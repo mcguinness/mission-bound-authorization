@@ -269,7 +269,7 @@ Table of Contents
 
    nonce:  REQUIRED.  A string.  A client-generated nonce binding the
       response to this request.  It MUST be unique per request within
-      the response lifetime; a consumer MUST reject a response whose
+      the response lifetime.  A consumer MUST reject a response whose
       nonce does not equal the one it sent.  This is a standard client
       challenge: echoing it in the signed response anti-replay-binds
       that response to this specific request.
@@ -277,7 +277,8 @@ Table of Contents
 3.2.  Authentication
 
    The request MUST be authenticated.  The AS MUST support at least one
-   of the following; the client MUST use exactly one per request:
+   of the following mechanisms.  The client MUST use exactly one of them
+   per request:
 
    1.  *mTLS client authentication* [RFC8705].  The AS validates the
        client's X.509 certificate against its configured trust anchors
@@ -483,23 +484,33 @@ Table of Contents
 
 3.5.  Caching
 
-   Consumers SHOULD cache a response keyed on (mission_id, audience), or
-   on (mission_id, requester identifier) for a state-only response,
-   until mission.fresh_until.  Consumers MUST NOT use a cached response
-   after mission.fresh_until.  When the AS advertises
-   mission_max_stale_seconds (Section 9), it MUST NOT set
-   mission.fresh_until later than the response iat plus that value, so
-   report freshness never exceeds the deployment's advertised
-   revocation-propagation tolerance.  When comparing the current time to
-   mission.fresh_until, a consumer MAY allow up to 30 seconds of
-   tolerance for the active state only, and no tolerance for any other
-   state.  This tolerance is a clock-skew allowance on the reliance
-   path, bounding the disagreement between the AS's and the consumer's
-   clocks, not a property of state reversibility; it MUST NOT exceed the
-   AS's advertised mission_max_stale_seconds (Section 9).  A suspended
-   Mission may be resumed to active, so a consumer MUST NOT extend
-   reliance on a cached suspended (or any non-active) response beyond
-   mission.fresh_until.
+   Caching follows these rules:
+
+   *  *Cache key.* Consumers SHOULD cache a response keyed on
+      (mission_id, audience), or on (mission_id, requester identifier)
+      for a state-only response, until mission.fresh_until.
+
+   *  *Hard stop.* Consumers MUST NOT use a cached response after
+      mission.fresh_until.  In particular, a consumer MUST NOT extend
+      reliance on a cached suspended (or any non-active) response beyond
+      mission.fresh_until.
+
+   *  *Freshness cap.* When the AS advertises mission_max_stale_seconds
+      (Section 9), it MUST NOT set mission.fresh_until later than the
+      response iat plus that value.
+
+   *  *Skew tolerance.* When comparing the current time to
+      mission.fresh_until, a consumer MAY allow up to 30 seconds of
+      tolerance for the active state only, and no tolerance for any
+      other state.  The tolerance MUST NOT exceed the AS's advertised
+      mission_max_stale_seconds (Section 9).
+
+   The freshness cap keeps report freshness within the deployment's
+   advertised revocation-propagation tolerance.  The skew tolerance is a
+   clock-skew allowance on the reliance path, bounding the disagreement
+   between the AS's and the consumer's clocks, not a property of state
+   reversibility.  The hard stop is absolute for non-active states
+   because a suspended Mission may be resumed to active.
 
 3.6.  Anti-Oracle Property
 
@@ -512,7 +523,7 @@ Table of Contents
    found body; see Section 3.7).  The AS MUST return an identical HTTP
    status code, response body, and headers for the two cases.  The AS
    SHOULD NOT vary response timing in a way that distinguishes the two
-   cases, and SHOULD mitigate timing side channels (for example by
+   cases.  It SHOULD mitigate timing side channels (for example by
    padding response time or by taking a uniform lookup path for both the
    unknown and the unauthorized case).
 
@@ -579,16 +590,12 @@ Table of Contents
 
                                   Table 2
 
-   Success outcomes return HTTP 200 with the signed Mission Status
-   Response carrying state.  Wire errors (unauthorized, not_found,
-   conflict, stale_version, rate_limited, unavailable) return the
-   matching HTTP status with a JSON body; the two 409 symbols arise only
-   on lifecycle operations (Section 6.7).  Note the distinction between
-   the two access failures: unauthorized (401) means the request carried
-   no valid authentication, whereas a request that is authenticated but
-   not authorized for the referenced Mission returns not_found (404),
-   never 401, so that an unauthorized reference is indistinguishable
-   from an unknown one (Section 3.6).  The error body is:
+   Note the distinction between the two access failures: unauthorized
+   (401) means the request carried no valid authentication, whereas a
+   request that is authenticated but not authorized for the referenced
+   Mission returns not_found (404), never 401, so that an unauthorized
+   reference is indistinguishable from an unknown one (Section 3.6).
+   The error body is:
 
    HTTP/1.1 404 Not Found
    Content-Type: application/json
@@ -753,10 +760,8 @@ Table of Contents
 
    A transition to suspended or completed gates new derivation only.
    Tokens already derived under the Mission remain valid until their own
-   exp, exactly as in the issuance profile's revocation model:
-   suspending or completing a Mission stops new derivation; it does not
-   retroactively invalidate access tokens already issued, mirroring the
-   treatment of superseded
+   exp, exactly as in the issuance profile's revocation model and
+   mirroring the treatment of superseded
    ([I-D.draft-mcguinness-oauth-mission-expansion]).  A deployment that
    needs a prompt cutoff on outstanding tokens uses the propagation
    mechanisms of Section 8.
@@ -809,12 +814,14 @@ Table of Contents
 
    An operation is legal only from the source states below.  A terminal
    state (revoked, expired, completed, or the companion-defined
-   superseded and cascaded) admits no transition; an operation whose
+   superseded and cascaded) admits no transition.  An operation whose
    resulting state equals the current state, terminal or not, is
-   idempotent success (Section 6.7). resume is the sole exception: it is
-   legal only from suspended (its resulting state, active, is also the
-   baseline a Mission holds before any suspension), so resume on an
-   active or terminal Mission is a conflict, not idempotent success.
+   idempotent success (Section 6.7).
+
+   resume is the sole exception: it is legal only from suspended (its
+   resulting state, active, is also the baseline a Mission holds before
+   any suspension), so resume on an active or terminal Mission is a
+   conflict, not idempotent success.
 
             +===========+===================+=================+
             | Operation | Legal from        | Resulting state |
@@ -837,7 +844,7 @@ Table of Contents
 
    Requests are adjudicated by the single rule of Section 6.7: an
    operation whose resulting state equals the Mission's current state is
-   idempotent success, with the resume exception above, and any other
+   idempotent success, with the resume exception above.  Any other
    operation not legal from the current state, including resume on a
    Mission that is not suspended, is refused as a conflict.  A Mission
    that reaches its expires_at transitions to expired independently of
@@ -930,16 +937,23 @@ Table of Contents
    by an explicit lifecycle authorization: a mission_lifecycle scope or
    a deployment-defined equivalent grant that names who may perform the
    transition.  The AS MUST refuse a caller that carries no such
-   authorization.  When a sender-constrained access token (DPoP-bound
-   [RFC9449] or mTLS-bound [RFC8705]) authenticates the call, the
-   token's sub is the acting party and the token MUST carry that
-   authorization.  When the caller authenticates directly as a client
-   (mTLS client authentication [RFC8705] or private-key JWT [RFC7523]),
-   the authenticated client is the acting party and the AS MUST check
-   the deployment-defined lifecycle grant bound to that client.  The AS
-   MUST record the acting party and SHOULD reflect it in the signed
-   response's audit surface (for example in sub or a deployment-defined
-   audit member of the Mission Status Response).
+   authorization.
+
+   The acting party, and where the AS checks the lifecycle
+   authorization, follow from the authentication case:
+
+   1.  When a sender-constrained access token (DPoP-bound [RFC9449] or
+       mTLS-bound [RFC8705]) authenticates the call, the token's sub is
+       the acting party.  The token MUST carry that authorization.
+
+   2.  When the caller authenticates directly as a client (mTLS client
+       authentication [RFC8705] or private-key JWT [RFC7523]), the
+       authenticated client is the acting party.  The AS MUST check the
+       deployment-defined lifecycle grant bound to that client.
+
+   In every case the AS MUST record the acting party and SHOULD reflect
+   it in the signed response's audit surface (for example in sub or a
+   deployment-defined audit member of the Mission Status Response).
 
    Which parties may perform which operation is deployment-defined.
    Typical deployments authorize revoke to the Mission's Subject or
@@ -1061,13 +1075,13 @@ Table of Contents
 
    The request nonce (Section 6, Operations) is the idempotency key.
    The AS MUST deduplicate lifecycle requests by the triple (client,
-   mission_id, nonce) for a bounded window and, on a retransmit carrying
-   a nonce already seen for that client and mission_id, MUST replay the
-   original response rather than re-execute the operation.  This window
-   MUST be at least the validity span of the signed response the AS
-   would replay (its iat to exp, Section 3.4), so any retransmit that
-   could still present a live response is deduplicated; a deployment MAY
-   use a longer window.  This makes a retransmit safe against
+   mission_id, nonce) for a bounded window.  On a retransmit carrying a
+   nonce already seen for that client and mission_id, the AS MUST replay
+   the original response rather than re-execute the operation.  The
+   window MUST be at least the validity span of the signed response the
+   AS would replay (its iat to exp, Section 3.4), so any retransmit that
+   could still present a live response is deduplicated.  A deployment
+   MAY use a longer window.  This makes a retransmit safe against
    reordering: a delayed suspend retry that arrives after a resume is
    recognized as a duplicate and replays the original suspend response,
    so it cannot re-suspend an already-resumed Mission.
@@ -1087,18 +1101,17 @@ Table of Contents
    Lifecycle operations follow one rule.  An operation whose resulting
    state (Section 6.2) equals the Mission's current state is idempotent
    success, terminal or not: the AS returns the current Mission Status
-   Response, with no state change and no event emitted.  This covers a
-   repeat of the same transition, such as revoke on a revoked Mission,
-   suspend on a suspended Mission, or complete on a completed Mission.
-   resume is the sole exception: it is legal only from suspended, and
-   its resulting state active is also the baseline a Mission holds
-   before any suspension, so resume on an active Mission (one never
-   suspended, or already resumed) or on a terminal Mission is not
-   idempotent success but a conflict.  Any other operation not legal
-   from the current state is likewise a conflict (for example that
-   resume on an active or terminal Mission, or suspend against a
-   terminal state): the AS MUST refuse it with HTTP 409 and a JSON body
-   whose error symbol is conflict, leaving the Mission state unchanged.
+   Response, with no state change and no event emitted.  Any other
+   operation not legal from the current state (for example suspend
+   against a terminal state) is a conflict: the AS MUST refuse it with
+   HTTP 409 and a JSON body whose error symbol is conflict, leaving the
+   Mission state unchanged.
+
+   resume is the sole exception to the idempotent-success arm.  It is
+   legal only from suspended, and its resulting state active is also the
+   baseline a Mission holds before any suspension, so resume on an
+   active Mission (one never suspended, or already resumed) or on a
+   terminal Mission is not idempotent success but a conflict.
 
    One idempotent case carries metadata.  A suspend against a suspended
    Mission whose suspend_until or on_expiry differ from the recorded
@@ -1155,18 +1168,14 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission]) on a mission_resource_access
    entry that carries one or more completion conditions.  When a
    condition is met, the entry is *discharged*: the Authorization Server
-   MUST NOT thereafter derive a token carrying that entry, exactly as it
-   refuses derivation for a non-active Mission.
+   no longer derives a token carrying that entry (Section 7.3), exactly
+   as it refuses derivation for a non-active Mission.
 
    Three properties make this safe inside the Mission model and this
    section requires all three:
 
    *  *Discharge is monotonic.* It only removes an entry's authority; it
-      can never widen the entry or the Mission.  A prompt-injected agent
-      therefore cannot use it to escalate: the worst it can do is spend
-      its own authority sooner, which is not an escalation, though a
-      forced premature discharge is an availability and guardrail-
-      retirement concern (Section 11.6).
+      can never widen the entry or the Mission.
 
    *  *Discharge composes with the subset rule.* A derived entry carries
       its parent's completion conditions unchanged and MAY add more, the
@@ -1177,12 +1186,13 @@ Table of Contents
       condition, and an Authorization Server that cannot determine a
       condition's status refuses to derive.
 
-   Discharge gates at the entry, not the Mission, so a multi-resource
-   Mission completes one entry at a time while the Mission remains
-   active for the rest.  It also strengthens the kill switch: a task
-   that finishes stops issuing its own authority without waiting for a
-   clock or a revoke.  It is the enforceable counterpart of the inert
-   success_criteria.
+   The threat analysis of these properties, including why a prompt-
+   injected agent cannot use discharge to escalate and the forced-
+   premature-discharge residual, is given in Section 11.6.
+
+   Discharge gates at the entry, not the Mission (Section 7.3).  It
+   strengthens the kill switch: a task that finishes stops issuing its
+   own authority without waiting for a clock or a revoke.
 
 7.1.  Relationship to the Issuance Profile
 
@@ -1248,7 +1258,7 @@ Table of Contents
    carrying a discharged entry, at the token endpoint, on refresh, or on
    Token Exchange, exactly as issuance is refused for a non-active
    Mission ([I-D.draft-mcguinness-oauth-mission]).  A derivation that
-   would carry only discharged entries MUST fail; a derivation that
+   would carry only discharged entries MUST fail.  A derivation that
    carries a mix MUST omit the discharged entries.
 
    Discharge gates at the entry, not the Mission.  The Mission remains
@@ -1276,12 +1286,13 @@ Table of Contents
    max_staleness is absent, the Authorization Server MUST re-evaluate
    the condition at each derivation, so terminal_when never goes inert:
    absence of max_staleness removes the tolerance for a cached view, it
-   does not relieve the freshness duty.  The mechanism is deployment-
-   defined (a status query, a received signal, a recorded administrative
-   action).  This document defines one interoperable event-source
-   profile a deployment MAY use: the event_source URI is retrieved over
-   authenticated HTTPS and returns a signed JSON status document, a JWS
-   [RFC7515], with these members:
+   does not relieve the freshness duty.
+
+   The mechanism is deployment-defined (a status query, a received
+   signal, a recorded administrative action).  This document defines one
+   interoperable event-source profile a deployment MAY use: the
+   event_source URI is retrieved over authenticated HTTPS and returns a
+   signed JSON status document, a JWS [RFC7515], with these members:
 
    *  occurred: REQUIRED.  A boolean, true when the event has occurred.
 
@@ -1295,22 +1306,29 @@ Table of Contents
 
    The Authorization Server verifies the JWS against key material it
    resolves for the source identity, not for the event_source origin:
-   the protected header's kid MUST resolve to a key the source publishes
-   through an authenticated channel (for example its JWKS), and the
-   resolved signer identity MUST be the source the Authorization Server
-   trusts for this event_type.  A signature that does not chain to a
-   trusted source for the event_type leaves the condition indeterminate,
-   and the Authorization Server fails closed as below.
+
+   1.  the protected header's kid MUST resolve to a key the source
+       publishes through an authenticated channel (for example its
+       JWKS); and
+
+   2.  the resolved signer identity MUST be the source the Authorization
+       Server trusts for this event_type.
+
+   A signature that does not chain to a trusted source for the
+   event_type leaves the condition indeterminate, and the Authorization
+   Server fails closed as below.
 
    Other source mechanisms remain deployment-defined.  The Mission
    Issuer MUST authenticate and integrity-verify any event source
-   outside its own trust domain before acting on its report.  The
-   event_source SHOULD lie outside the Mission's own writable authority:
-   an agent that can write to the source can drive its own discharge or
-   suppress it.  Where the event_source is on an origin the Mission
-   holds write authority to, the Authorization Server MUST determine
-   discharge through an integrity mechanism, such as the signed status
-   document above, whose signing key the Mission cannot influence.
+   outside its own trust domain before acting on its report.
+
+   The event_source SHOULD lie outside the Mission's own writable
+   authority: an agent that can write to the source can drive its own
+   discharge or suppress it.  Where the event_source is on an origin the
+   Mission holds write authority to, the Authorization Server MUST
+   determine discharge through an integrity mechanism, such as the
+   signed status document above, whose signing key the Mission cannot
+   influence.
 
    Once the Authorization Server observes that a condition has been met,
    the discharge is recorded as Authorization-Server-side state and MUST
@@ -1356,12 +1374,13 @@ Table of Contents
    defined subset rule with no new clause: for a key present in the
    reference entry's constraints, the same key MUST be present in the
    candidate entry and its value MUST be no broader under the key's
-   defined rule.  For terminal_when, a candidate value is no broader
-   than a reference value when the candidate's condition array contains
-   every condition of the reference, compared structurally after the
-   canonicalization of the issuance profile
-   ([I-D.draft-mcguinness-oauth-mission]); the candidate MAY add further
-   conditions.
+   defined rule.
+
+   For terminal_when, a candidate value is no broader than a reference
+   value when the candidate's condition array contains every condition
+   of the reference, compared structurally after the canonicalization of
+   the issuance profile ([I-D.draft-mcguinness-oauth-mission]); the
+   candidate MAY add further conditions.
 
    Conditions are compared structurally, not by event semantics.  A
    child cannot drop or alter a parent's completion condition, only add
@@ -1766,10 +1785,9 @@ Table of Contents
       sources inside the issuer's trust domain are RECOMMENDED, for
       latency as well as trust.
 
-   *  Already-issued tokens.  Discharge gates new derivations only; a
-      token already issued runs to expiry.  Prompt cutoff relies on
-      short token lifetimes or runtime point-of-use denial
-      (Section 7.7), the same caveat revocation carries.
+   *  Already-issued tokens.  The window between discharge and the
+      expiry of a token already issued is the same residual revocation
+      carries, bounded the same way (Section 7.3, Section 7.7).
 
 11.7.  General OAuth Security
 

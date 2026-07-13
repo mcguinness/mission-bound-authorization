@@ -1488,13 +1488,14 @@ Intent via PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>.<
         <h3 id="name-pending-lifetime-and-stalen">
 <a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-pending-lifetime-and-stalen" class="section-name selfRef">Pending Lifetime and Staleness</a>
         </h3>
-<p id="section-5.4-1">A deferred approval <span class="bcp14">MUST</span> carry a deployment-set maximum pending lifetime,
-after which it resolves to <code>expired_token</code> per the deferred substrate. A
-decision made after a change to the derivation <code>policy_version</code>, or to
-the applicable capability catalog, <span class="bcp14">MUST</span> be made over a proposal that has
-been re-derived and re-rendered under the current policy and catalog; the
-Mission Issuer <span class="bcp14">MUST NOT</span> commit an approval over a proposal derived under
-superseded policy.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+<p id="section-5.4-1">A deferred approval <span class="bcp14">MUST</span> carry a deployment-set maximum pending
+lifetime, after which it resolves to <code>expired_token</code> per the deferred
+substrate. Staleness of the proposal itself needs no separate rule:
+derivation is mechanical and happens once, at the approval event,
+over the policy and capability catalog then in force
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so the reviewer always
+decides over an Authority Set derived and rendered under current
+policy, never one derived under superseded policy.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="decision-set">

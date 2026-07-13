@@ -1588,12 +1588,12 @@ MAS-held Missions unchanged.<a href="#section-3-6.4.1" class="pilcrow">¶</a></p
 MAS's mission submission endpoint, published as
 <code>mission_submission_endpoint</code> (<a href="#discovery" class="auto internal xref">Section 9</a>). The endpoint <span class="bcp14">MUST</span> be
 served over TLS 1.2 or later (TLS 1.3 <span class="bcp14">RECOMMENDED</span>), following the
-recommendations of <span>[<a href="#RFC9325" class="cite xref">RFC9325</a>]</span>, and <span class="bcp14">MUST</span> authenticate the client using
-the authentication mechanisms of the Mission Status endpoint
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>): mTLS, DPoP-bound
-bearer, or private-key JWT. How clients register with a MAS is
-deployment-defined; the identifier the MAS authenticates is recorded
-as the Mission's <code>client_id</code>.<a href="#section-4-1" class="pilcrow">¶</a></p>
+recommendations of <span>[<a href="#RFC9325" class="cite xref">RFC9325</a>]</span>. The endpoint <span class="bcp14">MUST</span> authenticate the
+client using the authentication mechanisms of the Mission Status
+endpoint (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>): mTLS,
+DPoP-bound bearer, or private-key JWT. How clients register with a
+MAS is deployment-defined; the identifier the MAS authenticates is
+recorded as the Mission's <code>client_id</code>.<a href="#section-4-1" class="pilcrow">¶</a></p>
 <p id="section-4-2">The endpoint serves two operations, dispatched by request media type:<a href="#section-4-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-4-3.1">
@@ -2308,62 +2308,69 @@ poll returns <code>approved</code> with the successor's <code>mission_id</code>
       </h2>
 <p id="section-9-1">A MAS publishes a metadata document at the well-known URI <span>[<a href="#RFC8615" class="cite xref">RFC8615</a>]</span>
 path <code>/.well-known/mission-authority-server</code>, registered in <a href="#iana" class="auto internal xref">Section 18</a>:
-a JSON object served over TLS as <code>application/json</code>. For an <code>issuer</code>
-with no path component the document is served at that well-known path
-under the issuer's host; for an <code>issuer</code> that bears a path component
-the <code>mission-authority-server</code> well-known segment is inserted between
-the host and the issuer's path, following the metadata-location rule of
-<span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> (for <code>issuer</code> <code>https://host/tenant</code>, the document is at
-<code>https://host/.well-known/mission-authority-server/tenant</code>). Its members
+a JSON object served over TLS as <code>application/json</code>. The document's
+location is constructed from the <code>issuer</code>, following the
+metadata-location rule of <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>:<a href="#section-9-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-9-2">
+<li id="section-9-2.1">
+          <p id="section-9-2.1.1">For an <code>issuer</code> with no path component, the document is served at
+the well-known path under the issuer's host.<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-2.2">
+          <p id="section-9-2.2.1">For an <code>issuer</code> that bears a path component, the
+<code>mission-authority-server</code> well-known segment is inserted between
+the host and the issuer's path (for <code>issuer</code>
+            <code>https://host/tenant</code>, the document is at
+<code>https://host/.well-known/mission-authority-server/tenant</code>).<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-9-3">Its members
 mirror the Mission suite's Authorization Server metadata members where
 applicable, so a consumer reads the same member names it would read
-from AS metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, resolved from this document instead:<a href="#section-9-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-9-2">
-        <dt id="section-9-2.1">
+from AS metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, resolved from this document instead:<a href="#section-9-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-4">
+        <dt id="section-9-4.1">
 <code>issuer</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-2.2">
-          <p id="section-9-2.2.1"><span class="bcp14">REQUIRED</span>. A string. The MAS's issuer URL. It equals the <code>issuer</code> of
+        <dd style="margin-left: 1.5em" id="section-9-4.2">
+          <p id="section-9-4.2.1"><span class="bcp14">REQUIRED</span>. A string. The MAS's issuer URL. It equals the <code>issuer</code> of
 every Mission the MAS records and the <code>iss</code> of its integrity-anchor
-envelopes and signed status responses. A consumer <span class="bcp14">MUST</span> verify it
-equals the URL the metadata was resolved from with the
-<code>mission-authority-server</code> well-known segment removed: for a
-host-only issuer that segment is the entire path, and for a
-path-bearing issuer it is removed from between the host and the
-issuer's path, reversing the insertion above.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+envelopes and signed status responses. A consumer <span class="bcp14">MUST</span> verify that
+applying the location-construction steps above to this <code>issuer</code>
+yields the URL the metadata was resolved from.<a href="#section-9-4.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-2.3">
+<dt id="section-9-4.3">
 <code>mission_submission_endpoint</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-2.4">
-          <p id="section-9-2.4.1"><span class="bcp14">REQUIRED</span>. A string containing a URL. The mission submission endpoint
-(<a href="#mission-submission" class="auto internal xref">Section 4</a>).<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-9-4.4">
+          <p id="section-9-4.4.1"><span class="bcp14">REQUIRED</span>. A string containing a URL. The mission submission endpoint
+(<a href="#mission-submission" class="auto internal xref">Section 4</a>).<a href="#section-9-4.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-2.5">
+<dt id="section-9-4.5">
 <code>mission_status_endpoint</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-2.6">
-          <p id="section-9-2.6.1"><span class="bcp14">REQUIRED</span>. A string containing a URL. Semantics per
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-9-2.6.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-9-4.6">
+          <p id="section-9-4.6.1"><span class="bcp14">REQUIRED</span>. A string containing a URL. Semantics per
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-9-4.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-2.7">
+<dt id="section-9-4.7">
 <code>mission_status_signing_alg_values_supported</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-2.8">
-          <p id="section-9-2.8.1"><span class="bcp14">REQUIRED</span>. A JSON array of strings. Semantics per
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-9-2.8.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-9-4.8">
+          <p id="section-9-4.8.1"><span class="bcp14">REQUIRED</span>. A JSON array of strings. Semantics per
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-9-4.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-2.9">
+<dt id="section-9-4.9">
 <code>mission_lifecycle_endpoint</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-2.10">
-          <p id="section-9-2.10.1"><span class="bcp14">REQUIRED</span>. A string containing a URL. Semantics per
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-9-2.10.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-9-4.10">
+          <p id="section-9-4.10.1"><span class="bcp14">REQUIRED</span>. A string containing a URL. Semantics per
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-9-4.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-2.11">
+<dt id="section-9-4.11">
 <code>mission_auth_methods_supported</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-2.12">
-          <p id="section-9-2.12.1"><span class="bcp14">REQUIRED</span>. A JSON array of strings. The caller authentication
+        <dd style="margin-left: 1.5em" id="section-9-4.12">
+          <p id="section-9-4.12.1"><span class="bcp14">REQUIRED</span>. A JSON array of strings. The caller authentication
 mechanisms the MAS accepts at the submission, status, and lifecycle
 endpoints, from the mechanism set of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>. A value naming a
@@ -2373,47 +2380,47 @@ mTLS, <code>private_key_jwt</code>), following the discovery pattern of the
 <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> <code>*_endpoint_auth_methods_supported</code> members. The
 DPoP-bound access token mechanism is token presentation rather than
 client authentication, so no registry entry names it; this document
-uses <code>dpop_bound_token</code>.<a href="#section-9-2.12.1" class="pilcrow">¶</a></p>
+uses <code>dpop_bound_token</code>.<a href="#section-9-4.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-2.13">
+<dt id="section-9-4.13">
 <code>mission_join_assertion_endpoint</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-2.14">
-          <p id="section-9-2.14.1"><span class="bcp14">OPTIONAL</span>. A string containing a URL. The join-assertion endpoint
+        <dd style="margin-left: 1.5em" id="section-9-4.14">
+          <p id="section-9-4.14.1"><span class="bcp14">OPTIONAL</span>. A string containing a URL. The join-assertion endpoint
 (<a href="#join-assertion" class="auto internal xref">Section 11</a>). Present when the MAS mints Mission Join
-Assertions.<a href="#section-9-2.14.1" class="pilcrow">¶</a></p>
+Assertions.<a href="#section-9-4.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-2.15">
+<dt id="section-9-4.15">
 <code>mission_event_stream_endpoint</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-2.16">
-          <p id="section-9-2.16.1"><span class="bcp14">OPTIONAL</span>. A string containing a URL. Present when the MAS supports
+        <dd style="margin-left: 1.5em" id="section-9-4.16">
+          <p id="section-9-4.16.1"><span class="bcp14">OPTIONAL</span>. A string containing a URL. Present when the MAS supports
 Mission Lifecycle Signals; semantics per
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>.<a href="#section-9-2.16.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>.<a href="#section-9-4.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-2.17">
+<dt id="section-9-4.17">
 <code>mission_max_stale_seconds</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-2.18">
-          <p id="section-9-2.18.1"><span class="bcp14">OPTIONAL</span>. An integer. Semantics per
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-9-2.18.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-9-4.18">
+          <p id="section-9-4.18.1"><span class="bcp14">OPTIONAL</span>. An integer. Semantics per
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-9-4.18.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-2.19">
+<dt id="section-9-4.19">
 <code>jwks_uri</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-2.20">
-          <p id="section-9-2.20.1"><span class="bcp14">REQUIRED</span>. A string containing a URL. The MAS's JSON Web Key Set:
+        <dd style="margin-left: 1.5em" id="section-9-4.20">
+          <p id="section-9-4.20.1"><span class="bcp14">REQUIRED</span>. A string containing a URL. The MAS's JSON Web Key Set:
 the issuer's signing keys, from which consumers resolve the keys
 for Mission Status responses, consent evidence
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>), Mission
 Mandates (<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), and other
 issuer-signed artifacts, with the signing-key retention rules of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-9-2.20.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-9-4.20.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-9-3">Example:<a href="#section-9-3" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-9-4">
+<p id="section-9-5">Example:<a href="#section-9-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-9-6">
 <pre>
 {
   "issuer": "https://mas.example.com",
@@ -2431,14 +2438,14 @@ issuer-signed artifacts, with the signing-key retention rules of
   "mission_max_stale_seconds": 60,
   "jwks_uri": "https://mas.example.com/.well-known/jwks.json"
 }
-</pre><a href="#section-9-4" class="pilcrow">¶</a>
+</pre><a href="#section-9-6" class="pilcrow">¶</a>
 </div>
-<p id="section-9-5">A consumer holding a Mission reference resolves this document from the
+<p id="section-9-7">A consumer holding a Mission reference resolves this document from the
 reference's <code>issuer</code>; whether a given <code>issuer</code> is a MAS or an OAuth AS
 is deployment configuration. The submission and lifecycle surfaces
 follow a reference-plus-continuation shape (a request yields an opaque
 reference the client continues against) that parallels the grant
-continuation pattern of GNAP <span>[<a href="#RFC9635" class="cite xref">RFC9635</a>]</span>.<a href="#section-9-5" class="pilcrow">¶</a></p>
+continuation pattern of GNAP <span>[<a href="#RFC9635" class="cite xref">RFC9635</a>]</span>.<a href="#section-9-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-join">
@@ -2462,9 +2469,9 @@ credential belongs to the Mission's parties, never that it was
 issued for the Mission (<a href="#limitations" class="auto internal xref">Section 12</a>). For the high-consequence
 classes, association is therefore not the terminal architecture. The
 issuance join (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>)
-or native Mission-bound issuance restores cryptographic derivation;
-a deployment claiming high-consequence enforcement in MAS mode
-<span class="bcp14">SHOULD</span> adopt one of them for those classes, and one that instead
+or native Mission-bound issuance restores cryptographic derivation.
+A deployment claiming high-consequence enforcement in MAS mode
+<span class="bcp14">SHOULD</span> adopt one of them for those classes. A deployment that instead
 runs high-consequence work on an asserted join alone <span class="bcp14">MUST</span> state that
 residual in its Mission Deployment Profile's <code>residual_risks</code>.<a href="#section-10-2" class="pilcrow">¶</a></p>
 <p id="section-10-3">A Mission-joining PDP and its PEPs <span class="bcp14">MUST</span> observe the following:<a href="#section-10-3" class="pilcrow">¶</a></p>
@@ -2559,7 +2566,7 @@ key.<a href="#section-10-5" class="pilcrow">¶</a></p>
 <p id="section-10-6">The join binds identity, not possession, so the acting credential's
 own sender binding is what keeps a joined permit from being a bearer
 property. Acting credentials for governed work <span class="bcp14">SHOULD</span> be
-sender-constrained, with DPoP or mutual TLS at the unchanged AS; for
+sender-constrained, with DPoP or mutual TLS at the unchanged AS. For
 the high-consequence action classes they <span class="bcp14">MUST</span> be. With a pure bearer
 token, any holder inside the (subject, client) equivalence class
 joins (<a href="#join-spoofing" class="auto internal xref">Section 16.1</a>).<a href="#section-10-6" class="pilcrow">¶</a></p>
@@ -2636,11 +2643,12 @@ match the referenced Mission:<a href="#section-10-12" class="pilcrow">¶</a></p>
 client the Mission names. It does not prove the credential was derived
 under the Mission; no MAS-mode mechanism can, because the AS issues
 tokens with no knowledge of Missions (<a href="#limitations" class="auto internal xref">Section 12</a>,
-<a href="#join-spoofing" class="auto internal xref">Section 16.1</a>). A deployment <span class="bcp14">MAY</span> move the join's verification from
-each PDP to the MAS with the Mission Join Assertion
-(<a href="#join-assertion" class="auto internal xref">Section 11</a>); that upgrade strengthens who verifies the join,
-not what the join can prove.<a href="#section-10-14" class="pilcrow">¶</a></p>
-<p id="section-10-15">Where the deployment's Authorization Server issues tokens under the
+<a href="#join-spoofing" class="auto internal xref">Section 16.1</a>).<a href="#section-10-14" class="pilcrow">¶</a></p>
+<p id="section-10-15">A deployment <span class="bcp14">MAY</span> move the join's verification from each PDP to the
+MAS with the Mission Join Assertion (<a href="#join-assertion" class="auto internal xref">Section 11</a>). That
+upgrade strengthens who verifies the join, not what the join can
+prove.<a href="#section-10-15" class="pilcrow">¶</a></p>
+<p id="section-10-16">Where the deployment's Authorization Server issues tokens under the
 client-instance-assertion profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>), the acting
 credential identifies a concrete runtime instance: the token's <code>act</code>
@@ -2649,7 +2657,7 @@ The PDP <span class="bcp14">SHOULD</span> include that instance in the join, so 
 binds (subject, client, instance) rather than (subject, client). This
 restores per-instance granularity behind a shared gateway <code>client_id</code>:
 the validated instance joins, not every workload in the <code>client_id</code>
-equivalence class.<a href="#section-10-15" class="pilcrow">¶</a></p>
+equivalence class.<a href="#section-10-16" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="join-assertion">
@@ -2707,13 +2715,14 @@ token's <code>cnf</code> public key.<a href="#section-11.1-2.8.1" class="pilcrow
 <code>token_jkt</code>. The digest pair keeps the credential itself off this
 wire, but it is usable only where the deployment's introspection
 surface can resolve a token by digest; <code>access_token</code> is the
-interoperable form. The acting token <span class="bcp14">MUST</span> be sender-constrained: a
-token without a <code>cnf</code> key gives the assertion nothing to bind, and the
-MAS <span class="bcp14">MUST NOT</span> mint one for it.<a href="#section-11.1-3" class="pilcrow">¶</a></p>
-<p id="section-11.1-4">The MAS verifies the join centrally:<a href="#section-11.1-4" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-11.1-5">
-<li id="section-11.1-5.1">
-            <p id="section-11.1-5.1.1">It establishes the acting token's validity, subject, and client.
+interoperable form.<a href="#section-11.1-3" class="pilcrow">¶</a></p>
+<p id="section-11.1-4">The acting token <span class="bcp14">MUST</span> be sender-constrained. The MAS <span class="bcp14">MUST NOT</span> mint an
+assertion for a token without a <code>cnf</code> key: such a token gives the
+assertion nothing to bind.<a href="#section-11.1-4" class="pilcrow">¶</a></p>
+<p id="section-11.1-5">The MAS verifies the join centrally:<a href="#section-11.1-5" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-11.1-6">
+<li id="section-11.1-6.1">
+            <p id="section-11.1-6.1.1">It establishes the acting token's validity, subject, and client.
 Where the AS offers token introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>, the MAS
 introspects the token under introspection credentials it holds
 there, and a token the AS reports inactive fails the request. Where
@@ -2724,42 +2733,42 @@ published metadata and taking the subject and client from the
 validated claims; a token that fails signature, <code>exp</code>, or <code>aud</code>
 validation fails the request. An opaque token that no introspection
 surface will resolve cannot be verified, and the request fails.
-Calling the AS is permitted in MAS mode; changing it is not.<a href="#section-11.1-5.1.1" class="pilcrow">¶</a></p>
+Calling the AS is permitted in MAS mode; changing it is not.<a href="#section-11.1-6.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-11.1-5.2">
-            <p id="section-11.1-5.2.1">It verifies the subject and client joins of <a href="#mission-join" class="auto internal xref">Section 10</a>
+          <li id="section-11.1-6.2">
+            <p id="section-11.1-6.2.1">It verifies the subject and client joins of <a href="#mission-join" class="auto internal xref">Section 10</a>
 against the introspection response or the validated token claims,
 under its own documented account and client mappings and delegate
-policy.<a href="#section-11.1-5.2.1" class="pilcrow">¶</a></p>
+policy.<a href="#section-11.1-6.2.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-11.1-6">A token that does not join is refused with the <code>join_failed</code> error
+<p id="section-11.1-7">A token that does not join is refused with the <code>join_failed</code> error
 (HTTP 403), in the error format of <a href="#submission-errors" class="auto internal xref">Section 4.3</a>; like
 <code>conflict</code>, it extends that section's error code set. An unknown
 or not-visible <code>mission_id</code> returns <code>not_found</code>, preserving the
-anti-oracle property.<a href="#section-11.1-6" class="pilcrow">¶</a></p>
-<p id="section-11.1-7">Visibility on this endpoint is bounded: a Mission is visible to its
+anti-oracle property.<a href="#section-11.1-7" class="pilcrow">¶</a></p>
+<p id="section-11.1-8">Visibility on this endpoint is bounded: a Mission is visible to its
 <code>client_id</code>, its recorded delegates, and the PEPs and PDPs enrolled
 for the Mission's enforcement scope. Any other caller <span class="bcp14">MUST</span> receive
 <code>not_found</code>, so the <code>join_failed</code> (403) and <code>not_found</code> (404) split
-never acts as a mapping oracle for callers outside that set.<a href="#section-11.1-7" class="pilcrow">¶</a></p>
-<p id="section-11.1-8">Assertion lifetime is capped by the token's, so short token lifetimes
+never acts as a mapping oracle for callers outside that set.<a href="#section-11.1-8" class="pilcrow">¶</a></p>
+<p id="section-11.1-9">Assertion lifetime is capped by the token's, so short token lifetimes
 put minting on the rotation path: each rotation needs a fresh
 assertion and its introspection call, per Mission and per workload. A
 deployment amortizes deliberately: it sizes agent token lifetimes to
 the runtime layer's revocation cutoff rather than treating expiry as
 the kill switch (the token-lifetime trade of
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and the MAS <span class="bcp14">MAY</span> reuse an
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The MAS <span class="bcp14">MAY</span> reuse an
 introspection result across mintings of the same token within the
 deployment's staleness bound, so re-minting for an unchanged token
-does not repeat the AS round trip.<a href="#section-11.1-8" class="pilcrow">¶</a></p>
-<p id="section-11.1-9">That same position makes minting a denial-of-service surface: it is a
+does not repeat the AS round trip.<a href="#section-11.1-9" class="pilcrow">¶</a></p>
+<p id="section-11.1-10">That same position makes minting a denial-of-service surface: it is a
 hot, per-action-adjacent path, invoked on every rotation for every
 Mission and workload the MAS serves. The MAS <span class="bcp14">MUST</span> rate-limit
-assertion requests per caller, and <span class="bcp14">SHOULD</span> serve repeated requests for
-the same (token digest, audience) pair from cache within the
+assertion requests per caller. The MAS <span class="bcp14">SHOULD</span> serve repeated requests
+for the same (token digest, audience) pair from cache within the
 assertion's lifetime, so a burst of re-mints for an unchanged token
-costs one evaluation rather than many.<a href="#section-11.1-9" class="pilcrow">¶</a></p>
+costs one evaluation rather than many.<a href="#section-11.1-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="join-assertion-artifact">
@@ -2953,13 +2962,13 @@ knowledge of Mission state. Revoking a Mission stops nothing at the
 token layer: every outstanding token, and every token the AS issues
 after revocation, remains valid OAuth. The Mission kill switch acts
 only through the runtime layer's state re-check.<a href="#section-12-6" class="pilcrow">¶</a></p>
-<p id="section-12-7">Because both properties are absent, enforcement rests entirely on PEP
-coverage. A MAS deployment <span class="bcp14">MUST</span> deploy the runtime profile's
-enforcement (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) over every
-consequential action path within the scope it claims Mission
-governance for, and the no-unmediated-path condition consolidated by
-the security model (<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>)
-is load-bearing for all of this profile's guarantees, not only for the
+<p id="section-12-7">A MAS deployment <span class="bcp14">MUST</span> deploy the runtime profile's enforcement
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) over every consequential
+action path within the scope it claims Mission governance for.
+Because both properties are absent, enforcement rests entirely on PEP
+coverage: the no-unmediated-path condition consolidated by the
+security model (<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>) is
+load-bearing for all of this profile's guarantees, not only for the
 runtime profile's agent-compromise-resistant enforcement claim. A
 token exercised outside PEP coverage is ungoverned: its use is
 bounded by ordinary OAuth alone, and no Mission property applies to
@@ -3025,12 +3034,8 @@ published in the Enforcement Scope Statement.<a href="#section-13-2.2.1" class="
 </li>
         <li class="normal" id="section-13-2.3">
           <p id="section-13-2.3.1"><strong>Join Assertion.</strong> The MAS <span class="bcp14">MUST</span> offer the Mission Join Assertion
-(<a href="#join-assertion" class="auto internal xref">Section 11</a>), and for the high-consequence classes the PDP
-<span class="bcp14">MUST</span> require one: the mapping join (<a href="#mission-join" class="auto internal xref">Section 10</a>) is the baseline
-compatibility mode, and the Join Assertion is the enterprise mode,
-because it centralizes subject and client mapping at the MAS, binds
-the proof to one token digest and key thumbprint, and produces audit
-evidence rather than leaving each PDP to maintain mapping tables.<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
+(<a href="#join-assertion" class="auto internal xref">Section 11</a>). For the high-consequence classes the PDP
+<span class="bcp14">MUST</span> require one.<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.4">
           <p id="section-13-2.4.1"><strong>Instance-bound joins.</strong> Where the acting credential carries a
@@ -3059,9 +3064,15 @@ evidence retained for the audit horizon
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-13-3">A deployment claiming this profile <span class="bcp14">SHOULD</span> publish its claims,
+<p id="section-13-3">The Join Assertion obligation is what separates the modes: the
+mapping join (<a href="#mission-join" class="auto internal xref">Section 10</a>) is the baseline compatibility mode,
+and the Join Assertion is the enterprise mode, because it centralizes
+subject and client mapping at the MAS, binds the proof to one token
+digest and key thumbprint, and produces audit evidence rather than
+leaving each PDP to maintain mapping tables.<a href="#section-13-3" class="pilcrow">¶</a></p>
+<p id="section-13-4">A deployment claiming this profile <span class="bcp14">SHOULD</span> publish its claims,
 coverage, and residual risks as a Mission Deployment Profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-13-3" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-13-4" class="pilcrow">¶</a></p>
 <div id="enterprise-prerequisites">
 <section id="section-13.1">
         <h3 id="name-estate-prerequisites">
@@ -3244,9 +3255,9 @@ governed workflow.<a href="#section-14.2-2.5.1" class="pilcrow">¶</a></p>
 that cannot itself enforce.<a href="#section-14.2-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-14.2-3">Each is credible only to the extent it has no unmediated bypass, which
-the runtime profile's Enforcement Scope Statement must state
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-14.2-3" class="pilcrow">¶</a></p>
+<p id="section-14.2-3">Each is credible only to the extent it has no unmediated bypass; the
+runtime profile's Enforcement Scope Statement is where that coverage
+is stated (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-14.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="deployment-adoption">
@@ -3304,10 +3315,10 @@ rest of the estate.<a href="#section-14.3-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 <p id="section-14.3-3">A deployment stops at the phase its risk warrants; nothing above the
-floor is required to begin. The MAS is not a throwaway bridge but the
-enduring control plane of the family's delegated-authority layer
-(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), which a deployment
-keeps even as individual Authorization Servers become Mission-aware.<a href="#section-14.3-3" class="pilcrow">¶</a></p>
+floor is required to begin, and the MAS remains the enduring control
+plane of the family's delegated-authority layer
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) even as individual
+Authorization Servers become Mission-aware.<a href="#section-14.3-3" class="pilcrow">¶</a></p>
 <p id="section-14.3-4">The common starting estate runs bots on standing service accounts
 with broad, durable entitlements. The migration is per task, not per
 account: each recurring job becomes a durable Mission whose Authority
@@ -3423,32 +3434,41 @@ reference the join was verified against.<a href="#section-15-7.4.1" class="pilcr
 <code>mission_id</code>: the join requires the subject and client the PEP
 authenticates from the credential to match values the MAS recorded at
 approval, which the client cannot alter, so a reference to someone
-else's Mission fails with <code>mission_mismatch</code>. The residual is mapping coarseness. Where the
-deployment's account mapping is many-to-one (several AS accounts map
-to one directory subject), any credential in the equivalence class
-joins; a deployment <span class="bcp14">SHOULD</span> keep the mapping one-to-one for subjects
-that hold Missions, with the granularity recorded in its mapping
-contract (<a href="#mapping-contract" class="auto internal xref">Section 13.2</a>). The client join
-is coarse the same way where several workloads share one <code>client_id</code>:
-any of them joins. Client instance assertions
+else's Mission fails with <code>mission_mismatch</code>. Three residuals remain:<a href="#section-16.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-16.1-2.1">
+            <p id="section-16.1-2.1.1"><strong>Mapping coarseness.</strong> Where the deployment's account mapping is
+many-to-one (several AS accounts map to one directory subject), any
+credential in the equivalence class joins; a deployment <span class="bcp14">SHOULD</span> keep
+the mapping one-to-one for subjects that hold Missions, with the
+granularity recorded in its mapping contract (<a href="#mapping-contract" class="auto internal xref">Section 13.2</a>).
+The client join is coarse the same way where several workloads share
+one <code>client_id</code>: any of them joins. Client instance assertions
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>) are the
 standard fix: the join then binds the validated instance
 (<a href="#mission-join" class="auto internal xref">Section 10</a>), and this residual remains only for deployments
-without instance identity. A second residual: two Missions held by
-the same subject and client are distinguished only by the PEP-supplied
-reference, so a faulty or compromised PEP can attribute work to the
-wrong same-party Mission, bounded by that Mission's authority and
-visible in evidence. A third residual is bearer possession: with a
-pure bearer token, possession alone presents the credential, so any
-holder inside the (subject, client) equivalence class joins, which is
-why <a href="#mission-join" class="auto internal xref">Section 10</a> requires sender-constraint for the
-high-consequence classes.<a href="#section-16.1-1" class="pilcrow">¶</a></p>
-<p id="section-16.1-2">The Mission Join Assertion (<a href="#join-assertion" class="auto internal xref">Section 11</a>) is the mitigation for
+without instance identity.<a href="#section-16.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-16.1-2.2">
+            <p id="section-16.1-2.2.1"><strong>Same-party misattribution.</strong> Two Missions held by the same subject
+and client are distinguished only by the PEP-supplied reference, so
+a faulty or compromised PEP can attribute work to the wrong
+same-party Mission, bounded by that Mission's authority and visible
+in evidence.<a href="#section-16.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-16.1-2.3">
+            <p id="section-16.1-2.3.1"><strong>Bearer possession.</strong> With a pure bearer token, possession alone
+presents the credential, so any holder inside the (subject, client)
+equivalence class joins, which is why <a href="#mission-join" class="auto internal xref">Section 10</a> requires
+sender-constraint for the high-consequence classes.<a href="#section-16.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-16.1-3">The Mission Join Assertion (<a href="#join-assertion" class="auto internal xref">Section 11</a>) is the mitigation for
 the coarse-mapping and shared-client residuals: the MAS evaluates the
 mapping once, centrally, under its documented policy, and binds the
 result to one introspected token by digest and key thumbprint, so the
 join stops being a standing property of every credential in an
-equivalence class and becomes a minted, audited, token-bound event.<a href="#section-16.1-2" class="pilcrow">¶</a></p>
+equivalence class and becomes a minted, audited, token-bound event.<a href="#section-16.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-join-assertion">
@@ -3483,18 +3503,30 @@ possession, and the residual is exactly that difference: a compromised
 or impersonated registered client can request expansion or child
 creation for any Mission recorded under its <code>client_id</code>, where token
 possession would have limited it to the grants it actually holds. The
-mitigations: instance-grade binding
-(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>) shrinks the
-<code>client_id</code> equivalence class to one runtime instance, and a Mission
-Join Assertion presented with the submission makes that instance a
-verified, token-bound party (<a href="#native-binding" class="auto internal xref">Section 8.2</a>); the expansion
-profile's fresh-approval requirement means no widening activates
-without the Approver, so a forged expansion request yields an approval
-prompt, not authority; the child-delegation profile's fan-out controls
-bound what child creation can amplify; and the binding failure surface
-is anti-oracle (<a href="#native-carriage" class="auto internal xref">Section 8.1</a>), so a request against a Mission
-the client is not bound to is indistinguishable from one against a
-Mission that does not exist.<a href="#section-16.3-1" class="pilcrow">¶</a></p>
+mitigations:<a href="#section-16.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-16.3-2.1">
+            <p id="section-16.3-2.1.1">Instance-grade binding
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>) shrinks
+the <code>client_id</code> equivalence class to one runtime instance, and a
+Mission Join Assertion presented with the submission makes that
+instance a verified, token-bound party (<a href="#native-binding" class="auto internal xref">Section 8.2</a>).<a href="#section-16.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-16.3-2.2">
+            <p id="section-16.3-2.2.1">The expansion profile's fresh-approval requirement means no widening
+activates without the Approver, so a forged expansion request yields
+an approval prompt, not authority.<a href="#section-16.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-16.3-2.3">
+            <p id="section-16.3-2.3.1">The child-delegation profile's fan-out controls bound what child
+creation can amplify.<a href="#section-16.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-16.3-2.4">
+            <p id="section-16.3-2.4.1">The binding failure surface is anti-oracle (<a href="#native-carriage" class="auto internal xref">Section 8.1</a>), so
+a request against a Mission the client is not bound to is
+indistinguishable from one against a Mission that does not exist.<a href="#section-16.3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
 </section>
 </div>
 <div id="ambient-authority-of-ungated-tokens">
@@ -3534,7 +3566,7 @@ provisions MAS availability accordingly and sizes
 status and lifecycle responses, Join Assertions, and the issuer-signed
 artifacts of the companions. A MAS <span class="bcp14">SHOULD</span> hold it in a non-exportable
 keystore (an HSM or equivalent KMS-grade custody) with dual-controlled
-generation, and <span class="bcp14">SHOULD</span> sign high-volume surfaces (status, Join
+generation. A MAS <span class="bcp14">SHOULD</span> sign high-volume surfaces (status, Join
 Assertions) and long-lived artifacts (Mandates, Issuance Grants) under
 distinct <code>kid</code>s in one <code>jwks_uri</code>, so custody can differ by blast
 radius. The introspection credential the MAS holds at the estate AS

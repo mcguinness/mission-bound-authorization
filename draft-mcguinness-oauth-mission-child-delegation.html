@@ -1175,7 +1175,15 @@ Mission is never created by session ancestry alone.<a href="#section-abstract-1"
             <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-status-an-optional-extensio" class="internal xref">Status: An Optional Extension</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
-            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-relationship-to-the-issuanc" class="internal xref">Relationship to the Issuance Profile</a></p>
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-relationship-to-the-issuanc" class="internal xref">Relationship to the Issuance Profile</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1" class="keepWithNext"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-relationship-to-delegated-t" class="internal xref">Relationship to Delegated Tokens</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-relationship-to-in-mission-" class="internal xref">Relationship to In-Mission Delegation</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
             <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-scope" class="internal xref">Scope</a></p>
@@ -1390,6 +1398,58 @@ the authority commitment for its tokens; the <code>parent</code> member is linea
 and audit data only.<a href="#section-3-3" class="pilcrow">¶</a></p>
 <p id="section-3-4">Where this document refers to "the issuance profile" without a section,
 it means <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> as a whole.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<div id="child-vs-token">
+<section id="section-3.1">
+        <h3 id="name-relationship-to-delegated-t">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-relationship-to-delegated-t" class="section-name selfRef">Relationship to Delegated Tokens</a>
+        </h3>
+<p id="section-3.1-1">A Child Mission is a new Mission with its own <code>mission_id</code>. It is not
+an attenuation child: the Mission Offline Attenuation profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>) defines a child
+as a narrower token minted under one Mission, not a new Mission.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">A delegated token is appropriate when the delegate performs work
+within the lifetime and operational control of the delegating flow. A
+Child Mission is appropriate when the child actor needs a durable
+Mission handle of its own: for example, a sub-agent with a queue,
+background job, independent harness session, or separate audit
+lifecycle. A Child Mission is not a way to widen authority; it is a
+way to create a narrower, separately accountable authority record for
+a child actor.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+<p id="section-3.1-3">The dividing line is survivability: work that can outlive the
+delegating flow, because it is queued, scheduled, or retried after
+the delegator exits, or that needs its own revocation and audit
+lifecycle, requires a Child Mission; work that cannot <span class="bcp14">MAY</span> run on a
+delegated token. A harness applies the test at spawn, not by agent
+design: the same sub-agent takes a delegated token when invoked
+inline and a Child Mission when parked on a queue.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="child-vs-act">
+<section id="section-3.2">
+        <h3 id="name-relationship-to-in-mission-">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-relationship-to-in-mission-" class="section-name selfRef">Relationship to In-Mission Delegation</a>
+        </h3>
+<p id="section-3.2-1">This profile's child delegation is distinct from the in-Mission
+delegation the issuance profile already defines. In-Mission delegation
+extends a single Mission's <code>act</code> chain to additional actors, bounded by
+the per-entry <code>delegation</code> policy (<code>allowed_delegates</code>, <code>max_depth</code>) of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; no new Mission is created and
+authority is exercised under the original Mission. Child delegation, by
+contrast, creates a separate Child Mission with its own <code>mission_id</code>,
+actor, lifecycle, and <code>act</code> chain.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<p id="section-3.2-2">Where this profile reads the parent entry's <code>delegation</code> policy, it
+does so to decide whether child creation is permitted and which
+<code>child_actor</code> is eligible: the presence of a <code>children</code> object in the
+parent entry's <code>delegation</code> member is what permits child creation for
+that entry (<a href="#fanout" class="auto internal xref">Section 9</a>), and that object's <code>allowed_child_actors</code>
+constrains the <code>child_actor</code> the parent may name.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
+<p id="section-3.2-3">The issuance profile's <code>act</code> <code>max_depth</code> bounds act-chain nesting
+within a Mission and is not a child-generation counter; a Child
+Mission's own <code>act</code> chain restarts at depth 0. Child-generation depth
+and breadth are governed instead by the fan-out controls of
+<a href="#fanout" class="auto internal xref">Section 9</a>.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="scope">
@@ -1468,45 +1528,8 @@ the attenuation checks from parent to child.<a href="#section-5-3.8.1" class="pi
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-5-4">A Child Mission is a new Mission with its own <code>mission_id</code>. It is not an
-attenuation child: the Mission Offline Attenuation profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>) defines a
-child as a narrower token minted under one Mission, not a new Mission.<a href="#section-5-4" class="pilcrow">¶</a></p>
-<div id="child-vs-token">
-<p id="section-5-5">A delegated token is appropriate when the delegate performs work within
-the lifetime and operational control of the delegating flow. A Child
-Mission is appropriate when the child actor needs a durable Mission
-handle of its own: for example, a sub-agent with a queue, background
-job, independent harness session, or separate audit lifecycle. A Child
-Mission is not a way to widen authority; it is a way to create a
-narrower, separately accountable authority record for a child actor.
-The dividing line is survivability: work that can outlive the
-delegating flow, because it is queued, scheduled, or retried after
-the delegator exits, or that needs its own revocation and audit
-lifecycle, requires a Child Mission; work that cannot <span class="bcp14">MAY</span> run on a
-delegated token. A harness applies the test at spawn, not by agent
-design: the same sub-agent takes a delegated token when invoked
-inline and a Child Mission when parked on a queue.<a href="#section-5-5" class="pilcrow">¶</a></p>
-</div>
-<div id="child-vs-act">
-<p id="section-5-6">This profile's child delegation is distinct from the in-Mission
-delegation the issuance profile already defines. In-Mission delegation
-extends a single Mission's <code>act</code> chain to additional actors, bounded by
-the per-entry <code>delegation</code> policy (<code>allowed_delegates</code>, <code>max_depth</code>) of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; no new Mission is created and
-authority is exercised under the original Mission. Child delegation, by
-contrast, creates a separate Child Mission with its own <code>mission_id</code>,
-actor, lifecycle, and <code>act</code> chain. Where this profile reads the parent
-entry's <code>delegation</code> policy, it does so to decide whether child creation
-is permitted and which <code>child_actor</code> is eligible: the presence of a
-<code>children</code> object in the parent entry's <code>delegation</code> member is what
-permits child creation for that entry (<a href="#fanout" class="auto internal xref">Section 9</a>), and that object's
-<code>allowed_child_actors</code> constrains the <code>child_actor</code> the parent may name.
-The issuance profile's <code>act</code> <code>max_depth</code> bounds act-chain nesting within
-a Mission and is not a child-generation counter; a Child Mission's own
-<code>act</code> chain restarts at depth 0. Child-generation depth and breadth are
-governed instead by the fan-out controls of <a href="#fanout" class="auto internal xref">Section 9</a>.<a href="#section-5-6" class="pilcrow">¶</a></p>
-</div>
+<p id="section-5-4">The design comparison between Child Missions, delegated tokens, and
+in-Mission delegation is in <a href="#child-vs-token" class="auto internal xref">Section 3.1</a> and <a href="#child-vs-act" class="auto internal xref">Section 3.2</a>.<a href="#section-5-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="child-creation">
@@ -1591,15 +1614,16 @@ on the authenticated back channel.<a href="#section-6-4" class="pilcrow">¶</a><
 <p id="section-6-5">Presenting the parent's refresh token as <code>parent_token</code> <span class="bcp14">MUST</span> follow
 the issuance profile's handling for that token: a sender-constrained
 refresh token <span class="bcp14">MUST</span> be presented in conformance with its sender
-constraint. Presenting the token for child creation <span class="bcp14">MUST NOT</span> rotate it
-and <span class="bcp14">MUST NOT</span> register as a replay in the deployment's refresh-token
-replay detection: the token is used here only to bind and resolve the
-parent, not to refresh. Because that carve-out would let a stolen
-bearer refresh token be presented repeatedly without detection, each
-child-creation presentation <span class="bcp14">MUST</span> be recorded and counted toward the
-deployment's anomaly detection, and a per-parent rate limit on child
-creation requests is a <span class="bcp14">MUST</span> when the presented token is not
-sender-constrained.<a href="#section-6-5" class="pilcrow">¶</a></p>
+constraint.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">Presenting the token for child creation <span class="bcp14">MUST NOT</span> rotate it and
+<span class="bcp14">MUST NOT</span> register as a replay in the deployment's refresh-token
+replay detection. The token is used here only to bind and resolve the
+parent, not to refresh.<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-7">That carve-out would let a stolen bearer refresh token be presented
+repeatedly without detection. The Mission Issuer therefore <span class="bcp14">MUST</span> record
+each child-creation presentation and count it toward the deployment's
+anomaly detection, and <span class="bcp14">MUST</span> rate-limit child creation requests per
+parent when the presented token is not sender-constrained.<a href="#section-6-7" class="pilcrow">¶</a></p>
 <div id="child-client-identity">
 <section id="section-6.1">
         <h3 id="name-child-client-identity">
@@ -1617,19 +1641,20 @@ defines (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" cla
 creating the Child Mission the Mission Issuer mints an assertion that
 names the child actor as the authorized redeemer and the Mission
 Issuer's token endpoint as the audience, and the child actor presents it
-there authenticating with its own client credential. An authorization
-code <span class="bcp14">MUST NOT</span> be used to convey the child's grant: a code and its
+there authenticating with its own client credential.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+<p id="section-6.1-3">An authorization code <span class="bcp14">MUST NOT</span> be used to convey the child's grant: a
+code and its
 <code>request_uri</code> are redeemable only by the client that pushed the request
 (<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>), which is the parent, not the child. The child-bound
 assertion is redeemable only by the child actor it names, so conveying
 it through the parent gives the parent no ability to redeem it. How the
 assertion reaches the child actor remains deployment-defined, subject to
-the rules above.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
-<p id="section-6.1-3">Where creation is adjudicated by policy with no front channel, the
+the rules above.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-4">Where creation is adjudicated by policy with no front channel, the
 Mission Issuer completes the authorization without user interaction,
 mints the same child-bound JWT authorization grant, and the child actor
 redeems it as itself under the <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> JWT-bearer grant at the token
-endpoint.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+endpoint.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="cross-issuer">
@@ -2001,28 +2026,54 @@ depth the ancestor entries allowed.<a href="#section-7-4" class="pilcrow">¶</a>
         <h3 id="name-mission-record-requirements">
 <a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-mission-record-requirements" class="section-name selfRef">Mission Record Requirements</a>
         </h3>
-<p id="section-7.1-1">The Child Mission record <span class="bcp14">MUST</span> contain the <code>parent</code> object, the child
-actor, the child Authority Set, the child <code>authority_hash</code>, the child
-Mission Intent's <code>intent_hash</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
-the delegation event identifier, the cascade mode, and the fan-out
-policy result. The <code>parent</code> value is immutable after creation.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
-<p id="section-7.1-2">The delegation event (<a href="#child-creation" class="auto internal xref">Section 6</a>) is the Child Mission's
+<p id="section-7.1-1">The Child Mission record <span class="bcp14">MUST</span> contain:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.1-2.1">
+            <p id="section-7.1-2.1.1">the <code>parent</code> object;<a href="#section-7.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.2">
+            <p id="section-7.1-2.2.1">the child actor;<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.3">
+            <p id="section-7.1-2.3.1">the child Authority Set;<a href="#section-7.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.4">
+            <p id="section-7.1-2.4.1">the child <code>authority_hash</code>;<a href="#section-7.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.5">
+            <p id="section-7.1-2.5.1">the child Mission Intent's <code>intent_hash</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-7.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.6">
+            <p id="section-7.1-2.6.1">the delegation event identifier;<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.7">
+            <p id="section-7.1-2.7.1">the cascade mode; and<a href="#section-7.1-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.8">
+            <p id="section-7.1-2.8.1">the fan-out policy result.<a href="#section-7.1-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.1-3">The <code>parent</code> value is immutable after creation.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+<p id="section-7.1-4">The delegation event (<a href="#child-creation" class="auto internal xref">Section 6</a>) is the Child Mission's
 approval event. It <span class="bcp14">MUST</span> commit the issuance profile's integrity anchors
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): <code>authority_hash</code> over the
 child Authority Set and <code>intent_hash</code> over the child Mission Intent, and
 it <span class="bcp14">MUST</span> produce the immutable, accountable record the core approval
-event produces. A Child Mission is created under a parent grant rather
-than a first-party approval (<a href="#issuance-relationship" class="auto internal xref">Section 3</a>), so its human
+event produces.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+<p id="section-7.1-5">A Child Mission is created under a parent grant rather than a
+first-party approval (<a href="#issuance-relationship" class="auto internal xref">Section 3</a>), so its human
 accountability is inherited from the Parent Mission's own approval.
 Where the deployment requires a human approval event for child creation
 (<a href="#child-creation" class="auto internal xref">Section 6</a>), that event meets the issuance profile's
 approval-event requirements in full and its human Approver is the
-record's approver. Where creation is adjudicated by policy with no human
+record's approver.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+<p id="section-7.1-6">Where creation is adjudicated by policy with no human
 interaction (<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>), the record's approver is the
 adjudicating policy (identified by the <code>child_creation_policy</code> reference
 where the entry carries one, <a href="#fanout" class="auto internal xref">Section 9</a>) together with the Subject and
 Approver of the Parent Mission the parent grant resolves to, and the
-record <span class="bcp14">MUST</span> mark the approval as policy-adjudicated rather than human.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+record <span class="bcp14">MUST</span> mark the approval as policy-adjudicated rather than human.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2049,18 +2100,27 @@ or delegation right not present in the parent;<a href="#section-8-2.2.1" class="
 </li>
         <li class="normal" id="section-8-2.4">
           <p id="section-8-2.4.1">the child <span class="bcp14">MUST</span> be created only where the applicable parent entry's
-<code>delegation</code> member carries a <code>children</code> object (<a href="#fanout" class="auto internal xref">Section 9</a>), and a
-child entry's <code>delegation</code> policy <span class="bcp14">MUST NOT</span> be broader than the parent
-entry's: its <code>max_depth</code> <span class="bcp14">MUST</span> be no greater and its <code>allowed_delegates</code>
-            <span class="bcp14">MUST</span> be no wider, per the subset rule of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>;<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+<code>delegation</code> member carries a <code>children</code> object (<a href="#fanout" class="auto internal xref">Section 9</a>);<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.5">
-          <p id="section-8-2.5.1">non-delegable parent entries <span class="bcp14">MUST NOT</span> appear in child authority; and<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.5.1">a child entry's <code>delegation</code> policy <span class="bcp14">MUST NOT</span> be broader than the
+parent entry's, per the subset rule of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>:<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-2.5.2.1">
+              <p id="section-8-2.5.2.1.1">its <code>max_depth</code> <span class="bcp14">MUST</span> be no greater; and<a href="#section-8-2.5.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-8-2.5.2.2">
+              <p id="section-8-2.5.2.2.1">its <code>allowed_delegates</code> <span class="bcp14">MUST</span> be no wider;<a href="#section-8-2.5.2.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
 </li>
         <li class="normal" id="section-8-2.6">
-          <p id="section-8-2.6.1">child authority <span class="bcp14">MUST</span> be bound to the child actor identified in the
-request.<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.6.1">non-delegable parent entries <span class="bcp14">MUST NOT</span> appear in child authority; and<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.7">
+          <p id="section-8-2.7.1">child authority <span class="bcp14">MUST</span> be bound to the child actor identified in the
+request.<a href="#section-8-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-8-3">The Mission Issuer <span class="bcp14">MUST</span> compute the Child Mission's <code>authority_hash</code>
@@ -2213,74 +2273,84 @@ the limit.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
 Child Missions are every transitive descendant: its Child Missions,
 their children, and every further generation. The cascade trigger is
 any Parent Mission transition to a non-active state. This profile
-distinguishes terminal triggers from the one reversible trigger:<a href="#section-10-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-10-2.1">
-          <p id="section-10-2.1.1">Terminal triggers: parent <code>revoked</code> or <code>expired</code>
+distinguishes terminal triggers from the one reversible trigger.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10-2">
+        <dt id="section-10-2.1">Terminal triggers:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.2">
+          <p id="section-10-2.2.1">Parent <code>revoked</code> or <code>expired</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), <code>completed</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), <code>superseded</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), or <code>cascaded</code>
 (<a href="#child-state" class="auto internal xref">Section 10.1</a>, when the parent is itself a Child Mission that was
-cascade-terminated). On a terminal trigger the Mission Issuer <span class="bcp14">MUST</span> stop
-new derivation under dependent Child Missions and, under <code>immediate</code>
-cascade, transition each dependent child to the terminal <code>cascaded</code>
-state (<a href="#child-state" class="auto internal xref">Section 10.1</a>). Cascade is transitive: the children of a
-<code>cascaded</code> parent cascade in turn under the same mode, in generation
-order, so a terminal trigger reaches every descendant.<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-10-2.2">
-          <p id="section-10-2.2.1">Reversible trigger: parent <code>suspended</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). The Mission Issuer
-<span class="bcp14">MUST</span> stop new derivation under dependent Child Missions while the
-parent is suspended, but <span class="bcp14">MUST NOT</span> drive them to a terminal state. When
-the parent is resumed to <code>active</code>, dependent children return to their
-pre-suspension state and may derive again. Reporting of a dependent
-child while its parent is suspended is governed by <a href="#child-state" class="auto internal xref">Section 10.1</a>.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-10-3">A <code>superseded</code> parent does not transfer its Child Missions to the
-successor. The successor Mission carries a freshly derived Authority Set
-that does not inherit the predecessor's authority by reference
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), so a Child Mission
-that was a strict subset of the predecessor is not guaranteed to be a
-subset of the successor. The Mission Issuer therefore <span class="bcp14">MUST</span> treat
-<code>superseded</code> as a terminal cascade trigger and <span class="bcp14">MUST NOT</span> silently re-bind
-children to the successor. Continuing child work under the successor
-requires an explicit new Child Mission creation (<a href="#child-creation" class="auto internal xref">Section 6</a>)
-under a successor grant, which re-runs strict-subset validation
-(<a href="#strict-subset" class="auto internal xref">Section 8.1</a>) against the successor's Authority Set.<a href="#section-10-3" class="pilcrow">¶</a></p>
-<p id="section-10-4">Cascade under this profile is issuer-committed. The Mission Issuer
-<span class="bcp14">MUST</span> implement the <code>immediate</code> cascade mode and record the mode on the
-Child Mission:<a href="#section-10-4" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-10-5">
-        <dt id="section-10-5.1">
-<code>immediate</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-10-5.2">
-          <p id="section-10-5.2.1">On a terminal trigger the Child Mission transitions to the <code>cascaded</code>
-state when the parent transition commits. On the reversible trigger
-the child is held non-active while the parent is suspended and
-restored to its prior state on parent resume.<a href="#section-10-5.2.1" class="pilcrow">¶</a></p>
+cascade-terminated).<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+<p id="section-10-2.2.2">On a terminal trigger the Mission Issuer <span class="bcp14">MUST</span> stop new derivation
+under dependent Child Missions and, under <code>immediate</code> cascade, <span class="bcp14">MUST</span>
+transition each dependent child to the terminal <code>cascaded</code> state
+(<a href="#child-state" class="auto internal xref">Section 10.1</a>).<a href="#section-10-2.2.2" class="pilcrow">¶</a></p>
+<p id="section-10-2.2.3">Cascade is transitive: the children of a <code>cascaded</code> parent cascade
+in turn under the same mode, in generation order, so a terminal
+trigger reaches every descendant.<a href="#section-10-2.2.3" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.3">Reversible trigger:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.4">
+          <p id="section-10-2.4.1">Parent <code>suspended</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+<p id="section-10-2.4.2">While the parent is suspended the Mission Issuer <span class="bcp14">MUST</span> stop new
+derivation under dependent Child Missions, but <span class="bcp14">MUST NOT</span> drive them
+to a terminal state. When the parent is resumed to <code>active</code>,
+dependent children return to their pre-suspension state and may
+derive again. Reporting of a dependent child while its parent is
+suspended is governed by <a href="#child-state" class="auto internal xref">Section 10.1</a>.<a href="#section-10-2.4.2" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-10-6">Two consumer-verified cascade modes, <code>bounded_staleness</code> and
+<p id="section-10-3">A <code>superseded</code> parent does not transfer its Child Missions to the
+successor. The Mission Issuer <span class="bcp14">MUST</span> treat <code>superseded</code> as a terminal
+cascade trigger and <span class="bcp14">MUST NOT</span> silently re-bind children to the
+successor.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4">The reason is how successor authority is derived: the successor
+Mission carries a freshly derived Authority Set that does not inherit
+the predecessor's authority by reference
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), so a Child Mission
+that was a strict subset of the predecessor is not guaranteed to be a
+subset of the successor.<a href="#section-10-4" class="pilcrow">¶</a></p>
+<p id="section-10-5">Continuing child work under the successor requires an explicit new
+Child Mission creation (<a href="#child-creation" class="auto internal xref">Section 6</a>) under a successor grant,
+which re-runs strict-subset validation (<a href="#strict-subset" class="auto internal xref">Section 8.1</a>) against the
+successor's Authority Set.<a href="#section-10-5" class="pilcrow">¶</a></p>
+<p id="section-10-6">Cascade under this profile is issuer-committed. The Mission Issuer
+<span class="bcp14">MUST</span> implement the <code>immediate</code> cascade mode and record the mode on the
+Child Mission:<a href="#section-10-6" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10-7">
+        <dt id="section-10-7.1">
+<code>immediate</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-7.2">
+          <p id="section-10-7.2.1">On a terminal trigger the Child Mission transitions to the <code>cascaded</code>
+state when the parent transition commits. On the reversible trigger
+the child is held non-active while the parent is suspended and
+restored to its prior state on parent resume.<a href="#section-10-7.2.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-10-8">Two consumer-verified cascade modes, <code>bounded_staleness</code> and
 <code>status_required</code>, which trade issuer-committed transitions for
 consumer-side parent-state checks, are experimental and defined in
 <a href="#experimental-cascade" class="auto internal xref">Appendix A</a>. A cascade mode <span class="bcp14">MUST NOT</span> allow a Child Mission
 to continue deriving
-new credentials after the parent is known to be non-active.<a href="#section-10-6" class="pilcrow">¶</a></p>
-<p id="section-10-7">A consumer that does not recognize a Child Mission's <code>cascade_mode</code>
+new credentials after the parent is known to be non-active.<a href="#section-10-8" class="pilcrow">¶</a></p>
+<p id="section-10-9">A consumer that does not recognize a Child Mission's <code>cascade_mode</code>
 value <span class="bcp14">MUST</span> verify parent state, within the deployment's declared
 freshness window, before each reliance on the child's authority: an
 unrecognized mode may place the interim verification obligation on
-the consumer.<a href="#section-10-7" class="pilcrow">¶</a></p>
-<p id="section-10-8">Cascade modes may differ across one lineage. The Mission Issuer <span class="bcp14">MUST</span>
+the consumer.<a href="#section-10-9" class="pilcrow">¶</a></p>
+<p id="section-10-10">Cascade modes may differ across one lineage. The Mission Issuer <span class="bcp14">MUST</span>
 commit the terminal cascade transition for every dependent Child
 Mission regardless of its cascade mode; the mode governs only what
-consumers must verify in the interim. An <code>immediate</code>-mode descendant
-under a consumer-verified parent is therefore never orphaned: its own
-transition is committed even where the parent's is consumer-observed.<a href="#section-10-8" class="pilcrow">¶</a></p>
-<p id="section-10-9">The cascade behavior by trigger:<a href="#section-10-9" class="pilcrow">¶</a></p>
+consumers must verify in the interim.<a href="#section-10-10" class="pilcrow">¶</a></p>
+<p id="section-10-11">An <code>immediate</code>-mode descendant under a consumer-verified parent is
+therefore never orphaned: its own transition is committed even where
+the parent's is consumer-observed.<a href="#section-10-11" class="pilcrow">¶</a></p>
+<p id="section-10-12">The cascade behavior by trigger:<a href="#section-10-12" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
         <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -2348,59 +2418,61 @@ whose root ancestor is non-active is refused derivation even before
 its own cascade transition commits.<a href="#section-10.1-5" class="pilcrow">¶</a></p>
 <p id="section-10.1-6">Where a deployment also runs the status profile's completion
 machinery (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Completion
-section), discharge
-propagates entry-wise: when a parent Authority Set entry is
-discharged, the Mission Issuer <span class="bcp14">MUST</span> discharge every child entry
-justified by it, so spent authority does not survive in the subtree.
-The issuer holds both records, so the propagation needs no consumer
-coordination.<a href="#section-10.1-6" class="pilcrow">¶</a></p>
-<p id="section-10.1-7">While a parent is <code>suspended</code>, the issuer <span class="bcp14">MUST</span> report each dependent
+section), discharge propagates entry-wise: when a parent Authority Set
+entry is discharged, the Mission Issuer <span class="bcp14">MUST</span> discharge every child
+entry justified by it, so spent authority does not survive in the
+subtree.<a href="#section-10.1-6" class="pilcrow">¶</a></p>
+<p id="section-10.1-7">The issuer holds both records, so the propagation needs no consumer
+coordination.<a href="#section-10.1-7" class="pilcrow">¶</a></p>
+<p id="section-10.1-8">While a parent is <code>suspended</code>, the issuer <span class="bcp14">MUST</span> report each dependent
 child's state as <code>suspended</code> on every state-reporting surface (the
 Mission Status operation and token introspection,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), and <span class="bcp14">MUST</span> restore the
-child's own state when the parent resumes to <code>active</code>. A child whose own
-<code>expires_at</code> passes during the suspension is <code>expired</code>: expiry takes
-precedence over the projected <code>suspended</code> state.<a href="#section-10.1-7" class="pilcrow">¶</a></p>
-<p id="section-10.1-8">Projection onset and lift are not silent. Each is a committed
+child's own state when the parent resumes to <code>active</code>.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
+<p id="section-10.1-9">A child whose own <code>expires_at</code> passes during the suspension is
+<code>expired</code>: expiry takes precedence over the projected <code>suspended</code>
+state.<a href="#section-10.1-9" class="pilcrow">¶</a></p>
+<p id="section-10.1-10">Projection onset and lift are not silent. Each is a committed
 metadata-only change on every affected child for the purposes of the
 status profile's state version
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>): the child's state
 version increments at onset and again at lift, and, where the
 deployment runs Lifecycle Signals
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), a lifecycle-change
-event is emitted for each affected child.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
-<p id="section-10.1-9">Likewise, once a terminal cascade trigger (<a href="#cascade" class="auto internal xref">Section 10</a>) commits at any
+event is emitted for each affected child.<a href="#section-10.1-10" class="pilcrow">¶</a></p>
+<p id="section-10.1-11">Likewise, once a terminal cascade trigger (<a href="#cascade" class="auto internal xref">Section 10</a>) commits at any
 ancestor, the issuer <span class="bcp14">MUST</span> report each dependent descendant's state as
 <code>cascaded</code> on every state-reporting surface (the Mission Status
 operation and token introspection,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) from that commit, ahead
-of each descendant's own per-generation transition. The transitive
-transitions still commit in generation order (<a href="#cascade" class="auto internal xref">Section 10</a>); this rule
-bounds only what a consumer reads, so a consumer keying on a
-descendant's own state never reads <code>active</code> mid-cascade.<a href="#section-10.1-9" class="pilcrow">¶</a></p>
-<p id="section-10.1-10">Expiry takes precedence over <code>cascaded</code> as it does over the projected
+of each descendant's own per-generation transition.<a href="#section-10.1-11" class="pilcrow">¶</a></p>
+<p id="section-10.1-12">The transitive transitions still commit in generation order
+(<a href="#cascade" class="auto internal xref">Section 10</a>); this rule bounds only what a consumer reads, so a
+consumer keying on a descendant's own state never reads <code>active</code>
+mid-cascade.<a href="#section-10.1-12" class="pilcrow">¶</a></p>
+<p id="section-10.1-13">Expiry takes precedence over <code>cascaded</code> as it does over the projected
 <code>suspended</code> state: where a child's own <code>expires_at</code> coincides with a
 terminal cascade of its parent (for example, a child whose <code>expires_at</code>
 equals the parent's on parent expiry), the child's own <code>expired</code> state
 wins and it is reported <code>expired</code>, not <code>cascaded</code>. This matches the
 <code>cascaded</code> state, which a child enters only when its own expiry was not
-reached.<a href="#section-10.1-10" class="pilcrow">¶</a></p>
-<p id="section-10.1-11">Mission Status for a Child Mission <span class="bcp14">SHOULD</span> also include a parent
-projection for authorized callers, as additional context:<a href="#section-10.1-11" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-10.1-12">
-          <dt id="section-10.1-12.1">
+reached.<a href="#section-10.1-13" class="pilcrow">¶</a></p>
+<p id="section-10.1-14">Mission Status for a Child Mission <span class="bcp14">SHOULD</span> also include a parent
+projection for authorized callers, as additional context:<a href="#section-10.1-14" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10.1-15">
+          <dt id="section-10.1-15.1">
 <code>parent</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-12.2">
-            <p id="section-10.1-12.2.1">Object containing parent <code>id</code>, <code>issuer</code>, current parent <code>state</code> when
-known, <code>cascade_mode</code>, and freshness information.<a href="#section-10.1-12.2.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-10.1-15.2">
+            <p id="section-10.1-15.2.1">Object containing parent <code>id</code>, <code>issuer</code>, current parent <code>state</code> when
+known, <code>cascade_mode</code>, and freshness information.<a href="#section-10.1-15.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-10.1-13">Under <code>immediate</code> cascade a consumer needs no parent-state check of its
+<p id="section-10.1-16">Under <code>immediate</code> cascade a consumer needs no parent-state check of its
 own: it relies on the Mission Issuer's child state transition, read
 from the child's own state surfaces. The consumer obligations of the
 experimental consumer-verified modes are defined with those modes
-(<a href="#experimental-cascade" class="auto internal xref">Appendix A</a>).<a href="#section-10.1-13" class="pilcrow">¶</a></p>
+(<a href="#experimental-cascade" class="auto internal xref">Appendix A</a>).<a href="#section-10.1-16" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2570,7 +2642,7 @@ object by these values.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 Mission that replaces a predecessor for a broader task. Mission Child
 Delegation creates a dependent Mission for a child actor with narrower
 authority. Expansion widens by fresh approval; Child Missions attenuate
-within parent authority. The two <span class="bcp14">MUST NOT</span> be conflated.<a href="#section-12-1" class="pilcrow">¶</a></p>
+within parent authority. The two operations are distinct.<a href="#section-12-1" class="pilcrow">¶</a></p>
 <p id="section-12-2">A Child Mission <span class="bcp14">MAY</span> be expanded, but only within the parent's authority:
 a successor Child Mission <span class="bcp14">MUST</span> remain a strict subset of the Parent
 Mission's Authority Set (<a href="#strict-subset" class="auto internal xref">Section 8.1</a>) and keeps the same <code>parent</code>.
@@ -2725,14 +2797,25 @@ the two match.<a href="#section-17.4-1" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-17.5-1">A child creation request carries <code>parent_token</code>, a refresh token or
 other parent grant, through PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>, so that credential sits at
-rest in the PAR store until the pushed request is redeemed or expires. A
-deployment <span class="bcp14">MUST</span> protect the PAR store as credential storage: it <span class="bcp14">SHOULD</span>
-hold <code>parent_token</code> only until its <code>request_uri</code> is redeemed or expires
-and then delete it, <span class="bcp14">MUST NOT</span> write <code>parent_token</code> to request logs,
-traces, or audit records in the clear, and <span class="bcp14">MUST</span> redact or hash it
-wherever the pushed request is otherwise recorded. Child delegation
-evidence (<a href="#child-evidence" class="auto internal xref">Section 11</a>) records the parent Mission by identifier
-and authority hash, never the parent grant itself.<a href="#section-17.5-1" class="pilcrow">¶</a></p>
+rest in the PAR store until the pushed request is redeemed or expires.
+A deployment <span class="bcp14">MUST</span> protect the PAR store as credential storage:<a href="#section-17.5-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-17.5-2.1">
+            <p id="section-17.5-2.1.1">it <span class="bcp14">SHOULD</span> hold <code>parent_token</code> only until its <code>request_uri</code> is
+redeemed or expires, and then delete it;<a href="#section-17.5-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-17.5-2.2">
+            <p id="section-17.5-2.2.1">it <span class="bcp14">MUST NOT</span> write <code>parent_token</code> to request logs, traces, or audit
+records in the clear; and<a href="#section-17.5-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-17.5-2.3">
+            <p id="section-17.5-2.3.1">it <span class="bcp14">MUST</span> redact or hash <code>parent_token</code> wherever the pushed request is
+otherwise recorded.<a href="#section-17.5-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-17.5-3">Child delegation evidence (<a href="#child-evidence" class="auto internal xref">Section 11</a>) records the parent
+Mission by identifier and authority hash, never the parent grant
+itself.<a href="#section-17.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="subset-bugs">
@@ -2917,7 +3000,9 @@ not create it.<a href="#section-19-7" class="pilcrow">¶</a></p>
 <a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-experimental-consumer-verif" class="section-name selfRef">Experimental Consumer-Verified Cascade Modes</a>
       </h2>
 <p id="appendix-A-1">This appendix is <strong>experimental</strong>: adopt it for evaluation, not as a
-stable interface. It defines two cascade modes that trade the
+stable interface. It is not part of this profile's conformance
+surface, so its rules are stated in lowercase rather than as BCP 14
+keywords. It defines two cascade modes that trade the
 issuer-committed transition of <code>immediate</code> (<a href="#cascade" class="auto internal xref">Section 10</a>) for
 consumer-side parent-state checks, for deployments where the Mission
 Issuer cannot commit child transitions synchronously with the parent's.
@@ -2942,13 +3027,13 @@ child is otherwise confirmed non-active.<a href="#appendix-A-2.2.1" class="pilcr
 <dt id="appendix-A-2.3">
 <code>status_required</code>:</dt>
         <dd style="margin-left: 1.5em" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Consumers <span class="bcp14">MUST</span> check parent state, per reliance decision and within
+          <p id="appendix-A-2.4.1">Consumers must check parent state, per reliance decision and within
 the deployment's declared freshness window
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), before accepting
-child Mission authority. The Mission Issuer <span class="bcp14">MUST</span> select this mode only
+child Mission authority. The Mission Issuer must select this mode only
 where every audience of child tokens is known, by registration or
 deployment policy, to implement this profile's parent-state check;
-otherwise the Mission Issuer <span class="bcp14">MUST</span> compensate with short child-token
+otherwise the Mission Issuer must compensate with short child-token
 lifetimes or introspection-required paths.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
@@ -2983,14 +3068,21 @@ lifetimes or introspection-required paths.<a href="#appendix-A-2.4.1" class="pil
           </tr>
         </tbody>
       </table>
-<p id="appendix-A-5">A consumer that cannot obtain parent state <span class="bcp14">MUST</span> obey the mode: for
-<code>status_required</code>, it <span class="bcp14">MUST</span> refuse; for <code>bounded_staleness</code>, it <span class="bcp14">MUST</span>
-refuse after the bound. For derivation under these modes, the Mission
-Issuer <span class="bcp14">MAY</span> rely on a prior confirmed-active parent observation within
-the mode's freshness rules where it cannot observe the parent
-synchronously; a Child Mission <span class="bcp14">MUST NOT</span> derive after the parent is
-known to be non-active. The <code>immediate</code> rules of <a href="#cascade" class="auto internal xref">Section 10</a> and
-<a href="#child-state" class="auto internal xref">Section 10.1</a> otherwise apply unchanged.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
+<p id="appendix-A-5">A consumer that cannot obtain parent state must obey the mode:<a href="#appendix-A-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-6.1">
+          <p id="appendix-A-6.1.1">under <code>status_required</code>, it must refuse; and<a href="#appendix-A-6.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-6.2">
+          <p id="appendix-A-6.2.1">under <code>bounded_staleness</code>, it must refuse after the bound.<a href="#appendix-A-6.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="appendix-A-7">For derivation under these modes, the Mission Issuer may rely on a
+prior confirmed-active parent observation within the mode's freshness
+rules where it cannot observe the parent synchronously; a Child
+Mission must not derive after the parent is known to be non-active.
+The <code>immediate</code> rules of <a href="#cascade" class="auto internal xref">Section 10</a> and <a href="#child-state" class="auto internal xref">Section 10.1</a> otherwise
+apply unchanged.<a href="#appendix-A-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="acknowledgments">

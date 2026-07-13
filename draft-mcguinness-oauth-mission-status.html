@@ -1556,7 +1556,7 @@ for a specific audience <span class="bcp14">MUST</span> send it.<a href="#sectio
           <dd style="margin-left: 1.5em" id="section-3.1-2.6">
             <p id="section-3.1-2.6.1"><span class="bcp14">REQUIRED</span>. A string. A client-generated nonce binding the
 response to this request. It <span class="bcp14">MUST</span> be unique per request within the
-response lifetime; a consumer <span class="bcp14">MUST</span> reject a response whose <code>nonce</code>
+response lifetime. A consumer <span class="bcp14">MUST</span> reject a response whose <code>nonce</code>
 does not equal the one it sent. This is a standard client challenge:
 echoing it in the signed response anti-replay-binds that response to
 this specific request.<a href="#section-3.1-2.6.1" class="pilcrow">¶</a></p>
@@ -1570,8 +1570,9 @@ this specific request.<a href="#section-3.1-2.6.1" class="pilcrow">¶</a></p>
         <h3 id="name-authentication">
 <a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-authentication" class="section-name selfRef">Authentication</a>
         </h3>
-<p id="section-3.2-1">The request <span class="bcp14">MUST</span> be authenticated. The AS <span class="bcp14">MUST</span> support at least one of
-the following; the client <span class="bcp14">MUST</span> use exactly one per request:<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<p id="section-3.2-1">The request <span class="bcp14">MUST</span> be authenticated. The AS <span class="bcp14">MUST</span> support at least one
+of the following mechanisms. The client <span class="bcp14">MUST</span> use exactly one of them
+per request:<a href="#section-3.2-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-3.2-2">
 <li id="section-3.2-2.1">
             <p id="section-3.2-2.1.1"><strong>mTLS client authentication</strong> <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>. The AS validates the
@@ -1826,23 +1827,39 @@ rejecting <code>none</code> and any algorithm not listed;<a href="#section-3.4-1
         <h3 id="name-caching">
 <a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-caching" class="section-name selfRef">Caching</a>
         </h3>
-<p id="section-3.5-1">Consumers <span class="bcp14">SHOULD</span> cache a response keyed on (<code>mission_id</code>, audience),
-or on (<code>mission_id</code>, requester identifier) for a state-only response,
-until <code>mission.fresh_until</code>. Consumers <span class="bcp14">MUST NOT</span> use a cached response
-after <code>mission.fresh_until</code>. When the AS advertises
+<p id="section-3.5-1">Caching follows these rules:<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.5-2.1">
+            <p id="section-3.5-2.1.1"><strong>Cache key.</strong> Consumers <span class="bcp14">SHOULD</span> cache a response keyed on
+(<code>mission_id</code>, audience), or on (<code>mission_id</code>, requester
+identifier) for a state-only response, until <code>mission.fresh_until</code>.<a href="#section-3.5-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.5-2.2">
+            <p id="section-3.5-2.2.1"><strong>Hard stop.</strong> Consumers <span class="bcp14">MUST NOT</span> use a cached response after
+<code>mission.fresh_until</code>. In particular, a consumer <span class="bcp14">MUST NOT</span> extend
+reliance on a cached <code>suspended</code> (or any non-<code>active</code>) response
+beyond <code>mission.fresh_until</code>.<a href="#section-3.5-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.5-2.3">
+            <p id="section-3.5-2.3.1"><strong>Freshness cap.</strong> When the AS advertises
 <code>mission_max_stale_seconds</code> (<a href="#as-metadata" class="auto internal xref">Section 9</a>), it <span class="bcp14">MUST NOT</span> set
-<code>mission.fresh_until</code> later than the response <code>iat</code> plus that value, so
-report freshness never exceeds the deployment's advertised
-revocation-propagation tolerance. When comparing the current time to
+<code>mission.fresh_until</code> later than the response <code>iat</code> plus that
+value.<a href="#section-3.5-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.5-2.4">
+            <p id="section-3.5-2.4.1"><strong>Skew tolerance.</strong> When comparing the current time to
 <code>mission.fresh_until</code>, a consumer <span class="bcp14">MAY</span> allow up to 30 seconds of
-tolerance for the <code>active</code> state only, and no tolerance for any other
-state. This tolerance is a clock-skew allowance on the reliance path,
-bounding the disagreement between the AS's and the consumer's clocks,
-not a property of state reversibility; it <span class="bcp14">MUST NOT</span> exceed the AS's
-advertised <code>mission_max_stale_seconds</code> (<a href="#as-metadata" class="auto internal xref">Section 9</a>). A suspended
-Mission may be resumed to <code>active</code>, so a consumer <span class="bcp14">MUST NOT</span> extend
-reliance on a cached <code>suspended</code> (or any non-<code>active</code>) response beyond
-<code>mission.fresh_until</code>.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+tolerance for the <code>active</code> state only, and no tolerance for any
+other state. The tolerance <span class="bcp14">MUST NOT</span> exceed the AS's advertised
+<code>mission_max_stale_seconds</code> (<a href="#as-metadata" class="auto internal xref">Section 9</a>).<a href="#section-3.5-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.5-3">The freshness cap keeps report freshness within the deployment's
+advertised revocation-propagation tolerance. The skew tolerance is a
+clock-skew allowance on the reliance path, bounding the disagreement
+between the AS's and the consumer's clocks, not a property of state
+reversibility. The hard stop is absolute for non-<code>active</code> states
+because a suspended Mission may be resumed to <code>active</code>.<a href="#section-3.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-status-anti-oracle">
@@ -1858,7 +1875,7 @@ produce indistinguishable responses (HTTP 404 with a generic
 not-found body; see <a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>). The AS <span class="bcp14">MUST</span> return an
 identical HTTP status code, response body, and headers for the two
 cases. The AS <span class="bcp14">SHOULD NOT</span> vary response timing in a way that
-distinguishes the two cases, and <span class="bcp14">SHOULD</span> mitigate timing side channels
+distinguishes the two cases. It <span class="bcp14">SHOULD</span> mitigate timing side channels
 (for example by padding response time or by taking a uniform lookup
 path for both the unknown and the unauthorized case).<a href="#section-3.6-2" class="pilcrow">¶</a></p>
 </section>
@@ -1972,16 +1989,12 @@ consumer recognizes it.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
             </tr>
           </tbody>
         </table>
-<p id="section-3.7-7">Success outcomes return HTTP 200 with the signed Mission Status Response
-carrying <code>state</code>. Wire errors (<code>unauthorized</code>, <code>not_found</code>, <code>conflict</code>,
-<code>stale_version</code>, <code>rate_limited</code>, <code>unavailable</code>) return the matching
-HTTP status with a JSON body; the two 409 symbols arise only on
-lifecycle operations (<a href="#idempotency" class="auto internal xref">Section 6.7</a>). Note the distinction between the two access
-failures: <code>unauthorized</code> (401) means the request carried no valid
-authentication, whereas a request that is authenticated but not
-authorized for the referenced Mission returns <code>not_found</code> (404), never
-401, so that an unauthorized reference is indistinguishable from an
-unknown one (<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.6</a>). The error body is:<a href="#section-3.7-7" class="pilcrow">¶</a></p>
+<p id="section-3.7-7">Note the distinction between the two access failures: <code>unauthorized</code>
+(401) means the request carried no valid authentication, whereas a
+request that is authenticated but not authorized for the referenced
+Mission returns <code>not_found</code> (404), never 401, so that an unauthorized
+reference is indistinguishable from an unknown one
+(<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.6</a>). The error body is:<a href="#section-3.7-7" class="pilcrow">¶</a></p>
 <div class="lang-http-message sourcecode" id="section-3.7-8">
 <pre>
 HTTP/1.1 404 Not Found
@@ -2168,12 +2181,11 @@ Issuance gating treats any state other than <code>active</code> as
 non-deriving, exactly as the issuance profile gates on <code>active</code>.<a href="#section-6-3" class="pilcrow">¶</a></p>
 <p id="section-6-4">A transition to <code>suspended</code> or <code>completed</code> gates new derivation only.
 Tokens already derived under the Mission remain valid until their own
-<code>exp</code>, exactly as in the issuance profile's revocation model: suspending
-or completing a Mission stops new derivation; it does not retroactively
-invalidate access tokens already issued, mirroring the treatment of
-<code>superseded</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>). A
-deployment that needs a prompt cutoff on outstanding tokens uses the
-propagation mechanisms of <a href="#revocation-enforcement-classes" class="auto internal xref">Section 8</a>.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<code>exp</code>, exactly as in the issuance profile's revocation model and
+mirroring the treatment of <code>superseded</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>). A deployment that
+needs a prompt cutoff on outstanding tokens uses the propagation
+mechanisms of <a href="#revocation-enforcement-classes" class="auto internal xref">Section 8</a>.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <div id="operations">
 <section id="section-6.1">
         <h3 id="name-operations">
@@ -2258,13 +2270,13 @@ so a consumer sees the pending outcome.<a href="#section-6.1-5" class="pilcrow">
         </h3>
 <p id="section-6.2-1">An operation is legal only from the source states below. A terminal
 state (<code>revoked</code>, <code>expired</code>, <code>completed</code>, or the companion-defined
-<code>superseded</code> and <code>cascaded</code>) admits no transition; an operation whose
+<code>superseded</code> and <code>cascaded</code>) admits no transition. An operation whose
 resulting state equals the current state, terminal or not, is
-idempotent success (<a href="#idempotency" class="auto internal xref">Section 6.7</a>). <code>resume</code> is the sole exception:
-it is legal only from <code>suspended</code> (its resulting state, <code>active</code>, is
-also the baseline a Mission holds before any suspension), so <code>resume</code>
-on an <code>active</code> or terminal Mission is a conflict, not idempotent
-success.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+idempotent success (<a href="#idempotency" class="auto internal xref">Section 6.7</a>).<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<p id="section-6.2-2"><code>resume</code> is the sole exception: it is legal only from <code>suspended</code>
+(its resulting state, <code>active</code>, is also the baseline a Mission holds
+before any suspension), so <code>resume</code> on an <code>active</code> or terminal
+Mission is a conflict, not idempotent success.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
 <table class="center" id="table-3">
           <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
@@ -2321,17 +2333,17 @@ success.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
             </tr>
           </tbody>
         </table>
-<p id="section-6.2-3"><code>complete</code> is legal from <code>suspended</code> as well as <code>active</code>: completion is
+<p id="section-6.2-4"><code>complete</code> is legal from <code>suspended</code> as well as <code>active</code>: completion is
 a monotonic narrowing to a terminal state and needs no derivation
 window, so a suspended Mission need not first be resumed to be
-completed.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
-<p id="section-6.2-4">Requests are adjudicated by the single rule of <a href="#idempotency" class="auto internal xref">Section 6.7</a>: an
+completed.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.2-5">Requests are adjudicated by the single rule of <a href="#idempotency" class="auto internal xref">Section 6.7</a>: an
 operation whose resulting state equals the Mission's current state is
-idempotent success, with the <code>resume</code> exception above, and any other
+idempotent success, with the <code>resume</code> exception above. Any other
 operation not legal from the current state, including <code>resume</code> on a
 Mission that is not <code>suspended</code>, is refused as a conflict. A Mission
 that reaches its <code>expires_at</code> transitions to <code>expired</code> independently of
-this endpoint, from <code>active</code> or <code>suspended</code>.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+this endpoint, from <code>active</code> or <code>suspended</code>.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="state-machine">
@@ -2554,28 +2566,37 @@ authentication mechanism (<a href="#mission-status-authentication" class="auto i
 governed by an explicit lifecycle authorization: a <code>mission_lifecycle</code>
 scope or a deployment-defined equivalent grant that names who may
 perform the transition. The AS <span class="bcp14">MUST</span> refuse a caller that carries no
-such authorization. When a sender-constrained access token (DPoP-bound
-<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or mTLS-bound <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>) authenticates the call, the
-token's <code>sub</code> is the acting party and the token <span class="bcp14">MUST</span> carry that
-authorization. When the caller authenticates directly as a client (mTLS
-client authentication <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> or private-key JWT <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>), the
-authenticated client is the acting party and the AS <span class="bcp14">MUST</span> check the
-deployment-defined lifecycle grant bound to that client. The AS <span class="bcp14">MUST</span>
-record the acting party and <span class="bcp14">SHOULD</span> reflect it in the signed response's
-audit surface (for example in <code>sub</code> or a deployment-defined audit
-member of the Mission Status Response).<a href="#section-6.5-1" class="pilcrow">¶</a></p>
-<p id="section-6.5-2">Which parties may perform which operation is deployment-defined. Typical
+such authorization.<a href="#section-6.5-1" class="pilcrow">¶</a></p>
+<p id="section-6.5-2">The acting party, and where the AS checks the lifecycle
+authorization, follow from the authentication case:<a href="#section-6.5-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6.5-3">
+<li id="section-6.5-3.1">
+            <p id="section-6.5-3.1.1">When a sender-constrained access token (DPoP-bound <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or
+mTLS-bound <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>) authenticates the call, the token's <code>sub</code>
+is the acting party. The token <span class="bcp14">MUST</span> carry that authorization.<a href="#section-6.5-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.5-3.2">
+            <p id="section-6.5-3.2.1">When the caller authenticates directly as a client (mTLS client
+authentication <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> or private-key JWT <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>), the
+authenticated client is the acting party. The AS <span class="bcp14">MUST</span> check the
+deployment-defined lifecycle grant bound to that client.<a href="#section-6.5-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-6.5-4">In every case the AS <span class="bcp14">MUST</span> record the acting party and <span class="bcp14">SHOULD</span> reflect
+it in the signed response's audit surface (for example in <code>sub</code> or a
+deployment-defined audit member of the Mission Status Response).<a href="#section-6.5-4" class="pilcrow">¶</a></p>
+<p id="section-6.5-5">Which parties may perform which operation is deployment-defined. Typical
 deployments authorize <code>revoke</code> to the Mission's Subject or Approver and
 to administrators; <code>suspend</code> and <code>resume</code> to administrators; and
-<code>complete</code> to the requesting client or an administrator.<a href="#section-6.5-2" class="pilcrow">¶</a></p>
-<p id="section-6.5-3">Because <code>resume</code> returns a suspended Mission to <code>active</code> and so undoes
+<code>complete</code> to the requesting client or an administrator.<a href="#section-6.5-5" class="pilcrow">¶</a></p>
+<p id="section-6.5-6">Because <code>resume</code> returns a suspended Mission to <code>active</code> and so undoes
 the containment a <code>suspend</code> established, a deployment <span class="bcp14">SHOULD</span> require a
 distinct or elevated authorization for <code>resume</code>, mirroring the
 treatment of bulk <code>resume</code> in Mission Management
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>).<a href="#section-6.5-3" class="pilcrow">¶</a></p>
-<p id="section-6.5-4">The AS <span class="bcp14">MUST</span> refuse an unauthorized lifecycle request with the
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>).<a href="#section-6.5-6" class="pilcrow">¶</a></p>
+<p id="section-6.5-7">The AS <span class="bcp14">MUST</span> refuse an unauthorized lifecycle request with the
 not-found response shape of <a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>, so the endpoint
-does not act as a Mission enumeration oracle.<a href="#section-6.5-4" class="pilcrow">¶</a></p>
+does not act as a Mission enumeration oracle.<a href="#section-6.5-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="worked-examples">
@@ -2700,13 +2721,13 @@ request.<a href="#section-6.6-12" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-6.7-1">The request <code>nonce</code> (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>, Operations) is
 the idempotency key. The AS <span class="bcp14">MUST</span> deduplicate lifecycle requests by the
-triple (client, <code>mission_id</code>, <code>nonce</code>) for a bounded window and, on a
+triple (client, <code>mission_id</code>, <code>nonce</code>) for a bounded window. On a
 retransmit carrying a <code>nonce</code> already seen for that client and
-<code>mission_id</code>, <span class="bcp14">MUST</span> replay the original response rather than re-execute
-the operation. This window <span class="bcp14">MUST</span> be at least the validity span of the
-signed response the AS would replay (its <code>iat</code> to <code>exp</code>,
+<code>mission_id</code>, the AS <span class="bcp14">MUST</span> replay the original response rather than
+re-execute the operation. The window <span class="bcp14">MUST</span> be at least the validity
+span of the signed response the AS would replay (its <code>iat</code> to <code>exp</code>,
 <a href="#mission-status-response" class="auto internal xref">Section 3.4</a>), so any retransmit that could still
-present a live response is deduplicated; a deployment <span class="bcp14">MAY</span> use a longer
+present a live response is deduplicated. A deployment <span class="bcp14">MAY</span> use a longer
 window. This makes a retransmit safe against reordering: a
 delayed <code>suspend</code> retry that arrives after a <code>resume</code> is recognized as
 a duplicate and replays the original <code>suspend</code> response, so it cannot
@@ -2726,23 +2747,21 @@ against duplicate delivery, one against stale decisions.<a href="#section-6.7-2"
 state (<a href="#legal-transitions" class="auto internal xref">Section 6.2</a>) equals the Mission's current state is
 idempotent success, terminal or not: the AS returns the current
 Mission Status Response, with no state change and no event emitted.
-This covers a repeat of the same transition, such as <code>revoke</code> on a
-<code>revoked</code> Mission, <code>suspend</code> on a <code>suspended</code> Mission, or <code>complete</code> on
-a <code>completed</code> Mission. <code>resume</code> is the sole exception: it is legal only
-from <code>suspended</code>, and its resulting state <code>active</code> is also the baseline
-a Mission holds before any suspension, so <code>resume</code> on an <code>active</code>
-Mission (one never suspended, or already resumed) or on a terminal
-Mission is not idempotent success but a conflict. Any other operation
-not legal from the current state is likewise a conflict (for example
-that <code>resume</code> on an <code>active</code> or terminal Mission, or <code>suspend</code> against
-a terminal state): the AS <span class="bcp14">MUST</span> refuse it with HTTP 409 and a JSON body
-whose error symbol is <code>conflict</code>, leaving the Mission state unchanged.<a href="#section-6.7-3" class="pilcrow">¶</a></p>
-<p id="section-6.7-4">One idempotent case carries metadata. A <code>suspend</code> against a
+Any other operation not legal from the current state (for example
+<code>suspend</code> against a terminal state) is a conflict: the AS <span class="bcp14">MUST</span> refuse
+it with HTTP 409 and a JSON body whose error symbol is <code>conflict</code>,
+leaving the Mission state unchanged.<a href="#section-6.7-3" class="pilcrow">¶</a></p>
+<p id="section-6.7-4"><code>resume</code> is the sole exception to the idempotent-success arm. It is
+legal only from <code>suspended</code>, and its resulting state <code>active</code> is also
+the baseline a Mission holds before any suspension, so <code>resume</code> on an
+<code>active</code> Mission (one never suspended, or already resumed) or on a
+terminal Mission is not idempotent success but a conflict.<a href="#section-6.7-4" class="pilcrow">¶</a></p>
+<p id="section-6.7-5">One idempotent case carries metadata. A <code>suspend</code> against a
 <code>suspended</code> Mission whose <code>suspend_until</code> or <code>on_expiry</code> differ from
 the recorded values <span class="bcp14">MUST</span> update the recorded values, emitting the
 corresponding transition-metadata change and reporting the updated
 values in the response; silent acceptance without effect is not
-conforming.<a href="#section-6.7-4" class="pilcrow">¶</a></p>
+conforming.<a href="#section-6.7-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="relationship-to-rfc-7009">
@@ -2804,18 +2823,15 @@ rendered and committed, and carry no machine effect
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) on a
 <code>mission_resource_access</code> entry that carries one or more completion
 conditions. When a condition is met, the entry is <strong>discharged</strong>: the
-Authorization Server <span class="bcp14">MUST NOT</span> thereafter derive a token carrying that
-entry, exactly as it refuses derivation for a non-<code>active</code> Mission.<a href="#section-7-3" class="pilcrow">¶</a></p>
+Authorization Server no longer derives a token carrying that entry
+(<a href="#discharge" class="auto internal xref">Section 7.3</a>), exactly as it refuses derivation for a non-<code>active</code>
+Mission.<a href="#section-7-3" class="pilcrow">¶</a></p>
 <p id="section-7-4">Three properties make this safe inside the Mission model and this
 section requires all three:<a href="#section-7-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-5.1">
           <p id="section-7-5.1.1"><strong>Discharge is monotonic.</strong> It only removes an entry's authority; it
-can never widen the entry or the Mission. A prompt-injected agent
-therefore cannot use it to escalate: the worst it can do is spend
-its own authority sooner, which is not an escalation, though a forced
-premature discharge is an availability and guardrail-retirement
-concern (<a href="#completion-security" class="auto internal xref">Section 11.6</a>).<a href="#section-7-5.1.1" class="pilcrow">¶</a></p>
+can never widen the entry or the Mission.<a href="#section-7-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-5.2">
           <p id="section-7-5.2.1"><strong>Discharge composes with the subset rule.</strong> A derived entry carries
@@ -2829,12 +2845,13 @@ and an Authorization Server that cannot determine a condition's status
 refuses to derive.<a href="#section-7-5.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-7-6">Discharge gates at the entry, not the Mission, so a multi-resource
-Mission completes one entry at a time while the Mission remains
-<code>active</code> for the rest. It also strengthens the kill switch: a task
-that finishes stops issuing its own authority without waiting for a
-clock or a revoke. It is the enforceable counterpart of the inert
-<code>success_criteria</code>.<a href="#section-7-6" class="pilcrow">¶</a></p>
+<p id="section-7-6">The threat analysis of these properties, including why a
+prompt-injected agent cannot use discharge to escalate and the
+forced-premature-discharge residual, is given in
+<a href="#completion-security" class="auto internal xref">Section 11.6</a>.<a href="#section-7-6" class="pilcrow">¶</a></p>
+<p id="section-7-7">Discharge gates at the entry, not the Mission (<a href="#discharge" class="auto internal xref">Section 7.3</a>). It
+strengthens the kill switch: a task that finishes stops issuing its
+own authority without waiting for a clock or a revoke.<a href="#section-7-7" class="pilcrow">¶</a></p>
 <div id="issuance-relationship">
 <section id="section-7.1">
         <h3 id="name-relationship-to-the-issuanc">
@@ -2925,7 +2942,7 @@ discharged. The Authorization Server <span class="bcp14">MUST NOT</span> derive 
 discharged entry, at the token endpoint, on refresh, or on Token
 Exchange, exactly as issuance is refused for a non-<code>active</code> Mission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A derivation that would carry
-only discharged entries <span class="bcp14">MUST</span> fail; a derivation that carries a mix <span class="bcp14">MUST</span>
+only discharged entries <span class="bcp14">MUST</span> fail. A derivation that carries a mix <span class="bcp14">MUST</span>
 omit the discharged entries.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
 <p id="section-7.3-2">Discharge gates at the entry, not the Mission. The Mission remains
 <code>active</code> and continues to derive its other entries: a multi-resource
@@ -2953,64 +2970,74 @@ the <code>event_source</code>, within <code>max_staleness</code> when present. W
 <code>max_staleness</code> is absent, the Authorization Server <span class="bcp14">MUST</span> re-evaluate the
 condition at each derivation, so <code>terminal_when</code> never goes inert:
 absence of <code>max_staleness</code> removes the tolerance for a cached view, it
-does not relieve the freshness duty. The mechanism is
-deployment-defined (a status query, a received signal, a recorded
-administrative action). This document defines one interoperable
-event-source profile a deployment <span class="bcp14">MAY</span> use: the <code>event_source</code> URI is
-retrieved over authenticated HTTPS and returns a signed JSON status
-document, a JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>, with these members:<a href="#section-7.3.1-1" class="pilcrow">¶</a></p>
+does not relieve the freshness duty.<a href="#section-7.3.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.3.1-2">The mechanism is deployment-defined (a status query, a received
+signal, a recorded administrative action). This document defines one
+interoperable event-source profile a deployment <span class="bcp14">MAY</span> use: the
+<code>event_source</code> URI is retrieved over authenticated HTTPS and returns
+a signed JSON status document, a JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>, with these members:<a href="#section-7.3.1-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-7.3.1-2.1">
-              <p id="section-7.3.1-2.1.1"><code>occurred</code>: <span class="bcp14">REQUIRED</span>. A boolean, true when the event has occurred.<a href="#section-7.3.1-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-7.3.1-3.1">
+              <p id="section-7.3.1-3.1.1"><code>occurred</code>: <span class="bcp14">REQUIRED</span>. A boolean, true when the event has occurred.<a href="#section-7.3.1-3.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-7.3.1-2.2">
-              <p id="section-7.3.1-2.2.1"><code>observed_at</code>: <span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time at which the
-status was observed.<a href="#section-7.3.1-2.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-7.3.1-3.2">
+              <p id="section-7.3.1-3.2.1"><code>observed_at</code>: <span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time at which the
+status was observed.<a href="#section-7.3.1-3.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-7.3.1-2.3">
-              <p id="section-7.3.1-2.3.1"><code>event_type</code>: <span class="bcp14">REQUIRED</span>. A string, the <code>event_type</code> the document
-reports.<a href="#section-7.3.1-2.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-7.3.1-3.3">
+              <p id="section-7.3.1-3.3.1"><code>event_type</code>: <span class="bcp14">REQUIRED</span>. A string, the <code>event_type</code> the document
+reports.<a href="#section-7.3.1-3.3.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-7.3.1-2.4">
-              <p id="section-7.3.1-2.4.1"><code>source</code>: <span class="bcp14">REQUIRED</span>. A URI identifying the reporting source.<a href="#section-7.3.1-2.4.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-7.3.1-3.4">
+              <p id="section-7.3.1-3.4.1"><code>source</code>: <span class="bcp14">REQUIRED</span>. A URI identifying the reporting source.<a href="#section-7.3.1-3.4.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-7.3.1-3">The Authorization Server verifies the JWS against key material it
-resolves for the <code>source</code> identity, not for the <code>event_source</code> origin:
-the protected header's <code>kid</code> <span class="bcp14">MUST</span> resolve to a key the <code>source</code>
-publishes through an authenticated channel (for example its JWKS), and
-the resolved signer identity <span class="bcp14">MUST</span> be the <code>source</code> the Authorization
-Server trusts for this <code>event_type</code>. A signature that does not chain to
-a trusted <code>source</code> for the <code>event_type</code> leaves the condition
-indeterminate, and the Authorization Server fails closed as below.<a href="#section-7.3.1-3" class="pilcrow">¶</a></p>
-<p id="section-7.3.1-4">Other source mechanisms remain deployment-defined. The Mission Issuer
+<p id="section-7.3.1-4">The Authorization Server verifies the JWS against key material it
+resolves for the <code>source</code> identity, not for the <code>event_source</code>
+origin:<a href="#section-7.3.1-4" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-7.3.1-5">
+<li id="section-7.3.1-5.1">
+              <p id="section-7.3.1-5.1.1">the protected header's <code>kid</code> <span class="bcp14">MUST</span> resolve to a key the <code>source</code>
+publishes through an authenticated channel (for example its
+JWKS); and<a href="#section-7.3.1-5.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-7.3.1-5.2">
+              <p id="section-7.3.1-5.2.1">the resolved signer identity <span class="bcp14">MUST</span> be the <code>source</code> the
+Authorization Server trusts for this <code>event_type</code>.<a href="#section-7.3.1-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ol>
+<p id="section-7.3.1-6">A signature that does not chain to a trusted <code>source</code> for the
+<code>event_type</code> leaves the condition indeterminate, and the
+Authorization Server fails closed as below.<a href="#section-7.3.1-6" class="pilcrow">¶</a></p>
+<p id="section-7.3.1-7">Other source mechanisms remain deployment-defined. The Mission Issuer
 <span class="bcp14">MUST</span> authenticate and integrity-verify any event source outside its own
-trust domain before acting on its report. The <code>event_source</code> <span class="bcp14">SHOULD</span> lie
-outside the Mission's own writable authority: an agent that can write to
-the source can drive its own discharge or suppress it. Where the
-<code>event_source</code> is on an origin the Mission holds write authority to, the
-Authorization Server <span class="bcp14">MUST</span> determine discharge through an integrity
-mechanism, such as the signed status document above, whose signing key
-the Mission cannot influence.<a href="#section-7.3.1-4" class="pilcrow">¶</a></p>
-<p id="section-7.3.1-5">Once the Authorization Server observes that a condition has been met, the
+trust domain before acting on its report.<a href="#section-7.3.1-7" class="pilcrow">¶</a></p>
+<p id="section-7.3.1-8">The <code>event_source</code> <span class="bcp14">SHOULD</span> lie outside the Mission's own writable
+authority: an agent that can write to the source can drive its own
+discharge or suppress it. Where the <code>event_source</code> is on an origin
+the Mission holds write authority to, the Authorization Server <span class="bcp14">MUST</span>
+determine discharge through an integrity mechanism, such as the
+signed status document above, whose signing key the Mission cannot
+influence.<a href="#section-7.3.1-8" class="pilcrow">¶</a></p>
+<p id="section-7.3.1-9">Once the Authorization Server observes that a condition has been met, the
 discharge is recorded as Authorization-Server-side state and <span class="bcp14">MUST NOT</span>
 revert, regardless of any later report from the event source: a source
 that afterward reports the event as not occurred does not restore the
-entry's authority.<a href="#section-7.3.1-5" class="pilcrow">¶</a></p>
-<p id="section-7.3.1-6">A committed discharge is a committed metadata-only change for the
+entry's authority.<a href="#section-7.3.1-9" class="pilcrow">¶</a></p>
+<p id="section-7.3.1-10">A committed discharge is a committed metadata-only change for the
 purposes of the state version (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>): the
 Mission's state version increments at the commit, so a materialized
 policy view that commits a state version
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) is detectably obsolete
 after a discharge. A dedicated discharge signal remains deferred
 (<a href="#visibility" class="auto internal xref">Section 7.3.2</a>); the version movement is what makes the change
-observable in the interim.<a href="#section-7.3.1-6" class="pilcrow">¶</a></p>
-<p id="section-7.3.1-7">If the Authorization Server cannot determine whether a condition has been
+observable in the interim.<a href="#section-7.3.1-10" class="pilcrow">¶</a></p>
+<p id="section-7.3.1-11">If the Authorization Server cannot determine whether a condition has been
 met, for example because <code>event_source</code> is unreachable within
 <code>max_staleness</code>, it <span class="bcp14">MUST</span> treat the entry as possibly discharged and
 refuse to derive it, as it fails closed for stale Mission state. Discharge
 removes authority, so the conservative action when status is unknown is
-to withhold issuance, never to issue.<a href="#section-7.3.1-7" class="pilcrow">¶</a></p>
+to withhold issuance, never to issue.<a href="#section-7.3.1-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="visibility">
@@ -3043,18 +3070,19 @@ subset comparison (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="c
 defined subset rule with no new clause: for a key present in the
 reference entry's <code>constraints</code>, the same key <span class="bcp14">MUST</span> be present in the
 candidate entry and its value <span class="bcp14">MUST</span> be no broader under the key's
-defined rule. For <code>terminal_when</code>, a candidate value is no broader
+defined rule.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
+<p id="section-7.4-2">For <code>terminal_when</code>, a candidate value is no broader
 than a reference value when the candidate's condition array contains
 every condition of the reference, compared structurally after the
 canonicalization of the issuance profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); the candidate <span class="bcp14">MAY</span> add further
-conditions.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
-<p id="section-7.4-2">Conditions are compared structurally, not by event semantics. A child
+conditions.<a href="#section-7.4-2" class="pilcrow">¶</a></p>
+<p id="section-7.4-3">Conditions are compared structurally, not by event semantics. A child
 cannot drop or alter a parent's completion condition, only add more, so
 discharge composes monotonically: an added condition can only make an
 entry discharge sooner, which is a narrowing. Modifying a parent
 condition is forbidden because a verifier cannot decide whether the
-change discharges earlier or later from opaque <code>event_type</code> values.<a href="#section-7.4-2" class="pilcrow">¶</a></p>
+change discharges earlier or later from opaque <code>event_type</code> values.<a href="#section-7.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="forward-compat">
@@ -3565,10 +3593,9 @@ sources inside the issuer's trust domain are <span class="bcp14">RECOMMENDED</sp
 as well as trust.<a href="#section-11.6-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.6-2.6">
-            <p id="section-11.6-2.6.1">Already-issued tokens. Discharge gates new derivations only; a token
-already issued runs to expiry. Prompt cutoff relies on short token
-lifetimes or runtime point-of-use denial (<a href="#runtime" class="auto internal xref">Section 7.7</a>), the same caveat
-revocation carries.<a href="#section-11.6-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-11.6-2.6.1">Already-issued tokens. The window between discharge and the expiry
+of a token already issued is the same residual revocation carries,
+bounded the same way (<a href="#discharge" class="auto internal xref">Section 7.3</a>, <a href="#runtime" class="auto internal xref">Section 7.7</a>).<a href="#section-11.6-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
