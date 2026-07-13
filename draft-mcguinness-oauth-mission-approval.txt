@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            12 July 2026
-Expires: 13 January 2027
+Intended status: Standards Track                            13 July 2026
+Expires: 14 January 2027
 
 
                 Mission Deferred Approval for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 13 January 2027.
+   This Internet-Draft will expire on 14 January 2027.
 
 Copyright Notice
 

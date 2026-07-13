@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            12 July 2026
-Expires: 13 January 2027
+Intended status: Standards Track                            13 July 2026
+Expires: 14 January 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 13 January 2027.
+   This Internet-Draft will expire on 14 January 2027.
 
 Copyright Notice
 
@@ -135,11 +135,12 @@ Table of Contents
      15.3.  Downgrade by Omission
      15.4.  Prompt Injection and the Exfiltration Leg
      15.5.  Issuance Scope, Not Runtime Enforcement
-     15.6.  Token Theft
-     15.7.  Delegation and Chain Compromise
-     15.8.  Signing and Key Rotation
-     15.9.  Compromised or Over-Broad Derivation
-     15.10. Authority Hash Is Not a Mission Identifier
+     15.6.  Denial Detail Disclosure
+     15.7.  Token Theft
+     15.8.  Delegation and Chain Compromise
+     15.9.  Signing and Key Rotation
+     15.10. Compromised or Over-Broad Derivation
+     15.11. Authority Hash Is Not a Mission Identifier
    16. Privacy Considerations
      16.1.  Mission Identifier Correlation
      16.2.  Token Payload Disclosure
@@ -727,10 +728,15 @@ Table of Contents
 
    purpose:  OPTIONAL.  A string.  A URI identifying the purpose of the
       task, recorded for disclosure and audit.  Its semantics are
-      deployment- or registry-defined and opaque to this document; like
-      success_criteria it MUST NOT be used to derive, widen, or gate
-      authority.  A deployment MAY consult it for out-of-band policy or
-      logging that does not affect the authority derived here.
+      deployment- or registry-defined and opaque to this document.  Like
+      goal, it shapes authority only through the pre-approval derivation
+      whose result the Approver reads and consents to: in template mode
+      it MAY key the configured mapping (Section 5), and the derived set
+      stays bounded by the Intent and by policy like any derivation.  It
+      MUST NOT otherwise be used to derive, widen, or gate authority,
+      and once the Mission is approved it is inert.  A deployment MAY
+      consult it for out-of-band policy or logging that does not affect
+      the authority derived here.
 
    expires_at:  REQUIRED.  A string.  An RFC 3339 [RFC3339] date-time
       after which the AS MUST NOT derive tokens under the Mission.  The
@@ -2192,7 +2198,8 @@ Table of Contents
    a widening), or constraint_unrecognized (an applicable entry carries
    a constraints key the RS cannot enforce, and the request fails
    closed).  A value the client does not recognize is treated as
-   insufficient_authority.
+   insufficient_authority.  The attribute's disclosure considerations
+   are Section 15.6's.
 
    A Mission-unaware Resource Server that authorizes only from scope
    still operates within the Mission at the coarse scope level, because
@@ -2975,12 +2982,12 @@ Table of Contents
    authority from everything the agent's standing credentials allow to
    the resources the approved task needs, and per-task Missions
    (Section 1.5) shrink the blast radius further.  It contributes one
-   thing against the untrusted-content leg: purpose and success_criteria
-   are inert, granting, widening, and gating no authority, and goal
-   shapes authority only through the pre-approval derivation whose
-   result the Approver reads and consents to (Section 4, Section 5);
-   authority is fixed at the approval event, so injected text cannot
-   talk an approved Mission into expanding itself.
+   thing against the untrusted-content leg: success_criteria is inert,
+   granting, widening, and gating no authority, and goal and purpose
+   shape authority only through the pre-approval derivation whose result
+   the Approver reads and consents to (Section 4, Section 5); authority
+   is fixed at the approval event, so injected text cannot talk an
+   approved Mission into expanding itself.
 
    This profile does not constrain the external-communication leg and
    provides no information-flow control.  It models authority over
@@ -3024,7 +3031,21 @@ Table of Contents
    enforcement table (Section 4).  Short token lifetimes and narrow
    authority bound, but do not eliminate, this exposure.
 
-15.6.  Token Theft
+15.6.  Denial Detail Disclosure
+
+   The mission_denial attribute (Section 8.2) tells a caller which path
+   a denial leads into, and thereby reveals authorization shape:
+   step_up_required confirms to the presenting party that the authority
+   exists, where insufficient_authority denies its existence.
+   Introspection guards the same class of fact behind caller
+   authorization (Section 10.1); a Resource Server applies the same care
+   here.  It SHOULD return the attribute only on a response to a validly
+   signed, audience-correct token whose holder its deployment accepts
+   learning the distinction, and SHOULD omit the attribute otherwise;
+   when in doubt, insufficient_authority is the value that reveals
+   least, and omission reveals nothing.
+
+15.7.  Token Theft
 
    Derived tokens are sender-constrained (DPoP [RFC9449] or mTLS
    [RFC8705]) at the levels set in Section 8 and Section 11: SHOULD for
@@ -3034,7 +3055,7 @@ Table of Contents
    is bounded by the Authority Set and the Mission lifetime regardless,
    but sender-constraint prevents replay by a different party.
 
-15.7.  Delegation and Chain Compromise
+15.8.  Delegation and Chain Compromise
 
    Delegation (Section 11) widens the set of parties holding Mission-
    derived authority.  Because authority only narrows down the chain, a
@@ -3069,7 +3090,7 @@ Table of Contents
    token (Section 8) closes the remaining gap, since a token stolen from
    an audience then fails presentation at the token endpoint.
 
-15.8.  Signing and Key Rotation
+15.9.  Signing and Key Rotation
 
    The mission claim and authorization_details are carried inside the
    [RFC9068] JWT and are covered by the AS's token signature; their
@@ -3100,7 +3121,7 @@ Table of Contents
    Recovery from a signing-key compromise is deployment-owned and
    belongs in the deployment's documented procedures.
 
-15.9.  Compromised or Over-Broad Derivation
+15.10.  Compromised or Over-Broad Derivation
 
    The AS is trusted to derive authority no broader than the Mission
    Intent.  Both derivation modes (Section 5) are mechanical, a proposal
@@ -3109,7 +3130,7 @@ Table of Contents
    derivation ran under so the derivation can be audited.  General OAuth
    security guidance [RFC9700] applies.
 
-15.10.  Authority Hash Is Not a Mission Identifier
+15.11.  Authority Hash Is Not a Mission Identifier
 
    authority_hash commits the approved Authority Set, not the Mission.
    Two distinct Missions that approve byte-identical authority carry the
@@ -3237,10 +3258,14 @@ Table of Contents
 
    PAR [RFC9126] carries authorization-request parameters without a
    distinct usage location, so the pushed submission of mission_intent
-   needs no separate registration.  The mission_denial attribute rides
-   the WWW-Authenticate scheme's extensible auth-param space ([RFC6750],
-   Section 8.2), for which no IANA registry exists; no action is
-   required for it.
+   needs no separate registration.  The mission_error member rides the
+   token-endpoint error response; "token response" is the registry's
+   applicable usage location, and the member relies on the error
+   response's JSON extensibility rather than defining a new error code,
+   so generic [RFC6749] error handling is undisturbed.  The
+   mission_denial attribute rides the WWW-Authenticate scheme's
+   extensible auth-param space ([RFC6750], Section 8.2), for which no
+   IANA registry exists; no action is required for it.
 
 17.2.  The Mission Resource Access Authorization Details Type
 
@@ -3971,6 +3996,12 @@ Appendix C.  Document History
       and actions member definitions, the audience and token-response
       text, and the Mission Record introduction are tightened; the
       rendering-to-consent change rule stands as its own paragraph.
+
+   *  Post-review fixes: purpose is stated consistently with the pre-
+      approval shaping invariant (it may key template-mode derivation;
+      it remains inert after approval and never widens); mission_denial
+      gains denial-detail disclosure considerations; the mission_error
+      registration's usage-location choice is explained.
 
    -00
 
