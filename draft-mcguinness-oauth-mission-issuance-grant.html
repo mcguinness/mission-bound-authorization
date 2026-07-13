@@ -1550,9 +1550,9 @@ other state refuses.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
         <li id="section-5-2.3">
           <p id="section-5-2.3.1"><strong>Subset and audience.</strong> The grant's <code>authorization_details</code> <span class="bcp14">MUST</span>
 be a subset of the Mission's consented Authority Set under the
-core's subset rule, and <span class="bcp14">SHOULD</span> carry only the entries the named
-consuming AS serves. The requester <span class="bcp14">MAY</span> request a narrower subset;
-it <span class="bcp14">MUST NOT</span> obtain a wider one.<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
+core's subset rule. The grant <span class="bcp14">SHOULD</span> carry only the entries the
+named consuming AS serves. The requester <span class="bcp14">MAY</span> request a narrower
+subset. The requester <span class="bcp14">MUST NOT</span> obtain a wider one.<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-5-2.4">
           <p id="section-5-2.4.1"><strong>Derivation event.</strong> Each grant minted is a derivation event.
@@ -1781,48 +1781,55 @@ the <code>expires_at</code> member (<a href="#expires-at-member" class="auto int
 </li>
         <li class="normal" id="section-6-6.2">
           <p id="section-6-6.2.1"><strong>Subset.</strong> Issued <code>authorization_details</code> <span class="bcp14">MUST</span> be a subset of the
-grant's; the token response <span class="bcp14">SHOULD</span> echo them as the core specifies
-for Mission-bound issuance. The consuming AS <span class="bcp14">MUST NOT</span> widen, remap,
-or supplement them from its own policy except to narrow. Carrying
-<code>authorization_details</code> at all requires <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> support at the
-consuming AS; an AS that models authority as <code>scope</code> instead projects
-the grant's <code>authorization_details</code> to <code>scope</code> under the core's
-scope-projection rule (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), where
-every issued scope value corresponds to authority the grant conveys
-and none conveys authority, or relaxes a constraint, that the grant
-does not.<a href="#section-6-6.2.1" class="pilcrow">¶</a></p>
+grant's. The consuming AS <span class="bcp14">MUST NOT</span> widen, remap, or supplement
+them from its own policy except to narrow.<a href="#section-6-6.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-6.3">
-          <p id="section-6-6.3.1"><strong>Lifetime.</strong> No access or refresh token issued under the grant may
+          <p id="section-6-6.3.1"><strong>Echo.</strong> The token response <span class="bcp14">SHOULD</span> echo the issued
+<code>authorization_details</code> as the core specifies for Mission-bound
+issuance.<a href="#section-6-6.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-6.4">
+          <p id="section-6-6.4.1"><strong>Scope projection.</strong> Carrying <code>authorization_details</code> at all
+requires <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> support at the consuming AS. An AS that
+models authority as <code>scope</code> instead projects the grant's
+<code>authorization_details</code> to <code>scope</code> under the core's
+scope-projection rule (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):
+every issued scope value corresponds to authority the grant
+conveys, and none conveys authority, or relaxes a constraint, that
+the grant does not.<a href="#section-6-6.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-6.5">
+          <p id="section-6-6.5.1"><strong>Lifetime.</strong> No access or refresh token issued under the grant may
 have an expiry later than the <code>mission</code> object's <code>expires_at</code>. That
 ceiling is the Mission horizon, not a liveness bound, so access
 tokens issued under a grant <span class="bcp14">SHOULD</span> be short-lived: absent a
 redemption-time state check, an issued access token's own lifetime is
 the window in which a revoked Mission's token keeps working at the
-token layer.<a href="#section-6-6.3.1" class="pilcrow">¶</a></p>
+token layer.<a href="#section-6-6.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-6.4">
-          <p id="section-6-6.4.1"><strong>State at redemption.</strong> A consuming AS that has a Mission-state
+        <li class="normal" id="section-6-6.6">
+          <p id="section-6-6.6.1"><strong>State at redemption.</strong> A consuming AS that has a Mission-state
 integration (the one its refresh gating uses) <span class="bcp14">SHOULD</span> re-check Mission
 state at redemption and refuse when the Mission is not established
 <code>active</code>, so a Mission revoked between minting and redemption yields
 no fresh access token; an AS with no state integration relies on the
 grant's <code>active</code>-at-minting gate and the short access-token lifetime
-above.<a href="#section-6-6.4.1" class="pilcrow">¶</a></p>
+above.<a href="#section-6-6.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-6.5">
-          <p id="section-6-6.5.1"><strong>Refresh is state-gated.</strong> A consuming AS <span class="bcp14">MAY</span> issue refresh
-tokens only if it gates each refresh on current Mission state,
-resolved through the Mission Status operation
+        <li class="normal" id="section-6-6.7">
+          <p id="section-6-6.7.1"><strong>Refresh is state-gated.</strong> A consuming AS <span class="bcp14">MUST NOT</span> issue refresh
+tokens unless it gates each refresh on current Mission state. That
+gate resolves state through the Mission Status operation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) or the MAS's state
-surface within a published staleness bound, refusing when the
+surface within a published staleness bound, and refuses when the
 Mission is not established as <code>active</code>. A consuming AS without a
-state integration <span class="bcp14">MUST NOT</span> issue refresh tokens under a grant.<a href="#section-6-6.5.1" class="pilcrow">¶</a></p>
+state integration <span class="bcp14">MUST NOT</span> issue refresh tokens under a grant.<a href="#section-6-6.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-6.6">
-          <p id="section-6-6.6.1"><strong>No re-approval.</strong> The approval event already occurred at the
+        <li class="normal" id="section-6-6.8">
+          <p id="section-6-6.8.1"><strong>No re-approval.</strong> The approval event already occurred at the
 Mission Issuer. The consuming AS <span class="bcp14">MUST NOT</span> prompt the Subject or
-any user for consent at redemption.<a href="#section-6-6.6.1" class="pilcrow">¶</a></p>
+any user for consent at redemption.<a href="#section-6-6.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-6-7">A grant redeems exactly once. Subsequent token needs are met by the
@@ -1934,25 +1941,27 @@ than retry.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-6.2-1">Deployments whose clients must traverse the authorization code flow
 <span class="bcp14">MAY</span> carry the grant in a Pushed Authorization Request <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> as
-the request parameter <code>mission_issuance_grant</code> (<a href="#iana" class="auto internal xref">Section 12</a>). The AS
-applies the grant validation of <a href="#redemption" class="auto internal xref">Section 6</a> at the PAR endpoint,
-treats the grant as the authorization already obtained, and <span class="bcp14">MUST NOT</span>
-re-prompt for consent; at most it renders the Mission reference. It
-consumes the grant there: the 300-second <code>exp</code>, <code>iat</code>, and <code>aud</code> checks
-and the single-use <code>jti</code> are evaluated at PAR validation, and the <code>jti</code>
-is recorded as seen at that point, so the grant cannot be replayed into
-a second authorization request. The grant's window is not re-evaluated
-at code exchange; the issued authorization code carries its own
-lifetime from there, and all remaining redemption rules (subset,
-lifetime, state-gated refresh, no re-approval, and the error mapping of
-<a href="#redemption-errors" class="auto internal xref">Section 6.1</a>) apply at the token request unchanged.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
-<p id="section-6.2-2">The AS <span class="bcp14">MUST</span> bind the resource owner authenticated at the authorization
-endpoint to the grant's <code>sub</code>: it proceeds only where the authenticated
-user is the grant's Subject under the deployment's mapping policy
-(<a href="#issuance-join" class="auto internal xref">Section 3</a>), and <span class="bcp14">MUST</span> refuse when a different user
-authenticates, so the grant cannot mint tokens for the wrong resource
-owner. The authenticated client <span class="bcp14">MUST</span> still be the grant's <code>client_id</code>
-(<a href="#redemption" class="auto internal xref">Section 6</a>).<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+the request parameter <code>mission_issuance_grant</code> (<a href="#iana" class="auto internal xref">Section 12</a>).<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<p id="section-6.2-2">The AS applies the grant validation of <a href="#redemption" class="auto internal xref">Section 6</a> at the PAR
+endpoint and treats the grant as the authorization already obtained.
+It <span class="bcp14">MUST NOT</span> re-prompt for consent; at most it renders the Mission
+reference.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+<p id="section-6.2-3">The AS consumes the grant at PAR validation: the 300-second <code>exp</code>,
+<code>iat</code>, and <code>aud</code> checks and the single-use <code>jti</code> check are evaluated
+there, and the <code>jti</code> is recorded as seen at that point, so the grant
+cannot be replayed into a second authorization request.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-4">The grant's window is not re-evaluated at code exchange; the issued
+authorization code carries its own lifetime from there. All
+remaining redemption rules (subset, lifetime, state-gated refresh,
+no re-approval, and the error mapping of <a href="#redemption-errors" class="auto internal xref">Section 6.1</a>)
+apply at the token request unchanged.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.2-5">The AS <span class="bcp14">MUST</span> bind the resource owner authenticated at the
+authorization endpoint to the grant's <code>sub</code>: it proceeds only where
+the authenticated user is the grant's Subject under the deployment's
+mapping policy (<a href="#issuance-join" class="auto internal xref">Section 3</a>). The AS <span class="bcp14">MUST</span> refuse when a
+different user authenticates, so the grant cannot mint tokens for
+the wrong resource owner. The authenticated client <span class="bcp14">MUST</span> still be the
+grant's <code>client_id</code> (<a href="#redemption" class="auto internal xref">Section 6</a>).<a href="#section-6.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2010,25 +2019,62 @@ half-step arrives with the consuming AS's refresh gating.<a href="#section-8-1" 
       <h2 id="name-conformance">
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
       </h2>
-<p id="section-9-1"><strong>Grant Minter</strong> (the MAS): implements <a href="#minting" class="auto internal xref">Section 5</a> in full: the
-authenticated, visibility-guarded endpoint; the <code>active</code>-only gate;
-subset and audience scoping; derivation counting where consented;
-minting evidence; and grants shaped exactly as <a href="#grant" class="auto internal xref">Section 4</a> requires.<a href="#section-9-1" class="pilcrow">¶</a></p>
-<p id="section-9-2"><strong>Consuming Authorization Server</strong>: implements <a href="#redemption" class="auto internal xref">Section 6</a> in
-full: <code>typ</code>, signature, audience, lifetime, single-use, and client
-binding validation; verbatim <code>mission</code> claim carriage;
-subset-bounded minting; <code>expires_at</code> capping; state-gated
-refresh or no refresh; no re-approval; and the redemption error
-mapping of <a href="#redemption-errors" class="auto internal xref">Section 6.1</a>. The PAR carriage of
-<a href="#par-carriage" class="auto internal xref">Section 6.2</a> is <span class="bcp14">OPTIONAL</span>.<a href="#section-9-2" class="pilcrow">¶</a></p>
-<p id="section-9-3">A deployment claiming this profile states, alongside its
+<p id="section-9-1"><strong>Grant Minter</strong> (the MAS) implements <a href="#minting" class="auto internal xref">Section 5</a> in full:<a href="#section-9-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-2.1">
+          <p id="section-9-2.1.1">the authenticated, visibility-guarded endpoint;<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.2">
+          <p id="section-9-2.2.1">the <code>active</code>-only gate;<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.3">
+          <p id="section-9-2.3.1">subset and audience scoping;<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.4">
+          <p id="section-9-2.4.1">derivation counting where consented;<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.5">
+          <p id="section-9-2.5.1">minting evidence; and<a href="#section-9-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.6">
+          <p id="section-9-2.6.1">grants shaped exactly as <a href="#grant" class="auto internal xref">Section 4</a> requires.<a href="#section-9-2.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-9-3"><strong>Consuming Authorization Server</strong> implements <a href="#redemption" class="auto internal xref">Section 6</a> in
+full:<a href="#section-9-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-4.1">
+          <p id="section-9-4.1.1"><code>typ</code>, signature, audience, lifetime, single-use, and client
+binding validation;<a href="#section-9-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.2">
+          <p id="section-9-4.2.1">verbatim <code>mission</code> claim carriage;<a href="#section-9-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.3">
+          <p id="section-9-4.3.1">subset-bounded minting;<a href="#section-9-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.4">
+          <p id="section-9-4.4.1"><code>expires_at</code> capping;<a href="#section-9-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.5">
+          <p id="section-9-4.5.1">state-gated refresh or no refresh;<a href="#section-9-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.6">
+          <p id="section-9-4.6.1">no re-approval; and<a href="#section-9-4.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.7">
+          <p id="section-9-4.7.1">the redemption error mapping of <a href="#redemption-errors" class="auto internal xref">Section 6.1</a>.<a href="#section-9-4.7.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-9-5">The PAR carriage of <a href="#par-carriage" class="auto internal xref">Section 6.2</a> is <span class="bcp14">OPTIONAL</span>.<a href="#section-9-5" class="pilcrow">¶</a></p>
+<p id="section-9-6">A deployment claiming this profile states, alongside its
 Enforcement Scope Statement, which Authorization Servers consume
 grants, the staleness bound of each one's refresh gating, and its
 reconciliation posture (<a href="#security-considerations" class="auto internal xref">Section 10</a>): the window
 within which minting and redemption logs are reconciled, or that
 they are not. A consuming AS advertises its support with the
 <code>mission_issuance_grant_supported</code> metadata member, and its PAR
-carriage with <code>mission_issuance_grant_par_supported</code> (<a href="#iana" class="auto internal xref">Section 12</a>).<a href="#section-9-3" class="pilcrow">¶</a></p>
+carriage with <code>mission_issuance_grant_par_supported</code> (<a href="#iana" class="auto internal xref">Section 12</a>).<a href="#section-9-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -2050,38 +2096,40 @@ profile it additionally mints grants every consuming AS honors:
 compromise reaches token issuance across the estate. The consuming
 ASs' audit logs of redeemed grants (each with <code>jti</code> and Mission
 reference) are the independent record that bounds and exposes such
-minting; a deployment <span class="bcp14">SHOULD</span> reconcile MAS minting evidence against
-consuming-AS redemption logs and treat a redemption with no matching
-minting record as a security event, and states its reconciliation
-posture in its conformance statement (<a href="#conformance" class="auto internal xref">Section 9</a>). A deployment
-operating under the Enterprise Mission Authority Profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>) <span class="bcp14">MUST</span> reconcile,
-within the window its statement declares: at estate scale,
-reconciliation is the only check on this compromise class.<a href="#section-10-2" class="pilcrow">¶</a></p>
-<p id="section-10-3"><strong>Trust inversion.</strong> The consuming AS accepts externally derived
+minting.<a href="#section-10-2" class="pilcrow">¶</a></p>
+<p id="section-10-3">A deployment <span class="bcp14">SHOULD</span> reconcile MAS minting evidence against
+consuming-AS redemption logs. A deployment <span class="bcp14">SHOULD</span> treat a redemption
+with no matching minting record as a security event. A deployment
+states its reconciliation posture in its conformance statement
+(<a href="#conformance" class="auto internal xref">Section 9</a>). A deployment operating under the Enterprise
+Mission Authority Profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>) <span class="bcp14">MUST</span> reconcile
+within the window its statement declares; at estate scale,
+reconciliation is the only check on this compromise class.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4"><strong>Trust inversion.</strong> The consuming AS accepts externally derived
 authority. Its exposure is bounded by the profile's own rules: it
 mints only within the grant's <code>authorization_details</code>, only for the
 grant's client, never longer than the Mission's <code>expires_at</code>, and
 its local
 policy <span class="bcp14">MAY</span> narrow further. The AS remains free to refuse any grant
-its policy distrusts; nothing obliges issuance.<a href="#section-10-3" class="pilcrow">¶</a></p>
-<p id="section-10-4"><strong>Type confusion.</strong> Three issuer-signed JWT artifacts about Missions
+its policy distrusts; nothing obliges issuance.<a href="#section-10-4" class="pilcrow">¶</a></p>
+<p id="section-10-5"><strong>Type confusion.</strong> Three issuer-signed JWT artifacts about Missions
 now exist: the Mandate (evidence), the cross-domain grant (foreign
 domain), and this grant (same estate). The <code>typ</code> discipline is the
 defense; every consumer checks it first, and none accepts another's
-type.<a href="#section-10-4" class="pilcrow">¶</a></p>
-<p id="section-10-5"><strong>Revocation latency.</strong> New grants stop at the MAS <code>active</code> gate at
+type.<a href="#section-10-5" class="pilcrow">¶</a></p>
+<p id="section-10-6"><strong>Revocation latency.</strong> New grants stop at the MAS <code>active</code> gate at
 the moment of state commit. Outstanding tokens end at the earlier of
 their own expiry and the consuming AS's next state-gated refresh;
 where the runtime layer is deployed, the PDP's re-check bounds
 outstanding-token use independently. A deployment states the refresh
-staleness bound it publishes (<a href="#conformance" class="auto internal xref">Section 9</a>).<a href="#section-10-5" class="pilcrow">¶</a></p>
-<p id="section-10-6"><strong>Consent integrity.</strong> The approval the grant rests on was rendered
+staleness bound it publishes (<a href="#conformance" class="auto internal xref">Section 9</a>).<a href="#section-10-6" class="pilcrow">¶</a></p>
+<p id="section-10-7"><strong>Consent integrity.</strong> The approval the grant rests on was rendered
 and committed at the Mission Issuer under the core's rules and,
 where deployed, Consent Evidence. The consuming AS relies on that
 event; it <span class="bcp14">MUST NOT</span> substitute a weaker consent of its own, and its
 non-prompting duty (<a href="#redemption" class="auto internal xref">Section 6</a>) prevents consent-surface
-confusion where the Subject holds accounts at both.<a href="#section-10-6" class="pilcrow">¶</a></p>
+confusion where the Subject holds accounts at both.<a href="#section-10-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="privacy-considerations">
