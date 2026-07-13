@@ -2425,7 +2425,14 @@ a deployment-configured mapping, keyed on the Intent's <code>purpose</code> or
 <code>resources</code>, yields the candidate entries, which are then narrowed
 to policy. The mapping is a lookup, never synthesis; the AS refuses
 an Intent that matches no configured mapping with
-<code>invalid_authorization_details</code>.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+<code>invalid_authorization_details</code>, and <span class="bcp14">SHOULD</span> make that refusal
+distinguishable from a policy refusal in <code>error_description</code>. A
+deployment publishes its mapping space as deployment
+documentation; eligibility <span class="bcp14">MAY</span> be scoped per Subject and client,
+and a mapping keyed on Subject attributes resolves at the approval
+event, where the Subject is established (<a href="#approval-event" class="auto internal xref">Section 6</a>), so a
+refusal at PAR time is best-effort over what is checkable without
+the Subject.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-5-3">In both modes the AS <span class="bcp14">MUST</span> bound every derived entry by the Mission
@@ -3717,7 +3724,13 @@ runtime layer covers the high-consequence classes with an active
 freshness source, the point-of-use decision is the revocation
 cutoff, and a deployment <span class="bcp14">MAY</span> size lifetimes by action class without
 losing the kill switch (<a href="#runtime-boundary" class="auto internal xref">Section 15.5</a>,
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-8-19" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Classes attach to
+entries while <code>exp</code> attaches to the token: an extended lifetime is
+appropriate only for a token whose carried entries are all on
+runtime-gated paths, since a single ungated entry stretches its own
+revocation latency to the extended lifetime. Narrowed,
+single-audience tokens (<a href="#subset" class="auto internal xref">Section 5.1</a>) are the mechanism that keeps
+gated and ungated authority from sharing one long-lived token.<a href="#section-8-19" class="pilcrow">¶</a></p>
 <div id="mission-claim">
 <section id="section-8.1">
         <h3 id="name-the-mission-claim">
@@ -6061,6 +6074,15 @@ derivation; it remains inert after approval and never widens);
 <code>mission_denial</code> gains denial-detail disclosure considerations;
 the <code>mission_error</code> registration's usage-location choice is
 explained.<a href="#appendix-C-3.15.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-3.16">
+          <p id="appendix-C-3.16.1">Pre-publication fixes: extended token lifetimes apply only to
+tokens whose carried entries are all runtime-gated, with
+single-audience narrowing as the splitting mechanism (#244);
+template mode publishes its mapping space as deployment
+documentation, distinguishes no-mapping from policy refusals, and
+resolves Subject-keyed mappings at the approval event (#246 in
+part).<a href="#appendix-C-3.16.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-C-4">-00<a href="#appendix-C-4" class="pilcrow">¶</a></p>
