@@ -201,9 +201,10 @@ to the asynchronous review surface:
    Mission exists. A `deferral_code` and any PAR `request_uri` are
    pending-request state, not a grant.
 3. The approval event executes on the asynchronous review surface. That
-   surface MUST authenticate the Approver and MUST satisfy the Mission
-   Intent's `controls.acr`, exactly as the synchronous approval event
-   requires ({{I-D.draft-mcguinness-oauth-mission}}).
+   surface MUST authenticate the Approver. It MUST satisfy the Mission
+   Intent's `controls.acr`. Both requirements hold exactly as the
+   synchronous approval event requires
+   ({{I-D.draft-mcguinness-oauth-mission}}).
 4. The Mission record is created in the `active` state atomically with
    the approval decision, preserving the issuance profile's atomicity at
    the moved point.
@@ -304,14 +305,17 @@ policy, never one derived under superseded policy.
 
 ## The Approval Decision Set {#decision-set}
 
-This section is OPTIONAL and experimental. The issuance profile
+This section is optional and experimental. The issuance profile
 records exactly one accountable Approver and defers approval-authority
 provenance to a governance layer
 ({{I-D.draft-mcguinness-oauth-mission}}). An enterprise review
 surface often is that governance layer: the decision may involve
 several principals, a threshold rule, and a delegation-of-authority
 policy, and an auditor later needs to prove not only who approved but
-under which authority the approval was valid.
+under which authority the approval was valid. The decision set records
+that provenance as governance evidence, not as a wire artifact. The
+ordinary one-person approval is the degenerate case, a single human
+assertion, and need not be recorded at all.
 
 A Mission Issuer MAY record an **approval decision set** alongside
 the approval event, retained with the Mission record for its audit
@@ -327,25 +331,26 @@ horizon and joined by `approval_event_id`:
   optionally the provenance under which that principal was authorized
   to decide and a reason.
 
-The set is governance evidence, not a wire artifact. It never appears
-on tokens or in any protocol message; the Mission record still
-carries exactly one accountable `approver`, the principal the
-`approval_policy` designates as accountable for the committed
-decision, and every downstream projection is unchanged. An approval
-whose recorded assertions do not satisfy the declared
-`approval_policy` threshold MUST NOT commit, and a committed set is
-immutable. The ordinary one-person approval is the degenerate case, a
-single human assertion, and need not be recorded at all. Where
-consent evidence is claimed, each human assertion's disclosure is
-committed as the consent-evidence profile requires
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); a `policy`
-assertion carries its policy identifier and version, which is the
-family's provenance chain for non-human approval (policy approves the
-instance because a human approved the policy). Consent evidence's
-`co_approvals` and `approval_authority` members
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) are this
-record's consent-evidence projection; where both are recorded they
-MUST agree, and the decision set governs.
+A recorded set is governed by these rules:
+
+- The set never appears on tokens or in any protocol message.
+- The Mission record still carries exactly one accountable
+  `approver`: the principal the `approval_policy` designates as
+  accountable for the committed decision. Every downstream projection
+  is unchanged.
+- An approval whose recorded assertions do not satisfy the declared
+  `approval_policy` threshold MUST NOT commit.
+- A committed set is immutable.
+- Where consent evidence is claimed, each human assertion's
+  disclosure is committed as the consent-evidence profile requires
+  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+- A `policy` assertion carries its policy identifier and version, the
+  family's provenance chain for non-human approval (policy approves
+  the instance because a human approved the policy).
+- Consent evidence's `co_approvals` and `approval_authority` members
+  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) are this
+  record's consent-evidence projection. Where both are recorded they
+  MUST agree, and the decision set governs.
 
 ~~~ json
 {
@@ -372,12 +377,14 @@ MUST agree, and the decision set governs.
 Deferral turns the review surface into a queue a client can flood. The
 Mission Issuer MUST bound the number of concurrent pending proposals
 per (client, Approver) pair, refusing further submissions until the
-queue drains. It SHOULD collapse pending proposals carrying an
-identical `intent_hash` into a single review item, SHOULD rate-limit
-reviewer notifications, and SHOULD log a queue flood as a security
-event, alongside the decline-suppression detection the consent
-evidence profile describes
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+queue drains. The Mission Issuer further:
+
+- SHOULD collapse pending proposals carrying an identical
+  `intent_hash` into a single review item;
+- SHOULD rate-limit reviewer notifications; and
+- SHOULD log a queue flood as a security event, alongside the
+  decline-suppression detection the consent evidence profile
+  describes ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 Collapsing identical proposals is a review-surface convenience and does
 not merge their outcomes: one approval decision MUST resolve exactly
@@ -480,10 +487,13 @@ A Mission Issuer conforming to this profile MUST:
 - enforce the pending lifetime and staleness rules of
   {{pending-staleness}} and the queue bounds of {{queue-pressure}}.
 
-A Mission Issuer that records approval decision sets additionally
-commits only approvals whose assertions satisfy the declared
-`approval_policy` threshold, and retains each committed set,
-immutable, for the Mission's audit horizon ({{decision-set}}).
+A Mission Issuer that records approval decision sets
+({{decision-set}}) additionally MUST:
+
+- commit only approvals whose assertions satisfy the declared
+  `approval_policy` threshold; and
+- retain each committed set, immutable, for the Mission's audit
+  horizon.
 
 A client conforming to this profile MUST treat every pending response
 as unapproved and poll the `deferral_code` per the deferred substrate.
