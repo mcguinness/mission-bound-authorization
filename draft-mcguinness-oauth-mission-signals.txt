@@ -210,13 +210,13 @@ Table of Contents
       [RFC8936]: the Mission Issuer makes SETs available for the
       consumer to poll.
 
-   A Mission Issuer that emits events MUST support at least one method,
-   and a consumer discovers the supported methods from the SSF
-   Transmitter Configuration Metadata rather than from a separate
-   Authorization Server metadata member.  The consumer's stream
-   configuration declares, in its delivery object, the method it uses;
-   the Mission Issuer MUST respect it and MUST NOT silently fall back to
-   a less-timely method.
+   A Mission Issuer that emits events MUST support at least one method.
+   A consumer discovers the supported methods from the SSF Transmitter
+   Configuration Metadata rather than from a separate Authorization
+   Server metadata member.  The consumer's stream configuration
+   declares, in its delivery object, the method it uses.  The Mission
+   Issuer MUST respect the declared method.  It MUST NOT silently fall
+   back to a less-timely method.
 
    A bulk lifecycle sweep at the management endpoint
    ([I-D.draft-mcguinness-oauth-mission-management]) emits one SET per
@@ -227,17 +227,24 @@ Table of Contents
 
    Streams are configured per [OIDC-SSF].  A receiver adds a Mission to
    its stream with the SSF add-subject operation, using the Mission
-   subject identifier (Section 4).  The transmitter MUST accept an add-
-   subject only for a Mission the receiver is authorized for under
-   deployment policy, for example a receiver whose audience is an
-   audience of the Mission's authority.  The executing side is an
-   intended receiver class: a deployment SHOULD authorize the harness
-   executing a Mission as a receiver for it, since the harness profile's
-   event-driven state cache ([I-D.draft-mcguinness-mission-harness]) is
-   a consumer of this stream.  Absent explicit subjects, a deployment
-   MAY provision an authorization-derived default stream (delivering the
-   events for the Missions a receiver is authorized for) and MUST
-   document that stream's scope.
+   subject identifier (Section 4).
+
+   *  Add-subject authorization: the transmitter MUST accept an add-
+      subject only for a Mission the receiver is authorized for under
+      deployment policy, for example a receiver whose audience is an
+      audience of the Mission's authority.
+
+   *  Harness as receiver: the executing side is an intended receiver
+      class.  A deployment SHOULD authorize the harness executing a
+      Mission as a receiver for it, since the harness profile's event-
+      driven state cache ([I-D.draft-mcguinness-mission-harness]) is a
+      consumer of this stream.
+
+   *  Default stream: absent explicit subjects, a deployment MAY
+      provision an authorization-derived default stream, delivering the
+      events for the Missions a receiver is authorized for.  A
+      deployment that provisions such a default stream MUST document its
+      scope.
 
 4.  The Mission Lifecycle Change Event
 
@@ -263,70 +270,70 @@ Table of Contents
    claim of a SET [RFC8417], alongside the SET's own iss, aud, iat, jti,
    and sub_id.  Its claims are:
 
-   *  mission (object, required): the Mission identity, the same
-      identity members as the mission object of
+   mission (object, required):  the Mission identity, the same identity
+      members as the mission object of
       [I-D.draft-mcguinness-oauth-mission-status], carrying id (the
       canonical Mission Identifier) and issuer (the Mission Issuer's
       issuer URL).
 
-   *  state (string, required): the new lifecycle state.  The value
-      space is the Mission lifecycle state space defined by the issuance
+   state (string, required):  the new lifecycle state.  The value space
+      is the Mission lifecycle state space defined by the issuance
       profile [I-D.draft-mcguinness-oauth-mission] (active, revoked,
       expired), as extended by whichever lifecycle profiles a deployment
       also runs: suspended and completed
       ([I-D.draft-mcguinness-oauth-mission-status]), superseded
       ([I-D.draft-mcguinness-oauth-mission-expansion]), and cascaded
-      ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
-      Following the issuance profile's forward-compatibility rule, an
-      event consumer MUST treat every value other than active as non-
-      deriving, including a value it does not recognize.  A Mission
-      Issuer that runs a profile defining an additional state emits that
-      state here on the corresponding transition (for example,
-      superseded when a predecessor is superseded by an expansion
-      successor).
+      ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  A
+      Mission Issuer that runs a profile defining an additional state
+      emits that state here on the corresponding transition (for
+      example, superseded when a predecessor is superseded by an
+      expansion successor).
 
-   *  prior_state (string, conditional): the state immediately before
-      the transition, drawn from the same value space.  REQUIRED on a
+   prior_state (string, conditional):  the state immediately before the
+      transition, drawn from the same value space.  REQUIRED on a
       transition emission; absent only on the approval-event emission,
       where there is no prior state.  A supersede transition emits
       prior_state of active and state of superseded.
 
-   *  version (integer, required): the Mission's state version at this
+   version (integer, required):  the Mission's state version at this
       event's commit, letting a consumer order events and detect gaps.
       The counter is the Status profile's state version, defined and
       served there ([I-D.draft-mcguinness-oauth-mission-status]); this
       member carries its value at the emission.
 
-   *  committed_at (string, required): an RFC 3339 [RFC3339] date-time
-      at which the Mission Issuer committed the transition.
+   committed_at (string, required):  an RFC 3339 [RFC3339] date-time at
+      which the Mission Issuer committed the transition.
 
-   *  expires_at (string, required): an RFC 3339 [RFC3339] date-time,
-      the Mission's own expiry, the same expires_at the Status profile
+   expires_at (string, required):  an RFC 3339 [RFC3339] date-time, the
+      Mission's own expiry, the same expires_at the Status profile
       reports ([I-D.draft-mcguinness-oauth-mission-status]), so an
       event-only consumer can fail safe on expiry without a Status
       fetch.
 
-   *  suspend_until, on_expiry (conditional): present only on a
-      transition to suspended under a deadline, with the values and
-      meaning of the Status profile
-      ([I-D.draft-mcguinness-oauth-mission-status]): the RFC 3339
-      [RFC3339] deadline and the transition (resume or revoke) the
-      Mission Issuer applies when it passes.  A suspend-metadata update,
-      a change to suspend_until or on_expiry on an already-suspended
-      Mission, is emitted as a mission.lifecycle-change with state and
-      prior_state both suspended and the updated values, incrementing
-      version like any other committed change.
+   suspend_until, on_expiry (conditional):  present only on a transition
+      to suspended under a deadline, with the values and meaning of the
+      Status profile ([I-D.draft-mcguinness-oauth-mission-status]): the
+      RFC 3339 [RFC3339] deadline and the transition (resume or revoke)
+      the Mission Issuer applies when it passes.  A suspend-metadata
+      update, a change to suspend_until or on_expiry on an already-
+      suspended Mission, is emitted as a mission.lifecycle-change with
+      state and prior_state both suspended and the updated values,
+      incrementing version like any other committed change.
 
-   *  tenant (string, optional): the Mission's deployment tenant.  This
+   tenant (string, optional):  the Mission's deployment tenant.  This
       profile defines no tenant model and does not use it; it is present
       so the event type is shared, unchanged, with multi-tenant and
       cross-substrate deployments that do.
 
-   *  reason (string, optional): a human-readable reason, for audit.
+   reason (string, optional):  a human-readable reason, for audit.
 
-   *  successor (string, optional): the successor mission_id.  Present
+   successor (string, optional):  the successor mission_id.  Present
       only when state is superseded, giving the successor that replaced
       the Mission ([I-D.draft-mcguinness-oauth-mission-expansion]).
+
+   Following the issuance profile's forward-compatibility rule, an event
+   consumer MUST treat every state value other than active as non-
+   deriving, including a value it does not recognize.
 
    The expired event MAY be emitted lazily.  Because expiry is driven by
    the clock reaching the Mission's expires_at rather than an explicit
@@ -420,28 +427,38 @@ Table of Contents
 
    Each SET [RFC8417] is a JWS Compact Serialization [RFC7515] signed
    with a Mission Issuer key resolvable in the issuer's jwks_uri, with a
-   typ of secevent+jwt and a kid identifying the signing key.  A
-   consumer MUST verify the signature against the Mission Issuer's
-   published keys and MUST refuse a SET whose iss does not match the
-   Mission Issuer it registered with.  Because this profile is single-
-   issuer, the SET iss equals the event's mission.issuer; a consumer MAY
-   treat a mismatch as a verification failure. (mission.issuer is
-   carried in the event for cross-substrate deployments where the two
-   can differ.)
+   typ of secevent+jwt and a kid identifying the signing key.  The SET
+   aud MUST be the receiving consumer's registered audience identifier.
 
-   The SET aud MUST be the receiving consumer's registered audience
-   identifier; a consumer MUST refuse a SET whose aud is not its own.
-   SSF delivery is at-least-once, so the same SET (same jti) may be
-   redelivered; a consumer MUST NOT treat redelivery as an error.  At
-   the delivery layer a consumer acknowledges a duplicate jti normally,
-   per the SSF delivery method in use, without reprocessing it; at the
-   application layer it applies each event idempotently by version
-   (Section 6), so a redelivered SET regresses nothing.  Tracking
-   recently seen jti values for a deployment-defined window measured
-   from the SET's iat lets a consumer recognize a duplicate; this is
-   duplicate suppression, not a hard reject.  Following [RFC8417], this
-   profile does not require an exp on the SET; a consumer MAY reject a
-   SET whose iat is implausibly old.
+   On receipt, a consumer applies the following checks to each SET:
+
+   1.  Signature: the consumer MUST verify the signature against the
+       Mission Issuer's published keys.
+
+   2.  Issuer: the consumer MUST refuse a SET whose iss does not match
+       the Mission Issuer it registered with.  Because this profile is
+       single-issuer, the SET iss equals the event's mission.issuer; a
+       consumer MAY treat a mismatch as a verification failure.
+       (mission.issuer is carried in the event for cross-substrate
+       deployments where the two can differ.)
+
+   3.  Audience: the consumer MUST refuse a SET whose aud is not its
+       own.
+
+   4.  Redelivery: the consumer MUST NOT treat redelivery of the same
+       SET (same jti) as an error, because SSF delivery is at-least-
+       once.
+
+   At the delivery layer a consumer acknowledges a duplicate jti
+   normally, per the SSF delivery method in use, without reprocessing
+   it; at the application layer it applies each event idempotently by
+   version (Section 6), so a redelivered SET regresses nothing.
+   Tracking recently seen jti values for a deployment-defined window
+   measured from the SET's iat lets a consumer recognize a duplicate;
+   this is duplicate suppression, not a hard reject.
+
+   Following [RFC8417], this profile does not require an exp on the SET;
+   a consumer MAY reject a SET whose iat is implausibly old.
 
 6.  Consumer Behavior on Receipt
 
@@ -502,25 +519,26 @@ Table of Contents
 
    A consumer anchors freshness to stream liveness, not to per-Mission
    age.  The Shared Signals Framework [OIDC-SSF] provides a stream
-   verification event, and a Mission Issuer MAY additionally emit a
-   periodic stream-status heartbeat.  A verified verification or
-   heartbeat event received within the stream's heartbeat interval
-   attests that the stream is live and that any committed transition for
-   the stream's subjects would have been delivered; it therefore extends
-   freshness for those subjects up to the next heartbeat interval.  On a
-   stream verified live, silence is freshness-preserving: the consumer
-   MAY continue to rely on cached Mission state and does not poll
+   verification event.  A Mission Issuer MAY additionally emit a
+   periodic stream-status heartbeat.  A stream is verified live when the
+   consumer has received a verified verification or heartbeat event
+   within the stream's heartbeat interval; such an event attests that
+   any committed transition for the stream's subjects would have been
+   delivered.  On a stream verified live, silence is freshness-
+   preserving: the consumer MAY continue to rely on cached Mission state
+   for those subjects up to the next heartbeat interval, without polling
    Mission Status per Mission.
 
    The staleness fallback applies to a stream that is not verified live.
    A consumer MUST treat cached Mission state as stale once the stream
    has gone without a verified verification or heartbeat event for
    longer than the Mission Issuer's advertised mission_max_stale_seconds
-   ([I-D.draft-mcguinness-oauth-mission-status]), and MUST re-establish
-   current state before further reliance; the Mission Status operation
-   is the RECOMMENDED fallback surface.  A consumer that cannot verify
-   its stream, or that was down and may have missed events, applies the
-   same rule rather than continuing on possibly stale state.
+   ([I-D.draft-mcguinness-oauth-mission-status]).  Once its cached state
+   is stale, the consumer MUST re-establish current state before further
+   reliance.  The Mission Status operation is the RECOMMENDED fallback
+   surface.  A consumer that cannot verify its stream, or that was down
+   and may have missed events, applies the same rule rather than
+   continuing on possibly stale state.
 
 7.  Relationship to Revocation Propagation
 
@@ -621,12 +639,13 @@ Table of Contents
 
    A forged event could suppress a Mission (a spurious revoked) or, more
    dangerously, mask a revocation (a spurious active).  SET signing
-   (Section 5) binds each event to the Mission Issuer; a consumer MUST
-   verify the signature, the iss, and its own aud, and suppresses a
-   redelivered jti as a duplicate rather than reprocessing it
-   (Section 5).  The version ordering rule (Section 6) prevents an old
-   active event from overriding a newer revoked one, whether the old
-   event is a forgery, a replay, or an at-least-once duplicate.
+   (Section 5) binds each event to the Mission Issuer: the consumer's
+   verification of the signature, the iss, and its own aud per Section 5
+   rejects a forged event, and the same section's duplicate suppression
+   handles a redelivered jti without reprocessing it.  The version
+   ordering rule (Section 6) prevents an old active event from
+   overriding a newer revoked one, whether the old event is a forgery, a
+   replay, or an at-least-once duplicate.
 
 11.2.  Missed Events Are Not Fail-Open
 

@@ -1372,13 +1372,13 @@ consumer's registered receiver endpoint.<a href="#section-3-4.1.1" class="pilcro
 to poll.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-3-5">A Mission Issuer that emits events <span class="bcp14">MUST</span> support at least one method,
-and a consumer discovers the supported methods from the SSF
-Transmitter Configuration Metadata rather than from a separate
-Authorization Server metadata
-member. The consumer's stream configuration declares, in its
-<code>delivery</code> object, the method it uses; the Mission Issuer <span class="bcp14">MUST</span> respect it and <span class="bcp14">MUST NOT</span> silently fall
-back to a less-timely method.<a href="#section-3-5" class="pilcrow">¶</a></p>
+<p id="section-3-5">A Mission Issuer that emits events <span class="bcp14">MUST</span> support at least one method.
+A consumer discovers the supported methods from the SSF Transmitter
+Configuration Metadata rather than from a separate Authorization
+Server metadata member. The consumer's stream configuration declares,
+in its <code>delivery</code> object, the method it uses. The Mission Issuer <span class="bcp14">MUST</span>
+respect the declared method. It <span class="bcp14">MUST NOT</span> silently fall back to a
+less-timely method.<a href="#section-3-5" class="pilcrow">¶</a></p>
 <p id="section-3-6">A bulk lifecycle sweep at the management endpoint
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>) emits one SET per
 member Mission; a transmitter should expect, and pace, the resulting
@@ -1390,17 +1390,28 @@ burst.<a href="#section-3-6" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-3.1-1">Streams are configured per <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span>. A receiver adds a Mission to
 its stream with the SSF add-subject operation, using the Mission subject
-identifier (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>). The transmitter <span class="bcp14">MUST</span> accept an
+identifier (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>).<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.1-2.1">
+            <p id="section-3.1-2.1.1">Add-subject authorization: the transmitter <span class="bcp14">MUST</span> accept an
 add-subject only for a Mission the receiver is authorized for under
-deployment policy, for example a receiver whose audience is an audience
-of the Mission's authority. The executing side is an intended
-receiver class: a deployment <span class="bcp14">SHOULD</span> authorize the harness executing
-a Mission as a receiver for it, since the harness profile's
-event-driven state cache (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>)
-is a consumer of this stream. Absent explicit subjects, a deployment <span class="bcp14">MAY</span>
-provision an authorization-derived default stream (delivering the events
-for the Missions a receiver is authorized for) and <span class="bcp14">MUST</span> document that
-stream's scope.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+deployment policy, for example a receiver whose audience is an
+audience of the Mission's authority.<a href="#section-3.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-2.2">
+            <p id="section-3.1-2.2.1">Harness as receiver: the executing side is an intended receiver
+class. A deployment <span class="bcp14">SHOULD</span> authorize the harness executing a Mission
+as a receiver for it, since the harness profile's event-driven state
+cache (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) is a consumer of
+this stream.<a href="#section-3.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-2.3">
+            <p id="section-3.1-2.3.1">Default stream: absent explicit subjects, a deployment <span class="bcp14">MAY</span> provision
+an authorization-derived default stream, delivering the events for
+the Missions a receiver is authorized for. A deployment that
+provisions such a default stream <span class="bcp14">MUST</span> document its scope.<a href="#section-3.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
 </section>
 </div>
 </section>
@@ -1427,90 +1438,119 @@ its stream using this same subject identifier (<a href="#event-stream" class="au
 <p id="section-4-5">The event is carried as the event-type-keyed value of the <code>events</code>
 claim of a SET <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>, alongside the SET's own <code>iss</code>, <code>aud</code>,
 <code>iat</code>, <code>jti</code>, and <code>sub_id</code>. Its claims are:<a href="#section-4-5" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-4-6.1">
-          <p id="section-4-6.1.1"><code>mission</code> (object, required): the Mission identity, the same
-identity members as the <code>mission</code> object of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, carrying <code>id</code> (the
-canonical Mission Identifier) and <code>issuer</code> (the Mission Issuer's
-issuer URL).<a href="#section-4-6.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-6.2">
-          <p id="section-4-6.2.1"><code>state</code> (string, required): the new lifecycle state. The value space
-is the Mission lifecycle state space defined by the issuance profile
+<span class="break"></span><dl class="dlParallel" id="section-4-6">
+        <dt id="section-4-6.1">
+<code>mission</code> (object, required):</dt>
+        <dd style="margin-left: 1.5em" id="section-4-6.2">
+          <p id="section-4-6.2.1">the Mission identity, the same identity members as the <code>mission</code>
+object of <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, carrying
+<code>id</code> (the canonical Mission Identifier) and <code>issuer</code> (the Mission
+Issuer's issuer URL).<a href="#section-4-6.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-6.3">
+<code>state</code> (string, required):</dt>
+        <dd style="margin-left: 1.5em" id="section-4-6.4">
+          <p id="section-4-6.4.1">the new lifecycle state. The value space is the Mission lifecycle
+state space defined by the issuance profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (<code>active</code>, <code>revoked</code>,
 <code>expired</code>), as extended by whichever lifecycle profiles a deployment
 also runs: <code>suspended</code> and <code>completed</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), <code>superseded</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and <code>cascaded</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Following
-the issuance profile's forward-compatibility rule, an event consumer
-<span class="bcp14">MUST</span> treat every value other than <code>active</code> as non-deriving, including
-a value it does not recognize. A Mission Issuer that runs a profile
-defining an additional state emits that state here on the
-corresponding transition (for example, <code>superseded</code> when a
-predecessor is superseded by an expansion successor).<a href="#section-4-6.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-6.3">
-          <p id="section-4-6.3.1"><code>prior_state</code> (string, conditional): the state immediately before the
-transition, drawn from the same value space. <span class="bcp14">REQUIRED</span> on a transition
-emission; absent only on the approval-event emission, where there is
-no prior state. A supersede transition emits <code>prior_state</code> of <code>active</code>
-and <code>state</code> of <code>superseded</code>.<a href="#section-4-6.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-6.4">
-          <p id="section-4-6.4.1"><code>version</code> (integer, required): the Mission's state version at this
-event's commit, letting a consumer order events and detect gaps.
-The counter is the Status profile's state version, defined and
-served there (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>); this
-member carries its value at the emission.<a href="#section-4-6.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-6.5">
-          <p id="section-4-6.5.1"><code>committed_at</code> (string, required): an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time
-at which the Mission Issuer committed the transition.<a href="#section-4-6.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-6.6">
-          <p id="section-4-6.6.1"><code>expires_at</code> (string, required): an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time,
-the Mission's own expiry, the same <code>expires_at</code> the Status profile
-reports (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), so an
-event-only consumer can fail safe on expiry without a Status fetch.<a href="#section-4-6.6.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-6.7">
-          <p id="section-4-6.7.1"><code>suspend_until</code>, <code>on_expiry</code> (conditional): present only on a
-transition to <code>suspended</code> under a deadline, with the values and
-meaning of the Status profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). A Mission
+Issuer that runs a profile defining an additional state emits that
+state here on the corresponding transition (for example,
+<code>superseded</code> when a predecessor is superseded by an expansion
+successor).<a href="#section-4-6.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-6.5">
+<code>prior_state</code> (string, conditional):</dt>
+        <dd style="margin-left: 1.5em" id="section-4-6.6">
+          <p id="section-4-6.6.1">the state immediately before the transition, drawn from the same
+value space. <span class="bcp14">REQUIRED</span> on a transition emission; absent only on the
+approval-event emission, where there is no prior state. A supersede
+transition emits <code>prior_state</code> of <code>active</code> and <code>state</code> of
+<code>superseded</code>.<a href="#section-4-6.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-6.7">
+<code>version</code> (integer, required):</dt>
+        <dd style="margin-left: 1.5em" id="section-4-6.8">
+          <p id="section-4-6.8.1">the Mission's state version at this event's commit, letting a
+consumer order events and detect gaps. The counter is the Status
+profile's state version, defined and served there
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>); this member carries
+its value at the emission.<a href="#section-4-6.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-6.9">
+<code>committed_at</code> (string, required):</dt>
+        <dd style="margin-left: 1.5em" id="section-4-6.10">
+          <p id="section-4-6.10.1">an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time at which the Mission Issuer
+committed the transition.<a href="#section-4-6.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-6.11">
+<code>expires_at</code> (string, required):</dt>
+        <dd style="margin-left: 1.5em" id="section-4-6.12">
+          <p id="section-4-6.12.1">an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time, the Mission's own expiry, the
+same <code>expires_at</code> the Status profile reports
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), so an event-only
+consumer can fail safe on expiry without a Status fetch.<a href="#section-4-6.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-6.13">
+<code>suspend_until</code>, <code>on_expiry</code> (conditional):</dt>
+        <dd style="margin-left: 1.5em" id="section-4-6.14">
+          <p id="section-4-6.14.1">present only on a transition to <code>suspended</code> under a deadline, with
+the values and meaning of the Status profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>): the RFC 3339
 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> deadline and the transition (<code>resume</code> or <code>revoke</code>) the
 Mission Issuer applies when it passes. A suspend-metadata update, a
 change to <code>suspend_until</code> or <code>on_expiry</code> on an already-<code>suspended</code>
 Mission, is emitted as a <code>mission.lifecycle-change</code> with <code>state</code> and
 <code>prior_state</code> both <code>suspended</code> and the updated values, incrementing
-<code>version</code> like any other committed change.<a href="#section-4-6.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-6.8">
-          <p id="section-4-6.8.1"><code>tenant</code> (string, optional): the Mission's deployment tenant. This
-profile defines no tenant model and does not use it; it is present so
-the event type is shared, unchanged, with multi-tenant and
-cross-substrate deployments that do.<a href="#section-4-6.8.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-6.9">
-          <p id="section-4-6.9.1"><code>reason</code> (string, optional): a human-readable reason, for audit.<a href="#section-4-6.9.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-6.10">
-          <p id="section-4-6.10.1"><code>successor</code> (string, optional): the successor <code>mission_id</code>. Present
-only when <code>state</code> is <code>superseded</code>, giving the successor that replaced
-the Mission (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-4-6.10.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-4-7">The <code>expired</code> event <span class="bcp14">MAY</span> be emitted lazily. Because expiry is driven by
+<code>version</code> like any other committed change.<a href="#section-4-6.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-6.15">
+<code>tenant</code> (string, optional):</dt>
+        <dd style="margin-left: 1.5em" id="section-4-6.16">
+          <p id="section-4-6.16.1">the Mission's deployment tenant. This profile defines no tenant
+model and does not use it; it is present so the event type is
+shared, unchanged, with multi-tenant and cross-substrate deployments
+that do.<a href="#section-4-6.16.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-6.17">
+<code>reason</code> (string, optional):</dt>
+        <dd style="margin-left: 1.5em" id="section-4-6.18">
+          <p id="section-4-6.18.1">a human-readable reason, for audit.<a href="#section-4-6.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-6.19">
+<code>successor</code> (string, optional):</dt>
+        <dd style="margin-left: 1.5em" id="section-4-6.20">
+          <p id="section-4-6.20.1">the successor <code>mission_id</code>. Present only when <code>state</code> is
+<code>superseded</code>, giving the successor that replaced the Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-4-6.20.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-4-7">Following the issuance profile's forward-compatibility rule, an event
+consumer <span class="bcp14">MUST</span> treat every <code>state</code> value other than <code>active</code> as
+non-deriving, including a value it does not recognize.<a href="#section-4-7" class="pilcrow">¶</a></p>
+<p id="section-4-8">The <code>expired</code> event <span class="bcp14">MAY</span> be emitted lazily. Because expiry is driven by
 the clock reaching the Mission's <code>expires_at</code> rather than an explicit
 request, a Mission Issuer emits the <code>expired</code> event at or after the
 Mission's <code>expires_at</code>, when it observes the transition. A consumer
 does not depend on prompt emission: it already fails safe on the
 Mission's <code>expires_at</code> carried with cached Mission status
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-4-7" class="pilcrow">¶</a></p>
-<p id="section-4-8">Example SET (decoded), for a revocation:<a href="#section-4-8" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-4-9">
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-4-8" class="pilcrow">¶</a></p>
+<p id="section-4-9">Example SET (decoded), for a revocation:<a href="#section-4-9" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4-10">
 <pre>
 {
   "iss": "https://as.example.com",
@@ -1536,11 +1576,11 @@ Mission's <code>expires_at</code> carried with cached Mission status
     }
   }
 }
-</pre><a href="#section-4-9" class="pilcrow">¶</a>
+</pre><a href="#section-4-10" class="pilcrow">¶</a>
 </div>
-<p id="section-4-10">Example SET (decoded), for the approval event that activates the
-Mission (<code>version</code> 1, no <code>prior_state</code>):<a href="#section-4-10" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-4-11">
+<p id="section-4-11">Example SET (decoded), for the approval event that activates the
+Mission (<code>version</code> 1, no <code>prior_state</code>):<a href="#section-4-11" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4-12">
 <pre>
 {
   "iss": "https://as.example.com",
@@ -1564,10 +1604,10 @@ Mission (<code>version</code> 1, no <code>prior_state</code>):<a href="#section-
     }
   }
 }
-</pre><a href="#section-4-11" class="pilcrow">¶</a>
+</pre><a href="#section-4-12" class="pilcrow">¶</a>
 </div>
-<p id="section-4-12">Example SET (decoded), for a supersession, carrying <code>successor</code>:<a href="#section-4-12" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-4-13">
+<p id="section-4-13">Example SET (decoded), for a supersession, carrying <code>successor</code>:<a href="#section-4-13" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4-14">
 <pre>
 {
   "iss": "https://as.example.com",
@@ -1593,7 +1633,7 @@ Mission (<code>version</code> 1, no <code>prior_state</code>):<a href="#section-
     }
   }
 }
-</pre><a href="#section-4-13" class="pilcrow">¶</a>
+</pre><a href="#section-4-14" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -1604,27 +1644,41 @@ Mission (<code>version</code> 1, no <code>prior_state</code>):<a href="#section-
       </h2>
 <p id="section-5-1">Each SET <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> is a JWS Compact Serialization <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> signed
 with a Mission Issuer key resolvable in the issuer's <code>jwks_uri</code>, with a
-<code>typ</code> of <code>secevent+jwt</code> and a <code>kid</code> identifying the signing key. A
-consumer <span class="bcp14">MUST</span> verify the signature against the Mission Issuer's
-published keys and <span class="bcp14">MUST</span> refuse a SET whose <code>iss</code> does not match the
-Mission Issuer it registered with. Because this profile is
-single-issuer, the SET <code>iss</code> equals the event's <code>mission.issuer</code>; a
-consumer <span class="bcp14">MAY</span> treat a mismatch as a verification failure. (<code>mission.issuer</code>
-is carried in the event for cross-substrate deployments where the two
-can differ.)<a href="#section-5-1" class="pilcrow">¶</a></p>
-<p id="section-5-2">The SET <code>aud</code> <span class="bcp14">MUST</span> be the receiving consumer's registered audience
-identifier; a consumer <span class="bcp14">MUST</span> refuse a SET whose <code>aud</code> is not its own.
-SSF delivery is at-least-once, so the same SET (same <code>jti</code>) may be
-redelivered; a consumer <span class="bcp14">MUST NOT</span> treat redelivery as an error. At the
-delivery layer a consumer acknowledges a duplicate <code>jti</code> normally, per
-the SSF delivery method in use, without reprocessing it; at the
-application layer it applies each event idempotently by <code>version</code>
-(<a href="#consumer-behavior" class="auto internal xref">Section 6</a>), so a redelivered SET regresses nothing.
-Tracking recently seen <code>jti</code> values for a deployment-defined window
-measured from the SET's <code>iat</code> lets a consumer recognize a duplicate;
-this is duplicate suppression, not a hard reject. Following
-<span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>, this profile does not require an <code>exp</code> on the SET; a
-consumer <span class="bcp14">MAY</span> reject a SET whose <code>iat</code> is implausibly old.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<code>typ</code> of <code>secevent+jwt</code> and a <code>kid</code> identifying the signing key. The
+SET <code>aud</code> <span class="bcp14">MUST</span> be the receiving consumer's registered audience
+identifier.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">On receipt, a consumer applies the following checks to each SET:<a href="#section-5-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5-3">
+<li id="section-5-3.1">
+          <p id="section-5-3.1.1">Signature: the consumer <span class="bcp14">MUST</span> verify the signature against the
+Mission Issuer's published keys.<a href="#section-5-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-3.2">
+          <p id="section-5-3.2.1">Issuer: the consumer <span class="bcp14">MUST</span> refuse a SET whose <code>iss</code> does not match
+the Mission Issuer it registered with. Because this profile is
+single-issuer, the SET <code>iss</code> equals the event's <code>mission.issuer</code>;
+a consumer <span class="bcp14">MAY</span> treat a mismatch as a verification failure.
+(<code>mission.issuer</code> is carried in the event for cross-substrate
+deployments where the two can differ.)<a href="#section-5-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-3.3">
+          <p id="section-5-3.3.1">Audience: the consumer <span class="bcp14">MUST</span> refuse a SET whose <code>aud</code> is not its
+own.<a href="#section-5-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-3.4">
+          <p id="section-5-3.4.1">Redelivery: the consumer <span class="bcp14">MUST NOT</span> treat redelivery of the same SET
+(same <code>jti</code>) as an error, because SSF delivery is at-least-once.<a href="#section-5-3.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-5-4">At the delivery layer a consumer acknowledges a duplicate <code>jti</code>
+normally, per the SSF delivery method in use, without reprocessing it;
+at the application layer it applies each event idempotently by
+<code>version</code> (<a href="#consumer-behavior" class="auto internal xref">Section 6</a>), so a redelivered SET regresses
+nothing. Tracking recently seen <code>jti</code> values for a deployment-defined
+window measured from the SET's <code>iat</code> lets a consumer recognize a
+duplicate; this is duplicate suppression, not a hard reject.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<p id="section-5-5">Following <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>, this profile does not require an <code>exp</code> on the
+SET; a consumer <span class="bcp14">MAY</span> reject a SET whose <code>iat</code> is implausibly old.<a href="#section-5-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="consumer-behavior">
@@ -1692,24 +1746,25 @@ URN or an OpenID Foundation schema URI), and a provisional
 <code>urn:ietf:params</code> URN <span class="bcp14">MAY</span> be used in the interim.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <p id="section-6-5">A consumer anchors freshness to stream liveness, not to per-Mission
 age. The Shared Signals Framework <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> provides a stream
-verification event, and a Mission Issuer <span class="bcp14">MAY</span> additionally emit a
-periodic stream-status heartbeat. A verified verification or heartbeat
-event received within the stream's heartbeat interval attests that the
-stream is live and that any committed transition for the stream's
-subjects would have been delivered; it therefore extends freshness for
-those subjects up to the next heartbeat interval. On a stream verified
-live, silence is freshness-preserving: the consumer <span class="bcp14">MAY</span> continue to
-rely on cached Mission state and does not poll Mission Status per
+verification event. A Mission Issuer <span class="bcp14">MAY</span> additionally emit a periodic
+stream-status heartbeat. A stream is verified live when the consumer
+has received a verified verification or heartbeat event within the
+stream's heartbeat interval; such an event attests that any committed
+transition for the stream's subjects would have been delivered. On a
+stream verified live, silence is freshness-preserving: the consumer
+<span class="bcp14">MAY</span> continue to rely on cached Mission state for those subjects up to
+the next heartbeat interval, without polling Mission Status per
 Mission.<a href="#section-6-5" class="pilcrow">¶</a></p>
-<p id="section-6-6">The staleness fallback applies to a stream that is not verified live. A
-consumer <span class="bcp14">MUST</span> treat cached Mission state as stale once the stream has
-gone without a verified verification or heartbeat event for longer than
-the Mission Issuer's advertised <code>mission_max_stale_seconds</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), and <span class="bcp14">MUST</span> re-establish
-current state before further reliance; the Mission Status operation is
-the <span class="bcp14">RECOMMENDED</span> fallback surface. A consumer that cannot verify its
-stream, or that was down and may have missed events, applies the same
-rule rather than continuing on possibly stale state.<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-6">The staleness fallback applies to a stream that is not verified live.
+A consumer <span class="bcp14">MUST</span> treat cached Mission state as stale once the stream
+has gone without a verified verification or heartbeat event for longer
+than the Mission Issuer's advertised <code>mission_max_stale_seconds</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). Once its cached state
+is stale, the consumer <span class="bcp14">MUST</span> re-establish current state before further
+reliance. The Mission Status operation is the <span class="bcp14">RECOMMENDED</span> fallback
+surface. A consumer that cannot verify its stream, or that was down
+and may have missed events, applies the same rule rather than
+continuing on possibly stale state.<a href="#section-6-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="event-driven">
@@ -1843,10 +1898,11 @@ covers threats specific to event propagation.<a href="#section-11-1" class="pilc
         </h3>
 <p id="section-11.1-1">A forged event could suppress a Mission (a spurious <code>revoked</code>) or, more
 dangerously, mask a revocation (a spurious <code>active</code>). SET signing
-(<a href="#set-protection" class="auto internal xref">Section 5</a>) binds each event to the Mission Issuer; a consumer
-<span class="bcp14">MUST</span> verify the signature, the <code>iss</code>, and its own <code>aud</code>, and suppresses
-a redelivered <code>jti</code> as a duplicate rather than reprocessing it
-(<a href="#set-protection" class="auto internal xref">Section 5</a>). The <code>version</code> ordering rule
+(<a href="#set-protection" class="auto internal xref">Section 5</a>) binds each event to the Mission Issuer: the
+consumer's verification of the signature, the <code>iss</code>, and its own <code>aud</code>
+per <a href="#set-protection" class="auto internal xref">Section 5</a> rejects a forged event, and the same section's
+duplicate suppression handles a redelivered <code>jti</code> without reprocessing
+it. The <code>version</code> ordering rule
 (<a href="#consumer-behavior" class="auto internal xref">Section 6</a>) prevents an old <code>active</code> event from overriding
 a newer <code>revoked</code> one, whether the old event is a forgery, a replay, or
 an at-least-once duplicate.<a href="#section-11.1-1" class="pilcrow">¶</a></p>

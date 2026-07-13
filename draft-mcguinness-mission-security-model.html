@@ -1425,17 +1425,18 @@ issuer, which never sees these tokens
 <dt id="section-6-2.5">Mission Authority Server (standalone binding):</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.6">
           <p id="section-6-2.6.1">When the standalone Mission Authority Server binding is used, a
-service outside the OAuth Authorization Server implements the Mission
-Issuer role: it must run the approval ceremony faithfully, keep the
-Mission record and its anchors intact, and serve accurate Mission
-state, while the deployment's tokens remain ordinary and carry no
-Mission binding. Its compromise is equivalent to Mission Issuer
-compromise (forged approvals, altered records, false state), with one
-addition: in this mode the PDP's credential-to-Mission join is the
-only binding between a presented credential and a Mission, so a
-compromised Mission Authority Server combined with the PDP's trust in
-it yields arbitrary attribution of authority to any credential the
-join accepts. Where Mission Join Assertions are used, the PDP's join
+service outside the OAuth Authorization Server implements the
+Mission Issuer role, while the deployment's tokens remain ordinary
+and carry no Mission binding. It must run the approval ceremony
+faithfully, keep the Mission record and its anchors intact, and
+serve accurate Mission state. Its compromise is equivalent to
+Mission Issuer compromise (forged approvals, altered records, false
+state), with one addition. In this mode the PDP's
+credential-to-Mission join is the only binding between a presented
+credential and a Mission, so a compromised Mission Authority Server
+combined with the PDP's trust in it yields arbitrary attribution of
+authority to any credential the join accepts. Where Mission Join
+Assertions are used, the PDP's join
 trust concentrates in one MAS signature, and the MAS may hold
 introspection credentials at the Authorization Server, a
 cross-component channel whose compromise forges joins
@@ -1678,8 +1679,7 @@ concrete publication and evaluation mechanisms for such policy.<a href="#section
 and cannot derive, widen, or gate authority; <code>goal</code> shapes
 authority only through the pre-approval derivation whose result the
 Approver reads and consents to, and is inert once the Mission is
-approved (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Authority is
-fixed at the approval event.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+approved (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -1833,14 +1833,15 @@ part: it is what a deploying party still owns.<a href="#section-9-2" class="pilc
 <span class="break"></span><dl class="dlParallel" id="section-9-3">
         <dt id="section-9-3.1">Compromised or injected agent acts beyond its task:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.2">
-          <p id="section-9-3.2.1">Addressed by authority fixed at the approval event (issuance);
-per-action PDP check (runtime). Residual: misuse within the approved
-scope; low-consequence authority the agent legitimately holds.<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
+          <p id="section-9-3.2.1">Addressed by authority committed at the approval event
+(<a href="#untrusted-agent" class="auto internal xref">Section 5</a>) (issuance); per-action PDP check (runtime).
+Residual: misuse within the approved scope; low-consequence
+authority the agent legitimately holds.<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-9-3.3">Prompt injection tries to widen authority:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.4">
-          <p id="section-9-3.4.1">Addressed by authority fixed at approval: <code>purpose</code> and
+          <p id="section-9-3.4.1">Addressed by the same approval-time commitment: <code>purpose</code> and
 <code>success_criteria</code> are inert, and <code>goal</code> shapes authority only through
 the pre-approval derivation the Approver consents to. Residual:
 injected text can still drive actions already in scope.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
@@ -1984,8 +1985,8 @@ cannot mint or widen authority.<a href="#section-9-3.34.1" class="pilcrow">¶</a
         <dd style="margin-left: 1.5em" id="section-9-3.36">
           <p id="section-9-3.36.1">Addressed by transparency: append-only log, inclusion receipts,
 non-equivocation. Residual: single-service equivocation (per-service
-only; register with several); a producer can still log a false record
-(accountability, not prevention).<a href="#section-9-3.36.1" class="pilcrow">¶</a></p>
+only; register with several); a producer can still log a false
+record.<a href="#section-9-3.36.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-9-3.37">Agent fabricates results or acts on false data:</dt>
@@ -2530,9 +2531,10 @@ named complement owns it.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="appendix-A-3">The pattern behind the verdicts follows the model's one commitment:
-authority is fixed at approval, and every consequential action is
-checked against it fresh. Threats that attack authority are
+<p id="appendix-A-3">The pattern behind the verdicts follows the model's one commitment
+(<a href="#untrusted-agent" class="auto internal xref">Section 5</a>): authority is committed at the approval event,
+and every consequential action is checked against it fresh. Threats
+that attack authority are
 contained. Threats that attack the model, its memory, or its inputs
 are bounded, because a fully fooled agent still cannot out-argue a
 parameter check. Threats that attack other layers are delegated by
@@ -2627,8 +2629,7 @@ where the two could be read to differ, the adversary model governs.<a href="#app
           </tr>
         </tbody>
       </table>
-<p id="appendix-A-5">The agentic tally is six contained, nine bounded, none waved away.
-The threats that attack authority (tools, privilege, goals,
+<p id="appendix-A-5">The threats that attack authority (tools, privilege, goals,
 attribution, identity, rogue delegates) land on machinery built for
 them, and the threats that attack the model or the humans are capped
 rather than cured, because capping is what a deterministic gate can

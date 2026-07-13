@@ -249,13 +249,13 @@ Table of Contents
 
    Mission Authority Server (standalone binding):  When the standalone
       Mission Authority Server binding is used, a service outside the
-      OAuth Authorization Server implements the Mission Issuer role: it
-      must run the approval ceremony faithfully, keep the Mission record
-      and its anchors intact, and serve accurate Mission state, while
-      the deployment's tokens remain ordinary and carry no Mission
-      binding.  Its compromise is equivalent to Mission Issuer
-      compromise (forged approvals, altered records, false state), with
-      one addition: in this mode the PDP's credential-to-Mission join is
+      OAuth Authorization Server implements the Mission Issuer role,
+      while the deployment's tokens remain ordinary and carry no Mission
+      binding.  It must run the approval ceremony faithfully, keep the
+      Mission record and its anchors intact, and serve accurate Mission
+      state.  Its compromise is equivalent to Mission Issuer compromise
+      (forged approvals, altered records, false state), with one
+      addition.  In this mode the PDP's credential-to-Mission join is
       the only binding between a presented credential and a Mission, so
       a compromised Mission Authority Server combined with the PDP's
       trust in it yields arbitrary attribution of authority to any
@@ -458,8 +458,7 @@ Table of Contents
       cannot derive, widen, or gate authority; goal shapes authority
       only through the pre-approval derivation whose result the Approver
       reads and consents to, and is inert once the Mission is approved
-      ([I-D.draft-mcguinness-oauth-mission]).  Authority is fixed at the
-      approval event.
+      ([I-D.draft-mcguinness-oauth-mission]).
 
 8.  What the Model Does and Does Not Guarantee
 
@@ -588,14 +587,15 @@ Table of Contents
    the honest part: it is what a deploying party still owns.
 
    Compromised or injected agent acts beyond its task:  Addressed by
-      authority fixed at the approval event (issuance); per-action PDP
-      check (runtime).  Residual: misuse within the approved scope; low-
-      consequence authority the agent legitimately holds.
+      authority committed at the approval event (Section 5) (issuance);
+      per-action PDP check (runtime).  Residual: misuse within the
+      approved scope; low-consequence authority the agent legitimately
+      holds.
 
-   Prompt injection tries to widen authority:  Addressed by authority
-      fixed at approval: purpose and success_criteria are inert, and
-      goal shapes authority only through the pre-approval derivation the
-      Approver consents to.  Residual: injected text can still drive
+   Prompt injection tries to widen authority:  Addressed by the same
+      approval-time commitment: purpose and success_criteria are inert,
+      and goal shapes authority only through the pre-approval derivation
+      the Approver consents to.  Residual: injected text can still drive
       actions already in scope.
 
    Agent escalates through the request path (expansion, requestable
@@ -705,8 +705,7 @@ Table of Contents
    Audit tampered, dropped, or reordered:  Addressed by transparency:
       append-only log, inclusion receipts, non-equivocation.  Residual:
       single-service equivocation (per-service only; register with
-      several); a producer can still log a false record (accountability,
-      not prevention).
+      several); a producer can still log a false record.
 
    Agent fabricates results or acts on false data:  Addressed by not
       addressed.  Residual: full: semantic and grounding verification
@@ -1202,15 +1201,15 @@ Appendix A.  OWASP Agentic Threat Coverage
    *Delegated*:  the threat belongs to a layer this family never
       claimed, and a named complement owns it.
 
-   The pattern behind the verdicts follows the model's one commitment:
-   authority is fixed at approval, and every consequential action is
-   checked against it fresh.  Threats that attack authority are
-   contained.  Threats that attack the model, its memory, or its inputs
-   are bounded, because a fully fooled agent still cannot out-argue a
-   parameter check.  Threats that attack other layers are delegated by
-   name.  The adversary model (Section 9) owns coverage and residuals;
-   this appendix maps its rows onto OWASP vocabulary, and where the two
-   could be read to differ, the adversary model governs.
+   The pattern behind the verdicts follows the model's one commitment
+   (Section 5): authority is committed at the approval event, and every
+   consequential action is checked against it fresh.  Threats that
+   attack authority are contained.  Threats that attack the model, its
+   memory, or its inputs are bounded, because a fully fooled agent still
+   cannot out-argue a parameter check.  Threats that attack other layers
+   are delegated by name.  The adversary model (Section 9) owns coverage
+   and residuals; this appendix maps its rows onto OWASP vocabulary, and
+   where the two could be read to differ, the adversary model governs.
 
    +==============+========================================================+=========+
    |Threat        |The model's answer                                      |Verdict  |
@@ -1290,7 +1289,6 @@ Appendix A.  OWASP Agentic Threat Coverage
 
                                   Table 3
 
-   The agentic tally is six contained, nine bounded, none waved away.
    The threats that attack authority (tools, privilege, goals,
    attribution, identity, rogue delegates) land on machinery built for
    them, and the threats that attack the model or the humans are capped

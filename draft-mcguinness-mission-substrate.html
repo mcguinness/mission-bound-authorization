@@ -1317,9 +1317,7 @@ where this document and the core appear to differ, the core governs.<a href="#se
 <p id="section-1.1-2">Ownership migrates by touch, not by relocation. When a
 binding-neutral definition next changes substantively, the change
 lands in this document and the owning binding section becomes a
-reference to it, so the contract boundary exists now while the text
-crosses it opportunistically, and no change is ever made solely to
-move words.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
+reference to it; no change is ever made solely to move words.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1384,21 +1382,32 @@ profiles; a summary here never overrides its home.<a href="#section-3-1" class="
 <p id="section-3.1-1">A binding <span class="bcp14">MUST</span> require its implementations to maintain the Mission
 record as the core defines it: the durable object created at the
 approval event, immutable after creation except its lifecycle state,
-and retained per the audit horizon (<a href="#audit-horizon" class="auto internal xref">Section 3.7</a>). A binding <span class="bcp14">MUST</span> provide a Mission
-Identifier that is opaque, carries no semantic content, has at least
-128 bits of entropy, and is never reused, together with an <code>issuer</code>:
-an issuer identifier naming the approving Mission Issuer, from which
-consumers resolve the binding's state and key surfaces; together they
-name exactly one Mission.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
-<p id="section-3.1-2">A binding <span class="bcp14">MAY</span> define a substrate-native reference to the same Mission,
+and retained per the audit horizon (<a href="#audit-horizon" class="auto internal xref">Section 3.7</a>).<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">A binding <span class="bcp14">MUST</span> provide, together with an <code>issuer</code>, a Mission
+Identifier that:<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.1-3.1">
+            <p id="section-3.1-3.1.1">is opaque and carries no semantic content;<a href="#section-3.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-3.2">
+            <p id="section-3.1-3.2.1">has at least 128 bits of entropy; and<a href="#section-3.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-3.3">
+            <p id="section-3.1-3.3.1">is never reused.<a href="#section-3.1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.1-4">The <code>issuer</code> is an issuer identifier naming the approving Mission
+Issuer, from which consumers resolve the binding's state and key
+surfaces; together the pair names exactly one Mission.<a href="#section-3.1-4" class="pilcrow">¶</a></p>
+<p id="section-3.1-5">A binding <span class="bcp14">MAY</span> define a substrate-native reference to the same Mission,
 as the AAuth binding does with its (<code>approver</code>, <code>s256</code>) pair; the
-Mission record <span class="bcp14">MUST</span> bind both names to the same Mission.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
-<p id="section-3.1-3">Home: the Mission Record and Mission Identifier Format sections of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
-<p id="section-3.1-4">Consumers: every substrate-neutral profile keys on the pair, from
+Mission record <span class="bcp14">MUST</span> bind both names to the same Mission.<a href="#section-3.1-5" class="pilcrow">¶</a></p>
+<p id="section-3.1-6">Home: the Mission Record and Mission Identifier Format sections of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-3.1-6" class="pilcrow">¶</a></p>
+<p id="section-3.1-7">Consumers: every substrate-neutral profile keys on the pair, from
 enforcement decisions and evidence through harness work-item bindings
 to the audit statement subject and the Mandate, whose committed
-members assume the record's immutability.<a href="#section-3.1-4" class="pilcrow">¶</a></p>
+members assume the record's immutability.<a href="#section-3.1-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="lifecycle">
@@ -1406,40 +1415,54 @@ members assume the record's immutability.<a href="#section-3.1-4" class="pilcrow
         <h3 id="name-mission-lifecycle-states">
 <a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-mission-lifecycle-states" class="section-name selfRef">Mission Lifecycle States</a>
         </h3>
-<p id="section-3.2-1">A binding <span class="bcp14">MUST</span> provide the core's lifecycle state space: <code>active</code>,
-<code>revoked</code>, and <code>expired</code> as the minimum, with only <code>active</code> permitting
-issuance, derivation, or continued reliance. Every other state value,
-including one a consumer does not recognize, is non-active and
-non-deriving; a binding <span class="bcp14">MUST NOT</span> define a surface that fails open on
-an unrecognized state. A binding that adopts an extension state <span class="bcp14">MUST</span>
-surface its value verbatim on the binding's Mission state surfaces
-(the Mission Status operation and kin) and <span class="bcp14">MUST NOT</span> translate it
-there into a core state or a substrate-native vocabulary, because the
-fail-safe rule keys on the exact value. On a substrate-native
-protocol surface a binding <span class="bcp14">MAY</span> project states onto its native
-vocabulary, provided every non-<code>active</code> state projects to a
-non-active native signal: the projection is fail-safe.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
-<p id="section-3.2-2">A binding <span class="bcp14">MUST</span> provide an authenticated means, independent of any
+<p id="section-3.2-1">A binding <span class="bcp14">MUST</span> provide the core's lifecycle state space, under the
+following rules.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.2-2.1">
+            <p id="section-3.2-2.1.1">The state space is <code>active</code>, <code>revoked</code>, and <code>expired</code> as the
+minimum, with only <code>active</code> permitting issuance, derivation, or
+continued reliance.<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-2.2">
+            <p id="section-3.2-2.2.1">Every other state value, including one a consumer does not
+recognize, is non-active and non-deriving. A binding <span class="bcp14">MUST NOT</span>
+define a surface that fails open on an unrecognized state.<a href="#section-3.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-2.3">
+            <p id="section-3.2-2.3.1">A binding that adopts an extension state <span class="bcp14">MUST</span> surface its value
+verbatim on the binding's Mission state surfaces (the Mission
+Status operation and kin), not translated there into a core state
+or a substrate-native vocabulary, because the fail-safe rule keys
+on the exact value.<a href="#section-3.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-2.4">
+            <p id="section-3.2-2.4.1">On a substrate-native protocol surface a binding <span class="bcp14">MAY</span> project
+states onto its native vocabulary, provided every non-<code>active</code>
+state projects to a non-active native signal: the projection is
+fail-safe.<a href="#section-3.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.2-3">A binding <span class="bcp14">MUST</span> provide an authenticated means, independent of any
 credential's possession, for the Subject, the Approver, or an
 administrator to transition a Mission to <code>revoked</code> by its Mission
 Identifier: the state space is not provided without a way to cause
-its kill-switch state.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
-<p id="section-3.2-3">A binding <span class="bcp14">MUST</span> specify at least one state source from which consumers
+its kill-switch state.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+<p id="section-3.2-4">A binding <span class="bcp14">MUST</span> specify at least one state source from which consumers
 learn a Mission's current state, with a stated staleness bound, so
 deployments can meet the runtime profile's freshness rules. Each state
 source <span class="bcp14">MUST</span> be authenticated and integrity-protected, so a consumer
 verifies a state report's origin and detects tampering before relying
-on it: state whose origin or integrity a consumer cannot verify is
-treated as unavailable and fails closed. Verifying a signed state
-report consumes the issuer key material of <a href="#keys" class="auto internal xref">Section 3.6</a>.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
-<p id="section-3.2-4">Home: the Mission Lifecycle and Gating section of
+on it. In consequence, state whose origin or integrity a consumer
+cannot verify is treated as unavailable and fails closed. Verifying a
+signed state report consumes the issuer key material of <a href="#keys" class="auto internal xref">Section 3.6</a>.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+<p id="section-3.2-5">Home: the Mission Lifecycle and Gating section of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; the freshness rules are the
 runtime profile's (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and the
 Mission Status profile defines a canonical observation surface
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-3.2-4" class="pilcrow">¶</a></p>
-<p id="section-3.2-5">Consumers: the runtime layer (per-class state re-check, fail closed on
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-3.2-5" class="pilcrow">¶</a></p>
+<p id="section-3.2-6">Consumers: the runtime layer (per-class state re-check, fail closed on
 staleness), the harness (pause, suppress, terminate), orchestration
-(the unwind trigger), and the Mandate (state only as of minting).<a href="#section-3.2-5" class="pilcrow">¶</a></p>
+(the unwind trigger), and the Mandate (state only as of minting).<a href="#section-3.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authority">
@@ -1447,26 +1470,36 @@ staleness), the harness (pause, suppress, terminate), orchestration
         <h3 id="name-mission-authority-represent">
 <a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-mission-authority-represent" class="section-name selfRef">Mission Authority Representation</a>
         </h3>
-<p id="section-3.3-1">A binding <span class="bcp14">MUST</span> represent the Authority Set as an array of entries in
-the core's authorization-details shape: each entry names a resource,
-its actions, and its constraints. The binding <span class="bcp14">MUST</span> require its
-implementations to apply the subset rule at every narrowing they
-perform: no derivation, delegation, or attenuation under a Mission
-yields authority broader than the Mission's Authority Set. The binding
-<span class="bcp14">MUST</span> require its implementations to interpret Common Constraint names
-per their definitions and compare their values in value space under
-each definition's subset and intersection rules, so independent
-implementations compute the same result for the same values. Where a
-binding or its enforcement surface admits a delegate, per-entry
-<code>delegation</code> policy is evaluated by whichever surface admits the
-delegate: the issuance gate where tokens are derived, the join where
-they are not.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
-<p id="section-3.3-2">Home: the Mission Authority section of
+<ul class="normal">
+<li class="normal" id="section-3.3-1.1">
+            <p id="section-3.3-1.1.1">A binding <span class="bcp14">MUST</span> represent the Authority Set as an array of entries
+in the core's authorization-details shape: each entry names a
+resource, its actions, and its constraints.<a href="#section-3.3-1.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-1.2">
+            <p id="section-3.3-1.2.1">The binding <span class="bcp14">MUST</span> require its implementations to apply the subset
+rule at every narrowing they perform: no derivation, delegation,
+or attenuation under a Mission yields authority broader than the
+Mission's Authority Set.<a href="#section-3.3-1.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-1.3">
+            <p id="section-3.3-1.3.1">The binding <span class="bcp14">MUST</span> require its implementations to interpret Common
+Constraint names per their definitions and compare their values in
+value space under each definition's subset and intersection rules,
+so independent implementations compute the same result for the
+same values.<a href="#section-3.3-1.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.3-2">Where a binding or its enforcement surface admits a delegate, the
+surface that admits the delegate <span class="bcp14">MUST</span> evaluate per-entry <code>delegation</code>
+policy: the issuance gate where tokens are derived, the join where
+they are not.<a href="#section-3.3-2" class="pilcrow">¶</a></p>
+<p id="section-3.3-3">Home: the Mission Authority section of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, with its Subset Rule and
-Common Constraints subsections.<a href="#section-3.3-2" class="pilcrow">¶</a></p>
-<p id="section-3.3-3">Consumers: the runtime layer and its decision API bindings
+Common Constraints subsections.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+<p id="section-3.3-4">Consumers: the runtime layer and its decision API bindings
 (evaluation), consent evidence (rendering), and the Mandate (optional
-carriage).<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+carriage).<a href="#section-3.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="anchors">
@@ -1503,36 +1536,47 @@ form), and audit transparency (the committed evidence types).<a href="#section-3
 <a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-mission-bound-credential" class="section-name selfRef">Mission-Bound Credential</a>
         </h3>
 <p id="section-3.5-1">This primitive is <span class="bcp14">OPTIONAL</span>, and it is where provision levels split.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
-<p id="section-3.5-2">Under full provision, the binding issues a Mission-bound credential:
-a credential under the binding's own proof-of-possession discipline
-that names exactly one Mission, through the <code>mission</code> claim (<code>id</code>,
+<p id="section-3.5-2">Under full provision, the binding issues a Mission-bound credential:<a href="#section-3.5-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.5-3.1">
+            <p id="section-3.5-3.1.1">a credential under the binding's own proof-of-possession
+discipline;<a href="#section-3.5-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.5-3.2">
+            <p id="section-3.5-3.2.1">naming exactly one Mission, through the <code>mission</code> claim (<code>id</code>,
 <code>issuer</code>, <code>authority_hash</code>) or a substrate-native reference the
-Mission record binds (<a href="#identifier" class="auto internal xref">Section 3.1</a>), issued only while the
-referenced Mission is <code>active</code>: credential issuance is gated on
-Mission state. The <code>mission</code> claim shape is the interoperable
-default. Provision may be composite: the standalone MAS binding
+Mission record binds (<a href="#identifier" class="auto internal xref">Section 3.1</a>), with the <code>mission</code> claim
+shape as the interoperable default; and<a href="#section-3.5-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.5-3.3">
+            <p id="section-3.5-3.3.1">issued only while the referenced Mission is <code>active</code>: credential
+issuance is gated on Mission state.<a href="#section-3.5-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.5-4">Provision may be composite: the standalone MAS binding
 together with Authorization Servers consuming its issuance grants
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>) provides
-this credential jointly.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
-<p id="section-3.5-3">Under partial provision, the binding issues no such credential. It
+this credential jointly.<a href="#section-3.5-4" class="pilcrow">¶</a></p>
+<p id="section-3.5-5">Under partial provision, the binding issues no such credential. It
 <span class="bcp14">MUST</span> define a join per the externally established mode of the runtime
 profile's Mission binding establishment step: how a PDP verifies a
 supplied Mission reference against the acting credential before any
-authority is evaluated. The definition <span class="bcp14">MUST</span> state what the join proves
-and what it cannot prove; an unverified reference never establishes
-the Mission. The MAS's Mission Join is the profiled example
-(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-3.5-3" class="pilcrow">¶</a></p>
-<p id="section-3.5-4">Profiles that ride the credential itself (offline attenuation, and the
+authority is evaluated. The definition <span class="bcp14">MUST</span> state what the join
+proves, what it cannot prove, and the residuals that remain; an
+unverified reference never establishes the Mission. The MAS's
+Mission Join is the profiled example
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-3.5-5" class="pilcrow">¶</a></p>
+<p id="section-3.5-6">Profiles that ride the credential itself (offline attenuation, and the
 token-carriage aspects of delegation) apply only under full provision.
 Of the substrate-neutral profiles, those that need a
 credential-to-Mission association (the runtime layer and the harness)
 route through the binding establishment step, which is what makes
 partial provision possible; the rest consume no credential at all
-(the composition table's credential column).<a href="#section-3.5-4" class="pilcrow">¶</a></p>
-<p id="section-3.5-5">Home: the Mission-Bound Access Tokens and The Mission Claim sections
+(the composition table's credential column).<a href="#section-3.5-6" class="pilcrow">¶</a></p>
+<p id="section-3.5-7">Home: the Mission-Bound Access Tokens and The Mission Claim sections
 of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; the seam is the Mission
 binding establishment section of the runtime profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-3.5-5" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-3.5-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="keys">
@@ -1951,14 +1995,14 @@ re-derives only the substrate-specific entries of that model.<a href="#section-6
 <p id="section-6.2-1">Partial provision moves the credential-to-Mission binding from
 cryptographic carriage to the join, so the join's assurance bounds
 every downstream guarantee that names "this credential under this
-Mission". A binding <span class="bcp14">MUST</span> state that assurance honestly: what the join
-proves, what it cannot prove, and the residuals that remain. The MAS's
-Join Spoofing analysis is the pattern
-(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>): the join proves
-the credential belongs to the subject and client the Mission names, no
-mechanism in that mode proves the credential was derived under the
-Mission, and mapping coarseness and same-party misattribution remain
-as residuals.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+Mission". The statement duty of <a href="#credential" class="auto internal xref">Section 3.5</a>, what the join proves,
+what it cannot prove, and the residuals that remain, is what keeps
+that assurance honest. The MAS's Join Spoofing analysis is the
+pattern (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>): the join
+proves the credential belongs to the subject and client the Mission
+names, no mechanism in that mode proves the credential was derived
+under the Mission, and mapping coarseness and same-party
+misattribution remain as residuals.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="state-source-fidelity">
@@ -1974,7 +2018,8 @@ cannot meet its stated bound turns those fail-closed rules into
 fail-open in effect: consumers rely on state the binding reports as
 fresher than it is. The bound is a fidelity claim about the binding's
 infrastructure, of the same kind as the join's assurance statement,
-and belongs in the Mission Substrate Statement with the same honesty.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+and the Mission Substrate Statement names it with the same honesty
+(<a href="#statement" class="auto internal xref">Section 5.1</a>).<a href="#section-6.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

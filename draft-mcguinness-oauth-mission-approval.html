@@ -1371,9 +1371,10 @@ pending-request state, not a grant.<a href="#section-5.1-2.2.1" class="pilcrow">
 </li>
           <li id="section-5.1-2.3">
             <p id="section-5.1-2.3.1">The approval event executes on the asynchronous review surface. That
-surface <span class="bcp14">MUST</span> authenticate the Approver and <span class="bcp14">MUST</span> satisfy the Mission
-Intent's <code>controls.acr</code>, exactly as the synchronous approval event
-requires (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.1-2.3.1" class="pilcrow">¶</a></p>
+surface <span class="bcp14">MUST</span> authenticate the Approver. It <span class="bcp14">MUST</span> satisfy the Mission
+Intent's <code>controls.acr</code>. Both requirements hold exactly as the
+synchronous approval event requires
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-5.1-2.4">
             <p id="section-5.1-2.4.1">The Mission record is created in the <code>active</code> state atomically with
@@ -1503,14 +1504,17 @@ policy, never one derived under superseded policy.<a href="#section-5.4-1" class
         <h3 id="name-the-approval-decision-set">
 <a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-the-approval-decision-set" class="section-name selfRef">The Approval Decision Set</a>
         </h3>
-<p id="section-5.5-1">This section is <span class="bcp14">OPTIONAL</span> and experimental. The issuance profile
+<p id="section-5.5-1">This section is optional and experimental. The issuance profile
 records exactly one accountable Approver and defers approval-authority
 provenance to a governance layer
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). An enterprise review
 surface often is that governance layer: the decision may involve
 several principals, a threshold rule, and a delegation-of-authority
 policy, and an auditor later needs to prove not only who approved but
-under which authority the approval was valid.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+under which authority the approval was valid. The decision set records
+that provenance as governance evidence, not as a wire artifact. The
+ordinary one-person approval is the degenerate case, a single human
+assertion, and need not be recorded at all.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
 <p id="section-5.5-2">A Mission Issuer <span class="bcp14">MAY</span> record an <strong>approval decision set</strong> alongside
 the approval event, retained with the Mission record for its audit
 horizon and joined by <code>approval_event_id</code>:<a href="#section-5.5-2" class="pilcrow">¶</a></p>
@@ -1531,26 +1535,42 @@ optionally the provenance under which that principal was authorized
 to decide and a reason.<a href="#section-5.5-3.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.5-4">The set is governance evidence, not a wire artifact. It never appears
-on tokens or in any protocol message; the Mission record still
-carries exactly one accountable <code>approver</code>, the principal the
-<code>approval_policy</code> designates as accountable for the committed
-decision, and every downstream projection is unchanged. An approval
-whose recorded assertions do not satisfy the declared
-<code>approval_policy</code> threshold <span class="bcp14">MUST NOT</span> commit, and a committed set is
-immutable. The ordinary one-person approval is the degenerate case, a
-single human assertion, and need not be recorded at all. Where
-consent evidence is claimed, each human assertion's disclosure is
-committed as the consent-evidence profile requires
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>); a <code>policy</code>
-assertion carries its policy identifier and version, which is the
-family's provenance chain for non-human approval (policy approves the
-instance because a human approved the policy). Consent evidence's
-<code>co_approvals</code> and <code>approval_authority</code> members
+<p id="section-5.5-4">A recorded set is governed by these rules:<a href="#section-5.5-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.5-5.1">
+            <p id="section-5.5-5.1.1">The set never appears on tokens or in any protocol message.<a href="#section-5.5-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-5.2">
+            <p id="section-5.5-5.2.1">The Mission record still carries exactly one accountable
+<code>approver</code>: the principal the <code>approval_policy</code> designates as
+accountable for the committed decision. Every downstream projection
+is unchanged.<a href="#section-5.5-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-5.3">
+            <p id="section-5.5-5.3.1">An approval whose recorded assertions do not satisfy the declared
+<code>approval_policy</code> threshold <span class="bcp14">MUST NOT</span> commit.<a href="#section-5.5-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-5.4">
+            <p id="section-5.5-5.4.1">A committed set is immutable.<a href="#section-5.5-5.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-5.5">
+            <p id="section-5.5-5.5.1">Where consent evidence is claimed, each human assertion's
+disclosure is committed as the consent-evidence profile requires
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-5.5-5.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-5.6">
+            <p id="section-5.5-5.6.1">A <code>policy</code> assertion carries its policy identifier and version, the
+family's provenance chain for non-human approval (policy approves
+the instance because a human approved the policy).<a href="#section-5.5-5.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-5.7">
+            <p id="section-5.5-5.7.1">Consent evidence's <code>co_approvals</code> and <code>approval_authority</code> members
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>) are this
-record's consent-evidence projection; where both are recorded they
-<span class="bcp14">MUST</span> agree, and the decision set governs.<a href="#section-5.5-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-5.5-5">
+record's consent-evidence projection. Where both are recorded they
+<span class="bcp14">MUST</span> agree, and the decision set governs.<a href="#section-5.5-5.7.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<div class="lang-json sourcecode" id="section-5.5-6">
 <pre>
 {
   "approval_event_id": "ape_7Kq2mR9tW4xY",
@@ -1569,7 +1589,7 @@ record's consent-evidence projection; where both are recorded they
       "provenance": "dlg-matrix:v7#agent-charters" }
   ]
 }
-</pre><a href="#section-5.5-5" class="pilcrow">¶</a>
+</pre><a href="#section-5.5-6" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -1581,17 +1601,26 @@ record's consent-evidence projection; where both are recorded they
 <p id="section-5.6-1">Deferral turns the review surface into a queue a client can flood. The
 Mission Issuer <span class="bcp14">MUST</span> bound the number of concurrent pending proposals
 per (client, Approver) pair, refusing further submissions until the
-queue drains. It <span class="bcp14">SHOULD</span> collapse pending proposals carrying an
-identical <code>intent_hash</code> into a single review item, <span class="bcp14">SHOULD</span> rate-limit
-reviewer notifications, and <span class="bcp14">SHOULD</span> log a queue flood as a security
-event, alongside the decline-suppression detection the consent
-evidence profile describes
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-5.6-1" class="pilcrow">¶</a></p>
-<p id="section-5.6-2">Collapsing identical proposals is a review-surface convenience and does
+queue drains. The Mission Issuer further:<a href="#section-5.6-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.6-2.1">
+            <p id="section-5.6-2.1.1"><span class="bcp14">SHOULD</span> collapse pending proposals carrying an identical
+<code>intent_hash</code> into a single review item;<a href="#section-5.6-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.6-2.2">
+            <p id="section-5.6-2.2.1"><span class="bcp14">SHOULD</span> rate-limit reviewer notifications; and<a href="#section-5.6-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.6-2.3">
+            <p id="section-5.6-2.3.1"><span class="bcp14">SHOULD</span> log a queue flood as a security event, alongside the
+decline-suppression detection the consent evidence profile
+describes (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-5.6-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.6-3">Collapsing identical proposals is a review-surface convenience and does
 not merge their outcomes: one approval decision <span class="bcp14">MUST</span> resolve exactly
 one pending approval, and the Mission Issuer <span class="bcp14">MUST</span> re-queue or deny the
 others rather than mint a Mission for each. A single consent therefore
-mints at most one Mission.<a href="#section-5.6-2" class="pilcrow">¶</a></p>
+mints at most one Mission.<a href="#section-5.6-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1719,12 +1748,20 @@ decision; and<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 <a href="#pending-staleness" class="auto internal xref">Section 5.4</a> and the queue bounds of <a href="#queue-pressure" class="auto internal xref">Section 5.6</a>.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-8-3">A Mission Issuer that records approval decision sets additionally
-commits only approvals whose assertions satisfy the declared
-<code>approval_policy</code> threshold, and retains each committed set,
-immutable, for the Mission's audit horizon (<a href="#decision-set" class="auto internal xref">Section 5.5</a>).<a href="#section-8-3" class="pilcrow">¶</a></p>
-<p id="section-8-4">A client conforming to this profile <span class="bcp14">MUST</span> treat every pending response
-as unapproved and poll the <code>deferral_code</code> per the deferred substrate.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-3">A Mission Issuer that records approval decision sets
+(<a href="#decision-set" class="auto internal xref">Section 5.5</a>) additionally <span class="bcp14">MUST</span>:<a href="#section-8-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-4.1">
+          <p id="section-8-4.1.1">commit only approvals whose assertions satisfy the declared
+<code>approval_policy</code> threshold; and<a href="#section-8-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-4.2">
+          <p id="section-8-4.2.1">retain each committed set, immutable, for the Mission's audit
+horizon.<a href="#section-8-4.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-8-5">A client conforming to this profile <span class="bcp14">MUST</span> treat every pending response
+as unapproved and poll the <code>deferral_code</code> per the deferred substrate.<a href="#section-8-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
