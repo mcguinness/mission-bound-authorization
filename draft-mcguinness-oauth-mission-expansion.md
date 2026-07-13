@@ -155,18 +155,6 @@ adjudicates expansion; otherwise it remains a plain issuance-profile
 Mission Issuer. Nothing here places a new requirement back on the
 issuance profile.
 
-## Expansion is not step-up {#not-step-up}
-
-Expansion is a governance operation. It is distinct from
-authentication step-up {{RFC9470}}. A request denied because an `acr`
-or `amr` constraint requires fresh authentication is satisfied by
-step-up, not by expansion: the Authority Set does not change. A
-request denied because the requested authority is not in the active
-Mission's Authority Set requires expansion: the Authority Set must be
-enlarged through a new approval event. The two are not interchangeable;
-{{step-up-distinction}} treats the security consequence of conflating
-them.
-
 ## Relationship to the issuance profile {#relationship}
 
 This document depends normatively on the issuance profile and is not
@@ -303,6 +291,18 @@ Whether the Mission Issuer adjudicates a successor remains its decision
 ({{adjudication}}); an eligible denial is not an authorization in favor
 of expansion.
 
+## Expansion is not step-up {#not-step-up}
+
+Expansion is a governance operation. It is distinct from
+authentication step-up {{RFC9470}}. A request denied because an `acr`
+or `amr` constraint requires fresh authentication is satisfied by
+step-up, not by expansion: the Authority Set does not change. A
+request denied because the requested authority is not in the active
+Mission's Authority Set requires expansion: the Authority Set must be
+enlarged through a new approval event. The two are not interchangeable;
+{{step-up-distinction}} treats the security consequence of conflating
+them.
+
 # The Expansion Request {#expansion-request}
 
 An expansion request is an ordinary Mission creation request under the
@@ -330,11 +330,7 @@ the `predecessor` request parameter:
   `mission.predecessor` lineage member and `superseded` transition the
   Mission Issuer applies. It names the predecessor for cross-checking
   and audit; it does not by itself select or authorize one (the grant
-  does, {{request-binding}}). The parameter is carried through PAR with
-  `mission_intent`; like `mission_intent`, an AS MUST reject a
-  `predecessor` value presented directly on a front-channel
-  authorization request rather than through a PAR-issued `request_uri`
-  with `invalid_request`.
+  does, {{request-binding}}).
 
 `predecessor_token`:
 : REQUIRED for an expansion request. A string. The predecessor
@@ -342,12 +338,15 @@ the `predecessor` request parameter:
   the predecessor's grant. The Mission Issuer resolves the predecessor
   from this token and binds the expansion to it ({{request-binding}});
   this value, not `predecessor`, selects the predecessor
-  authoritatively. It is carried through PAR with `mission_intent`; an
-  AS MUST reject a `predecessor_token` presented directly on a
-  front-channel authorization request rather than through a PAR-issued
-  `request_uri` with `invalid_request`. Because it carries a refresh
-  token, it MUST be sent only on the PAR back
-  channel and MUST NOT appear on any front channel.
+  authoritatively.
+
+Both parameters are carried through PAR with `mission_intent`. Like
+`mission_intent`, an AS MUST reject a `predecessor` or
+`predecessor_token` value presented directly on a front-channel
+authorization request rather than through a PAR-issued `request_uri`
+with `invalid_request`. Because `predecessor_token` carries a refresh
+token, it MUST be sent only on the PAR back channel and MUST NOT
+appear on any front channel.
 
 The `predecessor` parameter names the predecessor but does not
 by itself authorize expanding it. Authorization comes from the grant
@@ -365,23 +364,28 @@ request MUST be bound to the predecessor's grant the same way.
 Because expansion runs as an interactive approval event, a PAR
 submission followed by an authorization-code flow ({{adjudication}}),
 the binding is established at the PAR submission, a back-channel
-request. PAR permits a public client to submit without client
-authentication ({{RFC9126}}), so the expansion MUST rest on an
-authenticated proof of control over the predecessor's grant. A
-confidential client supplies this by authenticating to the PAR
-endpoint. A public client's PAR request is not client-authenticated,
-so its expansion rests solely on the presented `predecessor_token`,
-which MUST then be sender-constrained ({{RFC8705}} or {{RFC9449}}) so
-it is not a bearer proof; the Mission Issuer MUST reject a
-public-client expansion whose `predecessor_token` is not
-sender-constrained with `invalid_request`. In the same PAR request that
-carries `mission_intent` and `predecessor`, the client MUST
-present the predecessor Mission's refresh token in the
-`predecessor_token` parameter ({{submission}}). The Mission
-Issuer MUST resolve the predecessor from that refresh token, applying
-the same grant-to-Mission resolution the issuance profile uses for a
-presented refresh token, and MUST verify that the resolved Mission is
-the Mission named in `predecessor`.
+request. The binding procedure is:
+
+1. In the same PAR request that carries `mission_intent` and
+   `predecessor`, the client MUST present the predecessor Mission's
+   refresh token in the `predecessor_token` parameter
+   ({{submission}}).
+2. The expansion MUST rest on an authenticated proof of control over
+   the predecessor's grant: a confidential client supplies this by
+   authenticating to the PAR endpoint; a public client's proof is a
+   sender-constrained `predecessor_token`, as required below.
+3. The Mission Issuer MUST resolve the predecessor from the presented
+   refresh token, applying the same grant-to-Mission resolution the
+   issuance profile uses for a presented refresh token.
+4. The Mission Issuer MUST verify that the resolved Mission is the
+   Mission named in `predecessor`.
+
+PAR permits a public client to submit without client authentication
+({{RFC9126}}), so a public client's expansion rests solely on the
+presented `predecessor_token`. That token MUST be sender-constrained
+({{RFC8705}} or {{RFC9449}}) so it is not a bearer proof. The Mission
+Issuer MUST reject a public-client expansion whose `predecessor_token`
+is not sender-constrained with `invalid_request`.
 
 Establishing the binding at PAR, before the approval event, is
 deliberate: the Mission Issuer resolves the predecessor from a real
@@ -413,24 +417,30 @@ atomic supersession), never the authority: no proof failure can
 widen anything.
 
 Presenting the predecessor's refresh token in the PAR request MUST
-follow the issuance profile's handling for that token: a
-sender-constrained refresh token MUST be presented in conformance with
-its sender constraint. When the token is DPoP-bound {{RFC9449}}, the PAR
-request MUST carry a DPoP proof bound to the PAR endpoint (its `htu` and
-`htm`); when it is mTLS-bound {{RFC8705}}, the mutual-TLS connection of
-the PAR request satisfies the constraint. Presenting the token for
-expansion MUST NOT rotate it and MUST NOT register as a replay in the
-deployment's refresh-token replay detection: the token is used here only
-to bind and resolve the predecessor, not to refresh. In a
-rotation-based deployment that carve-out would let a stolen bearer
-refresh token be presented repeatedly without detection, so each
-expansion presentation MUST be recorded and counted toward the
-deployment's anomaly detection, and the per-predecessor rate limit
-({{policy-probing}}) applies unconditionally, with a tighter bound
-SHOULD when the presented token is not sender-constrained. The
-successor's
-authority still comes only from the fresh consent at the approval event,
-never from authority the binding token could itself derive.
+follow the issuance profile's handling for that token:
+
+1. A sender-constrained refresh token MUST be presented in conformance
+   with its sender constraint. When the token is DPoP-bound
+   {{RFC9449}}, the PAR request MUST carry a DPoP proof bound to the
+   PAR endpoint (its `htu` and `htm`); when it is mTLS-bound
+   {{RFC8705}}, the mutual-TLS connection of the PAR request satisfies
+   the constraint.
+2. Presenting the token for expansion MUST NOT rotate it. It MUST NOT
+   register as a replay in the deployment's refresh-token replay
+   detection. The token is used here only to bind and resolve the
+   predecessor, not to refresh.
+3. Each expansion presentation MUST be recorded and counted toward the
+   deployment's anomaly detection.
+4. The per-predecessor rate limit ({{policy-probing}}) applies
+   unconditionally. A deployment SHOULD apply a tighter bound when the
+   presented token is not sender-constrained.
+
+The record-and-count rule exists because, in a rotation-based
+deployment, the no-rotation and no-replay carve-out would otherwise
+let a stolen bearer refresh token be presented repeatedly without
+detection. The successor's authority still comes only from the fresh
+consent at the approval event, never from authority the binding token
+could itself derive.
 
 This binding requires the predecessor to have a refresh token to
 present. A Mission issued without one (for example an
@@ -549,13 +559,9 @@ This document introduces one such member:
 : REQUIRED on a successor Mission; absent otherwise. A string. The
   `mission_id` of the Mission this Mission succeeded by expansion.
   Present on every Mission created by expansion and absent on a Mission
-  that was not created by expansion. It is a
-  lineage and audit reference only: it links the successor to the
+  that was not created by expansion. It links the successor to the
   Mission it replaced so that the expansion chain is observable in
-  audit. Consistent with the issuance profile's open-`mission`-claim
-  rule, `predecessor` MUST NOT grant or widen authority, and a consumer
-  that does not understand it MUST ignore it. The successor's authority
-  comes only from its own `authority_hash`, never from its predecessor.
+  audit.
 
 The same `predecessor` value is recorded on the successor's immutable
 Mission record so that the lineage is durable independently of any
@@ -568,21 +574,25 @@ This document defines two further lineage members:
   related to by lineage without superseding it, used for a non-superseding
   link such as a branch ({{replacement}}). Unlike `predecessor`, its
   presence does not imply that the referenced Mission was superseded and
-  it carries no lifecycle consequence. Like `predecessor`, it is lineage
-  and audit context only: it MUST NOT grant or widen authority, and a
-  consumer that does not understand it MUST ignore it.
+  it carries no lifecycle consequence.
 
 `successor`:
 : OPTIONAL. A string. The `mission_id` of the successor that superseded
   this Mission by expansion, recorded on the superseded predecessor's
   Mission record at supersession ({{superseded-state}}). It is the
   reverse of the successor's `predecessor` link, letting a consumer that
-  holds a superseded predecessor discover its successor directly. It is
-  lineage and audit context only and MUST NOT grant or widen authority.
+  holds a superseded predecessor discover its successor directly.
   The Status profile surfaces it in the status response
   ({{I-D.draft-mcguinness-oauth-mission-status}}) and the Signals profile
   in the superseded lifecycle event
   ({{I-D.draft-mcguinness-oauth-mission-signals}}).
+
+`predecessor`, `related_to`, and `successor` are lineage and audit
+context only. Consistent with the issuance profile's
+open-`mission`-claim rule, each of them MUST NOT grant or widen
+authority, and a consumer that does not understand one MUST ignore it.
+The successor's authority comes only from its own `authority_hash`,
+never from its predecessor.
 
 `predecessor`, `related_to`, and `successor` are each a bare Mission
 Identifier string, not an object like the `parent` member of a Child
@@ -643,16 +653,18 @@ The transition has these requirements:
   successor activates, and the predecessor enters `superseded`, in one
   atomic operation at the first redemption of the successor's
   authorization code (its grant), not at the approval event
-  ({{adjudication}}); in that same operation the Mission Issuer sets
+  ({{adjudication}}). In that same operation the Mission Issuer sets
   the predecessor's `successor` member to the successor's `mission_id`
   ({{predecessor-member}}). Until that redemption the predecessor
-  remains `active`. An authorization code that is never redeemed or
-  that expires activates no successor and leaves the predecessor
-  `active`, so an unredeemed or expired code never strands the task's
-  authority nor cascade-terminates the predecessor's Child Missions.
-  If the atomic operation fails, the predecessor remains `active` and
-  no successor record exists; the Mission Issuer MUST NOT produce a
-  partial successor or a predecessor left in an indeterminate state.
+  remains `active`.
+  - An authorization code that is never redeemed or that expires
+    activates no successor and leaves the predecessor `active`, so an
+    unredeemed or expired code never strands the task's authority nor
+    cascade-terminates the predecessor's Child Missions.
+  - If the atomic operation fails, the predecessor remains `active`
+    and no successor record exists. The Mission Issuer MUST NOT
+    produce a partial successor or a predecessor left in an
+    indeterminate state.
 - **Non-active: no further derivation.** A `superseded` Mission is not
   `active`, so the issuance profile's issuance gating refuses to derive
   any new token, refresh, token exchange, or cross-domain grant under
@@ -663,14 +675,15 @@ The transition has these requirements:
   the predecessor before it was superseded remain valid until their own
   `exp`, exactly as in the issuance profile's revocation model:
   superseding a Mission stops new derivation; it does not retroactively
-  invalidate access tokens already issued. A deployment that needs a
-  lower cutoff latency on the predecessor's outstanding tokens SHOULD
-  use short token lifetimes, and MAY additionally revoke the
-  predecessor's refresh token where the issuance profile's optional
-  revocation composition is in use. These tokens MUST NOT be silently
-  rebound to the successor; authority under the successor is obtained
-  only by deriving from the successor's grant, which is a new
-  derivation governed by the successor's Authority Set.
+  invalidate access tokens already issued.
+  - These tokens MUST NOT be silently rebound to the successor.
+    Authority under the successor is obtained only by deriving from
+    the successor's grant, which is a new derivation governed by the
+    successor's Authority Set.
+  - A deployment that needs a lower cutoff latency on the
+    predecessor's outstanding tokens SHOULD use short token lifetimes.
+    It MAY additionally revoke the predecessor's refresh token where
+    the issuance profile's optional revocation composition is in use.
 - **Reported as non-active.** A `superseded` predecessor is reported
   through the same mechanisms that report a `revoked` or `expired`
   Mission. Where the issuance profile's optional token introspection is
@@ -933,11 +946,11 @@ any Mission-bound token, and treats the `predecessor` member, if it
 reads it at all, as audit context it MUST NOT use to grant authority
 ({{predecessor-member}}).
 
-Under this document, every expansion is adjudicated by a fresh human
-approval. The experimental progressive authorization companion defines
-a further OPTIONAL capability, **Expansion with Progressive
-Authorization**, with its own conformance requirements
-({{I-D.draft-mcguinness-oauth-mission-progressive}}).
+Every expansion this document defines is adjudicated as a fresh
+approval event ({{adjudication}}). The experimental progressive
+authorization companion defines a further OPTIONAL capability,
+**Expansion with Progressive Authorization**, with its own conformance
+requirements ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
 # Security Considerations
 
@@ -956,10 +969,10 @@ example by naming another tenant's or subject's `mission_id` in the
 Mitigations:
 
 - The predecessor is resolved from the grant the client presents, not
-  from the `predecessor` value; the Mission Issuer MUST verify
-  the resolved Mission matches the named one and MUST refuse a mismatch
-  with `invalid_grant` ({{request-binding}}). A client that holds no
-  grant for the named predecessor cannot expand it.
+  from the `predecessor` value; the Mission Issuer verifies that the
+  resolved Mission matches the named one and refuses a mismatch with
+  `invalid_grant` ({{request-binding}}). A client that holds no grant
+  for the named predecessor cannot expand it.
 - The issuance profile's integrity anchors are issuer-bound, so a
   Mission's governance state cannot be transplanted across Mission
   Issuers; an expansion is adjudicated only at the predecessor's own
@@ -976,11 +989,12 @@ Mitigations:
 - The successor's authority comes only from the Authority Set derived
   and consented at the expansion approval event; the `authority_hash`
   commits exactly that set ({{adjudication}}). The `predecessor` member
-  carries no authority and MUST NOT widen the successor
+  carries no authority and cannot widen the successor
   ({{predecessor-member}}).
-- The successor's `expires_at` MUST NOT silently exceed the
-  predecessor's ({{successor-expiry}}), so expansion cannot launder a
-  longer lifetime past the originally approved horizon.
+- The successor-expiry rule ({{successor-expiry}}) keeps the
+  successor's `expires_at` from silently exceeding the predecessor's,
+  so expansion cannot launder a longer lifetime past the originally
+  approved horizon.
 
 ## Race against predecessor lifecycle {#lifecycle-race}
 
@@ -993,11 +1007,11 @@ created.
 
 Mitigations:
 
-- The Mission Issuer MUST verify predecessor state and the
+- The Mission Issuer verifies predecessor state and the
   no-existing-successor condition in the same atomic step that would
-  activate the successor at first redemption ({{reconciliation}}), and
-  serializes the redemptions that activate a successor of the same
-  predecessor.
+  activate the successor at first redemption, and serializes the
+  redemptions that activate a successor of the same predecessor
+  ({{reconciliation}}).
 - A failed check refuses with `invalid_grant` and a reconciliation
   status that tells the client whether to discover an existing
   successor or stop, without leaking the predecessor's new internal
@@ -1042,7 +1056,7 @@ The `predecessor` member makes the expansion chain observable: an
 authorized auditor can trace a successor back through its predecessors
 to the original Mission. This is a core governance property of
 expansion. An implementation that omits the member breaks the chain
-and defeats it; the member is therefore REQUIRED on a successor
+and defeats it; the member is therefore mandatory on a successor
 ({{predecessor-member}}).
 
 General OAuth security guidance applies to the underlying credentials
@@ -1077,13 +1091,12 @@ treatment of consent disclosure.
 
 # IANA Considerations
 
-Consistent with the issuance profile, which establishes no registry of
-`mission` claim members and registers the `mission` claim as an open
-object, this document defines the `predecessor` member of the `mission`
-claim ({{predecessor-member}}) without registering it in a dedicated
-registry: it is a member defined by this profile, carried inside the
-already-registered `mission` claim. No new claim, parameter, or
-token-introspection registration is required for the lineage link.
+The `predecessor` member of the `mission` claim
+({{predecessor-member}}) is not registered in a dedicated registry: it
+is carried inside the already-registered `mission` claim, an open
+object for which the issuance profile establishes no member registry.
+No new claim, parameter, or token-introspection registration is
+required for the lineage link.
 
 This document defines two closed sets of symbolic codes, the expansion
 reconciliation status codes ({{reconciliation}}), conveyed in
@@ -1092,14 +1105,12 @@ reconciliation status codes ({{reconciliation}}), conveyed in
 member. As members of the OAuth error response JSON body at the PAR
 and token endpoints, both are namespaced to their error responses and
 require no registration; their authorization error response parameter
-forms are registered below. Like the issuance profile's restraint with
-`mission` members, the codes are documented in their defining
-specifications rather than placed in new IANA registries: the closed
-sets are small and fully specified. Should interoperable extension
-prove necessary, a future revision can create a "Mission Expansion
-Reconciliation Status" registry and a shared "Mission Denial Reason"
-registry with a Specification Required {{RFC8126}} policy; this document
-does not create them.
+forms are registered below. This document creates no registry for the
+codes: the closed sets are small and fully specified in their defining
+specifications. Should interoperable extension prove necessary, a
+future revision can create a "Mission Expansion Reconciliation Status"
+registry and a shared "Mission Denial Reason" registry with a
+Specification Required {{RFC8126}} policy.
 
 This document registers the following parameters in the "OAuth
 Parameters" registry:
@@ -1129,9 +1140,9 @@ Parameters" registry:
 As with `mission_intent` in the issuance profile, PAR {{RFC9126}}
 carries authorization-request parameters without a distinct usage
 location, so the pushed submission of these parameters needs no
-separate registration. `predecessor_token` carries a refresh
-token and MUST be submitted only through PAR, never on a front-channel
-authorization request ({{submission}}).
+separate registration. `predecessor_token` carries a refresh token and
+is submitted only through PAR, never on a front-channel authorization
+request ({{submission}}).
 
 # Acknowledgments
 {:numbered="false"}
