@@ -1,0 +1,714 @@
+
+
+
+
+Network Working Group                                      K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Experimental                               13 July 2026
+Expires: 14 January 2027
+
+
+                      Mission Consumption Metering
+                draft-mcguinness-mission-metering-latest
+
+Abstract
+
+   Mission-Bound Authorization for OAuth 2.0 bounds an agent's authority
+   by resources, actions, and constraints, and its runtime enforcement
+   profile evaluates each consequential action at the point of use.
+   Neither bounds how much of an approved authority a Mission may
+   consume.  This document defines an experimental consumption-metering
+   extension: four cumulative consumption bounds a Mission Intent may
+   carry (max_budget, max_calls, max_duration, and max_egress_volume),
+   an exclusivity control (exclusive, separation of duty), the runtime
+   metering semantics that enforce them (atomic check-and-decrement,
+   reserve and commit postures, duration leases, and settlement), and
+   the AuthZEN wire binding for lease renewal and settlement.  A
+   consumption bound is consented at approval and enforced only by a
+   runtime deployment that implements this profile; a deployment that
+   does not meter a bound must refuse rather than silently ignore it.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/mission-bound-authorization/draft-
+   mcguinness-mission-metering.html.  Status information for this
+   document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-mission-metering/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/mission-bound-authorization.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 14 January 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Status: An Experimental Extension
+   3.  Relationship to the Issuance and Runtime Profiles
+   4.  Conventions and Terminology
+   5.  Mission Substrate
+   6.  Consumption Bounds
+     6.1.  Consent Integrity
+   7.  Consumption Metering
+     7.1.  Exactness and Topology
+     7.2.  Retry, Idempotency, and Reserve/Commit Posture
+   8.  Exclusivity and Separation of Duty
+   9.  Aggregate Bounds
+   10. AuthZEN Binding
+     10.1.  Settlement Exchange
+   11. Conformance
+   12. Security Considerations
+   13. Privacy Considerations
+   14. IANA Considerations
+   15. References
+     15.1.  Normative References
+     15.2.  Informative References
+   Acknowledgments
+   Author's Address
+
+1.  Introduction
+
+   Mission-Bound Authorization for OAuth 2.0
+   [I-D.draft-mcguinness-oauth-mission] (the "issuance profile") bounds
+   what an agent may do; the runtime enforcement profile
+   ([I-D.draft-mcguinness-mission-runtime]) enforces each consequential
+   action at the point of use.  A long-running agentic task also needs
+   bounds on how much: cumulative spend, call volume, and wall-clock
+   activity.  Those are not per-action constraints; they are counters
+   that deplete across the life of the Mission, and enforcing them is a
+   metering problem with reserve, commit, retry, and distributed-
+   consistency concerns of its own.
+
+   This document defines that metering layer: the consumption-bounds
+   vocabulary a Mission Intent carries, the metering semantics a runtime
+   deployment enforces, and the AuthZEN wire binding
+   ([I-D.draft-mcguinness-mission-authzen]) for settlement and duration-
+   lease renewal.
+
+2.  Status: An Experimental Extension
+
+   This document is optional and experimental: adopt it for evaluation,
+   not as a stable interface.  Metering cumulative bounds exactly under
+   distributed decision points is a distributed-counting problem, and
+   the reserve, commit, lease, and settlement machinery here is expected
+   to evolve with implementation experience.
+
+   A deployment that does not implement this document carries no
+   consumption bounds on its Missions and is fully conformant to the
+   issuance and runtime profiles.  The issuance profile's
+   max_derivations is not a consumption bound: it is enforced by the
+   issuing Authorization Server at each derivation and needs none of
+   this document ([I-D.draft-mcguinness-oauth-mission]).
+
+   The consent-integrity rule of Section 6.1 is the boundary that makes
+   this safe to omit: a bound is rendered to an Approver only where it
+   is actually metered.
+
+3.  Relationship to the Issuance and Runtime Profiles
+
+   This document depends normatively on the issuance profile and the
+   runtime profile and is not implementable alone.  It defines its
+   consumption bounds as members of the Mission Intent controls object,
+   using the extension seam the issuance profile provides; they are
+   carried on the Mission and committed by intent_hash exactly as any
+   other Intent member.  Metering is performed by the runtime profile's
+   PDP within a documented enforcement scope; this document adds
+   metering semantics to the runtime profile's decision contract and
+   changes no issuance protocol, though it does add consent-surface
+   obligations on the Mission Issuer (Section 6.1).
+
+4.  Conventions and Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   Consumption bound:  A cumulative bound on Mission activity that
+      depletes as the Mission is used, as distinct from a per-action
+      constraint that is evaluated independently on each action.
+
+5.  Mission Substrate
+
+   This profile is defined against the Mission model rather than against
+   OAuth 2.0 mechanics.  It consumes these substrate primitives
+   ([I-D.draft-mcguinness-mission-substrate]): the Mission Identifier
+   and issuer, which key every consumption counter; the Authority Set
+   representation, from which a call_class SHOULD be drawn (Section 6);
+   and the integrity-anchor envelope, through which the bounds are
+   committed by intent_hash as Mission Intent controls members.  It
+   defines no binding of its own: enforcement composes through the
+   runtime profile's Mission binding establishment step
+   ([I-D.draft-mcguinness-mission-runtime]), and metering adds counters
+   to the runtime decision.
+
+6.  Consumption Bounds
+
+   A Mission Intent controls object
+   ([I-D.draft-mcguinness-oauth-mission]) MAY carry these members:
+
+   max_budget:  OPTIONAL.  An object.  A hard cap on cumulative monetary
+      spend under the Mission.  It carries the same {amount, currency}
+      shape as the max_amount Common Constraint the issuance profile
+      seeds, so the per-action cap and this cumulative cap read alike.
+      Has the members:
+
+      amount:  REQUIRED.  A string.  A decimal number.
+
+      currency:  REQUIRED.  A string.  An ISO 4217 currency code.
+
+   max_calls:  OPTIONAL.  An array of objects.  Hard caps on the count
+      of consequential call events.  Each object has the members:
+
+      call_class:  REQUIRED.  A string.  The named call class to meter.
+         A call_class value SHOULD be drawn from the actions identifiers
+         of the entry's mission_resource_access
+         ([I-D.draft-mcguinness-oauth-mission]), so the metered class
+         maps to evaluated actions; a deployment that meters a coarser
+         or cross-entry class defines that class's membership, and such
+         a class is deployment-defined and not interoperable, like a
+         deployment-defined constraint.  (Named call_class rather than
+         scope to avoid collision with the OAuth scope parameter and
+         claim.)
+
+      count:  REQUIRED.  An integer. 1 or greater.
+
+   max_duration:  OPTIONAL.  A string.  An ISO 8601 duration (for
+      example, PT8H), matching the duration rule in Appendix A of
+      [RFC3339], bounding cumulative wall-clock consequential activity
+      under the Mission.  It is distinct from the Mission's expires_at,
+      which bounds issuance rather than activity.
+
+   max_egress_volume:  OPTIONAL.  An object with one or both members
+      bytes and messages, each an integer, 1 or greater: hard caps on
+      cumulative egress under the Mission across consequential external-
+      communication and external-commitment actions
+      ([I-D.draft-mcguinness-mission-runtime]), as the total size in
+      bytes of those actions' bound payload parameters and the count of
+      such actions.  It bounds the volume of within-scope laundering; it
+      does not detect it.
+
+   exclusive:  OPTIONAL.  An array of exclusivity groups, each an array
+      of two or more selectors.  A selector is an object with resource
+      (REQUIRED, a string) and actions (OPTIONAL, an array of strings);
+      it matches a consequential action whose resource equals resource
+      and, when actions is present, whose invoked action is within it.
+      Within a group, the selectors name authority the Approver consents
+      MUST NOT be combined under this Mission (Section 8).
+
+   The bounds are carried on the Mission and committed by intent_hash.
+   They are not enforced by the Authorization Server at issuance; they
+   are enforced by the runtime layer at the point of use (Section 7).
+
+   Example Mission Intent controls carrying three of the four bounds
+   alongside the issuance profile's members:
+
+   {
+     "controls": {
+       "acr": "urn:example:acr:mfa",
+       "max_derivations": 200,
+       "max_budget": { "amount": "5000.00", "currency": "USD" },
+       "max_calls": [
+         { "call_class": "journal-entries.write", "count": 50 }
+       ],
+       "max_duration": "PT8H"
+     }
+   }
+
+6.1.  Consent Integrity
+
+   A consumption bound is part of what the Approver consents to.  Where
+   a deployment records Consent Evidence
+   ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), the rendered
+   authority summary MUST include the consumption bounds the Mission
+   carries.
+
+   A deployment MUST NOT render a consumption bound to the Approver as
+   enforced unless the bound is within a runtime enforcement scope that
+   meters it under this document.  A deployment that accepts the bounds
+   into the Intent but does not meter them presents an unenforced
+   promise at the consent surface; a Mission Issuer whose deployment
+   does not meter a bound MUST refuse an Intent that carries it at
+   intake, and MUST NOT render it as an enforced limit.
+
+   Under a multi-PDP topology (Section 7.1), a consented hard cap the
+   deployment renders as enforced MUST either be realized as
+   structurally exact relaxations, per-PDP sub-budgets that sum to the
+   cap, or be rendered with the consistency qualifier the topology
+   operates under, so the Approver consents to the guarantee the
+   deployment can meet rather than to a hard number it cannot.
+
+7.  Consumption Metering
+
+   Consumption bounds are enforced by the runtime profile's PDP
+   ([I-D.draft-mcguinness-mission-runtime]), not at issuance:
+
+   *  max_budget: the PDP performs an atomic reserve-or-charge against
+      the remaining balance for each consequential action and MUST
+      refuse when the remaining balance is insufficient.
+
+   *  max_calls: the PDP increments an atomic counter for the named
+      call_class and MUST refuse a call past count.
+
+   *  max_egress_volume: the PDP adds the action's bound payload size
+      and increments the action count atomically with the permit and
+      MUST refuse an action that would exceed either cap.  Payload size
+      is measured over the parameter bytes committed by parameter_digest
+      ([I-D.draft-mcguinness-mission-runtime]); the Operation Profile
+      defines the measurement so PDPs accumulate consistently.  For a
+      reference-typed parameter, one that carries an attachment
+      identifier or URL whose referent egresses while the pointer is
+      what parameter_digest commits, the Operation Profile MUST measure
+      the dereferenced payload size, or the deployment MUST exclude such
+      actions from a claimed bytes bound; counting the pointer bytes
+      alone understates the egress.
+
+   *  max_duration: the PDP accumulates the duration of consequential
+      activity it reserves, commits, or permits and MUST refuse once
+      that total would exceed the bound.  The PDP MUST accumulate
+      max_duration as the sum of per-action measured durations, not the
+      union of activity intervals, so concurrent actions each count
+      against the bound.  For an action whose duration is not known
+      before execution, the PDP MUST either reserve a bounded maximum
+      duration or issue a duration lease that expires unless renewed;
+      the PEP MUST stop the action or obtain a new permit before the
+      reservation or lease is exhausted.  Lease boundaries MUST carry a
+      clock-skew margin: the PEP renews or stops ahead of expiry by at
+      least the deployment's skew bound, so a renewal in flight does not
+      race the expiry it extends.  For an action that cannot be safely
+      stopped mid-execution, lease exhaustion is handled as an in-flight
+      outcome under the orchestration profile's dispatched_not_committed
+      or unknown classes ([I-D.draft-mcguinness-mission-orchestration]),
+      not by severing the action.  After execution, the PEP MUST report
+      the measured duration so the PDP can commit actual use and release
+      any unused reservation.  The Operation Profile defines how a
+      single action's duration is measured so that PDPs accumulate
+      consistently.
+
+   A per-entry constraints value that expresses a cumulative consumption
+   bound is metered the same way.  When an applicable entry or the
+   Mission's controls carries such a bound, the PDP MUST meter use
+   against it and MUST refuse a consequential action that would exceed
+   it.  The runtime profile's fail-closed rule stands beneath all of
+   this: an unmetered or unrecognized consumption bound MUST cause
+   refusal rather than silent pass-through
+   ([I-D.draft-mcguinness-mission-runtime]).
+
+7.1.  Exactness and Topology
+
+   The exactness of a consumption bound depends on the decision
+   topology, and this profile does not overpromise:
+
+   *  Under a *single serializing PDP* for the Mission, the check and
+      decrement can be atomic, and the bound is exact.
+
+   *  Under *multiple or distributed PDPs* (for example, Resource
+      Server-hosted PDPs), an exact global counter is a distributed-
+      counting problem.  Such a deployment MUST publish the consistency
+      bound it operates under (for example, per-PDP sub-budgets, or a
+      bounded reconciliation window), and the effective guarantee is
+      that bound, not exact-to-the-call enforcement.
+
+   A deployment MUST NOT advertise exact consumption enforcement it
+   cannot meet under its chosen topology.  The consistency bound is part
+   of the runtime enforcement scope the runtime profile requires a
+   deployment to document ([I-D.draft-mcguinness-mission-runtime]).
+
+7.2.  Retry, Idempotency, and Reserve/Commit Posture
+
+   For a metered permit, the PDP and PEP MUST define retry and
+   idempotency behavior.  A retry of the same normalized action under
+   the same idempotency key or single-use decision identifier MUST NOT
+   consume the bound twice.  Reuse of an idempotency key or decision
+   identifier for a different normalized action MUST cause refusal.  For
+   irreversible actions and external commitments, a deployment MUST
+   define whether metering is reserved before execution and committed
+   after success, or committed before execution; it MUST NOT leave the
+   decrement ambiguous.  A failed attempt releases any reserved
+   consumption per the deployment's documented reserve/commit posture.
+
+8.  Exclusivity and Separation of Duty
+
+   The exclusive control (Section 6) is not a consumption bound: it is a
+   stateful separation-of-duty rule enforced with the same machinery.
+   Within an exclusivity group, the first permitted consequential action
+   matching a selector latches the group to that selector, atomically
+   with the permit; for the Mission's remaining lifetime the PDP MUST
+   refuse a consequential action matching any other selector of the same
+   group.  The latch is per group and per Mission and is PDP-side
+   operational state like a consumption counter (Section 7).  The latch
+   tracks execution, not permit issuance: a permit whose action is
+   affirmatively not executed never combined the group's authority, so
+   when Execution Evidence reports that outcome within the strongly
+   consistent latch domain the PDP releases the latch, restoring
+   monotonic narrowing rather than breaking it.  Absent that affirmative
+   non-execution the latch does not unlatch: narrowing by exercise is
+   monotonic, like every other narrowing in the family.
+
+   The latch is exempt from the relaxations of Section 7.1.  A counter
+   degrades gracefully under a per-PDP sub-budget or a reconciliation
+   window; a separation-of-duty rule violated once is violated
+   permanently, and two PDPs can latch the same group to opposite
+   selectors within the window.  An exclusivity group MUST therefore be
+   enforced in a single strongly consistent per-Mission latch domain
+   (the runtime profile's Mission-sharding guidance makes the Mission
+   the consistency unit, [I-D.draft-mcguinness-mission-runtime]), the
+   sub-budget and reconciliation-window relaxations MUST NOT be applied
+   to exclusive, and the deployment MUST name the latch domain in its
+   Enforcement Scope Statement.
+
+   Exclusivity turns the quarantine deployment pattern
+   ([I-D.draft-mcguinness-mission-architecture]) into consented,
+   enforceable structure: an Approver can approve a Mission that may
+   read a sensitive store or communicate externally, but never both.
+   The groups are consented at the approval event, committed by
+   intent_hash with the other controls members, and rendered in the
+   consent disclosure (Section 6.1 applies unchanged).
+
+   In the AuthZEN binding, a refusal under a latched group is denied
+   with exclusivity_latched, an extension of the runtime denial set
+   under the AuthZEN profile's coordinated-extension conventions
+   ([I-D.draft-mcguinness-mission-authzen]), and recorded as the
+   denial_reason in Decision Evidence.  A PDP that cannot establish a
+   group's latch state fails closed for the actions the group covers,
+   per the runtime profile's availability posture.
+
+9.  Aggregate Bounds
+
+   The bounds of this document are Mission-keyed.  A deployment MAY
+   additionally meter the same bound classes across Missions, keyed by
+   the Mission's subject or by the approved client_id, so a fleet
+   operator can cap what an agent identity or a Subject consumes in
+   total rather than per task.  The counter semantics, reserve/commit
+   postures, and refusal behavior are unchanged; only the key differs.
+
+   An aggregate bound is deployment policy: it is carried on no single
+   Mission Intent, is committed by no intent_hash, and is disclosed
+   through the deployment's Enforcement Scope Statement rather than the
+   approval event.  A refusal under an aggregate bound is carried as
+   quota_exceeded, and Decision Evidence records the deployment-defined
+   aggregate key class.
+
+   Aggregate keying crosses the family's per-Mission consistency
+   domains: a subject-keyed counter is shared by every Mission the
+   subject holds, so it cannot be sharded by Mission Identifier and is
+   provisioned as its own consistency domain
+   ([I-D.draft-mcguinness-mission-runtime]).
+
+10.  AuthZEN Binding
+
+   Where the runtime deployment uses the AuthZEN binding
+   ([I-D.draft-mcguinness-mission-authzen]), this section defines the
+   wire representation of metering.  It defines no new metering
+   semantics and no new constraint.  The requirements of this section
+   and Section 10.1 apply only to a deployment that adopts the AuthZEN
+   binding under that profile's conformance; for every other deployment
+   the AuthZEN profile remains an informative reference.
+
+   When metering a bound would exceed it, the PDP MUST deny with
+   quota_exceeded ([I-D.draft-mcguinness-mission-authzen]) instead of
+   returning a permit, and MUST record quota_exceeded as the
+   denial_reason in Decision Evidence.  Whether a metered permit is
+   reserved at decision time and committed on settlement, or committed
+   at decision time, follows the deployment's documented reserve/commit
+   posture (Section 7.2); this binding fixes neither.  In a batch
+   (boxcar) evaluation, consumption metering applies per item in request
+   order.  The exactness of the bound is the consistency bound of
+   Section 7.1, not a property of this wire binding.
+
+10.1.  Settlement Exchange
+
+   The metering rules require the PEP to signal actual use so the PDP
+   commits consumption and releases any reservation.  In the AuthZEN
+   binding, delivery of the Execution Evidence Object
+   ([I-D.draft-mcguinness-mission-authzen]) to the PDP is that commit-
+   or-release signal: on receipt the PDP commits the consumption the
+   linked action used and releases any reserved excess, keyed to the
+   Execution Evidence's decision_id.  The deployment MUST provide a
+   settlement transport for this signal: a PDP evidence-submission path,
+   or an equivalent channel, with at-least-once delivery and a commit
+   that is idempotent on the Execution Evidence's decision_id, so a
+   redelivered settlement neither double-commits the consumption nor
+   double-releases the reservation.
+
+   Settlement can also fail to arrive.  A reservation MUST carry a
+   bounded lease so a crashed or abandoned reservation does not consume
+   the budget permanently: on lease expiry without settlement the PDP
+   reconciles the reservation through the runtime profile's orphaned-
+   evidence process ([I-D.draft-mcguinness-mission-runtime]).  For an
+   idempotent or reversible action class, expiry releases the
+   reservation and returns the budget; for a non-idempotent action
+   class, expiry forces reconciliation or human review rather than
+   release.  An unsettled reservation remains charged against the bound
+   until it is reconciled, and is released only on affirmative evidence
+   of non-execution; timeout alone never releases a reservation for a
+   non-idempotent action class.  The operational consequence: a lossy
+   evidence channel accumulates reservations against max_budget and
+   max_calls until the Mission starves on quota_exceeded, a self-
+   inflicted denial of service.  A deployment SHOULD run orphaned-
+   evidence reconciliation on a published cadence sized to its evidence-
+   channel loss rate; the reconciliation window it publishes is how long
+   leaked budget stays leaked.
+
+   For a duration-metered action the PEP reports the measured duration
+   in the Execution Evidence measured_duration member, and the PDP
+   commits that duration against max_duration.  A duration-lease renewal
+   is a new re-evaluation request that carries the prior permit's
+   decision_id in context.prior_decision_id, so the PDP continues the
+   same metered activity rather than opening a new reservation.  The PDP
+   MUST verify that the renewal's Mission, subject, action, and audience
+   match the decision named by prior_decision_id.  A deployment sizes
+   lease intervals to amortize renewals: an interval materially shorter
+   than the action class's staleness bound adds decision load without
+   tightening the revocation cutoff.  This exchange requires one request
+   member and one evidence member:
+
+   context.prior_decision_id:  OPTIONAL.  A string.  Present on a
+      duration-lease renewal request, carrying the decision_id of the
+      permit being renewed.  Absent on an initial request.
+
+   measured_duration (Execution Evidence):  REQUIRED for a duration-
+      metered action, otherwise absent.  A string containing an ISO 8601
+      duration (the duration rule in Appendix A of [RFC3339]): the PEP's
+      measured duration for the executed action.
+
+   A renewal repeats the evaluation-request envelope for the same
+   activity and adds context.prior_decision_id.  Here a long-running,
+   duration-metered ledger reconciliation renews its lease before the
+   prior permit expires; the action is not parameter-bound, so no
+   parameter_digest is carried:
+
+   {
+     "subject": {
+       "type": "user",
+       "id": "user_3p2q8mN1a0kV7tR",
+       "properties": {
+         "iss": "https://idp.example.com"
+       }
+     },
+     "resource": {
+       "type": "ledger",
+       "id": "ledger_main"
+     },
+     "action": { "name": "reconciliation.run" },
+     "context": {
+       "mission": {
+         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+         "issuer": "https://as.example.com",
+         "authority_hash":
+           "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+         "state": "active"
+       },
+       "actor": { "client_id": "s6BhdRkqt3" },
+       "credential": {
+         "issuer": "https://as.example.com",
+         "expires_at": "2026-11-02T09:14:00Z"
+       },
+       "audience": "https://erp.example.com",
+       "freshness": {
+         "mode": "fresh",
+         "freshness_at": "2026-11-02T08:44:00Z"
+       },
+       "prior_decision_id": "dec_0Rt5nB8xW2qK7mJ4vS1pL9eYc"
+     }
+   }
+
+11.  Conformance
+
+   A runtime deployment that claims this profile MUST:
+
+   *  meter every consumption bound a governed Mission carries per
+      Section 7, within its documented runtime enforcement scope
+      ([I-D.draft-mcguinness-mission-runtime]);
+
+   *  refuse a consequential action that would exceed a bound, and
+      refuse on any bound it cannot meter;
+
+   *  enforce every consented exclusivity group with a latch atomic with
+      the permit (Section 8);
+
+   *  where aggregate bounds are configured, meter and disclose them per
+      Section 9;
+
+   *  publish its consistency bound under a multi-PDP topology
+      (Section 7.1);
+
+   *  define and document its retry, idempotency, and reserve/commit
+      posture (Section 7.2); and
+
+   *  where the AuthZEN binding is in use, implement the settlement
+      exchange of Section 10.1.
+
+   A Mission Issuer in a deployment claiming this profile MUST carry the
+   consented bounds on the Mission record committed by intent_hash, and
+   MUST render them at the approval event per Section 6.1.
+
+12.  Security Considerations
+
+   Consumption bounds limit the blast radius of a compromised or runaway
+   agent in a dimension authority narrowing cannot: a Mission whose
+   every action is individually authorized can still be drained by
+   volume.  Their enforcement, however, is only as good as the metering:
+
+   *  *Unenforced bounds are consent theater.* A bound rendered at
+      approval but not metered anywhere misleads the Approver about the
+      Mission's exposure.  The consent-integrity rule (Section 6.1)
+      exists for this; a deployment that cannot meter MUST NOT render
+      the bound as enforced.
+
+   *  *Distributed undercounting.* Under a multi-PDP topology, an
+      attacker who can spread actions across decision points exploits
+      the consistency gap.  The published consistency bound
+      (Section 7.1) is the honest statement of that exposure; per-PDP
+      sub-budgets bound it structurally.
+
+   *  *Settlement honesty.* The PDP commits what the PEP reports.
+      Execution Evidence is integrity-protected and signed by the PEP
+      ([I-D.draft-mcguinness-mission-authzen]); a compromised PEP can
+      under-report duration or spend, which is within the runtime
+      profile's trusted-base assumptions for PEPs.
+
+   *  *Lease abandonment.* An agent that stops renewing a duration lease
+      and keeps acting is stopped by the PEP, which MUST stop the action
+      or obtain a new permit before the lease is exhausted (Section 7).
+
+   *  *Reservation starvation.* An attacker who opens reservations and
+      never settles them can consume a budget with no executed action,
+      denying the Mission its remaining authority.  The bounded
+      reservation lease (Section 10.1) caps this: an unsettled
+      reservation is reconciled on lease expiry rather than held
+      indefinitely, and the idempotent-release path returns the budget.
+
+   *  *Latch burning.* Because the first matching action latches an
+      exclusivity group, an injected agent can try to burn a group by
+      driving the side it wants foreclosed, denying the Mission the
+      other side.  Releasing the latch on affirmative non-execution
+      (Section 8) keeps an unexecuted attempt from foreclosing the group
+      permanently.
+
+13.  Privacy Considerations
+
+   Metering state (spend, call counts, activity durations) is a fine-
+   grained record of Mission activity over time.  It SHOULD be retained
+   under the same access controls and retention windows as runtime
+   enforcement evidence ([I-D.draft-mcguinness-mission-runtime]), and
+   disclosed in decision responses only as refusals, not as remaining-
+   balance oracles.  The refusal boundary is itself a coarse balance
+   oracle: the point at which a bound flips from permit to refusal
+   reveals the remaining margin.  A deployment SHOULD bound this probing
+   with the AuthZEN profile's denial-oracle controls
+   ([I-D.draft-mcguinness-mission-authzen]), per-Mission rate-limiting
+   of access requests and evidence-logging of request provenance, so a
+   compromised agent mapping a balance by repeated probes is visible to
+   the humans adjudicating it.
+
+14.  IANA Considerations
+
+   This document has no IANA actions. max_budget, max_calls,
+   max_duration, max_egress_volume, and exclusive are Mission Intent
+   controls members defined by this profile under the issuance profile's
+   controls extension seam; context.prior_decision_id and
+   measured_duration are AuthZEN extension data carried per the AuthZEN
+   profile's conventions ([I-D.draft-mcguinness-mission-authzen]).
+
+15.  References
+
+15.1.  Normative References
+
+   [I-D.draft-mcguinness-mission-authzen]
+              McGuinness, K., "Mission-Bound Runtime Enforcement:
+              AuthZEN Profile", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              authzen.html>.
+
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime.html>.
+
+   [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-consent-evidence]
+              McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-consent-
+              evidence.html>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
+              Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
+              <https://www.rfc-editor.org/rfc/rfc3339>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+15.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-architecture]
+              McGuinness, K., "An Architecture for Mission-Bound
+              Authorization", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              architecture.html>.
+
+   [I-D.draft-mcguinness-mission-orchestration]
+              McGuinness, K., "Mission Orchestration and Unwinding",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-mission-
+              orchestration.html>.
+
+   [I-D.draft-mcguinness-mission-substrate]
+              McGuinness, K., "Mission Substrate Requirements", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-substrate.html>.
+
+Acknowledgments
+
+   This document is part of the Mission-Bound Authorization for OAuth
+   2.0 work and defines its experimental consumption-metering layer.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
