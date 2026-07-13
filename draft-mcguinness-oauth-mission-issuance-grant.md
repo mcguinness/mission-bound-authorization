@@ -340,9 +340,9 @@ discovery metadata ({{iana}}). The Grant Minter MUST observe:
    other state refuses.
 3. **Subset and audience.** The grant's `authorization_details` MUST
    be a subset of the Mission's consented Authority Set under the
-   core's subset rule, and SHOULD carry only the entries the named
-   consuming AS serves. The requester MAY request a narrower subset;
-   it MUST NOT obtain a wider one.
+   core's subset rule. The grant SHOULD carry only the entries the
+   named consuming AS serves. The requester MAY request a narrower
+   subset. The requester MUST NOT obtain a wider one.
 4. **Derivation event.** Each grant minted is a derivation event.
    Where the Mission carries a consented `controls.max_derivations`,
    the MAS MUST count grants against it atomically and refuse beyond
@@ -472,16 +472,19 @@ On success the consuming AS mints tokens under these rules:
   `mission` object verbatim as the core's `mission` claim, including
   the `expires_at` member ({{expires-at-member}}).
 - **Subset.** Issued `authorization_details` MUST be a subset of the
-  grant's; the token response SHOULD echo them as the core specifies
-  for Mission-bound issuance. The consuming AS MUST NOT widen, remap,
-  or supplement them from its own policy except to narrow. Carrying
-  `authorization_details` at all requires {{RFC9396}} support at the
-  consuming AS; an AS that models authority as `scope` instead projects
-  the grant's `authorization_details` to `scope` under the core's
-  scope-projection rule ({{I-D.draft-mcguinness-oauth-mission}}), where
-  every issued scope value corresponds to authority the grant conveys
-  and none conveys authority, or relaxes a constraint, that the grant
-  does not.
+  grant's. The consuming AS MUST NOT widen, remap, or supplement
+  them from its own policy except to narrow.
+- **Echo.** The token response SHOULD echo the issued
+  `authorization_details` as the core specifies for Mission-bound
+  issuance.
+- **Scope projection.** Carrying `authorization_details` at all
+  requires {{RFC9396}} support at the consuming AS. An AS that
+  models authority as `scope` instead projects the grant's
+  `authorization_details` to `scope` under the core's
+  scope-projection rule ({{I-D.draft-mcguinness-oauth-mission}}):
+  every issued scope value corresponds to authority the grant
+  conveys, and none conveys authority, or relaxes a constraint, that
+  the grant does not.
 - **Lifetime.** No access or refresh token issued under the grant may
   have an expiry later than the `mission` object's `expires_at`. That
   ceiling is the Mission horizon, not a liveness bound, so access
@@ -496,11 +499,11 @@ On success the consuming AS mints tokens under these rules:
   no fresh access token; an AS with no state integration relies on the
   grant's `active`-at-minting gate and the short access-token lifetime
   above.
-- **Refresh is state-gated.** A consuming AS MAY issue refresh
-  tokens only if it gates each refresh on current Mission state,
-  resolved through the Mission Status operation
+- **Refresh is state-gated.** A consuming AS MUST NOT issue refresh
+  tokens unless it gates each refresh on current Mission state. That
+  gate resolves state through the Mission Status operation
   ({{I-D.draft-mcguinness-oauth-mission-status}}) or the MAS's state
-  surface within a published staleness bound, refusing when the
+  surface within a published staleness bound, and refuses when the
   Mission is not established as `active`. A consuming AS without a
   state integration MUST NOT issue refresh tokens under a grant.
 - **No re-approval.** The approval event already occurred at the
@@ -546,26 +549,31 @@ than retry.
 
 Deployments whose clients must traverse the authorization code flow
 MAY carry the grant in a Pushed Authorization Request {{RFC9126}} as
-the request parameter `mission_issuance_grant` ({{iana}}). The AS
-applies the grant validation of {{redemption}} at the PAR endpoint,
-treats the grant as the authorization already obtained, and MUST NOT
-re-prompt for consent; at most it renders the Mission reference. It
-consumes the grant there: the 300-second `exp`, `iat`, and `aud` checks
-and the single-use `jti` are evaluated at PAR validation, and the `jti`
-is recorded as seen at that point, so the grant cannot be replayed into
-a second authorization request. The grant's window is not re-evaluated
-at code exchange; the issued authorization code carries its own
-lifetime from there, and all remaining redemption rules (subset,
-lifetime, state-gated refresh, no re-approval, and the error mapping of
-{{redemption-errors}}) apply at the token request unchanged.
+the request parameter `mission_issuance_grant` ({{iana}}).
 
-The AS MUST bind the resource owner authenticated at the authorization
-endpoint to the grant's `sub`: it proceeds only where the authenticated
-user is the grant's Subject under the deployment's mapping policy
-({{issuance-join}}), and MUST refuse when a different user
-authenticates, so the grant cannot mint tokens for the wrong resource
-owner. The authenticated client MUST still be the grant's `client_id`
-({{redemption}}).
+The AS applies the grant validation of {{redemption}} at the PAR
+endpoint and treats the grant as the authorization already obtained.
+It MUST NOT re-prompt for consent; at most it renders the Mission
+reference.
+
+The AS consumes the grant at PAR validation: the 300-second `exp`,
+`iat`, and `aud` checks and the single-use `jti` check are evaluated
+there, and the `jti` is recorded as seen at that point, so the grant
+cannot be replayed into a second authorization request.
+
+The grant's window is not re-evaluated at code exchange; the issued
+authorization code carries its own lifetime from there. All
+remaining redemption rules (subset, lifetime, state-gated refresh,
+no re-approval, and the error mapping of {{redemption-errors}})
+apply at the token request unchanged.
+
+The AS MUST bind the resource owner authenticated at the
+authorization endpoint to the grant's `sub`: it proceeds only where
+the authenticated user is the grant's Subject under the deployment's
+mapping policy ({{issuance-join}}). The AS MUST refuse when a
+different user authenticates, so the grant cannot mint tokens for
+the wrong resource owner. The authenticated client MUST still be the
+grant's `client_id` ({{redemption}}).
 
 # Relationship to Other Artifacts {#relationships}
 
@@ -612,18 +620,28 @@ half-step arrives with the consuming AS's refresh gating.
 
 # Conformance {#conformance}
 
-**Grant Minter** (the MAS): implements {{minting}} in full: the
-authenticated, visibility-guarded endpoint; the `active`-only gate;
-subset and audience scoping; derivation counting where consented;
-minting evidence; and grants shaped exactly as {{grant}} requires.
+**Grant Minter** (the MAS) implements {{minting}} in full:
 
-**Consuming Authorization Server**: implements {{redemption}} in
-full: `typ`, signature, audience, lifetime, single-use, and client
-binding validation; verbatim `mission` claim carriage;
-subset-bounded minting; `expires_at` capping; state-gated
-refresh or no refresh; no re-approval; and the redemption error
-mapping of {{redemption-errors}}. The PAR carriage of
-{{par-carriage}} is OPTIONAL.
+- the authenticated, visibility-guarded endpoint;
+- the `active`-only gate;
+- subset and audience scoping;
+- derivation counting where consented;
+- minting evidence; and
+- grants shaped exactly as {{grant}} requires.
+
+**Consuming Authorization Server** implements {{redemption}} in
+full:
+
+- `typ`, signature, audience, lifetime, single-use, and client
+  binding validation;
+- verbatim `mission` claim carriage;
+- subset-bounded minting;
+- `expires_at` capping;
+- state-gated refresh or no refresh;
+- no re-approval; and
+- the redemption error mapping of {{redemption-errors}}.
+
+The PAR carriage of {{par-carriage}} is OPTIONAL.
 
 A deployment claiming this profile states, alongside its
 Enforcement Scope Statement, which Authorization Servers consume
@@ -651,13 +669,16 @@ profile it additionally mints grants every consuming AS honors:
 compromise reaches token issuance across the estate. The consuming
 ASs' audit logs of redeemed grants (each with `jti` and Mission
 reference) are the independent record that bounds and exposes such
-minting; a deployment SHOULD reconcile MAS minting evidence against
-consuming-AS redemption logs and treat a redemption with no matching
-minting record as a security event, and states its reconciliation
-posture in its conformance statement ({{conformance}}). A deployment
-operating under the Enterprise Mission Authority Profile
-({{I-D.draft-mcguinness-mission-authority-server}}) MUST reconcile,
-within the window its statement declares: at estate scale,
+minting.
+
+A deployment SHOULD reconcile MAS minting evidence against
+consuming-AS redemption logs. A deployment SHOULD treat a redemption
+with no matching minting record as a security event. A deployment
+states its reconciliation posture in its conformance statement
+({{conformance}}). A deployment operating under the Enterprise
+Mission Authority Profile
+({{I-D.draft-mcguinness-mission-authority-server}}) MUST reconcile
+within the window its statement declares; at estate scale,
 reconciliation is the only check on this compromise class.
 
 **Trust inversion.** The consuming AS accepts externally derived
