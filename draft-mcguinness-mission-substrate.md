@@ -195,9 +195,7 @@ where this document and the core appear to differ, the core governs.
 Ownership migrates by touch, not by relocation. When a
 binding-neutral definition next changes substantively, the change
 lands in this document and the owning binding section becomes a
-reference to it, so the contract boundary exists now while the text
-crosses it opportunistically, and no change is ever made solely to
-move words.
+reference to it; no change is ever made solely to move words.
 
 # Conventions and Terminology
 
@@ -240,12 +238,18 @@ profiles; a summary here never overrides its home.
 A binding MUST require its implementations to maintain the Mission
 record as the core defines it: the durable object created at the
 approval event, immutable after creation except its lifecycle state,
-and retained per the audit horizon ({{audit-horizon}}). A binding MUST provide a Mission
-Identifier that is opaque, carries no semantic content, has at least
-128 bits of entropy, and is never reused, together with an `issuer`:
-an issuer identifier naming the approving Mission Issuer, from which
-consumers resolve the binding's state and key surfaces; together they
-name exactly one Mission.
+and retained per the audit horizon ({{audit-horizon}}).
+
+A binding MUST provide, together with an `issuer`, a Mission
+Identifier that:
+
+- is opaque and carries no semantic content;
+- has at least 128 bits of entropy; and
+- is never reused.
+
+The `issuer` is an issuer identifier naming the approving Mission
+Issuer, from which consumers resolve the binding's state and key
+surfaces; together the pair names exactly one Mission.
 
 A binding MAY define a substrate-native reference to the same Mission,
 as the AAuth binding does with its (`approver`, `s256`) pair; the
@@ -261,19 +265,24 @@ members assume the record's immutability.
 
 ## Mission Lifecycle States {#lifecycle}
 
-A binding MUST provide the core's lifecycle state space: `active`,
-`revoked`, and `expired` as the minimum, with only `active` permitting
-issuance, derivation, or continued reliance. Every other state value,
-including one a consumer does not recognize, is non-active and
-non-deriving; a binding MUST NOT define a surface that fails open on
-an unrecognized state. A binding that adopts an extension state MUST
-surface its value verbatim on the binding's Mission state surfaces
-(the Mission Status operation and kin) and MUST NOT translate it
-there into a core state or a substrate-native vocabulary, because the
-fail-safe rule keys on the exact value. On a substrate-native
-protocol surface a binding MAY project states onto its native
-vocabulary, provided every non-`active` state projects to a
-non-active native signal: the projection is fail-safe.
+A binding MUST provide the core's lifecycle state space, under the
+following rules.
+
+- The state space is `active`, `revoked`, and `expired` as the
+  minimum, with only `active` permitting issuance, derivation, or
+  continued reliance.
+- Every other state value, including one a consumer does not
+  recognize, is non-active and non-deriving. A binding MUST NOT
+  define a surface that fails open on an unrecognized state.
+- A binding that adopts an extension state MUST surface its value
+  verbatim on the binding's Mission state surfaces (the Mission
+  Status operation and kin), not translated there into a core state
+  or a substrate-native vocabulary, because the fail-safe rule keys
+  on the exact value.
+- On a substrate-native protocol surface a binding MAY project
+  states onto its native vocabulary, provided every non-`active`
+  state projects to a non-active native signal: the projection is
+  fail-safe.
 
 A binding MUST provide an authenticated means, independent of any
 credential's possession, for the Subject, the Approver, or an
@@ -286,9 +295,9 @@ learn a Mission's current state, with a stated staleness bound, so
 deployments can meet the runtime profile's freshness rules. Each state
 source MUST be authenticated and integrity-protected, so a consumer
 verifies a state report's origin and detects tampering before relying
-on it: state whose origin or integrity a consumer cannot verify is
-treated as unavailable and fails closed. Verifying a signed state
-report consumes the issuer key material of {{keys}}.
+on it. In consequence, state whose origin or integrity a consumer
+cannot verify is treated as unavailable and fails closed. Verifying a
+signed state report consumes the issuer key material of {{keys}}.
 
 Home: the Mission Lifecycle and Gating section of
 {{I-D.draft-mcguinness-oauth-mission}}; the freshness rules are the
@@ -302,19 +311,22 @@ staleness), the harness (pause, suppress, terminate), orchestration
 
 ## Mission Authority Representation {#authority}
 
-A binding MUST represent the Authority Set as an array of entries in
-the core's authorization-details shape: each entry names a resource,
-its actions, and its constraints. The binding MUST require its
-implementations to apply the subset rule at every narrowing they
-perform: no derivation, delegation, or attenuation under a Mission
-yields authority broader than the Mission's Authority Set. The binding
-MUST require its implementations to interpret Common Constraint names
-per their definitions and compare their values in value space under
-each definition's subset and intersection rules, so independent
-implementations compute the same result for the same values. Where a
-binding or its enforcement surface admits a delegate, per-entry
-`delegation` policy is evaluated by whichever surface admits the
-delegate: the issuance gate where tokens are derived, the join where
+- A binding MUST represent the Authority Set as an array of entries
+  in the core's authorization-details shape: each entry names a
+  resource, its actions, and its constraints.
+- The binding MUST require its implementations to apply the subset
+  rule at every narrowing they perform: no derivation, delegation,
+  or attenuation under a Mission yields authority broader than the
+  Mission's Authority Set.
+- The binding MUST require its implementations to interpret Common
+  Constraint names per their definitions and compare their values in
+  value space under each definition's subset and intersection rules,
+  so independent implementations compute the same result for the
+  same values.
+
+Where a binding or its enforcement surface admits a delegate, the
+surface that admits the delegate MUST evaluate per-entry `delegation`
+policy: the issuance gate where tokens are derived, the join where
 they are not.
 
 Home: the Mission Authority section of
@@ -357,13 +369,17 @@ form), and audit transparency (the committed evidence types).
 This primitive is OPTIONAL, and it is where provision levels split.
 
 Under full provision, the binding issues a Mission-bound credential:
-a credential under the binding's own proof-of-possession discipline
-that names exactly one Mission, through the `mission` claim (`id`,
-`issuer`, `authority_hash`) or a substrate-native reference the
-Mission record binds ({{identifier}}), issued only while the
-referenced Mission is `active`: credential issuance is gated on
-Mission state. The `mission` claim shape is the interoperable
-default. Provision may be composite: the standalone MAS binding
+
+- a credential under the binding's own proof-of-possession
+  discipline;
+- naming exactly one Mission, through the `mission` claim (`id`,
+  `issuer`, `authority_hash`) or a substrate-native reference the
+  Mission record binds ({{identifier}}), with the `mission` claim
+  shape as the interoperable default; and
+- issued only while the referenced Mission is `active`: credential
+  issuance is gated on Mission state.
+
+Provision may be composite: the standalone MAS binding
 together with Authorization Servers consuming its issuance grants
 ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) provides
 this credential jointly.
@@ -372,9 +388,10 @@ Under partial provision, the binding issues no such credential. It
 MUST define a join per the externally established mode of the runtime
 profile's Mission binding establishment step: how a PDP verifies a
 supplied Mission reference against the acting credential before any
-authority is evaluated. The definition MUST state what the join proves
-and what it cannot prove; an unverified reference never establishes
-the Mission. The MAS's Mission Join is the profiled example
+authority is evaluated. The definition MUST state what the join
+proves, what it cannot prove, and the residuals that remain; an
+unverified reference never establishes the Mission. The MAS's
+Mission Join is the profiled example
 ({{I-D.draft-mcguinness-mission-authority-server}}).
 
 Profiles that ride the credential itself (offline attenuation, and the
@@ -613,14 +630,14 @@ re-derives only the substrate-specific entries of that model.
 Partial provision moves the credential-to-Mission binding from
 cryptographic carriage to the join, so the join's assurance bounds
 every downstream guarantee that names "this credential under this
-Mission". A binding MUST state that assurance honestly: what the join
-proves, what it cannot prove, and the residuals that remain. The MAS's
-Join Spoofing analysis is the pattern
-({{I-D.draft-mcguinness-mission-authority-server}}): the join proves
-the credential belongs to the subject and client the Mission names, no
-mechanism in that mode proves the credential was derived under the
-Mission, and mapping coarseness and same-party misattribution remain
-as residuals.
+Mission". The statement duty of {{credential}}, what the join proves,
+what it cannot prove, and the residuals that remain, is what keeps
+that assurance honest. The MAS's Join Spoofing analysis is the
+pattern ({{I-D.draft-mcguinness-mission-authority-server}}): the join
+proves the credential belongs to the subject and client the Mission
+names, no mechanism in that mode proves the credential was derived
+under the Mission, and mapping coarseness and same-party
+misattribution remain as residuals.
 
 ## State Source Fidelity
 
@@ -632,7 +649,8 @@ cannot meet its stated bound turns those fail-closed rules into
 fail-open in effect: consumers rely on state the binding reports as
 fresher than it is. The bound is a fidelity claim about the binding's
 infrastructure, of the same kind as the join's assurance statement,
-and belongs in the Mission Substrate Statement with the same honesty.
+and the Mission Substrate Statement names it with the same honesty
+({{statement}}).
 
 # Privacy Considerations
 
