@@ -554,10 +554,10 @@ NOT reject an event solely for a missing OPTIONAL member (notably
 `tenant`). A consumer matches the event type by the exact URI the
 Mission Issuer's Transmitter Configuration Metadata advertises, so
 the event-type namespace can change without a change to this
-profile's semantics: on adoption, the URI SHOULD migrate to an IETF-
-or foundation-controlled namespace (for example a `urn:ietf:params`
-URN or an OpenID Foundation schema URI), and a provisional
-`urn:ietf:params` URN MAY be used in the interim.
+profile's semantics. On adoption, the URI is expected to migrate to
+an IETF- or foundation-controlled namespace (for example a
+`urn:ietf:params` URN or an OpenID Foundation schema URI), with a
+provisional `urn:ietf:params` URN serving in the interim.
 
 A consumer anchors freshness to stream liveness, not to per-Mission
 age. The Shared Signals Framework {{OIDC-SSF}} provides a stream
