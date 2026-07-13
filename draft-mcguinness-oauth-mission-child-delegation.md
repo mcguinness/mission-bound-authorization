@@ -178,6 +178,54 @@ and audit data only.
 Where this document refers to "the issuance profile" without a section,
 it means {{I-D.draft-mcguinness-oauth-mission}} as a whole.
 
+## Relationship to Delegated Tokens {#child-vs-token}
+
+A Child Mission is a new Mission with its own `mission_id`. It is not
+an attenuation child: the Mission Offline Attenuation profile
+({{I-D.draft-mcguinness-oauth-mission-attenuation}}) defines a child
+as a narrower token minted under one Mission, not a new Mission.
+
+A delegated token is appropriate when the delegate performs work
+within the lifetime and operational control of the delegating flow. A
+Child Mission is appropriate when the child actor needs a durable
+Mission handle of its own: for example, a sub-agent with a queue,
+background job, independent harness session, or separate audit
+lifecycle. A Child Mission is not a way to widen authority; it is a
+way to create a narrower, separately accountable authority record for
+a child actor.
+
+The dividing line is survivability: work that can outlive the
+delegating flow, because it is queued, scheduled, or retried after
+the delegator exits, or that needs its own revocation and audit
+lifecycle, requires a Child Mission; work that cannot MAY run on a
+delegated token. A harness applies the test at spawn, not by agent
+design: the same sub-agent takes a delegated token when invoked
+inline and a Child Mission when parked on a queue.
+
+## Relationship to In-Mission Delegation {#child-vs-act}
+
+This profile's child delegation is distinct from the in-Mission
+delegation the issuance profile already defines. In-Mission delegation
+extends a single Mission's `act` chain to additional actors, bounded by
+the per-entry `delegation` policy (`allowed_delegates`, `max_depth`) of
+{{I-D.draft-mcguinness-oauth-mission}}; no new Mission is created and
+authority is exercised under the original Mission. Child delegation, by
+contrast, creates a separate Child Mission with its own `mission_id`,
+actor, lifecycle, and `act` chain.
+
+Where this profile reads the parent entry's `delegation` policy, it
+does so to decide whether child creation is permitted and which
+`child_actor` is eligible: the presence of a `children` object in the
+parent entry's `delegation` member is what permits child creation for
+that entry ({{fanout}}), and that object's `allowed_child_actors`
+constrains the `child_actor` the parent may name.
+
+The issuance profile's `act` `max_depth` bounds act-chain nesting
+within a Mission and is not a child-generation counter; a Child
+Mission's own `act` chain restarts at depth 0. Child-generation depth
+and breadth are governed instead by the fan-out controls of
+{{fanout}}.
+
 # Scope
 
 This document defines:
@@ -222,45 +270,8 @@ Delegation event:
 : The Mission Issuer event that creates the Child Mission and records
   the attenuation checks from parent to child.
 
-A Child Mission is a new Mission with its own `mission_id`. It is not an
-attenuation child: the Mission Offline Attenuation profile
-({{I-D.draft-mcguinness-oauth-mission-attenuation}}) defines a
-child as a narrower token minted under one Mission, not a new Mission.
-
-A delegated token is appropriate when the delegate performs work within
-the lifetime and operational control of the delegating flow. A Child
-Mission is appropriate when the child actor needs a durable Mission
-handle of its own: for example, a sub-agent with a queue, background
-job, independent harness session, or separate audit lifecycle. A Child
-Mission is not a way to widen authority; it is a way to create a
-narrower, separately accountable authority record for a child actor.
-The dividing line is survivability: work that can outlive the
-delegating flow, because it is queued, scheduled, or retried after
-the delegator exits, or that needs its own revocation and audit
-lifecycle, requires a Child Mission; work that cannot MAY run on a
-delegated token. A harness applies the test at spawn, not by agent
-design: the same sub-agent takes a delegated token when invoked
-inline and a Child Mission when parked on a queue.
-{:#child-vs-token}
-
-This profile's child delegation is distinct from the in-Mission
-delegation the issuance profile already defines. In-Mission delegation
-extends a single Mission's `act` chain to additional actors, bounded by
-the per-entry `delegation` policy (`allowed_delegates`, `max_depth`) of
-{{I-D.draft-mcguinness-oauth-mission}}; no new Mission is created and
-authority is exercised under the original Mission. Child delegation, by
-contrast, creates a separate Child Mission with its own `mission_id`,
-actor, lifecycle, and `act` chain. Where this profile reads the parent
-entry's `delegation` policy, it does so to decide whether child creation
-is permitted and which `child_actor` is eligible: the presence of a
-`children` object in the parent entry's `delegation` member is what
-permits child creation for that entry ({{fanout}}), and that object's
-`allowed_child_actors` constrains the `child_actor` the parent may name.
-The issuance profile's `act` `max_depth` bounds act-chain nesting within
-a Mission and is not a child-generation counter; a Child Mission's own
-`act` chain restarts at depth 0. Child-generation depth and breadth are
-governed instead by the fan-out controls of {{fanout}}.
-{:#child-vs-act}
+The design comparison between Child Missions, delegated tokens, and
+in-Mission delegation is in {{child-vs-token}} and {{child-vs-act}}.
 
 # Child Mission Creation {#child-creation}
 
@@ -320,15 +331,18 @@ on the authenticated back channel.
 Presenting the parent's refresh token as `parent_token` MUST follow
 the issuance profile's handling for that token: a sender-constrained
 refresh token MUST be presented in conformance with its sender
-constraint. Presenting the token for child creation MUST NOT rotate it
-and MUST NOT register as a replay in the deployment's refresh-token
-replay detection: the token is used here only to bind and resolve the
-parent, not to refresh. Because that carve-out would let a stolen
-bearer refresh token be presented repeatedly without detection, each
-child-creation presentation MUST be recorded and counted toward the
-deployment's anomaly detection, and a per-parent rate limit on child
-creation requests is a MUST when the presented token is not
-sender-constrained.
+constraint.
+
+Presenting the token for child creation MUST NOT rotate it and
+MUST NOT register as a replay in the deployment's refresh-token
+replay detection. The token is used here only to bind and resolve the
+parent, not to refresh.
+
+That carve-out would let a stolen bearer refresh token be presented
+repeatedly without detection. The Mission Issuer therefore MUST record
+each child-creation presentation and count it toward the deployment's
+anomaly detection, and MUST rate-limit child creation requests per
+parent when the presented token is not sender-constrained.
 
 ## Child Client Identity {#child-client-identity}
 
@@ -345,8 +359,10 @@ defines ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}): on
 creating the Child Mission the Mission Issuer mints an assertion that
 names the child actor as the authorized redeemer and the Mission
 Issuer's token endpoint as the audience, and the child actor presents it
-there authenticating with its own client credential. An authorization
-code MUST NOT be used to convey the child's grant: a code and its
+there authenticating with its own client credential.
+
+An authorization code MUST NOT be used to convey the child's grant: a
+code and its
 `request_uri` are redeemable only by the client that pushed the request
 ({{RFC9126}}), which is the parent, not the child. The child-bound
 assertion is redeemable only by the child actor it names, so conveying
@@ -627,24 +643,36 @@ Example:
 
 ## Mission Record Requirements {#record-requirements}
 
-The Child Mission record MUST contain the `parent` object, the child
-actor, the child Authority Set, the child `authority_hash`, the child
-Mission Intent's `intent_hash` ({{I-D.draft-mcguinness-oauth-mission}}),
-the delegation event identifier, the cascade mode, and the fan-out
-policy result. The `parent` value is immutable after creation.
+The Child Mission record MUST contain:
+
+- the `parent` object;
+- the child actor;
+- the child Authority Set;
+- the child `authority_hash`;
+- the child Mission Intent's `intent_hash`
+  ({{I-D.draft-mcguinness-oauth-mission}});
+- the delegation event identifier;
+- the cascade mode; and
+- the fan-out policy result.
+
+The `parent` value is immutable after creation.
 
 The delegation event ({{child-creation}}) is the Child Mission's
 approval event. It MUST commit the issuance profile's integrity anchors
 ({{I-D.draft-mcguinness-oauth-mission}}): `authority_hash` over the
 child Authority Set and `intent_hash` over the child Mission Intent, and
 it MUST produce the immutable, accountable record the core approval
-event produces. A Child Mission is created under a parent grant rather
-than a first-party approval ({{issuance-relationship}}), so its human
+event produces.
+
+A Child Mission is created under a parent grant rather than a
+first-party approval ({{issuance-relationship}}), so its human
 accountability is inherited from the Parent Mission's own approval.
 Where the deployment requires a human approval event for child creation
 ({{child-creation}}), that event meets the issuance profile's
 approval-event requirements in full and its human Approver is the
-record's approver. Where creation is adjudicated by policy with no human
+record's approver.
+
+Where creation is adjudicated by policy with no human
 interaction ({{child-client-identity}}), the record's approver is the
 adjudicating policy (identified by the `child_creation_policy` reference
 where the entry carries one, {{fanout}}) together with the Subject and
@@ -663,11 +691,12 @@ A Child Mission MUST be bounded by the Parent Mission:
   `expires_at` (so it transitively caps every child-derived token's
   `exp`, per {{I-D.draft-mcguinness-oauth-mission}});
 - the child MUST be created only where the applicable parent entry's
-  `delegation` member carries a `children` object ({{fanout}}), and a
-  child entry's `delegation` policy MUST NOT be broader than the parent
-  entry's: its `max_depth` MUST be no greater and its `allowed_delegates`
-  MUST be no wider, per the subset rule of
-  {{I-D.draft-mcguinness-oauth-mission}};
+  `delegation` member carries a `children` object ({{fanout}});
+- a child entry's `delegation` policy MUST NOT be broader than the
+  parent entry's, per the subset rule of
+  {{I-D.draft-mcguinness-oauth-mission}}:
+  - its `max_depth` MUST be no greater; and
+  - its `allowed_delegates` MUST be no wider;
 - non-delegable parent entries MUST NOT appear in child authority; and
 - child authority MUST be bound to the child actor identified in the
   request.
@@ -792,38 +821,51 @@ A Child Mission depends on the Parent Mission. A Mission's dependent
 Child Missions are every transitive descendant: its Child Missions,
 their children, and every further generation. The cascade trigger is
 any Parent Mission transition to a non-active state. This profile
-distinguishes terminal triggers from the one reversible trigger:
+distinguishes terminal triggers from the one reversible trigger.
 
-- Terminal triggers: parent `revoked` or `expired`
+Terminal triggers:
+: Parent `revoked` or `expired`
   ({{I-D.draft-mcguinness-oauth-mission}}), `completed`
   ({{I-D.draft-mcguinness-oauth-mission-status}}), `superseded`
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or `cascaded`
   ({{child-state}}, when the parent is itself a Child Mission that was
-  cascade-terminated). On a terminal trigger the Mission Issuer MUST stop
-  new derivation under dependent Child Missions and, under `immediate`
-  cascade, transition each dependent child to the terminal `cascaded`
-  state ({{child-state}}). Cascade is transitive: the children of a
-  `cascaded` parent cascade in turn under the same mode, in generation
-  order, so a terminal trigger reaches every descendant.
-- Reversible trigger: parent `suspended`
-  ({{I-D.draft-mcguinness-oauth-mission-status}}). The Mission Issuer
-  MUST stop new derivation under dependent Child Missions while the
-  parent is suspended, but MUST NOT drive them to a terminal state. When
-  the parent is resumed to `active`, dependent children return to their
-  pre-suspension state and may derive again. Reporting of a dependent
-  child while its parent is suspended is governed by {{child-state}}.
+  cascade-terminated).
+
+  On a terminal trigger the Mission Issuer MUST stop new derivation
+  under dependent Child Missions and, under `immediate` cascade, MUST
+  transition each dependent child to the terminal `cascaded` state
+  ({{child-state}}).
+
+  Cascade is transitive: the children of a `cascaded` parent cascade
+  in turn under the same mode, in generation order, so a terminal
+  trigger reaches every descendant.
+
+Reversible trigger:
+: Parent `suspended` ({{I-D.draft-mcguinness-oauth-mission-status}}).
+
+  While the parent is suspended the Mission Issuer MUST stop new
+  derivation under dependent Child Missions, but MUST NOT drive them
+  to a terminal state. When the parent is resumed to `active`,
+  dependent children return to their pre-suspension state and may
+  derive again. Reporting of a dependent child while its parent is
+  suspended is governed by {{child-state}}.
 
 A `superseded` parent does not transfer its Child Missions to the
-successor. The successor Mission carries a freshly derived Authority Set
-that does not inherit the predecessor's authority by reference
+successor. The Mission Issuer MUST treat `superseded` as a terminal
+cascade trigger and MUST NOT silently re-bind children to the
+successor.
+
+The reason is how successor authority is derived: the successor
+Mission carries a freshly derived Authority Set that does not inherit
+the predecessor's authority by reference
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}), so a Child Mission
 that was a strict subset of the predecessor is not guaranteed to be a
-subset of the successor. The Mission Issuer therefore MUST treat
-`superseded` as a terminal cascade trigger and MUST NOT silently re-bind
-children to the successor. Continuing child work under the successor
-requires an explicit new Child Mission creation ({{child-creation}})
-under a successor grant, which re-runs strict-subset validation
-({{strict-subset}}) against the successor's Authority Set.
+subset of the successor.
+
+Continuing child work under the successor requires an explicit new
+Child Mission creation ({{child-creation}}) under a successor grant,
+which re-runs strict-subset validation ({{strict-subset}}) against the
+successor's Authority Set.
 
 Cascade under this profile is issuer-committed. The Mission Issuer
 MUST implement the `immediate` cascade mode and record the mode on the
@@ -851,9 +893,11 @@ the consumer.
 Cascade modes may differ across one lineage. The Mission Issuer MUST
 commit the terminal cascade transition for every dependent Child
 Mission regardless of its cascade mode; the mode governs only what
-consumers must verify in the interim. An `immediate`-mode descendant
-under a consumer-verified parent is therefore never orphaned: its own
-transition is committed even where the parent's is consumer-observed.
+consumers must verify in the interim.
+
+An `immediate`-mode descendant under a consumer-verified parent is
+therefore never orphaned: its own transition is committed even where
+the parent's is consumer-observed.
 
 The cascade behavior by trigger:
 
@@ -896,10 +940,11 @@ its own cascade transition commits.
 
 Where a deployment also runs the status profile's completion
 machinery ({{I-D.draft-mcguinness-oauth-mission-status}}, Completion
-section), discharge
-propagates entry-wise: when a parent Authority Set entry is
-discharged, the Mission Issuer MUST discharge every child entry
-justified by it, so spent authority does not survive in the subtree.
+section), discharge propagates entry-wise: when a parent Authority Set
+entry is discharged, the Mission Issuer MUST discharge every child
+entry justified by it, so spent authority does not survive in the
+subtree.
+
 The issuer holds both records, so the propagation needs no consumer
 coordination.
 
@@ -907,9 +952,11 @@ While a parent is `suspended`, the issuer MUST report each dependent
 child's state as `suspended` on every state-reporting surface (the
 Mission Status operation and token introspection,
 {{I-D.draft-mcguinness-oauth-mission-status}}), and MUST restore the
-child's own state when the parent resumes to `active`. A child whose own
-`expires_at` passes during the suspension is `expired`: expiry takes
-precedence over the projected `suspended` state.
+child's own state when the parent resumes to `active`.
+
+A child whose own `expires_at` passes during the suspension is
+`expired`: expiry takes precedence over the projected `suspended`
+state.
 
 Projection onset and lift are not silent. Each is a committed
 metadata-only change on every affected child for the purposes of the
@@ -925,10 +972,12 @@ ancestor, the issuer MUST report each dependent descendant's state as
 `cascaded` on every state-reporting surface (the Mission Status
 operation and token introspection,
 {{I-D.draft-mcguinness-oauth-mission-status}}) from that commit, ahead
-of each descendant's own per-generation transition. The transitive
-transitions still commit in generation order ({{cascade}}); this rule
-bounds only what a consumer reads, so a consumer keying on a
-descendant's own state never reads `active` mid-cascade.
+of each descendant's own per-generation transition.
+
+The transitive transitions still commit in generation order
+({{cascade}}); this rule bounds only what a consumer reads, so a
+consumer keying on a descendant's own state never reads `active`
+mid-cascade.
 
 Expiry takes precedence over `cascaded` as it does over the projected
 `suspended` state: where a child's own `expires_at` coincides with a
@@ -1051,7 +1100,7 @@ Mission Expansion
 Mission that replaces a predecessor for a broader task. Mission Child
 Delegation creates a dependent Mission for a child actor with narrower
 authority. Expansion widens by fresh approval; Child Missions attenuate
-within parent authority. The two MUST NOT be conflated.
+within parent authority. The two operations are distinct.
 
 A Child Mission MAY be expanded, but only within the parent's authority:
 a successor Child Mission MUST remain a strict subset of the Parent
@@ -1150,14 +1199,19 @@ the two match.
 
 A child creation request carries `parent_token`, a refresh token or
 other parent grant, through PAR {{RFC9126}}, so that credential sits at
-rest in the PAR store until the pushed request is redeemed or expires. A
-deployment MUST protect the PAR store as credential storage: it SHOULD
-hold `parent_token` only until its `request_uri` is redeemed or expires
-and then delete it, MUST NOT write `parent_token` to request logs,
-traces, or audit records in the clear, and MUST redact or hash it
-wherever the pushed request is otherwise recorded. Child delegation
-evidence ({{child-evidence}}) records the parent Mission by identifier
-and authority hash, never the parent grant itself.
+rest in the PAR store until the pushed request is redeemed or expires.
+A deployment MUST protect the PAR store as credential storage:
+
+- it SHOULD hold `parent_token` only until its `request_uri` is
+  redeemed or expires, and then delete it;
+- it MUST NOT write `parent_token` to request logs, traces, or audit
+  records in the clear; and
+- it MUST redact or hash `parent_token` wherever the pushed request is
+  otherwise recorded.
+
+Child delegation evidence ({{child-evidence}}) records the parent
+Mission by identifier and authority hash, never the parent grant
+itself.
 
 ## Subset Bugs
 
@@ -1223,7 +1277,9 @@ not create it.
 # Experimental Consumer-Verified Cascade Modes {#experimental-cascade}
 
 This appendix is **experimental**: adopt it for evaluation, not as a
-stable interface. It defines two cascade modes that trade the
+stable interface. It is not part of this profile's conformance
+surface, so its rules are stated in lowercase rather than as BCP 14
+keywords. It defines two cascade modes that trade the
 issuer-committed transition of `immediate` ({{cascade}}) for
 consumer-side parent-state checks, for deployments where the Mission
 Issuer cannot commit child transitions synchronously with the parent's.
@@ -1243,13 +1299,13 @@ tokens, which is why they are not part of the base profile.
   child is otherwise confirmed non-active.
 
 `status_required`:
-: Consumers MUST check parent state, per reliance decision and within
+: Consumers must check parent state, per reliance decision and within
   the deployment's declared freshness window
   ({{I-D.draft-mcguinness-oauth-mission-status}}), before accepting
-  child Mission authority. The Mission Issuer MUST select this mode only
+  child Mission authority. The Mission Issuer must select this mode only
   where every audience of child tokens is known, by registration or
   deployment policy, to implement this profile's parent-state check;
-  otherwise the Mission Issuer MUST compensate with short child-token
+  otherwise the Mission Issuer must compensate with short child-token
   lifetimes or introspection-required paths.
 
 The cascade behavior by trigger and mode:
@@ -1259,14 +1315,17 @@ The cascade behavior by trigger and mode:
 | Terminal | `bounded_staleness` | non-active by the staleness bound | Consumer, from its last confirmed-active parent observation |
 | Terminal | `status_required` | non-active on the next parent-state check | Consumer, per reliance decision |
 
-A consumer that cannot obtain parent state MUST obey the mode: for
-`status_required`, it MUST refuse; for `bounded_staleness`, it MUST
-refuse after the bound. For derivation under these modes, the Mission
-Issuer MAY rely on a prior confirmed-active parent observation within
-the mode's freshness rules where it cannot observe the parent
-synchronously; a Child Mission MUST NOT derive after the parent is
-known to be non-active. The `immediate` rules of {{cascade}} and
-{{child-state}} otherwise apply unchanged.
+A consumer that cannot obtain parent state must obey the mode:
+
+- under `status_required`, it must refuse; and
+- under `bounded_staleness`, it must refuse after the bound.
+
+For derivation under these modes, the Mission Issuer may rely on a
+prior confirmed-active parent observation within the mode's freshness
+rules where it cannot observe the parent synchronously; a Child
+Mission must not derive after the parent is known to be non-active.
+The `immediate` rules of {{cascade}} and {{child-state}} otherwise
+apply unchanged.
 
 # Acknowledgments
 {:numbered="false"}
