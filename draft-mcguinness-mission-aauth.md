@@ -210,10 +210,13 @@ signature-covered on every request and echoed in resource and auth
 tokens. AAuth leaves the mission's structure implementation-defined,
 gives it two states, and leaves governance evaluation to unspecified
 Person Server policy. This document supplies those pieces from the
-Mission model of Mission-Bound Authorization for OAuth 2.0: the
-mission blob carries the structured Mission record with its integrity
-anchors, the approval interaction is the approval event, the full
-Mission lifecycle governs with revocation and expiry, and, because no
+Mission model of Mission-Bound Authorization for OAuth 2.0, in
+AAuth's own idiom: the blob's native members carry the Mission record
+under a fixed equivalence, three flat members complete it, the
+integrity anchors are a deterministic projection of the
+s256-committed blob rather than stored fields, the approval
+interaction is the approval event, the full Mission lifecycle rides
+the mission log with revocation and expiry, and, because no
 auth token is issued under a Mission without passing the Person Server,
 the Person Server gates auth-token issuance on Mission state. In the
 PS-asserted mode, and in the federated mode where the Access Server
@@ -247,10 +250,16 @@ mission has exactly two states, active and terminated, with
 companion specification. And how the PS evaluates a request against
 the mission is unspecified PS policy. This document supplies exactly
 those pieces from the Mission model of
-{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile"): the
-mission blob carries the structured Mission record with its integrity
-anchors, the propose-clarify-approve interaction is profiled as the
-approval event, the full Mission lifecycle governs with `revoked` and
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile"), and
+it supplies them natively: AAuth's own blob members carry the Mission
+record under a fixed equivalence (the `description` is the goal, the
+`approved_tools` are the Authority Set, the `agent` is the
+`client_id`), three flat members complete what the natives cannot
+carry, the integrity anchors are computed as a deterministic
+projection of the s256-committed blob rather than embedded beside
+the members they commit, the propose-clarify-approve interaction is
+profiled as the approval event, the full Mission lifecycle rides the
+mission log with `revoked` and
 `expired` added and the only-`active` rule gating every PS surface,
 and the family's governance, enforcement, and evidence profiles
 compose against the result.
@@ -331,50 +340,101 @@ and this profile adds no requirement to it.
 AAuth's mission blob is the JSON object the PS returns at approval,
 held only by the agent and the PS, and committed by `s256` over its
 exact bytes ({{I-D.draft-hardt-oauth-aauth-protocol}}). This binding
-makes the blob the carrier of the Mission record.
+makes the blob the wire carrier of the Mission record without
+restating it: the blob's native members carry the record's facts
+under a fixed equivalence, and three flat members carry what the
+natives cannot. No nested record object is embedded, and no fact is
+spelled twice.
 
-A Mission-Bound Person Server MUST create a Mission record, as the
+A Mission-Bound Person Server MUST maintain a Mission record, as the
 issuance profile's Mission Record section defines it, for every
 mission it approves, with `issuer` equal to the `approver` URL. The
-blob MUST include a `mission_record` member: a JSON object carrying
-every immutable member of the Mission record, each as the issuance
-profile's Mission Record section defines it; that section's member
-list is authoritative and is not restated here. The record's `state` MUST NOT appear in
-the blob: the blob is immutable under `s256`, and state is served by
-the lifecycle surfaces ({{lifecycle}}).
+record's equivalence with the blob is fixed as follows:
 
-The mapping into AAuth's vocabulary is fixed as follows:
+- `intent.goal` **is** the blob's `description`; `created_at` **is**
+  `approved_at`; `client_id` **is** `agent`; `issuer` **is**
+  `approver`.
+- The Authority Set **is** the `approved_tools` array under the
+  projection of {{two-commitments}}: each tool entry is one
+  `mission_resource_access` entry, its `resource` the entry's
+  `resource`, its `name` the entry's single action, its
+  `constraints` the entry's constraints. A tool with no `resource`
+  projects to the PS's own issuer URL, PS-governed local action
+  whose point-of-use evaluation belongs to the runtime layer. This
+  equivalence is definitional, so the AAuth-native tool list and the
+  committed authority cannot diverge: they are one structure.
+- The approved Mission Intent is the canonical projection of
+  {{two-commitments}} (`goal` from `description`, `resources` from
+  the tool providers in order of first appearance, `expires_at`);
+  when the approved Intent carries members the projection cannot
+  express (structured `controls`, `proposed_authority` context), the
+  blob carries the approved Intent verbatim in a flat
+  `mission_intent` member, which then supersedes the canonical
+  projection.
 
-- `client_id` is the AAuth agent identifier and MUST equal the blob's
-  `agent` member.
-- `mission_record.issuer` MUST equal the blob's `approver` member.
-- `subject` and `approver` are `{iss, sub}` objects whose `iss` is the
-  PS's issuer URL: in AAuth the PS is the party that asserts user
-  identity.
-- `intent.goal` MUST equal the blob's `description`: the
-  approved Markdown description is the recorded goal.
-- `expires_at` is REQUIRED ({{lifecycle}}), in RFC 3339
-  {{RFC3339}} date-time form.
+Three flat members complete the record, in AAuth's own style:
 
-The AAuth-native blob members (`approver`, `agent`, `approved_at`,
-`description`, and the optional `approved_tools` and `capabilities`)
-are unchanged. The blob MAY carry additional session members per
-AAuth; they are committed by `s256` but not by the integrity anchors.
+`mission_id`:
+: REQUIRED. The Mission Identifier ({{reference}}).
 
-## Two Commitments {#two-commitments}
+`expires_at`:
+: REQUIRED ({{lifecycle}}). RFC 3339 {{RFC3339}} date-time.
 
-The blob carries two independent commitments. AAuth's `s256` is the
-unpadded base64url SHA-256 of the exact blob bytes as returned; the
-agent stores those bytes without re-serialization
-({{I-D.draft-hardt-oauth-aauth-protocol}}). The family's anchors,
-`intent_hash` and `authority_hash`, are computed per the issuance
-profile's envelope and canonicalization rules with the PS's issuer URL
-as the envelope `iss`, and are reproducible from the recorded
-`intent` and `authority_set` alone, independent of blob
-serialization. The `s256` therefore commits the blob that contains
-the anchors; a verifier holding the blob can check both, and neither
-commitment substitutes for the other
-({{security-two-commitments}}).
+`policy_version`:
+: REQUIRED. The derivation policy correlator, per the issuance
+  profile.
+
+What deliberately does not appear in the blob: the record's `state`
+(the blob is immutable under `s256`; state is served by the
+lifecycle surfaces ({{lifecycle}})); the integrity anchors (they are
+computed from the blob, {{two-commitments}}); and the `subject` and
+`approver` principals with their `approval_event_id`. The PS
+establishes the principals at approval as `{iss, sub}` objects whose
+`iss` is its own issuer URL and records them PS-side, where evidence
+and the status surfaces join them: keeping the person out of the
+portable artifact is AAuth's own directed-identity posture, and this
+binding follows it.
+
+The AAuth-native blob members are otherwise unchanged, and the blob
+MAY carry additional session members per AAuth; they are committed
+by `s256` and, apart from `mission_intent`, not by the integrity
+anchors.
+
+## The Anchor Projection {#two-commitments}
+
+The blob stores no anchors; the anchors are computed from it. AAuth's
+`s256` is the unpadded base64url SHA-256 of the exact blob bytes as
+returned, and the agent stores those bytes without re-serialization
+({{I-D.draft-hardt-oauth-aauth-protocol}}). The family's anchors are
+a deterministic projection of those committed bytes:
+
+- **Authority projection**: for each `approved_tools` entry, in
+  array order, one object `{ "type": "mission_resource_access",
+  "resource": <tool resource, or the PS's issuer URL when absent>,
+  "actions": [<tool name>], "constraints": <tool constraints, when
+  present> }`. The resulting array is the Authority Set.
+- **Intent projection**: `{ "goal": <description>, "resources":
+  <the distinct tool resource values, in order of first appearance>,
+  "expires_at": <expires_at> }`, unless the blob carries
+  `mission_intent`, which is then the approved Intent verbatim
+  ({{mission-record}}).
+
+`intent_hash` and `authority_hash` are computed over these projected
+objects per the issuance profile's envelope and canonicalization
+rules, with the PS's issuer URL as the envelope `iss`; the core's
+test vectors verify the pipeline, and {{record-example}} gives a
+computed pair for the projection itself. Any holder of the blob
+recomputes the anchors; no party needs them stored. The anchors
+travel where family consumers live: the `mission` claim
+({{mission-claim}}), consent and runtime evidence, Mandates, and
+audit statements.
+
+The two commitments answer different questions and neither
+substitutes for the other ({{security-two-commitments}}): `s256`
+answers "is this the blob the reference names", byte-exact and
+session-inclusive; the anchors answer "what task and authority were
+approved", domain-separated, issuer-bound, and comparable across the
+family.
 
 ## Mission Reference and Resolution {#reference}
 
@@ -386,7 +446,8 @@ locates the record). A Mission-Bound Person Server MUST resolve `s256`
 to the Mission record at every PS endpoint that takes a mission
 reference. Per AAuth, a Resource or Access Server never dereferences
 the reference; it consumes mission semantics through token claims and
-PS evaluation. `mission_id` remains the family-surface identifier: the
+PS evaluation. `mission_id`, carried as the blob's flat `mission_id`
+member ({{mission-record}}), is the family-surface identifier: the
 Mission Status operation, lifecycle signals, consent evidence, runtime
 evidence, and audit key on it
 ({{I-D.draft-mcguinness-oauth-mission-status}},
@@ -410,66 +471,46 @@ The approved mission blob for a reconciliation Mission at
   "approved_tools": [
     { "name": "invoices.read",
       "description": "Read invoices",
-      "resource": "https://erp.example.com" },
+      "resource": "https://erp.example.com",
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      } },
     { "name": "journal-entries.write",
       "description": "Post journal entries",
-      "resource": "https://erp.example.com" }
+      "resource": "https://erp.example.com",
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
   ],
   "capabilities": ["interaction"],
-  "mission_record": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://ps.example.com",
-    "intent": {
-      "goal":
-        "Reconcile Q3 invoices and post adjustments under $500.",
-      "resources": ["https://erp.example.com"],
-      "constraints": [
-        "Read only invoices issued in 2026-Q3.",
-        "Post journal entries under $500."
-      ],
-      "expires_at": "2026-12-31T23:59:59Z"
-    },
-    "authority_set": [
-      { "type": "mission_resource_access",
-        "resource": "https://erp.example.com",
-        "actions": ["invoices.read"],
-        "constraints": {
-          "resource_issued_after": "2026-07-01T00:00:00Z",
-          "resource_issued_before": "2026-09-30T23:59:59Z"
-        } },
-      { "type": "mission_resource_access",
-        "resource": "https://erp.example.com",
-        "actions": ["journal-entries.write"],
-        "constraints": {
-          "max_amount": { "amount": "500.00", "currency": "USD" }
-        } }
-    ],
-    "authority_hash":
-      "sha-256:mdRUVZfU1BG_Bgla4mrLp6Q9NPVTJ-udnn88F1oXqFc",
-    "intent_hash":
-      "sha-256:_XJAaRanTKlwadKGYDx60Gk6y6tCSYf04HvQRsHTWio",
-    "subject": { "iss": "https://ps.example.com", "sub": "alice" },
-    "approver": { "iss": "https://ps.example.com", "sub": "alice" },
-    "client_id": "aauth:reconciler@agent.example",
-    "policy_version": "ps-policy:v4",
-    "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
-    "created_at": "2026-10-15T14:32:11Z",
-    "expires_at": "2026-12-31T23:59:59Z"
-  }
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "expires_at": "2026-12-31T23:59:59Z",
+  "policy_version": "ps-policy:v4"
 }
 ~~~
 
-The anchors above are computed with the issuance profile's JCS
-pipeline over the recorded `intent` and `authority_set` with
-`iss` `https://ps.example.com`; an implementation reproduces them
-byte for byte per that profile's test-vector rules. On the wire,
-`s256` is computed over the exact response body bytes; for the
-compact (whitespace-free) serialization of the blob shown, in the
-member order shown, it is:
+Every Mission fact rides a native member or one of the three flat
+members; nothing is spelled twice. The projection of
+{{two-commitments}} over this blob yields the two-entry Authority Set
+(the two tools, with their constraints) and the canonical Intent
+(`goal` from `description`, `resources`
+`["https://erp.example.com"]`, `expires_at`), and the anchors
+computed over those projections with the issuance profile's JCS
+pipeline and `iss` `https://ps.example.com` are, reproducibly:
+
+~~~ text
+intent_hash    = sha-256:kYYJtTdI2RDrObFOdRDGonB7eRmiB65xwxqnw5Nikbk
+authority_hash = sha-256:mdRUVZfU1BG_Bgla4mrLp6Q9NPVTJ-udnn88F1oXqFc
+~~~
+
+On the wire, `s256` is computed over the exact response body bytes;
+for the compact (whitespace-free) serialization of the blob shown, in
+the member order shown, it is:
 
 ~~~ text
 AAuth-Mission: approver="https://ps.example.com";
-    s256="sN5v0poiLW85zY6tKSlxkR10yPkIr-JUr9ttwhiOc0w"
+    s256="w7zuCFWNcWtDb10bawnuQrMcVRGm9B8PKFpJUMoUzbs"
 ~~~
 
 # Mission Intent {#mission-intent}
@@ -489,28 +530,34 @@ OPTIONAL proposal members:
 `resource` (on each `tools` entry):
 : An absolute URI naming the tool's provider.
 
+`constraints` (on each `tools` entry):
+: An object of machine-actionable bounds on the tool, in the
+  issuance profile's `constraints` shape: Common Constraint names
+  with their shared semantics, other names deployment-defined.
+
 A Mission-Bound Agent SHOULD include `mission_intent`. With a
 structured Intent the PS derives the Authority Set by narrowing, which
 the issuance profile makes reproducible and auditable; from
 `description` and `tools` alone the derivation is generative, under
 that profile's disclosure and recording rules for generative
-derivation. In either case the PS records the approved Mission Intent,
-with `goal` equal to the approved `description` ({{mission-record}})
-and `resources` drawn from the tool providers and policy; when the
-proposal's Intent carries no `expires_at`, the PS MUST set one by
+derivation. In either case the approved Intent is carried by the
+canonical projection where it fits, and verbatim in the blob's
+`mission_intent` member where it does not ({{mission-record}}); when
+the proposal's Intent carries no `expires_at`, the PS MUST set one by
 policy, since the record requires it.
 
-Tools map to the Authority Set per the issuance profile's Modeling
-Tools and Function Calls section: the tool's `resource` member is the
-entry's `resource`, tool names are `actions`, and argument bounds are
-`constraints`. For a tool with no `resource` (a local tool with no
-remote provider), the PS MUST set the entry's `resource` to its own
-issuer URL: the authority is PS-governed local action, and its
-point-of-use evaluation belongs to the runtime layer, not to
-issuance. Every `approved_tools` name MUST appear as an action of an
-Authority Set entry whose `resource` is the tool's provider or the
-PS's issuer URL, so the AAuth-native tool list and the committed
-authority cannot diverge.
+Derivation lands in the `approved_tools` shape, consistent with the
+issuance profile's Modeling Tools and Function Calls section: each
+derived Authority Set entry is one tool entry, its provider the
+entry's `resource`, its name the entry's action, its bounds the
+entry's `constraints`. The tools are the Authority Set by definition
+under the projection of {{two-commitments}}, so the AAuth-native
+tool list and the committed authority cannot diverge: they are one
+structure. For a tool with no `resource` (a local tool with no
+remote provider), the projection sets the entry's `resource` to the
+PS's own issuer URL: the authority is PS-governed local action, and
+its point-of-use evaluation belongs to the runtime layer, not to
+issuance.
 
 AAuth's permission endpoint remains the per-call path for actions
 outside the Authority Set: each grant there is an individually
@@ -547,8 +594,11 @@ issuance profile's approval steps, mapped onto the interaction:
 4. Compute the integrity anchors with the PS's issuer URL as the
    envelope `iss`.
 5. Create the Mission record in the `active` state atomically with
-   the approval decision, construct the blob around it, and compute
-   `s256` over the response bytes. The PS MUST NOT return the
+   the approval decision, construct the blob from the approved
+   native members and the flat members ({{mission-record}}), and
+   compute `s256` over the response bytes; the anchors of step 4 are
+   thereafter recomputable from those bytes ({{two-commitments}}).
+   The PS MUST NOT return the
    approved (`approver`, `s256`) reference before the record is
    `active`.
 
@@ -578,7 +628,10 @@ binding supplies them: the Mission lifecycle is the issuance profile's
 state space, extended by the status profile where the deployment
 adopts it ({{I-D.draft-mcguinness-oauth-mission-status}}), and the
 only-`active` rule governs, with unrecognized states fail-safe
-non-active.
+non-active. Transitions live in AAuth's own idiom: each is a
+mission-log event, the log is the authoritative transition history,
+and AAuth's endpoints surface the current state through the existing
+mission status machinery.
 
 | Family state | AAuth surface |
 |---|---|
@@ -649,10 +702,15 @@ where a deployment needs one.
 
 ## Mission State Surfaces {#state-surfaces}
 
-A Mission-Bound Person Server SHOULD serve the Mission Status
+The mission log is the native state substrate, and the family
+surfaces are views over it: a status read reports the log's latest
+lifecycle event, and a signal transmits one. A Mission-Bound Person
+Server SHOULD serve the Mission Status
 operation of {{I-D.draft-mcguinness-oauth-mission-status}}, with its
 signed responses, authentication, anti-oracle property, and caching
-rules, and MAY serve that profile's Mission Lifecycle endpoint as its
+rules, and MAY serve it at its existing mission endpoint, keyed by
+the native reference, rather than at a distinct endpoint; it MAY
+serve that profile's Mission Lifecycle endpoint as its
 management surface. A PS whose deployment claims runtime enforcement
 of the high-consequence classes MUST serve signed Mission Status as
 an active freshness source with a published staleness bound: this is
@@ -662,7 +720,8 @@ expiry alone does not meet it. It MAY emit Mission Lifecycle Signals, with the P
 as the transmitting Mission Issuer
 ({{I-D.draft-mcguinness-oauth-mission-signals}}).
 
-A PS that serves these surfaces publishes the corresponding members
+A PS that serves these surfaces at distinct endpoints publishes the
+corresponding members
 (`mission_status_endpoint`,
 `mission_status_signing_alg_values_supported`,
 `mission_lifecycle_endpoint`, `mission_event_stream_endpoint`,
@@ -793,7 +852,7 @@ in the PS-asserted mode, narrowed to read-only authority:
   "exp": 1793610000,
   "mission": {
     "approver": "https://ps.example.com",
-    "s256": "sN5v0poiLW85zY6tKSlxkR10yPkIr-JUr9ttwhiOc0w",
+    "s256": "w7zuCFWNcWtDb10bawnuQrMcVRGm9B8PKFpJUMoUzbs",
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://ps.example.com",
     "authority_hash":
@@ -819,8 +878,8 @@ carries the family `mission` members ({{mission-claim}}); a federated
 deployment whose Access Servers do not is Reference-only
 ({{verification-modes}}). Against the substrate's requirements:
 
-1. **Identifier and issuer**: `id` on the record, `issuer`
-   the `approver` URL; the (`approver`, `s256`) pair is the
+1. **Identifier and issuer**: `mission_id`, a flat blob member;
+   `issuer` the `approver` URL; the (`approver`, `s256`) pair is the
    wire-native reference to the same Mission ({{reference}}).
 2. **Lifecycle state space**: the issuance profile's states with the
    only-`active` rule and fail-safe unrecognized states, extended by
@@ -828,10 +887,12 @@ deployment whose Access Servers do not is Reference-only
    operation, signals, and the one-hour auth-token lifetime, with a
    PS-declared staleness bound ({{lifecycle}}).
 3. **Authority Set representation**: the issuance profile's, with its
-   subset rule and Common Constraints, recorded in the blob
-   ({{mission-record}}).
+   subset rule and Common Constraints, carried as the profiled
+   `approved_tools`, which are the Authority Set by definition under
+   the projection ({{mission-record}}, {{two-commitments}}).
 4. **Integrity anchors**: the family envelope and canonicalization,
-   `iss` the PS's issuer URL, carried inside the s256-committed blob
+   `iss` the PS's issuer URL, computed as a deterministic projection
+   of the s256-committed blob rather than stored
    ({{two-commitments}}).
 5. **Mission-bound credential**: the auth token with the `mission`
    claim and signature-covered reference, issued only while the
@@ -988,9 +1049,10 @@ An implementation conforms in one of two roles.
 
 A **Mission-Bound Person Server**:
 
-- creates a Mission record for every approved mission and embeds it
-  in the blob as `mission_record`, computing the integrity anchors
-  with its issuer URL ({{mission-record}});
+- maintains a Mission record for every approved mission, carried by
+  the blob's native and flat members under the fixed equivalence of
+  {{mission-record}}, and computes the integrity anchors as the
+  projection of {{two-commitments}} with its issuer URL;
 - resolves the (`approver`, `s256`) reference to the record at every
   PS endpoint that takes one ({{reference}});
 - executes the approval event of {{approval}}, creating the record
@@ -1040,13 +1102,21 @@ anchors do not cover, but it has no domain separation and no issuer
 binding: it is a content hash, and a party holding only `s256` learns
 nothing about what was approved. The anchors commit the approved
 Intent and Authority Set under the issuance profile's
-domain-separated, issuer-bound envelope, reproducible from the record
-alone, but they do not commit `approved_at`, `capabilities`, or any
+domain-separated, issuer-bound envelope, reproducible from the blob
+alone through the projection of {{two-commitments}}, but they do not
+commit `approved_at`, `capabilities`, or any
 other session member. A verifier holding the blob MUST check the
 commitment relevant to its question: `s256` for "is this the blob the
 reference names", the anchors for "is this the authority and task
 that were approved". A party without the blob relies on the signed
 status surfaces or a Mandate.
+
+Because the anchors are computed rather than stored, the projection
+is in the trust path: an implementation error in the projection is
+an anchor error. The core's test vectors verify the envelope and
+canonicalization pipeline, and the computed pair of
+{{record-example}} verifies the projection itself; an implementation
+MUST reproduce both before interoperating.
 
 ## Person Server Compromise {#security-ps-compromise}
 
@@ -1089,7 +1159,10 @@ execution evidence records, which is the interoperable form.
 **The blob stays with the agent and the PS.** Task text, constraints,
 and the full Authority Set do not travel in credentials unless a
 deployment opts to carry authorization details; by default a Resource
-sees only the reference and the granted scope. This is a minimization
+sees only the reference and the granted scope. The Subject's
+identity does not appear in the blob at all ({{mission-record}}),
+extending AAuth's directed-identity posture to the Mission artifact
+itself. This is a minimization
 property the OAuth binding does not have, where the token carries the
 authority payload; the trade is Resource-side enforcement, which here
 requires opting into token-carried authority or a Mandate
@@ -1121,8 +1194,10 @@ This document has no IANA actions. The registries AAuth establishes
 belong to that specification, and this binding defines no new AAuth
 requirement, capability, or platform values. The members this
 document adds ride inside structures whose extensibility their
-defining specifications state: `mission_record` in the PS-produced
-blob, and `id`, `issuer`, and `authority_hash` inside the `mission`
+defining specifications state: the flat `mission_id`, `expires_at`,
+and `policy_version` members (and the conditional `mission_intent`)
+in the PS-produced blob, and `id`, `issuer`, and `authority_hash`
+inside the `mission`
 claim AAuth registers, whose unrecognized members AAuth consumers
 ignore. Should AAuth establish registries for those members, the
 members this document defines would be registered there.

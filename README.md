@@ -626,7 +626,8 @@ The AAuth binding, the first to a non-OAuth substrate. AAuth already
 carries a mission reference on every signed request; this binding gives
 that native concept the Mission model's structure: the AAuth Person
 Server is the Mission Issuer, the mission blob carries the Mission
-record and its integrity anchors under AAuth's own `s256` commitment,
+record natively (profiled blob members, with the integrity anchors
+computed as a projection of AAuth's own `s256` commitment),
 the propose/clarify/approve interaction is the (natively asynchronous)
 approval event, and the family lifecycle rides AAuth's two wire states
 (`active`, `terminated`) with revocation and expiry made normative and
