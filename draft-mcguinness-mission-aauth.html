@@ -14,10 +14,13 @@ signature-covered on every request and echoed in resource and auth
 tokens. AAuth leaves the mission's structure implementation-defined,
 gives it two states, and leaves governance evaluation to unspecified
 Person Server policy. This document supplies those pieces from the
-Mission model of Mission-Bound Authorization for OAuth 2.0: the
-mission blob carries the structured Mission record with its integrity
-anchors, the approval interaction is the approval event, the full
-Mission lifecycle governs with revocation and expiry, and, because no
+Mission model of Mission-Bound Authorization for OAuth 2.0, in
+AAuth's own idiom: the blob's native members carry the Mission record
+under a fixed equivalence, three flat members complete it, the
+integrity anchors are a deterministic projection of the
+s256-committed blob rather than stored fields, the approval
+interaction is the approval event, the full Mission lifecycle rides
+the mission log with revocation and expiry, and, because no
 auth token is issued under a Mission without passing the Person Server,
 the Person Server gates auth-token issuance on Mission state. In the
 PS-asserted mode, and in the federated mode where the Access Server
@@ -1110,10 +1113,13 @@ signature-covered on every request and echoed in resource and auth
 tokens. AAuth leaves the mission's structure implementation-defined,
 gives it two states, and leaves governance evaluation to unspecified
 Person Server policy. This document supplies those pieces from the
-Mission model of Mission-Bound Authorization for OAuth 2.0: the
-mission blob carries the structured Mission record with its integrity
-anchors, the approval interaction is the approval event, the full
-Mission lifecycle governs with revocation and expiry, and, because no
+Mission model of Mission-Bound Authorization for OAuth 2.0, in
+AAuth's own idiom: the blob's native members carry the Mission record
+under a fixed equivalence, three flat members complete it, the
+integrity anchors are a deterministic projection of the
+s256-committed blob rather than stored fields, the approval
+interaction is the approval event, the full Mission lifecycle rides
+the mission log with revocation and expiry, and, because no
 auth token is issued under a Mission without passing the Person Server,
 the Person Server gates auth-token issuance on Mission state. In the
 PS-asserted mode, and in the federated mode where the Access Server
@@ -1201,7 +1207,7 @@ a non-OAuth substrate.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-mission-record" class="internal xref">Mission Record</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
-                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-two-commitments" class="internal xref">Two Commitments</a></p>
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-the-anchor-projection" class="internal xref">The Anchor Projection</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
                 <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-mission-reference-and-resol" class="internal xref">Mission Reference and Resolution</a></p>
@@ -1330,10 +1336,16 @@ mission has exactly two states, active and terminated, with
 companion specification. And how the PS evaluates a request against
 the mission is unspecified PS policy. This document supplies exactly
 those pieces from the Mission model of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile"): the
-mission blob carries the structured Mission record with its integrity
-anchors, the propose-clarify-approve interaction is profiled as the
-approval event, the full Mission lifecycle governs with <code>revoked</code> and
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile"), and
+it supplies them natively: AAuth's own blob members carry the Mission
+record under a fixed equivalence (the <code>description</code> is the goal, the
+<code>approved_tools</code> are the Authority Set, the <code>agent</code> is the
+<code>client_id</code>), three flat members complete what the natives cannot
+carry, the integrity anchors are computed as a deterministic
+projection of the s256-committed blob rather than embedded beside
+the members they commit, the propose-clarify-approve interaction is
+profiled as the approval event, the full Mission lifecycle rides the
+mission log with <code>revoked</code> and
 <code>expired</code> added and the only-<code>active</code> rule gating every PS surface,
 and the family's governance, enforcement, and evidence profiles
 compose against the result.<a href="#section-1-2" class="pilcrow">¶</a></p>
@@ -1461,60 +1473,120 @@ and this profile adds no requirement to it.<a href="#section-3-2" class="pilcrow
 <p id="section-4-1">AAuth's mission blob is the JSON object the PS returns at approval,
 held only by the agent and the PS, and committed by <code>s256</code> over its
 exact bytes (<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>). This binding
-makes the blob the carrier of the Mission record.<a href="#section-4-1" class="pilcrow">¶</a></p>
-<p id="section-4-2">A Mission-Bound Person Server <span class="bcp14">MUST</span> create a Mission record, as the
+makes the blob the wire carrier of the Mission record without
+restating it: the blob's native members carry the record's facts
+under a fixed equivalence, and three flat members carry what the
+natives cannot. No nested record object is embedded, and no fact is
+spelled twice.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">A Mission-Bound Person Server <span class="bcp14">MUST</span> maintain a Mission record, as the
 issuance profile's Mission Record section defines it, for every
 mission it approves, with <code>issuer</code> equal to the <code>approver</code> URL. The
-blob <span class="bcp14">MUST</span> include a <code>mission_record</code> member: a JSON object carrying
-every immutable member of the Mission record, each as the issuance
-profile's Mission Record section defines it; that section's member
-list is authoritative and is not restated here. The record's <code>state</code> <span class="bcp14">MUST NOT</span> appear in
-the blob: the blob is immutable under <code>s256</code>, and state is served by
-the lifecycle surfaces (<a href="#lifecycle" class="auto internal xref">Section 7</a>).<a href="#section-4-2" class="pilcrow">¶</a></p>
-<p id="section-4-3">The mapping into AAuth's vocabulary is fixed as follows:<a href="#section-4-3" class="pilcrow">¶</a></p>
+record's equivalence with the blob is fixed as follows:<a href="#section-4-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-4-4.1">
-          <p id="section-4-4.1.1"><code>client_id</code> is the AAuth agent identifier and <span class="bcp14">MUST</span> equal the blob's
-<code>agent</code> member.<a href="#section-4-4.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-4-3.1">
+          <p id="section-4-3.1.1"><code>intent.goal</code> <strong>is</strong> the blob's <code>description</code>; <code>created_at</code> <strong>is</strong>
+            <code>approved_at</code>; <code>client_id</code> <strong>is</strong> <code>agent</code>; <code>issuer</code> <strong>is</strong>
+            <code>approver</code>.<a href="#section-4-3.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-4-4.2">
-          <p id="section-4-4.2.1"><code>mission_record.issuer</code> <span class="bcp14">MUST</span> equal the blob's <code>approver</code> member.<a href="#section-4-4.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-4-3.2">
+          <p id="section-4-3.2.1">The Authority Set <strong>is</strong> the <code>approved_tools</code> array under the
+projection of <a href="#two-commitments" class="auto internal xref">Section 4.1</a>: each tool entry is one
+<code>mission_resource_access</code> entry, its <code>resource</code> the entry's
+<code>resource</code>, its <code>name</code> the entry's single action, its
+<code>constraints</code> the entry's constraints. A tool with no <code>resource</code>
+projects to the PS's own issuer URL, PS-governed local action
+whose point-of-use evaluation belongs to the runtime layer. This
+equivalence is definitional, so the AAuth-native tool list and the
+committed authority cannot diverge: they are one structure.<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-4-4.3">
-          <p id="section-4-4.3.1"><code>subject</code> and <code>approver</code> are <code>{iss, sub}</code> objects whose <code>iss</code> is the
-PS's issuer URL: in AAuth the PS is the party that asserts user
-identity.<a href="#section-4-4.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-4.4">
-          <p id="section-4-4.4.1"><code>intent.goal</code> <span class="bcp14">MUST</span> equal the blob's <code>description</code>: the
-approved Markdown description is the recorded goal.<a href="#section-4-4.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-4.5">
-          <p id="section-4-4.5.1"><code>expires_at</code> is <span class="bcp14">REQUIRED</span> (<a href="#lifecycle" class="auto internal xref">Section 7</a>), in RFC 3339
-<span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time form.<a href="#section-4-4.5.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-4-3.3">
+          <p id="section-4-3.3.1">The approved Mission Intent is the canonical projection of
+<a href="#two-commitments" class="auto internal xref">Section 4.1</a> (<code>goal</code> from <code>description</code>, <code>resources</code> from
+the tool providers in order of first appearance, <code>expires_at</code>);
+when the approved Intent carries members the projection cannot
+express (structured <code>controls</code>, <code>proposed_authority</code> context), the
+blob carries the approved Intent verbatim in a flat
+<code>mission_intent</code> member, which then supersedes the canonical
+projection.<a href="#section-4-3.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-4-5">The AAuth-native blob members (<code>approver</code>, <code>agent</code>, <code>approved_at</code>,
-<code>description</code>, and the optional <code>approved_tools</code> and <code>capabilities</code>)
-are unchanged. The blob <span class="bcp14">MAY</span> carry additional session members per
-AAuth; they are committed by <code>s256</code> but not by the integrity anchors.<a href="#section-4-5" class="pilcrow">¶</a></p>
+<p id="section-4-4">Three flat members complete the record, in AAuth's own style:<a href="#section-4-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4-5">
+        <dt id="section-4-5.1">
+<code>mission_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-5.2">
+          <p id="section-4-5.2.1"><span class="bcp14">REQUIRED</span>. The Mission Identifier (<a href="#reference" class="auto internal xref">Section 4.2</a>).<a href="#section-4-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-5.3">
+<code>expires_at</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-5.4">
+          <p id="section-4-5.4.1"><span class="bcp14">REQUIRED</span> (<a href="#lifecycle" class="auto internal xref">Section 7</a>). RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time.<a href="#section-4-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-5.5">
+<code>policy_version</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-5.6">
+          <p id="section-4-5.6.1"><span class="bcp14">REQUIRED</span>. The derivation policy correlator, per the issuance
+profile.<a href="#section-4-5.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-4-6">What deliberately does not appear in the blob: the record's <code>state</code>
+(the blob is immutable under <code>s256</code>; state is served by the
+lifecycle surfaces (<a href="#lifecycle" class="auto internal xref">Section 7</a>)); the integrity anchors (they are
+computed from the blob, <a href="#two-commitments" class="auto internal xref">Section 4.1</a>); and the <code>subject</code> and
+<code>approver</code> principals with their <code>approval_event_id</code>. The PS
+establishes the principals at approval as <code>{iss, sub}</code> objects whose
+<code>iss</code> is its own issuer URL and records them PS-side, where evidence
+and the status surfaces join them: keeping the person out of the
+portable artifact is AAuth's own directed-identity posture, and this
+binding follows it.<a href="#section-4-6" class="pilcrow">¶</a></p>
+<p id="section-4-7">The AAuth-native blob members are otherwise unchanged, and the blob
+<span class="bcp14">MAY</span> carry additional session members per AAuth; they are committed
+by <code>s256</code> and, apart from <code>mission_intent</code>, not by the integrity
+anchors.<a href="#section-4-7" class="pilcrow">¶</a></p>
 <div id="two-commitments">
 <section id="section-4.1">
-        <h3 id="name-two-commitments">
-<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-two-commitments" class="section-name selfRef">Two Commitments</a>
+        <h3 id="name-the-anchor-projection">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-the-anchor-projection" class="section-name selfRef">The Anchor Projection</a>
         </h3>
-<p id="section-4.1-1">The blob carries two independent commitments. AAuth's <code>s256</code> is the
-unpadded base64url SHA-256 of the exact blob bytes as returned; the
-agent stores those bytes without re-serialization
-(<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>). The family's anchors,
-<code>intent_hash</code> and <code>authority_hash</code>, are computed per the issuance
-profile's envelope and canonicalization rules with the PS's issuer URL
-as the envelope <code>iss</code>, and are reproducible from the recorded
-<code>intent</code> and <code>authority_set</code> alone, independent of blob
-serialization. The <code>s256</code> therefore commits the blob that contains
-the anchors; a verifier holding the blob can check both, and neither
-commitment substitutes for the other
-(<a href="#security-two-commitments" class="auto internal xref">Section 14.2</a>).<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-1">The blob stores no anchors; the anchors are computed from it. AAuth's
+<code>s256</code> is the unpadded base64url SHA-256 of the exact blob bytes as
+returned, and the agent stores those bytes without re-serialization
+(<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>). The family's anchors are
+a deterministic projection of those committed bytes:<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.1-2.1">
+            <p id="section-4.1-2.1.1"><strong>Authority projection</strong>: for each <code>approved_tools</code> entry, in
+array order, one object <code>{ "type": "mission_resource_access",
+"resource": &lt;tool resource, or the PS's issuer URL when absent&gt;,
+"actions": [&lt;tool name&gt;], "constraints": &lt;tool constraints, when
+present&gt; }</code>. The resulting array is the Authority Set.<a href="#section-4.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.1-2.2">
+            <p id="section-4.1-2.2.1"><strong>Intent projection</strong>: <code>{ "goal": &lt;description&gt;, "resources":
+&lt;the distinct tool resource values, in order of first appearance&gt;,
+"expires_at": &lt;expires_at&gt; }</code>, unless the blob carries
+<code>mission_intent</code>, which is then the approved Intent verbatim
+(<a href="#mission-record" class="auto internal xref">Section 4</a>).<a href="#section-4.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-4.1-3"><code>intent_hash</code> and <code>authority_hash</code> are computed over these projected
+objects per the issuance profile's envelope and canonicalization
+rules, with the PS's issuer URL as the envelope <code>iss</code>; the core's
+test vectors verify the pipeline, and <a href="#record-example" class="auto internal xref">Section 4.3</a> gives a
+computed pair for the projection itself. Any holder of the blob
+recomputes the anchors; no party needs them stored. The anchors
+travel where family consumers live: the <code>mission</code> claim
+(<a href="#mission-claim" class="auto internal xref">Section 8.1</a>), consent and runtime evidence, Mandates, and
+audit statements.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-4">The two commitments answer different questions and neither
+substitutes for the other (<a href="#security-two-commitments" class="auto internal xref">Section 14.2</a>): <code>s256</code>
+answers "is this the blob the reference names", byte-exact and
+session-inclusive; the anchors answer "what task and authority were
+approved", domain-separated, issuer-bound, and comparable across the
+family.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="reference">
@@ -1530,7 +1602,8 @@ locates the record). A Mission-Bound Person Server <span class="bcp14">MUST</spa
 to the Mission record at every PS endpoint that takes a mission
 reference. Per AAuth, a Resource or Access Server never dereferences
 the reference; it consumes mission semantics through token claims and
-PS evaluation. <code>mission_id</code> remains the family-surface identifier: the
+PS evaluation. <code>mission_id</code>, carried as the blob's flat <code>mission_id</code>
+member (<a href="#mission-record" class="auto internal xref">Section 4</a>), is the family-surface identifier: the
 Mission Status operation, lifecycle signals, consent evidence, runtime
 evidence, and audit key on it
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>,
@@ -1547,7 +1620,7 @@ same Mission, and the record binds them.<a href="#section-4.2-1" class="pilcrow"
 <code>https://erp.example.com</code>, approved by <code>alice</code> at
 <code>https://ps.example.com</code> for the agent
 <code>aauth:reconciler@agent.example</code>:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
-<div class="breakable lang-json sourcecode" id="section-4.3-2">
+<div class="lang-json sourcecode" id="section-4.3-2">
 <pre>
 {
   "approver": "https://ps.example.com",
@@ -1558,67 +1631,47 @@ same Mission, and the record binds them.<a href="#section-4.2-1" class="pilcrow"
   "approved_tools": [
     { "name": "invoices.read",
       "description": "Read invoices",
-      "resource": "https://erp.example.com" },
+      "resource": "https://erp.example.com",
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      } },
     { "name": "journal-entries.write",
       "description": "Post journal entries",
-      "resource": "https://erp.example.com" }
+      "resource": "https://erp.example.com",
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
   ],
   "capabilities": ["interaction"],
-  "mission_record": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://ps.example.com",
-    "intent": {
-      "goal":
-        "Reconcile Q3 invoices and post adjustments under $500.",
-      "resources": ["https://erp.example.com"],
-      "constraints": [
-        "Read only invoices issued in 2026-Q3.",
-        "Post journal entries under $500."
-      ],
-      "expires_at": "2026-12-31T23:59:59Z"
-    },
-    "authority_set": [
-      { "type": "mission_resource_access",
-        "resource": "https://erp.example.com",
-        "actions": ["invoices.read"],
-        "constraints": {
-          "resource_issued_after": "2026-07-01T00:00:00Z",
-          "resource_issued_before": "2026-09-30T23:59:59Z"
-        } },
-      { "type": "mission_resource_access",
-        "resource": "https://erp.example.com",
-        "actions": ["journal-entries.write"],
-        "constraints": {
-          "max_amount": { "amount": "500.00", "currency": "USD" }
-        } }
-    ],
-    "authority_hash":
-      "sha-256:mdRUVZfU1BG_Bgla4mrLp6Q9NPVTJ-udnn88F1oXqFc",
-    "intent_hash":
-      "sha-256:_XJAaRanTKlwadKGYDx60Gk6y6tCSYf04HvQRsHTWio",
-    "subject": { "iss": "https://ps.example.com", "sub": "alice" },
-    "approver": { "iss": "https://ps.example.com", "sub": "alice" },
-    "client_id": "aauth:reconciler@agent.example",
-    "policy_version": "ps-policy:v4",
-    "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
-    "created_at": "2026-10-15T14:32:11Z",
-    "expires_at": "2026-12-31T23:59:59Z"
-  }
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "expires_at": "2026-12-31T23:59:59Z",
+  "policy_version": "ps-policy:v4"
 }
 </pre><a href="#section-4.3-2" class="pilcrow">¶</a>
 </div>
-<p id="section-4.3-3">The anchors above are computed with the issuance profile's JCS
-pipeline over the recorded <code>intent</code> and <code>authority_set</code> with
-<code>iss</code> <code>https://ps.example.com</code>; an implementation reproduces them
-byte for byte per that profile's test-vector rules. On the wire,
-<code>s256</code> is computed over the exact response body bytes; for the
-compact (whitespace-free) serialization of the blob shown, in the
-member order shown, it is:<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+<p id="section-4.3-3">Every Mission fact rides a native member or one of the three flat
+members; nothing is spelled twice. The projection of
+<a href="#two-commitments" class="auto internal xref">Section 4.1</a> over this blob yields the two-entry Authority Set
+(the two tools, with their constraints) and the canonical Intent
+(<code>goal</code> from <code>description</code>, <code>resources</code>
+          <code>["https://erp.example.com"]</code>, <code>expires_at</code>), and the anchors
+computed over those projections with the issuance profile's JCS
+pipeline and <code>iss</code> <code>https://ps.example.com</code> are, reproducibly:<a href="#section-4.3-3" class="pilcrow">¶</a></p>
 <div class="lang-text sourcecode" id="section-4.3-4">
 <pre>
-AAuth-Mission: approver="https://ps.example.com";
-    s256="sN5v0poiLW85zY6tKSlxkR10yPkIr-JUr9ttwhiOc0w"
+intent_hash    = sha-256:kYYJtTdI2RDrObFOdRDGonB7eRmiB65xwxqnw5Nikbk
+authority_hash = sha-256:mdRUVZfU1BG_Bgla4mrLp6Q9NPVTJ-udnn88F1oXqFc
 </pre><a href="#section-4.3-4" class="pilcrow">¶</a>
+</div>
+<p id="section-4.3-5">On the wire, <code>s256</code> is computed over the exact response body bytes;
+for the compact (whitespace-free) serialization of the blob shown, in
+the member order shown, it is:<a href="#section-4.3-5" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-4.3-6">
+<pre>
+AAuth-Mission: approver="https://ps.example.com";
+    s256="w7zuCFWNcWtDb10bawnuQrMcVRGm9B8PKFpJUMoUzbs"
+</pre><a href="#section-4.3-6" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -1649,6 +1702,14 @@ lengths, and it is untrusted client input, never authority.<a href="#section-5-2
         <dd style="margin-left: 1.5em" id="section-5-2.4">
           <p id="section-5-2.4.1">An absolute URI naming the tool's provider.<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
 </dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.5">
+<code>constraints</code> (on each <code>tools</code> entry):</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.6">
+          <p id="section-5-2.6.1">An object of machine-actionable bounds on the tool, in the
+issuance profile's <code>constraints</code> shape: Common Constraint names
+with their shared semantics, other names deployment-defined.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+</dd>
       <dd class="break"></dd>
 </dl>
 <p id="section-5-3">A Mission-Bound Agent <span class="bcp14">SHOULD</span> include <code>mission_intent</code>. With a
@@ -1656,22 +1717,23 @@ structured Intent the PS derives the Authority Set by narrowing, which
 the issuance profile makes reproducible and auditable; from
 <code>description</code> and <code>tools</code> alone the derivation is generative, under
 that profile's disclosure and recording rules for generative
-derivation. In either case the PS records the approved Mission Intent,
-with <code>goal</code> equal to the approved <code>description</code> (<a href="#mission-record" class="auto internal xref">Section 4</a>)
-and <code>resources</code> drawn from the tool providers and policy; when the
-proposal's Intent carries no <code>expires_at</code>, the PS <span class="bcp14">MUST</span> set one by
+derivation. In either case the approved Intent is carried by the
+canonical projection where it fits, and verbatim in the blob's
+<code>mission_intent</code> member where it does not (<a href="#mission-record" class="auto internal xref">Section 4</a>); when
+the proposal's Intent carries no <code>expires_at</code>, the PS <span class="bcp14">MUST</span> set one by
 policy, since the record requires it.<a href="#section-5-3" class="pilcrow">¶</a></p>
-<p id="section-5-4">Tools map to the Authority Set per the issuance profile's Modeling
-Tools and Function Calls section: the tool's <code>resource</code> member is the
-entry's <code>resource</code>, tool names are <code>actions</code>, and argument bounds are
-<code>constraints</code>. For a tool with no <code>resource</code> (a local tool with no
-remote provider), the PS <span class="bcp14">MUST</span> set the entry's <code>resource</code> to its own
-issuer URL: the authority is PS-governed local action, and its
-point-of-use evaluation belongs to the runtime layer, not to
-issuance. Every <code>approved_tools</code> name <span class="bcp14">MUST</span> appear as an action of an
-Authority Set entry whose <code>resource</code> is the tool's provider or the
-PS's issuer URL, so the AAuth-native tool list and the committed
-authority cannot diverge.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<p id="section-5-4">Derivation lands in the <code>approved_tools</code> shape, consistent with the
+issuance profile's Modeling Tools and Function Calls section: each
+derived Authority Set entry is one tool entry, its provider the
+entry's <code>resource</code>, its name the entry's action, its bounds the
+entry's <code>constraints</code>. The tools are the Authority Set by definition
+under the projection of <a href="#two-commitments" class="auto internal xref">Section 4.1</a>, so the AAuth-native
+tool list and the committed authority cannot diverge: they are one
+structure. For a tool with no <code>resource</code> (a local tool with no
+remote provider), the projection sets the entry's <code>resource</code> to the
+PS's own issuer URL: the authority is PS-governed local action, and
+its point-of-use evaluation belongs to the runtime layer, not to
+issuance.<a href="#section-5-4" class="pilcrow">¶</a></p>
 <p id="section-5-5">AAuth's permission endpoint remains the per-call path for actions
 outside the Authority Set: each grant there is an individually
 approved action recorded in the mission log, and it does not widen the
@@ -1720,8 +1782,11 @@ envelope <code>iss</code>.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-2.5">
           <p id="section-6-2.5.1">Create the Mission record in the <code>active</code> state atomically with
-the approval decision, construct the blob around it, and compute
-<code>s256</code> over the response bytes. The PS <span class="bcp14">MUST NOT</span> return the
+the approval decision, construct the blob from the approved
+native members and the flat members (<a href="#mission-record" class="auto internal xref">Section 4</a>), and
+compute <code>s256</code> over the response bytes; the anchors of step 4 are
+thereafter recomputable from those bytes (<a href="#two-commitments" class="auto internal xref">Section 4.1</a>).
+The PS <span class="bcp14">MUST NOT</span> return the
 approved (<code>approver</code>, <code>s256</code>) reference before the record is
 <code>active</code>.<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
 </li>
@@ -1756,7 +1821,10 @@ binding supplies them: the Mission lifecycle is the issuance profile's
 state space, extended by the status profile where the deployment
 adopts it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), and the
 only-<code>active</code> rule governs, with unrecognized states fail-safe
-non-active.<a href="#section-7-1" class="pilcrow">¶</a></p>
+non-active. Transitions live in AAuth's own idiom: each is a
+mission-log event, the log is the authoritative transition history,
+and AAuth's endpoints surface the current state through the existing
+mission status machinery.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
         <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
@@ -1872,10 +1940,15 @@ where a deployment needs one.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
         <h3 id="name-mission-state-surfaces">
 <a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-mission-state-surfaces" class="section-name selfRef">Mission State Surfaces</a>
         </h3>
-<p id="section-7.2-1">A Mission-Bound Person Server <span class="bcp14">SHOULD</span> serve the Mission Status
+<p id="section-7.2-1">The mission log is the native state substrate, and the family
+surfaces are views over it: a status read reports the log's latest
+lifecycle event, and a signal transmits one. A Mission-Bound Person
+Server <span class="bcp14">SHOULD</span> serve the Mission Status
 operation of <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, with its
 signed responses, authentication, anti-oracle property, and caching
-rules, and <span class="bcp14">MAY</span> serve that profile's Mission Lifecycle endpoint as its
+rules, and <span class="bcp14">MAY</span> serve it at its existing mission endpoint, keyed by
+the native reference, rather than at a distinct endpoint; it <span class="bcp14">MAY</span>
+serve that profile's Mission Lifecycle endpoint as its
 management surface. A PS whose deployment claims runtime enforcement
 of the high-consequence classes <span class="bcp14">MUST</span> serve signed Mission Status as
 an active freshness source with a published staleness bound: this is
@@ -1884,7 +1957,8 @@ the runtime profile's active-freshness requirement for those classes
 expiry alone does not meet it. It <span class="bcp14">MAY</span> emit Mission Lifecycle Signals, with the PS
 as the transmitting Mission Issuer
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>).<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<p id="section-7.2-2">A PS that serves these surfaces publishes the corresponding members
+<p id="section-7.2-2">A PS that serves these surfaces at distinct endpoints publishes the
+corresponding members
 (<code>mission_status_endpoint</code>,
 <code>mission_status_signing_alg_values_supported</code>,
 <code>mission_lifecycle_endpoint</code>, <code>mission_event_stream_endpoint</code>,
@@ -2035,7 +2109,7 @@ in the PS-asserted mode, narrowed to read-only authority:<a href="#section-8.5-1
   "exp": 1793610000,
   "mission": {
     "approver": "https://ps.example.com",
-    "s256": "sN5v0poiLW85zY6tKSlxkR10yPkIr-JUr9ttwhiOc0w",
+    "s256": "w7zuCFWNcWtDb10bawnuQrMcVRGm9B8PKFpJUMoUzbs",
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://ps.example.com",
     "authority_hash":
@@ -2068,8 +2142,8 @@ deployment whose Access Servers do not is Reference-only
 (<a href="#verification-modes" class="auto internal xref">Section 11</a>). Against the substrate's requirements:<a href="#section-9-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-9-2">
 <li id="section-9-2.1">
-          <p id="section-9-2.1.1"><strong>Identifier and issuer</strong>: <code>id</code> on the record, <code>issuer</code>
-the <code>approver</code> URL; the (<code>approver</code>, <code>s256</code>) pair is the
+          <p id="section-9-2.1.1"><strong>Identifier and issuer</strong>: <code>mission_id</code>, a flat blob member;
+<code>issuer</code> the <code>approver</code> URL; the (<code>approver</code>, <code>s256</code>) pair is the
 wire-native reference to the same Mission (<a href="#reference" class="auto internal xref">Section 4.2</a>).<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-9-2.2">
@@ -2081,12 +2155,14 @@ PS-declared staleness bound (<a href="#lifecycle" class="auto internal xref">Sec
 </li>
         <li id="section-9-2.3">
           <p id="section-9-2.3.1"><strong>Authority Set representation</strong>: the issuance profile's, with its
-subset rule and Common Constraints, recorded in the blob
-(<a href="#mission-record" class="auto internal xref">Section 4</a>).<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
+subset rule and Common Constraints, carried as the profiled
+<code>approved_tools</code>, which are the Authority Set by definition under
+the projection (<a href="#mission-record" class="auto internal xref">Section 4</a>, <a href="#two-commitments" class="auto internal xref">Section 4.1</a>).<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-9-2.4">
           <p id="section-9-2.4.1"><strong>Integrity anchors</strong>: the family envelope and canonicalization,
-<code>iss</code> the PS's issuer URL, carried inside the s256-committed blob
+<code>iss</code> the PS's issuer URL, computed as a deterministic projection
+of the s256-committed blob rather than stored
 (<a href="#two-commitments" class="auto internal xref">Section 4.1</a>).<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-9-2.5">
@@ -2295,9 +2371,10 @@ applies at that gate.<a href="#section-12-3" class="pilcrow">¶</a></p>
 <p id="section-13-2">A <strong>Mission-Bound Person Server</strong>:<a href="#section-13-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13-3.1">
-          <p id="section-13-3.1.1">creates a Mission record for every approved mission and embeds it
-in the blob as <code>mission_record</code>, computing the integrity anchors
-with its issuer URL (<a href="#mission-record" class="auto internal xref">Section 4</a>);<a href="#section-13-3.1.1" class="pilcrow">¶</a></p>
+          <p id="section-13-3.1.1">maintains a Mission record for every approved mission, carried by
+the blob's native and flat members under the fixed equivalence of
+<a href="#mission-record" class="auto internal xref">Section 4</a>, and computes the integrity anchors as the
+projection of <a href="#two-commitments" class="auto internal xref">Section 4.1</a> with its issuer URL;<a href="#section-13-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-3.2">
           <p id="section-13-3.2.1">resolves the (<code>approver</code>, <code>s256</code>) reference to the record at every
@@ -2380,13 +2457,20 @@ anchors do not cover, but it has no domain separation and no issuer
 binding: it is a content hash, and a party holding only <code>s256</code> learns
 nothing about what was approved. The anchors commit the approved
 Intent and Authority Set under the issuance profile's
-domain-separated, issuer-bound envelope, reproducible from the record
-alone, but they do not commit <code>approved_at</code>, <code>capabilities</code>, or any
+domain-separated, issuer-bound envelope, reproducible from the blob
+alone through the projection of <a href="#two-commitments" class="auto internal xref">Section 4.1</a>, but they do not
+commit <code>approved_at</code>, <code>capabilities</code>, or any
 other session member. A verifier holding the blob <span class="bcp14">MUST</span> check the
 commitment relevant to its question: <code>s256</code> for "is this the blob the
 reference names", the anchors for "is this the authority and task
 that were approved". A party without the blob relies on the signed
 status surfaces or a Mandate.<a href="#section-14.2-1" class="pilcrow">¶</a></p>
+<p id="section-14.2-2">Because the anchors are computed rather than stored, the projection
+is in the trust path: an implementation error in the projection is
+an anchor error. The core's test vectors verify the envelope and
+canonicalization pipeline, and the computed pair of
+<a href="#record-example" class="auto internal xref">Section 4.3</a> verifies the projection itself; an implementation
+<span class="bcp14">MUST</span> reproduce both before interoperating.<a href="#section-14.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-ps-compromise">
@@ -2442,7 +2526,10 @@ execution evidence records, which is the interoperable form.<a href="#section-14
 <p id="section-15-1"><strong>The blob stays with the agent and the PS.</strong> Task text, constraints,
 and the full Authority Set do not travel in credentials unless a
 deployment opts to carry authorization details; by default a Resource
-sees only the reference and the granted scope. This is a minimization
+sees only the reference and the granted scope. The Subject's
+identity does not appear in the blob at all (<a href="#mission-record" class="auto internal xref">Section 4</a>),
+extending AAuth's directed-identity posture to the Mission artifact
+itself. This is a minimization
 property the OAuth binding does not have, where the token carries the
 authority payload; the trade is Resource-side enforcement, which here
 requires opting into token-carried authority or a Mandate
@@ -2476,8 +2563,10 @@ anchor for unlinkability, and neither is a v1 property.<a href="#section-15-3" c
 belong to that specification, and this binding defines no new AAuth
 requirement, capability, or platform values. The members this
 document adds ride inside structures whose extensibility their
-defining specifications state: <code>mission_record</code> in the PS-produced
-blob, and <code>id</code>, <code>issuer</code>, and <code>authority_hash</code> inside the <code>mission</code>
+defining specifications state: the flat <code>mission_id</code>, <code>expires_at</code>,
+and <code>policy_version</code> members (and the conditional <code>mission_intent</code>)
+in the PS-produced blob, and <code>id</code>, <code>issuer</code>, and <code>authority_hash</code>
+inside the <code>mission</code>
 claim AAuth registers, whose unrecognized members AAuth consumers
 ignore. Should AAuth establish registries for those members, the
 members this document defines would be registered there.<a href="#section-16-1" class="pilcrow">¶</a></p>
