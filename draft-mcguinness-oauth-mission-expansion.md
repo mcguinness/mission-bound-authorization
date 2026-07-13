@@ -397,6 +397,21 @@ value does not match the Mission resolved from the presented grant,
 with `invalid_grant`. A client that does not hold a grant for the named
 predecessor cannot present its refresh token and so cannot expand it.
 
+Stated as the eligibility rule rather than a consequence: this
+profile's expansion requires a refresh-token-bearing grant, and a
+deployment that issues no refresh token for a Mission forgoes it.
+Nothing else is lost. Succession stays reachable through a fresh
+approval, a new Mission whose disclosure references the work it
+continues, since the successor's authority comes only from the fresh
+consent in any case; and the Subject or an administrator acts on the
+predecessor at the management plane regardless, whose standing is
+the authenticated principal, never a token's possession
+({{I-D.draft-mcguinness-oauth-mission-status}}). The grant proof
+gates the proposal channel (who may put an expansion wearing this
+predecessor's name in front of the Approver, and who may trigger the
+atomic supersession), never the authority: no proof failure can
+widen anything.
+
 Presenting the predecessor's refresh token in the PAR request MUST
 follow the issuance profile's handling for that token: a
 sender-constrained refresh token MUST be presented in conformance with

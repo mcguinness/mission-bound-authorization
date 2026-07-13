@@ -955,7 +955,14 @@ derivation policy then in force, in one of two modes:
   `resources`, yields the candidate entries, which are then narrowed
   to policy. The mapping is a lookup, never synthesis; the AS refuses
   an Intent that matches no configured mapping with
-  `invalid_authorization_details`.
+  `invalid_authorization_details`, and SHOULD make that refusal
+  distinguishable from a policy refusal in `error_description`. A
+  deployment publishes its mapping space as deployment
+  documentation; eligibility MAY be scoped per Subject and client,
+  and a mapping keyed on Subject attributes resolves at the approval
+  event, where the Subject is established ({{approval-event}}), so a
+  refusal at PAR time is best-effort over what is checkable without
+  the Subject.
 
 In both modes the AS MUST bound every derived entry by the Mission
 Intent (each derived entry's `resource` MUST be one of the Intent's
@@ -2059,7 +2066,13 @@ runtime layer covers the high-consequence classes with an active
 freshness source, the point-of-use decision is the revocation
 cutoff, and a deployment MAY size lifetimes by action class without
 losing the kill switch ({{runtime-boundary}},
-{{I-D.draft-mcguinness-mission-runtime}}).
+{{I-D.draft-mcguinness-mission-runtime}}). Classes attach to
+entries while `exp` attaches to the token: an extended lifetime is
+appropriate only for a token whose carried entries are all on
+runtime-gated paths, since a single ungated entry stretches its own
+revocation latency to the extended lifetime. Narrowed,
+single-audience tokens ({{subset}}) are the mechanism that keeps
+gated and ungated authority from sharing one long-lived token.
 
 ## The Mission Claim {#mission-claim}
 
@@ -3775,6 +3788,13 @@ resolve before interoperating.
   `mission_denial` gains denial-detail disclosure considerations;
   the `mission_error` registration's usage-location choice is
   explained.
+- Pre-publication fixes: extended token lifetimes apply only to
+  tokens whose carried entries are all runtime-gated, with
+  single-audience narrowing as the splitting mechanism (#244);
+  template mode publishes its mapping space as deployment
+  documentation, distinguishes no-mapping from policy refusals, and
+  resolves Subject-keyed mappings at the approval event (#246 in
+  part).
 
 -00
 
