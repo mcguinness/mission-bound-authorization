@@ -1378,7 +1378,7 @@ inside the trust model and the behaviors a sound implementation follows.
 This profile therefore defines role boundaries, trust posture, and
 recommended behavior; it does not define a portable shaping protocol,
 register a media type or claim name, or define a conformance test suite.
-A deployment that exposes shaping as a network service <span class="bcp14">MAY</span> do so
+A deployment that exposes shaping as a network service may do so
 (<a href="#exposing-shaping-as-a-service" class="auto internal xref">Section 15</a>), but that surface is a local
 implementation detail, not an interoperability contract.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
 </section>
@@ -1554,27 +1554,27 @@ machinery that produces an untrusted proposal.<a href="#section-5.1-2" class="pi
 <p id="section-5.2-1">The Mission Shaper <span class="bcp14">MUST NOT</span> issue, derive, or certify authority of any
 kind. It produces a Mission Intent proposal, which is untrusted client
 input under the issuance profile until the Mission Issuer validates and
-narrows it and binds authority at the approval event. The issuance
-profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) already treats a
-received Mission Intent as untrusted input under its validation rules;
-nothing in this profile changes that, and a shaper <span class="bcp14">SHOULD NOT</span> structure
-its output to imply otherwise. The shaper's output has no authority
-implications until the Mission Issuer approves a Mission from it and
-derives an Authority Set.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
-<p id="section-5.2-2">Three consequences follow, and a sound shaper observes all three:<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+narrows it and binds authority at the approval event.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">The issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) already
+treats a received Mission Intent as untrusted input under its
+validation rules; nothing in this profile changes that. A shaper
+<span class="bcp14">SHOULD NOT</span> structure its output to imply otherwise. The shaper's
+output has no authority implications until the Mission Issuer approves
+a Mission from it and derives an Authority Set.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+<p id="section-5.2-3">Three consequences follow, and a sound shaper observes all three:<a href="#section-5.2-3" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.2-3.1">
-            <p id="section-5.2-3.1.1">It does not act as a credential issuer. A shaper that signs its
+<li class="normal" id="section-5.2-4.1">
+            <p id="section-5.2-4.1.1">It does not act as a credential issuer. A shaper that signs its
 output, attaches an authority assertion, emits a credential, or
 otherwise behaves as a credential issuer is acting outside this role
 and is <span class="bcp14">NOT RECOMMENDED</span>. A deployment <span class="bcp14">MAY</span> integrity-protect shaper
 output for client-internal reasons (for example, to detect tampering
 between the shaper and the submission step in a multi-process client,
-<a href="#multi-process" class="auto internal xref">Section 18.5</a>), but that protection has no authority semantics at
-the Mission Issuer and <span class="bcp14">MUST NOT</span> be relied upon beyond the client.<a href="#section-5.2-3.1.1" class="pilcrow">¶</a></p>
+<a href="#multi-process" class="auto internal xref">Section 18.5</a>). Such protection has no authority semantics at
+the Mission Issuer and <span class="bcp14">MUST NOT</span> be relied upon beyond the client.<a href="#section-5.2-4.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.2-3.2">
-            <p id="section-5.2-3.2.1">It does not mimic Mission Issuer output. The proposal <span class="bcp14">MUST NOT</span> carry
+          <li class="normal" id="section-5.2-4.2">
+            <p id="section-5.2-4.2.1">It does not mimic Mission Issuer output. The proposal <span class="bcp14">MUST NOT</span> carry
 <code>mission.id</code>, <code>intent_hash</code>, <code>authority_hash</code>, an Authority Set, a
 lifecycle state, or approving-principal evidence. The Mission Issuer
 produces those values on the Mission record at and after the approval
@@ -1582,10 +1582,10 @@ event, never the client (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" cl
 shaper that emits them is misusing its role: the issuance profile
 rejects a Mission Intent that carries an unrecognized top-level member,
 including any such issuer-output member, with <code>invalid_request</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.2-3.2.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.2-4.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.2-3.3">
-            <p id="section-5.2-3.3.1">It does not cross the trust boundary. The trust boundary separates the
+          <li class="normal" id="section-5.2-4.3">
+            <p id="section-5.2-4.3.1">It does not cross the trust boundary. The trust boundary separates the
 client, where the shaper lives, from the Mission Issuer, where the
 Mission Intent is validated and the Authority Set is created; crossing
 it is a Mission Issuer action. The shaper does not initiate the
@@ -1593,7 +1593,7 @@ submission, invoke the Pushed Authorization Request or Authorization
 Endpoint, select the recipient Mission Issuer on its own authority, or
 attest to the submission on the Mission Issuer's behalf. It produces an
 input; the client transmits it; the Mission Issuer decides what to do
-with it.<a href="#section-5.2-3.3.1" class="pilcrow">¶</a></p>
+with it.<a href="#section-5.2-4.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -1685,23 +1685,45 @@ resolve those details.<a href="#section-6-3" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-7-1">A Mission Intent proposal <span class="bcp14">MUST</span> satisfy the syntactic requirements of the
 issuance profile's <code>mission_intent</code> object
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): a <code>goal</code>, <code>resources</code> (each an
-absolute URI), optional free-text <code>constraints</code>, optional
-<code>success_criteria</code>, an optional <code>purpose</code>, an optional
-<code>proposed_authority</code> array of candidate Authority Set entries, an
-<code>expires_at</code>, and an
-optional <code>controls</code> object. The shaper proposes the resources,
-describes the desired bounds in free-text <code>constraints</code> and
-<code>success_criteria</code>, and carries any concrete candidate authority
-(actions, structured constraints, delegation facts) in
-<code>proposed_authority</code>, the untrusted carrier the Mission Issuer only
-narrows when it derives the Authority Set
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):<a href="#section-7-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-2.1">
+          <p id="section-7-2.1.1">a <code>goal</code>;<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.2">
+          <p id="section-7-2.2.1"><code>resources</code>, each an absolute URI;<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.3">
+          <p id="section-7-2.3.1">optional free-text <code>constraints</code>;<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.4">
+          <p id="section-7-2.4.1">optional <code>success_criteria</code>;<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.5">
+          <p id="section-7-2.5.1">an optional <code>purpose</code>;<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.6">
+          <p id="section-7-2.6.1">an optional <code>proposed_authority</code> array of candidate Authority Set
+entries;<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.7">
+          <p id="section-7-2.7.1">an <code>expires_at</code>; and<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.8">
+          <p id="section-7-2.8.1">an optional <code>controls</code> object.<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-7-3">The shaper proposes the resources. It describes the desired bounds in
+free-text <code>constraints</code> and <code>success_criteria</code>. It carries any
+concrete candidate authority (actions, structured constraints,
+delegation facts) in <code>proposed_authority</code>, the untrusted carrier the
+Mission Issuer only narrows when it derives the Authority Set
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The proposal <span class="bcp14">MUST</span> be
 bounded enough for the Mission Issuer to derive an Authority Set without
-interpreting natural language as authority.<a href="#section-7-1" class="pilcrow">¶</a></p>
-<p id="section-7-2">The proposal <span class="bcp14">MUST NOT</span> present issuer outputs as approved authority:
-the derived Authority Set is the Mission Issuer's product, and nothing
-the shaper emits carries authority. Concrete candidate authority
+interpreting natural language as authority.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4">The proposal <span class="bcp14">MUST NOT</span> present issuer outputs as approved authority:
+the derived Authority Set is the Mission Issuer's product
+(<a href="#proposes-only" class="auto internal xref">Section 5.2</a>). Concrete candidate authority
 (actions, structured constraints such as <code>max_amount</code>, delegation)
 belongs in the Intent's <code>proposed_authority</code> member, where the core
 treats it as untrusted proposal input and bounds the derivation to a
@@ -1709,25 +1731,25 @@ subset of it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 has resolved such facts (for
 example, the actions a resource supports, or that the task implies
 delegated execution) proposes them there and records the same facts in
-Shaping Evidence (<a href="#shaping-evidence" class="auto internal xref">Section 10</a>) for audit only; Shaping
-Evidence is never an input the derivation consumes.<a href="#section-7-2" class="pilcrow">¶</a></p>
-<p id="section-7-3">A sound shaper does not include a resource in the proposal merely because
-the task text implies it might be useful. The shaper should have a
-resolution basis under <a href="#capability-resolution" class="auto internal xref">Section 9</a>, or it should produce a
-clarification request or a refusal.<a href="#section-7-3" class="pilcrow">¶</a></p>
+Shaping Evidence (<a href="#shaping-evidence" class="auto internal xref">Section 10</a>) for audit only. Shaping
+Evidence is never an input the derivation consumes.<a href="#section-7-4" class="pilcrow">¶</a></p>
+<p id="section-7-5">A sound shaper does not include a resource in the proposal merely because
+the task text implies it might be useful: it has a resolution basis
+under <a href="#capability-resolution" class="auto internal xref">Section 9</a>, or it produces a clarification
+request or a refusal.<a href="#section-7-5" class="pilcrow">¶</a></p>
 <div id="authority-ceiling">
 <section id="section-7.1">
         <h3 id="name-shaping-ceiling-and-default">
 <a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-shaping-ceiling-and-default" class="section-name selfRef">Shaping Ceiling and Default Deny</a>
         </h3>
-<p id="section-7.1-1">A sound shaper applies a default-deny posture. The Mission Intent
-proposal should contain only resources that have a positive basis in the
+<p id="section-7.1-1">A sound shaper applies a default-deny posture: its Mission Intent
+proposal contains only resources that have a positive basis in the
 request, context, capability source, and shaping policy, and free-text
 <code>constraints</code> and <code>success_criteria</code> that describe the bounds the shaper
-can defend. The shaper should not include a broad resource class as a
+can defend. It does not include a broad resource class as a
 convenience fallback for unresolved detail.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
 <p id="section-7.1-2">For an open-ended task whose concrete objects are not known when the
-proposal is built, the shaper should express the bound as <code>constraints</code>
+proposal is built, a sound shaper expresses the bound as <code>constraints</code>
 that hold as invariants over those objects (the owning customer, the
 tenant, an amount ceiling, read-only except named writes, a time
 window), rather than reaching for a broad resource class to anticipate
@@ -1736,37 +1758,43 @@ constraints, and the runtime layer enforces them per object at the point
 of use; this keeps the proposal tight without enumerating objects the
 shaper cannot know yet (Mission Authority,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7.1-2" class="pilcrow">¶</a></p>
-<p id="section-7.1-3">A shaper should also propose a Mission Intent scoped to one concrete
+<p id="section-7.1-3">A sound shaper also proposes a Mission Intent scoped to one concrete
 task, not to an agent's whole session or standing role. Where a request
-spans several distinct tasks, the shaper should propose several
+spans several distinct tasks, it proposes several
 task-scoped Mission Intents rather than one broad proposal, so each
 resulting Mission stays narrow, separately approved, and separately
 revocable.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
 <p id="section-7.1-4">Where cross-vendor interoperability matters, the shaper <span class="bcp14">SHOULD</span> carry
 the concrete candidate authority it proposes (the resources, actions,
 and constraints) in the Intent's <code>proposed_authority</code> member, and
-record the same proposal in Shaping Evidence, so the Mission Issuer
-derives the Authority Set by narrowing <code>proposed_authority</code> under its
-subset rule, with the deterministic-reproducibility rule applying,
-rather than generating authority from free text
+record the same proposal in Shaping Evidence. This lets the Mission
+Issuer derive the Authority Set by narrowing <code>proposed_authority</code>
+under its subset rule, with the deterministic-reproducibility rule
+applying, rather than generating authority from free text
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Narrowing is the portable
 derivation path: the proposal format and the narrowing rule are
 interoperable, so the resulting Authority Set is enforceable and
 auditable across domains even though the Mission Issuer's policy
 decision of what to narrow to stays local. The shaper still proposes
-only; the Mission Issuer validates, narrows, and binds authority at
-approval (<a href="#proposes-only" class="auto internal xref">Section 5.2</a>).<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+only (<a href="#proposes-only" class="auto internal xref">Section 5.2</a>).<a href="#section-7.1-4" class="pilcrow">¶</a></p>
 <p id="section-7.1-5">When a deployment or caller supplies a <strong>shaping ceiling</strong>, a
 caller-supplied bound distinct from the progressive profile's
 consented <code>authority_ceiling</code> Mission member
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>), the proposal
 <span class="bcp14">MUST</span> be a subset of it. If the task cannot be completed within that
-ceiling, the shaper <span class="bcp14">MUST</span> request clarification or refuse; it <span class="bcp14">MUST NOT</span>
-silently drop necessary authority while emitting a proposal that appears
-complete, unless Shaping Evidence records the excluded authority and the
-outcome clearly indicates the proposal may not satisfy the task. The
-Mission Issuer remains responsible for enforcing its own ceiling even
-when no caller ceiling is present.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+ceiling, the shaper <span class="bcp14">MUST</span> request clarification or refuse. It <span class="bcp14">MUST NOT</span>
+silently drop necessary authority while emitting a proposal that
+appears complete, unless both of the following hold:<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.1-6.1">
+            <p id="section-7.1-6.1.1">Shaping Evidence records the excluded authority; and<a href="#section-7.1-6.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-6.2">
+            <p id="section-7.1-6.2.1">the outcome clearly indicates the proposal may not satisfy the task.<a href="#section-7.1-6.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.1-7">The Mission Issuer remains responsible for enforcing its own ceiling
+even when no caller ceiling is present.<a href="#section-7.1-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="delegation">
@@ -1783,11 +1811,12 @@ task implies use of sub-agents, background workers, or delegated
 execution, the shaper <span class="bcp14">SHOULD</span> propose that fact there, recording the
 same fact in Shaping Evidence (<a href="#shaping-evidence" class="auto internal xref">Section 10</a>) for audit only.
 The shaper <span class="bcp14">MAY</span> also describe the desired delegation bound in free-text
-<code>constraints</code> or <code>success_criteria</code>. A sound shaper does not infer
+<code>constraints</code> or <code>success_criteria</code>.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">A sound shaper does not infer
 delegated execution from the mere existence of a task graph or an agent
 harness: a child actor needs explicit authority derived by the Mission
-Issuer, not session ancestry.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<p id="section-7.2-2">Where a deployment creates Child Missions
+Issuer, not session ancestry.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+<p id="section-7.2-3">Where a deployment creates Child Missions
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), turning a
 sub-task into the proposed Child Mission Intent is a shaping act, and
 this profile applies to it unchanged. The Parent Mission's Authority
@@ -1796,7 +1825,7 @@ profile refuses a child that is not a strict subset of its parent, so
 a proposal that exceeds the parent cannot be approved, and a sound
 shaper narrows, clarifies, or refuses rather than emit one. Shaping
 Evidence for a child proposal <span class="bcp14">SHOULD</span> record the parent Mission
-identifier and the parent-derived ceiling it shaped under.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+identifier and the parent-derived ceiling it shaped under.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="construction-guidance">
@@ -1904,15 +1933,16 @@ records the exclusion in Shaping Evidence; or<a href="#section-8-3.2.1" class="p
           <p id="section-8-3.3.1">refuse with a reason.<a href="#section-8-3.3.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-8-4">Because a shaper is a client-side component whose internal reasoning the
-Mission Issuer cannot observe, this profile expresses the requirement
-through the observable artifact rather than the internal choice: when a
-shaper resolves an ambiguity in the broadening direction, Shaping
-Evidence <span class="bcp14">MUST</span> record the resolution and, where a deployment permits
-policy-based default narrowing, the policy rule that authorized it. A
-proposal that broadens authority on an ambiguity without a corresponding
-Shaping Evidence record is unsound. The Mission Issuer enforces
-its own ceiling and consent regardless of what the shaper recorded.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-4">When a shaper resolves an ambiguity in the broadening direction,
+Shaping Evidence <span class="bcp14">MUST</span> record the resolution and, where a deployment
+permits policy-based default narrowing, the policy rule that
+authorized it. This profile expresses the requirement through the
+observable artifact rather than the internal choice because a shaper
+is a client-side component whose internal reasoning the Mission Issuer
+cannot observe. A proposal that broadens authority on an ambiguity
+without a corresponding Shaping Evidence record is unsound. The
+Mission Issuer enforces its own ceiling and consent regardless of what
+the shaper recorded.<a href="#section-8-4" class="pilcrow">¶</a></p>
 <p id="section-8-5">Requesting clarification is not approval. The user's response is
 incorporated into the Mission Intent; the Mission Issuer still
 validates, narrows, and renders the consent disclosure for binding
@@ -1928,7 +1958,7 @@ agent for consent.<a href="#section-8-5" class="pilcrow">¶</a></p>
 authority consequence of each answer. "Need more scope?" is not
 sufficient; "May this Mission read invoices for customer 5678 in
 addition to customer 1234?" is. A clarification <span class="bcp14">SHOULD</span> identify the
-authority consequence of each offered choice and <span class="bcp14">SHOULD</span> state what the
+authority consequence of each offered choice. It <span class="bcp14">SHOULD</span> state what the
 shaper will do if it is left unanswered (refuse, narrow, or wait).<a href="#section-8.1-1" class="pilcrow">¶</a></p>
 <p id="section-8.1-2">Clarification runs from shaper to requester and resolves task ambiguity
 before a proposal exists. The reverse channel, the Approver questioning
@@ -1973,9 +2003,9 @@ that prevents a defensible proposal (<code>unsafe_to_shape</code>).<a href="#sec
 </li>
         </ul>
 <p id="section-8.2-3">The reason strings above are recommended labels for Shaping Evidence and
-for surfacing a refusal to the requesting client; a deployment <span class="bcp14">MAY</span>
-define additional labels but <span class="bcp14">SHOULD NOT</span> reuse these with different
-meaning.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+for surfacing a refusal to the requesting client. A deployment <span class="bcp14">MAY</span>
+define additional labels. It <span class="bcp14">SHOULD NOT</span> reuse these labels with
+different meaning.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
 <p id="section-8.2-4">A shaper <span class="bcp14">SHOULD NOT</span> refuse merely because the requested authority is
 broad, or because the Authority Set the Mission Issuer would derive
 looks expensive. Breadth is the Mission Issuer's decision and the
@@ -2024,12 +2054,27 @@ resource/action projection for this task.<a href="#section-9-2.8.1" class="pilcr
 <p id="section-9-3">A sound shaper records the resolution basis in Shaping Evidence. A
 model-generated capability name with none of these bases is not
 resolved, and a sound shaper treats it as unresolved (<a href="#refusal" class="auto internal xref">Section 8.2</a>).<a href="#section-9-3" class="pilcrow">¶</a></p>
-<p id="section-9-4">For each resolved capability, Shaping Evidence <span class="bcp14">SHOULD</span> record what was
-requested, what it resolved to, the basis, the source consulted (for
-<code>catalog</code> and <code>authority_source</code>), and, where available, a digest over
-the source representation so later approval and runtime enforcement can
-detect drift. A confidence value, if recorded, is audit evidence only
-and <span class="bcp14">MUST NOT</span> be treated as authority.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-4">For each resolved capability, Shaping Evidence <span class="bcp14">SHOULD</span> record:<a href="#section-9-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-5.1">
+          <p id="section-9-5.1.1">what was requested;<a href="#section-9-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-5.2">
+          <p id="section-9-5.2.1">what it resolved to;<a href="#section-9-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-5.3">
+          <p id="section-9-5.3.1">the basis;<a href="#section-9-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-5.4">
+          <p id="section-9-5.4.1">the source consulted (for <code>catalog</code> and <code>authority_source</code>); and<a href="#section-9-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-5.5">
+          <p id="section-9-5.5.1">where available, a digest over the source representation, so later
+approval and runtime enforcement can detect drift.<a href="#section-9-5.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-9-6">A confidence value, if recorded, is audit evidence only
+and <span class="bcp14">MUST NOT</span> be treated as authority.<a href="#section-9-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="shaping-evidence">
@@ -2070,7 +2115,7 @@ form of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I
 the named exclusion ruleset marks as non-retained. To make the digest
 recomputable by a later auditor, the evidence <span class="bcp14">MUST</span> also record
 <code>input_exclusion_ruleset</code>, an identifier (and version) of the
-exclusion ruleset applied, and the auditor recomputes the digest over
+exclusion ruleset applied. The auditor recomputes the digest over
 the retained canonical input under that ruleset. A digest whose
 exclusion set is not recorded cannot be reproduced and so is not a
 sound <code>input_digest</code>.<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
@@ -2129,7 +2174,7 @@ to answer why the task needs an entry (Disclosure Interrogation,
         <dd style="margin-left: 1.5em" id="section-10-2.22">
           <p id="section-10-2.22.1">Model prompts, outputs, or tool calls used during shaping. When
 retained it <span class="bcp14">MUST</span> be treated as sensitive audit data
-(<a href="#privacy-considerations" class="auto internal xref">Section 19</a>) and <span class="bcp14">MUST NOT</span> be rendered as authority.<a href="#section-10-2.22.1" class="pilcrow">¶</a></p>
+(<a href="#privacy-considerations" class="auto internal xref">Section 19</a>). It <span class="bcp14">MUST NOT</span> be rendered as authority.<a href="#section-10-2.22.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2139,44 +2184,46 @@ retained it <span class="bcp14">MUST</span> be treated as sensitive audit data
 <a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-integrity-and-the-evidence-" class="section-name selfRef">Integrity and the Evidence Hash</a>
         </h3>
 <p id="section-10.1-1">A deployment <span class="bcp14">MAY</span> bind a proposal to its evidence so the Mission record
-can cite how the proposal was produced. When it does:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-10.1-2.1">
-            <p id="section-10.1-2.1.1"><code>shaping_evidence_hash</code> is a string in the integrity-anchor form of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. Like every other committed
-object in this suite, the Shaping Evidence object is committed inside
-that profile's domain-separated <code>{typ, iss, value}</code> envelope, with
-<code>typ</code> of <code>mission-shaping-evidence</code>, <code>iss</code> the Mission Issuer
-<code>issuer</code>, and <code>value</code> the Shaping Evidence object; the anchor is the
-prefixed digest of the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of that
-envelope. Hashing the bare object would omit the <code>typ</code> domain
-separation and <code>iss</code> binding the integrity-anchor construction exists
-to provide. It is an audit commitment only. Because the shaper is
-client-side and <span class="bcp14">MAY</span> build a proposal before the target Mission Issuer
-is selected, the <code>iss</code> binding requires that issuer to be known: the
-<code>shaping_evidence_hash</code> is computed only once the Mission Issuer's
-<code>issuer</code> is fixed, and a proposal re-submitted to a different Mission
-Issuer needs a <code>shaping_evidence_hash</code> recomputed under that issuer's
-<code>issuer</code>.<a href="#section-10.1-2.1.1" class="pilcrow">¶</a></p>
+can cite how the proposal was produced. When it does,
+<code>shaping_evidence_hash</code> is a string in the integrity-anchor form of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, constructed as follows:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-10.1-2">
+<li id="section-10.1-2.1">
+            <p id="section-10.1-2.1.1">Like every other committed object in this suite, commit the Shaping
+Evidence object inside that profile's domain-separated
+<code>{typ, iss, value}</code> envelope, with <code>typ</code> of
+<code>mission-shaping-evidence</code>, <code>iss</code> the Mission Issuer <code>issuer</code>, and
+<code>value</code> the Shaping Evidence object.<a href="#section-10.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.1-2.2">
-            <p id="section-10.1-2.2.1">A deployment <span class="bcp14">MAY</span> instead, or in addition, carry an integrity envelope
+          <li id="section-10.1-2.2">
+            <p id="section-10.1-2.2.1">Compute the anchor as the prefixed digest of the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
+canonical bytes of that envelope.<a href="#section-10.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-10.1-3">Hashing the bare object would omit the <code>typ</code> domain separation and
+<code>iss</code> binding the integrity-anchor construction exists to provide. The
+hash is an audit commitment only.<a href="#section-10.1-3" class="pilcrow">¶</a></p>
+<p id="section-10.1-4">Because the shaper is client-side and <span class="bcp14">MAY</span> build a proposal before the
+target Mission Issuer is selected, the <code>iss</code> binding requires that
+issuer to be known: the <code>shaping_evidence_hash</code> is computed only once
+the Mission Issuer's <code>issuer</code> is fixed. A proposal re-submitted to a
+different Mission Issuer needs a <code>shaping_evidence_hash</code> recomputed
+under that issuer's <code>issuer</code>.<a href="#section-10.1-4" class="pilcrow">¶</a></p>
+<p id="section-10.1-5">A deployment <span class="bcp14">MAY</span> instead, or in addition, carry an integrity envelope
 over the Shaping Evidence, for example a JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Compact
 Serialization over the JCS canonical bytes of the evidence with the
-envelope member removed.<a href="#section-10.1-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<p id="section-10.1-3">Where the deployment records Consent Evidence, the consent-disclosure
+envelope member removed.<a href="#section-10.1-5" class="pilcrow">¶</a></p>
+<p id="section-10.1-6">Where the deployment records Consent Evidence, the consent-disclosure
 object defines an <span class="bcp14">OPTIONAL</span> <code>shaping_evidence_hash</code> member; that member
 is the suite's standard carrier for this commitment
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-10.1-3" class="pilcrow">¶</a></p>
-<p id="section-10.1-4">Neither the hash nor the envelope confers authority. A Resource Server
-or PDP <span class="bcp14">MUST NOT</span> treat a shaping evidence hash as proof of authority.<a href="#section-10.1-4" class="pilcrow">¶</a></p>
-<p id="section-10.1-5">When a Mission record cites a <code>shaping_evidence_hash</code>, the deployment
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-10.1-6" class="pilcrow">¶</a></p>
+<p id="section-10.1-7">Neither the hash nor the envelope confers authority. A Resource Server
+or PDP <span class="bcp14">MUST NOT</span> treat a shaping evidence hash as proof of authority.<a href="#section-10.1-7" class="pilcrow">¶</a></p>
+<p id="section-10.1-8">When a Mission record cites a <code>shaping_evidence_hash</code>, the deployment
 <span class="bcp14">SHOULD</span> retain the Shaping Evidence and its <code>input_exclusion_ruleset</code> for
 as long as it retains the Mission record (the audit horizon of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so the cited evidence stays
-reproducible for that record.<a href="#section-10.1-5" class="pilcrow">¶</a></p>
+reproducible for that record.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="illustrative-evidence-non-normative">
@@ -2269,17 +2316,28 @@ would have asked <code>alice</code> rather than guess (<a href="#clarifications"
       </h2>
 <p id="section-12-1">A Mission Issuer that receives a shaped Mission Intent <span class="bcp14">MAY</span> use a
 <code>shaping_evidence_hash</code> and Shaping Evidence as input to approval and
-audit. Under <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> it independently
-validates the Mission Intent, does not approve a Mission solely because
-a shaper produced it, derives an Authority Set under issuer policy, and
-refuses, narrows, or requires approval as that profile requires. A
-<code>shaping_evidence_hash</code> the Mission Issuer records on the Mission record
-is an audit commitment only.<a href="#section-12-1" class="pilcrow">¶</a></p>
-<p id="section-12-2">A shaped proposal can go stale. A deployment that conveys a freshness
+audit. Under <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> it:<a href="#section-12-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12-2.1">
+          <p id="section-12-2.1.1">independently validates the Mission Intent;<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.2">
+          <p id="section-12-2.2.1">does not approve a Mission solely because a shaper produced it;<a href="#section-12-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.3">
+          <p id="section-12-2.3.1">derives an Authority Set under issuer policy; and<a href="#section-12-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.4">
+          <p id="section-12-2.4.1">refuses, narrows, or requires approval as that profile requires.<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-12-3">A <code>shaping_evidence_hash</code> the Mission Issuer records on the Mission
+record is an audit commitment only.<a href="#section-12-3" class="pilcrow">¶</a></p>
+<p id="section-12-4">A shaped proposal can go stale. A deployment that conveys a freshness
 bound with the proposal (for example, an expiry, or an evidence source
 digest that no longer matches) <span class="bcp14">SHOULD</span> re-shape rather than submit a
 proposal built against a capability catalog or policy version that has
-since changed.<a href="#section-12-2" class="pilcrow">¶</a></p>
+since changed.<a href="#section-12-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="re-shaping">
@@ -2325,8 +2383,8 @@ refusal input that motivated it (the error, the resolution, or the
 rejected dimensions) and <span class="bcp14">MAY</span> reference the predecessor proposal's
 evidence, so an auditor can read the narrowing chain end to end.<a href="#section-13-3" class="pilcrow">¶</a></p>
 <p id="section-13-4">The loop narrows. A refusal is a signal to propose less, not to
-propose the same authority under different names: a shaper <span class="bcp14">SHOULD NOT</span>
-re-encode refused authority in new vocabulary, and it <span class="bcp14">MUST NOT</span> use
+propose the same authority under different names. A shaper <span class="bcp14">SHOULD NOT</span>
+re-encode refused authority in new vocabulary. It <span class="bcp14">MUST NOT</span> use
 iterative resubmission to probe the Mission Issuer's policy boundary
 (<a href="#silent-broadening" class="auto internal xref">Section 18.4</a>). Where a narrower proposal can no longer
 complete the task, the outcomes this profile already defines apply:
@@ -2358,13 +2416,14 @@ Endpoint and does not handle the authorization response. Those are
 requesting-client responsibilities (<a href="#proposes-only" class="auto internal xref">Section 5.2</a>). The shaper hands
 its output to the requesting client, which performs the OAuth flow and
 <span class="bcp14">MAY</span> also convey a <code>shaping_evidence_hash</code> so the Mission record can cite
-the evidence (<a href="#evidence-hash" class="auto internal xref">Section 10.1</a>). Because the issuance profile rejects
+the evidence (<a href="#evidence-hash" class="auto internal xref">Section 10.1</a>).<a href="#section-14.1-2" class="pilcrow">¶</a></p>
+<p id="section-14.1-3">Because the issuance profile rejects
 an unrecognized top-level Mission Intent member
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the hash is not carried inside
 <code>mission_intent</code>; a deployment conveys it as a separate PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>
 request parameter it registers (for example, a <code>shaping_evidence_hash</code>
 parameter) alongside the Mission Intent. Conveying it does not require
-the Mission Issuer to trust the shaper.<a href="#section-14.1-2" class="pilcrow">¶</a></p>
+the Mission Issuer to trust the shaper.<a href="#section-14.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="runtime-composition">
@@ -2471,12 +2530,24 @@ to authority.<a href="#section-16-5.4.1" class="pilcrow">¶</a></p>
       </ul>
 <p id="section-16-6">A deployment that runs a shaper should say so in its Mission
 Deployment Profile, the deployment-level manifest the architecture
-defines (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>): whether
-shaping is in the submission path, the shaper version policy, whether
-Shaping Evidence is retained and for how long, and whether Mission
-records cite <code>shaping_evidence_hash</code>. The shaping posture then lives
+defines (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>):<a href="#section-16-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-16-7.1">
+          <p id="section-16-7.1.1">whether shaping is in the submission path;<a href="#section-16-7.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-7.2">
+          <p id="section-16-7.2.1">the shaper version policy;<a href="#section-16-7.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-7.3">
+          <p id="section-16-7.3.1">whether Shaping Evidence is retained and for how long; and<a href="#section-16-7.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-7.4">
+          <p id="section-16-7.4.1">whether Mission records cite <code>shaping_evidence_hash</code>.<a href="#section-16-7.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-16-8">The shaping posture then lives
 in the same artifact as the deployment's other claims, and its absence
-is legible rather than assumed.<a href="#section-16-6" class="pilcrow">¶</a></p>
+is legible rather than assumed.<a href="#section-16-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conformance">
@@ -2495,16 +2566,14 @@ not a conformance target.<a href="#section-17-1" class="pilcrow">¶</a></p>
 <a href="#section-18" class="section-number selfRef">18. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
 <p id="section-18-1">The shaper sits at the prompt-to-Intent boundary. Its security
-properties follow from the role contract: the shaper proposes, and
-authority is created only at the Mission Issuer's approval event.<a href="#section-18-1" class="pilcrow">¶</a></p>
+properties follow from the role contract (<a href="#proposes-only" class="auto internal xref">Section 5.2</a>).<a href="#section-18-1" class="pilcrow">¶</a></p>
 <div id="model-output">
 <section id="section-18.1">
         <h3 id="name-model-output-is-not-authori">
 <a href="#section-18.1" class="section-number selfRef">18.1. </a><a href="#name-model-output-is-not-authori" class="section-name selfRef">Model Output Is Not Authority</a>
         </h3>
 <p id="section-18.1-1">A model-based shaper can draft a Mission Intent, but the model <span class="bcp14">MUST NOT</span>
-be the authority that grants or widens access. The approved Mission is
-created only through the issuance profile's validation and approval. A
+be the authority that grants or widens access (<a href="#proposes-only" class="auto internal xref">Section 5.2</a>). A
 deployment that lets a model's proposal become active without validation
 and approval is not following this profile. A model-based shaper
 inherits its model's failure modes (hallucinated resources, fabricated
@@ -2520,15 +2589,38 @@ Shaping Evidence so failures can be attributed.<a href="#section-18.1-1" class="
         </h3>
 <p id="section-18.2-1">A compromised shaper can produce arbitrary Mission Intent and can
 suppress ambiguity, but it cannot, by itself, cause the Mission Issuer
-to approve that Intent. A compromised shaper can cause spurious
-proposals to be submitted, mis-shape Intent so the Approver approves a
-task different from the one intended, or leak prompts through
-shaper-local logging. It cannot issue credentials, set or change Mission
-lifecycle state, bypass the approval event, or cause a Resource Server
-to act without Mission Issuer-issued authority. The Mission Issuer
-remains the enforcement point for approval and <span class="bcp14">MUST</span> validate and narrow
-the proposal; deployments <span class="bcp14">SHOULD</span> monitor shaper versions and evidence
-for anomalous broadening.<a href="#section-18.2-1" class="pilcrow">¶</a></p>
+to approve that Intent. A compromised shaper can:<a href="#section-18.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-18.2-2.1">
+            <p id="section-18.2-2.1.1">cause spurious proposals to be submitted;<a href="#section-18.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.2-2.2">
+            <p id="section-18.2-2.2.1">mis-shape Intent so the Approver approves a task different from the
+one intended; or<a href="#section-18.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.2-2.3">
+            <p id="section-18.2-2.3.1">leak prompts through shaper-local logging.<a href="#section-18.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-18.2-3">It cannot:<a href="#section-18.2-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-18.2-4.1">
+            <p id="section-18.2-4.1.1">issue credentials;<a href="#section-18.2-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.2-4.2">
+            <p id="section-18.2-4.2.1">set or change Mission lifecycle state;<a href="#section-18.2-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.2-4.3">
+            <p id="section-18.2-4.3.1">bypass the approval event; or<a href="#section-18.2-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.2-4.4">
+            <p id="section-18.2-4.4.1">cause a Resource Server to act without Mission Issuer-issued
+authority.<a href="#section-18.2-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-18.2-5">The Mission Issuer remains the enforcement point for approval and <span class="bcp14">MUST</span>
+validate and narrow the proposal. Deployments <span class="bcp14">SHOULD</span> monitor shaper
+versions and evidence for anomalous broadening.<a href="#section-18.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="prompt-injection">
@@ -2541,43 +2633,55 @@ attacker-influenceable: prompts may contain pasted content, content the
 user was tricked into typing, or content arriving through a non-prompt
 trigger such as an inbound email or webhook. Task text, tickets,
 documents, tool descriptions, and catalog metadata can all carry
-instructions aimed at the shaper. Concrete threats include attempts to
-expand <code>resources</code> beyond what the user requested, to push
-<code>expires_at</code> past deployment policy, to suppress a stated
-constraint, or to select a <code>purpose</code> the user did not choose.<a href="#section-18.3-1" class="pilcrow">¶</a></p>
-<p id="section-18.3-2">Mitigations the shaper <span class="bcp14">SHOULD</span> apply:<a href="#section-18.3-2" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-18.3-3">
-<li id="section-18.3-3.1">
-            <p id="section-18.3-3.1.1">Treat all prompt and attachment content as untrusted data, not as
+instructions aimed at the shaper. Concrete threats include attempts
+to:<a href="#section-18.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-18.3-2.1">
+            <p id="section-18.3-2.1.1">expand <code>resources</code> beyond what the user requested;<a href="#section-18.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.3-2.2">
+            <p id="section-18.3-2.2.1">push <code>expires_at</code> past deployment policy;<a href="#section-18.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.3-2.3">
+            <p id="section-18.3-2.3.1">suppress a stated constraint; or<a href="#section-18.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.3-2.4">
+            <p id="section-18.3-2.4.1">select a <code>purpose</code> the user did not choose.<a href="#section-18.3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-18.3-3">Mitigations the shaper <span class="bcp14">SHOULD</span> apply:<a href="#section-18.3-3" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-18.3-4">
+<li id="section-18.3-4.1">
+            <p id="section-18.3-4.1.1">Treat all prompt and attachment content as untrusted data, not as
 instructions to the shaper. Do not let it alter shaper policy or
-override deployment defaults.<a href="#section-18.3-3.1.1" class="pilcrow">¶</a></p>
+override deployment defaults.<a href="#section-18.3-4.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-18.3-3.2">
-            <p id="section-18.3-3.2.1">Apply the refusal behavior of <a href="#refusal" class="auto internal xref">Section 8.2</a> when the input exhibits
-injection patterns.<a href="#section-18.3-3.2.1" class="pilcrow">¶</a></p>
+          <li id="section-18.3-4.2">
+            <p id="section-18.3-4.2.1">Apply the refusal behavior of <a href="#refusal" class="auto internal xref">Section 8.2</a> when the input exhibits
+injection patterns.<a href="#section-18.3-4.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-18.3-3.3">
-            <p id="section-18.3-3.3.1">Do not echo verbatim prompt-derived instruction text into <code>goal</code> or
+          <li id="section-18.3-4.3">
+            <p id="section-18.3-4.3.1">Do not echo verbatim prompt-derived instruction text into <code>goal</code> or
 <code>constraints</code> the Approver will read; paraphrase, or quote with clear
 attribution, but do not present injected content as if it came from
-the user.<a href="#section-18.3-3.3.1" class="pilcrow">¶</a></p>
+the user.<a href="#section-18.3-4.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-18.3-3.4">
-            <p id="section-18.3-3.4.1">Use the capability sources' resolved vocabulary as a hard allowlist
+          <li id="section-18.3-4.4">
+            <p id="section-18.3-4.4.1">Use the capability sources' resolved vocabulary as a hard allowlist
 (<a href="#capability-resolution" class="auto internal xref">Section 9</a>); do not infer new authority types from
-the prompt.<a href="#section-18.3-3.4.1" class="pilcrow">¶</a></p>
+the prompt.<a href="#section-18.3-4.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-18.3-3.5">
-            <p id="section-18.3-3.5.1">Record the prompt, the parsed intent, and the chosen defaults in
-Shaping Evidence so an auditor can reconstruct what the shaper saw.<a href="#section-18.3-3.5.1" class="pilcrow">¶</a></p>
+          <li id="section-18.3-4.5">
+            <p id="section-18.3-4.5.1">Record the prompt, the parsed intent, and the chosen defaults in
+Shaping Evidence so an auditor can reconstruct what the shaper saw.<a href="#section-18.3-4.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-18.3-4">Injection cannot be fully eliminated at the shaper. The defense in depth
+<p id="section-18.3-5">Injection cannot be fully eliminated at the shaper. The defense in depth
 is the Approver seeing the Mission Intent in a consent disclosure
 rendered by the Mission Issuer, not by the shaper, before authority is
 bound. A shaper that builds Intent truthfully and a Mission Issuer that
 renders disclosure truthfully together make injection visible at the
-approval step.<a href="#section-18.3-4" class="pilcrow">¶</a></p>
+approval step.<a href="#section-18.3-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="silent-broadening">
@@ -2589,9 +2693,10 @@ approval step.<a href="#section-18.3-4" class="pilcrow">¶</a></p>
 wide Authority Set. The ambiguity rules of <a href="#ambiguity" class="auto internal xref">Section 8</a> are intended to
 fail closed by requiring clarification, narrowing, or refusal. A
 proposal shaped against an old catalog can also resolve the wrong
-capability; capability resolutions <span class="bcp14">SHOULD</span> record source digests
-(<a href="#capability-resolution" class="auto internal xref">Section 9</a>) and deployments <span class="bcp14">SHOULD</span> re-shape when catalog
-data is volatile, so approval and runtime enforcement can detect drift.<a href="#section-18.4-1" class="pilcrow">¶</a></p>
+capability. Capability resolutions <span class="bcp14">SHOULD</span> record source digests
+(<a href="#capability-resolution" class="auto internal xref">Section 9</a>), so approval and runtime enforcement can
+detect drift. Deployments <span class="bcp14">SHOULD</span> re-shape when catalog data is
+volatile.<a href="#section-18.4-1" class="pilcrow">¶</a></p>
 <p id="section-18.4-2">Re-shaping adds a loop variant of the same failure: widening by retry,
 where refused authority is resubmitted in different words until
 something passes, or successive proposals walk the Mission Issuer's
@@ -2647,22 +2752,34 @@ from where that content flows.<a href="#section-19-1" class="pilcrow">¶</a></p>
 <code>resources</code>, <code>constraints</code>, and <code>controls</code>, which the Mission Issuer
 renders in a consent disclosure the Approver reads and which may be
 retained in the Mission record. A shaper <span class="bcp14">SHOULD</span> carry into these fields
-only the content needed to describe the task, <span class="bcp14">SHOULD NOT</span> widen
+only the content needed to describe the task. It <span class="bcp14">SHOULD NOT</span> widen
 <code>resources</code> or echo unrelated prompt content
-(<a href="#mission-intent-proposal" class="auto internal xref">Section 7</a>), and <span class="bcp14">SHOULD</span> avoid copying third-party
+(<a href="#mission-intent-proposal" class="auto internal xref">Section 7</a>). It <span class="bcp14">SHOULD</span> avoid copying third-party
 personal data into <code>goal</code> where a non-identifying description suffices.<a href="#section-19-2" class="pilcrow">¶</a></p>
 <p id="section-19-3">Shaping Evidence aggregates the prompt, applied defaults, inferences,
 and model outputs into one artifact and is therefore a concentrated sink
-of sensitive content. Deployments <span class="bcp14">SHOULD</span> minimize retained raw task
-text, prefer digests where full content is not required for audit, apply
-access controls equivalent to those used for Mission records, and be
-able to produce a redacted evidence record for audiences that need the
-transformation provenance but not the raw prompt.<a href="#section-19-3" class="pilcrow">¶</a></p>
-<p id="section-19-4">The shaper introduces no identifier of its own and is not a separate
+of sensitive content. Deployments <span class="bcp14">SHOULD</span>:<a href="#section-19-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-19-4.1">
+          <p id="section-19-4.1.1">minimize retained raw task text;<a href="#section-19-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-19-4.2">
+          <p id="section-19-4.2.1">prefer digests where full content is not required for audit;<a href="#section-19-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-19-4.3">
+          <p id="section-19-4.3.1">apply access controls equivalent to those used for Mission records;
+and<a href="#section-19-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-19-4.4">
+          <p id="section-19-4.4.1">be able to produce a redacted evidence record for audiences that
+need the transformation provenance but not the raw prompt.<a href="#section-19-4.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-19-5">The shaper introduces no identifier of its own and is not a separate
 principal to the Mission Issuer (<a href="#role-and-trust-boundary" class="auto internal xref">Section 5</a>). It
 therefore adds no cross-party correlation surface beyond the prompt
 content it processes and the requesting-client identity the Mission
-Issuer already sees.<a href="#section-19-4" class="pilcrow">¶</a></p>
+Issuer already sees.<a href="#section-19-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">
