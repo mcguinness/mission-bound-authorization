@@ -120,11 +120,13 @@ deplete across the life of the Mission, and enforcing them is a
 metering problem with reserve, commit, retry, and
 distributed-consistency concerns of its own.
 
-This document defines that metering layer: the consumption-bounds
-vocabulary a Mission Intent carries, the metering semantics a runtime
-deployment enforces, and the AuthZEN wire binding
-({{I-D.draft-mcguinness-mission-authzen}}) for settlement and
-duration-lease renewal.
+This document defines that metering layer:
+
+- the consumption-bounds vocabulary a Mission Intent carries,
+- the metering semantics a runtime deployment enforces, and
+- the AuthZEN wire binding
+  ({{I-D.draft-mcguinness-mission-authzen}}) for settlement and
+  duration-lease renewal.
 
 # Status: An Experimental Extension {#optional-status}
 
@@ -171,13 +173,17 @@ Consumption bound:
 
 This profile is defined against the Mission model rather than against
 OAuth 2.0 mechanics. It consumes these substrate primitives
-({{I-D.draft-mcguinness-mission-substrate}}): the Mission Identifier
-and issuer, which key every consumption counter; the Authority Set
-representation, from which a `call_class` SHOULD be drawn
-({{bounds}}); and the integrity-anchor envelope, through which the
-bounds are committed by `intent_hash` as Mission Intent `controls`
-members. It defines no binding of its own: enforcement composes
-through the runtime profile's Mission binding establishment step
+({{I-D.draft-mcguinness-mission-substrate}}):
+
+- the Mission Identifier and issuer, which key every consumption
+  counter;
+- the Authority Set representation, from which a `call_class` SHOULD
+  be drawn ({{bounds}}); and
+- the integrity-anchor envelope, through which the bounds are
+  committed by `intent_hash` as Mission Intent `controls` members.
+
+It defines no binding of its own: enforcement composes through the
+runtime profile's Mission binding establishment step
 ({{I-D.draft-mcguinness-mission-runtime}}), and metering adds
 counters to the runtime decision.
 
@@ -276,18 +282,22 @@ Mission carries.
 
 A deployment MUST NOT render a consumption bound to the Approver as
 enforced unless the bound is within a runtime enforcement scope that
-meters it under this document. A deployment that accepts the bounds
-into the Intent but does not meter them presents an unenforced promise
-at the consent surface; a Mission Issuer whose deployment does not
-meter a bound MUST refuse an Intent that carries it at intake, and MUST
-NOT render it as an enforced limit.
+meters it under this document. A Mission Issuer whose deployment does
+not meter a bound MUST refuse an Intent that carries it at intake.
+Such an Issuer MUST NOT render the bound as an enforced limit. A
+deployment that accepts the bounds into the Intent but does not meter
+them presents an unenforced promise at the consent surface.
 
 Under a multi-PDP topology ({{topology}}), a consented hard cap the
-deployment renders as enforced MUST either be realized as structurally
-exact relaxations, per-PDP sub-budgets that sum to the cap, or be
-rendered with the consistency qualifier the topology operates under, so
-the Approver consents to the guarantee the deployment can meet rather
-than to a hard number it cannot.
+deployment renders as enforced MUST either:
+
+- be realized as structurally exact relaxations: per-PDP sub-budgets
+  that sum to the cap; or
+- be rendered with the consistency qualifier the topology operates
+  under.
+
+Either way the Approver consents to the guarantee the deployment can
+meet rather than to a hard number it cannot.
 
 # Consumption Metering {#metering}
 
@@ -310,37 +320,45 @@ Consumption bounds are enforced by the runtime profile's PDP
   or URL whose referent egresses while the pointer is what
   `parameter_digest` commits, the Operation Profile MUST measure the
   dereferenced payload size, or the deployment MUST exclude such
-  actions from a claimed `bytes` bound; counting the pointer bytes
+  actions from a claimed `bytes` bound. Counting the pointer bytes
   alone understates the egress.
-- `max_duration`: the PDP
-  accumulates the duration of consequential activity it reserves,
-  commits, or permits and MUST refuse once that total would exceed the
-  bound. The PDP MUST accumulate `max_duration` as the sum of
-  per-action measured durations, not the union of activity intervals,
-  so concurrent actions each count against the bound. For an action
-  whose duration is not known before execution,
-  the PDP MUST either reserve a bounded maximum duration or issue a
-  duration lease that expires unless renewed; the PEP MUST stop the
-  action or obtain a new permit before the reservation or lease is
-  exhausted. Lease boundaries MUST carry a clock-skew margin: the PEP
-  renews or stops ahead of expiry by at least the deployment's skew
-  bound, so a renewal in flight does not race the expiry it extends.
-  For an action that cannot be safely stopped mid-execution, lease
-  exhaustion is handled as an in-flight outcome under the orchestration
-  profile's `dispatched_not_committed` or `unknown` classes
-  ({{I-D.draft-mcguinness-mission-orchestration}}), not by severing
-  the action. After execution, the PEP MUST report the measured
-  duration so the PDP can commit actual use and release any unused
-  reservation. The Operation Profile defines how a single action's
-  duration is measured so that PDPs accumulate consistently.
+- `max_duration`: the PDP accumulates the duration of consequential
+  activity it reserves, commits, or permits, under these rules:
+
+  1. The PDP MUST refuse once the accumulated total would exceed the
+     bound.
+  2. The PDP MUST accumulate `max_duration` as the sum of per-action
+     measured durations, not the union of activity intervals, so
+     concurrent actions each count against the bound.
+  3. For an action whose duration is not known before execution, the
+     PDP MUST either reserve a bounded maximum duration or issue a
+     duration lease that expires unless renewed.
+  4. The PEP MUST stop the action or obtain a new permit before the
+     reservation or lease is exhausted.
+  5. Lease boundaries MUST carry a clock-skew margin: the PEP renews
+     or stops ahead of expiry by at least the deployment's skew
+     bound, so a renewal in flight does not race the expiry it
+     extends.
+  6. For an action that cannot be safely stopped mid-execution, lease
+     exhaustion is handled as an in-flight outcome under the
+     orchestration profile's `dispatched_not_committed` or `unknown`
+     classes ({{I-D.draft-mcguinness-mission-orchestration}}), not by
+     severing the action.
+  7. After execution, the PEP MUST report the measured duration so
+     the PDP can commit actual use and release any unused
+     reservation.
+
+  The Operation Profile defines how a single action's duration is
+  measured so that PDPs accumulate consistently.
 
 A per-entry `constraints` value that expresses a cumulative consumption
 bound is metered the same way. When an applicable entry or the
 Mission's `controls` carries such a bound, the PDP MUST meter use
-against it and MUST refuse a consequential action that would exceed it.
-The runtime profile's fail-closed rule stands beneath all of this: an
-unmetered or unrecognized consumption bound MUST cause refusal rather
-than silent pass-through ({{I-D.draft-mcguinness-mission-runtime}}).
+against it. The PDP MUST refuse a consequential action that would
+exceed it. The runtime profile's fail-closed rule stands beneath all
+of this: an unmetered or unrecognized consumption bound MUST cause
+refusal rather than silent pass-through
+({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## Exactness and Topology {#topology}
 
@@ -370,7 +388,7 @@ bound twice. Reuse of an idempotency key or decision identifier for a
 different normalized action MUST cause refusal. For irreversible
 actions and external commitments, a deployment MUST define whether
 metering is reserved before execution and committed after success, or
-committed before execution; it MUST NOT leave the decrement ambiguous.
+committed before execution. It MUST NOT leave the decrement ambiguous.
 A failed attempt releases any reserved consumption per the deployment's
 documented reserve/commit posture.
 
@@ -384,10 +402,12 @@ selector, atomically with the permit; for the Mission's remaining
 lifetime the PDP MUST refuse a consequential action matching any
 other selector of the same group. The latch is per group and per
 Mission and is PDP-side operational state like a consumption counter
-({{metering}}). The latch tracks execution, not permit issuance: a
-permit whose action is affirmatively not executed never combined the
-group's authority, so when Execution Evidence reports that outcome
-within the strongly consistent latch domain the PDP releases the latch,
+({{metering}}).
+
+The latch tracks execution, not permit issuance: a permit whose
+action is affirmatively not executed never combined the group's
+authority, so when Execution Evidence reports that outcome within the
+strongly consistent latch domain the PDP releases the latch,
 restoring monotonic narrowing rather than breaking it. Absent that
 affirmative non-execution the latch does not unlatch: narrowing by
 exercise is monotonic, like every other narrowing in the family.
@@ -396,13 +416,16 @@ The latch is exempt from the relaxations of {{topology}}. A counter
 degrades gracefully under a per-PDP sub-budget or a reconciliation
 window; a separation-of-duty rule violated once is violated
 permanently, and two PDPs can latch the same group to opposite
-selectors within the window. An exclusivity group MUST therefore be
-enforced in a single strongly consistent per-Mission latch domain
-(the runtime profile's Mission-sharding guidance makes the Mission
-the consistency unit, {{I-D.draft-mcguinness-mission-runtime}}), the
-sub-budget and reconciliation-window relaxations MUST NOT be applied
-to `exclusive`, and the deployment MUST name the latch domain in its
-Enforcement Scope Statement.
+selectors within the window. Therefore:
+
+- An exclusivity group MUST be enforced in a single strongly
+  consistent per-Mission latch domain (the runtime profile's
+  Mission-sharding guidance makes the Mission the consistency unit,
+  {{I-D.draft-mcguinness-mission-runtime}}).
+- The sub-budget and reconciliation-window relaxations MUST NOT be
+  applied to `exclusive`.
+- The deployment MUST name the latch domain in its Enforcement Scope
+  Statement.
 
 Exclusivity turns the quarantine deployment pattern
 ({{I-D.draft-mcguinness-mission-architecture}}) into consented,
@@ -454,14 +477,16 @@ deployment the AuthZEN profile remains an informative reference.
 
 When metering a bound would exceed it, the PDP MUST deny with
 `quota_exceeded` ({{I-D.draft-mcguinness-mission-authzen}}) instead of
-returning a permit, and MUST record `quota_exceeded` as the
-`denial_reason` in Decision Evidence. Whether a metered permit is
-reserved at decision time and committed on settlement, or committed at
-decision time, follows the deployment's documented reserve/commit
-posture ({{retry}}); this binding fixes neither. In a batch (boxcar)
-evaluation, consumption metering applies per item in request order. The
-exactness of the bound is the consistency bound of {{topology}}, not a
-property of this wire binding.
+returning a permit. The PDP MUST record `quota_exceeded` as the
+`denial_reason` in Decision Evidence.
+
+Whether a metered permit is reserved at decision time and committed on
+settlement, or committed at decision time, follows the deployment's
+documented reserve/commit posture ({{retry}}); this binding fixes
+neither. In a batch (boxcar) evaluation, consumption metering applies
+per item in request order. The exactness of the bound is the
+consistency bound of {{topology}}, not a property of this wire
+binding.
 
 ## Settlement Exchange {#settlement-exchange}
 
@@ -471,12 +496,14 @@ binding, delivery of the Execution Evidence Object
 ({{I-D.draft-mcguinness-mission-authzen}}) to the PDP is that
 commit-or-release signal: on receipt the PDP commits the consumption
 the linked action used and releases any reserved excess, keyed to the
-Execution Evidence's `decision_id`. The deployment MUST provide a
-settlement transport for this signal: a PDP evidence-submission path,
-or an equivalent channel, with at-least-once delivery and a commit that
-is idempotent on the Execution Evidence's `decision_id`, so a
-redelivered settlement neither double-commits the consumption nor
-double-releases the reservation.
+Execution Evidence's `decision_id`.
+
+The deployment MUST provide a settlement transport for this signal:
+a PDP evidence-submission path, or an equivalent channel, with
+at-least-once delivery and a commit that is idempotent on the
+Execution Evidence's `decision_id`, so a redelivered settlement
+neither double-commits the consumption nor double-releases the
+reservation.
 
 Settlement can also fail to arrive. A reservation MUST carry a bounded
 lease so a crashed or abandoned reservation does not consume the budget
@@ -488,22 +515,25 @@ budget; for a non-idempotent action class, expiry forces reconciliation
 or human review rather than release. An unsettled reservation remains
 charged against the bound until it is reconciled, and is released only
 on affirmative evidence of non-execution; timeout alone never releases a
-reservation for a non-idempotent action class. The operational
-consequence: a lossy evidence channel accumulates reservations
-against `max_budget` and `max_calls` until the Mission starves on
-`quota_exceeded`, a self-inflicted denial of service. A deployment
-SHOULD run orphaned-evidence reconciliation on a published cadence
-sized to its evidence-channel loss rate; the reconciliation window
-it publishes is how long leaked budget stays leaked.
+reservation for a non-idempotent action class.
+
+The operational consequence: a lossy evidence channel accumulates
+reservations against `max_budget` and `max_calls` until the Mission
+starves on `quota_exceeded`, a self-inflicted denial of service. A
+deployment SHOULD run orphaned-evidence reconciliation on a published
+cadence sized to its evidence-channel loss rate; the reconciliation
+window it publishes is how long leaked budget stays leaked.
 
 For a duration-metered action the PEP reports the measured duration in
 the Execution Evidence `measured_duration` member, and the PDP commits
 that duration against `max_duration`. A duration-lease renewal is a new
 re-evaluation request that carries the prior permit's `decision_id` in
 `context.prior_decision_id`, so the PDP continues the same metered
-activity rather than opening a new reservation. The PDP MUST verify
-that the renewal's Mission, subject, action, and audience match the
-decision named by `prior_decision_id`. A deployment sizes lease
+activity rather than opening a new reservation.
+
+The PDP MUST verify that the renewal's Mission, subject, action, and
+audience match the decision named by `prior_decision_id`. A
+deployment sizes lease
 intervals to amortize renewals: an interval materially shorter than
 the action class's staleness bound adds decision load without
 tightening the revocation cutoff. This exchange requires
@@ -583,7 +613,7 @@ A runtime deployment that claims this profile MUST:
   exchange of {{settlement-exchange}}.
 
 A Mission Issuer in a deployment claiming this profile MUST carry the
-consented bounds on the Mission record committed by `intent_hash`, and
+consented bounds on the Mission record committed by `intent_hash`. It
 MUST render them at the approval event per {{consent}}.
 
 # Security Considerations {#security-considerations}
@@ -596,8 +626,8 @@ Their enforcement, however, is only as good as the metering:
 - **Unenforced bounds are consent theater.** A bound rendered at
   approval but not metered anywhere misleads the Approver about the
   Mission's exposure. The consent-integrity rule ({{consent}}) exists
-  for this; a deployment that cannot meter MUST NOT render the bound as
-  enforced.
+  for this: it forbids a deployment that cannot meter a bound from
+  rendering it as enforced.
 - **Distributed undercounting.** Under a multi-PDP topology, an
   attacker who can spread actions across decision points exploits the
   consistency gap. The published consistency bound ({{topology}}) is
@@ -609,8 +639,9 @@ Their enforcement, however, is only as good as the metering:
   under-report duration or spend, which is within the runtime profile's
   trusted-base assumptions for PEPs.
 - **Lease abandonment.** An agent that stops renewing a duration lease
-  and keeps acting is stopped by the PEP, which MUST stop the action or
-  obtain a new permit before the lease is exhausted ({{metering}}).
+  and keeps acting is stopped by the PEP, which {{metering}} requires
+  to stop the action or obtain a new permit before the lease is
+  exhausted.
 - **Reservation starvation.** An attacker who opens reservations and
   never settles them can consume a budget with no executed action,
   denying the Mission its remaining authority. The bounded reservation
@@ -631,14 +662,16 @@ fine-grained record of Mission activity over time. It SHOULD be
 retained under the same access controls and retention windows as
 runtime enforcement evidence
 ({{I-D.draft-mcguinness-mission-runtime}}), and disclosed in decision
-responses only as refusals, not as remaining-balance oracles. The
-refusal boundary is itself a coarse balance oracle: the point at which a
-bound flips from permit to refusal reveals the remaining margin. A
-deployment SHOULD bound this probing with the AuthZEN profile's
-denial-oracle controls ({{I-D.draft-mcguinness-mission-authzen}}),
-per-Mission rate-limiting of access requests and evidence-logging of
-request provenance, so a compromised agent mapping a balance by
-repeated probes is visible to the humans adjudicating it.
+responses only as refusals, not as remaining-balance oracles.
+
+The refusal boundary is itself a coarse balance oracle: the point at
+which a bound flips from permit to refusal reveals the remaining
+margin. A deployment SHOULD bound this probing with the AuthZEN
+profile's denial-oracle controls
+({{I-D.draft-mcguinness-mission-authzen}}), per-Mission rate-limiting
+of access requests and evidence-logging of request provenance, so a
+compromised agent mapping a balance by repeated probes is visible to
+the humans adjudicating it.
 
 # IANA Considerations {#iana}
 
