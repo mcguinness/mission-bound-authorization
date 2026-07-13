@@ -1269,11 +1269,20 @@ activity. Those are not per-action constraints; they are counters that
 deplete across the life of the Mission, and enforcing them is a
 metering problem with reserve, commit, retry, and
 distributed-consistency concerns of its own.<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">This document defines that metering layer: the consumption-bounds
-vocabulary a Mission Intent carries, the metering semantics a runtime
-deployment enforces, and the AuthZEN wire binding
+<p id="section-1-2">This document defines that metering layer:<a href="#section-1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1-3.1">
+          <p id="section-1-3.1.1">the consumption-bounds vocabulary a Mission Intent carries,<a href="#section-1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-3.2">
+          <p id="section-1-3.2.1">the metering semantics a runtime deployment enforces, and<a href="#section-1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-3.3">
+          <p id="section-1-3.3.1">the AuthZEN wire binding
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) for settlement and
-duration-lease renewal.<a href="#section-1-2" class="pilcrow">¶</a></p>
+duration-lease renewal.<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
 </section>
 </div>
 <div id="optional-status">
@@ -1341,15 +1350,25 @@ independently on each action.<a href="#section-4-2.2.1" class="pilcrow">¶</a></
       </h2>
 <p id="section-5-1">This profile is defined against the Mission model rather than against
 OAuth 2.0 mechanics. It consumes these substrate primitives
-(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>): the Mission Identifier
-and issuer, which key every consumption counter; the Authority Set
-representation, from which a <code>call_class</code> <span class="bcp14">SHOULD</span> be drawn
-(<a href="#bounds" class="auto internal xref">Section 6</a>); and the integrity-anchor envelope, through which the
-bounds are committed by <code>intent_hash</code> as Mission Intent <code>controls</code>
-members. It defines no binding of its own: enforcement composes
-through the runtime profile's Mission binding establishment step
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>):<a href="#section-5-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5-2.1">
+          <p id="section-5-2.1.1">the Mission Identifier and issuer, which key every consumption
+counter;<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.2">
+          <p id="section-5-2.2.1">the Authority Set representation, from which a <code>call_class</code> <span class="bcp14">SHOULD</span>
+be drawn (<a href="#bounds" class="auto internal xref">Section 6</a>); and<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.3">
+          <p id="section-5-2.3.1">the integrity-anchor envelope, through which the bounds are
+committed by <code>intent_hash</code> as Mission Intent <code>controls</code> members.<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-5-3">It defines no binding of its own: enforcement composes through the
+runtime profile's Mission binding establishment step
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and metering adds
-counters to the runtime decision.<a href="#section-5-1" class="pilcrow">¶</a></p>
+counters to the runtime decision.<a href="#section-5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="bounds">
@@ -1483,16 +1502,25 @@ rendered authority summary <span class="bcp14">MUST</span> include the consumpti
 Mission carries.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 <p id="section-6.1-2">A deployment <span class="bcp14">MUST NOT</span> render a consumption bound to the Approver as
 enforced unless the bound is within a runtime enforcement scope that
-meters it under this document. A deployment that accepts the bounds
-into the Intent but does not meter them presents an unenforced promise
-at the consent surface; a Mission Issuer whose deployment does not
-meter a bound <span class="bcp14">MUST</span> refuse an Intent that carries it at intake, and <span class="bcp14">MUST NOT</span> render it as an enforced limit.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+meters it under this document. A Mission Issuer whose deployment does
+not meter a bound <span class="bcp14">MUST</span> refuse an Intent that carries it at intake.
+Such an Issuer <span class="bcp14">MUST NOT</span> render the bound as an enforced limit. A
+deployment that accepts the bounds into the Intent but does not meter
+them presents an unenforced promise at the consent surface.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
 <p id="section-6.1-3">Under a multi-PDP topology (<a href="#topology" class="auto internal xref">Section 7.1</a>), a consented hard cap the
-deployment renders as enforced <span class="bcp14">MUST</span> either be realized as structurally
-exact relaxations, per-PDP sub-budgets that sum to the cap, or be
-rendered with the consistency qualifier the topology operates under, so
-the Approver consents to the guarantee the deployment can meet rather
-than to a hard number it cannot.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+deployment renders as enforced <span class="bcp14">MUST</span> either:<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.1-4.1">
+            <p id="section-6.1-4.1.1">be realized as structurally exact relaxations: per-PDP sub-budgets
+that sum to the cap; or<a href="#section-6.1-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-4.2">
+            <p id="section-6.1-4.2.1">be rendered with the consistency qualifier the topology operates
+under.<a href="#section-6.1-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.1-5">Either way the Approver consents to the guarantee the deployment can
+meet rather than to a hard number it cannot.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1526,40 +1554,63 @@ reference-typed parameter, one that carries an attachment identifier
 or URL whose referent egresses while the pointer is what
 <code>parameter_digest</code> commits, the Operation Profile <span class="bcp14">MUST</span> measure the
 dereferenced payload size, or the deployment <span class="bcp14">MUST</span> exclude such
-actions from a claimed <code>bytes</code> bound; counting the pointer bytes
+actions from a claimed <code>bytes</code> bound. Counting the pointer bytes
 alone understates the egress.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.4">
-          <p id="section-7-2.4.1"><code>max_duration</code>: the PDP
-accumulates the duration of consequential activity it reserves,
-commits, or permits and <span class="bcp14">MUST</span> refuse once that total would exceed the
-bound. The PDP <span class="bcp14">MUST</span> accumulate <code>max_duration</code> as the sum of
-per-action measured durations, not the union of activity intervals,
-so concurrent actions each count against the bound. For an action
-whose duration is not known before execution,
-the PDP <span class="bcp14">MUST</span> either reserve a bounded maximum duration or issue a
-duration lease that expires unless renewed; the PEP <span class="bcp14">MUST</span> stop the
-action or obtain a new permit before the reservation or lease is
-exhausted. Lease boundaries <span class="bcp14">MUST</span> carry a clock-skew margin: the PEP
-renews or stops ahead of expiry by at least the deployment's skew
-bound, so a renewal in flight does not race the expiry it extends.
-For an action that cannot be safely stopped mid-execution, lease
-exhaustion is handled as an in-flight outcome under the orchestration
-profile's <code>dispatched_not_committed</code> or <code>unknown</code> classes
-(<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>), not by severing
-the action. After execution, the PEP <span class="bcp14">MUST</span> report the measured
-duration so the PDP can commit actual use and release any unused
-reservation. The Operation Profile defines how a single action's
-duration is measured so that PDPs accumulate consistently.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.4.1"><code>max_duration</code>: the PDP accumulates the duration of consequential
+activity it reserves, commits, or permits, under these rules:<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-7-2.4.2">
+<li id="section-7-2.4.2.1">
+              <p id="section-7-2.4.2.1.1">The PDP <span class="bcp14">MUST</span> refuse once the accumulated total would exceed the
+bound.<a href="#section-7-2.4.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-7-2.4.2.2">
+              <p id="section-7-2.4.2.2.1">The PDP <span class="bcp14">MUST</span> accumulate <code>max_duration</code> as the sum of per-action
+measured durations, not the union of activity intervals, so
+concurrent actions each count against the bound.<a href="#section-7-2.4.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-7-2.4.2.3">
+              <p id="section-7-2.4.2.3.1">For an action whose duration is not known before execution, the
+PDP <span class="bcp14">MUST</span> either reserve a bounded maximum duration or issue a
+duration lease that expires unless renewed.<a href="#section-7-2.4.2.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-7-2.4.2.4">
+              <p id="section-7-2.4.2.4.1">The PEP <span class="bcp14">MUST</span> stop the action or obtain a new permit before the
+reservation or lease is exhausted.<a href="#section-7-2.4.2.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-7-2.4.2.5">
+              <p id="section-7-2.4.2.5.1">Lease boundaries <span class="bcp14">MUST</span> carry a clock-skew margin: the PEP renews
+or stops ahead of expiry by at least the deployment's skew
+bound, so a renewal in flight does not race the expiry it
+extends.<a href="#section-7-2.4.2.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-7-2.4.2.6">
+              <p id="section-7-2.4.2.6.1">For an action that cannot be safely stopped mid-execution, lease
+exhaustion is handled as an in-flight outcome under the
+orchestration profile's <code>dispatched_not_committed</code> or <code>unknown</code>
+classes (<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>), not by
+severing the action.<a href="#section-7-2.4.2.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-7-2.4.2.7">
+              <p id="section-7-2.4.2.7.1">After execution, the PEP <span class="bcp14">MUST</span> report the measured duration so
+the PDP can commit actual use and release any unused
+reservation.<a href="#section-7-2.4.2.7.1" class="pilcrow">¶</a></p>
+</li>
+          </ol>
+<p id="section-7-2.4.3">
+The Operation Profile defines how a single action's duration is
+measured so that PDPs accumulate consistently.<a href="#section-7-2.4.3" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-3">A per-entry <code>constraints</code> value that expresses a cumulative consumption
 bound is metered the same way. When an applicable entry or the
 Mission's <code>controls</code> carries such a bound, the PDP <span class="bcp14">MUST</span> meter use
-against it and <span class="bcp14">MUST</span> refuse a consequential action that would exceed it.
-The runtime profile's fail-closed rule stands beneath all of this: an
-unmetered or unrecognized consumption bound <span class="bcp14">MUST</span> cause refusal rather
-than silent pass-through (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-7-3" class="pilcrow">¶</a></p>
+against it. The PDP <span class="bcp14">MUST</span> refuse a consequential action that would
+exceed it. The runtime profile's fail-closed rule stands beneath all
+of this: an unmetered or unrecognized consumption bound <span class="bcp14">MUST</span> cause
+refusal rather than silent pass-through
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-7-3" class="pilcrow">¶</a></p>
 <div id="topology">
 <section id="section-7.1">
         <h3 id="name-exactness-and-topology">
@@ -1599,7 +1650,7 @@ bound twice. Reuse of an idempotency key or decision identifier for a
 different normalized action <span class="bcp14">MUST</span> cause refusal. For irreversible
 actions and external commitments, a deployment <span class="bcp14">MUST</span> define whether
 metering is reserved before execution and committed after success, or
-committed before execution; it <span class="bcp14">MUST NOT</span> leave the decrement ambiguous.
+committed before execution. It <span class="bcp14">MUST NOT</span> leave the decrement ambiguous.
 A failed attempt releases any reserved consumption per the deployment's
 documented reserve/commit posture.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 </section>
@@ -1619,38 +1670,49 @@ selector, atomically with the permit; for the Mission's remaining
 lifetime the PDP <span class="bcp14">MUST</span> refuse a consequential action matching any
 other selector of the same group. The latch is per group and per
 Mission and is PDP-side operational state like a consumption counter
-(<a href="#metering" class="auto internal xref">Section 7</a>). The latch tracks execution, not permit issuance: a
-permit whose action is affirmatively not executed never combined the
-group's authority, so when Execution Evidence reports that outcome
-within the strongly consistent latch domain the PDP releases the latch,
+(<a href="#metering" class="auto internal xref">Section 7</a>).<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">The latch tracks execution, not permit issuance: a permit whose
+action is affirmatively not executed never combined the group's
+authority, so when Execution Evidence reports that outcome within the
+strongly consistent latch domain the PDP releases the latch,
 restoring monotonic narrowing rather than breaking it. Absent that
 affirmative non-execution the latch does not unlatch: narrowing by
-exercise is monotonic, like every other narrowing in the family.<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">The latch is exempt from the relaxations of <a href="#topology" class="auto internal xref">Section 7.1</a>. A counter
+exercise is monotonic, like every other narrowing in the family.<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-3">The latch is exempt from the relaxations of <a href="#topology" class="auto internal xref">Section 7.1</a>. A counter
 degrades gracefully under a per-PDP sub-budget or a reconciliation
 window; a separation-of-duty rule violated once is violated
 permanently, and two PDPs can latch the same group to opposite
-selectors within the window. An exclusivity group <span class="bcp14">MUST</span> therefore be
-enforced in a single strongly consistent per-Mission latch domain
-(the runtime profile's Mission-sharding guidance makes the Mission
-the consistency unit, <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), the
-sub-budget and reconciliation-window relaxations <span class="bcp14">MUST NOT</span> be applied
-to <code>exclusive</code>, and the deployment <span class="bcp14">MUST</span> name the latch domain in its
-Enforcement Scope Statement.<a href="#section-8-2" class="pilcrow">¶</a></p>
-<p id="section-8-3">Exclusivity turns the quarantine deployment pattern
+selectors within the window. Therefore:<a href="#section-8-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-4.1">
+          <p id="section-8-4.1.1">An exclusivity group <span class="bcp14">MUST</span> be enforced in a single strongly
+consistent per-Mission latch domain (the runtime profile's
+Mission-sharding guidance makes the Mission the consistency unit,
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-8-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-4.2">
+          <p id="section-8-4.2.1">The sub-budget and reconciliation-window relaxations <span class="bcp14">MUST NOT</span> be
+applied to <code>exclusive</code>.<a href="#section-8-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-4.3">
+          <p id="section-8-4.3.1">The deployment <span class="bcp14">MUST</span> name the latch domain in its Enforcement Scope
+Statement.<a href="#section-8-4.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-8-5">Exclusivity turns the quarantine deployment pattern
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) into consented,
 enforceable structure: an Approver can approve a Mission that may
 read a sensitive store or communicate externally, but never both.
 The groups are consented at the approval event, committed by
 <code>intent_hash</code> with the other <code>controls</code> members, and rendered in the
-consent disclosure (<a href="#consent" class="auto internal xref">Section 6.1</a> applies unchanged).<a href="#section-8-3" class="pilcrow">¶</a></p>
-<p id="section-8-4">In the AuthZEN binding, a refusal under a latched group is denied
+consent disclosure (<a href="#consent" class="auto internal xref">Section 6.1</a> applies unchanged).<a href="#section-8-5" class="pilcrow">¶</a></p>
+<p id="section-8-6">In the AuthZEN binding, a refusal under a latched group is denied
 with <code>exclusivity_latched</code>, an extension of the runtime denial set
 under the AuthZEN profile's coordinated-extension conventions
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), and recorded as the
 <code>denial_reason</code> in Decision Evidence. A PDP that cannot establish a
 group's latch state fails closed for the actions the group covers,
-per the runtime profile's availability posture.<a href="#section-8-4" class="pilcrow">¶</a></p>
+per the runtime profile's availability posture.<a href="#section-8-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="aggregate-bounds">
@@ -1691,14 +1753,15 @@ AuthZEN binding under that profile's conformance; for every other
 deployment the AuthZEN profile remains an informative reference.<a href="#section-10-1" class="pilcrow">¶</a></p>
 <p id="section-10-2">When metering a bound would exceed it, the PDP <span class="bcp14">MUST</span> deny with
 <code>quota_exceeded</code> (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) instead of
-returning a permit, and <span class="bcp14">MUST</span> record <code>quota_exceeded</code> as the
-<code>denial_reason</code> in Decision Evidence. Whether a metered permit is
-reserved at decision time and committed on settlement, or committed at
-decision time, follows the deployment's documented reserve/commit
-posture (<a href="#retry" class="auto internal xref">Section 7.2</a>); this binding fixes neither. In a batch (boxcar)
-evaluation, consumption metering applies per item in request order. The
-exactness of the bound is the consistency bound of <a href="#topology" class="auto internal xref">Section 7.1</a>, not a
-property of this wire binding.<a href="#section-10-2" class="pilcrow">¶</a></p>
+returning a permit. The PDP <span class="bcp14">MUST</span> record <code>quota_exceeded</code> as the
+<code>denial_reason</code> in Decision Evidence.<a href="#section-10-2" class="pilcrow">¶</a></p>
+<p id="section-10-3">Whether a metered permit is reserved at decision time and committed on
+settlement, or committed at decision time, follows the deployment's
+documented reserve/commit posture (<a href="#retry" class="auto internal xref">Section 7.2</a>); this binding fixes
+neither. In a batch (boxcar) evaluation, consumption metering applies
+per item in request order. The exactness of the bound is the
+consistency bound of <a href="#topology" class="auto internal xref">Section 7.1</a>, not a property of this wire
+binding.<a href="#section-10-3" class="pilcrow">¶</a></p>
 <div id="settlement-exchange">
 <section id="section-10.1">
         <h3 id="name-settlement-exchange">
@@ -1710,13 +1773,14 @@ binding, delivery of the Execution Evidence Object
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) to the PDP is that
 commit-or-release signal: on receipt the PDP commits the consumption
 the linked action used and releases any reserved excess, keyed to the
-Execution Evidence's <code>decision_id</code>. The deployment <span class="bcp14">MUST</span> provide a
-settlement transport for this signal: a PDP evidence-submission path,
-or an equivalent channel, with at-least-once delivery and a commit that
-is idempotent on the Execution Evidence's <code>decision_id</code>, so a
-redelivered settlement neither double-commits the consumption nor
-double-releases the reservation.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
-<p id="section-10.1-2">Settlement can also fail to arrive. A reservation <span class="bcp14">MUST</span> carry a bounded
+Execution Evidence's <code>decision_id</code>.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<p id="section-10.1-2">The deployment <span class="bcp14">MUST</span> provide a settlement transport for this signal:
+a PDP evidence-submission path, or an equivalent channel, with
+at-least-once delivery and a commit that is idempotent on the
+Execution Evidence's <code>decision_id</code>, so a redelivered settlement
+neither double-commits the consumption nor double-releases the
+reservation.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
+<p id="section-10.1-3">Settlement can also fail to arrive. A reservation <span class="bcp14">MUST</span> carry a bounded
 lease so a crashed or abandoned reservation does not consume the budget
 permanently: on lease expiry without settlement the PDP reconciles the
 reservation through the runtime profile's orphaned-evidence process
@@ -1726,49 +1790,50 @@ budget; for a non-idempotent action class, expiry forces reconciliation
 or human review rather than release. An unsettled reservation remains
 charged against the bound until it is reconciled, and is released only
 on affirmative evidence of non-execution; timeout alone never releases a
-reservation for a non-idempotent action class. The operational
-consequence: a lossy evidence channel accumulates reservations
-against <code>max_budget</code> and <code>max_calls</code> until the Mission starves on
-<code>quota_exceeded</code>, a self-inflicted denial of service. A deployment
-<span class="bcp14">SHOULD</span> run orphaned-evidence reconciliation on a published cadence
-sized to its evidence-channel loss rate; the reconciliation window
-it publishes is how long leaked budget stays leaked.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
-<p id="section-10.1-3">For a duration-metered action the PEP reports the measured duration in
+reservation for a non-idempotent action class.<a href="#section-10.1-3" class="pilcrow">¶</a></p>
+<p id="section-10.1-4">The operational consequence: a lossy evidence channel accumulates
+reservations against <code>max_budget</code> and <code>max_calls</code> until the Mission
+starves on <code>quota_exceeded</code>, a self-inflicted denial of service. A
+deployment <span class="bcp14">SHOULD</span> run orphaned-evidence reconciliation on a published
+cadence sized to its evidence-channel loss rate; the reconciliation
+window it publishes is how long leaked budget stays leaked.<a href="#section-10.1-4" class="pilcrow">¶</a></p>
+<p id="section-10.1-5">For a duration-metered action the PEP reports the measured duration in
 the Execution Evidence <code>measured_duration</code> member, and the PDP commits
 that duration against <code>max_duration</code>. A duration-lease renewal is a new
 re-evaluation request that carries the prior permit's <code>decision_id</code> in
 <code>context.prior_decision_id</code>, so the PDP continues the same metered
-activity rather than opening a new reservation. The PDP <span class="bcp14">MUST</span> verify
-that the renewal's Mission, subject, action, and audience match the
-decision named by <code>prior_decision_id</code>. A deployment sizes lease
+activity rather than opening a new reservation.<a href="#section-10.1-5" class="pilcrow">¶</a></p>
+<p id="section-10.1-6">The PDP <span class="bcp14">MUST</span> verify that the renewal's Mission, subject, action, and
+audience match the decision named by <code>prior_decision_id</code>. A
+deployment sizes lease
 intervals to amortize renewals: an interval materially shorter than
 the action class's staleness bound adds decision load without
 tightening the revocation cutoff. This exchange requires
-one request member and one evidence member:<a href="#section-10.1-3" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-10.1-4">
-          <dt id="section-10.1-4.1">
+one request member and one evidence member:<a href="#section-10.1-6" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10.1-7">
+          <dt id="section-10.1-7.1">
 <code>context.prior_decision_id</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-4.2">
-            <p id="section-10.1-4.2.1"><span class="bcp14">OPTIONAL</span>. A string. Present on a duration-lease renewal request,
+          <dd style="margin-left: 1.5em" id="section-10.1-7.2">
+            <p id="section-10.1-7.2.1"><span class="bcp14">OPTIONAL</span>. A string. Present on a duration-lease renewal request,
 carrying the <code>decision_id</code> of the permit being renewed. Absent on an
-initial request.<a href="#section-10.1-4.2.1" class="pilcrow">¶</a></p>
+initial request.<a href="#section-10.1-7.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-10.1-4.3">
+<dt id="section-10.1-7.3">
 <code>measured_duration</code> (Execution Evidence):</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-4.4">
-            <p id="section-10.1-4.4.1"><span class="bcp14">REQUIRED</span> for a duration-metered action, otherwise absent. A string
+          <dd style="margin-left: 1.5em" id="section-10.1-7.4">
+            <p id="section-10.1-7.4.1"><span class="bcp14">REQUIRED</span> for a duration-metered action, otherwise absent. A string
 containing an ISO 8601 duration (the <code>duration</code> rule in Appendix A of
-<span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>): the PEP's measured duration for the executed action.<a href="#section-10.1-4.4.1" class="pilcrow">¶</a></p>
+<span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>): the PEP's measured duration for the executed action.<a href="#section-10.1-7.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-10.1-5">A renewal repeats the evaluation-request envelope for the same
+<p id="section-10.1-8">A renewal repeats the evaluation-request envelope for the same
 activity and adds <code>context.prior_decision_id</code>. Here a long-running,
 duration-metered ledger reconciliation renews its lease before the
 prior permit expires; the action is not parameter-bound, so no
-<code>parameter_digest</code> is carried:<a href="#section-10.1-5" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-10.1-6">
+<code>parameter_digest</code> is carried:<a href="#section-10.1-8" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-10.1-9">
 <pre>
 {
   "subject": {
@@ -1804,7 +1869,7 @@ prior permit expires; the action is not parameter-bound, so no
     "prior_decision_id": "dec_0Rt5nB8xW2qK7mJ4vS1pL9eYc"
   }
 }
-</pre><a href="#section-10.1-6" class="pilcrow">¶</a>
+</pre><a href="#section-10.1-9" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -1848,7 +1913,7 @@ exchange of <a href="#settlement-exchange" class="auto internal xref">Section 10
 </li>
       </ul>
 <p id="section-11-3">A Mission Issuer in a deployment claiming this profile <span class="bcp14">MUST</span> carry the
-consented bounds on the Mission record committed by <code>intent_hash</code>, and
+consented bounds on the Mission record committed by <code>intent_hash</code>. It
 <span class="bcp14">MUST</span> render them at the approval event per <a href="#consent" class="auto internal xref">Section 6.1</a>.<a href="#section-11-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1866,8 +1931,8 @@ Their enforcement, however, is only as good as the metering:<a href="#section-12
           <p id="section-12-2.1.1"><strong>Unenforced bounds are consent theater.</strong> A bound rendered at
 approval but not metered anywhere misleads the Approver about the
 Mission's exposure. The consent-integrity rule (<a href="#consent" class="auto internal xref">Section 6.1</a>) exists
-for this; a deployment that cannot meter <span class="bcp14">MUST NOT</span> render the bound as
-enforced.<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
+for this: it forbids a deployment that cannot meter a bound from
+rendering it as enforced.<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.2">
           <p id="section-12-2.2.1"><strong>Distributed undercounting.</strong> Under a multi-PDP topology, an
@@ -1885,8 +1950,9 @@ trusted-base assumptions for PEPs.<a href="#section-12-2.3.1" class="pilcrow">¶
 </li>
         <li class="normal" id="section-12-2.4">
           <p id="section-12-2.4.1"><strong>Lease abandonment.</strong> An agent that stops renewing a duration lease
-and keeps acting is stopped by the PEP, which <span class="bcp14">MUST</span> stop the action or
-obtain a new permit before the lease is exhausted (<a href="#metering" class="auto internal xref">Section 7</a>).<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
+and keeps acting is stopped by the PEP, which <a href="#metering" class="auto internal xref">Section 7</a> requires
+to stop the action or obtain a new permit before the lease is
+exhausted.<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.5">
           <p id="section-12-2.5.1"><strong>Reservation starvation.</strong> An attacker who opens reservations and
@@ -1917,14 +1983,15 @@ fine-grained record of Mission activity over time. It <span class="bcp14">SHOULD
 retained under the same access controls and retention windows as
 runtime enforcement evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and disclosed in decision
-responses only as refusals, not as remaining-balance oracles. The
-refusal boundary is itself a coarse balance oracle: the point at which a
-bound flips from permit to refusal reveals the remaining margin. A
-deployment <span class="bcp14">SHOULD</span> bound this probing with the AuthZEN profile's
-denial-oracle controls (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>),
-per-Mission rate-limiting of access requests and evidence-logging of
-request provenance, so a compromised agent mapping a balance by
-repeated probes is visible to the humans adjudicating it.<a href="#section-13-1" class="pilcrow">¶</a></p>
+responses only as refusals, not as remaining-balance oracles.<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-2">The refusal boundary is itself a coarse balance oracle: the point at
+which a bound flips from permit to refusal reveals the remaining
+margin. A deployment <span class="bcp14">SHOULD</span> bound this probing with the AuthZEN
+profile's denial-oracle controls
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), per-Mission rate-limiting
+of access requests and evidence-logging of request provenance, so a
+compromised agent mapping a balance by repeated probes is visible to
+the humans adjudicating it.<a href="#section-13-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">

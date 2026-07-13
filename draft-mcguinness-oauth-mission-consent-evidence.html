@@ -1338,39 +1338,51 @@ evidence object records the approval event, the rendering context, the
 Mission anchors, and an integrity envelope over the evidence.<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">This profile commits the structured disclosure that the Authorization
 Server says it rendered, and binds it to the same Mission anchors used
-for authority. It does not, and cannot, prove that the pixels actually
-presented to the Approver matched that structured object, that the
-Approver read or understood it, or that the rendering layer was honest.
-A faulty or malicious rendering layer that lies about what it displayed
-remains outside the reach of any server-side commitment. What this
-profile provides is a durable, integrity-protected record that ties a
-specific structured disclosure to a specific approval decision and
-Authority Set, so that divergence between the recorded disclosure and
-the enforced authority becomes detectable in audit.<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">How much a deployment can narrow the rendering gap is not all-or-nothing.
-This profile defines a ladder of rendering assurance
+for authority. What no server-side commitment can prove, that the
+pixels presented to the Approver matched the committed object, is the
+what-you-see-is-what-you-sign problem this profile names and bounds in
+<a href="#rendering-assurance" class="auto internal xref">Section 6</a>. What this profile provides is a durable,
+integrity-protected record that ties a specific structured disclosure
+to a specific approval decision and Authority Set, so that divergence
+between the recorded disclosure and the enforced authority becomes
+detectable in audit.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">How much a deployment can narrow the rendering gap is not
+all-or-nothing. This profile defines a ladder of rendering assurance
 (<a href="#rendering-assurance" class="auto internal xref">Section 6</a>) whose rungs move the trust from an unbounded,
 unverifiable rendering layer toward the Approver's own authenticator
-signing the exact disclosure commitment. No rung proves what pixels a
-human perceived, but the higher rungs shrink the trusted rendering base
-to a small, attestable one and let the deployment pick the assurance its
-threat model needs.<a href="#section-1-4" class="pilcrow">¶</a></p>
+signing the exact disclosure commitment, letting the deployment pick
+the assurance its threat model needs.<a href="#section-1-4" class="pilcrow">¶</a></p>
 <p id="section-1-5">Conformance to this profile is the ladder's floor, Rung 0
-(<a href="#rendering-assurance" class="auto internal xref">Section 6</a>), plus three floor duties this profile
-attaches to it: commit the structured disclosure object, rendered
-within the translation floor (<a href="#intent-translation" class="auto internal xref">Section 4.3</a>), bind it to the
-Mission anchors, sign the evidence, carry the high-risk material
-notices with their acknowledgments, and record the interrogation
-offered (<a href="#interrogation" class="auto internal xref">Section 4.5</a>). What conformance requires is that what
-was shown is committed and reconstructible; everything past that is a
-rung or a <span class="bcp14">SHOULD</span>, the broader material-notice discipline and delta
-rendering as recommendations and each rung above Rung 0 as a named
-optional claim (<a href="#conformance" class="auto internal xref">Section 10</a>).<a href="#section-1-5" class="pilcrow">¶</a></p>
-<p id="section-1-6">Consent Evidence does not grant authority. Authority remains the
+(<a href="#rendering-assurance" class="auto internal xref">Section 6</a>), plus the floor duties this profile attaches
+to it:<a href="#section-1-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1-6.1">
+          <p id="section-1-6.1.1">commit the structured disclosure object, rendered within the
+translation floor (<a href="#intent-translation" class="auto internal xref">Section 4.3</a>);<a href="#section-1-6.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-6.2">
+          <p id="section-1-6.2.1">bind it to the Mission anchors;<a href="#section-1-6.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-6.3">
+          <p id="section-1-6.3.1">sign the evidence;<a href="#section-1-6.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-6.4">
+          <p id="section-1-6.4.1">carry the high-risk material notices with their acknowledgments; and<a href="#section-1-6.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-6.5">
+          <p id="section-1-6.5.1">record the interrogation offered (<a href="#interrogation" class="auto internal xref">Section 4.5</a>).<a href="#section-1-6.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-1-7">What conformance requires is that what was shown is committed and
+reconstructible; everything past that is a rung or a <span class="bcp14">SHOULD</span>, the
+broader material-notice discipline and delta rendering as
+recommendations and each rung above Rung 0 as a named optional claim
+(<a href="#conformance" class="auto internal xref">Section 10</a>).<a href="#section-1-7" class="pilcrow">¶</a></p>
+<p id="section-1-8">Consent Evidence does not grant authority. Authority remains the
 approved Mission and its Authority Set under
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. Consent Evidence lets auditors
 verify that the recorded approval surface corresponded to the authority
-later enforced.<a href="#section-1-6" class="pilcrow">¶</a></p>
+later enforced.<a href="#section-1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="scope">
@@ -1497,7 +1509,7 @@ approval event.<a href="#section-3-4.4.1" class="pilcrow">¶</a></p>
 object carries these two hashes rather than the full <code>mission</code>
 container (<a href="#consent-evidence" class="auto internal xref">Section 7</a>) because it is constructed before
 approval commits the Mission: the Mission <code>id</code> and lifecycle do not
-yet exist, and the disclosure must commit only to the proposed Intent
+yet exist, and the disclosure can commit only to the proposed Intent
 and Authority Set it actually renders. The Consent Evidence object,
 recorded at or after the decision, carries the resolved <code>mission</code>
 container with <code>id</code>, <code>issuer</code>, and the same anchors.<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
@@ -1548,19 +1560,34 @@ Subject, and a display of the Approver. Presentation wording is free.<a href="#s
         <dd style="margin-left: 1.5em" id="section-4-2.16">
           <p id="section-4-2.16.1"><span class="bcp14">REQUIRED</span>. An array with exactly one element per
 <code>mission_resource_access</code> entry of the derived Authority Set the
-disclosure presents for decision. Each
-element carries the entry's <code>resource</code>, its <code>actions</code>, the rendered
-form of each <code>constraints</code> key together with its value, the delegation
-summary when the entry permits delegation, and the consumption bounds
-when the entry carries them. This is the consent object: per the
-issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the Approver
-consents to the derived authority, with <code>mission_summary</code> as context.
+disclosure presents for decision. Each element carries:<a href="#section-4-2.16.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-2.16.2.1">
+              <p id="section-4-2.16.2.1.1">the entry's <code>resource</code>;<a href="#section-4-2.16.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-4-2.16.2.2">
+              <p id="section-4-2.16.2.2.1">its <code>actions</code>;<a href="#section-4-2.16.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-4-2.16.2.3">
+              <p id="section-4-2.16.2.3.1">the rendered form of each <code>constraints</code> key together with its
+value;<a href="#section-4-2.16.2.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-4-2.16.2.4">
+              <p id="section-4-2.16.2.4.1">the delegation summary, when the entry permits delegation; and<a href="#section-4-2.16.2.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-4-2.16.2.5">
+              <p id="section-4-2.16.2.5.1">the consumption bounds, when the entry carries them.<a href="#section-4-2.16.2.5.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-4-2.16.3">This is the consent object: per the issuance profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the Approver consents to
+the derived authority, with <code>mission_summary</code> as context.
 Presentation wording is free; coverage is normative. An array that
 omits an entry, a constraint, a delegation right, or a consumption
 bound is not faithful, and a verifier can check the rendered set
 against the committed Authority Set. A disclosure that renders
 <code>mission_summary</code> without a faithful <code>authority_summary</code> does not
-conform.<a href="#section-4-2.16.1" class="pilcrow">¶</a></p>
+conform.<a href="#section-4-2.16.3" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-2.17">
@@ -1577,12 +1604,12 @@ material-notice condition present, as listed in
         <dd style="margin-left: 1.5em" id="section-4-2.20">
           <p id="section-4-2.20.1"><span class="bcp14">OPTIONAL</span>. An array of objects, each with a <code>dimension</code> and a
 <code>statement</code>. When present, it <span class="bcp14">MUST</span> cover the risk dimensions the
-disclosure rules
-name (irreversibility, spend, delegation, and data access) when the
-Authority Set carries them, and it <span class="bcp14">MUST</span> identify, as dimensions, the
-material-notice conditions (<a href="#material-notices" class="auto internal xref">Section 4.2</a>) present in the
-Authority Set. <code>material_notices</code> remains the <span class="bcp14">REQUIRED</span> carrier of
-material risk; <code>risk_summary</code> is a rendered summary over it.<a href="#section-4-2.20.1" class="pilcrow">¶</a></p>
+disclosure rules name (irreversibility, spend, delegation, and data
+access) when the Authority Set carries them. When present, it <span class="bcp14">MUST</span>
+also identify, as dimensions, the material-notice conditions
+(<a href="#material-notices" class="auto internal xref">Section 4.2</a>) present in the Authority Set.
+<code>material_notices</code> remains the <span class="bcp14">REQUIRED</span> carrier of material risk;
+<code>risk_summary</code> is a rendered summary over it.<a href="#section-4-2.20.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-2.21">
@@ -1692,10 +1719,29 @@ one acknowledgment action per such notice.<a href="#section-4-2.40.1" class="pil
       <dd class="break"></dd>
 </dl>
 <p id="section-4-3">A Consent Disclosure object <span class="bcp14">MUST NOT</span> omit material authority. If the
-Authority Set includes delegation, external commitments, irreversible
-actions, privileged administration, cross-domain authority, or
-consumption bounds, the disclosure <span class="bcp14">MUST</span> include a material notice or a
-rendered authority summary entry covering that fact.<a href="#section-4-3" class="pilcrow">¶</a></p>
+Authority Set includes any of the following, the disclosure <span class="bcp14">MUST</span>
+include a material notice or a rendered authority summary entry
+covering that fact:<a href="#section-4-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-4.1">
+          <p id="section-4-4.1.1">delegation;<a href="#section-4-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-4.2">
+          <p id="section-4-4.2.1">external commitments;<a href="#section-4-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-4.3">
+          <p id="section-4-4.3.1">irreversible actions;<a href="#section-4-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-4.4">
+          <p id="section-4-4.4.1">privileged administration;<a href="#section-4-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-4.5">
+          <p id="section-4-4.5.1">cross-domain authority; or<a href="#section-4-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-4.6">
+          <p id="section-4-4.6.1">consumption bounds.<a href="#section-4-4.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
 <div id="constraint-provenance">
 <section id="section-4.1">
         <h3 id="name-constraint-provenance">
@@ -1770,21 +1816,35 @@ Approver; and<a href="#section-4.2-2.9.1" class="pilcrow">¶</a></p>
 <p id="section-4.2-3">Each notice <span class="bcp14">MUST</span> identify the Authority Set entry or entries it
 describes. A generic warning that "this may be risky" is not sufficient
 for this profile.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
-<p id="section-4.2-4">Four conditions are the high-risk notice classes: irreversible action,
-external commitment, privileged administration, and a consumption
-bound. For each material notice of a high-risk class,
-<code>approver_actions</code> (<a href="#consent-disclosure" class="auto internal xref">Section 4</a>) <span class="bcp14">SHOULD</span> carry an explicit
-acknowledgment action identifying that notice, and the Mission Issuer
-<span class="bcp14">SHOULD NOT</span> record an <code>approved</code> decision unless the Approver completed
-every acknowledgment the disclosure carries. The acknowledgment is per
-notice: the disclosure commits the acknowledgment actions it carries,
-and where the rendered disclosure carries them, the Mission Issuer
-<span class="bcp14">MUST</span> record each completion in the evidence's <code>acknowledgments</code>
-member (<a href="#consent-evidence" class="auto internal xref">Section 7</a>), so completion is auditable and not only
-the commitment. A single blanket confirmation does not satisfy it. The
-same classes key the minimum approval-authentication strength the
-issuance profile's deployment floor sets
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+<p id="section-4.2-4">Four conditions are the high-risk notice classes:<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.2-5.1">
+            <p id="section-4.2-5.1.1">irreversible action;<a href="#section-4.2-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-5.2">
+            <p id="section-4.2-5.2.1">external commitment;<a href="#section-4.2-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-5.3">
+            <p id="section-4.2-5.3.1">privileged administration; and<a href="#section-4.2-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-5.4">
+            <p id="section-4.2-5.4.1">a consumption bound.<a href="#section-4.2-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-4.2-6">For each material notice of a high-risk class, <code>approver_actions</code>
+(<a href="#consent-disclosure" class="auto internal xref">Section 4</a>) <span class="bcp14">SHOULD</span> carry an explicit acknowledgment
+action identifying that notice. The Mission Issuer <span class="bcp14">SHOULD NOT</span> record
+an <code>approved</code> decision unless the Approver completed every
+acknowledgment the disclosure carries. Where the rendered disclosure
+carries acknowledgment actions, the Mission Issuer <span class="bcp14">MUST</span> record each
+completion in the evidence's <code>acknowledgments</code> member
+(<a href="#consent-evidence" class="auto internal xref">Section 7</a>), so completion is auditable and not only the
+commitment.<a href="#section-4.2-6" class="pilcrow">¶</a></p>
+<p id="section-4.2-7">The acknowledgment is per notice: the disclosure commits the
+acknowledgment actions it carries, and a single blanket confirmation
+does not satisfy it. The same classes key the minimum
+approval-authentication strength the issuance profile's deployment
+floor sets (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-4.2-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="intent-translation">
@@ -1926,9 +1986,9 @@ envelope:<a href="#section-5-1" class="pilcrow">¶</a></p>
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> defines for <code>intent_hash</code> and
 <code>authority_hash</code>: a hash-name prefix and the base64url digest, for
 example <code>sha-256:...</code>. SHA-256 is the only digest algorithm defined; the
-<code>sha-256:</code> prefix identifies it, and algorithm agility is future work. A
-verifier <span class="bcp14">MUST</span> reject a commitment whose algorithm prefix it does not
-recognize and <span class="bcp14">MUST NOT</span> treat an unrecognized prefix as SHA-256.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<code>sha-256:</code> prefix identifies it, and algorithm agility is future work.
+A verifier <span class="bcp14">MUST</span> reject a commitment whose algorithm prefix it does not
+recognize. It <span class="bcp14">MUST NOT</span> treat an unrecognized prefix as SHA-256.<a href="#section-5-3" class="pilcrow">¶</a></p>
 <p id="section-5-4">The hash commits the disclosure object, not pixels or browser state. A
 deployment <span class="bcp14">MAY</span> additionally retain screenshots or UI telemetry, but the
 interoperable commitment is the structured disclosure object. A worked
@@ -1938,24 +1998,20 @@ the rendering <span class="bcp14">SHOULD</span> be a deterministic function of t
 object and its <code>template_id</code>, <code>template_version</code>, <code>template_hash</code>, and
 <code>locale</code>, so an auditor can re-render the recorded disclosure into the
 form the Approver should have been shown. A deployment that makes this
-guarantee normative claims Rung 1 (<a href="#experimental-rungs" class="auto internal xref">Appendix A</a>), which fixes
-the concrete requirements. This does not prove what was displayed, but
-it reduces the gap from "the rendering layer showed something
-unverifiable" to "did the rendering layer execute a published
-deterministic template," which the higher rungs of
-<a href="#experimental-rungs" class="auto internal xref">Appendix A</a> then address.<a href="#section-5-5" class="pilcrow">¶</a></p>
+guarantee normative claims Rung 1 (<a href="#experimental-rungs" class="auto internal xref">Appendix A</a>), which
+fixes the concrete requirements and states what determinism narrows
+and what it leaves open.<a href="#section-5-5" class="pilcrow">¶</a></p>
 <p id="section-5-6">A Mission Issuer claiming this profile <span class="bcp14">MUST</span> record
 <code>consent_rendering_hash</code> on the Mission record. When the Mission claim
-is extended to carry the value,
-it <span class="bcp14">MUST</span> carry the same prefixed integrity-anchor form, and consumers
-<span class="bcp14">MUST</span> treat it as audit data only; it <span class="bcp14">MUST NOT</span> grant or widen
-authority.<a href="#section-5-6" class="pilcrow">¶</a></p>
+is extended to carry the value, it <span class="bcp14">MUST</span> carry the same prefixed
+integrity-anchor form. Consumers <span class="bcp14">MUST</span> treat the value as audit data
+only. It <span class="bcp14">MUST NOT</span> grant or widen authority.<a href="#section-5-6" class="pilcrow">¶</a></p>
 <p id="section-5-7">The Consent Disclosure object <span class="bcp14">MUST</span> be constructed after Authority Set
 derivation and before approval. If any disclosure input changes after
 the disclosure is constructed and before the decision (the Authority
 Set, the locale, the template, or the material notices), the Mission
-Issuer <span class="bcp14">MUST</span> discard the disclosure and construct a new one; it <span class="bcp14">MUST NOT</span>
-reuse the prior <code>consent_rendering_hash</code>. Rung 1 determinism
+Issuer <span class="bcp14">MUST</span> discard the disclosure and construct a new one. It
+<span class="bcp14">MUST NOT</span> reuse the prior <code>consent_rendering_hash</code>. Rung 1 determinism
 (<a href="#experimental-rungs" class="auto internal xref">Appendix A</a>) applies per presentation modality: the same
 inputs produce the same rendered form within a given modality, not
 across modalities.<a href="#section-5-7" class="pilcrow">¶</a></p>
@@ -2022,25 +2078,33 @@ bounded reduction of the rendering trust base.<a href="#section-6-4" class="pilc
         <dd style="margin-left: 1.5em" id="section-7-2.4">
           <p id="section-7-2.4.1"><span class="bcp14">REQUIRED</span>. An object binding the evidence to what was approved. Its
 shape depends on <code>decision</code>, because a Mission exists only after an
-approval (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):
-- When <code>decision</code> is <code>approved</code>, it contains <code>id</code>, <code>issuer</code>,
-  <code>intent_hash</code>, <code>authority_hash</code>, and, when this profile records it
-  on the Mission, <code>consent_rendering_hash</code>.
-- When <code>decision</code> is <code>declined</code>, no Mission was created
-  (<a href="#declined-events" class="auto internal xref">Section 8.1</a>), so there is no <code>id</code>. It instead contains
-  <code>issuer</code> and the <code>intent_hash</code> and <code>authority_hash</code> the disclosure
-  corresponded to, matching the disclosure object's <code>source_hashes</code>
-  (<a href="#consent-disclosure" class="auto internal xref">Section 4</a>). It <span class="bcp14">MUST NOT</span> contain <code>id</code>.
-- When <code>decision</code> is <code>narrowed</code>, the review required a narrowing
-  revision and no Mission was created (<a href="#revision-events" class="auto internal xref">Section 8.2</a>). Like a
-  decline, it contains <code>issuer</code> and the reviewed disclosure's
-  <code>intent_hash</code> and <code>authority_hash</code>, matching that disclosure's
-  <code>source_hashes</code>, and <span class="bcp14">MUST NOT</span> contain <code>id</code>.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
-<p id="section-7-2.4.2">This descriptor follows the evidence-descriptor convention of the
+approval (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-2.4.2.1">
+              <p id="section-7-2.4.2.1.1">When <code>decision</code> is <code>approved</code>, it contains <code>id</code>, <code>issuer</code>,
+<code>intent_hash</code>, <code>authority_hash</code>, and, when this profile records it
+on the Mission, <code>consent_rendering_hash</code>.<a href="#section-7-2.4.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-2.4.2.2">
+              <p id="section-7-2.4.2.2.1">When <code>decision</code> is <code>declined</code>, no Mission was created
+(<a href="#declined-events" class="auto internal xref">Section 8.1</a>), so there is no <code>id</code>. It instead contains
+<code>issuer</code> and the <code>intent_hash</code> and <code>authority_hash</code> the disclosure
+corresponded to, matching the disclosure object's <code>source_hashes</code>
+(<a href="#consent-disclosure" class="auto internal xref">Section 4</a>). It <span class="bcp14">MUST NOT</span> contain <code>id</code>.<a href="#section-7-2.4.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-2.4.2.3">
+              <p id="section-7-2.4.2.3.1">When <code>decision</code> is <code>narrowed</code>, the review required a narrowing
+revision and no Mission was created (<a href="#revision-events" class="auto internal xref">Section 8.2</a>). Like a
+decline, it contains <code>issuer</code> and the reviewed disclosure's
+<code>intent_hash</code> and <code>authority_hash</code>, matching that disclosure's
+<code>source_hashes</code>, and <span class="bcp14">MUST NOT</span> contain <code>id</code>.<a href="#section-7-2.4.2.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-7-2.4.3">This descriptor follows the evidence-descriptor convention of the
 issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): it is the
 <code>mission</code> claim shape extended with the collision-resistantly named
 audit members <code>intent_hash</code> and <code>consent_rendering_hash</code>, and it is
-not authority-bearing on its own.<a href="#section-7-2.4.2" class="pilcrow">¶</a></p>
+not authority-bearing on its own.<a href="#section-7-2.4.3" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.5">
@@ -2120,20 +2184,26 @@ fixes the role, not the attestation format.<a href="#section-7-2.20.1" class="pi
 <code>rendering_confirmation</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.22">
           <p id="section-7-2.22.1"><span class="bcp14">OPTIONAL</span> and experimental. An object. A confirmation produced by the
-Approver's
-authenticator at approval (Rung 3, <a href="#experimental-rungs" class="auto internal xref">Appendix A</a>). To bind
-the trust to the Approver rather than the Authorization Server, it
-<span class="bcp14">MUST</span> sign the <code>consent_rendering_hash</code> together with a per-approval
-value (the <code>evidence_id</code>, or a nonce echoed in
+Approver's authenticator at approval (Rung 3,
+<a href="#experimental-rungs" class="auto internal xref">Appendix A</a>). To bind the trust to the Approver rather
+than the Authorization Server:<a href="#section-7-2.22.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-2.22.2.1">
+              <p id="section-7-2.22.2.1.1">it <span class="bcp14">MUST</span> sign the <code>consent_rendering_hash</code> together with a
+per-approval value (the <code>evidence_id</code>, or a nonce echoed in
 <code>authentication_context</code>), so a captured confirmation cannot be
-replayed into another record, and it <span class="bcp14">MUST</span> carry or reference an
-authenticator credential that the verifier can confirm is bound to the
-recorded <code>approver</code>. This profile fixes what is signed and bound, not
-the authenticator protocol. A deployment <span class="bcp14">SHOULD</span> include it for a
-high-risk material-notice class (<a href="#material-notices" class="auto internal xref">Section 4.2</a>). When present,
-a verifier <span class="bcp14">MUST</span> check it as part of <a href="#integrity" class="auto internal xref">Section 7.1</a> and <span class="bcp14">MUST</span> treat a
-confirmation that does not verify, or whose authenticator is not bound
-to the recorded <code>approver</code>, as an integrity failure.<a href="#section-7-2.22.1" class="pilcrow">¶</a></p>
+replayed into another record; and<a href="#section-7-2.22.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-2.22.2.2">
+              <p id="section-7-2.22.2.2.1">it <span class="bcp14">MUST</span> carry or reference an authenticator credential that the
+verifier can confirm is bound to the recorded <code>approver</code>.<a href="#section-7-2.22.2.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-7-2.22.3">This profile fixes what is signed and bound, not the authenticator
+protocol. A deployment <span class="bcp14">SHOULD</span> include it for a high-risk
+material-notice class (<a href="#material-notices" class="auto internal xref">Section 4.2</a>). Verification of a
+present confirmation, and the treatment of one that fails, is step 7
+of <a href="#integrity" class="auto internal xref">Section 7.1</a>.<a href="#section-7-2.22.3" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.23">
@@ -2192,7 +2262,7 @@ entry carries <code>question</code>, the question as asked or selected;
 concerned, when one was identified; and <code>answer_source</code>, one of
 <code>shaping_evidence</code>, <code>constraint_provenance</code>, <code>policy</code>, or <code>agent</code>.
 When <code>answer_source</code> is <code>agent</code>, the entry <span class="bcp14">MUST</span> also carry <code>answer</code>,
-the relayed text as rendered, which is committed nowhere else; for
+the relayed text as rendered, which is committed nowhere else. For
 the other sources the grounding material is already recorded, and
 the entry <span class="bcp14">SHOULD</span> reference it.<a href="#section-7-2.36.1" class="pilcrow">¶</a></p>
 </dd>
@@ -2201,16 +2271,23 @@ the entry <span class="bcp14">SHOULD</span> reference it.<a href="#section-7-2.3
 <code>refused_dimensions</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.38">
           <p id="section-7-2.38.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>narrowed</code>. An object identifying the
-dimensions the review refused. It carries one or both of
-<code>rejected_scope</code>, a string of space-delimited scope tokens naming the
-refused scope, and <code>rejected_authorization_details</code>, an array of
+dimensions the review refused. It carries one or both of:<a href="#section-7-2.38.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-2.38.2.1">
+              <p id="section-7-2.38.2.1.1"><code>rejected_scope</code>, a string of space-delimited scope tokens naming
+the refused scope; and<a href="#section-7-2.38.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-2.38.2.2">
+              <p id="section-7-2.38.2.2.1"><code>rejected_authorization_details</code>, an array of
 authorization-details-shaped subtrees the re-derived Authority Set
-must exclude or narrow, each naming a <code>type</code> and the members within
-it that must not survive re-derivation unchanged. These are the
-shapes the experimental approval-revision profile signals on its
-revision-required response
+excludes or narrows, each naming a <code>type</code> and the members within
+it that do not survive re-derivation unchanged.<a href="#section-7-2.38.2.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-7-2.38.3">These are the shapes the experimental approval-revision profile
+signals on its revision-required response
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>), recorded
-here as the review named them.<a href="#section-7-2.38.1" class="pilcrow">¶</a></p>
+here as the review named them.<a href="#section-7-2.38.3" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.39">
@@ -2246,10 +2323,9 @@ within the scope it chooses.<a href="#section-7-2.44.1" class="pilcrow">¶</a></
           <p id="section-7-2.46.1"><span class="bcp14">REQUIRED</span> when retained as a portable record. An object carrying
 <code>format</code> and <code>value</code>. This document defines <code>jws-compact</code>, a JWS
 Compact Serialization <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> over the JCS canonical bytes of the
-Consent Evidence object with <code>evidence_envelope</code> removed. Its protected
-header <span class="bcp14">MUST</span> carry a <code>typ</code> of <code>mission-consent-evidence+jws</code> and a <code>kid</code>
-that resolves in the Mission Issuer's published key material (its
-<code>jwks_uri</code>); that is the verification path (<a href="#integrity" class="auto internal xref">Section 7.1</a>).<a href="#section-7-2.46.1" class="pilcrow">¶</a></p>
+Consent Evidence object with <code>evidence_envelope</code> removed. The
+protected-header requirements and the verification path are defined
+in <a href="#integrity" class="auto internal xref">Section 7.1</a>.<a href="#section-7-2.46.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2371,13 +2447,13 @@ inside the signed <code>mission</code>. Reconstructing the disclosure is a separ
 step that depends on retrieval: when the disclosure object is inlined, a
 verifier recomputes <code>consent_rendering_hash</code> over it and compares; when
 it is carried by reference (<a href="#minimization" class="auto internal xref">Section 9.1</a>), the verifier retrieves it
-and verifies it against <code>consent_rendering_hash</code>. A verifier <span class="bcp14">MUST NOT</span>
-treat a disclosure that is merely unretrievable as an integrity failure
-of the evidence record; failure to retrieve a referenced disclosure
-within the retention window is an audit failure (<a href="#audit" class="auto internal xref">Section 9</a>), not a
-signature or anchor failure.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
-<p id="section-7.1-5">Evidence whose envelope format is unsupported <span class="bcp14">MUST</span> be rejected rather
-than accepted without verification.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+and verifies it against <code>consent_rendering_hash</code>.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+<p id="section-7.1-5">A verifier <span class="bcp14">MUST NOT</span> treat a disclosure that is merely unretrievable as
+an integrity failure of the evidence record; failure to retrieve a
+referenced disclosure within the retention window is an audit failure
+(<a href="#audit" class="auto internal xref">Section 9</a>), not a signature or anchor failure.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+<p id="section-7.1-6">Evidence whose envelope format is unsupported <span class="bcp14">MUST</span> be rejected rather
+than accepted without verification.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2412,9 +2488,8 @@ Set and Mission Intent;<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 <code>consent_rendering_hash</code>.<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-8-3">For expansion approvals, the disclosure <span class="bcp14">MUST</span> identify the predecessor
-Mission and <span class="bcp14">SHOULD</span> distinguish retained authority from newly requested
-authority (<a href="#expansion-disclosure" class="auto internal xref">Section 8.3</a>).<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-3">For expansion approvals, the disclosure requirements of
+<a href="#expansion-disclosure" class="auto internal xref">Section 8.3</a> apply.<a href="#section-8-3" class="pilcrow">¶</a></p>
 <div id="declined-events">
 <section id="section-8.1">
         <h3 id="name-declined-approval-events">
@@ -2423,7 +2498,7 @@ authority (<a href="#expansion-disclosure" class="auto internal xref">Section 8.
 <p id="section-8.1-1">Declined approval events are security-relevant. A deployment claiming
 this profile <span class="bcp14">MUST</span> record Consent Evidence when an Approver declines a
 Mission or expansion request. The evidence <span class="bcp14">MAY</span> omit sensitive
-free-form decline text, but it <span class="bcp14">MUST</span> record the disclosure commitment,
+free-form decline text. It <span class="bcp14">MUST</span> record the disclosure commitment,
 decision, Approver, time, and policy version when known.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
 <p id="section-8.1-2">Declined evidence <span class="bcp14">MUST NOT</span> create a Mission, Mission claim, token, or
 authority. It exists to prevent silent retry, coercion, and rendering
@@ -2440,14 +2515,14 @@ narrowed version and invites a narrowing revision under the
 experimental approval-revision profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>), is recorded
 as Consent Evidence with <code>decision</code> of <code>narrowed</code>. The evidence carries
-the reviewed
-disclosure's <code>consent_rendering_hash</code> and the <code>refused_dimensions</code> the
-review named. Like a decline, <code>narrowed</code> evidence <span class="bcp14">MUST NOT</span> create a
-Mission, Mission claim, token, or authority: no Mission exists until an
-approval commits one.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
-<p id="section-8.2-2">When the revision chain resolves to an approval, the final <code>approved</code>
+the reviewed disclosure's <code>consent_rendering_hash</code> and the
+<code>refused_dimensions</code> the review named.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2">Like a decline, <code>narrowed</code> evidence <span class="bcp14">MUST NOT</span> create a Mission, Mission
+claim, token, or authority: no Mission exists until an approval
+commits one.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
+<p id="section-8.2-3">When the revision chain resolves to an approval, the final <code>approved</code>
 evidence <span class="bcp14">MAY</span> carry <code>predecessor_intent_hashes</code> committing the chain of
-reviewed proposals that preceded it.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
+reviewed proposals that preceded it.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="expansion-disclosure">
@@ -2516,12 +2591,13 @@ the term the issuance profile defines
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Declined and narrowed events
 create no Mission (<a href="#declined-events" class="auto internal xref">Section 8.1</a>, <a href="#revision-events" class="auto internal xref">Section 8.2</a>) and so have
 no Mission audit horizon; a deployment <span class="bcp14">MUST</span> retain their evidence for a
-deployment-declared window. Entries discharged under the status
+deployment-declared window.<a href="#section-9-3" class="pilcrow">¶</a></p>
+<p id="section-9-4">Entries discharged under the status
 profile's completion machinery
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) disappear
 from status surfaces while <code>authority_hash</code> still commits them, so an
 auditor reconciling the recorded approval surface against
-later-enforced authority consults discharge state.<a href="#section-9-3" class="pilcrow">¶</a></p>
+later-enforced authority consults discharge state.<a href="#section-9-4" class="pilcrow">¶</a></p>
 <div id="minimization">
 <section id="section-9.1">
         <h3 id="name-minimization-and-redaction">
@@ -2533,14 +2609,15 @@ durable reference is an absolute HTTPS URI paired with the
 <code>consent_rendering_hash</code> the retrieved disclosure <span class="bcp14">MUST</span> verify against.
 The minimal retrieval profile is an authenticated HTTPS GET that returns
 the disclosure as <code>application/mission-consent-disclosure+json</code>; the
-authorization it requires is deployment-defined. A verifier with
-authorization <span class="bcp14">MUST</span> be able to retrieve or reconstruct the disclosure for
-the retention period and <span class="bcp14">MUST</span> verify the retrieved object against
-<code>consent_rendering_hash</code>. Non-retrievability within the retention window
-is an audit failure (<a href="#audit" class="auto internal xref">Section 9</a>) within deployment agreement, not an
-integrity failure of the evidence record (<a href="#integrity" class="auto internal xref">Section 7.1</a>).<a href="#section-9.1-1" class="pilcrow">¶</a></p>
-<p id="section-9.1-2">Free-form task text and approver comments <span class="bcp14">SHOULD</span> be redacted or stored
-by reference when not required for ordinary audit.<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+authorization it requires is deployment-defined.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<p id="section-9.1-2">A verifier with authorization <span class="bcp14">MUST</span> be able to retrieve or reconstruct
+the disclosure for the retention period. It <span class="bcp14">MUST</span> verify the retrieved
+object against <code>consent_rendering_hash</code>. Non-retrievability within the
+retention window is an audit failure (<a href="#audit" class="auto internal xref">Section 9</a>) within deployment
+agreement, not an integrity failure of the evidence record
+(<a href="#integrity" class="auto internal xref">Section 7.1</a>).<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+<p id="section-9.1-3">Free-form task text and approver comments <span class="bcp14">SHOULD</span> be redacted or stored
+by reference when not required for ordinary audit.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2585,16 +2662,27 @@ acknowledgment completion (<a href="#material-notices" class="auto internal xref
           <p id="section-10-2.8.1">retain evidence for audit reconstruction (<a href="#audit" class="auto internal xref">Section 9</a>).<a href="#section-10-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-10-3">Beyond that floor, a conforming Mission Issuer <span class="bcp14">SHOULD</span> include a
-material notice for each further condition of <a href="#material-notices" class="auto internal xref">Section 4.2</a>
-present, <span class="bcp14">SHOULD</span> gate <code>approved</code> on acknowledgments beyond the
-high-risk classes, and <span class="bcp14">SHOULD</span> render expansion approvals as a delta
-(<a href="#expansion-disclosure" class="auto internal xref">Section 8.3</a>). Each rung above Rung 0 is a named
-optional claim (<a href="#experimental-rungs" class="auto internal xref">Appendix A</a>), made only when its
-requirements are satisfied and its evidence recorded.<a href="#section-10-3" class="pilcrow">¶</a></p>
-<p id="section-10-4">A conforming verifier of Consent Evidence <span class="bcp14">MUST</span> implement the checks in
-<a href="#integrity" class="auto internal xref">Section 7.1</a> and <span class="bcp14">MUST</span> treat failure to retrieve a referenced
-disclosure during the retention window as an audit failure.<a href="#section-10-4" class="pilcrow">¶</a></p>
+<p id="section-10-3">Beyond that floor, a conforming Mission Issuer:<a href="#section-10-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10-4.1">
+          <p id="section-10-4.1.1"><span class="bcp14">SHOULD</span> include a material notice for each further condition of
+<a href="#material-notices" class="auto internal xref">Section 4.2</a> present;<a href="#section-10-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-4.2">
+          <p id="section-10-4.2.1"><span class="bcp14">SHOULD</span> gate <code>approved</code> on acknowledgments beyond the high-risk
+classes; and<a href="#section-10-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-4.3">
+          <p id="section-10-4.3.1"><span class="bcp14">SHOULD</span> render expansion approvals as a delta
+(<a href="#expansion-disclosure" class="auto internal xref">Section 8.3</a>).<a href="#section-10-4.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-10-5">Each rung above Rung 0 is a named optional claim
+(<a href="#experimental-rungs" class="auto internal xref">Appendix A</a>), made only when its requirements are
+satisfied and its evidence recorded.<a href="#section-10-5" class="pilcrow">¶</a></p>
+<p id="section-10-6">A conforming verifier of Consent Evidence <span class="bcp14">MUST</span> implement the checks in
+<a href="#integrity" class="auto internal xref">Section 7.1</a>. It <span class="bcp14">MUST</span> treat failure to retrieve a referenced
+disclosure during the retention window as an audit failure.<a href="#section-10-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -2611,20 +2699,13 @@ disclosure during the retention window as an audit failure.<a href="#section-10-
 while the Mission records another. This profile mitigates that by
 committing a structured disclosure object to the same Mission anchors
 used for authority, so a disclosure that understates the Authority Set
-is detectable in audit. It does not eliminate the threat: a rendering
-layer that displays pixels inconsistent with the structured disclosure
-it commits remains outside any server-side commitment (<a href="#introduction" class="auto internal xref">Section 1</a>).
-The assurance ladder of <a href="#rendering-assurance" class="auto internal xref">Section 6</a> is how a deployment
-reduces this threat by degree: the optional rungs
-(<a href="#experimental-rungs" class="auto internal xref">Appendix A</a>) make the intended form re-renderable
-(Rung 1), bind an attested renderer (Rung 2), or bind the
-Approver's own authenticator (Rung 3). A deployment that needs
-assurance
-that the Approver's authenticator confirmed a specific disclosure
-commitment <span class="bcp14">SHOULD</span> evaluate Rung 3 for its high-risk classes; no rung
-proves perception, which remains
-outside
-reach for any electronic-signature scheme.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+is detectable in audit. It does not eliminate the threat: the limits
+of a server-side commitment, and the degrees by which the optional
+rungs reduce the rendering trust base, are stated with the ladder
+(<a href="#rendering-assurance" class="auto internal xref">Section 6</a>, <a href="#experimental-rungs" class="auto internal xref">Appendix A</a>). A deployment that
+needs assurance that the Approver's authenticator confirmed a specific
+disclosure commitment <span class="bcp14">SHOULD</span> evaluate Rung 3 for its high-risk
+classes.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="template-downgrade">

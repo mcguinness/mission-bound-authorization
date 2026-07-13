@@ -78,8 +78,9 @@ Table of Contents
    1.  Introduction
    2.  Conventions and Terminology
    3.  Mission Management Endpoint
-     3.1.  Authentication
-     3.2.  Authorization and Filter Scope
+     3.1.  Idempotency
+     3.2.  Authentication
+     3.3.  Authorization and Filter Scope
    4.  Administrative Metadata
    5.  Mission Filter
    6.  Mission Enumeration
@@ -131,8 +132,8 @@ Table of Contents
    Issuer's own trust domain, explicitly authorized for existence
    knowledge over a declared filter scope, compensated not by
    indistinguishability but by explicit authorization and mandatory
-   audit of every call (Section 3.2).  The surface is never agent-
-   facing: the Agent executing a Mission has no role here (Section 3.1).
+   audit of every call (Section 3.3).  The surface is never agent-
+   facing: the Agent executing a Mission has no role here (Section 3.2).
    Fleet enumeration and bulk lifecycle are the operator surface of the
    family's delegated-authority layer
    ([I-D.draft-mcguinness-mission-architecture]).
@@ -199,13 +200,7 @@ Table of Contents
 
    nonce:  REQUIRED.  A string.  A client-generated nonce, unique per
       request within the response lifetime, echoed in the signed
-      response.  It is also the idempotency key: the AS MUST deduplicate
-      management requests by (client, nonce) for a bounded window, at
-      least the validity span of the signed response it would replay, as
-      the status profile's lifecycle endpoint requires
-      ([I-D.draft-mcguinness-oauth-mission-status]), and, on a
-      retransmit, MUST replay the original response rather than re-
-      execute the request.
+      response.  It is also the idempotency key (Section 3.1).
 
    A success response is a JWS Compact Serialization [RFC7515] signed
    with a key published in the Mission Issuer's jwks_uri, following the
@@ -213,43 +208,75 @@ Table of Contents
    a typ of mission-management-response+jwt, the algorithm is one
    advertised in mission_status_signing_alg_values_supported
    (Section 11), and the status profile's signing-key retention rules
-   apply.  Per [RFC7515] Section 4.1.9 the typ header omits the
-   application/ prefix; the full media type application/mission-
-   management-response+jwt (registered in Section 15) is used as the
-   HTTP Content-Type, with Cache-Control: no-store.  The signed payload
-   carries the envelope iss, aud (the authenticated caller), sub (the
-   acting party), nonce, iat, and exp, plus the members of Section 6.1,
-   Section 7.1, or Section 7.3.  Before honoring a response a Management
-   Client MUST apply the status profile's response verification checks
-   (signature, iss, aud, sub, nonce, iat/exp with up to 30 seconds skew)
-   and MUST verify the typ.
+   apply.
+
+   Per [RFC7515] Section 4.1.9 the typ header omits the application/
+   prefix.  The full media type application/mission-management-
+   response+jwt (registered in Section 15) is used as the HTTP Content-
+   Type, with Cache-Control: no-store.
+
+   The signed payload carries the members of Section 6.1, Section 7.1,
+   or Section 7.3, plus the envelope members:
+
+   *  iss
+
+   *  aud: the authenticated caller
+
+   *  sub: the acting party
+
+   *  nonce
+
+   *  iat and exp
+
+   Before honoring a response a Management Client MUST apply the status
+   profile's response verification checks: signature, iss, aud, sub,
+   nonce, and iat/exp with up to 30 seconds skew.  The Management Client
+   MUST also verify the typ.
 
    Rate limits, the enumeration page maximum, and the bulk size bound
    are deployment-declared operational configuration; this document
    defines the error symbols that surface them (Section 8) but no
    metadata for them.
 
-3.1.  Authentication
+3.1.  Idempotency
+
+   The nonce is the idempotency key.  The AS MUST deduplicate management
+   requests by (client, nonce) for a bounded window, at least the
+   validity span of the signed response it would replay, as the status
+   profile's lifecycle endpoint requires
+   ([I-D.draft-mcguinness-oauth-mission-status]).  On a retransmit, the
+   AS MUST replay the original response rather than re-execute the
+   request.
+
+3.2.  Authentication
 
    The request MUST be authenticated using the status profile's
    mechanism set ([I-D.draft-mcguinness-oauth-mission-status],
-   Section "Authentication"): mTLS client authentication, a DPoP-bound
-   bearer token, or private-key-JWT client authentication, discovered
-   through the AS's existing client-authentication metadata [RFC8414].
+   Section "Authentication"), discovered through the AS's existing
+   client-authentication metadata [RFC8414]:
+
+   *  mTLS client authentication,
+
+   *  a DPoP-bound bearer token, or
+
+   *  private-key-JWT client authentication.
+
    Plain Basic or POST client authentication MUST NOT be used.  A
    deployment MUST NOT accept at the Management endpoint an
    authentication mechanism weaker than those it accepts at its Mission
-   Lifecycle endpoint.  When a sender-constrained access token
-   authenticates the call, it MUST carry a management authorization: a
-   mission_management scope or an equivalent deployment-defined grant,
-   distinct from the status profile's lifecycle grant.
+   Lifecycle endpoint.
+
+   When a sender-constrained access token authenticates the call, it
+   MUST carry a management authorization: a mission_management scope or
+   an equivalent deployment-defined grant, distinct from the status
+   profile's lifecycle grant.
 
    The surface is management-plane only.  A Mission Issuer MUST NOT
    authorize an Agent (the OAuth client that submitted or executes a
-   Mission) as a Management Client, and MUST NOT accept a Mission-bound
-   access token as authentication here.
+   Mission) as a Management Client.  A Mission Issuer MUST NOT accept a
+   Mission-bound access token as authentication here.
 
-3.2.  Authorization and Filter Scope
+3.3.  Authorization and Filter Scope
 
    A deployment authorizes each Management Client for a *filter scope*:
    the Missions it may enumerate and operate on, expressed over the
@@ -262,16 +289,28 @@ Table of Contents
    outside that scope.
 
    This surface intentionally inverts the status profile's anti-oracle
-   property.  That property exists because status callers are not
-   authorized for existence knowledge; a Management Client is, over
-   exactly its filter scope, so unknown and unauthorized references need
-   not be indistinguishable here and forbidden is returned openly.  The
-   compensating control is audit: the AS MUST record every management
-   request, including refused ones, in its audit log with the caller,
-   the operation, the full filter, the purpose or reason, the result
-   count or outcome manifest, and the disposition.  A refusal is
-   computed from the caller's grant and the request alone, never from
-   Mission data, so it discloses nothing about which Missions exist.
+   property: that property exists because status callers are not
+   authorized for existence knowledge, while a Management Client is,
+   over exactly its filter scope, so unknown and unauthorized references
+   need not be indistinguishable here and forbidden is returned openly.
+   The compensating control is audit: the AS MUST record every
+   management request, including refused ones, in its audit log with
+
+   *  the caller,
+
+   *  the operation,
+
+   *  the full filter,
+
+   *  the purpose or reason,
+
+   *  the result count or outcome manifest, and
+
+   *  the disposition.
+
+   A refusal is computed from the caller's grant and the request alone,
+   never from Mission data, so it discloses nothing about which Missions
+   exist.
 
 4.  Administrative Metadata
 
@@ -305,16 +344,19 @@ Table of Contents
    Administrative metadata is control-plane state: it MUST NOT be
    carried on access tokens or in audience-scoped authority projections,
    and it grants no authority.  It drives the management plane: approval
-   routing, filter scope (Section 3.2), enumeration, retention, and
-   incident response.  Enumeration summaries MAY include it for callers
-   whose filter scope covers the Mission (Section 6).  How the object is
-   populated, at issuance from deployment policy or by an authorized
-   management operation, is deployment-defined; a dedicated metadata
-   update operation is deferred until deployment experience shows the
-   shape.  However populated, a change to administrative metadata that
-   affects any caller's filter scope MUST be recorded as an audited
-   management event, since it redraws who may see and operate on the
-   Mission (Section 3.2).
+   routing, filter scope (Section 3.3), enumeration, retention, and
+   incident response.
+
+   Enumeration summaries MAY include administrative metadata for callers
+   whose filter scope covers the Mission (Section 6).
+
+   How the object is populated, at issuance from deployment policy or by
+   an authorized management operation, is deployment-defined; a
+   dedicated metadata update operation is deferred until deployment
+   experience shows the shape.  However populated, a change to
+   administrative metadata that affects any caller's filter scope MUST
+   be recorded as an audited management event, since it redraws who may
+   see and operate on the Mission (Section 3.3).
 
 5.  Mission Filter
 
@@ -379,7 +421,7 @@ Table of Contents
 
    purpose:  REQUIRED.  A string, maximum 1024 characters.  The
       operator's reason for the query (for example a ticket or case
-      identifier), recorded in audit (Section 3.2).
+      identifier), recorded in audit (Section 3.3).
 
    cursor:  OPTIONAL.  A string.  An opaque pagination cursor from a
       prior response.
@@ -391,10 +433,10 @@ Table of Contents
    bulk_token:  OPTIONAL.  A string.  A bulk token from a prior dry run
       (Section 7.1).  When present, enumerate returns exactly the
       membership that token pins (the pinned set) as summaries, so the
-      reviewed set equals the set a matching execute will operate on;
-      filter MUST equal the filter the token binds, and the AS MUST
-      refuse a mismatch with invalid_bulk_token (Section 8).  Presenting
-      a bulk token to enumerate is read-only and does not consume it.
+      reviewed set equals the executed set (Section 7.1). filter MUST
+      equal the filter the token binds; the AS MUST refuse a mismatch
+      with invalid_bulk_token (Section 8).  Presenting a bulk token to
+      enumerate is read-only and does not consume it.
 
 6.1.  Response
 
@@ -488,7 +530,7 @@ Table of Contents
       MUST NOT be sent otherwise.
 
    reason:  REQUIRED.  A string, maximum 1024 characters.  Recorded in
-      audit (Section 3.2) and applied as each per-Mission transition's
+      audit (Section 3.3) and applied as each per-Mission transition's
       reason under the status profile, so it surfaces in per-Mission
       audit and, where signals run, in each emitted event
       ([I-D.draft-mcguinness-oauth-mission-signals]).
@@ -505,7 +547,7 @@ Table of Contents
 7.1.  Dry Run
 
    On mode dry_run the AS evaluates the filter within the caller's
-   filter scope (Section 3.2), records the matched membership, and
+   filter scope (Section 3.3), records the matched membership, and
    returns a signed response carrying:
 
    operation:  REQUIRED.  The requested operation, echoed.
@@ -534,13 +576,21 @@ Table of Contents
 
 7.2.  Execution
 
-   On mode execute the AS MUST verify that the presented bulk_token is
-   unexpired and unused, was issued to this caller, and binds an
-   operation, filter, and (for a suspend) suspend_until and on_expiry
-   all equal to the request's; an execute whose operation, filter, or
-   on_expiry differs from what the token pins MUST be refused with
-   invalid_bulk_token, executing nothing.  The token is then consumed:
-   it is single-use whatever the outcome.
+   On mode execute the AS MUST verify that the presented bulk_token:
+
+   1.  is unexpired,
+
+   2.  is unused,
+
+   3.  was issued to this caller, and
+
+   4.  binds an operation, filter, and (for a suspend) suspend_until and
+       on_expiry all equal to the request's.
+
+   An execute whose operation, filter, or on_expiry differs from what
+   the token pins MUST be refused with invalid_bulk_token, executing
+   nothing.  The token is then consumed: it is single-use whatever the
+   outcome.
 
    The AS applies the operation to each member of the bound membership
    individually, under the status profile's lifecycle semantics
@@ -705,7 +755,7 @@ Table of Contents
    | forbidden          | 403  | Caller authenticated but not          |
    |                    |      | authorized for the requested          |
    |                    |      | operation or filter scope             |
-   |                    |      | (Section 3.2).                        |
+   |                    |      | (Section 3.3).                        |
    +--------------------+------+---------------------------------------+
    | rate_limited       | 429  | Caller is rate-limited.               |
    +--------------------+------+---------------------------------------+
@@ -783,22 +833,36 @@ Table of Contents
    This document is OPTIONAL.  An implementation that claims it conforms
    in one of two roles.
 
-   A *Management-capable Mission Issuer* serves the Mission Management
-   endpoint over the authentication and authorization of Section 3.1 and
-   Section 3.2 with signed responses per Section 3; serves enumerate
-   (Section 6) and the bulk lifecycle operations (Section 7) with dry-
-   run-then-execute and the bulk token bindings of Section 7.1; applies
-   bulk transitions per Mission under the status profile's lifecycle
-   semantics, emitting per-Mission evidence and signals (Section 7.2);
-   audit-logs every management request per Section 3.2; and advertises
-   mission_management_endpoint (Section 11).
+   A *Management-capable Mission Issuer*:
 
-   A *Management Client* authenticates per Section 3.1; sends the
-   REQUIRED purpose or reason on every request, identifying the operator
-   task rather than a fixed placeholder; obtains a fresh dry run for
-   every execute, surfacing the match_count to the deciding operator or
-   decision point before executing; and executes only bulk tokens from
-   dry runs it itself requested.
+   *  serves the Mission Management endpoint over the authentication and
+      authorization of Section 3.2 and Section 3.3 with signed responses
+      per Section 3;
+
+   *  serves enumerate (Section 6) and the bulk lifecycle operations
+      (Section 7) with dry-run-then-execute and the bulk token bindings
+      of Section 7.1;
+
+   *  applies bulk transitions per Mission under the status profile's
+      lifecycle semantics, emitting per-Mission evidence and signals
+      (Section 7.2);
+
+   *  audit-logs every management request per Section 3.3; and
+
+   *  advertises mission_management_endpoint (Section 11).
+
+   A *Management Client*:
+
+   *  authenticates per Section 3.2;
+
+   *  sends the REQUIRED purpose or reason on every request, identifying
+      the operator task rather than a fixed placeholder;
+
+   *  obtains a fresh dry run for every execute, surfacing the
+      match_count to the deciding operator or decision point before
+      executing; and
+
+   *  executes only bulk tokens from dry runs it itself requested.
 
    An implementation that supports neither role is unaffected and
    remains a conforming issuance or status profile implementation.
@@ -815,9 +879,9 @@ Table of Contents
    This endpoint is the highest-blast-radius surface in this suite: one
    authorized request can terminate or suspend every Mission in a filter
    scope, and one enumeration can disclose a tenant's entire Mission
-   population.  Accordingly, the authentication floor of Section 3.1 is
+   population.  Accordingly, the authentication floor of Section 3.2 is
    at least the lifecycle endpoint's with a distinct management grant,
-   every call including every refusal is audited (Section 3.2), and
+   every call including every refusal is audited (Section 3.3), and
    destructive operations are structurally two-step, since an execute
    cannot exist without the dry run that pinned its membership.
 
@@ -831,14 +895,24 @@ Table of Contents
    disclosure and work stoppage, not authority escalation: the surface
    cannot create or widen a Mission, and the model's availability trade
    applies, since a management credential converts into stopped governed
-   work rather than loosened enforcement.  One qualification: bulk
-   resume re-activates Missions suspended for cause, undoing an in-
-   flight containment.  A deployment MUST require a distinct or elevated
-   grant for resume at this endpoint and SHOULD alert on bulk resume.
-   Deployments SHOULD scope Management Clients narrowly, protect their
-   credentials as operator credentials, and alert on anomalous
-   management activity; where audit transparency runs, management audit
-   records are candidates for it ([I-D.draft-mcguinness-mission-audit]).
+   work rather than loosened enforcement.
+
+   One qualification: bulk resume re-activates Missions suspended for
+   cause, undoing an in-flight containment.  A deployment MUST require a
+   distinct or elevated grant for resume at this endpoint.  A deployment
+   SHOULD alert on bulk resume.
+
+   Deployments SHOULD:
+
+   *  scope Management Clients narrowly,
+
+   *  protect their credentials as operator credentials, and
+
+   *  alert on anomalous management activity.
+
+   Where audit transparency runs, management audit records are
+   candidates for it ([I-D.draft-mcguinness-mission-audit]).
+
    The purpose and reason strings that flow into those records, and into
    per-Mission evidence and signals, are caller-written free text; audit
    systems MUST treat them as untrusted input.
@@ -847,12 +921,13 @@ Table of Contents
 
    The status profile makes Mission existence unobservable to the
    unauthorized; this document makes it queryable by the authorized.
-   The two compose safely only if the boundary between them holds: a
+   The two compose safely only if the boundary between them holds.  A
    deployment MUST NOT satisfy a management request with a credential
-   authorized only for status or lifecycle calls, and the filter-scope
-   check of Section 3.2 MUST run before any Mission data is touched, so
-   a refusal is data-independent.  The audit rule is the compensating
-   control for the disclosure this surface exists to provide.
+   authorized only for status or lifecycle calls.  The filter-scope
+   check of Section 3.3 MUST run before any Mission data is touched, so
+   a refusal is data-independent.  The audit rule of Section 3.3 is the
+   compensating control for the disclosure this surface exists to
+   provide.
 
 13.3.  Bulk Token Binding
 
@@ -872,8 +947,7 @@ Table of Contents
 13.4.  General OAuth Security
 
    This document inherits OAuth 2.0 Best Current Practice [RFC9700] for
-   the OAuth surfaces it composes with; implementers MUST follow current
-   OAuth security guidance.
+   the OAuth surfaces it composes with.
 
 14.  Privacy Considerations
 
@@ -885,17 +959,22 @@ Table of Contents
    activity timing, and a page of rows profiles a person's delegated
    activity.  Minimization is structural: the summary shape of
    Section 6.1 excludes the Mission Intent and the Authority Set, and
-   the filter-scope authorization of Section 3.2 bounds each Management
+   the filter-scope authorization of Section 3.3 bounds each Management
    Client to the population it demonstrably needs.  A deployment SHOULD
    grant tenant-wide filter scopes only to incident-response roles.
 
-   The audit records of Section 3.2 are doubly sensitive: they carry the
+   The audit records of Section 3.3 are doubly sensitive: they carry the
    Subject identifiers of the Missions touched, and they record which
-   operator investigated which person, when, and why.  Deployments MUST
-   treat them as PII sinks under the issuance profile's privacy rules,
-   retain them for at least the audit horizon of the Missions they
-   concern ([I-D.draft-mcguinness-oauth-mission]), and restrict read
-   access to them at least as tightly as the management surface itself.
+   operator investigated which person, when, and why.  Deployments MUST:
+
+   *  treat them as PII sinks under the issuance profile's privacy
+      rules,
+
+   *  retain them for at least the audit horizon of the Missions they
+      concern ([I-D.draft-mcguinness-oauth-mission]), and
+
+   *  restrict read access to them at least as tightly as the management
+      surface itself.
 
 15.  IANA Considerations
 

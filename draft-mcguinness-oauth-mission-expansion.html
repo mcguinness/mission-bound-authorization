@@ -1183,13 +1183,10 @@ Mission is unaffected by this document.<a href="#section-abstract-1" class="pilc
                 <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-status-an-optional-extensio" class="internal xref">Status: an optional extension</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
-                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-expansion-is-not-step-up" class="internal xref">Expansion is not step-up</a></p>
+                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-relationship-to-the-issuanc" class="internal xref">Relationship to the issuance profile</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3">
-                <p id="section-toc.1-1.1.2.3.1" class="keepWithNext"><a href="#section-1.3" class="auto internal xref">1.3</a>.  <a href="#name-relationship-to-the-issuanc" class="internal xref">Relationship to the issuance profile</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.4">
-                <p id="section-toc.1-1.1.2.4.1"><a href="#section-1.4" class="auto internal xref">1.4</a>.  <a href="#name-scope" class="internal xref">Scope</a></p>
+                <p id="section-toc.1-1.1.2.3.1" class="keepWithNext"><a href="#section-1.3" class="auto internal xref">1.3</a>.  <a href="#name-scope" class="internal xref">Scope</a></p>
 </li>
             </ul>
 </li>
@@ -1204,6 +1201,9 @@ Mission is unaffected by this document.<a href="#section-abstract-1" class="pilc
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
                 <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-eligibility" class="internal xref">Eligibility</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-expansion-is-not-step-up" class="internal xref">Expansion is not step-up</a></p>
 </li>
             </ul>
 </li>
@@ -1365,97 +1365,81 @@ Mission Issuer. Nothing here places a new requirement back on the
 issuance profile.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="not-step-up">
-<section id="section-1.2">
-        <h3 id="name-expansion-is-not-step-up">
-<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-expansion-is-not-step-up" class="section-name selfRef">Expansion is not step-up</a>
-        </h3>
-<p id="section-1.2-1">Expansion is a governance operation. It is distinct from
-authentication step-up <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>. A request denied because an <code>acr</code>
-or <code>amr</code> constraint requires fresh authentication is satisfied by
-step-up, not by expansion: the Authority Set does not change. A
-request denied because the requested authority is not in the active
-Mission's Authority Set requires expansion: the Authority Set must be
-enlarged through a new approval event. The two are not interchangeable;
-<a href="#step-up-distinction" class="auto internal xref">Section 13.4</a> treats the security consequence of conflating
-them.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
-</section>
-</div>
 <div id="relationship">
-<section id="section-1.3">
+<section id="section-1.2">
         <h3 id="name-relationship-to-the-issuanc">
-<a href="#section-1.3" class="section-number selfRef">1.3. </a><a href="#name-relationship-to-the-issuanc" class="section-name selfRef">Relationship to the issuance profile</a>
+<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-relationship-to-the-issuanc" class="section-name selfRef">Relationship to the issuance profile</a>
         </h3>
-<p id="section-1.3-1">This document depends normatively on the issuance profile and is not
+<p id="section-1.2-1">This document depends normatively on the issuance profile and is not
 implementable alone. It reuses, without restating, that profile's
 Mission Intent, submission via PAR, authority
 derivation, approval event with its integrity anchors, Mission record,
 the <code>mission</code> claim, the subset rule, and the lifecycle and issuance
 gating. It uses the terms Agent (Client), Subject, Approver, Mission
 Issuer, Mission Intent, Authority Set, Mission, and derived token as
-defined there.<a href="#section-1.3-1" class="pilcrow">¶</a></p>
-<p id="section-1.3-2">Where this document refers to "the issuance profile" without a section,
-it means <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> as a whole.<a href="#section-1.3-2" class="pilcrow">¶</a></p>
+defined there.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
+<p id="section-1.2-2">Where this document refers to "the issuance profile" without a section,
+it means <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> as a whole.<a href="#section-1.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="scope">
-<section id="section-1.4">
+<section id="section-1.3">
         <h3 id="name-scope">
-<a href="#section-1.4" class="section-number selfRef">1.4. </a><a href="#name-scope" class="section-name selfRef">Scope</a>
+<a href="#section-1.3" class="section-number selfRef">1.3. </a><a href="#name-scope" class="section-name selfRef">Scope</a>
         </h3>
-<p id="section-1.4-1">This document defines:<a href="#section-1.4-1" class="pilcrow">¶</a></p>
+<p id="section-1.3-1">This document defines:<a href="#section-1.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-1.4-2.1">
-            <p id="section-1.4-2.1.1">the expansion request: how a client initiates a successor Mission
+<li class="normal" id="section-1.3-2.1">
+            <p id="section-1.3-2.1.1">the expansion request: how a client initiates a successor Mission
 and how that request is bound to the predecessor's grant
-(<a href="#expansion-request" class="auto internal xref">Section 4</a>);<a href="#section-1.4-2.1.1" class="pilcrow">¶</a></p>
+(<a href="#expansion-request" class="auto internal xref">Section 4</a>);<a href="#section-1.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-1.4-2.2">
-            <p id="section-1.4-2.2.1">the <code>predecessor</code> lineage member on the successor's <code>mission</code> claim
-and Mission record (<a href="#predecessor-member" class="auto internal xref">Section 6</a>);<a href="#section-1.4-2.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-1.3-2.2">
+            <p id="section-1.3-2.2.1">the <code>predecessor</code> lineage member on the successor's <code>mission</code> claim
+and Mission record (<a href="#predecessor-member" class="auto internal xref">Section 6</a>);<a href="#section-1.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-1.4-2.3">
-            <p id="section-1.4-2.3.1">the terminal <code>superseded</code> predecessor state and its transition
-(<a href="#superseded-state" class="auto internal xref">Section 7</a>);<a href="#section-1.4-2.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-1.3-2.3">
+            <p id="section-1.3-2.3.1">the terminal <code>superseded</code> predecessor state and its transition
+(<a href="#superseded-state" class="auto internal xref">Section 7</a>);<a href="#section-1.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-1.4-2.4">
-            <p id="section-1.4-2.4.1">replacement expansion as the mode, with branch expansion deferred
-(<a href="#replacement" class="auto internal xref">Section 8</a>);<a href="#section-1.4-2.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-1.3-2.4">
+            <p id="section-1.3-2.4.1">replacement expansion as the mode, with branch expansion deferred
+(<a href="#replacement" class="auto internal xref">Section 8</a>);<a href="#section-1.3-2.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-1.4-2.5">
-            <p id="section-1.4-2.5.1">concurrent-expansion reconciliation, with a closed set of
-reconciliation status codes (<a href="#reconciliation" class="auto internal xref">Section 9</a>); and<a href="#section-1.4-2.5.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-1.3-2.5">
+            <p id="section-1.3-2.5.1">concurrent-expansion reconciliation, with a closed set of
+reconciliation status codes (<a href="#reconciliation" class="auto internal xref">Section 9</a>); and<a href="#section-1.3-2.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-1.4-2.6">
-            <p id="section-1.4-2.6.1">the expansion denial reasons (<a href="#denial-reasons" class="auto internal xref">Section 10</a>).<a href="#section-1.4-2.6.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-1.3-2.6">
+            <p id="section-1.3-2.6.1">the expansion denial reasons (<a href="#denial-reasons" class="auto internal xref">Section 10</a>).<a href="#section-1.3-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-1.4-3">This document does NOT define:<a href="#section-1.4-3" class="pilcrow">¶</a></p>
+<p id="section-1.3-3">This document does NOT define:<a href="#section-1.3-3" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-1.4-4.1">
-            <p id="section-1.4-4.1.1">a way to widen an existing Mission in place; expansion always
-creates a new Mission;<a href="#section-1.4-4.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-1.3-4.1">
+            <p id="section-1.3-4.1.1">a way to widen an existing Mission in place; expansion always
+creates a new Mission;<a href="#section-1.3-4.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-1.4-4.2">
-            <p id="section-1.4-4.2.1">runtime per-action enforcement or the classification of a denial as
+          <li class="normal" id="section-1.3-4.2">
+            <p id="section-1.3-4.2.1">runtime per-action enforcement or the classification of a denial as
 expansion-eligible; that is the runtime layer's concern
-(<a href="#eligibility" class="auto internal xref">Section 3.2</a>, <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>);<a href="#section-1.4-4.2.1" class="pilcrow">¶</a></p>
+(<a href="#eligibility" class="auto internal xref">Section 3.2</a>, <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>);<a href="#section-1.3-4.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-1.4-4.3">
-            <p id="section-1.4-4.3.1">branch expansion, in which predecessor and successor both remain
-active (<a href="#replacement" class="auto internal xref">Section 8</a>);<a href="#section-1.4-4.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-1.3-4.3">
+            <p id="section-1.3-4.3.1">branch expansion, in which predecessor and successor both remain
+active (<a href="#replacement" class="auto internal xref">Section 8</a>);<a href="#section-1.3-4.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-1.4-4.4">
-            <p id="section-1.4-4.4.1">multi-hop or cross-domain expansion; an expansion is adjudicated by
-the predecessor's Mission Issuer (its <code>issuer</code>); or<a href="#section-1.4-4.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-1.3-4.4">
+            <p id="section-1.3-4.4.1">multi-hop or cross-domain expansion; an expansion is adjudicated by
+the predecessor's Mission Issuer (its <code>issuer</code>); or<a href="#section-1.3-4.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-1.4-4.5">
-            <p id="section-1.4-4.5.1">policy-adjudicated expansion within a pre-consented authority
+          <li class="normal" id="section-1.3-4.5">
+            <p id="section-1.3-4.5.1">policy-adjudicated expansion within a pre-consented authority
 ceiling; that is progressive authorization, defined by an
 experimental companion
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>). Under this
 document alone, every expansion is adjudicated by a fresh human
-approval.<a href="#section-1.4-4.5.1" class="pilcrow">¶</a></p>
+approval.<a href="#section-1.3-4.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -1474,7 +1458,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <p id="section-2-2">All JSON shown in this document is non-normative and illustrative; the
 member definitions in the surrounding text are authoritative.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">The following terms apply in addition to those inherited from the
-issuance profile (<a href="#relationship" class="auto internal xref">Section 1.3</a>).<a href="#section-2-3" class="pilcrow">¶</a></p>
+issuance profile (<a href="#relationship" class="auto internal xref">Section 1.2</a>).<a href="#section-2-3" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-2-4">
         <dt id="section-2-4.1">Predecessor Mission:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.2">
@@ -1573,6 +1557,22 @@ Whether the Mission Issuer adjudicates a successor remains its decision
 of expansion.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="not-step-up">
+<section id="section-3.3">
+        <h3 id="name-expansion-is-not-step-up">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-expansion-is-not-step-up" class="section-name selfRef">Expansion is not step-up</a>
+        </h3>
+<p id="section-3.3-1">Expansion is a governance operation. It is distinct from
+authentication step-up <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>. A request denied because an <code>acr</code>
+or <code>amr</code> constraint requires fresh authentication is satisfied by
+step-up, not by expansion: the Authority Set does not change. A
+request denied because the requested authority is not in the active
+Mission's Authority Set requires expansion: the Authority Set must be
+enlarged through a new approval event. The two are not interchangeable;
+<a href="#step-up-distinction" class="auto internal xref">Section 13.4</a> treats the security consequence of conflating
+them.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="expansion-request">
@@ -1608,11 +1608,7 @@ this Mission creation is an expansion and names the predecessor whose
 <code>mission.predecessor</code> lineage member and <code>superseded</code> transition the
 Mission Issuer applies. It names the predecessor for cross-checking
 and audit; it does not by itself select or authorize one (the grant
-does, <a href="#request-binding" class="auto internal xref">Section 4.2</a>). The parameter is carried through PAR with
-<code>mission_intent</code>; like <code>mission_intent</code>, an AS <span class="bcp14">MUST</span> reject a
-<code>predecessor</code> value presented directly on a front-channel
-authorization request rather than through a PAR-issued <code>request_uri</code>
-with <code>invalid_request</code>.<a href="#section-4.1-3.2.1" class="pilcrow">¶</a></p>
+does, <a href="#request-binding" class="auto internal xref">Section 4.2</a>).<a href="#section-4.1-3.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-4.1-3.3">
@@ -1623,19 +1619,21 @@ Mission's refresh token, presented as proof that the client controls
 the predecessor's grant. The Mission Issuer resolves the predecessor
 from this token and binds the expansion to it (<a href="#request-binding" class="auto internal xref">Section 4.2</a>);
 this value, not <code>predecessor</code>, selects the predecessor
-authoritatively. It is carried through PAR with <code>mission_intent</code>; an
-AS <span class="bcp14">MUST</span> reject a <code>predecessor_token</code> presented directly on a
-front-channel authorization request rather than through a PAR-issued
-<code>request_uri</code> with <code>invalid_request</code>. Because it carries a refresh
-token, it <span class="bcp14">MUST</span> be sent only on the PAR back
-channel and <span class="bcp14">MUST NOT</span> appear on any front channel.<a href="#section-4.1-3.4.1" class="pilcrow">¶</a></p>
+authoritatively.<a href="#section-4.1-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-4.1-4">The <code>predecessor</code> parameter names the predecessor but does not
+<p id="section-4.1-4">Both parameters are carried through PAR with <code>mission_intent</code>. Like
+<code>mission_intent</code>, an AS <span class="bcp14">MUST</span> reject a <code>predecessor</code> or
+<code>predecessor_token</code> value presented directly on a front-channel
+authorization request rather than through a PAR-issued <code>request_uri</code>
+with <code>invalid_request</code>. Because <code>predecessor_token</code> carries a refresh
+token, it <span class="bcp14">MUST</span> be sent only on the PAR back channel and <span class="bcp14">MUST NOT</span>
+appear on any front channel.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
+<p id="section-4.1-5">The <code>predecessor</code> parameter names the predecessor but does not
 by itself authorize expanding it. Authorization comes from the grant
 binding of <a href="#request-binding" class="auto internal xref">Section 4.2</a>: a client <span class="bcp14">MUST NOT</span> be able to expand a
-Mission merely by naming its <code>mission_id</code>.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
+Mission merely by naming its <code>mission_id</code>.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="request-binding">
@@ -1651,36 +1649,49 @@ request <span class="bcp14">MUST</span> be bound to the predecessor's grant the 
 <p id="section-4.2-2">Because expansion runs as an interactive approval event, a PAR
 submission followed by an authorization-code flow (<a href="#adjudication" class="auto internal xref">Section 5</a>),
 the binding is established at the PAR submission, a back-channel
-request. PAR permits a public client to submit without client
-authentication (<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>), so the expansion <span class="bcp14">MUST</span> rest on an
-authenticated proof of control over the predecessor's grant. A
-confidential client supplies this by authenticating to the PAR
-endpoint. A public client's PAR request is not client-authenticated,
-so its expansion rests solely on the presented <code>predecessor_token</code>,
-which <span class="bcp14">MUST</span> then be sender-constrained (<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> or <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) so
-it is not a bearer proof; the Mission Issuer <span class="bcp14">MUST</span> reject a
-public-client expansion whose <code>predecessor_token</code> is not
-sender-constrained with <code>invalid_request</code>. In the same PAR request that
-carries <code>mission_intent</code> and <code>predecessor</code>, the client <span class="bcp14">MUST</span>
-present the predecessor Mission's refresh token in the
-<code>predecessor_token</code> parameter (<a href="#submission" class="auto internal xref">Section 4.1</a>). The Mission
-Issuer <span class="bcp14">MUST</span> resolve the predecessor from that refresh token, applying
-the same grant-to-Mission resolution the issuance profile uses for a
-presented refresh token, and <span class="bcp14">MUST</span> verify that the resolved Mission is
-the Mission named in <code>predecessor</code>.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
-<p id="section-4.2-3">Establishing the binding at PAR, before the approval event, is
+request. The binding procedure is:<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4.2-3">
+<li id="section-4.2-3.1">
+            <p id="section-4.2-3.1.1">In the same PAR request that carries <code>mission_intent</code> and
+<code>predecessor</code>, the client <span class="bcp14">MUST</span> present the predecessor Mission's
+refresh token in the <code>predecessor_token</code> parameter
+(<a href="#submission" class="auto internal xref">Section 4.1</a>).<a href="#section-4.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.2-3.2">
+            <p id="section-4.2-3.2.1">The expansion <span class="bcp14">MUST</span> rest on an authenticated proof of control over
+the predecessor's grant: a confidential client supplies this by
+authenticating to the PAR endpoint; a public client's proof is a
+sender-constrained <code>predecessor_token</code>, as required below.<a href="#section-4.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.2-3.3">
+            <p id="section-4.2-3.3.1">The Mission Issuer <span class="bcp14">MUST</span> resolve the predecessor from the presented
+refresh token, applying the same grant-to-Mission resolution the
+issuance profile uses for a presented refresh token.<a href="#section-4.2-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.2-3.4">
+            <p id="section-4.2-3.4.1">The Mission Issuer <span class="bcp14">MUST</span> verify that the resolved Mission is the
+Mission named in <code>predecessor</code>.<a href="#section-4.2-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-4.2-4">PAR permits a public client to submit without client authentication
+(<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>), so a public client's expansion rests solely on the
+presented <code>predecessor_token</code>. That token <span class="bcp14">MUST</span> be sender-constrained
+(<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> or <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) so it is not a bearer proof. The Mission
+Issuer <span class="bcp14">MUST</span> reject a public-client expansion whose <code>predecessor_token</code>
+is not sender-constrained with <code>invalid_request</code>.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+<p id="section-4.2-5">Establishing the binding at PAR, before the approval event, is
 deliberate: the Mission Issuer resolves the predecessor from a real
 grant and confirms it is active and owned by this client before
 prompting the Approver. A client that merely names a <code>mission_id</code> it
 does not hold a grant for cannot reach the consent step, so expansion
 cannot be used to drive approval prompts against another party's
-Mission.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
-<p id="section-4.2-4">The grant, not the identifier, determines the predecessor. The Mission
+Mission.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
+<p id="section-4.2-6">The grant, not the identifier, determines the predecessor. The Mission
 Issuer <span class="bcp14">MUST</span> refuse an expansion request whose <code>predecessor</code>
 value does not match the Mission resolved from the presented grant,
 with <code>invalid_grant</code>. A client that does not hold a grant for the named
-predecessor cannot present its refresh token and so cannot expand it.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
-<p id="section-4.2-5">Stated as the eligibility rule rather than a consequence: this
+predecessor cannot present its refresh token and so cannot expand it.<a href="#section-4.2-6" class="pilcrow">¶</a></p>
+<p id="section-4.2-7">Stated as the eligibility rule rather than a consequence: this
 profile's expansion requires a refresh-token-bearing grant, and a
 deployment that issues no refresh token for a Mission forgoes it.
 Nothing else is lost. Succession stays reachable through a fresh
@@ -1693,38 +1704,52 @@ the authenticated principal, never a token's possession
 gates the proposal channel (who may put an expansion wearing this
 predecessor's name in front of the Approver, and who may trigger the
 atomic supersession), never the authority: no proof failure can
-widen anything.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
-<p id="section-4.2-6">Presenting the predecessor's refresh token in the PAR request <span class="bcp14">MUST</span>
-follow the issuance profile's handling for that token: a
-sender-constrained refresh token <span class="bcp14">MUST</span> be presented in conformance with
-its sender constraint. When the token is DPoP-bound <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, the PAR
-request <span class="bcp14">MUST</span> carry a DPoP proof bound to the PAR endpoint (its <code>htu</code> and
-<code>htm</code>); when it is mTLS-bound <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>, the mutual-TLS connection of
-the PAR request satisfies the constraint. Presenting the token for
-expansion <span class="bcp14">MUST NOT</span> rotate it and <span class="bcp14">MUST NOT</span> register as a replay in the
-deployment's refresh-token replay detection: the token is used here only
-to bind and resolve the predecessor, not to refresh. In a
-rotation-based deployment that carve-out would let a stolen bearer
-refresh token be presented repeatedly without detection, so each
-expansion presentation <span class="bcp14">MUST</span> be recorded and counted toward the
-deployment's anomaly detection, and the per-predecessor rate limit
-(<a href="#policy-probing" class="auto internal xref">Section 13.5</a>) applies unconditionally, with a tighter bound
-<span class="bcp14">SHOULD</span> when the presented token is not sender-constrained. The
-successor's
-authority still comes only from the fresh consent at the approval event,
-never from authority the binding token could itself derive.<a href="#section-4.2-6" class="pilcrow">¶</a></p>
-<p id="section-4.2-7">This binding requires the predecessor to have a refresh token to
+widen anything.<a href="#section-4.2-7" class="pilcrow">¶</a></p>
+<p id="section-4.2-8">Presenting the predecessor's refresh token in the PAR request <span class="bcp14">MUST</span>
+follow the issuance profile's handling for that token:<a href="#section-4.2-8" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4.2-9">
+<li id="section-4.2-9.1">
+            <p id="section-4.2-9.1.1">A sender-constrained refresh token <span class="bcp14">MUST</span> be presented in conformance
+with its sender constraint. When the token is DPoP-bound
+<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, the PAR request <span class="bcp14">MUST</span> carry a DPoP proof bound to the
+PAR endpoint (its <code>htu</code> and <code>htm</code>); when it is mTLS-bound
+<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>, the mutual-TLS connection of the PAR request satisfies
+the constraint.<a href="#section-4.2-9.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.2-9.2">
+            <p id="section-4.2-9.2.1">Presenting the token for expansion <span class="bcp14">MUST NOT</span> rotate it. It <span class="bcp14">MUST NOT</span>
+register as a replay in the deployment's refresh-token replay
+detection. The token is used here only to bind and resolve the
+predecessor, not to refresh.<a href="#section-4.2-9.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.2-9.3">
+            <p id="section-4.2-9.3.1">Each expansion presentation <span class="bcp14">MUST</span> be recorded and counted toward the
+deployment's anomaly detection.<a href="#section-4.2-9.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.2-9.4">
+            <p id="section-4.2-9.4.1">The per-predecessor rate limit (<a href="#policy-probing" class="auto internal xref">Section 13.5</a>) applies
+unconditionally. A deployment <span class="bcp14">SHOULD</span> apply a tighter bound when the
+presented token is not sender-constrained.<a href="#section-4.2-9.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-4.2-10">The record-and-count rule exists because, in a rotation-based
+deployment, the no-rotation and no-replay carve-out would otherwise
+let a stolen bearer refresh token be presented repeatedly without
+detection. The successor's authority still comes only from the fresh
+consent at the approval event, never from authority the binding token
+could itself derive.<a href="#section-4.2-10" class="pilcrow">¶</a></p>
+<p id="section-4.2-11">This binding requires the predecessor to have a refresh token to
 present. A Mission issued without one (for example an
 access-token-only grant) has no <code>predecessor_token</code> to carry and so
 cannot be expanded through this binding; a deployment that must expand
 such a Mission defines an alternative grant proof by extension, or the
 task obtains its broadened authority as an ordinary new Mission under
 the issuance profile, linked by the successor's <code>related_to</code> member
-(<a href="#predecessor-member" class="auto internal xref">Section 6</a>) for lineage.<a href="#section-4.2-7" class="pilcrow">¶</a></p>
-<p id="section-4.2-8">Because expansion reuses the issuance profile's grant binding, it
+(<a href="#predecessor-member" class="auto internal xref">Section 6</a>) for lineage.<a href="#section-4.2-11" class="pilcrow">¶</a></p>
+<p id="section-4.2-12">Because expansion reuses the issuance profile's grant binding, it
 needs no opaque expansion ticket or other new bearer: the predecessor
 is identified and authorized by the grant the client already holds for
-it, and a client cannot name an arbitrary predecessor.<a href="#section-4.2-8" class="pilcrow">¶</a></p>
+it, and a client cannot name an arbitrary predecessor.<a href="#section-4.2-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="predecessor-active">
@@ -1859,13 +1884,9 @@ This document introduces one such member:<a href="#section-6-2" class="pilcrow">
           <p id="section-6-3.2.1"><span class="bcp14">REQUIRED</span> on a successor Mission; absent otherwise. A string. The
 <code>mission_id</code> of the Mission this Mission succeeded by expansion.
 Present on every Mission created by expansion and absent on a Mission
-that was not created by expansion. It is a
-lineage and audit reference only: it links the successor to the
+that was not created by expansion. It links the successor to the
 Mission it replaced so that the expansion chain is observable in
-audit. Consistent with the issuance profile's open-<code>mission</code>-claim
-rule, <code>predecessor</code> <span class="bcp14">MUST NOT</span> grant or widen authority, and a consumer
-that does not understand it <span class="bcp14">MUST</span> ignore it. The successor's authority
-comes only from its own <code>authority_hash</code>, never from its predecessor.<a href="#section-6-3.2.1" class="pilcrow">¶</a></p>
+audit.<a href="#section-6-3.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1881,9 +1902,7 @@ derived token.<a href="#section-6-4" class="pilcrow">¶</a></p>
 related to by lineage without superseding it, used for a non-superseding
 link such as a branch (<a href="#replacement" class="auto internal xref">Section 8</a>). Unlike <code>predecessor</code>, its
 presence does not imply that the referenced Mission was superseded and
-it carries no lifecycle consequence. Like <code>predecessor</code>, it is lineage
-and audit context only: it <span class="bcp14">MUST NOT</span> grant or widen authority, and a
-consumer that does not understand it <span class="bcp14">MUST</span> ignore it.<a href="#section-6-6.2.1" class="pilcrow">¶</a></p>
+it carries no lifecycle consequence.<a href="#section-6-6.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-6.3">
@@ -1893,8 +1912,7 @@ consumer that does not understand it <span class="bcp14">MUST</span> ignore it.<
 this Mission by expansion, recorded on the superseded predecessor's
 Mission record at supersession (<a href="#superseded-state" class="auto internal xref">Section 7</a>). It is the
 reverse of the successor's <code>predecessor</code> link, letting a consumer that
-holds a superseded predecessor discover its successor directly. It is
-lineage and audit context only and <span class="bcp14">MUST NOT</span> grant or widen authority.
+holds a superseded predecessor discover its successor directly.
 The Status profile surfaces it in the status response
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) and the Signals profile
 in the superseded lifecycle event
@@ -1902,35 +1920,41 @@ in the superseded lifecycle event
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-6-7"><code>predecessor</code>, <code>related_to</code>, and <code>successor</code> are each a bare Mission
+<p id="section-6-7"><code>predecessor</code>, <code>related_to</code>, and <code>successor</code> are lineage and audit
+context only. Consistent with the issuance profile's
+open-<code>mission</code>-claim rule, each of them <span class="bcp14">MUST NOT</span> grant or widen
+authority, and a consumer that does not understand one <span class="bcp14">MUST</span> ignore it.
+The successor's authority comes only from its own <code>authority_hash</code>,
+never from its predecessor.<a href="#section-6-7" class="pilcrow">¶</a></p>
+<p id="section-6-8"><code>predecessor</code>, <code>related_to</code>, and <code>successor</code> are each a bare Mission
 Identifier string, not an object like the <code>parent</code> member of a Child
 Mission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>): same-issuer
 succession needs only the identifier to resolve the linked Mission at the
 shared <code>issuer</code>, whereas parentage carries cascade semantics and
-cross-object integrity that require a structured member.<a href="#section-6-7" class="pilcrow">¶</a></p>
-<p id="section-6-8">Properties:<a href="#section-6-8" class="pilcrow">¶</a></p>
+cross-object integrity that require a structured member.<a href="#section-6-8" class="pilcrow">¶</a></p>
+<p id="section-6-9">Properties:<a href="#section-6-9" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-6-9.1">
-          <p id="section-6-9.1.1"><strong>Cardinality.</strong> A successor has at most one <code>predecessor</code>. An
+<li class="normal" id="section-6-10.1">
+          <p id="section-6-10.1.1"><strong>Cardinality.</strong> A successor has at most one <code>predecessor</code>. An
 expansion chain is expressed by walking <code>predecessor</code> links from a
-successor back toward the original Mission.<a href="#section-6-9.1.1" class="pilcrow">¶</a></p>
+successor back toward the original Mission.<a href="#section-6-10.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-9.2">
-          <p id="section-6-9.2.1"><strong>Immutability.</strong> <code>predecessor</code> is set at the successor's approval
+        <li class="normal" id="section-6-10.2">
+          <p id="section-6-10.2.1"><strong>Immutability.</strong> <code>predecessor</code> is set at the successor's approval
 event and <span class="bcp14">MUST NOT</span> change thereafter. The Mission record is immutable
 except for its <code>state</code> and the one-time <code>successor</code> link a supersession
-sets on the predecessor (<a href="#superseded-state" class="auto internal xref">Section 7</a>).<a href="#section-6-9.2.1" class="pilcrow">¶</a></p>
+sets on the predecessor (<a href="#superseded-state" class="auto internal xref">Section 7</a>).<a href="#section-6-10.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-9.3">
-          <p id="section-6-9.3.1"><strong>Origin.</strong> The predecessor and successor share an <code>issuer</code>: an
+        <li class="normal" id="section-6-10.3">
+          <p id="section-6-10.3.1"><strong>Origin.</strong> The predecessor and successor share an <code>issuer</code>: an
 expansion is adjudicated by the predecessor's Mission Issuer. A
-consumer correlating a chain resolves each link at that issuer.<a href="#section-6-9.3.1" class="pilcrow">¶</a></p>
+consumer correlating a chain resolves each link at that issuer.<a href="#section-6-10.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-6-10">Example successor <code>mission</code> claim on a derived token (non-normative;
-other token claims omitted):<a href="#section-6-10" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-6-11">
+<p id="section-6-11">Example successor <code>mission</code> claim on a derived token (non-normative;
+other token claims omitted):<a href="#section-6-11" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6-12">
 <pre>
 {
   "mission": {
@@ -1941,7 +1965,7 @@ other token claims omitted):<a href="#section-6-10" class="pilcrow">¶</a></p>
     "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   }
 }
-</pre><a href="#section-6-11" class="pilcrow">¶</a>
+</pre><a href="#section-6-12" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -1992,16 +2016,24 @@ unchanged for it. The transition is:<a href="#section-7-3" class="pilcrow">¶</a
 successor activates, and the predecessor enters <code>superseded</code>, in one
 atomic operation at the first redemption of the successor's
 authorization code (its grant), not at the approval event
-(<a href="#adjudication" class="auto internal xref">Section 5</a>); in that same operation the Mission Issuer sets
+(<a href="#adjudication" class="auto internal xref">Section 5</a>). In that same operation the Mission Issuer sets
 the predecessor's <code>successor</code> member to the successor's <code>mission_id</code>
 (<a href="#predecessor-member" class="auto internal xref">Section 6</a>). Until that redemption the predecessor
-remains <code>active</code>. An authorization code that is never redeemed or
-that expires activates no successor and leaves the predecessor
-<code>active</code>, so an unredeemed or expired code never strands the task's
-authority nor cascade-terminates the predecessor's Child Missions.
-If the atomic operation fails, the predecessor remains <code>active</code> and
-no successor record exists; the Mission Issuer <span class="bcp14">MUST NOT</span> produce a
-partial successor or a predecessor left in an indeterminate state.<a href="#section-7-6.1.1" class="pilcrow">¶</a></p>
+remains <code>active</code>.<a href="#section-7-6.1.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-6.1.2.1">
+              <p id="section-7-6.1.2.1.1">An authorization code that is never redeemed or that expires
+activates no successor and leaves the predecessor <code>active</code>, so an
+unredeemed or expired code never strands the task's authority nor
+cascade-terminates the predecessor's Child Missions.<a href="#section-7-6.1.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-6.1.2.2">
+              <p id="section-7-6.1.2.2.1">If the atomic operation fails, the predecessor remains <code>active</code>
+and no successor record exists. The Mission Issuer <span class="bcp14">MUST NOT</span>
+produce a partial successor or a predecessor left in an
+indeterminate state.<a href="#section-7-6.1.2.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
 </li>
         <li class="normal" id="section-7-6.2">
           <p id="section-7-6.2.1"><strong>Non-active: no further derivation.</strong> A <code>superseded</code> Mission is not
@@ -2016,14 +2048,21 @@ flows through the successor.<a href="#section-7-6.2.1" class="pilcrow">¶</a></p
 the predecessor before it was superseded remain valid until their own
 <code>exp</code>, exactly as in the issuance profile's revocation model:
 superseding a Mission stops new derivation; it does not retroactively
-invalidate access tokens already issued. A deployment that needs a
-lower cutoff latency on the predecessor's outstanding tokens <span class="bcp14">SHOULD</span>
-use short token lifetimes, and <span class="bcp14">MAY</span> additionally revoke the
-predecessor's refresh token where the issuance profile's optional
-revocation composition is in use. These tokens <span class="bcp14">MUST NOT</span> be silently
-rebound to the successor; authority under the successor is obtained
-only by deriving from the successor's grant, which is a new
-derivation governed by the successor's Authority Set.<a href="#section-7-6.3.1" class="pilcrow">¶</a></p>
+invalidate access tokens already issued.<a href="#section-7-6.3.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-6.3.2.1">
+              <p id="section-7-6.3.2.1.1">These tokens <span class="bcp14">MUST NOT</span> be silently rebound to the successor.
+Authority under the successor is obtained only by deriving from
+the successor's grant, which is a new derivation governed by the
+successor's Authority Set.<a href="#section-7-6.3.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-6.3.2.2">
+              <p id="section-7-6.3.2.2.1">A deployment that needs a lower cutoff latency on the
+predecessor's outstanding tokens <span class="bcp14">SHOULD</span> use short token lifetimes.
+It <span class="bcp14">MAY</span> additionally revoke the predecessor's refresh token where
+the issuance profile's optional revocation composition is in use.<a href="#section-7-6.3.2.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
 </li>
         <li class="normal" id="section-7-6.4">
           <p id="section-7-6.4.1"><strong>Reported as non-active.</strong> A <code>superseded</code> predecessor is reported
@@ -2346,11 +2385,11 @@ new behavior: it enforces a successor's tokens exactly as it enforces
 any Mission-bound token, and treats the <code>predecessor</code> member, if it
 reads it at all, as audit context it <span class="bcp14">MUST NOT</span> use to grant authority
 (<a href="#predecessor-member" class="auto internal xref">Section 6</a>).<a href="#section-12-3" class="pilcrow">¶</a></p>
-<p id="section-12-4">Under this document, every expansion is adjudicated by a fresh human
-approval. The experimental progressive authorization companion defines
-a further <span class="bcp14">OPTIONAL</span> capability, <strong>Expansion with Progressive
-Authorization</strong>, with its own conformance requirements
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-12-4" class="pilcrow">¶</a></p>
+<p id="section-12-4">Every expansion this document defines is adjudicated as a fresh
+approval event (<a href="#adjudication" class="auto internal xref">Section 5</a>). The experimental progressive
+authorization companion defines a further <span class="bcp14">OPTIONAL</span> capability,
+<strong>Expansion with Progressive Authorization</strong>, with its own conformance
+requirements (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-12-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -2375,10 +2414,10 @@ example by naming another tenant's or subject's <code>mission_id</code> in the
 <ul class="normal">
 <li class="normal" id="section-13.1-3.1">
             <p id="section-13.1-3.1.1">The predecessor is resolved from the grant the client presents, not
-from the <code>predecessor</code> value; the Mission Issuer <span class="bcp14">MUST</span> verify
-the resolved Mission matches the named one and <span class="bcp14">MUST</span> refuse a mismatch
-with <code>invalid_grant</code> (<a href="#request-binding" class="auto internal xref">Section 4.2</a>). A client that holds no
-grant for the named predecessor cannot expand it.<a href="#section-13.1-3.1.1" class="pilcrow">¶</a></p>
+from the <code>predecessor</code> value; the Mission Issuer verifies that the
+resolved Mission matches the named one and refuses a mismatch with
+<code>invalid_grant</code> (<a href="#request-binding" class="auto internal xref">Section 4.2</a>). A client that holds no grant
+for the named predecessor cannot expand it.<a href="#section-13.1-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.1-3.2">
             <p id="section-13.1-3.2.1">The issuance profile's integrity anchors are issuer-bound, so a
@@ -2403,13 +2442,14 @@ authority without a fresh approval.<a href="#section-13.2-1" class="pilcrow">¶<
             <p id="section-13.2-3.1.1">The successor's authority comes only from the Authority Set derived
 and consented at the expansion approval event; the <code>authority_hash</code>
 commits exactly that set (<a href="#adjudication" class="auto internal xref">Section 5</a>). The <code>predecessor</code> member
-carries no authority and <span class="bcp14">MUST NOT</span> widen the successor
+carries no authority and cannot widen the successor
 (<a href="#predecessor-member" class="auto internal xref">Section 6</a>).<a href="#section-13.2-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.2-3.2">
-            <p id="section-13.2-3.2.1">The successor's <code>expires_at</code> <span class="bcp14">MUST NOT</span> silently exceed the
-predecessor's (<a href="#successor-expiry" class="auto internal xref">Section 5.1</a>), so expansion cannot launder a
-longer lifetime past the originally approved horizon.<a href="#section-13.2-3.2.1" class="pilcrow">¶</a></p>
+            <p id="section-13.2-3.2.1">The successor-expiry rule (<a href="#successor-expiry" class="auto internal xref">Section 5.1</a>) keeps the
+successor's <code>expires_at</code> from silently exceeding the predecessor's,
+so expansion cannot launder a longer lifetime past the originally
+approved horizon.<a href="#section-13.2-3.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -2428,11 +2468,11 @@ created.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
 <p id="section-13.3-2">Mitigations:<a href="#section-13.3-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13.3-3.1">
-            <p id="section-13.3-3.1.1">The Mission Issuer <span class="bcp14">MUST</span> verify predecessor state and the
+            <p id="section-13.3-3.1.1">The Mission Issuer verifies predecessor state and the
 no-existing-successor condition in the same atomic step that would
-activate the successor at first redemption (<a href="#reconciliation" class="auto internal xref">Section 9</a>), and
-serializes the redemptions that activate a successor of the same
-predecessor.<a href="#section-13.3-3.1.1" class="pilcrow">¶</a></p>
+activate the successor at first redemption, and serializes the
+redemptions that activate a successor of the same predecessor
+(<a href="#reconciliation" class="auto internal xref">Section 9</a>).<a href="#section-13.3-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.3-3.2">
             <p id="section-13.3-3.2.1">A failed check refuses with <code>invalid_grant</code> and a reconciliation
@@ -2457,7 +2497,7 @@ nothing.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
 <p id="section-13.4-2">Mitigation: a denial that is an authentication shortfall (<code>acr</code>,
 <code>amr</code>) is satisfied by step-up and <span class="bcp14">MUST NOT</span> be routed to expansion; a
 denial that is an authority shortfall is the one expansion addresses
-(<a href="#not-step-up" class="auto internal xref">Section 1.2</a>). The component that classifies the denial
+(<a href="#not-step-up" class="auto internal xref">Section 3.3</a>). The component that classifies the denial
 (<a href="#eligibility" class="auto internal xref">Section 3.2</a>) makes this distinction.<a href="#section-13.4-2" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2496,7 +2536,7 @@ would have been.<a href="#section-13.5-3.2.1" class="pilcrow">¶</a></p>
 authorized auditor can trace a successor back through its predecessors
 to the original Mission. This is a core governance property of
 expansion. An implementation that omits the member breaks the chain
-and defeats it; the member is therefore <span class="bcp14">REQUIRED</span> on a successor
+and defeats it; the member is therefore mandatory on a successor
 (<a href="#predecessor-member" class="auto internal xref">Section 6</a>).<a href="#section-13.6-1" class="pilcrow">¶</a></p>
 <p id="section-13.6-2">General OAuth security guidance applies to the underlying credentials
 through the issuance profile.<a href="#section-13.6-2" class="pilcrow">¶</a></p>
@@ -2548,13 +2588,12 @@ treatment of consent disclosure.<a href="#section-14.2-1" class="pilcrow">¶</a>
       <h2 id="name-iana-considerations">
 <a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-15-1">Consistent with the issuance profile, which establishes no registry of
-<code>mission</code> claim members and registers the <code>mission</code> claim as an open
-object, this document defines the <code>predecessor</code> member of the <code>mission</code>
-claim (<a href="#predecessor-member" class="auto internal xref">Section 6</a>) without registering it in a dedicated
-registry: it is a member defined by this profile, carried inside the
-already-registered <code>mission</code> claim. No new claim, parameter, or
-token-introspection registration is required for the lineage link.<a href="#section-15-1" class="pilcrow">¶</a></p>
+<p id="section-15-1">The <code>predecessor</code> member of the <code>mission</code> claim
+(<a href="#predecessor-member" class="auto internal xref">Section 6</a>) is not registered in a dedicated registry: it
+is carried inside the already-registered <code>mission</code> claim, an open
+object for which the issuance profile establishes no member registry.
+No new claim, parameter, or token-introspection registration is
+required for the lineage link.<a href="#section-15-1" class="pilcrow">¶</a></p>
 <p id="section-15-2">This document defines two closed sets of symbolic codes, the expansion
 reconciliation status codes (<a href="#reconciliation" class="auto internal xref">Section 9</a>), conveyed in
 <code>mission_expansion_status</code>, and the expansion denial reasons
@@ -2562,14 +2601,12 @@ reconciliation status codes (<a href="#reconciliation" class="auto internal xref
 member. As members of the OAuth error response JSON body at the PAR
 and token endpoints, both are namespaced to their error responses and
 require no registration; their authorization error response parameter
-forms are registered below. Like the issuance profile's restraint with
-<code>mission</code> members, the codes are documented in their defining
-specifications rather than placed in new IANA registries: the closed
-sets are small and fully specified. Should interoperable extension
-prove necessary, a future revision can create a "Mission Expansion
-Reconciliation Status" registry and a shared "Mission Denial Reason"
-registry with a Specification Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> policy; this document
-does not create them.<a href="#section-15-2" class="pilcrow">¶</a></p>
+forms are registered below. This document creates no registry for the
+codes: the closed sets are small and fully specified in their defining
+specifications. Should interoperable extension prove necessary, a
+future revision can create a "Mission Expansion Reconciliation Status"
+registry and a shared "Mission Denial Reason" registry with a
+Specification Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> policy.<a href="#section-15-2" class="pilcrow">¶</a></p>
 <p id="section-15-3">This document registers the following parameters in the "OAuth
 Parameters" registry:<a href="#section-15-3" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -2627,9 +2664,9 @@ child delegation profile
 <p id="section-15-5">As with <code>mission_intent</code> in the issuance profile, PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>
 carries authorization-request parameters without a distinct usage
 location, so the pushed submission of these parameters needs no
-separate registration. <code>predecessor_token</code> carries a refresh
-token and <span class="bcp14">MUST</span> be submitted only through PAR, never on a front-channel
-authorization request (<a href="#submission" class="auto internal xref">Section 4.1</a>).<a href="#section-15-5" class="pilcrow">¶</a></p>
+separate registration. <code>predecessor_token</code> carries a refresh token and
+is submitted only through PAR, never on a front-channel authorization
+request (<a href="#submission" class="auto internal xref">Section 4.1</a>).<a href="#section-15-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="acknowledgments">

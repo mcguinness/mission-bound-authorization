@@ -1185,10 +1185,13 @@ It is optional; a deployment that does not adopt it is unaffected.<a href="#sect
             <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-mission-management-endpoint" class="internal xref">Mission Management Endpoint</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
-                <p id="section-toc.1-1.3.2.1.1" class="keepWithNext"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-authentication" class="internal xref">Authentication</a></p>
+                <p id="section-toc.1-1.3.2.1.1" class="keepWithNext"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-idempotency" class="internal xref">Idempotency</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
-                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-authorization-and-filter-sc" class="internal xref">Authorization and Filter Scope</a></p>
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-authentication" class="internal xref">Authentication</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-authorization-and-filter-sc" class="internal xref">Authorization and Filter Scope</a></p>
 </li>
             </ul>
 </li>
@@ -1320,9 +1323,9 @@ operator consoles and incident-response tooling in the Mission
 Issuer's own trust domain, explicitly authorized for existence
 knowledge over a declared filter scope, compensated not by
 indistinguishability but by explicit authorization and mandatory audit
-of every call (<a href="#filter-scope" class="auto internal xref">Section 3.2</a>). The surface is never agent-facing:
+of every call (<a href="#filter-scope" class="auto internal xref">Section 3.3</a>). The surface is never agent-facing:
 the Agent executing a Mission has no role here
-(<a href="#management-authentication" class="auto internal xref">Section 3.1</a>). Fleet enumeration and bulk lifecycle
+(<a href="#management-authentication" class="auto internal xref">Section 3.2</a>). Fleet enumeration and bulk lifecycle
 are the operator surface of the family's delegated-authority layer
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">Both capabilities share one endpoint, one request shape, one
@@ -1406,13 +1409,7 @@ operation addresses.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
         <dd style="margin-left: 1.5em" id="section-3-3.6">
           <p id="section-3-3.6.1"><span class="bcp14">REQUIRED</span>. A string. A client-generated nonce, unique per request
 within the response lifetime, echoed in the signed response. It is
-also the idempotency key: the AS <span class="bcp14">MUST</span> deduplicate management
-requests by (client, <code>nonce</code>) for a bounded window, at least the
-validity span of the signed response it would replay, as the status
-profile's lifecycle endpoint requires
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), and, on a
-retransmit, <span class="bcp14">MUST</span> replay the original response rather than
-re-execute the request.<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
+also the idempotency key (<a href="#idempotency" class="auto internal xref">Section 3.1</a>).<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1422,50 +1419,92 @@ status profile's signing discipline: the JWS header carries a <code>kid</code>
 and a <code>typ</code> of <code>mission-management-response+jwt</code>, the algorithm is one
 advertised in <code>mission_status_signing_alg_values_supported</code>
 (<a href="#as-metadata" class="auto internal xref">Section 11</a>), and the status profile's signing-key retention
-rules apply. Per <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Section 4.1.9 the <code>typ</code> header omits the
-<code>application/</code> prefix; the full media type
+rules apply.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<p id="section-3-5">Per <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Section 4.1.9 the <code>typ</code> header omits the
+<code>application/</code> prefix. The full media type
 <code>application/mission-management-response+jwt</code> (registered in <a href="#iana" class="auto internal xref">Section 15</a>)
-is used as the HTTP <code>Content-Type</code>, with <code>Cache-Control: no-store</code>. The signed payload
-carries the envelope <code>iss</code>, <code>aud</code> (the authenticated caller), <code>sub</code>
-(the acting party), <code>nonce</code>, <code>iat</code>, and <code>exp</code>, plus the members of
-<a href="#enumeration-response" class="auto internal xref">Section 6.1</a>, <a href="#dry-run" class="auto internal xref">Section 7.1</a>, or <a href="#manifest" class="auto internal xref">Section 7.3</a>. Before
-honoring a response a Management Client <span class="bcp14">MUST</span> apply the status
-profile's response verification checks (signature, <code>iss</code>, <code>aud</code>,
-<code>sub</code>, <code>nonce</code>, <code>iat</code>/<code>exp</code> with up to 30 seconds skew) and <span class="bcp14">MUST</span>
-verify the <code>typ</code>.<a href="#section-3-4" class="pilcrow">¶</a></p>
-<p id="section-3-5">Rate limits, the enumeration page maximum, and the bulk size bound are
+is used as the HTTP <code>Content-Type</code>, with <code>Cache-Control: no-store</code>.<a href="#section-3-5" class="pilcrow">¶</a></p>
+<p id="section-3-6">The signed payload carries the members of <a href="#enumeration-response" class="auto internal xref">Section 6.1</a>,
+<a href="#dry-run" class="auto internal xref">Section 7.1</a>, or <a href="#manifest" class="auto internal xref">Section 7.3</a>, plus the envelope members:<a href="#section-3-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-7.1">
+          <p id="section-3-7.1.1"><code>iss</code><a href="#section-3-7.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-7.2">
+          <p id="section-3-7.2.1"><code>aud</code>: the authenticated caller<a href="#section-3-7.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-7.3">
+          <p id="section-3-7.3.1"><code>sub</code>: the acting party<a href="#section-3-7.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-7.4">
+          <p id="section-3-7.4.1"><code>nonce</code><a href="#section-3-7.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-7.5">
+          <p id="section-3-7.5.1"><code>iat</code> and <code>exp</code><a href="#section-3-7.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-3-8">Before honoring a response a Management Client <span class="bcp14">MUST</span> apply the status
+profile's response verification checks: signature, <code>iss</code>, <code>aud</code>,
+<code>sub</code>, <code>nonce</code>, and <code>iat</code>/<code>exp</code> with up to 30 seconds skew. The
+Management Client <span class="bcp14">MUST</span> also verify the <code>typ</code>.<a href="#section-3-8" class="pilcrow">¶</a></p>
+<p id="section-3-9">Rate limits, the enumeration page maximum, and the bulk size bound are
 deployment-declared operational configuration; this document defines
 the error symbols that surface them (<a href="#management-errors" class="auto internal xref">Section 8</a>) but no
-metadata for them.<a href="#section-3-5" class="pilcrow">¶</a></p>
-<div id="management-authentication">
+metadata for them.<a href="#section-3-9" class="pilcrow">¶</a></p>
+<div id="idempotency">
 <section id="section-3.1">
-        <h3 id="name-authentication">
-<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-authentication" class="section-name selfRef">Authentication</a>
+        <h3 id="name-idempotency">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-idempotency" class="section-name selfRef">Idempotency</a>
         </h3>
-<p id="section-3.1-1">The request <span class="bcp14">MUST</span> be authenticated using the status profile's mechanism
-set (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
-"Authentication"): mTLS client authentication, a DPoP-bound bearer
-token, or private-key-JWT client authentication, discovered through
-the AS's existing client-authentication metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. Plain
-Basic or POST client authentication <span class="bcp14">MUST NOT</span> be used. A deployment
-<span class="bcp14">MUST NOT</span> accept at the Management endpoint an authentication mechanism
-weaker than those it accepts at its Mission Lifecycle endpoint. When a
-sender-constrained access token authenticates the call, it <span class="bcp14">MUST</span> carry
-a management authorization: a <code>mission_management</code> scope or an
-equivalent deployment-defined grant, distinct from the status
-profile's lifecycle grant.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
-<p id="section-3.1-2">The surface is management-plane only. A Mission Issuer <span class="bcp14">MUST NOT</span>
+<p id="section-3.1-1">The <code>nonce</code> is the idempotency key. The AS <span class="bcp14">MUST</span> deduplicate
+management requests by (client, <code>nonce</code>) for a bounded window, at
+least the validity span of the signed response it would replay, as
+the status profile's lifecycle endpoint requires
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). On a retransmit, the
+AS <span class="bcp14">MUST</span> replay the original response rather than re-execute the
+request.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="management-authentication">
+<section id="section-3.2">
+        <h3 id="name-authentication">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-authentication" class="section-name selfRef">Authentication</a>
+        </h3>
+<p id="section-3.2-1">The request <span class="bcp14">MUST</span> be authenticated using the status profile's
+mechanism set (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
+"Authentication"), discovered through the AS's existing
+client-authentication metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>:<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.2-2.1">
+            <p id="section-3.2-2.1.1">mTLS client authentication,<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-2.2">
+            <p id="section-3.2-2.2.1">a DPoP-bound bearer token, or<a href="#section-3.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-2.3">
+            <p id="section-3.2-2.3.1">private-key-JWT client authentication.<a href="#section-3.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.2-3">Plain Basic or POST client authentication <span class="bcp14">MUST NOT</span> be used. A
+deployment <span class="bcp14">MUST NOT</span> accept at the Management endpoint an
+authentication mechanism weaker than those it accepts at its Mission
+Lifecycle endpoint.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+<p id="section-3.2-4">When a sender-constrained access token authenticates the call, it
+<span class="bcp14">MUST</span> carry a management authorization: a <code>mission_management</code> scope
+or an equivalent deployment-defined grant, distinct from the status
+profile's lifecycle grant.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+<p id="section-3.2-5">The surface is management-plane only. A Mission Issuer <span class="bcp14">MUST NOT</span>
 authorize an Agent (the OAuth client that submitted or executes a
-Mission) as a Management Client, and <span class="bcp14">MUST NOT</span> accept a Mission-bound
-access token as authentication here.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+Mission) as a Management Client. A Mission Issuer <span class="bcp14">MUST NOT</span> accept a
+Mission-bound access token as authentication here.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="filter-scope">
-<section id="section-3.2">
+<section id="section-3.3">
         <h3 id="name-authorization-and-filter-sc">
-<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-authorization-and-filter-sc" class="section-name selfRef">Authorization and Filter Scope</a>
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-authorization-and-filter-sc" class="section-name selfRef">Authorization and Filter Scope</a>
         </h3>
-<p id="section-3.2-1">A deployment authorizes each Management Client for a <strong>filter scope</strong>:
+<p id="section-3.3-1">A deployment authorizes each Management Client for a <strong>filter scope</strong>:
 the Missions it may enumerate and operate on, expressed over the
 filter members of <a href="#filter" class="auto internal xref">Section 5</a>. A subject-scoped operator, a
 client-scoped operator, and a tenant-wide incident responder are
@@ -1473,18 +1512,37 @@ distinct grants; the grant syntax is deployment-defined. The AS <span class="bcp
 evaluate a request's filter against the caller's filter scope before
 evaluating it against the Mission store, and <span class="bcp14">MUST</span> refuse with
 <code>forbidden</code> (<a href="#management-errors" class="auto internal xref">Section 8</a>) a request whose filter could match
-a Mission outside that scope.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
-<p id="section-3.2-2">This surface intentionally inverts the status profile's anti-oracle
-property. That property exists because status callers are not
-authorized for existence knowledge; a Management Client is, over
-exactly its filter scope, so unknown and unauthorized references need
-not be indistinguishable here and <code>forbidden</code> is returned openly. The
-compensating control is audit: the AS <span class="bcp14">MUST</span> record every management
-request, including refused ones, in its audit log with the caller, the
-<code>operation</code>, the full <code>filter</code>, the <code>purpose</code> or <code>reason</code>, the result
-count or outcome manifest, and the disposition. A refusal is computed
-from the caller's grant and the request alone, never from Mission
-data, so it discloses nothing about which Missions exist.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
+a Mission outside that scope.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<p id="section-3.3-2">This surface intentionally inverts the status profile's anti-oracle
+property: that property exists because status callers are not
+authorized for existence knowledge, while a Management Client is,
+over exactly its filter scope, so unknown and unauthorized references
+need not be indistinguishable here and <code>forbidden</code> is returned
+openly. The compensating control is audit: the AS <span class="bcp14">MUST</span> record every
+management request, including refused ones, in its audit log with<a href="#section-3.3-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.3-3.1">
+            <p id="section-3.3-3.1.1">the caller,<a href="#section-3.3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-3.2">
+            <p id="section-3.3-3.2.1">the <code>operation</code>,<a href="#section-3.3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-3.3">
+            <p id="section-3.3-3.3.1">the full <code>filter</code>,<a href="#section-3.3-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-3.4">
+            <p id="section-3.3-3.4.1">the <code>purpose</code> or <code>reason</code>,<a href="#section-3.3-3.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-3.5">
+            <p id="section-3.3-3.5.1">the result count or outcome manifest, and<a href="#section-3.3-3.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-3.6">
+            <p id="section-3.3-3.6.1">the disposition.<a href="#section-3.3-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.3-4">A refusal is computed from the caller's grant and the request alone,
+never from Mission data, so it discloses nothing about which Missions
+exist.<a href="#section-3.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1549,16 +1607,17 @@ and evidence.<a href="#section-4-2.12.1" class="pilcrow">¶</a></p>
 <p id="section-4-3">Administrative metadata is control-plane state: it <span class="bcp14">MUST NOT</span> be
 carried on access tokens or in audience-scoped authority projections,
 and it grants no authority. It drives the management plane: approval
-routing, filter scope (<a href="#filter-scope" class="auto internal xref">Section 3.2</a>), enumeration, retention, and
-incident response. Enumeration summaries <span class="bcp14">MAY</span> include it for callers
-whose filter scope covers the Mission (<a href="#enumeration" class="auto internal xref">Section 6</a>). How the
-object is populated, at issuance from deployment policy or by an
-authorized management operation, is deployment-defined; a dedicated
-metadata update operation is deferred until deployment experience
-shows the shape. However populated, a change to administrative
-metadata that affects any caller's filter scope <span class="bcp14">MUST</span> be recorded as
-an audited management event, since it redraws who may see and operate
-on the Mission (<a href="#filter-scope" class="auto internal xref">Section 3.2</a>).<a href="#section-4-3" class="pilcrow">¶</a></p>
+routing, filter scope (<a href="#filter-scope" class="auto internal xref">Section 3.3</a>), enumeration, retention, and
+incident response.<a href="#section-4-3" class="pilcrow">¶</a></p>
+<p id="section-4-4">Enumeration summaries <span class="bcp14">MAY</span> include administrative metadata for callers
+whose filter scope covers the Mission (<a href="#enumeration" class="auto internal xref">Section 6</a>).<a href="#section-4-4" class="pilcrow">¶</a></p>
+<p id="section-4-5">How the object is populated, at issuance from deployment policy or by
+an authorized management operation, is deployment-defined; a
+dedicated metadata update operation is deferred until deployment
+experience shows the shape. However populated, a change to
+administrative metadata that affects any caller's filter scope <span class="bcp14">MUST</span>
+be recorded as an audited management event, since it redraws who may
+see and operate on the Mission (<a href="#filter-scope" class="auto internal xref">Section 3.3</a>).<a href="#section-4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="filter">
@@ -1672,7 +1731,7 @@ carries:<a href="#section-6-1" class="pilcrow">¶</a></p>
         <dd style="margin-left: 1.5em" id="section-6-2.2">
           <p id="section-6-2.2.1"><span class="bcp14">REQUIRED</span>. A string, maximum 1024 characters. The operator's reason
 for the query (for example a ticket or case identifier), recorded
-in audit (<a href="#filter-scope" class="auto internal xref">Section 3.2</a>).<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+in audit (<a href="#filter-scope" class="auto internal xref">Section 3.3</a>).<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.3">
@@ -1696,10 +1755,10 @@ maximum when <code>limit</code> is absent.<a href="#section-6-2.6.1" class="pilc
           <p id="section-6-2.8.1"><span class="bcp14">OPTIONAL</span>. A string. A bulk token from a prior dry run (<a href="#dry-run" class="auto internal xref">Section 7.1</a>).
 When present, <code>enumerate</code> returns exactly the membership that token
 pins (the pinned set) as summaries, so the reviewed set equals the
-set a matching <code>execute</code> will operate on; <code>filter</code> <span class="bcp14">MUST</span> equal the
-filter the token binds, and the AS <span class="bcp14">MUST</span> refuse a mismatch with
-<code>invalid_bulk_token</code> (<a href="#management-errors" class="auto internal xref">Section 8</a>). Presenting a bulk token
-to <code>enumerate</code> is read-only and does not consume it.<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
+executed set (<a href="#dry-run" class="auto internal xref">Section 7.1</a>). <code>filter</code> <span class="bcp14">MUST</span> equal the filter the
+token binds; the AS <span class="bcp14">MUST</span> refuse a mismatch with <code>invalid_bulk_token</code>
+(<a href="#management-errors" class="auto internal xref">Section 8</a>). Presenting a bulk token to <code>enumerate</code> is
+read-only and does not consume it.<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1832,7 +1891,7 @@ be sent otherwise.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 <code>reason</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.6">
           <p id="section-7-2.6.1"><span class="bcp14">REQUIRED</span>. A string, maximum 1024 characters. Recorded in audit
-(<a href="#filter-scope" class="auto internal xref">Section 3.2</a>) and applied as each per-Mission transition's
+(<a href="#filter-scope" class="auto internal xref">Section 3.3</a>) and applied as each per-Mission transition's
 <code>reason</code> under the status profile, so it surfaces in per-Mission
 audit and, where signals run, in each emitted event
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>).<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
@@ -1857,7 +1916,7 @@ with <code>created_after</code>) and retries.<a href="#section-7-3" class="pilcr
 <a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-dry-run" class="section-name selfRef">Dry Run</a>
         </h3>
 <p id="section-7.1-1">On <code>mode</code> <code>dry_run</code> the AS evaluates the filter within the caller's
-filter scope (<a href="#filter-scope" class="auto internal xref">Section 3.2</a>), records the matched membership, and
+filter scope (<a href="#filter-scope" class="auto internal xref">Section 3.3</a>), records the matched membership, and
 returns a signed response carrying:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-7.1-2">
           <dt id="section-7.1-2.1">
@@ -1906,32 +1965,46 @@ evaluated membership.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
         <h3 id="name-execution">
 <a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-execution" class="section-name selfRef">Execution</a>
         </h3>
-<p id="section-7.2-1">On <code>mode</code> <code>execute</code> the AS <span class="bcp14">MUST</span> verify that the presented <code>bulk_token</code>
-is unexpired and unused, was issued to this caller, and binds an
-<code>operation</code>, <code>filter</code>, and (for a <code>suspend</code>) <code>suspend_until</code> and
-<code>on_expiry</code> all equal to the request's; an execute whose <code>operation</code>,
-<code>filter</code>, or <code>on_expiry</code> differs from what the token pins <span class="bcp14">MUST</span> be
-refused with <code>invalid_bulk_token</code>, executing nothing. The token is then
-consumed: it is single-use whatever the outcome.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<p id="section-7.2-2">The AS applies the operation to each member of the bound membership
+<p id="section-7.2-1">On <code>mode</code> <code>execute</code> the AS <span class="bcp14">MUST</span> verify that the presented
+<code>bulk_token</code>:<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-7.2-2">
+<li id="section-7.2-2.1">
+            <p id="section-7.2-2.1.1">is unexpired,<a href="#section-7.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-7.2-2.2">
+            <p id="section-7.2-2.2.1">is unused,<a href="#section-7.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-7.2-2.3">
+            <p id="section-7.2-2.3.1">was issued to this caller, and<a href="#section-7.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-7.2-2.4">
+            <p id="section-7.2-2.4.1">binds an <code>operation</code>, <code>filter</code>, and (for a <code>suspend</code>)
+<code>suspend_until</code> and <code>on_expiry</code> all equal to the request's.<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-7.2-3">An execute whose <code>operation</code>, <code>filter</code>, or <code>on_expiry</code> differs from
+what the token pins <span class="bcp14">MUST</span> be refused with <code>invalid_bulk_token</code>,
+executing nothing. The token is then consumed: it is single-use
+whatever the outcome.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-4">The AS applies the operation to each member of the bound membership
 individually, under the status profile's lifecycle semantics
 unchanged: legality per its Legal Transitions, idempotency,
 per-transition evidence and audit, and, where signals run, one
 <code>mission.lifecycle-change</code> SET per committed transition
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>). There is no bulk
 event type and no transactionality: transitions commit independently,
-and a failure on one member <span class="bcp14">MUST NOT</span> roll back another.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
-<p id="section-7.2-3">The membership is the one the dry run evaluated. A Mission created, or
+and a failure on one member <span class="bcp14">MUST NOT</span> roll back another.<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+<p id="section-7.2-5">The membership is the one the dry run evaluated. A Mission created, or
 newly matching the filter, after the dry run is not in the membership
 and <span class="bcp14">MUST NOT</span> be operated on; a member that transitioned in the interim
 yields an <code>already_terminal</code> or <code>illegal_transition</code> outcome rather
-than a surprise transition (<a href="#bulk-token-security" class="auto internal xref">Section 13.3</a>).<a href="#section-7.2-3" class="pilcrow">¶</a></p>
-<p id="section-7.2-4">The dry-run-then-execute exchange with its pinned membership is the
+than a surprise transition (<a href="#bulk-token-security" class="auto internal xref">Section 13.3</a>).<a href="#section-7.2-5" class="pilcrow">¶</a></p>
+<p id="section-7.2-6">The dry-run-then-execute exchange with its pinned membership is the
 bulk-path analog of the status profile's <code>expected_version</code> guard
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), and a deployment
 that requires <code>expected_version</code> for an operation it classifies
 high-risk satisfies that requirement on the bulk path through the
-pinned membership plus the per-member outcomes (<a href="#manifest" class="auto internal xref">Section 7.3</a>).<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+pinned membership plus the per-member outcomes (<a href="#manifest" class="auto internal xref">Section 7.3</a>).<a href="#section-7.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="manifest">
@@ -2128,7 +2201,7 @@ are manifest outcomes (<a href="#manifest" class="auto internal xref">Section 7.
               <code>forbidden</code>
 </td>
             <td class="text-left" rowspan="1" colspan="1">403</td>
-            <td class="text-left" rowspan="1" colspan="1">Caller authenticated but not authorized for the requested operation or filter scope (<a href="#filter-scope" class="auto internal xref">Section 3.2</a>).</td>
+            <td class="text-left" rowspan="1" colspan="1">Caller authenticated but not authorized for the requested operation or filter scope (<a href="#filter-scope" class="auto internal xref">Section 3.3</a>).</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">
@@ -2237,26 +2310,50 @@ the Mission Authority Server Metadata registry.<a href="#section-11-4" class="pi
       </h2>
 <p id="section-12-1">This document is <span class="bcp14">OPTIONAL</span>. An implementation that claims it conforms
 in one of two roles.<a href="#section-12-1" class="pilcrow">¶</a></p>
-<p id="section-12-2">A <strong>Management-capable Mission Issuer</strong> serves the Mission Management
-endpoint over the authentication and authorization of
-<a href="#management-authentication" class="auto internal xref">Section 3.1</a> and <a href="#filter-scope" class="auto internal xref">Section 3.2</a> with signed
-responses per <a href="#management-endpoint" class="auto internal xref">Section 3</a>; serves <code>enumerate</code>
-(<a href="#enumeration" class="auto internal xref">Section 6</a>) and the bulk lifecycle operations
-(<a href="#bulk-lifecycle" class="auto internal xref">Section 7</a>) with dry-run-then-execute and the bulk token
-bindings of <a href="#dry-run" class="auto internal xref">Section 7.1</a>; applies bulk transitions per Mission under
-the status profile's lifecycle semantics, emitting per-Mission
-evidence and signals (<a href="#execution" class="auto internal xref">Section 7.2</a>); audit-logs every management
-request per <a href="#filter-scope" class="auto internal xref">Section 3.2</a>; and advertises
-<code>mission_management_endpoint</code> (<a href="#as-metadata" class="auto internal xref">Section 11</a>).<a href="#section-12-2" class="pilcrow">¶</a></p>
-<p id="section-12-3">A <strong>Management Client</strong> authenticates per
-<a href="#management-authentication" class="auto internal xref">Section 3.1</a>; sends the <span class="bcp14">REQUIRED</span> <code>purpose</code> or
-<code>reason</code> on every request, identifying the operator task rather than a
-fixed placeholder; obtains a fresh dry run for every execute,
-surfacing the <code>match_count</code> to the deciding operator or decision point
-before executing; and executes only bulk tokens from dry runs it
-itself requested.<a href="#section-12-3" class="pilcrow">¶</a></p>
-<p id="section-12-4">An implementation that supports neither role is unaffected and remains
-a conforming issuance or status profile implementation.<a href="#section-12-4" class="pilcrow">¶</a></p>
+<p id="section-12-2">A <strong>Management-capable Mission Issuer</strong>:<a href="#section-12-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12-3.1">
+          <p id="section-12-3.1.1">serves the Mission Management endpoint over the authentication and
+authorization of <a href="#management-authentication" class="auto internal xref">Section 3.2</a> and <a href="#filter-scope" class="auto internal xref">Section 3.3</a>
+with signed responses per <a href="#management-endpoint" class="auto internal xref">Section 3</a>;<a href="#section-12-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-3.2">
+          <p id="section-12-3.2.1">serves <code>enumerate</code> (<a href="#enumeration" class="auto internal xref">Section 6</a>) and the bulk lifecycle
+operations (<a href="#bulk-lifecycle" class="auto internal xref">Section 7</a>) with dry-run-then-execute and the
+bulk token bindings of <a href="#dry-run" class="auto internal xref">Section 7.1</a>;<a href="#section-12-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-3.3">
+          <p id="section-12-3.3.1">applies bulk transitions per Mission under the status profile's
+lifecycle semantics, emitting per-Mission evidence and signals
+(<a href="#execution" class="auto internal xref">Section 7.2</a>);<a href="#section-12-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-3.4">
+          <p id="section-12-3.4.1">audit-logs every management request per <a href="#filter-scope" class="auto internal xref">Section 3.3</a>; and<a href="#section-12-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-3.5">
+          <p id="section-12-3.5.1">advertises <code>mission_management_endpoint</code> (<a href="#as-metadata" class="auto internal xref">Section 11</a>).<a href="#section-12-3.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-12-4">A <strong>Management Client</strong>:<a href="#section-12-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12-5.1">
+          <p id="section-12-5.1.1">authenticates per <a href="#management-authentication" class="auto internal xref">Section 3.2</a>;<a href="#section-12-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-5.2">
+          <p id="section-12-5.2.1">sends the <span class="bcp14">REQUIRED</span> <code>purpose</code> or <code>reason</code> on every request,
+identifying the operator task rather than a fixed placeholder;<a href="#section-12-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-5.3">
+          <p id="section-12-5.3.1">obtains a fresh dry run for every execute, surfacing the
+<code>match_count</code> to the deciding operator or decision point before
+executing; and<a href="#section-12-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-5.4">
+          <p id="section-12-5.4.1">executes only bulk tokens from dry runs it itself requested.<a href="#section-12-5.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-12-6">An implementation that supports neither role is unaffected and remains
+a conforming issuance or status profile implementation.<a href="#section-12-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -2277,9 +2374,9 @@ covers what is specific to fleet-scale management.<a href="#section-13-1" class=
 authorized request can terminate or suspend every Mission in a filter
 scope, and one enumeration can disclose a tenant's entire Mission
 population. Accordingly, the authentication floor of
-<a href="#management-authentication" class="auto internal xref">Section 3.1</a> is at least the lifecycle endpoint's
+<a href="#management-authentication" class="auto internal xref">Section 3.2</a> is at least the lifecycle endpoint's
 with a distinct management grant, every call including every refusal
-is audited (<a href="#filter-scope" class="auto internal xref">Section 3.2</a>), and destructive operations are
+is audited (<a href="#filter-scope" class="auto internal xref">Section 3.3</a>), and destructive operations are
 structurally two-step, since an execute cannot exist without the dry
 run that pinned its membership.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
 <p id="section-13.1-2">A compromised Management Client is equivalent to an operator
@@ -2292,18 +2389,28 @@ the mandatory audit trail. Its abuse ceiling is disclosure and work
 stoppage, not authority escalation: the surface cannot create or widen
 a Mission, and the model's availability trade applies, since a
 management credential converts into stopped governed work rather than
-loosened enforcement. One qualification: bulk <code>resume</code> re-activates
-Missions suspended for cause, undoing an in-flight containment. A
-deployment <span class="bcp14">MUST</span> require a distinct or elevated grant for <code>resume</code> at
-this endpoint and <span class="bcp14">SHOULD</span> alert on bulk resume. Deployments <span class="bcp14">SHOULD</span>
-scope Management Clients
-narrowly, protect their credentials as operator credentials, and alert
-on anomalous management activity; where audit transparency runs,
-management audit records are candidates for it
-(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). The <code>purpose</code> and <code>reason</code>
-strings that flow into those records, and into per-Mission evidence
-and signals, are caller-written free text; audit systems <span class="bcp14">MUST</span> treat
-them as untrusted input.<a href="#section-13.1-2" class="pilcrow">¶</a></p>
+loosened enforcement.<a href="#section-13.1-2" class="pilcrow">¶</a></p>
+<p id="section-13.1-3">One qualification: bulk <code>resume</code> re-activates Missions suspended for
+cause, undoing an in-flight containment. A deployment <span class="bcp14">MUST</span> require a
+distinct or elevated grant for <code>resume</code> at this endpoint. A
+deployment <span class="bcp14">SHOULD</span> alert on bulk resume.<a href="#section-13.1-3" class="pilcrow">¶</a></p>
+<p id="section-13.1-4">Deployments <span class="bcp14">SHOULD</span>:<a href="#section-13.1-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.1-5.1">
+            <p id="section-13.1-5.1.1">scope Management Clients narrowly,<a href="#section-13.1-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-5.2">
+            <p id="section-13.1-5.2.1">protect their credentials as operator credentials, and<a href="#section-13.1-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-5.3">
+            <p id="section-13.1-5.3.1">alert on anomalous management activity.<a href="#section-13.1-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-13.1-6">Where audit transparency runs, management audit records are
+candidates for it (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-13.1-6" class="pilcrow">¶</a></p>
+<p id="section-13.1-7">The <code>purpose</code> and <code>reason</code> strings that flow into those records, and
+into per-Mission evidence and signals, are caller-written free text;
+audit systems <span class="bcp14">MUST</span> treat them as untrusted input.<a href="#section-13.1-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="oracle-inversion">
@@ -2313,12 +2420,13 @@ them as untrusted input.<a href="#section-13.1-2" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-13.2-1">The status profile makes Mission existence unobservable to the
 unauthorized; this document makes it queryable by the authorized. The
-two compose safely only if the boundary between them holds: a
+two compose safely only if the boundary between them holds. A
 deployment <span class="bcp14">MUST NOT</span> satisfy a management request with a credential
-authorized only for status or lifecycle calls, and the filter-scope
-check of <a href="#filter-scope" class="auto internal xref">Section 3.2</a> <span class="bcp14">MUST</span> run before any Mission data is touched,
-so a refusal is data-independent. The audit rule is the compensating
-control for the disclosure this surface exists to provide.<a href="#section-13.2-1" class="pilcrow">¶</a></p>
+authorized only for status or lifecycle calls. The filter-scope check
+of <a href="#filter-scope" class="auto internal xref">Section 3.3</a> <span class="bcp14">MUST</span> run before any Mission data is touched, so a
+refusal is data-independent. The audit rule of <a href="#filter-scope" class="auto internal xref">Section 3.3</a> is
+the compensating control for the disclosure this surface exists to
+provide.<a href="#section-13.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="bulk-token-security">
@@ -2345,8 +2453,7 @@ filter substitution reduces the two-step exchange to a one-step sweep.<a href="#
 <a href="#section-13.4" class="section-number selfRef">13.4. </a><a href="#name-general-oauth-security" class="section-name selfRef">General OAuth Security</a>
         </h3>
 <p id="section-13.4-1">This document inherits OAuth 2.0 Best Current Practice <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span> for
-the OAuth surfaces it composes with; implementers <span class="bcp14">MUST</span> follow current
-OAuth security guidance.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
+the OAuth surfaces it composes with.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2363,17 +2470,26 @@ row ties a Subject identifier to an Agent, a lifecycle state, and
 activity timing, and a page of rows profiles a person's delegated
 activity. Minimization is structural: the summary shape of
 <a href="#enumeration-response" class="auto internal xref">Section 6.1</a> excludes the Mission Intent and the Authority
-Set, and the filter-scope authorization of <a href="#filter-scope" class="auto internal xref">Section 3.2</a> bounds
+Set, and the filter-scope authorization of <a href="#filter-scope" class="auto internal xref">Section 3.3</a> bounds
 each Management Client to the population it demonstrably needs. A
 deployment <span class="bcp14">SHOULD</span> grant tenant-wide filter scopes only to
 incident-response roles.<a href="#section-14-2" class="pilcrow">¶</a></p>
-<p id="section-14-3">The audit records of <a href="#filter-scope" class="auto internal xref">Section 3.2</a> are doubly sensitive: they carry
+<p id="section-14-3">The audit records of <a href="#filter-scope" class="auto internal xref">Section 3.3</a> are doubly sensitive: they carry
 the Subject identifiers of the Missions touched, and they record which
-operator investigated which person, when, and why. Deployments <span class="bcp14">MUST</span>
-treat them as PII sinks under the issuance profile's privacy rules,
-retain them for at least the audit horizon of the Missions they
-concern (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), and restrict read
-access to them at least as tightly as the management surface itself.<a href="#section-14-3" class="pilcrow">¶</a></p>
+operator investigated which person, when, and why. Deployments <span class="bcp14">MUST</span>:<a href="#section-14-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14-4.1">
+          <p id="section-14-4.1.1">treat them as PII sinks under the issuance profile's privacy rules,<a href="#section-14-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-4.2">
+          <p id="section-14-4.2.1">retain them for at least the audit horizon of the Missions they
+concern (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), and<a href="#section-14-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-4.3">
+          <p id="section-14-4.3.1">restrict read access to them at least as tightly as the management
+surface itself.<a href="#section-14-4.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
 </section>
 </div>
 <div id="iana">
