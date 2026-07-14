@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            13 July 2026
-Expires: 14 January 2027
+Intended status: Standards Track                            14 July 2026
+Expires: 15 January 2027
 
 
                 Mission Deferred Approval for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 14 January 2027.
+   This Internet-Draft will expire on 15 January 2027.
 
 Copyright Notice
 
@@ -170,6 +170,8 @@ Table of Contents
 
    Proposed Mission:  The Mission Intent and the Authority Set the
       Mission Issuer derived from it, pending an approval decision.
+      This document uses "proposal" as shorthand for the Proposed
+      Mission.
 
 5.  Deferred Mission Approval
 
@@ -418,10 +420,11 @@ Table of Contents
       the evidence commits.
 
    Shaping:  A client-side shaper
-      ([I-D.draft-mcguinness-mission-shaping]) narrows a proposal before
-      submission, which reduces the chance a deferred review is refused.
-      After an access_denied resolution, the shaper constructs the
-      fresh, narrower Mission Intent the client resubmits.
+      ([I-D.draft-mcguinness-mission-shaping]) narrows the Mission
+      Intent before submission, which reduces the chance a deferred
+      review is refused.  After an access_denied resolution, the shaper
+      constructs the fresh, narrower Mission Intent the client
+      resubmits.
 
    Integrity anchors:  The approval commits the proposal actually
       approved.  The intent_hash and authority_hash are computed over
