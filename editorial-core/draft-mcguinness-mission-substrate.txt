@@ -1,0 +1,854 @@
+
+
+
+
+Network Working Group                                      K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Standards Track                            14 July 2026
+Expires: 15 January 2027
+
+
+                     Mission Substrate Requirements
+               draft-mcguinness-mission-substrate-latest
+
+Abstract
+
+   The Mission model's substrate-neutral profiles are written against
+   Mission primitives rather than against any one binding, so a binding
+   of the model to a further authorization substrate hosts them
+   unchanged, provided it supplies the primitives they consume.  This
+   document states those primitives normatively for the author of such a
+   binding: the Mission record, identifier, and issuer; the lifecycle
+   state space; the Authority Set representation; the integrity anchors;
+   issuer key material; the audit horizon; approval-event fidelity; and
+   either a Mission-bound credential or a defined join in its place.
+   Each requirement points at the definition that owns it, each is
+   checkable against the Mission Substrate Statement a conforming
+   binding publishes, and nothing changes for the existing bindings and
+   profiles.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/mission-bound-authorization/draft-
+   mcguinness-mission-substrate.html.  Status information for this
+   document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-mission-substrate/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/mission-bound-authorization.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 15 January 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+     1.1.  Status: The Binding Contract
+   2.  Conventions and Terminology
+   3.  Mission Substrate Requirements
+     3.1.  Mission Record, Identifier, and Issuer
+     3.2.  Mission Lifecycle States
+     3.3.  Mission Authority Representation
+     3.4.  Mission Integrity Anchors
+     3.5.  Mission-Bound Credential
+     3.6.  Mission Key Material
+     3.7.  Mission Audit Horizon
+     3.8.  Mission Approval Fidelity
+   4.  Mission Composition
+   5.  Mission Substrate Conformance
+     5.1.  Mission Substrate Statement
+   6.  Security Considerations
+     6.1.  The Binding as Trust Root
+     6.2.  Mission Join Assurance
+     6.3.  State Source Fidelity
+   7.  Privacy Considerations
+   8.  IANA Considerations
+   9.  References
+     9.1.  Normative References
+     9.2.  Informative References
+   Appendix A.  Binding Crosswalk
+   Acknowledgments
+   Author's Address
+
+1.  Introduction
+
+   A Mission is a durable governance object created by an explicit
+   approval event: the approved task, with a lifecycle, that authority
+   is derived for, bound to, and gated on.  Mission-Bound Authorization
+   for OAuth 2.0 [I-D.draft-mcguinness-oauth-mission] (the "issuance
+   profile", here "the core") defines the object and every primitive of
+   the model, bound to the OAuth 2.0 Authorization Server.  Two further
+   bindings exist.  The Mission Authority Server (MAS) is a standalone
+   Mission Issuer beside an unchanged Authorization Server; it provides
+   every primitive except the Mission-bound credential and issuance
+   gating, and profiles the join that fills that gap as its Mission Join
+   ([I-D.draft-mcguinness-mission-authority-server]).  The AAuth binding
+   gives that protocol's native mission concept the model's structure;
+   in its PS-asserted mode it provides every primitive, and in its
+   federated mode it provides them all only where the Access Server
+   carries the family mission members, and is Reference-only otherwise
+   ([I-D.draft-mcguinness-mission-aauth]).
+
+   The family's substrate-neutral profiles (runtime enforcement and its
+   decision API bindings, the harness, orchestration, intent shaping,
+   consent evidence, consumption metering, open-world discovery, the
+   Mandate, audit transparency, and the security model) are written
+   against Mission primitives rather than against OAuth mechanics; each
+   names what it consumes in a Mission Substrate section of its own,
+   except consent evidence, whose consumption is stated by its approval
+   binding.  A binding that provides the primitives therefore hosts
+   these profiles as written.
+
+   The architecture document consolidates that interface
+   informationally, ending in a Binding Checklist
+   ([I-D.draft-mcguinness-mission-architecture]).  This document is the
+   checklist's normative home, written for the author of a new binding:
+   eight requirements (Section 3), a composition table showing which
+   profiles consume which primitives (Section 4), and a conformance role
+   claimed through a published Mission Substrate Statement (Section 5).
+   It restates no definition: each requirement points at the core
+   section that owns it.
+
+1.1.  Status: The Binding Contract
+
+   This document is the family's binding-neutral contract.  A
+   requirement stated here binds a new binding that claims conformance
+   (Section 5).  The three existing bindings, the OAuth core, the
+   Mission Authority Server, and the AAuth binding, predate this
+   document and are its conforming instantiations: the contract was
+   extracted from them, and Appendix A records where each satisfies it.
+   Their own texts remain authoritative for their definitions, and where
+   this document and the core appear to differ, the core governs.
+
+   Ownership migrates by touch, not by relocation.  When a binding-
+   neutral definition next changes substantively, the change lands in
+   this document and the owning binding section becomes a reference to
+   it; no change is ever made solely to move words.
+
+2.  Conventions and Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   This document uses Mission, Mission Intent, Mission Issuer, Authority
+   Set, Approver, Subject, the Mission Identifier, issuer, the mission
+   claim, the integrity anchors (intent_hash and authority_hash), the
+   subset rule, Common Constraints, the only-active rule, and the audit
+   horizon as defined by the core.  It uses Policy Enforcement Point
+   (PEP), Policy Decision Point (PDP), consequential action, and Mission
+   binding establishment as defined by
+   [I-D.draft-mcguinness-mission-runtime].  A *Mission Substrate
+   Binding* is a specification that binds the Mission model to an
+   authorization substrate and claims conformance to this document
+   (Section 5).  It additionally uses:
+
+   Full provision:  Providing every primitive of Section 3, including
+      the Mission-bound credential (Section 3.5).
+
+   Partial provision:  Providing every primitive of Section 3 except the
+      Mission-bound credential, with a defined join in its place
+      (Section 3.5).
+
+   Mission Substrate Statement:  The published section of a Mission
+      Substrate Binding that states, item by item, how the binding
+      provides each primitive (Section 5.1).
+
+3.  Mission Substrate Requirements
+
+   Each subsection states the requirement on the binding, the home of
+   the normative definition (a section of the core), and the consuming
+   profiles; a summary here never overrides its home.
+
+3.1.  Mission Record, Identifier, and Issuer
+
+   A binding MUST require its implementations to maintain the Mission
+   record as the core defines it: the durable object created at the
+   approval event, immutable after creation except its lifecycle state,
+   and retained per the audit horizon (Section 3.7).
+
+   A binding MUST provide, together with an issuer, a Mission Identifier
+   that:
+
+   *  is opaque and carries no semantic content;
+
+   *  has at least 128 bits of entropy; and
+
+   *  is never reused.
+
+   The issuer is an issuer identifier naming the approving Mission
+   Issuer, from which consumers resolve the binding's state and key
+   surfaces; together the pair names exactly one Mission.
+
+   A binding MAY define a substrate-native reference to the same
+   Mission, as the AAuth binding does with its (approver, s256) pair;
+   the Mission record MUST bind both names to the same Mission.
+
+   Home: the Mission Record and Mission Identifier Format sections of
+   [I-D.draft-mcguinness-oauth-mission].
+
+   Consumers: every substrate-neutral profile keys on the pair, from
+   enforcement decisions and evidence through harness work-item bindings
+   to the audit statement subject and the Mandate, whose committed
+   members assume the record's immutability.
+
+3.2.  Mission Lifecycle States
+
+   A binding MUST provide the core's lifecycle state space, under the
+   following rules.
+
+   *  The state space is active, revoked, and expired as the minimum,
+      with only active permitting issuance, derivation, or continued
+      reliance.
+
+   *  Every other state value, including one a consumer does not
+      recognize, is non-active and non-deriving.  A binding MUST NOT
+      define a surface that fails open on an unrecognized state.
+
+   *  A binding that adopts an extension state MUST surface its value
+      verbatim on the binding's Mission state surfaces (the Mission
+      Status operation and kin), not translated there into a core state
+      or a substrate-native vocabulary, because the fail-safe rule keys
+      on the exact value.
+
+   *  On a substrate-native protocol surface a binding MAY project
+      states onto its native vocabulary, provided every non-active state
+      projects to a non-active native signal: the projection is fail-
+      safe.
+
+   A binding MUST provide an authenticated means, independent of any
+   credential's possession, for the Subject, the Approver, or an
+   administrator to transition a Mission to revoked by its Mission
+   Identifier: the state space is not provided without a way to cause
+   its kill-switch state.
+
+   A binding MUST specify at least one state source from which consumers
+   learn a Mission's current state, with a stated staleness bound, so
+   deployments can meet the runtime profile's freshness rules.  Each
+   state source MUST be authenticated and integrity-protected, so a
+   consumer verifies a state report's origin and detects tampering
+   before relying on it.  In consequence, state whose origin or
+   integrity a consumer cannot verify is treated as unavailable and
+   fails closed.  Verifying a signed state report consumes the issuer
+   key material of Section 3.6.
+
+   Home: the Mission Lifecycle and Gating section of
+   [I-D.draft-mcguinness-oauth-mission]; the freshness rules are the
+   runtime profile's ([I-D.draft-mcguinness-mission-runtime]), and the
+   Mission Status profile defines a canonical observation surface
+   ([I-D.draft-mcguinness-oauth-mission-status]).
+
+   Consumers: the runtime layer (per-class state re-check, fail closed
+   on staleness), the harness (pause, suppress, terminate),
+   orchestration (the unwind trigger), and the Mandate (state only as of
+   minting).
+
+3.3.  Mission Authority Representation
+
+   *  A binding MUST represent the Authority Set as an array of entries
+      in the core's authorization-details shape: each entry names a
+      resource, its actions, and its constraints.
+
+   *  The binding MUST require its implementations to apply the subset
+      rule at every narrowing they perform: no derivation, delegation,
+      or attenuation under a Mission yields authority broader than the
+      Mission's Authority Set.
+
+   *  The binding MUST require its implementations to interpret Common
+      Constraint names per their definitions and compare their values in
+      value space under each definition's subset and intersection rules,
+      so independent implementations compute the same result for the
+      same values.
+
+   Where a binding or its enforcement surface admits a delegate, the
+   surface that admits the delegate MUST evaluate per-entry delegation
+   policy: the issuance gate where tokens are derived, the join where
+   they are not.
+
+   Home: the Mission Authority section of
+   [I-D.draft-mcguinness-oauth-mission], with its Subset Rule and Common
+   Constraints subsections.
+
+   Consumers: the runtime layer and its decision API bindings
+   (evaluation), consent evidence (rendering), and the Mandate (optional
+   carriage).
+
+3.4.  Mission Integrity Anchors
+
+   A binding MUST require its implementations to compute intent_hash and
+   authority_hash over the core's domain-separated, issuer-bound
+   envelope (typ names the committed object, iss carries the binding's
+   issuer identifier, value is the committed object), under the core's
+   canonicalization rules.  The computation is the core's byte for byte:
+   the core's test vectors verify a binding's implementation, and only
+   the envelope iss is the binding's own.  A binding MUST require
+   verifiers of its anchors to reject an anchor whose algorithm prefix
+   they do not recognize and never to treat an unrecognized prefix as
+   sha-256.  A new committed object uses the same envelope with a new
+   typ under the core's extension rule.
+
+   A binding MAY additionally commit to its native artifact with a
+   mechanism of its own, as the AAuth binding's s256 commits the mission
+   blob.  It MUST state that commitment's relationship to the anchors,
+   including whether either substitutes for the other.
+
+   Home: the Integrity Anchors and Canonicalization Rules sections of
+   [I-D.draft-mcguinness-oauth-mission], with the typ extension rule in
+   its Extensibility section.
+
+   Consumers: consent evidence (consent_rendering_hash), intent shaping
+   (Shaping Evidence), the runtime layer (the materialized policy view),
+   orchestration (unwind_plan_hash), the Mandate (the encoded digest
+   form), and audit transparency (the committed evidence types).
+
+3.5.  Mission-Bound Credential
+
+   This primitive is OPTIONAL, and it is where provision levels split.
+
+   Under full provision, the binding issues a Mission-bound credential:
+
+   *  a credential under the binding's own proof-of-possession
+      discipline;
+
+   *  naming exactly one Mission, through the mission claim (id, issuer,
+      authority_hash) or a substrate-native reference the Mission record
+      binds (Section 3.1), with the mission claim shape as the
+      interoperable default; and
+
+   *  issued only while the referenced Mission is active: credential
+      issuance is gated on Mission state.
+
+   Provision may be composite: the standalone MAS binding together with
+   Authorization Servers consuming its issuance grants
+   ([I-D.draft-mcguinness-oauth-mission-issuance-grant]) provides this
+   credential jointly.
+
+   Under partial provision, the binding issues no such credential.  It
+   MUST define a join per the externally established mode of the runtime
+   profile's Mission binding establishment step: how a PDP verifies a
+   supplied Mission reference against the acting credential before any
+   authority is evaluated.  The definition MUST state what the join
+   proves, what it cannot prove, and the residuals that remain; an
+   unverified reference never establishes the Mission.  The MAS's
+   Mission Join is the profiled example
+   ([I-D.draft-mcguinness-mission-authority-server]).
+
+   Profiles that ride the credential itself (offline attenuation, and
+   the token-carriage aspects of delegation) apply only under full
+   provision.  Of the substrate-neutral profiles, those that need a
+   credential-to-Mission association (the runtime layer and the harness)
+   route through the binding establishment step, which is what makes
+   partial provision possible; the rest consume no credential at all
+   (the composition table's credential column).
+
+   Home: the Mission-Bound Access Tokens and The Mission Claim sections
+   of [I-D.draft-mcguinness-oauth-mission]; the seam is the Mission
+   binding establishment section of the runtime profile
+   ([I-D.draft-mcguinness-mission-runtime]).
+
+3.6.  Mission Key Material
+
+   A binding MUST publish the Mission Issuer's signing keys, resolvable
+   from the issuer by verifiers of its signed artifacts.  Across a
+   rotation, the verification key for each key identifier SHOULD remain
+   resolvable while artifacts signed under it remain within the audit
+   horizon (Section 3.7).
+
+   Home: the Signing and Key Rotation section of
+   [I-D.draft-mcguinness-oauth-mission]; the discovery surface is the
+   binding's own metadata.
+
+   Consumers: verifiers of Mission-bound credentials under full
+   provision, consent evidence (its JWS verifies under the Issuer's
+   published keys), the Mandate
+   ([I-D.draft-mcguinness-mission-mandate]), signed state surfaces
+   ([I-D.draft-mcguinness-oauth-mission-status]), and audit statements
+   ([I-D.draft-mcguinness-mission-audit]).
+
+3.7.  Mission Audit Horizon
+
+   A binding MUST declare an audit horizon: the retention window for the
+   Mission record and its evidence, at least the Mission's lifetime plus
+   a declared post-expiry period.  After a Mission reaches a terminal
+   state, the binding MUST require its record to be retained for the
+   audit horizon.
+
+   Home: the Mission Record section of
+   [I-D.draft-mcguinness-oauth-mission].
+
+   Consumers: consent evidence, runtime enforcement evidence, and audit
+   transparency size their retention to it; the security model's
+   retention analysis assumes it.
+
+3.8.  Mission Approval Fidelity
+
+   A binding's approval surface MUST realize the core's approval-event
+   steps, whatever its native ceremony:
+
+   1.  authenticate the Approver, at the deployment's authentication
+       floor and satisfying the Intent's controls.acr where present;
+
+   2.  establish the Subject, never from unauthenticated client input;
+
+   3.  derive the Authority Set and render the derived authority for
+       consent, not the goal or the Intent, with the core's display
+       hardening (inert client strings, direction-override and
+       confusable mitigation, derived authority visually distinct from
+       client text);
+
+   4.  compute the integrity anchors over the consented Authority Set
+       and the approved Intent (Section 3.4); and
+
+   5.  create the Mission record in the active state atomically with the
+       approval decision.
+
+   The binding MUST provide a Mission Intent submission channel through
+   which a client proposes the Intent that step 1 authenticates against
+   and step 3 derives from, preserving the core's Intent semantics (its
+   resources, controls, and inert fields carried intact); a binding
+   without such a channel cannot run the approval event, and the intent-
+   shaping profile consumes this channel (Section 4).
+
+   Derivation in step 3 MUST be bounded by the approved Mission Intent
+   per the core's Mission Authority rules: each derived entry's resource
+   is among the Intent's resources, the Intent's controls are respected,
+   and proposed_authority is only narrowed, so intent_hash and
+   authority_hash commit a task and its authority with a defined
+   relationship.
+
+   If the derived Authority Set changes between rendering and consent,
+   the binding MUST require its implementations to recompute the
+   anchors, and not to create the Mission without the Approver's consent
+   to the changed set.
+
+   Home: the Mission Approval section of
+   [I-D.draft-mcguinness-oauth-mission].  The MAS shows the steps re-
+   shaped for an asynchronous surface, approval bound to the submission
+   rather than an authorization code; the AAuth binding shows them
+   profiled onto a propose-clarify-approve interaction.
+
+   Consumers: consent evidence binds to this event; every downstream
+   guarantee (the anchors, the gating, the record) assumes it.
+
+4.  Mission Composition
+
+   The table shows which substrate-neutral profiles consume which
+   primitives, so a binding author reads off what a provision level
+   hosts; each row mirrors the profile's own Mission Substrate statement
+   (for consent evidence, its approval binding) and adds nothing.
+   Marks: X consumed; B consumed through the Mission binding
+   establishment step (the credential under full provision, the join
+   under partial provision); . not consumed.  Notes follow the table.
+
+    +===============+==+=======+====+========+====+====+=========+====+
+    | Profile       |Id| State |Auth| Anchor |Cred|Keys| Horizon |Appr|
+    +===============+==+=======+====+========+====+====+=========+====+
+    | Runtime and   |X | X     |X   | X      |B   |X   | X       |.   |
+    | its decision  |  |       |    |        |    |    |         |    |
+    | API bindings  |  |       |    |        |    |    |         |    |
+    +---------------+--+-------+----+--------+----+----+---------+----+
+    | Harness       |X | X     |.   | .      |B   |.   | .       |.   |
+    +---------------+--+-------+----+--------+----+----+---------+----+
+    | Orchestration |X | X     |.   | X      |.   |.   | .       |.   |
+    +---------------+--+-------+----+--------+----+----+---------+----+
+    | Intent        |. | .     |.   | X      |.   |.   | .       |.   |
+    | Shaping       |  |       |    |        |    |    |         |    |
+    +---------------+--+-------+----+--------+----+----+---------+----+
+    | Consent       |X | .     |X   | X      |.   |X   | X       |X   |
+    | Evidence      |  |       |    |        |    |    |         |    |
+    +---------------+--+-------+----+--------+----+----+---------+----+
+    | Mandate       |X | X     |X   | X      |.   |X   | X       |.   |
+    +---------------+--+-------+----+--------+----+----+---------+----+
+    | Audit         |X | .     |.   | X      |.   |X   | X       |.   |
+    | Transparency  |  |       |    |        |    |    |         |    |
+    +---------------+--+-------+----+--------+----+----+---------+----+
+    | Consumption   |X | .     |X   | X      |.   |.   | .       |.   |
+    | Metering      |  |       |    |        |    |    |         |    |
+    +---------------+--+-------+----+--------+----+----+---------+----+
+    | Open-World    |X | X     |X   | X      |.   |.   | .       |.   |
+    | Discovery     |  |       |    |        |    |    |         |    |
+    +---------------+--+-------+----+--------+----+----+---------+----+
+
+         Table 1: Primitives consumed per substrate-neutral profile
+
+   *  The credential column is the split.  Under partial provision,
+      every B composes through the join and no other cell changes.
+
+   *  State verification consumes Keys: the runtime row reads a signed
+      state surface and verifies it under the Issuer's published keys
+      (Section 3.2, Section 3.6), so its Keys cell is X; a binding whose
+      harness or orchestration verifies state itself consumes Keys
+      likewise.
+
+   *  The Mandate consumes the audit horizon: an absent mandate_exp
+      binds the Mandate's evidence validity to the Mission's audit
+      horizon ([I-D.draft-mcguinness-mission-mandate]), so its Horizon
+      cell is X; its Authority Set carriage is optional.
+
+   *  Open-World Discovery is experimental: it keys on the identifier
+      and the only-active rule, adjudicates encountered resources
+      against the Authority Set under the subset rule, and commits
+      Discovery Evidence through the anchor envelope
+      ([I-D.draft-mcguinness-mission-discovery]); where the Progressive
+      companion supplies a pre-consented ceiling
+      ([I-D.draft-mcguinness-oauth-mission-progressive]), that ceiling
+      is a further adjudication input, as intent shaping takes the
+      Intent structure as a further input.
+
+   *  Consumption Metering defines no binding of its own: its counters
+      key on the identifier, its call_class draws on the Authority Set
+      representation, and its bounds are committed through the anchor
+      envelope; enforcement composes through the runtime row's binding.
+
+   *  The security model is not a row: it is informational, analyzes
+      every primitive, and applies to any binding
+      ([I-D.draft-mcguinness-mission-security-model]).
+
+   *  Some profiles name further inputs in their own Mission Substrate
+      sections, which remain the authoritative per-consumer statements:
+      intent shaping consumes the Mission Intent structure and a
+      submission channel; audit transparency consumes the evidence types
+      and their canonical bytes; the harness and orchestration import
+      the runtime profile's evidence conventions.
+
+   *  Profiles bound to OAuth wire mechanics (expansion, child
+      delegation, offline attenuation, cross-domain projection) are not
+      substrate-neutral and are not rows; a binding wanting those
+      capabilities defines its own surfaces.  The documents behind these
+      profile names are mapped by the architecture
+      ([I-D.draft-mcguinness-mission-architecture]).
+
+5.  Mission Substrate Conformance
+
+   This document defines one conformance role, claimed by a
+   specification, not an implementation; implementations conform to the
+   binding's own conformance clauses.
+
+   A *Mission Substrate Binding*:
+
+   1.  maintains the Mission record, immutable except its state, and
+       provides the Mission Identifier and issuer (Section 3.1);
+
+   2.  provides the lifecycle state space with the only-active rule,
+       fail-safe treatment of unrecognized states, verbatim extension
+       states, an authenticated, possession-independent means to
+       transition a Mission to revoked by its Mission Identifier, and a
+       state source with a stated staleness bound (Section 3.2);
+
+   3.  represents the Authority Set in the core's shape and applies the
+       subset rule and Common Constraint value-space semantics at every
+       narrowing (Section 3.3);
+
+   4.  computes the integrity anchors over the core's envelope and
+       canonicalization, rejects unrecognized algorithm prefixes, and
+       states the relationship of any native commitment to the anchors
+       (Section 3.4);
+
+   5.  either provides the Mission-bound credential with issuance
+       gating, or defines a join stating what it proves and what it
+       cannot prove (Section 3.5);
+
+   6.  publishes resolvable issuer key material with rotation retention
+       (Section 3.6);
+
+   7.  declares an audit horizon over the record and its evidence
+       (Section 3.7); and
+
+   8.  realizes the approval-event steps on its approval surface
+       (Section 3.8).
+
+5.1.  Mission Substrate Statement
+
+   A Mission Substrate Binding MUST publish a Mission Substrate
+   Statement: a section of the binding, following the existing bindings'
+   pattern, that states how the binding provides each primitive of
+   Section 3.  The statement names:
+
+   1.  the provision level: full provision, or partial provision with
+       the section defining its join and the profiles that consequently
+       do not apply (Section 3.5);
+
+   2.  the identifier mapping and any substrate-native Mission reference
+       (Section 3.1);
+
+   3.  each state source and its staleness bound (Section 3.2);
+
+   4.  how the binding carries the Authority Set (token payload, status-
+       served view, or native artifact) and where each narrowing occurs
+       (Section 3.3);
+
+   5.  the value its anchors bind as the envelope iss, and the
+       relationship of any native commitment to the anchors
+       (Section 3.4);
+
+   6.  the discovery surface for issuer key material (Section 3.6);
+
+   7.  the audit horizon (Section 3.7); and
+
+   8.  the surface that realizes each approval-event step (Section 3.8).
+
+   Each item is checkable against the binding's own text; a claim its
+   text does not support is a conformance failure.
+
+6.  Security Considerations
+
+   This document defines no mechanism; its security posture is the
+   core's plus the binding's own.  Two considerations are specific to
+   binding.
+
+6.1.  The Binding as Trust Root
+
+   A Mission Substrate Binding implements the Mission Issuer, the root
+   of trust of the security model's trusted base: it derives authority,
+   runs the approval event, commits the anchors, and gates or joins.
+   Mission Issuer compromise semantics apply to any binding: a
+   compromised issuer mints or attributes arbitrary authority, forges
+   approvals, and reports false state; consent evidence and audit
+   transparency make that detectable after the fact, not preventable
+   ([I-D.draft-mcguinness-mission-security-model]).  A new binding re-
+   derives only the substrate-specific entries of that model.
+
+6.2.  Mission Join Assurance
+
+   Partial provision moves the credential-to-Mission binding from
+   cryptographic carriage to the join, so the join's assurance bounds
+   every downstream guarantee that names "this credential under this
+   Mission".  The statement duty of Section 3.5, what the join proves,
+   what it cannot prove, and the residuals that remain, is what keeps
+   that assurance honest.  The MAS's Join Spoofing analysis is the
+   pattern ([I-D.draft-mcguinness-mission-authority-server]): the join
+   proves the credential belongs to the subject and client the Mission
+   names, no mechanism in that mode proves the credential was derived
+   under the Mission, and mapping coarseness and same-party
+   misattribution remain as residuals.
+
+6.3.  State Source Fidelity
+
+   Revocation reaches a consumer only through a state source, so the
+   staleness bound stated for each source (Section 3.2) is what the
+   runtime profile computes its freshness rules and permit lifetimes
+   from ([I-D.draft-mcguinness-mission-runtime]).  A source that cannot
+   meet its stated bound turns those fail-closed rules into fail-open in
+   effect: consumers rely on state the binding reports as fresher than
+   it is.  The bound is a fidelity claim about the binding's
+   infrastructure, of the same kind as the join's assurance statement,
+   and the Mission Substrate Statement names it with the same honesty
+   (Section 5.1).
+
+7.  Privacy Considerations
+
+   This document introduces no data element.  The core's privacy
+   considerations apply to any binding: the Mission identifier is a
+   correlation handle, and the Mission record concentrates task data at
+   the Mission Issuer; each hosted profile's own apply unchanged.
+
+8.  IANA Considerations
+
+   This document has no IANA actions.
+
+9.  References
+
+9.1.  Normative References
+
+   [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission.html>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+9.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-aauth]
+              McGuinness, K., "Mission-Bound Authorization for AAuth",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-mission-aauth.html>.
+
+   [I-D.draft-mcguinness-mission-architecture]
+              McGuinness, K., "An Architecture for Mission-Bound
+              Authorization", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              architecture.html>.
+
+   [I-D.draft-mcguinness-mission-audit]
+              McGuinness, K., "Mission Audit Transparency", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-audit.html>.
+
+   [I-D.draft-mcguinness-mission-authority-server]
+              McGuinness, K., "Mission Authority Server", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-authority-server.html>.
+
+   [I-D.draft-mcguinness-mission-discovery]
+              McGuinness, K., "Mission Open-World Discovery", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-discovery.html>.
+
+   [I-D.draft-mcguinness-mission-mandate]
+              McGuinness, K., "Mission Mandate", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-mandate.html>.
+
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime.html>.
+
+   [I-D.draft-mcguinness-mission-security-model]
+              McGuinness, K., "Mission Security Model", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-security-model.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-issuance-grant]
+              McGuinness, K., "Mission Issuance Grant for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-issuance-
+              grant.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-progressive]
+              McGuinness, K., "Mission Progressive Authorization for
+              OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-oauth-mission-
+              progressive.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-status]
+              McGuinness, K., "Mission Status and Lifecycle for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-status.html>.
+
+Appendix A.  Binding Crosswalk
+
+   This appendix is informative.  The three existing bindings are
+   conforming instantiations of this contract, recorded here rather than
+   through the Mission Substrate Statement (Section 5.1), which they
+   predate; each binding's own Mission Substrate section is its
+   authoritative statement.
+
+   +===================================================+===============+
+   | Binding                                           |Where the      |
+   |                                                   |contract is    |
+   |                                                   |satisfied      |
+   +===================================================+===============+
+   | OAuth core ([I-D.draft-mcguinness-oauth-mission]) |Full           |
+   |                                                   |provision.     |
+   |                                                   |Each           |
+   |                                                   |requirement of |
+   |                                                   |Section 3      |
+   |                                                   |points at the  |
+   |                                                   |core section   |
+   |                                                   |that defines   |
+   |                                                   |it; the core's |
+   |                                                   |definitions    |
+   |                                                   |are this       |
+   |                                                   |contract's     |
+   |                                                   |source text.   |
+   +---------------------------------------------------+---------------+
+   | Mission Authority Server                          |Partial        |
+   | ([I-D.draft-mcguinness-mission-authority-server]) |provision by   |
+   |                                                   |design.  Its   |
+   |                                                   |Mission        |
+   |                                                   |Substrate      |
+   |                                                   |section        |
+   |                                                   |provides the   |
+   |                                                   |identifier,    |
+   |                                                   |lifecycle,     |
+   |                                                   |Authority Set, |
+   |                                                   |anchors, and   |
+   |                                                   |audit horizon  |
+   |                                                   |(each the      |
+   |                                                   |core's,        |
+   |                                                   |unchanged),    |
+   |                                                   |forgoes the    |
+   |                                                   |Mission-bound  |
+   |                                                   |credential and |
+   |                                                   |issuance       |
+   |                                                   |gating,        |
+   |                                                   |satisfies the  |
+   |                                                   |credential     |
+   |                                                   |requirement's  |
+   |                                                   |join           |
+   |                                                   |alternative    |
+   |                                                   |with the       |
+   |                                                   |Mission Join,  |
+   |                                                   |and realizes   |
+   |                                                   |approval and   |
+   |                                                   |key            |
+   |                                                   |publication on |
+   |                                                   |its own        |
+   |                                                   |surfaces.      |
+   +---------------------------------------------------+---------------+
+   | AAuth binding                                     |Full provision |
+   | ([I-D.draft-mcguinness-mission-aauth])            |in PS-asserted |
+   |                                                   |mode.  Its     |
+   |                                                   |Mission        |
+   |                                                   |Substrate      |
+   |                                                   |section        |
+   |                                                   |enumerates all |
+   |                                                   |eight          |
+   |                                                   |requirements   |
+   |                                                   |point by       |
+   |                                                   |point;         |
+   |                                                   |federated mode |
+   |                                                   |is Reference-  |
+   |                                                   |only where     |
+   |                                                   |Access Servers |
+   |                                                   |do not carry   |
+   |                                                   |the mission    |
+   |                                                   |members.       |
+   +---------------------------------------------------+---------------+
+
+                                  Table 2
+
+Acknowledgments
+
+   This document gives a normative home to the substrate interface first
+   consolidated informationally by the architecture document.  The
+   author thanks the Mission-Bound Authorization implementer community
+   for feedback.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
