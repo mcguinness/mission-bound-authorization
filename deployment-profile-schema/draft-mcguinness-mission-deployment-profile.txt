@@ -1,0 +1,649 @@
+
+
+
+
+Network Working Group                                      K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Standards Track                            14 July 2026
+Expires: 15 January 2027
+
+
+                       Mission Deployment Profile
+           draft-mcguinness-mission-deployment-profile-latest
+
+Abstract
+
+   The Mission-Bound Authorization family states what a deployment can
+   prove as named assurance claims, each with a proof obligation an
+   owning profile fixes.  This document gives those claims their
+   machine-readable form: a stable identifier for each claim, and the
+   Mission Deployment Profile manifest, a JSON object in which a
+   deployment publishes the claims it makes, the per-layer statements
+   behind them, and the residual risks it does not cover.  The manifest
+   is the surface a procurement, an auditor, or a relying party
+   compares; every proof obligation remains with the profile that owns
+   it.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/mission-bound-authorization/draft-
+   mcguinness-mission-deployment-profile.html.  Status information for
+   this document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-mission-deployment-profile/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/mission-bound-authorization.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 15 January 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Conventions and Terminology
+   3.  Assurance Claim Identifiers
+   4.  The Manifest
+     4.1.  Worked Example
+   5.  Validation and Consumption
+   6.  Publication and Integrity
+   7.  Conformance
+   8.  Security Considerations
+     8.1.  Overclaiming
+     8.2.  The Manifest as an Oracle
+     8.3.  Signed Manifests
+   9.  Privacy Considerations
+   10. IANA Considerations
+     10.1.  Media Type Registration
+       10.1.1.  application/mission-deployment-profile+json
+       10.1.2.  application/mission-deployment-profile+jwt
+   11. References
+     11.1.  Normative References
+     11.2.  Informative References
+   Acknowledgments
+   Author's Address
+
+1.  Introduction
+
+   A Mission is a durable governance object created by an explicit
+   approval event: the approved task, with a lifecycle, that authority
+   is derived for, bound to, and gated on
+   ([I-D.draft-mcguinness-oauth-mission], "the core").  The family's
+   strongest properties are deployment properties, not protocol
+   properties: complete PEP placement, a trusted freshness source, and
+   credential custody are things a deployment does, not things a token
+   proves.  The architecture therefore states those properties as named
+   assurance claims and is plain about the comparison surface: "the
+   claims, not the level, are what a relying party compares"
+   ([I-D.draft-mcguinness-mission-architecture]).  The Mission Assurance
+   Levels order adoption; a level name asserts nothing a consumer can
+   check.
+
+   What the architecture deferred is defined here.  This document fixes
+   a stable identifier for each assurance claim (Section 3) and defines
+   the Mission Deployment Profile manifest (Section 4): the JSON object
+   a deployment publishes so a procurement, a security review, or a
+   relying party compares deployments on claims rather than labels.
+
+   The division of authority is deliberate and narrow.  Each claim's
+   proof obligation lives in the profile that owns it, and the owning
+   profile keeps normative force over the obligation; this document owns
+   only the identifier and the manifest form.  A manifest changes no
+   enforcement behavior: it is the assertion surface, and the owning
+   profile's conformance section is the verification surface.
+
+2.  Conventions and Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   This document uses Mission, Mission Issuer, and issuer as defined by
+   the core.  It uses action class, Enforcement Scope Statement, and the
+   named enforcement claims as defined by
+   [I-D.draft-mcguinness-mission-runtime] (the "runtime profile"), and
+   the rendering-assurance rungs as defined by
+   [I-D.draft-mcguinness-oauth-mission-consent-evidence] (the "consent-
+   evidence profile").  It additionally uses:
+
+   Publisher:  The deployment operator that publishes a Mission
+      Deployment Profile manifest for a deployment it operates.
+
+   Consumer:  A party (a procurement, an auditor, a relying party, or
+      software acting for one) that reads a manifest to evaluate or
+      compare a deployment.
+
+3.  Assurance Claim Identifiers
+
+   Each assurance claim of the architecture's claims axis has one stable
+   identifier, listed below.  Each entry summarizes the claim in one
+   paragraph and points at the owning profile section that fixes its
+   proof obligation; the summary never overrides its home.  A
+   parameterized claim is not made without its parameters: the
+   parameters state what the claim covers, and a claim entry missing a
+   parameter its definition names asserts nothing (Section 5).
+
+   record-integrity:  The Mission's integrity anchors reproduce from the
+      record alone.  Home: the Integrity Anchors section of the core
+      ([I-D.draft-mcguinness-oauth-mission]).  No parameters.
+
+   bounded-revocation-latency:  Revocation reaches enforcement within a
+      stated bound per action class: the published staleness bound plus
+      the permit window plus the class's execution bound.  Home: the
+      Mission State and Freshness section of the runtime profile
+      ([I-D.draft-mcguinness-mission-runtime]).  Parameters (REQUIRED):
+      seconds, an object mapping each covered action class to its bound
+      in seconds.
+
+   action-time-enforcement:  PEP coverage for the Enforcement Scope
+      Statement's mediated set, and nothing outside it: the runtime
+      profile's core enforcement tier.  Home: the Enforcement Scope and
+      Conformance section of the runtime profile
+      ([I-D.draft-mcguinness-mission-runtime]).  Parameters (REQUIRED):
+      classes, an array of the action classes claimed.
+
+   parameter-bound-enforcement:  Permits bound to concrete normalized
+      parameters for the classes claimed.  Home: the Parameter Binding
+      and Time-of-Check to Time-of-Use section of the runtime profile
+      ([I-D.draft-mcguinness-mission-runtime]).  Parameters (REQUIRED):
+      classes, an array of the action classes claimed.
+
+   transaction-grade-execution:  The transaction-assurance tier
+      machinery for the classes claimed: single-use permits, execution
+      leases, and outcome reconciliation.  Home: the transaction-
+      assurance tier of the runtime profile's Enforcement Scope and
+      Conformance section ([I-D.draft-mcguinness-mission-runtime]).
+      Parameters (REQUIRED): classes, an array of the action classes
+      claimed.
+
+   compromise-resistant-custody:  The runtime profile's agent-
+      compromise-resistant enforcement claim: mediated credential
+      custody, action-bound approval, agent-isolated approval rendering,
+      active-state freshness, and the declared-and-audited path scope.
+      Home: the Agent-Compromise-Resistant Enforcement section of the
+      runtime profile ([I-D.draft-mcguinness-mission-runtime]).  No
+      parameters.
+
+   trifecta-containment:  The runtime profile's trifecta-containment
+      claim: least exposure, the enforced taint rule with its pre-
+      consented egress carve-out, and full mediation of the external-
+      communication and external-commitment classes.  Home: the Trifecta
+      Containment section of the runtime profile
+      ([I-D.draft-mcguinness-mission-runtime]).  No parameters.
+
+   consent-rendering:  The rendering-assurance rung the deployment
+      claims for its approval surface, Rung 0 through Rung 4.  Home: the
+      Rendering Assurance section of the consent-evidence profile
+      ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), with the
+      rungs above the floor in its appendix.  Parameters (REQUIRED):
+      rung, an integer from 0 to 4.
+
+   The action-class values in parameters are the runtime profile's
+   classification identifiers in JSON form (consequential_read,
+   consequential_write, irreversible_action, external_commitment,
+   privileged_administration); a deployment-declared class uses the
+   identifier its Enforcement Scope Statement declares.
+
+4.  The Manifest
+
+   A Mission Deployment Profile manifest is a JSON object [RFC8259] with
+   the media type application/mission-deployment-profile+json
+   (Section 10).  Its members:
+
+   issuer:  REQUIRED.  The issuer identifier of the Mission Issuer whose
+      Missions the deployment runs.
+
+   bindings:  REQUIRED.  An array naming each Mission Issuer binding the
+      deployment runs, from the values oauth-core, mas, aauth, and uma:
+      the four bindings the architecture surveys
+      ([I-D.draft-mcguinness-mission-architecture]).
+
+   claims:  REQUIRED.  An array of claim entries.  Each entry is an
+      object with claim, one identifier of Section 3, and parameters,
+      the claim's parameter object, REQUIRED where the claim's
+      definition names parameters.
+
+   statements:  OPTIONAL.  An object composing the per-layer statements
+      the family's profiles demand, each member present where its
+      profile is run: enforcement_scope_statement, the runtime profile's
+      Enforcement Scope Statement with its content items as JSON members
+      ([I-D.draft-mcguinness-mission-runtime]); mapping_contract, the
+      Mission Authority Server's mapping contract
+      ([I-D.draft-mcguinness-mission-authority-server]);
+      environment_statement, the harness profile's execution-environment
+      scope statement ([I-D.draft-mcguinness-mission-harness]);
+      transparency, the audit-transparency service topology and
+      registration schedule ([I-D.draft-mcguinness-mission-audit]); and
+      ceiling_review, the progressive profile's bounds and ceiling-
+      review cadence ([I-D.draft-mcguinness-oauth-mission-progressive]).
+      Each statement's owning profile governs its meaning and normative
+      force; the manifest fixes only the carrying shape.
+
+   residual_risks:  REQUIRED.  A non-empty array of strings, each naming
+      a gap the listed claims do not cover.  The manifest is not
+      credible without it: the deployment states what it does not cover
+      in the same object as its guarantees
+      ([I-D.draft-mcguinness-mission-architecture]).
+
+   profile_version:  OPTIONAL.  A deployment-controlled string
+      identifying this manifest revision, so a consumer can detect
+      change.
+
+4.1.  Worked Example
+
+   A deployment running the OAuth core binding with runtime enforcement,
+   a harness, audit transparency, and standing charters publishes:
+
+   {
+     "profile_version": "acme-agent-runtime-3",
+     "issuer": "https://as.example.com",
+     "bindings": ["oauth-core"],
+     "claims": [
+       { "claim": "record-integrity" },
+       { "claim": "bounded-revocation-latency",
+         "parameters": { "seconds": {
+           "consequential_read": 45,
+           "consequential_write": 45,
+           "irreversible_action": 45,
+           "external_commitment": 45,
+           "privileged_administration": 45 } } },
+       { "claim": "action-time-enforcement",
+         "parameters": { "classes": [
+           "consequential_read", "consequential_write",
+           "irreversible_action", "external_commitment",
+           "privileged_administration" ] } },
+       { "claim": "parameter-bound-enforcement",
+         "parameters": { "classes": [
+           "consequential_write", "irreversible_action",
+           "external_commitment",
+           "privileged_administration" ] } },
+       { "claim": "transaction-grade-execution",
+         "parameters": { "classes": [
+           "irreversible_action", "external_commitment",
+           "privileged_administration" ] } },
+       { "claim": "compromise-resistant-custody" },
+       { "claim": "trifecta-containment" },
+       { "claim": "consent-rendering",
+         "parameters": { "rung": 1 } }
+     ],
+     "statements": {
+       "enforcement_scope_statement": {
+         "pdp": "authzen",
+         "pep_locations": ["tool-gateway", "browser-action-proxy"],
+         "mediated_action_classes": [
+           "consequential_read", "consequential_write",
+           "irreversible_action", "external_commitment",
+           "privileged_administration" ],
+         "action_bound_approval_classes": [
+           "irreversible_action", "privileged_administration" ],
+         "unmediated_exclusions": [
+           "internal_reasoning", "local_cache_read" ],
+         "credential_custody": {
+           "held_by": "pep",
+           "sender_constrained": true,
+           "key_generated_in_pep": true,
+           "agent_receives_bearer_token": false },
+         "approval_rendering": {
+           "rendered_by": "agent-isolated-component" },
+         "state_sources": [
+           { "type": "status_endpoint",
+             "max_staleness_seconds": 30 } ],
+         "resource_servers": {
+           "authorization_details_enforcing": [
+             "https://erp.example.com" ],
+           "scope_projection_only": [
+             "https://mail.example.com" ],
+           "constraint_enforcement_for_scope_only": "runtime_pep" },
+         "evidence": {
+           "decision_evidence": true,
+           "execution_evidence": true,
+           "retention_days": 365,
+           "field_classification": "evidence-schema-v2",
+           "evidence_access_audited": true,
+           "erasure_policy": "erasure-records" }
+       },
+       "environment_statement": {
+         "subagent_inheritance": "explicit_delegation_only",
+         "resume_requires_active_state": true,
+         "cached_credentials_revalidated": true,
+         "taint_rule": "enforced",
+         "egress_channels_enumerated": true
+       },
+       "transparency": {
+         "service_operator": "third_party",
+         "monitor": "sec-ops",
+         "registration_time_bound_seconds": 3600
+       },
+       "ceiling_review": {
+         "cadence_days": 90,
+         "per_drawdown_bound": "single_entry_delta",
+         "drawdown_rate_bound_per_chain_per_hour": 60
+       }
+     },
+     "residual_risks": [
+       "unmediated local reasoning is outside enforcement",
+       "revocation latency up to 45 seconds on mediated paths",
+       "PEP compromise is not prevented",
+       "scope-only resources are constrained only via the PEP",
+       "long-term memory is not Mission-scoped"
+     ]
+   }
+
+   The 45 second latency bound composes the state source's 30 second
+   staleness with the deployment's declared permit window and execution
+   bound.  A smaller deployment lists fewer claims, fewer statements,
+   and more residuals; the manifest stays honest at any size.
+
+5.  Validation and Consumption
+
+   Four rules are the whole processing model.
+
+   *  A consumer MUST treat an unrecognized claim identifier as not
+      proven, never as proven.
+
+   *  A publisher MUST NOT list a claim whose owning-profile obligations
+      the deployment does not meet; a parameterized claim without its
+      parameters is not listed.
+
+   *  A consumer MUST ignore a manifest member it does not recognize:
+      unrecognized members are the manifest's extension point.
+
+   *  A publisher MUST keep residual_risks current with the claims
+      listed: a claim added or withdrawn changes what remains uncovered.
+
+   A claim entry asserts; it does not prove.  Checking a claim is the
+   owning profile's conformance surface, from the Enforcement Scope
+   Statement's items to the runtime profile's negative tests, and a
+   consumer weighs an unverified manifest accordingly (Section 8).
+
+6.  Publication and Integrity
+
+   How a manifest is published is deployment-defined: a URL, a document
+   attached to a procurement, or an entry in a deployment registry.
+   This document deliberately defines no discovery endpoint and no
+   metadata extension: the manifest is a governance artifact between a
+   publisher and its consumers, not a protocol surface, and the family
+   adds no wire mechanism for it.
+
+   A publisher MAY publish the manifest as a JWS [RFC7515] whose payload
+   is the manifest object, with the protected header typ set to mission-
+   deployment-profile+jwt (Section 10), signed under keys the publisher
+   makes resolvable to its consumers.  A consumer of the signed form
+   MUST reject a JWS whose typ carries any other value.  The signature
+   adds origin and integrity to the assertion; it proves no claim
+   (Section 8).
+
+7.  Conformance
+
+   Two roles conform to this document.
+
+   A *Manifest Publisher*:
+
+   *  publishes a manifest with the members of Section 4, including a
+      non-empty residual_risks;
+
+   *  lists only claims whose owning-profile obligations its deployment
+      meets, each with the parameters its definition names (Section 3,
+      Section 5); and
+
+   *  keeps the manifest current as claims and residuals change
+      (Section 5).
+
+   A *Manifest Consumer*:
+
+   *  treats an unrecognized claim identifier as not proven and ignores
+      unrecognized members (Section 5); and
+
+   *  rejects a signed manifest whose typ is not mission-deployment-
+      profile+jwt (Section 6).
+
+8.  Security Considerations
+
+8.1.  Overclaiming
+
+   The first threat is the artifact itself: a manifest is an assertion,
+   not a proof, and an overclaiming publisher produces a well-formed
+   manifest for guarantees its deployment does not hold.  The mitigation
+   is the division of authority of Section 3: every claim points at an
+   owning profile whose conformance surface, scope statements, evidence,
+   and negative tests included, is where verification happens.  A
+   consumer that treats a manifest as proof has moved trust from the
+   deployment to a document; sound practice weighs a manifest together
+   with the owning profiles' evidence.
+
+8.2.  The Manifest as an Oracle
+
+   residual_risks states enforcement gaps, and a published gap list
+   reads as an attack surface to an adversary as it reads as honesty to
+   an auditor.  This document resolves that tension with policy, not
+   mechanism: publication audience is deployment policy.  A deployment
+   can hand the full manifest to contracted consumers and publish a
+   reduced surface openly; what no published form omits is
+   residual_risks itself (Section 4).
+
+8.3.  Signed Manifests
+
+   The JWS form of Section 6 authenticates the publisher and protects
+   the manifest in transit; it changes nothing about truth.  A
+   compromised or dishonest publisher signs the same false assertion.
+
+9.  Privacy Considerations
+
+   A manifest describes infrastructure, not people, and carries no
+   Mission data.  It can still fingerprint a deployment: PEP locations,
+   staleness bounds, and residual risks together narrow which deployment
+   a manifest describes and what it runs.  The publication audience
+   (Section 8) is the control.
+
+10.  IANA Considerations
+
+10.1.  Media Type Registration
+
+   IANA is requested to register two media types per [RFC6838].
+
+10.1.1.  application/mission-deployment-profile+json
+
+   *  Type name: application
+
+   *  Subtype name: mission-deployment-profile+json
+
+   *  Required parameters: none
+
+   *  Optional parameters: none
+
+   *  Encoding considerations: binary; UTF-8 encoded JSON
+
+   *  Security considerations: see Section 8
+
+   *  Interoperability considerations: see this document
+
+   *  Published specification: this document
+
+   *  Applications that use this media type: Mission-Bound Authorization
+      deployments, procurement and audit tooling, and relying parties
+
+   *  Fragment identifier considerations: not applicable
+
+   *  Additional information:
+
+      -  Deprecated alias names for this type: none
+
+      -  Magic number(s): none
+
+      -  File extension(s): none
+
+      -  Macintosh file type code(s): none
+
+   *  Person & email address to contact for further information: Karl
+      McGuinness public@karlmcguinness.com
+      (mailto:public@karlmcguinness.com)
+
+   *  Intended usage: COMMON
+
+   *  Restrictions on usage: none
+
+   *  Author: IETF
+
+   *  Change controller: IETF
+
+10.1.2.  application/mission-deployment-profile+jwt
+
+   *  Type name: application
+
+   *  Subtype name: mission-deployment-profile+jwt
+
+   *  Required parameters: none
+
+   *  Optional parameters: none
+
+   *  Encoding considerations: binary; JWS Compact Serialization
+
+   *  Security considerations: see Section 8
+
+   *  Interoperability considerations: see this document
+
+   *  Published specification: this document
+
+   *  Applications that use this media type: Mission-Bound Authorization
+      deployments, procurement and audit tooling, and relying parties
+
+   *  Fragment identifier considerations: not applicable
+
+   *  Additional information:
+
+      -  Deprecated alias names for this type: none
+
+      -  Magic number(s): none
+
+      -  File extension(s): none
+
+      -  Macintosh file type code(s): none
+
+   *  Person & email address to contact for further information: Karl
+      McGuinness public@karlmcguinness.com
+      (mailto:public@karlmcguinness.com)
+
+   *  Intended usage: COMMON
+
+   *  Restrictions on usage: none
+
+   *  Author: IETF
+
+   *  Change controller: IETF
+
+11.  References
+
+11.1.  Normative References
+
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime.html>.
+
+   [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-consent-evidence]
+              McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-consent-
+              evidence.html>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC6838]  Freed, N., Klensin, J., and T. Hansen, "Media Type
+              Specifications and Registration Procedures", BCP 13,
+              RFC 6838, DOI 10.17487/RFC6838, January 2013,
+              <https://www.rfc-editor.org/rfc/rfc6838>.
+
+   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
+              2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8259]  Bray, T., Ed., "The JavaScript Object Notation (JSON) Data
+              Interchange Format", STD 90, RFC 8259,
+              DOI 10.17487/RFC8259, December 2017,
+              <https://www.rfc-editor.org/rfc/rfc8259>.
+
+11.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-architecture]
+              McGuinness, K., "An Architecture for Mission-Bound
+              Authorization", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              architecture.html>.
+
+   [I-D.draft-mcguinness-mission-audit]
+              McGuinness, K., "Mission Audit Transparency", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-audit.html>.
+
+   [I-D.draft-mcguinness-mission-authority-server]
+              McGuinness, K., "Mission Authority Server", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-authority-server.html>.
+
+   [I-D.draft-mcguinness-mission-harness]
+              McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-harness.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-progressive]
+              McGuinness, K., "Mission Progressive Authorization for
+              OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-oauth-mission-
+              progressive.html>.
+
+Acknowledgments
+
+   This document is part of the Mission-Bound Authorization work and
+   gives the family's assurance claims their machine-readable form.  The
+   author thanks the Mission-Bound Authorization implementer community
+   for feedback.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
