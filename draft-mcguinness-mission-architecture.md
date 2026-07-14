@@ -25,6 +25,14 @@ author:
     email: public@karlmcguinness.com
 
 informative:
+  I-D.draft-mcguinness-mission-deployment-profile:
+    title: "Mission Deployment Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-deployment-profile.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-metering:
     title: "Mission Consumption Metering"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
@@ -1594,11 +1602,12 @@ High-Assurance Agent), advancing to the level its risk warrants and
 stopping there.
 
 A level is a dependency bundle: which documents a deployment runs,
-in adoption order. What a deployment can prove is the orthogonal
-claims axis ({{assurance-claims-axis}}), and the proof obligations
-noted with each level below are the claims that become available at
-that level, not properties the level name itself asserts; the
-claims, not the level, are what a relying party compares.
+in adoption order. The levels are adoption-ordering narrative; the
+claims axis ({{assurance-claims-axis}}) is the comparable surface.
+The proof obligations noted with each level below are the claims
+that become available at that level, not properties the level name
+itself asserts; the claims, not the level, are what a relying party
+compares.
 
 The levels are one axis; the **binding** is an orthogonal one. Every
 level is reachable under any of the Mission Issuer bindings (the
@@ -1770,6 +1779,11 @@ different claims; the MAS modes are the worked case
 ({{I-D.draft-mcguinness-mission-authority-server}}). The claims, not
 the level, are what a relying party compares.
 
+Each claim's stable identifier, its parameters, and the manifest a
+deployment lists it in are defined by the Mission Deployment Profile
+companion ({{I-D.draft-mcguinness-mission-deployment-profile}});
+each proof obligation stays with the profile named above.
+
 # The Mission Deployment Profile {#deployment-profile}
 
 The Mission Assurance Levels ({{assurance-levels}}) name what to
@@ -1786,95 +1800,36 @@ profile's bounds and ceiling-review cadence, each where its profile
 is run), composed into one object an auditor, a procurement, or a
 security review can read. It is one artifact, not a second one: each
 fact's owning profile governs its meaning and normative force, and
-this document fixes no serialization. A machine-readable manifest
-schema, with stable claim identifiers and validation rules, is
-deferred family work; until it exists, the shape below is
-illustrative and the per-profile statements are the checkable form.
+this document fixes no serialization. The machine-readable form is
+the companion's: the Mission Deployment Profile manifest, with the
+stable claim identifiers and its consumption rules, is defined by
+{{I-D.draft-mcguinness-mission-deployment-profile}}.
 
 Its distinguishing field is `residual_risks`: the profile is not
 credible unless it states, in the same object as its guarantees, what
-it does not cover. An illustrative shape:
+it does not cover. A sketch; the companion's worked example is the
+full form:
 
 ~~~ json
 {
-  "profile": "mission-governed-agent-runtime",
-  "assurance_level": "high-assurance-agent",
-  "mission_issuer": "https://as.example.com",
-  "state_sources": [
-    { "type": "status_endpoint", "max_staleness_seconds": 30 }
+  "issuer": "https://as.example.com",
+  "bindings": ["oauth-core"],
+  "claims": [
+    { "claim": "action-time-enforcement",
+      "parameters": { "classes": ["irreversible_action"] } },
+    { "claim": "consent-rendering", "parameters": { "rung": 1 } }
   ],
-  "issuance": {
-    "binding": "oauth-core",
-    "mission_claim_required": true,
-    "refresh_gated_on_active_state": true
-  },
-  "runtime": {
-    "pdp": "authzen",
-    "pep_locations": ["tool-gateway", "browser-action-proxy"],
-    "mediated_action_classes": [
-      "irreversible_action", "external_commitment",
-      "external_communication", "privileged_administration"
-    ],
-    "action_bound_approval_classes": [
-      "irreversible_action", "privileged_administration"
-    ],
-    "unmediated_exclusions": [
-      "internal_reasoning", "local_cache_read"
-    ]
-  },
-  "credential_custody": {
-    "held_by": "pep",
-    "sender_constrained": true,
-    "key_generated_in_pep": true,
-    "agent_receives_bearer_token": false
-  },
-  "approval_rendering": {
-    "rendered_by": "agent-isolated-component"
-  },
-  "harness": {
-    "subagent_inheritance": "explicit_delegation_only",
-    "resume_requires_active_state": true,
-    "cached_credentials_revalidated": true,
-    "secondary_egress_enumerated": true
-  },
-  "exposure": {
-    "taint_rule": "enforced",
-    "egress_channels_enumerated": true
-  },
-  "standing_charters": {
-    "ceiling_review_cadence_days": 90,
-    "per_drawdown_bound": "single_entry_delta",
-    "drawdown_rate_bound_per_chain_per_hour": 60
-  },
-  "resource_servers": {
-    "authorization_details_enforcing": ["https://erp.example.com"],
-    "scope_projection_only": ["https://mail.example.com"],
-    "constraint_enforcement_for_scope_only": "runtime_pep"
-  },
-  "evidence": {
-    "decision_evidence": true,
-    "execution_evidence": true,
-    "retention_days": 365,
-    "field_classification": "evidence-schema-v2",
-    "evidence_access_audited": true,
-    "erasure_policy": "erasure-records",
-    "transparency": {
-      "service_operator": "third_party",
-      "monitor": "sec-ops",
-      "registration_time_bound_seconds": 3600
-    }
+  "statements": {
+    "enforcement_scope_statement": { "pep_locations": ["tool-gateway"] }
   },
   "residual_risks": [
     "unmediated local reasoning is outside enforcement",
-    "revocation latency up to 30 seconds",
-    "PEP compromise is not prevented",
-    "per-entry constraints reach scope-only resources only via the PEP",
-    "long-term memory and provider model context are not Mission-scoped exposure points"
+    "revocation latency up to 45 seconds on mediated paths"
   ]
 }
 ~~~
 
-The `evidence` member carries the deployment's evidence-handling
+The composed statements carry the deployment's evidence-handling
 posture beside its guarantees: the field-classification scheme its
 records use, whether access to Mission evidence is itself audited,
 and the erasure policy that pairs retention with deletion
@@ -2173,6 +2128,10 @@ operator plane) as its satellites.
 `mission-audit`:
 : Registration of Mission evidence in a SCITT Transparency Service;
   receipts verifiable offline.
+
+`mission-deployment-profile`:
+: Stable assurance-claim identifiers and the published manifest of a
+  deployment's claims, statements, and residual risks.
 
 **Security model:**
 

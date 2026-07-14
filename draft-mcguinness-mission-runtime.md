@@ -46,6 +46,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-deployment-profile:
+    title: "Mission Deployment Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-deployment-profile.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-security-model:
     title: "Mission Security Model"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html
@@ -602,6 +610,13 @@ covers which class.
   - Execution Evidence; and
   - outcome reconciliation.
 
+In a Mission Deployment Profile manifest, the core enforcement tier
+is claimed as `action-time-enforcement`, plus
+`parameter-bound-enforcement` for the parameter-bound classes, and
+the transaction-assurance tier as `transaction-grade-execution`, per
+class; the identifiers are defined by
+{{I-D.draft-mcguinness-mission-deployment-profile}}.
+
 One bound is stated rather than implied: reconciliation detects
 divergence between decisions and outcomes; it never manufactures
 exactly-once execution, which exists only where the resource itself
@@ -613,7 +628,10 @@ OAuth Authorization Server metadata extension. This document defines no
 discovery mechanism, registry, or wire format for publishing it.
 Different deployments can document scope through configuration,
 operational policy, resource-server metadata defined elsewhere, or a
-contractual profile.
+contractual profile. The Mission Deployment Profile manifest
+({{I-D.draft-mcguinness-mission-deployment-profile}}) defines the
+publishable composition: the statement's content items carried as
+JSON members beside the deployment's assurance claims.
 
 ## Action Classification {#classification}
 
