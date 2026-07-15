@@ -960,6 +960,41 @@ say what sanctioned work that instance carries; per-hop credentials
 narrow; the runtime layer enforces each action and parameter; and
 the evidence layer joins what was approved, decided, and done.
 
+## Swarm Execution: Multiplication, Not Delegation {#swarm-execution}
+
+One composition of the three objects recurs often enough to name. A
+Mission pinned to an Agent Deployment through the core's
+`controls.agent_deployment` ({{I-D.draft-mcguinness-oauth-mission}}),
+executed concurrently by N attested instances of that Deployment, is
+multiplication, not delegation: no `act` hop, no Child Mission, no
+attenuation chain, because authority never moves between principals.
+Late binding is attestation: an instance joins the work by
+authenticating as the pinned Deployment under the instance profiles
+({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
+{{I-D.draft-mcguinness-oauth-ai-agent-instance}}), not by receiving
+a credential from a peer. The invariant is class-grain
+authorization, instance-grain attribution: the class, the Agent
+Deployment projected as `client_id`, is an authorization subject,
+never an attribution subject, and attribution stays per-instance
+through the instance substrate, which forbids a sender-constraint
+key shared across a client's instances. The core's
+`controls.max_derivations` is the explicit fan-out ceiling, and
+consumption bounds attach at Mission grain, so a swarm shares one
+budget ({{I-D.draft-mcguinness-mission-metering}}).
+
+The decision ladder:
+
+- The same principal exercising the same authority concurrently is
+  the swarm: more attested instances of the pinned Deployment
+  deriving under one Mission, no new construct.
+- A different principal acting inline is a delegated token with an
+  `act` hop (the core's Delegation Within a Mission section).
+- A durable sub-agent needing its own lifecycle, approval, or audit
+  identity is a Child Mission
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
+- Offline narrowing is attenuation
+  ({{I-D.draft-mcguinness-oauth-mission-attenuation}}).
+
 # The Mission Substrate {#substrate}
 
 The companion profiles named without "oauth" are defined against the

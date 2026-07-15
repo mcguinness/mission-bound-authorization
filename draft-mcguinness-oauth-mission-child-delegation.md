@@ -94,6 +94,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -184,6 +192,17 @@ A Child Mission is a new Mission with its own `mission_id`. It is not
 an attenuation child: the Mission Offline Attenuation profile
 ({{I-D.draft-mcguinness-oauth-mission-attenuation}}) defines a child
 as a narrower token minted under one Mission, not a new Mission.
+
+Neither construct is the first question when the need is only more
+concurrent capacity. The same principal running more attested
+instances of the same pinned Agent Deployment (the issuance
+profile's `controls.agent_deployment`) under the same Mission is
+multiplication, not delegation: each instance derives under the
+Mission directly, with no `act` hop and no Child Mission. The
+architecture names this swarm execution and states the full decision
+ladder ({{I-D.draft-mcguinness-mission-architecture}}); the choice
+below begins where a different principal or a separate lifecycle
+enters.
 
 A delegated token is appropriate when the delegate performs work
 within the lifetime and operational control of the delegating flow. A

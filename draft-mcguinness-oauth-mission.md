@@ -749,8 +749,12 @@ has the following members:
     identifier's format, and what change constitutes a distinct
     Agent Deployment, are deployment policy; the pin is recorded and
     committed like every control and never widens or derives
-    authority. This object is the agent's behavioral version, not
-    the deployment's published claims manifest.
+    authority. Under a class pin, every attested instance of the
+    pinned Deployment derives under the Mission itself, and
+    `controls.max_derivations` is the explicit fan-out ceiling,
+    whose atomic check and increment ({{lifecycle}}) already serves
+    exactly this concurrency. This object is the agent's behavioral
+    version, not the deployment's published claims manifest.
 
 This document defines no cumulative consumption bounds (for example, a
 budget, call-count, or activity-duration cap): every bound this
