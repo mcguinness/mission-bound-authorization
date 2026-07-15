@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                              14 July 2026
-Expires: 15 January 2027
+Intended status: Informational                              15 July 2026
+Expires: 16 January 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 January 2027.
+   This Internet-Draft will expire on 16 January 2027.
 
 Copyright Notice
 
@@ -89,6 +89,7 @@ Table of Contents
    10. Mission Roles and Components
      10.1.  The Actor Chain
      10.2.  Three Objects, Three Lifecycles
+     10.3.  Swarm Execution: Multiplication, Not Delegation
    11. The Mission Substrate
      11.1.  The Mission Identifier and Issuer
      11.2.  The Lifecycle State Space
@@ -829,6 +830,44 @@ Table of Contents
    say what sanctioned work that instance carries; per-hop credentials
    narrow; the runtime layer enforces each action and parameter; and the
    evidence layer joins what was approved, decided, and done.
+
+10.3.  Swarm Execution: Multiplication, Not Delegation
+
+   One composition of the three objects recurs often enough to name.  A
+   Mission pinned to an Agent Deployment through the core's
+   controls.agent_deployment ([I-D.draft-mcguinness-oauth-mission]),
+   executed concurrently by N attested instances of that Deployment, is
+   multiplication, not delegation: no act hop, no Child Mission, no
+   attenuation chain, because authority never moves between principals.
+   Late binding is attestation: an instance joins the work by
+   authenticating as the pinned Deployment under the instance profiles
+   ([I-D.draft-mcguinness-oauth-client-instance-assertion],
+   [I-D.draft-mcguinness-oauth-ai-agent-instance]), not by receiving a
+   credential from a peer.  The invariant is class-grain authorization,
+   instance-grain attribution: the class, the Agent Deployment projected
+   as client_id, is an authorization subject, never an attribution
+   subject, and attribution stays per-instance through the instance
+   substrate, which forbids a sender-constraint key shared across a
+   client's instances.  The core's controls.max_derivations is the
+   explicit fan-out ceiling, and consumption bounds attach at Mission
+   grain, so a swarm shares one budget
+   ([I-D.draft-mcguinness-mission-metering]).
+
+   The decision ladder:
+
+   *  The same principal exercising the same authority concurrently is
+      the swarm: more attested instances of the pinned Deployment
+      deriving under one Mission, no new construct.
+
+   *  A different principal acting inline is a delegated token with an
+      act hop (the core's Delegation Within a Mission section).
+
+   *  A durable sub-agent needing its own lifecycle, approval, or audit
+      identity is a Child Mission
+      ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
+
+   *  Offline narrowing is attenuation
+      ([I-D.draft-mcguinness-oauth-mission-attenuation]).
 
 11.  The Mission Substrate
 

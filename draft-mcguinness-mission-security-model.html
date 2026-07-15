@@ -1072,7 +1072,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 15 January 2027</td>
+<td class="center">Expires 16 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1085,12 +1085,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-security-model-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-14" class="published">14 July 2026</time>
+<time datetime="2026-07-15" class="published">15 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-15">15 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-16">16 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1154,7 +1154,7 @@ considerations of each profile rather than restating them.<a href="#section-abst
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 15 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 16 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1953,53 +1953,71 @@ the fan-out policy is the deployment's; a permissive delegation policy
 is consented but wide.<a href="#section-9-3.28.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.29">Injection steers discovery (the agent binds the attacker's resource):</dt>
+<dt id="section-9-3.29">One instance of a swarm is compromised (class-pinned multiplication):</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.30">
-          <p id="section-9-3.30.1">Addressed by default-closed discovery (no consented ceiling, no
+          <p id="section-9-3.30.1">Addressed by three kills that stay separable: revoke the one
+instance's credentials and its peers continue; disable the Agent
+Deployment at the registry, whose state the consuming decision
+point fails closed on
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>); revoke the
+Mission and the whole body of work stops. Evidence distinguishes
+the instances because a sender-constraint key is never shared
+across a client's instances, the instance-profile rule mediated
+custody composes with (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).
+Residual: instance-grain attribution, and the narrowest kill,
+exist only where the instance substrate is deployed
+(<a href="#trusted-base" class="auto internal xref">Section 6</a>); without it attribution collapses to the shared
+<code>client_id</code>, and containment falls back to the Deployment and
+Mission kills.<a href="#section-9-3.30.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.31">Injection steers discovery (the agent binds the attacker's resource):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.32">
+          <p id="section-9-3.32.1">Addressed by default-closed discovery (no consented ceiling, no
 binding), the tainted-session human floor for egress-capable
 bindings, resource identity pinning, the rule that
 self-declarations never classify consequences, and Discovery
 Evidence (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>). Residual: an
 untainted session binding within an over-broad consented family;
-ceiling breadth is a consent-time decision.<a href="#section-9-3.30.1" class="pilcrow">¶</a></p>
+ceiling breadth is a consent-time decision.<a href="#section-9-3.32.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.31">Offline sub-agent fan-out abuse:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.32">
-          <p id="section-9-3.32.1">Addressed by capability monotonicity (narrow-only) and the runtime
+<dt id="section-9-3.33">Offline sub-agent fan-out abuse:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.34">
+          <p id="section-9-3.34.1">Addressed by capability monotonicity (narrow-only) and the runtime
 kill-switch re-check on the carried chain. Residual: fan-out breadth
 is unobserved by the issuer; bounded by depth and policy, not by the
-issuer.<a href="#section-9-3.32.1" class="pilcrow">¶</a></p>
+issuer.<a href="#section-9-3.34.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.33">Operator surface abused (fleet management):</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.34">
-          <p id="section-9-3.34.1">Addressed by management Client authorization; dry-run-then-execute
+<dt id="section-9-3.35">Operator surface abused (fleet management):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.36">
+          <p id="section-9-3.36.1">Addressed by management Client authorization; dry-run-then-execute
 with a bulk token pinning the evaluated membership; every call
 audited; never agent-facing. Residual: a compromised Management Client
 stops or resumes Missions fleet-wide and learns Mission existence; it
-cannot mint or widen authority.<a href="#section-9-3.34.1" class="pilcrow">¶</a></p>
+cannot mint or widen authority.<a href="#section-9-3.36.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.35">Audit tampered, dropped, or reordered:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.36">
-          <p id="section-9-3.36.1">Addressed by transparency: append-only log, inclusion receipts,
+<dt id="section-9-3.37">Audit tampered, dropped, or reordered:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.38">
+          <p id="section-9-3.38.1">Addressed by transparency: append-only log, inclusion receipts,
 non-equivocation. Residual: single-service equivocation (per-service
 only; register with several); a producer can still log a false
-record.<a href="#section-9-3.36.1" class="pilcrow">¶</a></p>
+record.<a href="#section-9-3.38.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.37">Agent fabricates results or acts on false data:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.38">
-          <p id="section-9-3.38.1">Addressed by not addressed. Residual: full: semantic and grounding
-verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.38.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-9-3.39">A trusted-base component is compromised:</dt>
+<dt id="section-9-3.39">Agent fabricates results or acts on false data:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.40">
-          <p id="section-9-3.40.1">Addressed by not addressed; evidence detects it after the fact.
+          <p id="section-9-3.40.1">Addressed by not addressed. Residual: full: semantic and grounding
+verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.40.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.41">A trusted-base component is compromised:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.42">
+          <p id="section-9-3.42.1">Addressed by not addressed; evidence detects it after the fact.
 Residual: not prevented; degrades the specific guarantee per
-<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.40.1" class="pilcrow">¶</a></p>
+<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.42.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>

@@ -1064,7 +1064,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 15 January 2027</td>
+<td class="center">Expires 16 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-child-delegation-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-14" class="published">14 July 2026</time>
+<time datetime="2026-07-15" class="published">15 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-15">15 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-16">16 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1139,7 +1139,7 @@ Mission is never created by session ancestry alone.<a href="#section-abstract-1"
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 15 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 16 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1407,21 +1407,31 @@ it means <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">
 an attenuation child: the Mission Offline Attenuation profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>) defines a child
 as a narrower token minted under one Mission, not a new Mission.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
-<p id="section-3.1-2">A delegated token is appropriate when the delegate performs work
+<p id="section-3.1-2">Neither construct is the first question when the need is only more
+concurrent capacity. The same principal running more attested
+instances of the same pinned Agent Deployment (the issuance
+profile's <code>controls.agent_deployment</code>) under the same Mission is
+multiplication, not delegation: each instance derives under the
+Mission directly, with no <code>act</code> hop and no Child Mission. The
+architecture names this swarm execution and states the full decision
+ladder (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>); the choice
+below begins where a different principal or a separate lifecycle
+enters.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+<p id="section-3.1-3">A delegated token is appropriate when the delegate performs work
 within the lifetime and operational control of the delegating flow. A
 Child Mission is appropriate when the child actor needs a durable
 Mission handle of its own: for example, a sub-agent with a queue,
 background job, independent harness session, or separate audit
 lifecycle. A Child Mission is not a way to widen authority; it is a
 way to create a narrower, separately accountable authority record for
-a child actor.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
-<p id="section-3.1-3">The dividing line is survivability: work that can outlive the
+a child actor.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+<p id="section-3.1-4">The dividing line is survivability: work that can outlive the
 delegating flow, because it is queued, scheduled, or retried after
 the delegator exits, or that needs its own revocation and audit
 lifecycle, requires a Child Mission; work that cannot <span class="bcp14">MAY</span> run on a
 delegated token. A harness applies the test at spawn, not by agent
 design: the same sub-agent takes a delegated token when invoked
-inline and a Child Mission when parked on a queue.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+inline and a Child Mission when parked on a queue.<a href="#section-3.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="child-vs-act">
@@ -2961,6 +2971,10 @@ not create it.<a href="#section-19-7" class="pilcrow">¶</a></p>
 <a href="#section-20.2" class="section-number selfRef">20.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>

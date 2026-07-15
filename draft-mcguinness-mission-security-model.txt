@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                              14 July 2026
-Expires: 15 January 2027
+Intended status: Informational                              15 July 2026
+Expires: 16 January 2027
 
 
                          Mission Security Model
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 January 2027.
+   This Internet-Draft will expire on 16 January 2027.
 
 Copyright Notice
 
@@ -680,6 +680,21 @@ Table of Contents
       credentials never transit the parent.  Residual: breadth within
       the fan-out policy is the deployment's; a permissive delegation
       policy is consented but wide.
+
+   One instance of a swarm is compromised (class-pinned
+   multiplication):  Addressed by three kills that stay separable:
+      revoke the one instance's credentials and its peers continue;
+      disable the Agent Deployment at the registry, whose state the
+      consuming decision point fails closed on
+      ([I-D.draft-mcguinness-mission-architecture]); revoke the Mission
+      and the whole body of work stops.  Evidence distinguishes the
+      instances because a sender-constraint key is never shared across a
+      client's instances, the instance-profile rule mediated custody
+      composes with ([I-D.draft-mcguinness-mission-runtime]).  Residual:
+      instance-grain attribution, and the narrowest kill, exist only
+      where the instance substrate is deployed (Section 6); without it
+      attribution collapses to the shared client_id, and containment
+      falls back to the Deployment and Mission kills.
 
    Injection steers discovery (the agent binds the attacker's
    resource):  Addressed by default-closed discovery (no consented
