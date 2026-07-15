@@ -864,6 +864,22 @@ Sub-agent fan-out abuse (Child Missions):
   the fan-out policy is the deployment's; a permissive delegation policy
   is consented but wide.
 
+One instance of a swarm is compromised (class-pinned multiplication):
+: Addressed by three kills that stay separable: revoke the one
+  instance's credentials and its peers continue; disable the Agent
+  Deployment at the registry, whose state the consuming decision
+  point fails closed on
+  ({{I-D.draft-mcguinness-mission-architecture}}); revoke the
+  Mission and the whole body of work stops. Evidence distinguishes
+  the instances because a sender-constraint key is never shared
+  across a client's instances, the instance-profile rule mediated
+  custody composes with ({{I-D.draft-mcguinness-mission-runtime}}).
+  Residual: instance-grain attribution, and the narrowest kill,
+  exist only where the instance substrate is deployed
+  ({{trusted-base}}); without it attribution collapses to the shared
+  `client_id`, and containment falls back to the Deployment and
+  Mission kills.
+
 Injection steers discovery (the agent binds the attacker's resource):
 : Addressed by default-closed discovery (no consented ceiling, no
   binding), the tainted-session human floor for egress-capable
