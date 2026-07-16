@@ -1319,19 +1319,28 @@ callback for the facts themselves. Only currency is external: a
 Mandate proves what was committed as of its <code>iat</code>, and a verifier that
 relies on the Mission being active checks current state separately
 (<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a>).<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">The family distinguishes three artifacts: the Mission is the
-governed task object; a Mandate is portable evidence about the
-Mission and its committed authority; a Mission Receipt is portable
-evidence about an action taken under it
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">A Mandate is evidence, not a credential. The issuance profile makes
+<p id="section-1-3">The family distinguishes three artifacts:<a href="#section-1-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1-4.1">
+          <p id="section-1-4.1.1">the Mission is the governed task object;<a href="#section-1-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-4.2">
+          <p id="section-1-4.2.1">a Mandate is portable evidence about the Mission and its committed
+authority; and<a href="#section-1-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-4.3">
+          <p id="section-1-4.3.1">a Mission Receipt is portable evidence about an action taken under
+it (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-1-4.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-1-5">A Mandate is evidence, not a credential. The issuance profile makes
 <code>mission_id</code> an informational reference: presenting it authorizes
 nothing (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Binding the
 Mission to the Grant"). A Mandate extends that rule from the
 identifier to the full committed record: presenting a Mandate
 authorizes nothing either. It lets a verifier know what was approved;
 authority remains the substrate's job
-(<a href="#cross-domain-verification" class="auto internal xref">Section 8.1</a>).<a href="#section-1-4" class="pilcrow">¶</a></p>
+(<a href="#cross-domain-verification" class="auto internal xref">Section 8.1</a>).<a href="#section-1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="optional-status">
@@ -1401,20 +1410,40 @@ evidence.<a href="#section-3-4.6.1" class="pilcrow">¶</a></p>
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
       </h2>
 <p id="section-4-1">This profile is defined against the Mission model rather than against
-OAuth 2.0 mechanics. It consumes these substrate primitives: the
-Mission record's committed members and their immutability; the
-integrity-anchor envelope with its encoded digest form; the lifecycle
-state space with its only-<code>active</code>-permits rule; and the Mission
-Issuer's published key material, resolvable by <code>kid</code>. The issuance
-profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is this version's
-normative substrate, publishing keys through its Authorization Server
-metadata <code>jwks_uri</code>; the Mission Authority Server
-(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>) is a standalone
-binding of the same primitives with its own metadata <code>jwks_uri</code>; and
-the AAuth binding (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>) hosts the
-same primitives at the AAuth Person Server, whose existing <code>jwks_uri</code>
-is the published key material for its signed artifacts. A Mandate
-minted under any of the three bindings is verified identically.<a href="#section-4-1" class="pilcrow">¶</a></p>
+OAuth 2.0 mechanics. It consumes these substrate primitives:<a href="#section-4-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-2.1">
+          <p id="section-4-2.1.1">the Mission record's committed members and their immutability;<a href="#section-4-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.2">
+          <p id="section-4-2.2.1">the integrity-anchor envelope with its encoded digest form;<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.3">
+          <p id="section-4-2.3.1">the lifecycle state space with its only-<code>active</code>-permits rule; and<a href="#section-4-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.4">
+          <p id="section-4-2.4.1">the Mission Issuer's published key material, resolvable by <code>kid</code>.<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-4-3">Three bindings host these primitives, and a Mandate minted under any
+of them is verified identically:<a href="#section-4-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-4.1">
+          <p id="section-4-4.1.1">the issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, this
+version's normative substrate, publishing keys through its
+Authorization Server metadata <code>jwks_uri</code>;<a href="#section-4-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-4.2">
+          <p id="section-4-4.2.1">the Mission Authority Server
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), a standalone
+binding of the same primitives with its own metadata <code>jwks_uri</code>; and<a href="#section-4-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-4.3">
+          <p id="section-4-4.3.1">the AAuth binding (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), which
+hosts the same primitives at the AAuth Person Server, whose existing
+<code>jwks_uri</code> is the published key material for its signed artifacts.<a href="#section-4-4.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
 </section>
 </div>
 <div id="mandate">
@@ -1576,18 +1605,18 @@ would read as a credential lifetime.<a href="#section-5.2-1.26.1" class="pilcrow
 <code>minted_for</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.2-1.28">
             <p id="section-5.2-1.28.1"><span class="bcp14">OPTIONAL</span>. A string. An identifier for the party this Mandate was
-minted for. It is attribution, not audience: it binds nothing, a
+minted for. It is attribution, not audience: it binds nothing. A
 verifier <span class="bcp14">MUST NOT</span> treat it as access control or reject a Mandate
-over its value, and its use is that a Mandate found where it should
+over its value. Its use is that a Mandate found where it should
 not be names its leak path (<a href="#privacy-considerations" class="auto internal xref">Section 12</a>).<a href="#section-5.2-1.28.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
 <p id="section-5.2-2">The claim set is open in the manner of the <code>mission</code> claim: a
 companion profile of the issuance profile <span class="bcp14">MAY</span> add members with
-coordinated short names, and any other extension member <span class="bcp14">MUST</span> use a
+coordinated short names. Any other extension member <span class="bcp14">MUST</span> use a
 collision-resistant name. A consumer <span class="bcp14">MUST</span> ignore members it does not
-understand and <span class="bcp14">MUST NOT</span> derive authority from any member.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+understand. A consumer <span class="bcp14">MUST NOT</span> derive authority from any member.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
 <p id="section-5.2-3">The Mandate carries two date-time forms by design: NumericDate
 <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> for the JWT-level <code>iat</code> and <code>mandate_exp</code>, and RFC 3339
 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> strings for record-level facts (<code>mission.expires_at</code> and
@@ -1603,28 +1632,38 @@ leeway to time comparisons (<a href="#verification" class="auto internal xref">S
         </h3>
 <p id="section-5.3-1"><code>state_at_issuance</code> records history, not currency. A Mandate proves
 the Mission's committed facts as of <code>iat</code>; it <span class="bcp14">MUST NOT</span> be treated as
-proof of the Mission's current state. A verifier reads the value
-under the issuance profile's fail-safe rule: any value other than the
-exact string <code>active</code>, including one it does not recognize, means the
-Mission was not active at minting. The Mission may have transitioned
-since minting, and nothing in the artifact would show it.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
-<p id="section-5.3-2">Current state comes from a state surface, not from the Mandate: the
-Mission Status operation, keyed by the <code>mission.id</code> the Mandate
-carries (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>); a lifecycle
-Signals stream (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>); or
-token introspection where the verifier holds a Mission-bound token
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A verifier whose reliance
-requires the Mission to be active <span class="bcp14">MUST</span> obtain current state from a
-source its deployment trusts, within a freshness bound its policy
-sets; where the issuer advertises a propagation bound, the freshness
-bound <span class="bcp14">SHOULD</span> be no looser
+proof of the Mission's current state.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">A verifier reads the value under the issuance profile's fail-safe
+rule: any value other than the exact string <code>active</code>, including one it
+does not recognize, means the Mission was not active at minting. The
+Mission may have transitioned since minting, and nothing in the
+artifact would show it.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+<p id="section-5.3-3">Current state comes from a state surface, not from the Mandate:<a href="#section-5.3-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.3-4.1">
+            <p id="section-5.3-4.1.1">the Mission Status operation, keyed by the <code>mission.id</code> the Mandate
+carries (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>);<a href="#section-5.3-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.3-4.2">
+            <p id="section-5.3-4.2.1">a lifecycle Signals stream
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>); or<a href="#section-5.3-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.3-4.3">
+            <p id="section-5.3-4.3.1">token introspection where the verifier holds a Mission-bound token
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.3-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.3-5">A verifier whose reliance requires the Mission to be active <span class="bcp14">MUST</span>
+obtain current state from a source its deployment trusts, within a
+freshness bound its policy sets. Where the issuer advertises a
+propagation bound, the freshness bound <span class="bcp14">SHOULD</span> be no looser
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). An issuer that mints
 for cross-domain reliance provisions the recipient's standing to one
-of these surfaces at minting (<a href="#minting" class="auto internal xref">Section 5.4</a>); a recipient without such
+of these surfaces at minting (<a href="#minting" class="auto internal xref">Section 5.4</a>). A recipient without such
 standing cannot perform the check and <span class="bcp14">MUST</span> treat reliance that
 requires an active Mission as stale (<a href="#failures" class="auto internal xref">Section 7.1</a>). Reliance that
 needs no active Mission, such as auditing a completed one, needs no
-check.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+check.<a href="#section-5.3-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="minting">
@@ -1635,50 +1674,73 @@ check.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
 <p id="section-5.4-1">The Mission Issuer <span class="bcp14">MAY</span> mint a Mandate at any time within the Mission's
 audit horizon, including after the Mission reaches a terminal state.
 Each claim <span class="bcp14">MUST</span> be populated from the Mission record's committed
-members; <code>state_at_issuance</code> <span class="bcp14">MUST</span> equal the Mission's lifecycle state
+members. <code>state_at_issuance</code> <span class="bcp14">MUST</span> equal the Mission's lifecycle state
 at <code>iat</code>. The issuer <span class="bcp14">MUST NOT</span> mint a Mandate whose facts diverge from
 the record.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
 <p id="section-5.4-2">To whom Mandates are issued, and through what request surface, is
 deployment policy; this document defines the artifact, not a delivery
 protocol. Whatever its shape, the minting surface <span class="bcp14">MUST</span> authenticate
-its requesters and <span class="bcp14">MUST</span> authorize each request under the deployment's
-visibility policy: a Mandate reveals a Mission's existence,
-principals, expiry, and optionally its full consented authority, and
-an unauthorized requester learns none of that, receiving the same
-response as for a Mission that does not exist, per the anti-oracle
-discipline of the family's status surfaces
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). An issuer <span class="bcp14">SHOULD</span>
-mint narrowly for the recipient's need, in particular omitting
-<code>authority_set</code> when the recipient does not recompute the anchor
-(<a href="#privacy-considerations" class="auto internal xref">Section 12</a>), and <span class="bcp14">SHOULD</span> record <code>minted_for</code>.<a href="#section-5.4-2" class="pilcrow">¶</a></p>
-<p id="section-5.4-3">Each minting is a Mandate evidence event: the issuer <span class="bcp14">MUST</span> record the
-authenticated requester, the <code>jti</code>, the <code>iat</code>, and the <code>minted_for</code>
-value where present, retained for the Mandate's evidence lifetime.
-Leak attribution rests on this record: a Mandate found where it
+its requesters. It <span class="bcp14">MUST</span> authorize each request under the deployment's
+visibility policy. The reason is what a Mandate reveals: a Mission's
+existence, principals, expiry, and optionally its full consented
+authority. An unauthorized requester learns none of that: it receives
+the same response as for a Mission that does not exist, per the
+anti-oracle discipline of the family's status surfaces
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-5.4-2" class="pilcrow">¶</a></p>
+<p id="section-5.4-3">An issuer <span class="bcp14">SHOULD</span> mint narrowly for the recipient's need, in
+particular omitting <code>authority_set</code> when the recipient does not
+recompute the anchor (<a href="#privacy-considerations" class="auto internal xref">Section 12</a>). An issuer <span class="bcp14">SHOULD</span>
+record <code>minted_for</code>.<a href="#section-5.4-3" class="pilcrow">¶</a></p>
+<p id="section-5.4-4">Each minting is a Mandate evidence event. The issuer <span class="bcp14">MUST</span> record,
+and retain for the Mandate's evidence lifetime:<a href="#section-5.4-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.4-5.1">
+            <p id="section-5.4-5.1.1">the authenticated requester;<a href="#section-5.4-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.4-5.2">
+            <p id="section-5.4-5.2.1">the <code>jti</code>;<a href="#section-5.4-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.4-5.3">
+            <p id="section-5.4-5.3.1">the <code>iat</code>; and<a href="#section-5.4-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.4-5.4">
+            <p id="section-5.4-5.4.1">the <code>minted_for</code> value where present.<a href="#section-5.4-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.4-6">Leak attribution rests on this record: a Mandate found where it
 should not be names its first recipient only if the issuer can
 answer a repudiating one (the Join Assertion's minting evidence is
 the same pattern,
-<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-5.4-3" class="pilcrow">¶</a></p>
-<p id="section-5.4-4">The mandatory freshness check (<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a>) is reachable
+<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-5.4-6" class="pilcrow">¶</a></p>
+<p id="section-5.4-7">The mandatory freshness check (<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a>) is reachable
 only if the recipient has standing to a state surface. An issuer that
 mints a Mandate whose recipient's reliance requires an active Mission
-<span class="bcp14">MUST</span> provision that standing together with the Mandate: grant the
-recipient access to the Mission Status operation for that <code>mission.id</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), enroll it in a
-Lifecycle Signals stream
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), or offer a
-state-only surface that returns the Mission's lifecycle state and
-nothing else. Minting evidence a cross-domain recipient can verify but
-never refresh leaves the required check unreachable.<a href="#section-5.4-4" class="pilcrow">¶</a></p>
-<p id="section-5.4-5">A Mandate outlives signing-key rotation schedules. The issuer <span class="bcp14">MUST</span>
-keep the key that verifies each minted Mandate resolvable by its
-<code>kid</code> in the published key material for that Mandate's evidence
-lifetime: until <code>mandate_exp</code>, or for the Mission's audit horizon
-when <code>mandate_exp</code> is absent: the core's retired-key rule
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), with the Mandate's
-evidence lifetime as the retention bound. Revocation for a key known
-or suspected compromised is distinct from routine retirement and is
-treated in <a href="#security-considerations" class="auto internal xref">Section 11</a>.<a href="#section-5.4-5" class="pilcrow">¶</a></p>
+<span class="bcp14">MUST</span> provision that standing together with the Mandate, by one of:<a href="#section-5.4-7" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.4-8.1">
+            <p id="section-5.4-8.1.1">granting the recipient access to the Mission Status operation for
+that <code>mission.id</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>);<a href="#section-5.4-8.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.4-8.2">
+            <p id="section-5.4-8.2.1">enrolling it in a Lifecycle Signals stream
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>); or<a href="#section-5.4-8.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.4-8.3">
+            <p id="section-5.4-8.3.1">offering a state-only surface that returns the Mission's lifecycle
+state and nothing else.<a href="#section-5.4-8.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.4-9">Minting evidence a cross-domain recipient can verify but never
+refresh leaves the required check unreachable.<a href="#section-5.4-9" class="pilcrow">¶</a></p>
+<p id="section-5.4-10">The issuer <span class="bcp14">MUST</span> keep the key that verifies each minted Mandate
+resolvable by its <code>kid</code> in the published key material for that
+Mandate's evidence lifetime: until <code>mandate_exp</code>, or for the
+Mission's audit horizon when <code>mandate_exp</code> is absent. A Mandate
+outlives signing-key rotation schedules; this is the core's
+retired-key rule (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), with the
+Mandate's evidence lifetime as the retention bound. Revocation for a
+key known or suspected compromised is distinct from routine
+retirement and is treated in <a href="#security-considerations" class="auto internal xref">Section 11</a>.<a href="#section-5.4-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="example">
@@ -1854,8 +1916,8 @@ set is complete and the anchor is verified;<a href="#section-6-5.1.1" class="pil
 </li>
         <li class="normal" id="section-6-5.2">
           <p id="section-6-5.2.1">it does not match and undisclosed array-element digests remain: the
-presentation is partial (<a href="#failures" class="auto internal xref">Section 7.1</a>), not invalid; the verifier
-<span class="bcp14">MUST NOT</span> recompute the anchor as if the set were complete and <span class="bcp14">MUST NOT</span> treat the mismatch as tampering;<a href="#section-6-5.2.1" class="pilcrow">¶</a></p>
+presentation is partial (<a href="#failures" class="auto internal xref">Section 7.1</a>), not invalid. The verifier
+<span class="bcp14">MUST NOT</span> recompute the anchor as if the set were complete. It <span class="bcp14">MUST NOT</span> treat the mismatch as tampering;<a href="#section-6-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-5.3">
           <p id="section-6-5.3.1">it does not match and no undisclosed array-element digest remains:
@@ -1916,7 +1978,7 @@ treating it as passed.<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
 a verifier that relies on its contents <span class="bcp14">MUST</span> recompute
 <code>authority_hash</code> over it per the issuance profile's
 integrity-anchor rules (the <code>mission-authority-set</code> envelope with
-<code>iss</code> set to <code>mission.issuer</code>); a verifier that does not so rely
+<code>iss</code> set to <code>mission.issuer</code>). A verifier that does not so rely
 <span class="bcp14">MAY</span> recompute. On mismatch over a full array the verifier <span class="bcp14">MUST</span>
 reject the Mandate (invalid). For an SD-JWT presentation the
 verifier applies the three-way rule of <a href="#selective-disclosure" class="auto internal xref">Section 6</a>
@@ -1961,7 +2023,7 @@ for compromise or a post-compromise <code>iat</code> under step 3, the claim
 structure of step 2, <code>iss</code>/<code>issuer</code> mismatch, anchor mismatch over a
 full array under step 6 (as distinct from the partial class below),
 or an unrecognized hash prefix under step 8. The Mandate <span class="bcp14">MUST</span> be
-rejected and <span class="bcp14">MUST NOT</span> be relied on for anything.<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
+rejected. It <span class="bcp14">MUST NOT</span> be relied on for anything.<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.1-2.3">Partial:</dt>
@@ -1971,26 +2033,47 @@ some <code>authority_set</code> entries: <code>authority_hash</code> recomputati
 not match and undisclosed array-element digests remain
 (<a href="#selective-disclosure" class="auto internal xref">Section 6</a>). This is not the invalid class; the
 Mandate is authentic and every plaintext claim is relied on
-normally. A verifier that needs the full Authority Set <span class="bcp14">MUST</span> obtain a
-fuller presentation, <span class="bcp14">MUST NOT</span> recompute the anchor as if the set
-were complete, and <span class="bcp14">MUST NOT</span> treat the mismatch as tampering.<a href="#section-7.1-2.4.1" class="pilcrow">¶</a></p>
+normally. A verifier that needs the full Authority Set:<a href="#section-7.1-2.4.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.1-2.4.2.1">
+                <p id="section-7.1-2.4.2.1.1"><span class="bcp14">MUST</span> obtain a fuller presentation;<a href="#section-7.1-2.4.2.1.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-7.1-2.4.2.2">
+                <p id="section-7.1-2.4.2.2.1"><span class="bcp14">MUST NOT</span> recompute the anchor as if the set were complete; and<a href="#section-7.1-2.4.2.2.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-7.1-2.4.2.3">
+                <p id="section-7.1-2.4.2.3.1"><span class="bcp14">MUST NOT</span> treat the mismatch as tampering.<a href="#section-7.1-2.4.2.3.1" class="pilcrow">¶</a></p>
+</li>
+            </ul>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.1-2.5">Unverifiable:</dt>
           <dd style="margin-left: 1.5em" id="section-7.1-2.6">
-            <p id="section-7.1-2.6.1">Verification cannot complete: the issuer's key material is
-unreachable, the <code>kid</code> does not resolve, no trust anchor covers
-the Mission's issuer, or the signing key is issuer-flagged as
-compromised and the Mandate's <code>iat</code> is not anchored before the
-compromise time (<a href="#security-considerations" class="auto internal xref">Section 11</a>). This is not
-evidence of tampering, mirroring the audit
-profile's classification (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>);
-the verifier <span class="bcp14">MUST NOT</span> treat the Mandate as verified and <span class="bcp14">MUST NOT</span>
-treat the failure as proof the artifact is false. Within a
-Mandate's evidence lifetime a conforming issuer keeps its
-verification key resolvable (<a href="#minting" class="auto internal xref">Section 5.4</a>), so a <code>kid</code> that no
-longer resolves inside that bound is itself worth recording,
-though still not proof of forgery.<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-2.6.1">Verification cannot complete:<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.1-2.6.2.1">
+                <p id="section-7.1-2.6.2.1.1">the issuer's key material is unreachable;<a href="#section-7.1-2.6.2.1.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-7.1-2.6.2.2">
+                <p id="section-7.1-2.6.2.2.1">the <code>kid</code> does not resolve;<a href="#section-7.1-2.6.2.2.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-7.1-2.6.2.3">
+                <p id="section-7.1-2.6.2.3.1">no trust anchor covers the Mission's issuer; or<a href="#section-7.1-2.6.2.3.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-7.1-2.6.2.4">
+                <p id="section-7.1-2.6.2.4.1">the signing key is issuer-flagged as compromised and the
+Mandate's <code>iat</code> is not anchored before the compromise time
+(<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-7.1-2.6.2.4.1" class="pilcrow">¶</a></p>
+</li>
+            </ul>
+<p id="section-7.1-2.6.3">This is not evidence of tampering, mirroring the audit profile's
+classification (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). The
+verifier <span class="bcp14">MUST NOT</span> treat the Mandate as verified. It <span class="bcp14">MUST NOT</span> treat
+the failure as proof the artifact is false. Within a Mandate's
+evidence lifetime a conforming issuer keeps its verification key
+resolvable (<a href="#minting" class="auto internal xref">Section 5.4</a>), so a <code>kid</code> that no longer resolves inside
+that bound is itself worth recording, though still not proof of
+forgery.<a href="#section-7.1-2.6.3" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.1-2.7">Stale:</dt>
@@ -2029,9 +2112,9 @@ the facts it states.<a href="#section-7.1-2.10.1" class="pilcrow">¶</a></p>
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span> projects
 authority: the cross-domain grant carries the <code>mission</code> claim and the
 audience-scoped Authority Set entries to one Resource AS, which mints
-local tokens from it. That projection remains the only path to local tokens; a
-Mandate replaces nothing in it, is not redeemable, is not audienced,
-and authorizes nothing.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+local tokens from it. That projection remains the only path to local
+tokens; a Mandate replaces nothing in it (<a href="#non-goals" class="auto internal xref">Section 9</a>, and the
+grant contrast in <a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-8.1-1" class="pilcrow">¶</a></p>
 <p id="section-8.1-2">What a Mandate adds is knowledge. A verifier that needed to know what
 a Mission approved previously had only the token-exchange projection,
 available only in the grant flow and only audience-scoped. With a
@@ -2059,7 +2142,7 @@ never authority.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
 <p id="section-8.2-2">A Mandate binds no holder and is freely copyable (<a href="#non-goals" class="auto internal xref">Section 9</a>), so
 possession of one is not evidence that the presenter is the Mission's
 Subject or client. A rail <span class="bcp14">MUST NOT</span> derive authority on possession of a
-Mandate alone: before minting its vertical artifact, the rail <span class="bcp14">MUST</span>
+Mandate alone. Before minting its vertical artifact, the rail <span class="bcp14">MUST</span>
 independently authenticate the presenter as the Mission's <code>subject</code> or
 <code>client_id</code> through its own channel, and treat the Mandate only as the
 committed facts that authentication is checked against. Until a
@@ -2069,7 +2152,7 @@ presenter, and deriving authority without it repeats the
 mandate-as-credential misuse (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-8.2-2" class="pilcrow">¶</a></p>
 <p id="section-8.2-3">A rail deriving a durable artifact from a Mandate <span class="bcp14">SHOULD</span> record the
 time of its current-state check (<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a>) in its own
-artifact, and <span class="bcp14">SHOULD</span> consume Mission Status
+artifact. It <span class="bcp14">SHOULD</span> consume Mission Status
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) or Lifecycle Signals
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>) for the Mission's
 lifetime, so a later revocation of the Mission does not go silently
@@ -2118,9 +2201,9 @@ bounds a later issuer key compromise (<a href="#security-considerations" class="
       </h2>
 <ul class="normal">
 <li class="normal" id="section-9-1.1">
-          <p id="section-9-1.1.1">A Mandate is not a credential and is never authority-bearing;
-anything authority-bearing belongs to the substrate's issuance
-surfaces.<a href="#section-9-1.1.1" class="pilcrow">¶</a></p>
+          <p id="section-9-1.1.1">Not a credential (<a href="#security-considerations" class="auto internal xref">Section 11</a>). A Mandate is never
+authority-bearing; anything authority-bearing belongs to the
+substrate's issuance surfaces.<a href="#section-9-1.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-1.2">
           <p id="section-9-1.2.1">No audience. A Mandate is deliberately unaudienced: evidence is
@@ -2224,10 +2307,11 @@ presentation of a Mandate (<a href="#security-considerations" class="auto intern
 access because a presenter holds a well-signed Mandate. A Mandate
 binds no presenter, proves no possession, and commits no current
 state; accepting it as a credential turns a freely copyable audit
-artifact into a bearer token. A verifier <span class="bcp14">MUST NOT</span> grant access, mint a
-credential, or widen any authority on presentation of a Mandate.
-Authority flows only through the substrate's issuance surfaces
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+artifact into a bearer token.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<p id="section-11.1-2">A verifier <span class="bcp14">MUST NOT</span> grant access, mint a credential, or widen any
+authority on presentation of a Mandate. Authority flows only through
+the substrate's issuance surfaces
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-11.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stale-state-reliance">
@@ -2256,16 +2340,17 @@ within each Mandate's evidence lifetime the verification key stays
 resolvable (<a href="#minting" class="auto internal xref">Section 5.4</a>), so a forged Mandate with a backdated <code>iat</code>
 verifies exactly as a genuine one does, and an issuer cannot recover
 by simply dropping the key from the published set without also
-breaking the genuine Mandates that key signed. Audit registration
-(<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>) is the bound: a genuine Mandate has an
-independent, timestamped existence proof, and a forged one either
-goes unregistered or leaves a permanent, attributable trace. A
-deployment whose Mandates feed high-consequence decisions <span class="bcp14">SHOULD</span>
-register them. An issuer that learns a signing key was compromised
-<span class="bcp14">SHOULD</span> record and publish the compromise time; a verifier then
-treats an unregistered Mandate under that <code>kid</code> whose <code>iat</code> cannot
-be anchored before that time as unverifiable (<a href="#failures" class="auto internal xref">Section 7.1</a>), never
-as verified evidence.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
+breaking the genuine Mandates that key signed.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
+<p id="section-11.3-2">Audit registration (<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>) is the bound. A deployment
+whose Mandates feed high-consequence decisions <span class="bcp14">SHOULD</span> register them:
+a genuine Mandate has an independent, timestamped existence proof,
+and a forged one either goes unregistered or leaves a permanent,
+attributable trace.<a href="#section-11.3-2" class="pilcrow">¶</a></p>
+<p id="section-11.3-3">An issuer that learns a signing key was compromised <span class="bcp14">SHOULD</span> record
+and publish the compromise time. A verifier then treats an
+unregistered Mandate under that <code>kid</code> whose <code>iat</code> cannot be anchored
+before that time as unverifiable (<a href="#failures" class="auto internal xref">Section 7.1</a>), never as verified
+evidence.<a href="#section-11.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="confusion-with-the-cross-domain-grant">
@@ -2299,24 +2384,34 @@ Verifier rejects a grant presented as a Mandate at step 1 of
 <p id="section-12.1-1">A Mandate carries what the Mission record committed: principals, task
 anchors, expiry, and optionally the full Authority Set with its
 business bounds. It travels to parties that would otherwise never hold
-Mission data, and unlike a token it has no audience to scope it. An
-issuer <span class="bcp14">SHOULD</span> apply the restraint the issuance profile applies at a
-domain boundary: omit <code>authority_set</code> unless the recipient needs
-anchor recomputation, prefer the selective-disclosure form
-(<a href="#selective-disclosure" class="auto internal xref">Section 6</a>) where a holder re-presents the Mandate
-onward, and avoid Intent-derived free-text extension members by
-default. Selective disclosure is this profile's minimization tool:
-a presentation discloses the committed facts the verifier needs and
-no more, so a deployment handing Mission facts to a
-privacy-sensitive recipient prefers a selectively disclosed
-presentation over a full Mandate. Recording <code>minted_for</code> costs nothing and makes an artifact
-that travels beyond its recipient attributable to a leak path.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
-<p id="section-12.1-2">The Mandate also extends the correlation surface the issuance
+Mission data, and unlike a token it has no audience to scope it.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+<p id="section-12.1-2">An issuer <span class="bcp14">SHOULD</span> apply the restraint the issuance profile applies at
+a domain boundary:<a href="#section-12.1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12.1-3.1">
+            <p id="section-12.1-3.1.1">omit <code>authority_set</code> unless the recipient needs anchor
+recomputation;<a href="#section-12.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.1-3.2">
+            <p id="section-12.1-3.2.1">prefer the selective-disclosure form (<a href="#selective-disclosure" class="auto internal xref">Section 6</a>)
+where a holder re-presents the Mandate onward; and<a href="#section-12.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.1-3.3">
+            <p id="section-12.1-3.3.1">avoid Intent-derived free-text extension members by default.<a href="#section-12.1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-12.1-4">Selective disclosure is this profile's minimization tool: a
+presentation discloses the committed facts the verifier needs and no
+more, so a deployment handing Mission facts to a privacy-sensitive
+recipient prefers a selectively disclosed presentation over a full
+Mandate. Recording <code>minted_for</code> costs nothing and makes an artifact
+that travels beyond its recipient attributable to a leak path.<a href="#section-12.1-4" class="pilcrow">¶</a></p>
+<p id="section-12.1-5">The Mandate also extends the correlation surface the issuance
 profile's privacy considerations describe: it carries <code>mission.id</code> and
 <code>authority_hash</code> to parties outside the token path, and any two
 holders can correlate on them. That is the artifact's purpose, an
 auditable shared anchor; a deployment <span class="bcp14">SHOULD</span> weigh it before minting
-Mandates for recipients that do not need durable correlation.<a href="#section-12.1-2" class="pilcrow">¶</a></p>
+Mandates for recipients that do not need durable correlation.<a href="#section-12.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="subject-disclosure">
@@ -2327,7 +2422,7 @@ Mandates for recipients that do not need durable correlation.<a href="#section-1
 <p id="section-12.2-1">Selective disclosure never hides <code>subject</code>
 (<a href="#selective-disclosure" class="auto internal xref">Section 6</a>): every presentation identifies the
 Mission's Subject. Deployments <span class="bcp14">SHOULD</span> use opaque or pairwise Subject
-identifiers where the identity provider supports them, and <span class="bcp14">SHOULD</span>
+identifiers where the identity provider supports them. They <span class="bcp14">SHOULD</span>
 weigh Subject disclosure per recipient as this section weighs
 <code>authority_set</code>.<a href="#section-12.2-1" class="pilcrow">¶</a></p>
 </section>
