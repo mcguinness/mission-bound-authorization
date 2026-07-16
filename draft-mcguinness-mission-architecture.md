@@ -1181,6 +1181,26 @@ The horizons compose by minimum: reliance at any moment requires
 every applicable horizon to be open, and no horizon substitutes for
 another.
 
+The horizons also give the deployment its freshness dial, and the
+TTL-only end of that dial is a first-class posture, not a fallback.
+A deployment that relies on lifetimes alone verifies with local
+cryptography and a clock: no state source, no freshness discipline,
+no availability coupling, and a worst-case exposure equal to the
+lifetime by construction. That posture is the right choice at action
+grain, where an artifact lives seconds to minutes and no revocation
+can land inside its window, and for short missions; the family's own
+short-lived artifacts (the permit, the cross-domain grant, the Join
+Assertion) already sit at this end. What a lifetime cannot do is
+suspend, complete, or kill now, which is the task-grain residue the
+Mission's state carries. The two ends are one mechanism seen from
+opposite sides: a lifetime relocates the freshness check from the
+verification path to the issuance path, so every re-issuance is the
+policy re-check, which is the family's
+gates-new-derivation-only rule in its other reading. A deployment
+states where it sits on the dial through its bounded-revocation
+claim ({{assurance-claims-axis}}): a TTL-only posture claims the
+lifetime as its bound, honestly and with no state surface.
+
 ## The Binding Checklist {#binding-checklist}
 
 For a new binding this checklist is now normatively stated by Mission
@@ -1522,6 +1542,15 @@ condition:
 Every row shares the record, anchors, and lifecycle, so a ramp is an
 entry point, not a fork: Missions carry unchanged from any row to the
 rows a deployment adopts later.
+
+One ramp cuts across the rows: the **short mission**. A Mission whose
+`expires_at` sits minutes out, run in records mode with
+lifetime-bounded reliance, is a durable approval record with
+TTL-grade operational cost: audit, anchors, and bounded exposure
+with no state surface anywhere ({{validity-model}}). A deployment
+can adopt the family this way first, per task, and add state
+surfaces only where missions grow long enough to need suspend,
+complete, or kill-now.
 
 In sequence, the standalone mode runs submit, poll, approve, join,
 permit:
