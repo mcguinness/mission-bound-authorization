@@ -1,0 +1,2665 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Cross-Domain Projection for OAuth 2.0</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       The Mission-Bound Authorization for OAuth 2.0 profile binds issued
+authority to a durable, human-approved Mission held by a single
+Authorization Server, the Mission Issuer. This document specifies that
+profile's optional cross-domain projection: a single hop that lets an
+Authorization Server in another trust domain, a Resource AS, honor a
+Mission it did not issue. The Mission Issuer projects audience-scoped
+Mission authority in a short-lived, sender-constrained cross-domain
+grant of the OAuth identity chaining architecture; the Resource AS
+validates the grant and mints its own local tokens, preserving the
+Mission binding unchanged. The Mission record never crosses the
+boundary, and honoring it needs no session with the Mission Issuer.
+The Identity Assertion Authorization Grant
+(ID-JAG) is the recommended grant profile. Single-domain deployments
+of the issuance profile are unaffected by this document. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="cross-domain" name="keyword">
+<meta content="identity-chaining" name="keyword">
+<meta content="draft-mcguinness-oauth-mission-cross-domain-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-oauth-mission-cross-domain.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">OAuth Mission Cross-Domain</td>
+<td class="right">July 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 17 January 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Web Authorization Protocol</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-oauth-mission-cross-domain-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-07-16" class="published">16 July 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-01-17">17 January 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Cross-Domain Projection for OAuth 2.0</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">The Mission-Bound Authorization for OAuth 2.0 profile binds issued
+authority to a durable, human-approved Mission held by a single
+Authorization Server, the Mission Issuer. This document specifies that
+profile's optional cross-domain projection: a single hop that lets an
+Authorization Server in another trust domain, a Resource AS, honor a
+Mission it did not issue. The Mission Issuer projects audience-scoped
+Mission authority in a short-lived, sender-constrained cross-domain
+grant of the OAuth identity chaining architecture; the Resource AS
+validates the grant and mints its own local tokens, preserving the
+Mission binding unchanged. The Mission record never crosses the
+boundary, and honoring it needs no session with the Mission Issuer.
+The Identity Assertion Authorization Grant
+(ID-JAG) is the recommended grant profile. Single-domain deployments
+of the issuance profile are unaffected by this document.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-cross-domain/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-cross-domain/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 17 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-status-an-optional-extensio" class="internal xref">Status: An Optional Extension</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-cross-domain-projection" class="internal xref">Cross-Domain Projection</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-what-crosses-the-trust-boun" class="internal xref">What Crosses the Trust Boundary</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-audience-scoped-authority" class="internal xref">Audience-Scoped Authority</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-relationship-to-transaction" class="internal xref">Relationship to Transaction Token Chaining</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-pre-established-trust" class="internal xref">Pre-Established Trust</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-issuing-the-cross-domain-gr" class="internal xref">Issuing the Cross-Domain Grant</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-validation-at-the-resource-" class="internal xref">Validation at the Resource AS</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-error-responses" class="internal xref">Error Responses</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-introspection-at-a-resource" class="internal xref">Introspection at a Resource AS</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-authorization-server-metada" class="internal xref">Authorization Server Metadata</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-cross-domain-revocation-lat" class="internal xref">Cross-Domain Revocation Latency</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-the-grant-at-the-trust-boun" class="internal xref">The Grant at the Trust Boundary</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3">
+                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-per-domain-delegation-depth" class="internal xref">Per-Domain Delegation Depth</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#section-17" class="auto internal xref">17</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.1">
+                <p id="section-toc.1-1.17.2.1.1"><a href="#section-17.1" class="auto internal xref">17.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.2">
+                <p id="section-toc.1-1.17.2.2.1"><a href="#section-17.2" class="auto internal xref">17.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-end-to-end-example-non-norm" class="internal xref">End-to-End Example (Non-Normative)</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.1">
+                <p id="section-toc.1-1.18.2.1.1"><a href="#appendix-A.1" class="auto internal xref">A.1</a>.  <a href="#name-stage-2-cross-domain-projec" class="internal xref">Stage 2: Cross-Domain Projection via ID-JAG (Between Domains)</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.2">
+                <p id="section-toc.1-1.18.2.2.1"><a href="#appendix-A.2" class="auto internal xref">A.2</a>.  <a href="#name-stage-3-the-resource-as-iss" class="internal xref">Stage 3: The Resource AS Issues a Local Access Token</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.3">
+                <p id="section-toc.1-1.18.2.3.1"><a href="#appendix-A.3" class="auto internal xref">A.3</a>.  <a href="#name-stage-4-the-resource-server" class="internal xref">Stage 4: The Resource Server Enforces</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.4">
+                <p id="section-toc.1-1.18.2.4.1"><a href="#appendix-A.4" class="auto internal xref">A.4</a>.  <a href="#name-stage-5-internal-call-conte" class="internal xref">Stage 5: Internal Call Context via Transaction Tokens</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.5">
+                <p id="section-toc.1-1.18.2.5.1"><a href="#appendix-A.5" class="auto internal xref">A.5</a>.  <a href="#name-stage-6-the-internal-servic" class="internal xref">Stage 6: The Internal Service Enforces</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.6">
+                <p id="section-toc.1-1.18.2.6.1"><a href="#appendix-A.6" class="auto internal xref">A.6</a>.  <a href="#name-what-rode-through-and-what-" class="internal xref">What Rode Through, and What Narrowed</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
+            <p id="section-toc.1-1.19.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">The issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> makes a
+Mission a durable, human-approved, integrity-bound OAuth authorization
+artifact: one Authorization Server, the Mission Issuer, approves it,
+records it, and derives every token under it. That profile is
+deliberately single-domain: the AS that holds the Mission is the AS
+that issues for it.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">Real tasks cross trust domains. An agent reconciling invoices may need
+a partner's ERP, behind a partner Authorization Server the home AS
+does not control and whose accounts it does not manage. This document
+specifies <strong>cross-domain projection</strong>: the originating Mission Issuer
+projects a Mission's authority, audience-scoped and
+integrity-anchored, to an Authorization Server in another trust
+domain, which honors it by minting local tokens for its own resources.
+The projection is a single hop, issuer to Resource AS; chaining a
+Mission across more than one trust-domain boundary remains future work
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Non-Goals").<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">Two roles carry the model. The <strong>Mission Issuer</strong> (the Mission's
+<code>issuer</code>) remains the only party that creates, holds, and gates the
+Mission. A <strong>Resource AS</strong> honors a Mission it did not issue: it
+validates the projected grant, applies its own local policy, and mints
+its own tokens, preserving the Mission binding unchanged. A Resource
+AS is never the Mission Issuer.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">Three properties define the projection. The Mission does not cross:
+the record, the Mission Intent, the full Authority Set, and lifecycle
+authority stay with the Mission Issuer, and the Resource AS receives
+only claim-shape facts and the entries scoped to it
+(<a href="#what-crosses" class="auto internal xref">Section 5</a>). Authority never widens: the projection carries
+the agent's authority preserved and scoped to the audience, and
+nothing the Resource AS mints may widen it
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>). Honoring is session-less: the
+Resource AS verifies pre-established issuer trust and a signature, so
+the Mission Issuer is never on the partner's request path; the cost
+of that independence is a bounded revocation lease
+(<a href="#cross-domain-revocation" class="auto internal xref">Section 14.1</a>).<a href="#section-1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="status">
+<section id="section-2">
+      <h2 id="name-status-an-optional-extensio">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-extensio" class="section-name selfRef">Status: An Optional Extension</a>
+      </h2>
+<p id="section-2-1">This document is the Cross-Domain capability named by the base
+profile's conformance model (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Conformance"). The capability is optional: a deployment whose
+Missions never leave their issuing AS does not implement this
+document, and the issuance profile is complete without it.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">Two external dependencies set its deployment posture. The OAuth
+identity chaining architecture
+<span>[<a href="#I-D.draft-ietf-oauth-identity-chaining" class="cite xref">I-D.draft-ietf-oauth-identity-chaining</a>]</span> is approved for publication
+and in the RFC Editor queue; the Identity Assertion Authorization
+Grant <span>[<a href="#I-D.draft-ietf-oauth-identity-assertion-authz-grant" class="cite xref">I-D.draft-ietf-oauth-identity-assertion-authz-grant</a>]</span> is a
+working-group document. This document profiles them and cannot advance
+ahead of them; confining them here keeps the issuance profile free of
+in-progress cross-domain dependencies.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">The capability is orthogonal to the family's Mission Assurance Levels
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>): projection changes
+where a Mission is honored, not the strength at which either domain
+enforces it. Each trust domain runs at its own level.<a href="#section-2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions-and-terminology">
+<section id="section-3">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-3-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">This document uses the terms of the issuance profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>: Mission, Mission Issuer (the
+Mission's <code>issuer</code>), Mission Intent, Authority Set, Subject, <code>mission</code>
+claim, derived token, derivation, the subset rule, and lifecycle
+gating. Authority Set entries are <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> <code>authorization_details</code>
+objects. All JSON shown in this document is non-normative and
+illustrative; the member definitions in the surrounding text are
+authoritative.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3-3">
+        <dt id="section-3-3.1">Resource AS:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.2">
+          <p id="section-3-3.2.1">An Authorization Server in another trust domain that honors a
+Mission it did not issue, minting its own tokens for its resources
+from a cross-domain grant. A Resource AS is never the Mission
+Issuer.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.3">Cross-domain grant:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.4">
+          <p id="section-3-3.4.1">The short-lived JWT authorization grant the Mission Issuer issues
+toward a Resource AS (<a href="#cross-domain-grant" class="auto internal xref">Section 8</a>), carrying
+audience-scoped Mission authority and the <code>mission</code> claim. It is a
+Mission-bound token in the sense of the issuance profile.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.5">Local token:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.6">
+          <p id="section-3-3.6.1">An access token a Resource AS mints for its own resources from a
+cross-domain grant (<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>).<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="model">
+<section id="section-4">
+      <h2 id="name-cross-domain-projection">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-cross-domain-projection" class="section-name selfRef">Cross-Domain Projection</a>
+      </h2>
+<p id="section-4-1">A Mission is approved and held by one Mission Issuer (its <code>issuer</code>).
+This document lets a single Mission be honored by Authorization
+Servers in other trust domains, so a Mission can span more than one
+AS, using the cross-domain authorization grant of the OAuth identity
+chaining architecture <span>[<a href="#I-D.draft-ietf-oauth-identity-chaining" class="cite xref">I-D.draft-ietf-oauth-identity-chaining</a>]</span>: the
+issuer AS issues, through an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange, a short-lived
+JWT authorization grant audienced to the target Authorization Server,
+which the client redeems there with the <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> JWT-bearer grant.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">This document calls that artifact the <strong>cross-domain grant</strong> and
+attaches Mission context to it (<a href="#cross-domain-grant" class="auto internal xref">Section 8</a>). The Identity
+Assertion Authorization Grant (ID-JAG)
+<span>[<a href="#I-D.draft-ietf-oauth-identity-assertion-authz-grant" class="cite xref">I-D.draft-ietf-oauth-identity-assertion-authz-grant</a>]</span> is the
+<span class="bcp14">RECOMMENDED</span> profile of the cross-domain grant, and every example in
+this document uses it. Another identity-chaining JWT authorization
+grant profile that meets the requirements of <a href="#cross-domain-grant" class="auto internal xref">Section 8</a>
+        <span class="bcp14">MAY</span> be used instead. Where a requirement elsewhere in this document
+names the ID-JAG, it is illustrating with the recommended profile and
+applies equally to any conforming cross-domain grant.<a href="#section-4-2" class="pilcrow">¶</a></p>
+<p id="section-4-3">The grant shape this document profiles is already deployed: the
+Model Context Protocol's Cross App Access extension carries the same
+Identity Assertion JWT Authorization Grant between enterprise
+identity providers and MCP applications (<span>[<a href="#MCP" class="cite xref">MCP</a>]</span>), a shipped surface
+for the pattern this profile attaches Mission context to.<a href="#section-4-3" class="pilcrow">¶</a></p>
+<p id="section-4-4">This document is a thin Mission-bound profile of the cross-domain
+grant, not merely <code>mission</code>-claim carriage: beyond attaching and
+validating Mission context, it imposes two security requirements on the
+grant for Mission-bound use, proof-of-possession and single use
+(<a href="#cross-domain-grant" class="auto internal xref">Section 8</a>, <a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>). The grant's
+own format, signing, and token-exchange envelope remain defined by the
+cross-domain grant profile (ID-JAG in the recommended case) and its
+underlying <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> and <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>; this document does not redefine
+them.<a href="#section-4-4" class="pilcrow">¶</a></p>
+<p id="section-4-5">The two added requirements are a floor: the grant's position at the
+trust boundary demands them (<a href="#grant-at-boundary" class="auto internal xref">Section 14.2</a>), and its profile
+does not by itself guarantee them.<a href="#section-4-5" class="pilcrow">¶</a></p>
+<p id="section-4-6">In this model there is exactly one Mission Issuer per Mission (the
+<code>issuer</code>) and one or more <strong>Resource ASes</strong> in other domains that
+mint their own tokens for their resources. A Resource AS is never the
+Mission Issuer and <span class="bcp14">MUST NOT</span> create or alter a Mission.<a href="#section-4-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="what-crosses">
+<section id="section-5">
+      <h2 id="name-what-crosses-the-trust-boun">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-what-crosses-the-trust-boun" class="section-name selfRef">What Crosses the Trust Boundary</a>
+      </h2>
+<p id="section-5-1">The projection is exact about what leaves the issuing domain.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">Three values cross unchanged: <code>mission.id</code>, <code>mission.issuer</code>, and
+<code>authority_hash</code>, the claim-shape Mission binding every downstream
+token preserves (<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>). They are audit and
+correlation anchors, not credentials.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3">Two things cross scoped: the audience-scoped Authority Set entries
+(<a href="#audience-scope" class="auto internal xref">Section 5.1</a>), and the Mission's Subject in the form the
+identity chaining architecture defines (<a href="#cross-domain-grant" class="auto internal xref">Section 8</a>).<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">Everything else stays home. The Mission record, the Mission Intent,
+the full Authority Set, and lifecycle authority remain with the
+Mission Issuer; a Resource AS never creates or alters a Mission
+(<a href="#model" class="auto internal xref">Section 4</a>). The grant is not refreshable and confers no standing
+authority in the partner domain: when it expires, the client returns
+to the issuer for a new one, which is how the issuer's lifecycle gate
+keeps reaching across the boundary.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<p id="section-5-5">Nothing returns across the boundary at validation time. The Resource
+AS honors the grant from pre-established trust
+(<a href="#pre-established-trust" class="auto internal xref">Section 7</a>) and the signature alone; its assurance
+that the Mission was <code>active</code> is a lease bounded by the grant
+lifetime (<a href="#cross-domain-revocation" class="auto internal xref">Section 14.1</a>).<a href="#section-5-5" class="pilcrow">¶</a></p>
+<div id="audience-scope">
+<section id="section-5.1">
+        <h3 id="name-audience-scoped-authority">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-audience-scoped-authority" class="section-name selfRef">Audience-Scoped Authority</a>
+        </h3>
+<p id="section-5.1-1">When projecting authority toward a Resource AS, the Mission Issuer
+includes only the Authority Set entries whose <code>resource</code> that
+Resource AS is authoritative for, under the deployment's
+resource-to-AS mapping (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>). Entries for other
+Resource ASes <span class="bcp14">MUST NOT</span> be disclosed.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="txn-chaining">
+<section id="section-6">
+      <h2 id="name-relationship-to-transaction">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-relationship-to-transaction" class="section-name selfRef">Relationship to Transaction Token Chaining</a>
+      </h2>
+<p id="section-6-1">This section is informative. The Transaction Token chaining profile
+(<span>[<a href="#I-D.draft-fletcher-transaction-token-chaining-profile" class="cite xref">I-D.draft-fletcher-transaction-token-chaining-profile</a>]</span>) is a
+sibling of this document: the same identity-chaining framework, the
+same exchange-then-redeem shape at the same boundary, the same
+short-grant discipline, a distinct <code>typ</code> (<code>txn-chain+jwt</code>). What
+crosses differs. Its grant carries the in-flight transaction's
+context, minted from a Transaction Token
+(<span>[<a href="#I-D.draft-ietf-oauth-transaction-tokens" class="cite xref">I-D.draft-ietf-oauth-transaction-tokens</a>]</span>) that never leaves its
+domain; this document's grant carries the durable approved task. A
+hop between the same two domains may legitimately need both facts,
+and a deployment may run both profiles on one hop. They compose as
+follows:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6-2.1">
+          <p id="section-6-2.1.1"><strong>The Mission reference may ride the transaction chain as
+evidence, never as authority.</strong> The <code>mission</code> claim object (<code>id</code>,
+<code>issuer</code>, <code>authority_hash</code>) may be carried inside that profile's
+minimized <code>txn_claims</code>, exactly as it rides an intra-domain
+Transaction Token in this document's end-to-end example. It is
+inert there: a consumer must not derive, widen, or gate authority
+from it, and a partner that needs the committed facts verifies a
+Mission Mandate (<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>).
+Mission-scoped authority reaches another domain only through this
+document's grant.<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.2">
+          <p id="section-6-2.2.1"><strong>The transaction identifier may ride this document's evidence.</strong>
+A Resource AS that redeems a Mission-bound grant while
+participating in a transaction chain may record the transaction
+identifier with its redemption and derivation evidence, so the
+transaction chain and the Mission projection correlate in audit
+across both domains.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.3">
+          <p id="section-6-2.3.1"><strong>Recursion does not extend projection.</strong> That profile permits
+recursive chaining: the second domain repeats the pattern toward a
+third. A Mission's projection is single-hop by design
+(<a href="#what-crosses" class="auto internal xref">Section 5</a>); a recursive transaction chain carries the
+Mission reference onward as evidence only, and a third domain that
+must honor the Mission needs its own projection from the
+originating issuer.<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-6-3">The same composition extends to the proposed agent profile of
+Transaction Tokens
+(<span>[<a href="#I-D.draft-araut-oauth-transaction-tokens-for-agents" class="cite xref">I-D.draft-araut-oauth-transaction-tokens-for-agents</a>]</span>), whose
+<code>agentic_ctx</code> member carries roles, intent, and constraints along
+the call chain. The <code>mission</code> claim object is the natural anchor to
+carry there, inert as evidence exactly as in the chaining profile
+above, so call-chain intent context stays joined to the committed
+record instead of growing an unanchored twin of it.<a href="#section-6-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="pre-established-trust">
+<section id="section-7">
+      <h2 id="name-pre-established-trust">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-pre-established-trust" class="section-name selfRef">Pre-Established Trust</a>
+      </h2>
+<p id="section-7-1">Projection is configured, not negotiated: nothing in the protocol
+establishes trust between the domains, and every trust input below
+exists before the first grant is issued.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-2.1">
+          <p id="section-7-2.1.1">Issuer trust: which Mission Issuers the Resource AS accepts, by
+local policy or issuer metadata (<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>).
+The identity-assertion trust framework and its
+domain-authorized-issuer method
+(<span>[<a href="#I-D.draft-mcguinness-oauth-id-assertion-framework" class="cite xref">I-D.draft-mcguinness-oauth-id-assertion-framework</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-domain-authorized-issuer" class="cite xref">I-D.draft-mcguinness-oauth-domain-authorized-issuer</a>]</span>) are
+concrete ways to publish and evaluate this policy instead of
+hand-maintaining a list.<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.2">
+          <p id="section-7-2.2.1">The resource-to-AS mapping: which Resource AS is authoritative for
+which <code>resource</code> values, the mapping audience scoping is computed
+under (<a href="#audience-scope" class="auto internal xref">Section 5.1</a>).<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.3">
+          <p id="section-7-2.3.1">The grant profile in use (the ID-JAG in the <span class="bcp14">RECOMMENDED</span> case) and,
+where that profile defines no proof-of-possession, the
+sender-constraint mechanism (<a href="#cross-domain-grant" class="auto internal xref">Section 8</a>); binding and
+verification interoperate only if both domains fix the same one.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.4">
+          <p id="section-7-2.4.1">Client registration: the presenting client is registered with and
+authenticates to the Resource AS's token endpoint, as the grant
+profile requires.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.5">
+          <p id="section-7-2.5.1">Subject resolution: the account-linking policy by which the
+Resource AS resolves the conveyed Subject in its own namespace
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>).<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.6">
+          <p id="section-7-2.6.1">Derivation records: whether the Resource AS keeps the per-token
+derivation record of <a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>. An originating
+AS <span class="bcp14">MAY</span> condition projection on it.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-7-3">A deployment that publishes a Mission Deployment Profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) records its
+projection posture in these terms, and the accepted cross-domain
+revocation window (<a href="#cross-domain-revocation" class="auto internal xref">Section 14.1</a>) among its residual
+risks.<a href="#section-7-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="cross-domain-grant">
+<section id="section-8">
+      <h2 id="name-issuing-the-cross-domain-gr">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-issuing-the-cross-domain-gr" class="section-name selfRef">Issuing the Cross-Domain Grant</a>
+      </h2>
+<p id="section-8-1">Issuing a cross-domain grant is a derivation event and is gated like
+any other derivation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Mission Lifecycle and Gating"). It counts once against the Mission's
+derivation budget, however many local tokens the partner domain later
+mints: the issuer cannot observe those tokens and does not count
+them, and the Resource AS bounds its own minting by the grant and by
+local policy (<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>).<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">Because each grant lives at most 300 seconds, steady-state partner
+work re-issues grants on a lease cadence and consumes at least 12
+derivations per hour per audience; a deployment sizes the Mission's
+<code>max_derivations</code> control (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) as
+a function of that cadence times the projected audiences times the
+Mission's duration.<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-3">A Mission-bound cross-domain grant:<a href="#section-8-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-4.1">
+          <p id="section-8-4.1.1"><span class="bcp14">MUST</span> be a JWT authorization grant issued and signed by the Mission
+<code>issuer</code>, redeemable at the target Resource AS through the
+<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> JWT-bearer grant;<a href="#section-8-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-4.2">
+          <p id="section-8-4.2.1"><span class="bcp14">MUST</span> be explicitly typed with the JWT <code>typ</code> its grant profile
+defines (<code>oauth-id-jag+jwt</code> for the <span class="bcp14">RECOMMENDED</span> profile), so the
+grant is mechanically distinguishable from every other issuer-signed
+Mission artifact; a Mission Mandate
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>) is never redeemable as a
+grant, and the <code>typ</code> is what a token endpoint separates them by;<a href="#section-8-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-4.3">
+          <p id="section-8-4.3.1"><span class="bcp14">MUST</span> be audienced to the target Resource AS;<a href="#section-8-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-4.4">
+          <p id="section-8-4.4.1"><span class="bcp14">MUST NOT</span> have a lifetime exceeding 300 seconds (a short lifetime
+bounds cross-domain revocation latency; see
+<a href="#cross-domain-revocation" class="auto internal xref">Section 14.1</a>);<a href="#section-8-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-4.5">
+          <p id="section-8-4.5.1"><span class="bcp14">MUST</span> have an <code>exp</code> that does not exceed the Mission's
+<code>expires_at</code>, per the issuance profile's expiry rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission-Bound
+Access Tokens");<a href="#section-8-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-4.6">
+          <p id="section-8-4.6.1"><span class="bcp14">MUST</span> be sender-constrained (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>) to the presenting client:<a href="#section-8-4.6.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-4.6.2.1">
+              <p id="section-8-4.6.2.1.1">where the cross-domain grant profile defines a
+proof-of-possession mechanism, by that mechanism. This document
+does not define a new PoP mechanism; the originating AS and the
+Resource AS <span class="bcp14">MUST</span> use the mechanism of the profile in use, so
+that binding and verification interoperate;<a href="#section-8-4.6.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-8-4.6.2.2">
+              <p id="section-8-4.6.2.2.1">where the grant profile in use defines no proof-of-possession,
+by a <code>cnf</code> claim (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>) binding the presenting client's
+DPoP key (<code>jkt</code>, <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) or mTLS certificate (<code>x5t#S256</code>,
+<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>), and the Resource AS <span class="bcp14">MUST</span> verify possession at
+redemption (<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>). The ID-JAG profile
+defines none: the ID-JAG is a bearer authorization grant,
+protected by audience restriction, short lifetime, and client
+authentication at redemption; and<a href="#section-8-4.6.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-8-4.6.2.3">
+              <p id="section-8-4.6.2.3.1">in either case, binding and verification <span class="bcp14">MUST</span> use the same
+mechanism;<a href="#section-8-4.6.2.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</li>
+        <li class="normal" id="section-8-4.7">
+          <p id="section-8-4.7.1"><span class="bcp14">MUST</span> carry a <code>jti</code> for one-time use, so the bound party cannot
+replay it within its lifetime (<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>,
+<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> Section 3);<a href="#section-8-4.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-4.8">
+          <p id="section-8-4.8.1"><span class="bcp14">MUST</span> carry the <code>mission</code> claim
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "The Mission
+Claim") with <code>id</code>, <code>issuer</code>, and <code>authority_hash</code> unchanged from the
+Mission, and the audience-scoped <code>authorization_details</code>
+(<a href="#audience-scope" class="auto internal xref">Section 5.1</a>); and<a href="#section-8-4.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-4.9">
+          <p id="section-8-4.9.1"><span class="bcp14">MUST</span> convey the Mission's Subject in the form the identity chaining
+architecture defines, so the Resource AS can resolve it locally
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>).<a href="#section-8-4.9.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-8-5">The ID-JAG profile meets these requirements and is <span class="bcp14">RECOMMENDED</span>; in it
+the artifact is the ID-JAG and the issuance request carries a
+<code>requested_token_type</code> of <code>urn:ietf:params:oauth:token-type:id-jag</code>.<a href="#section-8-5" class="pilcrow">¶</a></p>
+<p id="section-8-6">The client obtains the grant with an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange. The
+<code>subject_token</code> <span class="bcp14">MUST</span> be the Mission's refresh token, with
+<code>subject_token_type</code> of
+<code>urn:ietf:params:oauth:token-type:refresh_token</code>, and the <code>audience</code>
+identifies the target Resource AS.<a href="#section-8-6" class="pilcrow">¶</a></p>
+<p id="section-8-7">The refresh-token subject is this profile's deviation from the
+ID-JAG issuance request, which that
+specification defines over an identity-assertion <code>subject_token</code>
+(<code>id_token</code> or <code>saml2</code>); a Mission-bound deployment substitutes the
+Mission's grant so the exchange resolves a Mission rather than a bare
+subject assertion. This refresh-token mode is what
+binds the request to a Mission: the AS resolves the Mission from the
+presented grant per the issuance profile's grant binding
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Binding the Mission
+to the Grant"), exactly as on any other refresh, and the grant
+therefore projects the agent's full Mission authority
+(audience-scoped), never a narrowed delegate's.<a href="#section-8-7" class="pilcrow">¶</a></p>
+<p id="section-8-8">The refresh-token subject mode is the only mode this profile defines,
+and fixing it is deliberate: the refresh token resolves to exactly
+one Mission and its full authority, where an access token or
+delegated token could carry a narrowed or actor-specific subset that
+a trust-boundary crossing could re-widen. Other Mission-bound
+subject-token modes, such as an access-token mode bounding the
+projection by the presenting token, are left to future profiles. The
+cost is that this <span class="bcp14">OPTIONAL</span> capability is unavailable to a deployment
+that issues no refresh token; such a deployment uses the
+single-domain issuance profile, which needs none.<a href="#section-8-8" class="pilcrow">¶</a></p>
+<p id="section-8-9">The AS <span class="bcp14">MUST</span> reject an access token or a delegated token presented as
+<code>subject_token</code> for cross-domain issuance. The AS <span class="bcp14">MUST NOT</span> resolve the
+Mission from a client-supplied <code>mission_id</code>, nor from an identity
+assertion that carries no Mission binding (<a href="#error-responses" class="auto internal xref">Section 10</a>).<a href="#section-8-9" class="pilcrow">¶</a></p>
+<p id="section-8-10">Before issuing, the AS <span class="bcp14">MUST</span> verify:<a href="#section-8-10" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-11.1">
+          <p id="section-8-11.1.1">that the Mission is <code>active</code>, failing otherwise with
+<code>invalid_grant</code>; and<a href="#section-8-11.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-11.2">
+          <p id="section-8-11.2.1">that the target Resource AS is authorized for the requested
+resources under the Mission's Authority Set, failing otherwise
+with <code>invalid_target</code> (<span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>).<a href="#section-8-11.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-8-12">The token-exchange response carries <code>issued_token_type</code> of
+<code>urn:ietf:params:oauth:token-type:id-jag</code> (for the <span class="bcp14">RECOMMENDED</span>
+profile) and <code>token_type</code> of <code>N_A</code>, per <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> Section 2.2.1.<a href="#section-8-12" class="pilcrow">¶</a></p>
+<p id="section-8-13">A delegate, rather than the agent, crossing a trust domain directly
+and carrying its own narrowed authority into another domain is out of
+scope for this document and deferred to future work. Cross-domain
+issuance here always projects the agent's Mission authority; delegation
+within the target domain is performed by the Resource AS
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>). A sub-agent that must act in a
+different trust domain under its own narrowed authority is therefore not
+covered by a single hop; distributed multi-agent work across domains
+composes only through the agent's projected authority or through
+separate Missions per domain. A delegate-carries-its-own-authority mode
+is future work.<a href="#section-8-13" class="pilcrow">¶</a></p>
+<p id="section-8-14">Two roles are distinct and easily conflated. The grant the client
+presents to <em>obtain</em> the cross-domain grant (the Mission's refresh
+token) is the input to the exchange and selects the Mission; the
+Mission-bound access token plays no part here. The identity the
+issued grant conveys <em>to</em> the Resource AS is the Mission's Subject,
+which the AS populates from the Mission's recorded <code>subject</code> and
+which the Resource AS resolves locally per the identity chaining
+rules (this document defines no cross-domain subject mapping,
+<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>).<a href="#section-8-14" class="pilcrow">¶</a></p>
+<p id="section-8-15">Sender-constraining is <span class="bcp14">REQUIRED</span> for the cross-domain grant, stronger
+than the <span class="bcp14">RECOMMENDED</span> level the issuance profile sets for the primary
+access token (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Mission-Bound Access Tokens"): the grant's position at the trust
+boundary demands it (<a href="#grant-at-boundary" class="auto internal xref">Section 14.2</a>), and the underlying grant
+provides no replay backstop of its own.<a href="#section-8-15" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="validation-at-resource-as">
+<section id="section-9">
+      <h2 id="name-validation-at-the-resource-">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-validation-at-the-resource-" class="section-name selfRef">Validation at the Resource AS</a>
+      </h2>
+<p id="section-9-1">A Resource AS consuming a Mission-bound cross-domain grant:<a href="#section-9-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-2.1">
+          <p id="section-9-2.1.1"><span class="bcp14">MUST</span> establish issuer trust in the originating AS by local policy
+or issuer metadata before accepting any Mission reference. It <span class="bcp14">MUST NOT</span> trust a <code>mission.issuer</code> merely because it appears inside a
+signed assertion.<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.2">
+          <p id="section-9-2.2.1"><span class="bcp14">MUST</span> reject, with <code>invalid_grant</code>, a cross-domain grant whose signing
+<code>iss</code> does not equal its <code>mission.issuer</code>. The party that signs the
+grant <span class="bcp14">MUST</span> be the Mission's issuer; a trusted issuer that signs a
+grant carrying another issuer's <code>mission.issuer</code> is refused. This
+operationalizes the rule above: the Mission binding is honored only
+when the grant's own signer is the Mission Issuer named by
+<code>mission.issuer</code>, and that issuer is trusted. This applies to the
+cross-domain grant presented for redemption, not to the local token
+the Resource AS later mints, whose <code>iss</code> is the Resource AS while
+<code>mission.issuer</code> remains the originating AS.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.3">
+          <p id="section-9-2.3.1"><span class="bcp14">MUST</span> validate the grant's explicit <code>typ</code> (per the grant profile in
+use; <code>oauth-id-jag+jwt</code> for the <span class="bcp14">RECOMMENDED</span> profile), signature,
+and expiry, and verify its <code>aud</code> is the Resource AS's own
+identifier: it rejects a grant minted for a different Resource AS,
+and rejects a JWT of any other type presented as this grant,
+whatever Mission facts it carries.<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-2.3.2.1">
+              <p id="section-9-2.3.2.1.1">Because this document defines no cross-domain status query,
+freshness is the Resource AS's only check that the Mission was
+active at issuance; the short grant lifetime bounds the staleness.<a href="#section-9-2.3.2.1.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</li>
+        <li class="normal" id="section-9-2.4">
+          <p id="section-9-2.4.1"><span class="bcp14">MUST</span> verify the grant's sender-constraint by the proof-of-possession
+mechanism the cross-domain grant profile defines (for the ID-JAG
+profile, as that specification defines). It <span class="bcp14">MUST</span> reject with
+<code>invalid_grant</code> a cross-domain grant that is not sender-constrained
+or whose proof-of-possession does not verify. A bearer grant <span class="bcp14">MUST NOT</span> be accepted: accepting one unbound would let any party that
+captured it mint a local token (<a href="#grant-at-boundary" class="auto internal xref">Section 14.2</a>).<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-2.4.2.1">
+              <p id="section-9-2.4.2.1.1">When the grant profile defines no proof-of-possession and the
+grant carries a <code>cnf</code> claim per <a href="#cross-domain-grant" class="auto internal xref">Section 8</a>, the
+Resource AS <span class="bcp14">MUST</span> verify possession of that key at redemption: a
+DPoP proof (<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) for its own token endpoint for a <code>jkt</code>
+binding, or the mTLS connection certificate (<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>) for an
+<code>x5t#S256</code> binding.<a href="#section-9-2.4.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-9-2.4.2.2">
+              <p id="section-9-2.4.2.2.1">Binding and verification <span class="bcp14">MUST</span> use the same mechanism.<a href="#section-9-2.4.2.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</li>
+        <li class="normal" id="section-9-2.5">
+          <p id="section-9-2.5.1"><span class="bcp14">MUST</span> reject a replayed cross-domain grant: it <span class="bcp14">MUST</span> track the grant's
+<code>jti</code> for the grant's validity window and refuse a second
+presentation with <code>invalid_grant</code> (<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> Section 3), so a grant
+cannot be replayed even by the party it is bound to.<a href="#section-9-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.6">
+          <p id="section-9-2.6.1">When issuing local access tokens for its resources, the Resource AS
+uses the subject-resolution rules of the underlying cross-domain
+grant and identity chaining specifications. The local token preserves
+the <code>mission</code> claim (<code>id</code>, <code>issuer</code>, and <code>authority_hash</code>) unchanged
+from the cross-domain grant. The issuing <code>iss</code> is the Resource AS;
+<code>mission.issuer</code> remains the originating AS. Such a local token:<a href="#section-9-2.6.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-2.6.2.1">
+              <p id="section-9-2.6.2.1.1">has an <code>exp</code> that <span class="bcp14">MUST NOT</span> exceed the grant's <code>exp</code>. The Resource
+AS does not hold the Mission's <code>expires_at</code>; because the grant's
+own <code>exp</code> is bounded by it (<a href="#cross-domain-grant" class="auto internal xref">Section 8</a>), the local
+token is bounded transitively;<a href="#section-9-2.6.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-9-2.6.2.2">
+              <p id="section-9-2.6.2.2.1"><span class="bcp14">MUST</span> be sender-constrained (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>), like the grant it
+derives from;<a href="#section-9-2.6.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-9-2.6.2.3">
+              <p id="section-9-2.6.2.3.1"><span class="bcp14">MUST NOT</span> be issued as a bearer token; and<a href="#section-9-2.6.2.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-9-2.6.2.4">
+              <p id="section-9-2.6.2.4.1">if it preserves the issuer's <code>client_id</code>, does so only as an audit
+reference, not a local identity: that value is in the originating
+AS's namespace, and a partner Resource Server <span class="bcp14">MUST NOT</span> resolve or
+authorize on it as a local client, for the same portability reason
+that applies to a <code>sub</code> matcher in <code>allowed_delegates</code> (see
+below).<a href="#section-9-2.6.2.4.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</li>
+        <li class="normal" id="section-9-2.7">
+          <p id="section-9-2.7.1"><span class="bcp14">MUST</span> bound the issued <code>authorization_details</code> by what the
+cross-domain grant conveyed. It <span class="bcp14">MUST</span> apply its own local
+authorization policy in addition: honoring a Mission does not
+obligate it to authorize any particular request. Because the
+conveyed entries were derived under the originating AS's local policy,
+the Resource AS does not re-derive them; it interprets and enforces
+them by their structure and vocabulary. It <span class="bcp14">MUST</span> fail closed on a
+conveyed <code>actions</code> identifier or <code>constraints</code> key it does not
+recognize for the resource in question, exactly as a Resource Server
+does (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Resource
+Server Enforcement"), so authority it cannot interpret is never
+honored across the trust boundary rather than enforced by guess.<a href="#section-9-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.8">
+          <p id="section-9-2.8.1"><span class="bcp14">MUST</span>, when it issues delegated tokens of its own, enforce each
+entry's <code>delegation</code> policy as the issuance profile specifies
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation
+Constraints"); the policy travels on the conveyed entries. The
+cross-domain grant carries no <code>act</code> chain (<a href="#cross-domain-grant" class="auto internal xref">Section 8</a>),
+so the Resource AS's own delegation depth begins at 0.<a href="#section-9-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.9">
+          <p id="section-9-2.9.1"><span class="bcp14">SHOULD</span> record, per minted local token, both sides of the
+derivation: the consumed grant's <code>jti</code> and conveyed
+<code>authorization_details</code>, and the local token's own identifier or
+digest (<code>jti</code>), <code>iss</code>, <code>aud</code>, <code>iat</code>, <code>exp</code>, and issued
+<code>authorization_details</code>. The issuer cannot observe local tokens
+(<a href="#cross-domain-revocation" class="auto internal xref">Section 14.1</a>), so this record is the only evidence
+tying a local token to the grant it was minted from and showing
+its authority did not widen; without it, cross-domain minting is
+unaccountable to both domains. Whether the Resource AS keeps this
+record is a pre-established trust input
+(<a href="#pre-established-trust" class="auto internal xref">Section 7</a>).<a href="#section-9-2.9.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-9-3">A grant that carries no <code>mission</code> claim is outside this profile: the
+Resource AS processes it, or refuses it, under plain identity
+chaining, and <span class="bcp14">MUST NOT</span> grant Mission-scoped resources on it. Where
+the deployment's pre-established trust (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>)
+requires Mission binding for the requested resources, the Resource AS
+refuses such a grant with <code>invalid_grant</code>; a <code>mission</code> claim that is
+present but malformed is always <code>invalid_grant</code>
+(<a href="#error-responses" class="auto internal xref">Section 10</a>).<a href="#section-9-3" class="pilcrow">¶</a></p>
+<p id="section-9-4">A <code>{ "sub": ... }</code> matcher in a conveyed entry's
+<code>delegation.allowed_delegates</code> is a client identifier in the
+originating AS's namespace and is not portable across the trust
+domain. When a Resource AS evaluates a conveyed entry, it <span class="bcp14">MUST</span> fail
+closed, narrowing the entry out, for any <code>sub</code> matcher it cannot
+resolve against the delegate it authenticated in its own namespace.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-5">Portable cross-domain matching <span class="bcp14">SHOULD</span> therefore use a <code>sub_profile</code>
+matcher, an actor-type class rather than a domain-relative identifier
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation
+Constraints").<a href="#section-9-5" class="pilcrow">¶</a></p>
+<p id="section-9-6">This document does not define cross-domain subject mapping. A Resource
+AS consuming a Mission-bound cross-domain grant resolves the subject
+of any local token according to the cross-domain grant profile in use
+(the Identity Assertion Authorization Grant profile in the recommended
+case), the OAuth identity chaining architecture, and its local trust
+and account-linking policy. This document only requires that the
+Mission binding (<code>mission.id</code>, <code>mission.issuer</code>, and <code>authority_hash</code>)
+and the audience-scoped <code>authorization_details</code> remain bounded as
+described here.<a href="#section-9-6" class="pilcrow">¶</a></p>
+<p id="section-9-7">Downstream, <code>authority_hash</code> is an immutable audit and correlation
+anchor to the originating AS's consent commitment. A Resource AS and
+its Resource Servers hold only the audience-scoped subset, never the
+full Authority Set, so they cannot recompute <code>authority_hash</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Integrity Anchors");
+its integrity rests on the signature chain (the originating AS signs
+the ID-JAG; the Resource AS validates issuer trust and signs its local
+token). It is verifiable only against the originating AS, which this
+document does not require to be exposed.<a href="#section-9-7" class="pilcrow">¶</a></p>
+<p id="section-9-8">A Resource AS or auditor that needs to verify the conveyed entries
+against the approved commitment <span class="bcp14">MAY</span> obtain a Mission Mandate
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>) and recompute
+<code>authority_hash</code> per that profile.<a href="#section-9-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="error-responses">
+<section id="section-10">
+      <h2 id="name-error-responses">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-error-responses" class="section-name selfRef">Error Responses</a>
+      </h2>
+<p id="section-10-1">This document defines no new error codes; it binds the standard codes
+of <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>, <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>, and OAuth 2.0 to this profile's failure
+conditions so both surfaces fail uniformly.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<p id="section-10-2">At issuance (the token exchange at the Mission Issuer,
+<a href="#cross-domain-grant" class="auto internal xref">Section 8</a>):<a href="#section-10-2" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Condition</th>
+            <th class="text-left" rowspan="1" colspan="1">Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>subject_token_type</code> is not <code>refresh_token</code>, or an access, delegated, or bare identity-assertion token is presented</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_request</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">The subject token does not resolve to a Mission, or the Mission is not <code>active</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_grant</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">The target Resource AS is not authorized for the requested resources under the Authority Set</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_target</code>
+</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-10-4">At redemption (the JWT-bearer grant at the Resource AS,
+<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>):<a href="#section-10-4" class="pilcrow">¶</a></p>
+<table class="center" id="table-2">
+        <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Condition</th>
+            <th class="text-left" rowspan="1" colspan="1">Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Client authentication fails</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_client</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Untrusted issuer; the grant's <code>iss</code> not equal to its <code>mission.issuer</code>; wrong or missing <code>typ</code>; signature, audience, or expiry failure; a sender-constraint absent, unverifiable, or bound to a different client; a replayed <code>jti</code>; a malformed <code>mission</code> claim, or a grant carrying none where the deployment's pre-established trust requires Mission binding for the requested resources (<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_grant</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">The request names a resource outside the conveyed entries</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_target</code>
+</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-10-6">A Resource AS rejecting a grant reveals no Mission state it does not
+hold: <code>invalid_grant</code> at redemption speaks to the presented grant,
+not to the Mission's current lifecycle state, which the Resource AS
+cannot know (<a href="#introspection-at-resource-as" class="auto internal xref">Section 11</a>).<a href="#section-10-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="introspection-at-resource-as">
+<section id="section-11">
+      <h2 id="name-introspection-at-a-resource">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-introspection-at-a-resource" class="section-name selfRef">Introspection at a Resource AS</a>
+      </h2>
+<p id="section-11-1">The issuance profile's <span class="bcp14">OPTIONAL</span> token introspection (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>) reports
+a <code>mission</code> response member, and only the Mission <code>issuer</code> reports the
+Mission's lifecycle <code>state</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Mission State via Token Introspection"). This section
+specifies the non-issuer half of that rule.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2">A Resource AS that supports introspection for a local token it minted
+from a cross-domain grant returns the claim-shape members only: <code>id</code>,
+<code>issuer</code>, and <code>authority_hash</code>. It <span class="bcp14">MUST</span> omit <code>mission.state</code> rather
+than report a stale value as current. It holds the token, not the
+Mission: it knows the Mission state only as of grant validation and
+has no query to the issuer keyed by <code>mission_id</code> (neither this
+document nor the issuance profile defines one).<a href="#section-11-2" class="pilcrow">¶</a></p>
+<p id="section-11-3"><code>authority_hash</code>, when included, is the issuer's commitment carried
+through the grant, not a value the Resource AS recomputes from its
+audience-scoped subset (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Consent Binding").<a href="#section-11-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="as-metadata">
+<section id="section-12">
+      <h2 id="name-authorization-server-metada">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-authorization-server-metada" class="section-name selfRef">Authorization Server Metadata</a>
+      </h2>
+<p id="section-12-1">Discovery uses existing metadata; this document defines no new
+parameters. A Mission Issuer supporting this capability advertises
+the <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token-exchange grant type in <code>grant_types_supported</code>,
+the issuance profile's signal for cross-domain grant issuance
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Authorization
+Server Metadata"). A Resource AS advertises the <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>
+JWT-bearer grant type the grant is redeemed through; support for a
+specific grant profile is discovered as that profile specifies, or
+out of band. The bilateral inputs of <a href="#pre-established-trust" class="auto internal xref">Section 7</a> are
+not discoverable and exist before first use.<a href="#section-12-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conformance">
+<section id="section-13">
+      <h2 id="name-conformance">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-13-1">An implementation conforms in one of two roles and names the
+capability as the issuance profile's conformance model directs (for
+example, "Mission Issuer with Cross-Domain";
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Conformance").<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-2">An <strong>Originating Mission Issuer with Cross-Domain</strong> is a conforming
+Mission Issuer of the issuance profile that additionally:<a href="#section-13-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13-3.1">
+          <p id="section-13-3.1.1">issues the Mission-bound cross-domain grant per
+<a href="#cross-domain-grant" class="auto internal xref">Section 8</a>, gated and counted as a derivation;<a href="#section-13-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-3.2">
+          <p id="section-13-3.2.1">scopes every projection by audience (<a href="#audience-scope" class="auto internal xref">Section 5.1</a>);<a href="#section-13-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-3.3">
+          <p id="section-13-3.3.1">fails issuance with the codes of <a href="#error-responses" class="auto internal xref">Section 10</a>; and<a href="#section-13-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-3.4">
+          <p id="section-13-3.4.1">advertises cross-domain grant issuance per <a href="#as-metadata" class="auto internal xref">Section 12</a>.<a href="#section-13-3.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-13-4">A <strong>Resource AS</strong>:<a href="#section-13-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13-5.1">
+          <p id="section-13-5.1.1">honors the cross-domain grant per <a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>,
+including issuer trust by local policy, explicit typing,
+sender-constraint and one-time-use verification, and fail-closed
+interpretation of conveyed authority;<a href="#section-13-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-5.2">
+          <p id="section-13-5.2.1">bounds every local token by the grant that seeded it and issues it
+sender-constrained and short-lived (<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>,
+<a href="#cross-domain-revocation" class="auto internal xref">Section 14.1</a>);<a href="#section-13-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-5.3">
+          <p id="section-13-5.3.1">fails redemption with the codes of <a href="#error-responses" class="auto internal xref">Section 10</a>;<a href="#section-13-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-5.4">
+          <p id="section-13-5.4.1">where it offers token introspection for its local tokens, follows
+<a href="#introspection-at-resource-as" class="auto internal xref">Section 11</a>; and<a href="#section-13-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-5.5">
+          <p id="section-13-5.5.1">never creates or alters a Mission (<a href="#model" class="auto internal xref">Section 4</a>).<a href="#section-13-5.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-13-6">A Resource AS is not required to implement the issuance profile's Mission
+Issuer role.<a href="#section-13-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-14">
+      <h2 id="name-security-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-14-1">The security considerations of the issuance profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and of the identity chaining
+architecture <span>[<a href="#I-D.draft-ietf-oauth-identity-chaining" class="cite xref">I-D.draft-ietf-oauth-identity-chaining</a>]</span> apply.<a href="#section-14-1" class="pilcrow">¶</a></p>
+<div id="cross-domain-revocation">
+<section id="section-14.1">
+        <h3 id="name-cross-domain-revocation-lat">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-cross-domain-revocation-lat" class="section-name selfRef">Cross-Domain Revocation Latency</a>
+        </h3>
+<p id="section-14.1-1">Resource ASes <span class="bcp14">MUST</span> issue short-lived local tokens for Mission-bound
+interactions. The originating AS bounds grant lifetimes by the
+300-second cap of <a href="#cross-domain-grant" class="auto internal xref">Section 8</a>, so a revoked Mission cannot
+continue to seed new downstream tokens for long. The rest of this
+section explains the exposure those bounds contain.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+<p id="section-14.1-2">Single-domain revocation is prompt: the AS that issued a token also
+honors its revocation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Revocation"). The cross-domain case is strictly weaker. When a
+Mission is revoked at the originating AS, that AS can stop issuing new
+cross-domain grants, but it cannot revoke a token a Resource AS has
+already minted in another domain: that token remains valid until its
+own expiry. Cross-domain revocation latency is therefore the
+downstream token lifetime. The grant lifetime is the state lease the
+partner domain runs on: the longest a Resource AS may treat Mission
+state established at issuance as current
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-14.1-2" class="pilcrow">¶</a></p>
+<p id="section-14.1-3">The issuance profile's token introspection closes the revocation gap
+only single-domain: it requires the introspecting AS to hold the
+Mission, and a Resource AS has no query to the issuer keyed by
+<code>mission_id</code> (<a href="#introspection-at-resource-as" class="auto internal xref">Section 11</a>), so short downstream
+lifetimes remain the only cross-domain control. Deployments needing a
+tighter lease add the companion mechanisms this document does not
+require: Mission Status
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> gives any consumer
+holding the <code>mission_id</code>, including a Resource AS, a state query
+against the issuer, and Mission Lifecycle Signals
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span> pushes lifecycle
+transitions to the partner domain.<a href="#section-14.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="grant-at-boundary">
+<section id="section-14.2">
+        <h3 id="name-the-grant-at-the-trust-boun">
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-the-grant-at-the-trust-boun" class="section-name selfRef">The Grant at the Trust Boundary</a>
+        </h3>
+<p id="section-14.2-1">The cross-domain grant is the highest-authority credential in the
+chain and the only one that crosses a trust boundary. The requirements
+of <a href="#cross-domain-grant" class="auto internal xref">Section 8</a> and <a href="#validation-at-resource-as" class="auto internal xref">Section 9</a> follow
+from that position: issuer trust is established by local policy or
+metadata, never inferred from a signed assertion's own
+<code>mission.issuer</code>; the grant is sender-constrained and one-time-use,
+because the underlying grant profile provides no replay backstop of
+its own; and everything the Resource AS honors is bounded by the
+audience-scoped entries the grant conveyed, interpreted fail-closed.
+Downstream of the issuer, <code>authority_hash</code> is an audit and correlation
+anchor, not a recomputable proof: its integrity rests on the signature
+chain (<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>).<a href="#section-14.2-1" class="pilcrow">¶</a></p>
+<p id="section-14.2-2">One companion mechanism composes here beyond the trust publication
+methods of <a href="#pre-established-trust" class="auto internal xref">Section 7</a>: a consumer that needs
+independently verifiable provenance of the delegation hops upstream
+of the re-mint, rather than trust in the minting domain's assertion
+of them, <span class="bcp14">MAY</span> require issuer-signed hop receipts
+(<span>[<a href="#I-D.draft-mcguinness-oauth-actor-receipts" class="cite xref">I-D.draft-mcguinness-oauth-actor-receipts</a>]</span>).<a href="#section-14.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="per-domain-delegation-depth">
+<section id="section-14.3">
+        <h3 id="name-per-domain-delegation-depth">
+<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-per-domain-delegation-depth" class="section-name selfRef">Per-Domain Delegation Depth</a>
+        </h3>
+<p id="section-14.3-1">Because the cross-domain grant carries no <code>act</code> chain
+(<a href="#cross-domain-grant" class="auto internal xref">Section 8</a>), a Resource AS that issues delegated tokens of
+its own begins its delegation depth at 0
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>). An entry's <code>max_depth</code> ceiling is
+therefore enforced per domain, not globally across the projection: a
+Mission delegable to depth N at the originating AS may be delegated a
+further N hops inside each Resource AS domain that honors it. A
+deployment that needs a global bound on delegation depth across domains
+constrains it out of band, through the resource-to-AS mapping and each
+Resource AS's local policy (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>); this profile
+bounds delegation depth only within a single domain.<a href="#section-14.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-15">
+      <h2 id="name-privacy-considerations">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-15-1">The cross-domain grant and every local token minted from it carry the
+canonical <code>mission_id</code>, <code>mission.issuer</code>, and <code>authority_hash</code>
+unchanged, so a Resource AS and its Resource Servers can correlate a
+Mission's activity across domains, and <code>mission.issuer</code> identifies the
+issuing AS to the partner domain. This is the deliberate correlation
+property of the issuance profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Identifier
+Correlation"), extended across the trust boundary. Audience scoping
+(<a href="#audience-scope" class="auto internal xref">Section 5.1</a>) is the minimization measure: a Resource AS never
+sees Authority Set entries addressed to other audiences.<a href="#section-15-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-16">
+      <h2 id="name-iana-considerations">
+<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-16-1">This document has no IANA actions. The <code>mission</code> JWT claim, the
+<code>mission</code> introspection response member, and the
+<code>mission_resource_access</code> authorization details type it carries are
+registered by the issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-16-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-17">
+      <h2 id="name-references">
+<a href="#section-17" class="section-number selfRef">17. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-17.1">
+        <h3 id="name-normative-references">
+<a href="#section-17.1" class="section-number selfRef">17.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-ietf-oauth-identity-assertion-authz-grant">[I-D.draft-ietf-oauth-identity-assertion-authz-grant]</dt>
+        <dd>
+<span class="refAuthor">Parecki, A.</span>, <span class="refAuthor">McGuinness, K.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"Identity Assertion JWT Authorization Grant"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-identity-assertion-authz-grant-04</span>, <time datetime="2026-05-21" class="refDate">21 May 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-ietf-oauth-identity-chaining">[I-D.draft-ietf-oauth-identity-chaining]</dt>
+        <dd>
+<span class="refAuthor">Schwenkschuster, A.</span>, <span class="refAuthor">Kasselman, P.</span>, <span class="refAuthor">Burgin, K.</span>, <span class="refAuthor">Jenkins, M. J.</span>, <span class="refAuthor">Campbell, B.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth Identity and Authorization Chaining Across Domains"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-identity-chaining-16</span>, <time datetime="2026-06-26" class="refDate">26 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-chaining-16">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-chaining-16</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7523">[RFC7523]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Campbell, B.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants"</span>, <span class="seriesInfo">RFC 7523</span>, <span class="seriesInfo">DOI 10.17487/RFC7523</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7523">https://www.rfc-editor.org/rfc/rfc7523</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7662">[RFC7662]</dt>
+        <dd>
+<span class="refAuthor">Richer, J., Ed.</span>, <span class="refTitle">"OAuth 2.0 Token Introspection"</span>, <span class="seriesInfo">RFC 7662</span>, <span class="seriesInfo">DOI 10.17487/RFC7662</span>, <time datetime="2015-10" class="refDate">October 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7662">https://www.rfc-editor.org/rfc/rfc7662</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7800">[RFC7800]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"Proof-of-Possession Key Semantics for JSON Web Tokens (JWTs)"</span>, <span class="seriesInfo">RFC 7800</span>, <span class="seriesInfo">DOI 10.17487/RFC7800</span>, <time datetime="2016-04" class="refDate">April 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7800">https://www.rfc-editor.org/rfc/rfc7800</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8705">[RFC8705]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">T. Lodderstedt</span>, <span class="refTitle">"OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"</span>, <span class="seriesInfo">RFC 8705</span>, <span class="seriesInfo">DOI 10.17487/RFC8705</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8705">https://www.rfc-editor.org/rfc/rfc8705</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9449">[RFC9449]</dt>
+      <dd>
+<span class="refAuthor">Fett, D.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">D. Waite</span>, <span class="refTitle">"OAuth 2.0 Demonstrating Proof of Possession (DPoP)"</span>, <span class="seriesInfo">RFC 9449</span>, <span class="seriesInfo">DOI 10.17487/RFC9449</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9449">https://www.rfc-editor.org/rfc/rfc9449</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-17.2">
+        <h3 id="name-informative-references">
+<a href="#section-17.2" class="section-number selfRef">17.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-araut-oauth-transaction-tokens-for-agents">[I-D.draft-araut-oauth-transaction-tokens-for-agents]</dt>
+        <dd>
+<span class="refAuthor">Raut, A.</span>, <span class="refTitle">"Transaction Tokens For Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-araut-oauth-transaction-tokens-for-agents-02</span>, <time datetime="2026-05-21" class="refDate">21 May 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-araut-oauth-transaction-tokens-for-agents-02">https://datatracker.ietf.org/doc/html/draft-araut-oauth-transaction-tokens-for-agents-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-fletcher-transaction-token-chaining-profile">[I-D.draft-fletcher-transaction-token-chaining-profile]</dt>
+        <dd>
+<span class="refAuthor">Fletcher, G.</span>, <span class="refAuthor">Kasselman, P.</span>, and <span class="refAuthor">S. O'Dell</span>, <span class="refTitle">"Transaction Token Authorization Grant Profile for OAuth Identity and Authorization Chaining"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-fletcher-transaction-token-chaining-profile-02</span>, <time datetime="2026-07-06" class="refDate">6 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-fletcher-transaction-token-chaining-profile-02">https://datatracker.ietf.org/doc/html/draft-fletcher-transaction-token-chaining-profile-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-ietf-oauth-transaction-tokens">[I-D.draft-ietf-oauth-transaction-tokens]</dt>
+        <dd>
+<span class="refAuthor">Tulshibagwale, A.</span>, <span class="refAuthor">Fletcher, G.</span>, and <span class="refAuthor">P. Kasselman</span>, <span class="refTitle">"Transaction Tokens"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-transaction-tokens-09</span>, <time datetime="2026-07-06" class="refDate">6 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens-09">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens-09</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-actor-receipts">[I-D.draft-mcguinness-oauth-actor-receipts]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Actor Receipts for Delegation Provenance"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-actor-receipts-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-domain-authorized-issuer">[I-D.draft-mcguinness-oauth-domain-authorized-issuer]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Domain-Authorized Issuer Trust Method"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-domain-authorized-issuer-00</span>, <time datetime="2026-07-05" class="refDate">5 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-domain-authorized-issuer-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-domain-authorized-issuer-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-id-assertion-framework">[I-D.draft-mcguinness-oauth-id-assertion-framework]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Identity Assertion Trust Framework"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-id-assertion-framework-00</span>, <time datetime="2026-07-05" class="refDate">5 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-assertion-framework-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-assertion-framework-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="MCP">[MCP]</dt>
+      <dd>
+<span class="refAuthor">Model Context Protocol Project</span>, <span class="refTitle">"Model Context Protocol: Authorization"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization">https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="end-to-end-example-non-normative">
+<section id="appendix-A">
+      <h2 id="name-end-to-end-example-non-norm">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-end-to-end-example-non-norm" class="section-name selfRef">End-to-End Example (Non-Normative)</a>
+      </h2>
+<p id="appendix-A-1">This appendix continues the end-to-end example of the issuance profile's
+appendix across a trust boundary: from the home domain
+(<code>as.example.com</code>) into a partner domain, and then into the partner's
+internal microservice call chain. It is illustrative and adds no
+normative requirements. The final intra-domain hop shows one
+deployment-local way to carry Mission context in a Transaction Token
+<span>[<a href="#I-D.draft-ietf-oauth-transaction-tokens" class="cite xref">I-D.draft-ietf-oauth-transaction-tokens</a>]</span>. Identifiers and hash
+values are illustrative and are not computed from the displayed JSON.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-A-2">The chain crosses boundaries in two distinct ways, and seeing why is
+the point of the example:<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-3.1">
+          <p id="appendix-A-3.1.1">The <strong>Identity Assertion Authorization Grant (ID-JAG)</strong> crosses
+<em>between</em> trust domains: from the home domain (<code>as.example.com</code>)
+to the partner domain (<code>ras.partner.example.com</code>).<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.2">
+          <p id="appendix-A-3.2.1"><strong>Transaction Tokens</strong> propagate <em>within</em> the partner trust domain:
+from the partner's Resource Server through its internal services.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="appendix-A-4">The Mission is the durable anchor across both: <code>mission.id</code>,
+<code>mission.issuer</code>, and <code>authority_hash</code> ride unchanged through every
+hop. OAuth authority is audience-scoped by the Mission Issuer and
+Resource AS; deployment-local transaction context then narrows the
+operation for internal services. In this baseline walkthrough no hop
+calls back to <code>mission.issuer</code> for state; each enforces from the
+credential it holds. The <span class="bcp14">OPTIONAL</span> companion profiles layer on this
+baseline, and the stages note where: Stage 4 gains a runtime
+point-of-use check, and Stage 3 gains prompt cross-domain revocation
+from Status or Signals.<a href="#appendix-A-4" class="pilcrow">¶</a></p>
+<p id="appendix-A-5">Scenario: agent <code>s6BhdRkqt3</code>, acting for <code>alice</code>
+(<code>user_3p2q8mN1a0kV7tR</code>), reconciles Q3 invoices in a partner ERP
+under Mission <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>. Stage 0 (agent
+identity) and Stage 1 (Mission creation at the home AS) are the base
+profile's single-domain walkthrough, extended here in one way: the
+Mission Intent's <code>resources</code> also names the partner ERP
+<code>https://erp.partner.example.com</code>, so the approved Authority Set
+additionally carries, for that resource, an <code>invoices.read</code> entry
+(delegable to <code>ai_agent</code> actors at depth 1) and a
+<code>journal-entries.write</code> entry capped at a <code>max_amount</code> of 500.00
+USD. The
+Mission was recorded <code>active</code> with <code>authority_hash</code>
+        <code>sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ</code> and
+<code>intent_hash</code>
+        <code>sha-256:Zb8mR3nX5pV4lE6sQqYwQ7p4LHnX9Md0LqJ6sZJ2xT5f</code> (illustrative;
+this Mission's Intent and Authority Set extend the single-domain
+walkthrough's, so its anchors differ from that example's). The partner ERP
+is behind the Resource AS <code>ras.partner.example.com</code>, so the agent's
+next step is a cross-domain projection rather than a home-domain
+access token.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
+<div id="stage-2-cross-domain-projection-via-id-jag-between-domains">
+<section id="appendix-A.1">
+        <h3 id="name-stage-2-cross-domain-projec">
+<a href="#appendix-A.1" class="section-number selfRef">A.1. </a><a href="#name-stage-2-cross-domain-projec" class="section-name selfRef">Stage 2: Cross-Domain Projection via ID-JAG (Between Domains)</a>
+        </h3>
+<p id="appendix-A.1-1">The agent needs the partner ERP, behind the Resource AS
+<code>ras.partner.example.com</code>. It presents its Mission refresh token as
+the <code>subject_token</code> of a token exchange requesting an ID-JAG
+(<a href="#cross-domain-grant" class="auto internal xref">Section 8</a>); the home AS resolves the Mission from that
+grant, gates on Mission <code>active</code>, and mints a Mission-bound ID-JAG
+audienced to that Resource AS, carrying the <code>mission</code> claim and the
+audience-scoped authority for the ERP:<a href="#appendix-A.1-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A.1-2">
+<pre>
+{
+  "iss": "https://as.example.com",
+  "aud": "https://ras.partner.example.com",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "client_id": "s6BhdRkqt3",
+  "iat": 1793606400,
+  "exp": 1793606700,
+  "jti": "idjag_4Kp9sT2vN7xR1mZ8bQ",
+  "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
+  "authorization_details": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.partner.example.com",
+      "actions": ["invoices.read"],
+      "delegation": {
+        "max_depth": 1,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+      } },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.partner.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": { "max_amount":
+        { "amount": "500.00", "currency": "USD" } } }
+  ],
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
+  }
+}
+</pre><a href="#appendix-A.1-2" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A.1-3">The ID-JAG is short-lived (300 s), explicitly typed
+(<code>oauth-id-jag+jwt</code> in its JWT header), and sender-constrained to the
+agent. Its <code>exp</code> does not exceed the Mission's <code>expires_at</code>
+(<a href="#cross-domain-grant" class="auto internal xref">Section 8</a>).<a href="#appendix-A.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stage-3-the-resource-as-issues-a-local-access-token">
+<section id="appendix-A.2">
+        <h3 id="name-stage-3-the-resource-as-iss">
+<a href="#appendix-A.2" class="section-number selfRef">A.2. </a><a href="#name-stage-3-the-resource-as-iss" class="section-name selfRef">Stage 3: The Resource AS Issues a Local Access Token</a>
+        </h3>
+<p id="appendix-A.2-1"><code>ras.partner.example.com</code> validates the ID-JAG
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>): it
+establishes issuer trust in <code>as.example.com</code>, verifies the signature,
+checks that <code>aud</code> is itself, checks the expiry, and verifies the
+sender-constraint proof. It then issues its own access token for the
+ERP, preserving the <code>mission</code> claim unchanged and capping <code>exp</code> at the
+ID-JAG's <code>exp</code>:<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A.2-2">
+<pre>
+{
+  "iss": "https://ras.partner.example.com",
+  "aud": "https://erp.partner.example.com",
+  "sub": "partner-user_7Kp4QnZ2vR9s",
+  "client_id": "s6BhdRkqt3",
+  "iat": 1793606430,
+  "exp": 1793606690,
+  "jti": "at_7Kp4QnZ2vR9sT1mX8b3N",
+  "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
+  "authorization_details": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.partner.example.com",
+      "actions": ["invoices.read"],
+      "delegation": {
+        "max_depth": 1,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+      } },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.partner.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": { "max_amount":
+        { "amount": "500.00", "currency": "USD" } } }
+  ],
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
+  }
+}
+</pre><a href="#appendix-A.2-2" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A.2-3">The issuing <code>iss</code> is now the Resource AS, but <code>mission.issuer</code> remains
+the home AS. The token's <code>exp</code> (1793606690) is below the ID-JAG's
+(1793606700) and far below the Mission's <code>expires_at</code>. The Resource
+AS-local <code>sub</code> is illustrative; its value is determined by the
+subject-resolution rules of the ID-JAG and identity chaining profiles,
+not by this document.<a href="#appendix-A.2-3" class="pilcrow">¶</a></p>
+<p id="appendix-A.2-4">Revoking the Mission now stops new ID-JAGs, but the local token the
+Resource AS minted stays usable until its <code>exp</code> (260 seconds), bounded
+by the 300-second ID-JAG cap (<a href="#cross-domain-revocation" class="auto internal xref">Section 14.1</a>). Tighter
+cross-domain revocation is opt-in, and the two companions do different
+things: a Mission Status freshness lease shortens how long the partner
+relies on stale state by forcing a pull or per-request re-check, while a
+Mission Lifecycle Signal notifies the partner on a Mission transition so
+it can react without polling.<a href="#appendix-A.2-4" class="pilcrow">¶</a></p>
+<p id="appendix-A.2-5">The Resource AS holds only this audience's subset and cannot recompute
+<code>authority_hash</code>. It records both sides of the derivation, the
+consumed ID-JAG and the minted token (<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>),
+so an auditor can identify the exact local token, tie it to the grant
+it was minted from, and check its authority is a subset of that
+grant.<a href="#appendix-A.2-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stage-4-the-resource-server-enforces">
+<section id="appendix-A.3">
+        <h3 id="name-stage-4-the-resource-server">
+<a href="#appendix-A.3" class="section-number selfRef">A.3. </a><a href="#name-stage-4-the-resource-server" class="section-name selfRef">Stage 4: The Resource Server Enforces</a>
+        </h3>
+<p id="appendix-A.3-1">The agent calls the ERP Resource Server (<code>erp.partner.example.com</code>)
+with that token. The Resource Server validates the JWT and the <code>cnf</code>
+binding and enforces the <code>authorization_details</code> whose <code>resource</code> it
+serves, permitting <code>invoices.read</code> and <code>journal-entries.write</code> up to
+a <code>max_amount</code> of 500.00 USD
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Resource Server Enforcement"). It treats the
+<code>mission</code> claim as an audit anchor; holding only this audience's
+subset of the Authority Set, it does not recompute <code>authority_hash</code>.<a href="#appendix-A.3-1" class="pilcrow">¶</a></p>
+<p id="appendix-A.3-2">This is stateless enforcement from the token alone.
+<code>journal-entries.write</code> is a consequential write, so where the partner
+deploys the runtime profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) it also obtains a
+point-of-use PDP permit against current Mission state before executing.
+The baseline bounds the write only by token lifetime and
+<code>max_amount</code>.<a href="#appendix-A.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stage-5-internal-call-context-via-transaction-tokens">
+<section id="appendix-A.4">
+        <h3 id="name-stage-5-internal-call-conte">
+<a href="#appendix-A.4" class="section-number selfRef">A.4. </a><a href="#name-stage-5-internal-call-conte" class="section-name selfRef">Stage 5: Internal Call Context via Transaction Tokens</a>
+        </h3>
+<p id="appendix-A.4-1">To serve the request, the ERP Resource Server calls internal services
+inside the partner trust domain. Here it calls a ledger service for one
+invoice. The Resource Server is the entry edge of that domain: after
+it has validated the Mission-bound access token, it obtains a
+short-lived Transaction Token for the internal call.<a href="#appendix-A.4-1" class="pilcrow">¶</a></p>
+<p id="appendix-A.4-2">The following shows one illustrative way the Mission context could
+ride in that Transaction Token. This is not a Mission-derived OAuth
+access token, and this document does not define the Transaction Token
+claim names or issuance rules. The important point is that the local
+context can keep the Mission anchor while narrowing the internal
+operation:<a href="#appendix-A.4-2" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A.4-3">
+<pre>
+{
+  "iss": "https://txn.partner.example.com",
+  "aud": "https://ledger.partner.example.com",
+  "sub": "partner-user_7Kp4QnZ2vR9s",
+  "tid": "txn_5kQ9pX2vN7sR1tY8mZ3",
+  "iat": 1793606460,
+  "exp": 1793606520,
+  "txn_authorization": {
+    "source_resource": "https://erp.partner.example.com",
+    "source_actions": ["invoices.read"],
+    "internal_operation": "ledger.lookup_invoice",
+    "constraints": { "invoice_id": "inv_2026Q3_1042" }
+  },
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
+  }
+}
+</pre><a href="#appendix-A.4-3" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A.4-4">The Transaction Token is intra-domain and the shortest-lived
+credential in the chain (60 s). The holder has changed: the Resource
+Server's workload, not the agent, possesses it. The local context has
+narrowed again, to one ledger lookup for one invoice, while the
+<code>mission</code> anchor is unchanged.<a href="#appendix-A.4-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stage-6-the-internal-service-enforces">
+<section id="appendix-A.5">
+        <h3 id="name-stage-6-the-internal-servic">
+<a href="#appendix-A.5" class="section-number selfRef">A.5. </a><a href="#name-stage-6-the-internal-servic" class="section-name selfRef">Stage 6: The Internal Service Enforces</a>
+        </h3>
+<p id="appendix-A.5-1">The ledger service receives the Transaction Token, validates it under
+partner-domain policy, reads the Mission context and local transaction
+authorization, and enforces them for the internal operation. Like
+every consumer downstream of the home AS, it treats <code>authority_hash</code>
+as an audit and correlation anchor it cannot recompute, and it makes
+no call to <code>mission.issuer</code>.<a href="#appendix-A.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="what-rode-through-and-what-narrowed">
+<section id="appendix-A.6">
+        <h3 id="name-what-rode-through-and-what-">
+<a href="#appendix-A.6" class="section-number selfRef">A.6. </a><a href="#name-what-rode-through-and-what-" class="section-name selfRef">What Rode Through, and What Narrowed</a>
+        </h3>
+<table class="center" id="table-3">
+          <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Hop (mechanism)</th>
+              <th class="text-left" rowspan="1" colspan="1">Mission anchor</th>
+              <th class="text-left" rowspan="1" colspan="1">Authority or context</th>
+              <th class="text-left" rowspan="1" colspan="1">Expiry</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">ID-JAG (between domains)</td>
+              <td class="text-left" rowspan="1" colspan="1">unchanged</td>
+              <td class="text-left" rowspan="1" colspan="1">ERP: read + write</td>
+              <td class="text-left" rowspan="1" colspan="1">1793606700</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Resource AS token</td>
+              <td class="text-left" rowspan="1" colspan="1">unchanged</td>
+              <td class="text-left" rowspan="1" colspan="1">ERP: read + write</td>
+              <td class="text-left" rowspan="1" colspan="1">1793606690</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Txn Token (within domain)</td>
+              <td class="text-left" rowspan="1" colspan="1">unchanged</td>
+              <td class="text-left" rowspan="1" colspan="1">one ledger lookup</td>
+              <td class="text-left" rowspan="1" colspan="1">1793606520</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="appendix-A.6-2">The Mission anchor (<code>id</code>, <code>issuer</code>, <code>authority_hash</code>) is constant end
+to end. OAuth authority is preserved or narrowed at the cross-domain
+boundary, and local transaction context narrows the internal operation
+inside the partner domain. The lifetime shrinks at every hop and never
+exceeds the Mission's <code>expires_at</code>. The ID-JAG carried identity
+<em>between</em> trust domains; the Transaction Token carried context
+<em>within</em> one. The Mission bound both.<a href="#appendix-A.6-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
