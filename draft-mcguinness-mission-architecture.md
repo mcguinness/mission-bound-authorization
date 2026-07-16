@@ -1199,7 +1199,9 @@ policy re-check, which is the family's
 gates-new-derivation-only rule in its other reading. A deployment
 states where it sits on the dial through its bounded-revocation
 claim ({{assurance-claims-axis}}): a TTL-only posture claims the
-lifetime as its bound, honestly and with no state surface.
+lifetime as its bound, honestly and with no state surface. The
+runtime profile prices each position, source by source, in its state
+and freshness section ({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## The Binding Checklist {#binding-checklist}
 

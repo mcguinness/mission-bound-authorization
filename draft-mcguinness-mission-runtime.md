@@ -1335,6 +1335,25 @@ Enforcement Scope Statement like any other source; what it cannot do
 is reflect a revocation faster than the lifetime, which is why the
 high-consequence classes require an active source.
 
+Together the sources form a single freshness dial, and a deployment
+picks a position per action class rather than one posture for the
+estate. The comparison, informative:
+
+| State source | Exposure bound | Per-action cost | Depends on | Cannot provide |
+|---|---|---|---|---|
+| Token-lifetime expiry | maximum token lifetime | local clock check | nothing beyond the token | suspend, complete, or any revocation inside the lifetime |
+| State-gated refresh | token lifetime (the refresh interval) | none at action time | the issuer at each refresh | anything between refreshes |
+| Mission Status List | Status List Token TTL | local bit read | one list fetch per window | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
+| Status operation or introspection | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
+| Lifecycle Signals | delivery latency within the verified stream | none (event-driven) | stream liveness | the pull floor; a dead stream is stale state |
+
+No position on this dial requires a per-request issuer call: the
+tightest posture costs one lookup per staleness bound, amortized by
+caching, and the loosest costs a clock. The dial is the architecture's
+freshness dial made concrete
+({{I-D.draft-mcguinness-mission-architecture}}), and the Enforcement
+Scope Statement records the chosen position per class.
+
 The following are the RECOMMENDED default freshness postures per
 class, adopted absent a documented, consequence-specific analysis:
 
