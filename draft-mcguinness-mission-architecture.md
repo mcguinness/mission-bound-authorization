@@ -25,6 +25,7 @@ author:
     email: public@karlmcguinness.com
 
 informative:
+  I-D.draft-zehavi-oauth-rar-metadata:
   I-D.draft-mcguinness-mission-metering:
     title: "Mission Consumption Metering"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
@@ -540,7 +541,9 @@ breaks that premise, and some substrates invert it outright: the
 resource declares its own operations and consequences, and that
 declaration is the semantic material approval needs (the AAuth
 binding composes one such substrate,
-{{I-D.draft-mcguinness-mission-aauth}}).
+{{I-D.draft-mcguinness-mission-aauth}}). Who owns meaning, and how
+it reaches derivation, consent, and enforcement, is stated once as
+the ontology contract ({{ontology-contract}}).
 
 Where the resource self-declares, the declaration's digest is
 committed with the binding evidence: a third commitment beside
@@ -1280,6 +1283,104 @@ A deployment seeking interoperable authority uses the first;
 free-text and model-assisted derivation are local policy unless a
 profile pins them with a published policy identifier, version, and
 test fixtures.
+
+# The Ontology Contract {#ontology-contract}
+
+The derivation boundary settles who commits authority; this section
+settles who owns what an operation means. The ownership statement is
+one sentence: the resource owns the ontology, its operations, its
+constraint semantics, and their consequences, while derivation,
+consent rendering, and enforcement consume that meaning without
+owning it, and no layer invents meaning it does not own. The
+consuming contract is equally short: meaning binds at approval, is
+enforced at the point of use, and any translation between the
+resource's vocabulary and another party's is trusted, verified, or
+separately approved, never a place where authority widens
+({{approval-fidelity}}).
+
+Resource-owned meaning reaches the three consuming layers through
+five mechanisms, each normative in its own home and composing as one
+contract:
+
+Common Constraints:
+: The registered constraint vocabulary every conforming party
+  evaluates identically, with the `mission_constraints_supported`
+  protected-resource metadata member advertising which constraints a
+  resource enforces. Home: the issuance profile
+  ({{I-D.draft-mcguinness-oauth-mission}}).
+
+Capability-source binding:
+: Catalog-sourced capability definitions (an MCP tool, an OpenAPI
+  operation) content-digested at derivation and refused on drift at
+  decision time, so the meaning authority bound to is the meaning
+  enforced. Home: the AuthZEN binding
+  ({{I-D.draft-mcguinness-mission-authzen}}).
+
+Operation Profiles:
+: The per-operation statement of normalization and binding rules,
+  carrying resource-declared operation semantics such as idempotency,
+  reversibility, and lease requirements into parameter binding. Home:
+  the runtime profile ({{I-D.draft-mcguinness-mission-runtime}}).
+
+The encounter contract:
+: What is submitted, adjudicated, and recorded when an agent meets a
+  resource the approval could not enumerate, so meaning that arrives
+  late still binds before use. Home: the discovery companion
+  ({{I-D.draft-mcguinness-mission-discovery}}).
+
+Resource-Declared Semantics:
+: The full inversion: the resource publishes its operations, their
+  human meaning, and their consequences, content-addressed by
+  `r3_s256` as a third commitment beside `intent_hash` and
+  `authority_hash`, and consent composes the resource's own words.
+  The declaration is not consent material alone; it returns to
+  authority. The declared operations are the candidate vocabulary
+  derivation narrows against, the issuer adjudicates the encounter
+  against the Mission's Authority Set or a pre-consented ceiling,
+  and the derived authority records the declaration's digest, so the
+  Authority Set remembers which version of the resource's meaning it
+  was derived under and enforcement refuses on declaration drift.
+  Home: the AAuth binding, informative
+  ({{I-D.draft-mcguinness-mission-aauth}}).
+
+Behind the five mechanisms sits one direction axis, and the
+direction is chosen per encounter, not fixed by binding. The family
+inherits OAuth's client-proposed default: the client names the
+authority it wants and the resource's meaning arrives through
+metadata, catalogs, and profiles ({{capability-envelope}}).
+Resource-Declared Semantics is the inversion, where the resource
+speaks first and approval consumes its declaration, and it is valid
+under every binding: the fundamentals, meaning bound at approval,
+enforced at use, translation never widening, hold in both
+directions. Under the OAuth binding the resource-declared direction
+runs entirely through seams the family already has: the encounter
+contract routes the declaration
+({{I-D.draft-mcguinness-mission-discovery}}), narrowing-mode
+derivation consumes the declared operations as candidate vocabulary
+({{I-D.draft-mcguinness-oauth-mission}}), consent composes the
+resource-authored material, and the declaration's digest rides the
+derived authority (the progressive companion's
+`resource_declaration_digest`,
+{{I-D.draft-mcguinness-oauth-mission-progressive}}). The AAuth
+binding's R3 composition is the worked example of the full
+inversion, not its only home. Proposed RAR-type metadata
+({{I-D.draft-zehavi-oauth-rar-metadata}}), a resource publishing the
+`authorization_details` types and fields it understands, is the
+OAuth-native descriptive surface the direction builds on.
+
+Both directions close the same loop: the meaning source's digest
+becomes part of the derived authority. A catalog-sourced capability
+pins its `source_digest`; a resource declaration pins `r3_s256`; in
+each case the Authority Set carries the version of the meaning it
+was derived under, and the point of use compares against the meaning
+in force. Meaning is not consulted at approval and assumed at
+enforcement; it is committed at approval and re-verified at use.
+
+The contract's failure mode is already normative in each home: a
+consumer that cannot resolve an operation's meaning, a constraint it
+cannot evaluate, a drifted capability definition, an unrecognized
+declaration, refuses rather than guesses. Meaning, like state, fails
+closed.
 
 # The Mission Verbs {#layers}
 
