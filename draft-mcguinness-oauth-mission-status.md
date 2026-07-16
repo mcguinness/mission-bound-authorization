@@ -688,6 +688,15 @@ additionally publish Mission state as a Status List
 array in which each participating Mission holds an index, fetched
 once per freshness window and read locally per action.
 
+The arithmetic is the point. A fleet of 100,000 participating
+Missions at two bits per entry is 25,000 bytes before compression,
+and a mostly-`active` population compresses far below that; a
+consumer fetching that list once per 30-second window spends under a
+kilobyte per second to hold fresh state for every Mission it relies
+on, where per-Mission status reads would cost 100,000 requests per
+window. Fleet scale makes state freshness cheaper per Mission, not
+more expensive.
+
 - **Reference.** A participating Mission's `status_list` member
   (`idx` and `uri`, the referenced-token shape of
   {{I-D.draft-ietf-oauth-status-list}}) rides the Mission Status
