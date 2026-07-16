@@ -104,34 +104,35 @@ Table of Contents
      11.11. The Binding Checklist
      11.12. Error Surfaces
    12. The Authority Derivation Boundary
-   13. The Mission Verbs
-     13.1.  Propose
-     13.2.  Approve and Record
-     13.3.  Govern
-     13.4.  Enforce Each Action
-     13.5.  Run and Wind Down
-     13.6.  Delegate
-     13.7.  Project
-     13.8.  Prove
-     13.9.  Analyze
-   14. Mission Deployment Patterns
-     14.1.  Binding Security Architectures
-     14.2.  Entry Ramps by Estate
-   15. Mission Assurance Levels
-     15.1.  Assurance Claims
-   16. The Mission Deployment Profile
-   17. Prevention, Detection, and Residue
-     17.1.  The Containment Matrix
-   18. Mission Requirements
-     18.1.  Context and Intent
-     18.2.  Consent and Approval
-     18.3.  Lifecycle
-     18.4.  Delegated, Projected, and Enforced Execution
-   19. Mission Document Map
-   20. Security Considerations
-   21. Privacy Considerations
-   22. IANA Considerations
-   23. Informative References
+   13. The Ontology Contract
+   14. The Mission Verbs
+     14.1.  Propose
+     14.2.  Approve and Record
+     14.3.  Govern
+     14.4.  Enforce Each Action
+     14.5.  Run and Wind Down
+     14.6.  Delegate
+     14.7.  Project
+     14.8.  Prove
+     14.9.  Analyze
+   15. Mission Deployment Patterns
+     15.1.  Binding Security Architectures
+     15.2.  Entry Ramps by Estate
+   16. Mission Assurance Levels
+     16.1.  Assurance Claims
+   17. The Mission Deployment Profile
+   18. Prevention, Detection, and Residue
+     18.1.  The Containment Matrix
+   19. Mission Requirements
+     19.1.  Context and Intent
+     19.2.  Consent and Approval
+     19.3.  Lifecycle
+     19.4.  Delegated, Projected, and Enforced Execution
+   20. Mission Document Map
+   21. Security Considerations
+   22. Privacy Considerations
+   23. IANA Considerations
+   24. Informative References
    Acknowledgments
    Author's Address
 
@@ -307,11 +308,11 @@ Table of Contents
 
    *Protocol core*:  the issuance profile alone: the standardizable
       primitive (approved, anchored, state-gated Missions), Mission-
-      substrate conformance (Section 18), no per-action control.
+      substrate conformance (Section 19), no per-action control.
 
    *Reference security architecture*:  core plus runtime enforcement,
       its AuthZEN binding, and a freshness source (the Runtime-Enforced
-      level, Section 15).  This is the architecture this document means
+      level, Section 16).  This is the architecture this document means
       when it says a Mission is enforced, and the one an evaluation
       should picture by default.
 
@@ -328,7 +329,7 @@ Table of Contents
 
    Independent of how the drafts are cut for standardization, the system
    decomposes into five architecture packages; the document map
-   (Section 19) names every draft, and each belongs to one package:
+   (Section 20) names every draft, and each belongs to one package:
 
    1.  *Mission Control*: the object, approval (including deferred and
        revision), lifecycle, status and signals, expansion, completion,
@@ -384,7 +385,7 @@ Table of Contents
    *  completion retires authority as the task finishes.
 
    No single lever closes the gap; a deployment composes the ones its
-   risk warrants (Section 15), and the verbs of Section 13 organize the
+   risk warrants (Section 16), and the verbs of Section 14 organize the
    levers by the question each answers.
 
    The levers share one strategy: they convert semantic risk into
@@ -416,7 +417,7 @@ Table of Contents
    [I-D.draft-mcguinness-mission-authzen]), while its interior,
    retrieval, memory, and context assembly scoped to the Mission, has no
    interoperable form yet and is deployment discipline, declared in the
-   Deployment Profile (Section 16) rather than claimed.
+   Deployment Profile (Section 17) rather than claimed.
 
    The envelope meets its hardest case in the open world.  The family
    inherits OAuth's ontology, authority client-proposed and enumerated
@@ -425,7 +426,9 @@ Table of Contents
    resource declares its own operations and consequences, and that
    declaration is the semantic material approval needs (the AAuth
    binding composes one such substrate,
-   [I-D.draft-mcguinness-mission-aauth]).
+   [I-D.draft-mcguinness-mission-aauth]).  Who owns meaning, and how it
+   reaches derivation, consent, and enforcement, is stated once as the
+   ontology contract (Section 13).
 
    Where the resource self-declares, the declaration's digest is
    committed with the binding evidence: a third commitment beside
@@ -512,7 +515,7 @@ Table of Contents
 
    Under the standalone binding the same life runs with ordinary tokens
    and the Mission Join in place of step 3's claim carriage
-   (Section 14); under the AAuth binding the Person Server plays the AS
+   (Section 15); under the AAuth binding the Person Server plays the AS
    role for its native missions.
 
 9.  Mission Invariants
@@ -553,7 +556,7 @@ Table of Contents
       association is itself a carried fact only where a binding carries
       the mission claim; under the standalone binding the PDP's join
       establishes it by inference, bounded by that binding's join
-      assurance (Section 14).
+      assurance (Section 15).
 
    *Enforcement fails closed; inert surfaces fail safe*:  A PDP that
       cannot establish state or authority within the published staleness
@@ -785,7 +788,7 @@ Table of Contents
 
       A Mission may be pinned to a named Agent Deployment where the
       deployment defines that control.  This object is distinct from the
-      Mission Deployment Profile (Section 16), which is the estate's
+      Mission Deployment Profile (Section 17), which is the estate's
       published claims manifest, not a property of an agent.
 
    Mission (why the authority exists):  This family's object: the
@@ -821,7 +824,7 @@ Table of Contents
    deployment adds it: authority is issued to an authenticated client;
    instance assertion pins the concrete instance; sender-constraint keys
    pin possession; attested runtimes pin the execution environment; and
-   an Agent Deployment pin holds the behavioral version (Section 15).
+   an Agent Deployment pin holds the behavioral version (Section 16).
 
    The division of labor with agent IAM is one sentence: agent identity
    preserves who is acting, and the Mission preserves why their
@@ -1068,7 +1071,7 @@ Table of Contents
    verification path to the issuance path, so every re-issuance is the
    policy re-check, which is the family's gates-new-derivation-only rule
    in its other reading.  A deployment states where it sits on the dial
-   through its bounded-revocation claim (Section 15.1): a TTL-only
+   through its bounded-revocation claim (Section 16.1): a TTL-only
    posture claims the lifetime as its bound, honestly and with no state
    surface.  The runtime profile prices each position, source by source,
    in its state and freshness section
@@ -1169,7 +1172,100 @@ Table of Contents
    pins them with a published policy identifier, version, and test
    fixtures.
 
-13.  The Mission Verbs
+13.  The Ontology Contract
+
+   The derivation boundary settles who commits authority; this section
+   settles who owns what an operation means.  The ownership statement is
+   one sentence: the resource owns the ontology, its operations, its
+   constraint semantics, and their consequences, while derivation,
+   consent rendering, and enforcement consume that meaning without
+   owning it, and no layer invents meaning it does not own.  The
+   consuming contract is equally short: meaning binds at approval, is
+   enforced at the point of use, and any translation between the
+   resource's vocabulary and another party's is trusted, verified, or
+   separately approved, never a place where authority widens
+   (Section 11.9).
+
+   Resource-owned meaning reaches the three consuming layers through
+   five mechanisms, each normative in its own home and composing as one
+   contract:
+
+   Common Constraints:  The registered constraint vocabulary every
+      conforming party evaluates identically, with the
+      mission_constraints_supported protected-resource metadata member
+      advertising which constraints a resource enforces.  Home: the
+      issuance profile ([I-D.draft-mcguinness-oauth-mission]).
+
+   Capability-source binding:  Catalog-sourced capability definitions
+      (an MCP tool, an OpenAPI operation) content-digested at derivation
+      and refused on drift at decision time, so the meaning authority
+      bound to is the meaning enforced.  Home: the AuthZEN binding
+      ([I-D.draft-mcguinness-mission-authzen]).
+
+   Operation Profiles:  The per-operation statement of normalization and
+      binding rules, carrying resource-declared operation semantics such
+      as idempotency, reversibility, and lease requirements into
+      parameter binding.  Home: the runtime profile
+      ([I-D.draft-mcguinness-mission-runtime]).
+
+   The encounter contract:  What is submitted, adjudicated, and recorded
+      when an agent meets a resource the approval could not enumerate,
+      so meaning that arrives late still binds before use.  Home: the
+      discovery companion ([I-D.draft-mcguinness-mission-discovery]).
+
+   Resource-Declared Semantics:  The full inversion: the resource
+      publishes its operations, their human meaning, and their
+      consequences, content-addressed by r3_s256 as a third commitment
+      beside intent_hash and authority_hash, and consent composes the
+      resource's own words.  The declaration is not consent material
+      alone; it returns to authority.  The declared operations are the
+      candidate vocabulary derivation narrows against, the issuer
+      adjudicates the encounter against the Mission's Authority Set or a
+      pre-consented ceiling, and the derived authority records the
+      declaration's digest, so the Authority Set remembers which version
+      of the resource's meaning it was derived under and enforcement
+      refuses on declaration drift.  Home: the AAuth binding,
+      informative ([I-D.draft-mcguinness-mission-aauth]).
+
+   Behind the five mechanisms sits one direction axis, and the direction
+   is chosen per encounter, not fixed by binding.  The family inherits
+   OAuth's client-proposed default: the client names the authority it
+   wants and the resource's meaning arrives through metadata, catalogs,
+   and profiles (Section 7).  Resource-Declared Semantics is the
+   inversion, where the resource speaks first and approval consumes its
+   declaration, and it is valid under every binding: the fundamentals,
+   meaning bound at approval, enforced at use, translation never
+   widening, hold in both directions.  Under the OAuth binding the
+   resource-declared direction runs entirely through seams the family
+   already has: the encounter contract routes the declaration
+   ([I-D.draft-mcguinness-mission-discovery]), narrowing-mode derivation
+   consumes the declared operations as candidate vocabulary
+   ([I-D.draft-mcguinness-oauth-mission]), consent composes the
+   resource-authored material, and the declaration's digest rides the
+   derived authority (the progressive companion's
+   resource_declaration_digest,
+   [I-D.draft-mcguinness-oauth-mission-progressive]).  The AAuth
+   binding's R3 composition is the worked example of the full inversion,
+   not its only home.  Proposed RAR-type metadata
+   ([I-D.draft-zehavi-oauth-rar-metadata]), a resource publishing the
+   authorization_details types and fields it understands, is the OAuth-
+   native descriptive surface the direction builds on.
+
+   Both directions close the same loop: the meaning source's digest
+   becomes part of the derived authority.  A catalog-sourced capability
+   pins its source_digest; a resource declaration pins r3_s256; in each
+   case the Authority Set carries the version of the meaning it was
+   derived under, and the point of use compares against the meaning in
+   force.  Meaning is not consulted at approval and assumed at
+   enforcement; it is committed at approval and re-verified at use.
+
+   The contract's failure mode is already normative in each home: a
+   consumer that cannot resolve an operation's meaning, a constraint it
+   cannot evaluate, a drifted capability definition, an unrecognized
+   declaration, refuses rather than guesses.  Meaning, like state, fails
+   closed.
+
+14.  The Mission Verbs
 
    The family organizes along a verb spine: each verb answers one
    question, sits on one trust boundary, and is owned by named
@@ -1204,7 +1300,7 @@ Table of Contents
 
     analyze      Security Model (the trusted base)
 
-13.1.  Propose
+14.1.  Propose
 
    The question: how does a user's request become a candidate Mission
    Intent?  The boundary: the client side; output is untrusted until the
@@ -1213,7 +1309,7 @@ Table of Contents
    Pushed Authorization Requests [RFC9126], the MAS submission endpoint,
    or the AAuth Person Server's mission endpoint.
 
-13.2.  Approve and Record
+14.2.  Approve and Record
 
    The question: how does a proposed task become an approved, committed
    Mission?  The boundary: the Mission Issuer's own; the approval event
@@ -1245,7 +1341,7 @@ Table of Contents
    decision, per the progressive profile's prohibited set
    ([I-D.draft-mcguinness-oauth-mission-progressive]).
 
-13.3.  Govern
+14.3.  Govern
 
    The question: how do consumers observe Mission state, and how does
    authority grow or retire mid-task?  The boundary: between the issuer
@@ -1260,7 +1356,7 @@ Table of Contents
    experimental, binding encountered resources within a pre-consented
    ceiling ([I-D.draft-mcguinness-mission-discovery]).
 
-13.4.  Enforce Each Action
+14.4.  Enforce Each Action
 
    The question: is this specific action, with these parameters,
    permitted under this Mission now?  The boundary: the last
@@ -1270,7 +1366,7 @@ Table of Contents
    AuthZEN binding, the concrete decision API and evidence objects
    ([I-D.draft-mcguinness-mission-authzen]).
 
-13.5.  Run and Wind Down
+14.5.  Run and Wind Down
 
    The question: how does governed work start, persist, pause, and
    unwind when Mission state changes?  The boundary: the operator's
@@ -1280,7 +1376,7 @@ Table of Contents
    in-flight work through reversibility classes and recorded unwind
    plans ([I-D.draft-mcguinness-mission-orchestration]).
 
-13.6.  Delegate
+14.6.  Delegate
 
    The question: how does authority reach a sub-agent without widening?
    The boundary: between principals acting under one approval.  Owners:
@@ -1297,7 +1393,7 @@ Table of Contents
    own lifecycle, approval, or audit identity; attenuation,
    experimental, only where offline minting is the constraint.
 
-13.7.  Project
+14.7.  Project
 
    The question: how is one Mission honored in another trust domain?
    The boundary: a trust boundary the origin does not control, where the
@@ -1310,7 +1406,7 @@ Table of Contents
    sub-actor, which is why it is a distinct verb from Delegate;
    downstream revocation latency is the local token lifetime.
 
-13.8.  Prove
+14.8.  Prove
 
    The question: what can a party outside the deployment verify about
    what was approved and done?  The boundary: across trust domains and
@@ -1322,16 +1418,16 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime]); Audit Transparency, the
    append-only evidence log ([I-D.draft-mcguinness-mission-audit]).
 
-13.9.  Analyze
+14.9.  Analyze
 
    The question: which components must be trusted, and what does each
    one's compromise cost?  The boundary: the whole system.  Owner: the
    Mission Security Model
    ([I-D.draft-mcguinness-mission-security-model]).
 
-14.  Mission Deployment Patterns
+15.  Mission Deployment Patterns
 
-14.1.  Binding Security Architectures
+15.1.  Binding Security Architectures
 
    The bindings share one object but are not one security system: each
    is a distinct architecture with its own trust assumptions, cutoff
@@ -1423,7 +1519,7 @@ Table of Contents
 
    The composition is an overlay, not a substrate swap: a deployment
    mediates the paths where the high-consequence classes live and lets
-   every other resource ride lifetime-bounded reliance (Section 15),
+   every other resource ride lifetime-bounded reliance (Section 16),
    token lifetimes sized to the tolerated staleness, with no state
    evaluation at the resource.
 
@@ -1445,7 +1541,7 @@ Table of Contents
    Mission Issuance Grants for Mission-bound, state-gated tokens,
    restoring the token-layer chokepoint without moving approval.
 
-14.2.  Entry Ramps by Estate
+15.2.  Entry Ramps by Estate
 
    Which chokepoint a deployment builds first is decided by the estate
    it already runs, not by preference.  The core's issuance ramp assumes
@@ -1589,7 +1685,7 @@ Table of Contents
    the experimental profile changes the unit economics, not the
    governance shape.
 
-15.  Mission Assurance Levels
+16.  Mission Assurance Levels
 
    Two questions get asked of a Mission deployment: what to deploy for a
    goal, and what guarantee it has earned.  They share one progression,
@@ -1616,7 +1712,7 @@ Table of Contents
 
    A level is a dependency bundle: which documents a deployment runs, in
    adoption order.  What a deployment can prove is the orthogonal claims
-   axis (Section 15.1), and the proof obligations noted with each level
+   axis (Section 16.1), and the proof obligations noted with each level
    below are the claims that become available at that level, not
    properties the level name itself asserts; the claims, not the level,
    are what a relying party compares.
@@ -1731,7 +1827,7 @@ Table of Contents
    classes are the runtime profile's
    ([I-D.draft-mcguinness-mission-runtime]), resource policy remains
    authoritative for its own objects, and what a level grants varies
-   with the binding; the Mission Deployment Profile (Section 16) is
+   with the binding; the Mission Deployment Profile (Section 17) is
    where a deployment states its own mediated_action_classes and
    exclusions.
 
@@ -1773,13 +1869,13 @@ Table of Contents
    what was recorded tamper-evident, not what was perceived true or what
    was never recorded present.
 
-15.1.  Assurance Claims
+16.1.  Assurance Claims
 
    The levels are the adoption ladder: what a deployment has built, in
    the order deployments build it.  What a deployment can prove is an
    orthogonal axis, claimed as named *assurance claims*, each with a
    proof obligation an existing profile fixes, and listed in the
-   Deployment Profile (Section 16) rather than implied by a level:
+   Deployment Profile (Section 17) rather than implied by a level:
 
    *  *Approved-record integrity*: the anchors reproduce from the record
       alone (the core's integrity anchors).
@@ -1800,17 +1896,17 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-runtime]).
 
    *  *Compromise-resistant custody* and *trifecta containment*: the two
-      named High-Assurance claims, unchanged (Section 15).
+      named High-Assurance claims, unchanged (Section 16).
 
    Two deployments at the same level under different bindings can hold
    different claims; the MAS modes are the worked case
    ([I-D.draft-mcguinness-mission-authority-server]).  The claims, not
    the level, are what a relying party compares.
 
-16.  The Mission Deployment Profile
+17.  The Mission Deployment Profile
 
-   The Mission Assurance Levels (Section 15) name what to deploy, and
-   the assurance claims (Section 15.1) name what may be proven; a claim
+   The Mission Assurance Levels (Section 16) name what to deploy, and
+   the assurance claims (Section 16.1) name what may be proven; a claim
    is only checkable if a deployment states, concretely, what it
    enforces and what it leaves outside the boundary.  The *Mission
    Deployment Profile* is that system-level artifact: the published
@@ -1918,10 +2014,10 @@ Table of Contents
    Two deployments that both "support Mission" but publish different
    Deployment Profiles provide different security properties, and the
    profile is what makes that difference legible.  A deployment claiming
-   a level (Section 15) states it here and lists the residuals that
+   a level (Section 16) states it here and lists the residuals that
    level leaves.
 
-17.  Prevention, Detection, and Residue
+18.  Prevention, Detection, and Residue
 
    Each layer earns a specific property and leaves a specific residue.
    Stated as a table so a claim cannot be read as more than it is:
@@ -1963,11 +2059,11 @@ Table of Contents
    The pattern is uniform: the family commits and checks what a party
    was shown, decided, or did; it does not make the human attentive, the
    producer honest, or the unmediated path disappear.  Those are the
-   residues the Mission Assurance Levels (Section 15) and the security
+   residues the Mission Assurance Levels (Section 16) and the security
    model make a deployment state rather than assume, and the exposure
    arm (Section 7) carries the same honesty in the other direction.
 
-17.1.  The Containment Matrix
+18.1.  The Containment Matrix
 
    Mission termination is one control in a larger containment surface.
    Each kill has a different blast radius, and an incident responder
@@ -2018,14 +2114,14 @@ Table of Contents
    revoked.  A deployment's incident runbook names which of these
    controls exist and who may pull each.
 
-18.  Mission Requirements
+19.  Mission Requirements
 
    The requirements the family answers, stated implementation-neutrally;
-   each names its answering documents by short form (Section 19).  They
+   each names its answering documents by short form (Section 20).  They
    stand on their own: a reader evaluating another design can use them
    as a checklist.  The litmus splits at the family's own conformance
    seam, because the family itself defines conformant deployments at two
-   strengths (Section 15).
+   strengths (Section 16).
 
    A design provides *Mission-substrate conformance*, the bar the
    Baseline Issuance level and every binding meets
@@ -2062,7 +2158,7 @@ Table of Contents
    deployment is, and claims nothing about action-time defense; the
    requirements below unpack all six.
 
-18.1.  Context and Intent
+19.1.  Context and Intent
 
    *  *R1*: The task an agent pursues is a durable, structured, approved
       object (oauth-mission; mission-authority-server).
@@ -2074,7 +2170,7 @@ Table of Contents
       influence never derive, widen, or gate authority (oauth-mission;
       mission-shaping).
 
-18.2.  Consent and Approval
+19.2.  Consent and Approval
 
    *  *R4*: The derived authority is disclosed to the Approver before it
       takes effect, and the approval covers it (oauth-mission).
@@ -2089,7 +2185,7 @@ Table of Contents
       only narrows (oauth-mission-approval; the experimental oauth-
       mission-approval-revision).
 
-18.3.  Lifecycle
+19.3.  Lifecycle
 
    *  *R8*: Reliance is gated on task state: only active permits it, and
       unrecognized states fail safe (oauth-mission).
@@ -2107,7 +2203,7 @@ Table of Contents
    *  *R12*: Authority retires per entry when the work an entry served
       is done (oauth-mission-status).
 
-18.4.  Delegated, Projected, and Enforced Execution
+19.4.  Delegated, Projected, and Enforced Execution
 
    *  *R13*: Derived and delegated authority only narrows (oauth-
       mission; oauth-mission-attenuation).
@@ -2132,7 +2228,7 @@ Table of Contents
       session with the issuer (oauth-mission-cross-domain; mission-
       mandate).
 
-19.  Mission Document Map
+20.  Mission Document Map
 
    One line per document, grouped as the family groups them; the short
    form drops the draft-mcguinness- prefix.  The naming encodes a
@@ -2264,7 +2360,7 @@ Table of Contents
    mission-security-model:  The trusted base in one view: what each
       component must achieve and what its compromise costs.
 
-20.  Security Considerations
+21.  Security Considerations
 
    This document introduces no mechanism and therefore no new security
    considerations.  The consolidated trusted base and compromise
@@ -2272,7 +2368,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-security-model]), and each profile's
    own Security Considerations remain normative.
 
-21.  Privacy Considerations
+22.  Privacy Considerations
 
    The privacy properties of the Mission record and the Mission Intent
    are the core's ([I-D.draft-mcguinness-oauth-mission]) and each
@@ -2284,11 +2380,11 @@ Table of Contents
    The status profile's anti-oracle property bounds what its status
    surfaces disclose ([I-D.draft-mcguinness-oauth-mission-status]).
 
-22.  IANA Considerations
+23.  IANA Considerations
 
    This document makes no IANA request.
 
-23.  Informative References
+24.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission-Bound Authorization for AAuth",
@@ -2443,6 +2539,13 @@ Table of Contents
               McGuinness, K., "Mission Status and Lifecycle for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-status.html>.
+
+   [I-D.draft-zehavi-oauth-rar-metadata]
+              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
+              Remediation", Work in Progress, Internet-Draft, draft-
+              zehavi-oauth-rar-metadata-05, 4 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-
+              rar-metadata-05>.
 
    [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
               RFC 6749, DOI 10.17487/RFC6749, October 2012,
