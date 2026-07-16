@@ -2874,10 +2874,69 @@ consuming resource. A deployment declares it per class in its
 Enforcement Scope Statement like any other source; what it cannot do
 is reflect a revocation faster than the lifetime, which is why the
 high-consequence classes require an active source.<a href="#section-7.3-4" class="pilcrow">¶</a></p>
-<p id="section-7.3-5">The following are the <span class="bcp14">RECOMMENDED</span> default freshness postures per
-class, adopted absent a documented, consequence-specific analysis:<a href="#section-7.3-5" class="pilcrow">¶</a></p>
+<p id="section-7.3-5">Together the sources form a single freshness dial, and a deployment
+picks a position per action class rather than one posture for the
+estate. The comparison, informative:<a href="#section-7.3-5" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
           <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">State source</th>
+              <th class="text-left" rowspan="1" colspan="1">Exposure bound</th>
+              <th class="text-left" rowspan="1" colspan="1">Per-action cost</th>
+              <th class="text-left" rowspan="1" colspan="1">Depends on</th>
+              <th class="text-left" rowspan="1" colspan="1">Cannot provide</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Token-lifetime expiry</td>
+              <td class="text-left" rowspan="1" colspan="1">maximum token lifetime</td>
+              <td class="text-left" rowspan="1" colspan="1">local clock check</td>
+              <td class="text-left" rowspan="1" colspan="1">nothing beyond the token</td>
+              <td class="text-left" rowspan="1" colspan="1">suspend, complete, or any revocation inside the lifetime</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">State-gated refresh</td>
+              <td class="text-left" rowspan="1" colspan="1">token lifetime (the refresh interval)</td>
+              <td class="text-left" rowspan="1" colspan="1">none at action time</td>
+              <td class="text-left" rowspan="1" colspan="1">the issuer at each refresh</td>
+              <td class="text-left" rowspan="1" colspan="1">anything between refreshes</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Mission Status List</td>
+              <td class="text-left" rowspan="1" colspan="1">Status List Token TTL</td>
+              <td class="text-left" rowspan="1" colspan="1">local bit read</td>
+              <td class="text-left" rowspan="1" colspan="1">one list fetch per window</td>
+              <td class="text-left" rowspan="1" colspan="1">terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Status operation or introspection</td>
+              <td class="text-left" rowspan="1" colspan="1">published staleness bound</td>
+              <td class="text-left" rowspan="1" colspan="1">one lookup within the bound, cacheable to <code>fresh_until</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">status surface availability</td>
+              <td class="text-left" rowspan="1" colspan="1">revocation inside the bound</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Lifecycle Signals</td>
+              <td class="text-left" rowspan="1" colspan="1">delivery latency within the verified stream</td>
+              <td class="text-left" rowspan="1" colspan="1">none (event-driven)</td>
+              <td class="text-left" rowspan="1" colspan="1">stream liveness</td>
+              <td class="text-left" rowspan="1" colspan="1">the pull floor; a dead stream is stale state</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-7.3-7">No position on this dial requires a per-request issuer call: the
+tightest posture costs one lookup per staleness bound, amortized by
+caching, and the loosest costs a clock. The dial is the architecture's
+freshness dial made concrete
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), and the Enforcement
+Scope Statement records the chosen position per class.<a href="#section-7.3-7" class="pilcrow">¶</a></p>
+<p id="section-7.3-8">The following are the <span class="bcp14">RECOMMENDED</span> default freshness postures per
+class, adopted absent a documented, consequence-specific analysis:<a href="#section-7.3-8" class="pilcrow">¶</a></p>
+<table class="center" id="table-3">
+          <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Class</th>
@@ -2911,8 +2970,8 @@ class, adopted absent a documented, consequence-specific analysis:<a href="#sect
             </tr>
           </tbody>
         </table>
-<p id="section-7.3-7">A deployment justifies any looser value for a high-consequence class
-in its Enforcement Scope Statement.<a href="#section-7.3-7" class="pilcrow">¶</a></p>
+<p id="section-7.3-10">A deployment justifies any looser value for a high-consequence class
+in its Enforcement Scope Statement.<a href="#section-7.3-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="policy-view">
@@ -3167,8 +3226,8 @@ requirement (<a href="#state-freshness" class="auto internal xref">Section 7.3</
 </li>
         </ul>
 <p id="section-8.2-3">The permit lifetime control is set by action class:<a href="#section-8.2-3" class="pilcrow">¶</a></p>
-<table class="center" id="table-3">
-          <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
+<table class="center" id="table-4">
+          <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Action class</th>
@@ -3329,8 +3388,8 @@ the PDP <span class="bcp14">MUST</span> refuse a consequential action governed b
 <span class="bcp14">MUST</span> behave as follows; in all cases the evidence record
 (<a href="#evidence" class="auto internal xref">Section 11</a>) <span class="bcp14">MUST</span> be sufficient to reconstruct which path produced a
 refusal.<a href="#section-10-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-4">
-        <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
+<table class="center" id="table-5">
+        <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Condition</th>
@@ -3700,8 +3759,8 @@ together, so the claim is no stronger than the weakest of the three,
 and "mediated custody" on its own is not the property.<a href="#section-12.1-6" class="pilcrow">¶</a></p>
 <p id="section-12.1-7">Each unmet condition loses a specific property; the base-profile
 column records the level each condition has outside this claim:<a href="#section-12.1-7" class="pilcrow">¶</a></p>
-<table class="center" id="table-5">
-          <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
+<table class="center" id="table-6">
+          <caption><a href="#table-6" class="selfRef">Table 6</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Condition unmet</th>
@@ -3820,8 +3879,8 @@ protocol element proves. A deployment <span class="bcp14">SHOULD</span> demonstr
 negative tests: each of the following bypass attempts <span class="bcp14">MUST</span> be refused
 or contained by a conforming deployment that makes the relevant
 claim, and a deployment <span class="bcp14">SHOULD</span> retain evidence that it ran them.<a href="#section-13-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-6">
-        <caption><a href="#table-6" class="selfRef">Table 6</a></caption>
+<table class="center" id="table-7">
+        <caption><a href="#table-7" class="selfRef">Table 7</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Bypass attempt</th>

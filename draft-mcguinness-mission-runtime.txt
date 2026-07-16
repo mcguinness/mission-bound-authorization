@@ -1328,6 +1328,58 @@ Table of Contents
    is reflect a revocation faster than the lifetime, which is why the
    high-consequence classes require an active source.
 
+   Together the sources form a single freshness dial, and a deployment
+   picks a position per action class rather than one posture for the
+   estate.  The comparison, informative:
+
+   +==============+=========+==============+============+==============+
+   |State source  |Exposure |Per-action    |Depends on  |Cannot provide|
+   |              |bound    |cost          |            |              |
+   +==============+=========+==============+============+==============+
+   |Token-lifetime|maximum  |local clock   |nothing     |suspend,      |
+   |expiry        |token    |check         |beyond the  |complete, or  |
+   |              |lifetime |              |token       |any revocation|
+   |              |         |              |            |inside the    |
+   |              |         |              |            |lifetime      |
+   +--------------+---------+--------------+------------+--------------+
+   |State-gated   |token    |none at action|the issuer  |anything      |
+   |refresh       |lifetime |time          |at each     |between       |
+   |              |(the     |              |refresh     |refreshes     |
+   |              |refresh  |              |            |              |
+   |              |interval)|              |            |              |
+   +--------------+---------+--------------+------------+--------------+
+   |Mission Status|Status   |local bit read|one list    |terminal-state|
+   |List          |List     |              |fetch per   |detail; a non-|
+   |              |Token TTL|              |window      |VALID bit     |
+   |              |         |              |            |sends the     |
+   |              |         |              |            |consumer to   |
+   |              |         |              |            |the           |
+   |              |         |              |            |authoritative |
+   |              |         |              |            |surface       |
+   +--------------+---------+--------------+------------+--------------+
+   |Status        |published|one lookup    |status      |revocation    |
+   |operation or  |staleness|within the    |surface     |inside the    |
+   |introspection |bound    |bound,        |availability|bound         |
+   |              |         |cacheable to  |            |              |
+   |              |         |fresh_until   |            |              |
+   +--------------+---------+--------------+------------+--------------+
+   |Lifecycle     |delivery |none (event-  |stream      |the pull      |
+   |Signals       |latency  |driven)       |liveness    |floor; a dead |
+   |              |within   |              |            |stream is     |
+   |              |the      |              |            |stale state   |
+   |              |verified |              |            |              |
+   |              |stream   |              |            |              |
+   +--------------+---------+--------------+------------+--------------+
+
+                                  Table 2
+
+   No position on this dial requires a per-request issuer call: the
+   tightest posture costs one lookup per staleness bound, amortized by
+   caching, and the loosest costs a clock.  The dial is the
+   architecture's freshness dial made concrete
+   ([I-D.draft-mcguinness-mission-architecture]), and the Enforcement
+   Scope Statement records the chosen position per class.
+
    The following are the RECOMMENDED default freshness postures per
    class, adopted absent a documented, consequence-specific analysis:
 
@@ -1355,7 +1407,7 @@ Table of Contents
       | Audit-only     | No active freshness required               |
       +----------------+--------------------------------------------+
 
-                                  Table 2
+                                  Table 3
 
    A deployment justifies any looser value for a high-consequence class
    in its Enforcement Scope Statement.
@@ -1573,7 +1625,7 @@ Table of Contents
    | administration   |                                                |
    +------------------+------------------------------------------------+
 
-                                  Table 3
+                                  Table 4
 
 8.3.  Single-Use Identifiers
 
@@ -1756,7 +1808,7 @@ Table of Contents
    | authority             |                                           |
    +-----------------------+-------------------------------------------+
 
-                                  Table 4
+                                  Table 5
 
 11.  Runtime Enforcement Evidence
 
@@ -2037,7 +2089,7 @@ Table of Contents
      |                        |                   | token lifetime   |
      +------------------------+-------------------+------------------+
 
-                                  Table 5
+                                  Table 6
 
 12.2.  Trifecta Containment
 
@@ -2127,7 +2179,7 @@ Table of Contents
    |                                   | declared outside the claim   |
    +-----------------------------------+------------------------------+
 
-                                 Table 6
+                                 Table 7
 
    These are the observable form of the requirements stated normatively
    above; a deployment's Enforcement Scope Statement (Section 4.2) names

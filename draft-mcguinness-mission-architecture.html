@@ -2533,6 +2533,27 @@ action-bound approval no longer authorizes the action it named.<a href="#section
 <p id="section-11.10-3">The horizons compose by minimum: reliance at any moment requires
 every applicable horizon to be open, and no horizon substitutes for
 another.<a href="#section-11.10-3" class="pilcrow">¶</a></p>
+<p id="section-11.10-4">The horizons also give the deployment its freshness dial, and the
+TTL-only end of that dial is a first-class posture, not a fallback.
+A deployment that relies on lifetimes alone verifies with local
+cryptography and a clock: no state source, no freshness discipline,
+no availability coupling, and a worst-case exposure equal to the
+lifetime by construction. That posture is the right choice at action
+grain, where an artifact lives seconds to minutes and no revocation
+can land inside its window, and for short missions; the family's own
+short-lived artifacts (the permit, the cross-domain grant, the Join
+Assertion) already sit at this end. What a lifetime cannot do is
+suspend, complete, or kill now, which is the task-grain residue the
+Mission's state carries. The two ends are one mechanism seen from
+opposite sides: a lifetime relocates the freshness check from the
+verification path to the issuance path, so every re-issuance is the
+policy re-check, which is the family's
+gates-new-derivation-only rule in its other reading. A deployment
+states where it sits on the dial through its bounded-revocation
+claim (<a href="#assurance-claims-axis" class="auto internal xref">Section 15.1</a>): a TTL-only posture claims the
+lifetime as its bound, honestly and with no state surface. The
+runtime profile prices each position, source by source, in its state
+and freshness section (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-11.10-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="binding-checklist">
@@ -3043,9 +3064,17 @@ condition:<a href="#section-14.2-1" class="pilcrow">¶</a></p>
 <p id="section-14.2-3">Every row shares the record, anchors, and lifecycle, so a ramp is an
 entry point, not a fork: Missions carry unchanged from any row to the
 rows a deployment adopts later.<a href="#section-14.2-3" class="pilcrow">¶</a></p>
-<p id="section-14.2-4">In sequence, the standalone mode runs submit, poll, approve, join,
-permit:<a href="#section-14.2-4" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-14.2-5">
+<p id="section-14.2-4">One ramp cuts across the rows: the <strong>short mission</strong>. A Mission whose
+<code>expires_at</code> sits minutes out, run in records mode with
+lifetime-bounded reliance, is a durable approval record with
+TTL-grade operational cost: audit, anchors, and bounded exposure
+with no state surface anywhere (<a href="#validity-model" class="auto internal xref">Section 11.10</a>). A deployment
+can adopt the family this way first, per task, and add state
+surfaces only where missions grow long enough to need suspend,
+complete, or kill-now.<a href="#section-14.2-4" class="pilcrow">¶</a></p>
+<p id="section-14.2-5">In sequence, the standalone mode runs submit, poll, approve, join,
+permit:<a href="#section-14.2-5" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-14.2-6">
 <pre>
  Client               MAS                Approver     PEP/PDP
    |                    |                  |            |
@@ -3074,38 +3103,38 @@ permit:<a href="#section-14.2-4" class="pilcrow">¶</a></p>
    |                    |                  |   evaluate |
    | 10 permit          |                  |            |
    |&lt;---------------------------------------------------|
-</pre><a href="#section-14.2-5" class="pilcrow">¶</a>
+</pre><a href="#section-14.2-6" class="pilcrow">¶</a>
 </div>
-<p id="section-14.2-6">The token in step 7 is an ordinary OAuth token from the unchanged AS;
+<p id="section-14.2-7">The token in step 7 is an ordinary OAuth token from the unchanged AS;
 steps 8 through 10 are the Mission Join and the runtime decision (the
 MAS's Mission Join section), and the MAS's staged walkthrough of the
 same flow is its end-to-end appendix
-(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-14.2-6" class="pilcrow">¶</a></p>
-<p id="section-14.2-7">The quarantine pattern removes a leg of the injection-to-exfiltration
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-14.2-7" class="pilcrow">¶</a></p>
+<p id="section-14.2-8">The quarantine pattern removes a leg of the injection-to-exfiltration
 chain instead of gating it: no single Mission ever holds untrusted
-input and an egress path at once.<a href="#section-14.2-7" class="pilcrow">¶</a></p>
+input and an egress path at once.<a href="#section-14.2-8" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-14.2-8.1">
-            <p id="section-14.2-8.1.1">Work that ingests untrusted content runs under a Mission with no
-external-communication or external-commitment authority.<a href="#section-14.2-8.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.2-9.1">
+            <p id="section-14.2-9.1.1">Work that ingests untrusted content runs under a Mission with no
+external-communication or external-commitment authority.<a href="#section-14.2-9.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.2-8.2">
-            <p id="section-14.2-8.2.1">Work that communicates externally runs under a separate Mission
-whose inputs are the quarantined product.<a href="#section-14.2-8.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.2-9.2">
+            <p id="section-14.2-9.2.1">Work that communicates externally runs under a separate Mission
+whose inputs are the quarantined product.<a href="#section-14.2-9.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.2-8.3">
-            <p id="section-14.2-8.3.1">The crossing between them, a human review or a deterministic
+          <li class="normal" id="section-14.2-9.3">
+            <p id="section-14.2-9.3.1">The crossing between them, a human review or a deterministic
 transformation, is recorded as evidence, under the harness taint
 policy (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) and, where
 claimed, the runtime profile's trifecta containment
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-14.2-8.3.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-14.2-9.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-14.2-9">Where the separation must hold within one Mission, the metering
+<p id="section-14.2-10">Where the separation must hold within one Mission, the metering
 profile's exclusivity control
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>) latches read-and-egress
-apart under a single approval.<a href="#section-14.2-9" class="pilcrow">¶</a></p>
-<p id="section-14.2-10">The <strong>standing-agent pattern</strong> governs the agent whose work never
+apart under a single approval.<a href="#section-14.2-10" class="pilcrow">¶</a></p>
+<p id="section-14.2-11">The <strong>standing-agent pattern</strong> governs the agent whose work never
 ends. The agent stands; the authority cycles: the standing thing is
 a charter, a Mission with a consented authority ceiling and drawdown
 policy (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>,
@@ -3114,16 +3143,16 @@ unit of work draws under it, as an in-ceiling successor or a
 policy-approved Child Mission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), each
 expiring and discharging as its unit completes
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-14.2-10" class="pilcrow">¶</a></p>
-<p id="section-14.2-11">The progressive profile's prohibited set keeps the high-consequence
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-14.2-11" class="pilcrow">¶</a></p>
+<p id="section-14.2-12">The progressive profile's prohibited set keeps the high-consequence
 classes on a fresh human approval inside the ceiling, and its
 Ceiling Review bounds the chain in time with an evidence-rendering
-renewal.<a href="#section-14.2-11" class="pilcrow">¶</a></p>
-<p id="section-14.2-12">Without the progressive profile the same pattern runs as ordinary,
+renewal.<a href="#section-14.2-12" class="pilcrow">¶</a></p>
+<p id="section-14.2-13">Without the progressive profile the same pattern runs as ordinary,
 freshly approved unit Missions with deferred approval
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>) absorbing the
 volume: the experimental profile changes the unit economics, not the
-governance shape.<a href="#section-14.2-12" class="pilcrow">¶</a></p>
+governance shape.<a href="#section-14.2-13" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

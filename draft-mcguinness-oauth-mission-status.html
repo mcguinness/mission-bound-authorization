@@ -2116,42 +2116,50 @@ additionally publish Mission state as a Status List
 (<span>[<a href="#I-D.draft-ietf-oauth-status-list" class="cite xref">I-D.draft-ietf-oauth-status-list</a>]</span>): a signed, compressed bit
 array in which each participating Mission holds an index, fetched
 once per freshness window and read locally per action.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">The arithmetic is the point. A fleet of 100,000 participating
+Missions at two bits per entry is 25,000 bytes before compression,
+and a mostly-<code>active</code> population compresses far below that; a
+consumer fetching that list once per 30-second window spends under a
+kilobyte per second to hold fresh state for every Mission it relies
+on, where per-Mission status reads would cost 100,000 requests per
+window. Fleet scale makes state freshness cheaper per Mission, not
+more expensive.<a href="#section-5-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5-2.1">
-          <p id="section-5-2.1.1"><strong>Reference.</strong> A participating Mission's <code>status_list</code> member
+<li class="normal" id="section-5-3.1">
+          <p id="section-5-3.1.1"><strong>Reference.</strong> A participating Mission's <code>status_list</code> member
 (<code>idx</code> and <code>uri</code>, the referenced-token shape of
 <span>[<a href="#I-D.draft-ietf-oauth-status-list" class="cite xref">I-D.draft-ietf-oauth-status-list</a>]</span>) rides the Mission Status
 Response and the introspection projection
 (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>, <a href="#introspection-projection" class="auto internal xref">Section 4</a>), so a
 consumer learns its index from the authoritative surface it
-already reads.<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
+already reads.<a href="#section-5-3.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-5-2.2">
-          <p id="section-5-2.2.1"><strong>Mapping.</strong> VALID (0x00) reports <code>active</code>; SUSPENDED (0x02)
+        <li class="normal" id="section-5-3.2">
+          <p id="section-5-3.2.1"><strong>Mapping.</strong> VALID (0x00) reports <code>active</code>; SUSPENDED (0x02)
 reports <code>suspended</code>; INVALID (0x01) reports every terminal state.
 A consumer treats any other value as non-active, per the fail-safe
 rule. The list carries reliance bits only: which terminal state, the
 <code>successor</code>, and the state version stay on this profile's
 authoritative surfaces, and a consumer that observes a bit other
-than VALID re-establishes state there before any further reliance.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+than VALID re-establishes state there before any further reliance.<a href="#section-5-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-5-2.3">
-          <p id="section-5-2.3.1"><strong>Freshness.</strong> The Status List Token's <code>ttl</code> and <code>exp</code> are a
+        <li class="normal" id="section-5-3.3">
+          <p id="section-5-3.3.1"><strong>Freshness.</strong> The Status List Token's <code>ttl</code> and <code>exp</code> are a
 published staleness bound: within them a VALID bit permits reliance
 exactly as a fresh Mission Status Response reporting <code>active</code> does,
 and an expired or unfetchable list is stale state, never permission
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). A committed lifecycle
 transition <span class="bcp14">MUST</span> be reflected in the next Status List Token
 published for its list, and where Signals runs, the event is the
-push complement to the list's pull floor.<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
+push complement to the list's pull floor.<a href="#section-5-3.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-5-2.4">
-          <p id="section-5-2.4.1"><strong>Privacy.</strong> Index assignment <span class="bcp14">MUST NOT</span> be derivable from or
+        <li class="normal" id="section-5-3.4">
+          <p id="section-5-3.4.1"><strong>Privacy.</strong> Index assignment <span class="bcp14">MUST NOT</span> be derivable from or
 correlatable with the Mission Identifier, and the list conveys bits
 at opaque indices only, so publishing it preserves this profile's
 anti-oracle posture (<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.6</a>) while the
 fetch itself, covering every index at once, reveals no per-Mission
-interest.<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
+interest.<a href="#section-5-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
