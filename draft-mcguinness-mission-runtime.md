@@ -46,6 +46,8 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-rosomakho-oauth-txn-challenge:
+  I-D.draft-jiang-oauth-intent-admission:
   I-D.draft-mcguinness-mission-security-model:
     title: "Mission Security Model"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html
@@ -801,6 +803,26 @@ with the AuthZEN Access Request and Approval Profile for exactly this
 bearer grant: the runtime decision of {{decision}} remains
 authoritative, and a persisted grant beyond the single action is a
 Mission expansion, not a property of the approval itself.
+
+Two proposed OAuth-native transports are converging on this same
+per-action moment, and both compose here rather than compete. The
+transaction authorization challenge
+({{I-D.draft-rosomakho-oauth-txn-challenge}}) has the protected
+resource return a signed challenge that the client presents to the
+AS, which obtains approval and issues a token whose
+`authorization_details` describe the approved operation; under a
+Mission, the approval event is the policy behind that challenge, the
+Authority Set bounds what any challenge can be approved into, and
+Consent Evidence is its record. The intent admission assertion
+({{I-D.draft-jiang-oauth-intent-admission}}) has an admission point
+sign a short-lived assertion binding an intent digest, its
+originator, an authorized presenter key, and consent evidence, which
+the executing endpoint re-verifies; a Mission-governed admission
+point evaluates against the Authority Set, and its
+consent-by-prior-grant case is exactly a reference to the Mission's
+committed anchors. In both compositions the durable record this
+family defines is what makes the per-action artifact accountable to
+an approved task rather than to policy alone.
 
 ## PEP Placement {#pep-placement}
 

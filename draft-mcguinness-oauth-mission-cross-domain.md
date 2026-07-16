@@ -47,6 +47,13 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-araut-oauth-transaction-tokens-for-agents:
+  MCP:
+    title: "Model Context Protocol: Authorization"
+    target: https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization
+    author:
+      - org: Model Context Protocol Project
+    date: 2025
   I-D.draft-ietf-oauth-transaction-tokens:
   I-D.draft-fletcher-transaction-token-chaining-profile:
   I-D.draft-mcguinness-oauth-id-assertion-framework:
@@ -225,6 +232,12 @@ MAY be used instead. Where a requirement elsewhere in this document
 names the ID-JAG, it is illustrating with the recommended profile and
 applies equally to any conforming cross-domain grant.
 
+The grant shape this document profiles is already deployed: the
+Model Context Protocol's Cross App Access extension carries the same
+Identity Assertion JWT Authorization Grant between enterprise
+identity providers and MCP applications ({{MCP}}), a shipped surface
+for the pattern this profile attaches Mission context to.
+
 This document is a thin Mission-bound profile of the cross-domain
 grant, not merely `mission`-claim carriage: beyond attaching and
 validating Mission context, it imposes two security requirements on the
@@ -317,6 +330,15 @@ follows:
   Mission reference onward as evidence only, and a third domain that
   must honor the Mission needs its own projection from the
   originating issuer.
+
+The same composition extends to the proposed agent profile of
+Transaction Tokens
+({{I-D.draft-araut-oauth-transaction-tokens-for-agents}}), whose
+`agentic_ctx` member carries roles, intent, and constraints along
+the call chain. The `mission` claim object is the natural anchor to
+carry there, inert as evidence exactly as in the chaining profile
+above, so call-chain intent context stays joined to the committed
+record instead of growing an unanchored twin of it.
 
 # Pre-Established Trust {#pre-established-trust}
 
