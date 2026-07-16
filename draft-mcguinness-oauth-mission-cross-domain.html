@@ -1407,7 +1407,12 @@ grant profile that meets the requirements of <a href="#cross-domain-grant" class
         <span class="bcp14">MAY</span> be used instead. Where a requirement elsewhere in this document
 names the ID-JAG, it is illustrating with the recommended profile and
 applies equally to any conforming cross-domain grant.<a href="#section-4-2" class="pilcrow">¶</a></p>
-<p id="section-4-3">This document is a thin Mission-bound profile of the cross-domain
+<p id="section-4-3">The grant shape this document profiles is already deployed: the
+Model Context Protocol's Cross App Access extension carries the same
+Identity Assertion JWT Authorization Grant between enterprise
+identity providers and MCP applications (<span>[<a href="#MCP" class="cite xref">MCP</a>]</span>), a shipped surface
+for the pattern this profile attaches Mission context to.<a href="#section-4-3" class="pilcrow">¶</a></p>
+<p id="section-4-4">This document is a thin Mission-bound profile of the cross-domain
 grant, not merely <code>mission</code>-claim carriage: beyond attaching and
 validating Mission context, it imposes two security requirements on the
 grant for Mission-bound use, proof-of-possession and single use
@@ -1415,14 +1420,14 @@ grant for Mission-bound use, proof-of-possession and single use
 own format, signing, and token-exchange envelope remain defined by the
 cross-domain grant profile (ID-JAG in the recommended case) and its
 underlying <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> and <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>; this document does not redefine
-them.<a href="#section-4-3" class="pilcrow">¶</a></p>
-<p id="section-4-4">The two added requirements are a floor: the grant's position at the
+them.<a href="#section-4-4" class="pilcrow">¶</a></p>
+<p id="section-4-5">The two added requirements are a floor: the grant's position at the
 trust boundary demands them (<a href="#grant-at-boundary" class="auto internal xref">Section 14.2</a>), and its profile
-does not by itself guarantee them.<a href="#section-4-4" class="pilcrow">¶</a></p>
-<p id="section-4-5">In this model there is exactly one Mission Issuer per Mission (the
+does not by itself guarantee them.<a href="#section-4-5" class="pilcrow">¶</a></p>
+<p id="section-4-6">In this model there is exactly one Mission Issuer per Mission (the
 <code>issuer</code>) and one or more <strong>Resource ASes</strong> in other domains that
 mint their own tokens for their resources. A Resource AS is never the
-Mission Issuer and <span class="bcp14">MUST NOT</span> create or alter a Mission.<a href="#section-4-5" class="pilcrow">¶</a></p>
+Mission Issuer and <span class="bcp14">MUST NOT</span> create or alter a Mission.<a href="#section-4-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="what-crosses">
@@ -1512,6 +1517,14 @@ must honor the Mission needs its own projection from the
 originating issuer.<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
+<p id="section-6-3">The same composition extends to the proposed agent profile of
+Transaction Tokens
+(<span>[<a href="#I-D.draft-araut-oauth-transaction-tokens-for-agents" class="cite xref">I-D.draft-araut-oauth-transaction-tokens-for-agents</a>]</span>), whose
+<code>agentic_ctx</code> member carries roles, intent, and constraints along
+the call chain. The <code>mission</code> claim object is the natural anchor to
+carry there, inert as evidence exactly as in the chaining profile
+above, so call-chain intent context stays joined to the committed
+record instead of growing an unanchored twin of it.<a href="#section-6-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pre-established-trust">
@@ -2266,6 +2279,10 @@ registered by the issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-m
 <a href="#section-17.2" class="section-number selfRef">17.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-araut-oauth-transaction-tokens-for-agents">[I-D.draft-araut-oauth-transaction-tokens-for-agents]</dt>
+        <dd>
+<span class="refAuthor">Raut, A.</span>, <span class="refTitle">"Transaction Tokens For Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-araut-oauth-transaction-tokens-for-agents-02</span>, <time datetime="2026-05-21" class="refDate">21 May 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-araut-oauth-transaction-tokens-for-agents-02">https://datatracker.ietf.org/doc/html/draft-araut-oauth-transaction-tokens-for-agents-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-fletcher-transaction-token-chaining-profile">[I-D.draft-fletcher-transaction-token-chaining-profile]</dt>
         <dd>
 <span class="refAuthor">Fletcher, G.</span>, <span class="refAuthor">Kasselman, P.</span>, and <span class="refAuthor">S. O'Dell</span>, <span class="refTitle">"Transaction Token Authorization Grant Profile for OAuth Identity and Authorization Chaining"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-fletcher-transaction-token-chaining-profile-02</span>, <time datetime="2026-07-06" class="refDate">6 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-fletcher-transaction-token-chaining-profile-02">https://datatracker.ietf.org/doc/html/draft-fletcher-transaction-token-chaining-profile-02</a>&gt;</span>. </dd>
@@ -2303,8 +2320,12 @@ registered by the issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-m
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="MCP">[MCP]</dt>
+      <dd>
+<span class="refAuthor">Model Context Protocol Project</span>, <span class="refTitle">"Model Context Protocol: Authorization"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization">https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>

@@ -2267,6 +2267,25 @@ with the AuthZEN Access Request and Approval Profile for exactly this
 bearer grant: the runtime decision of <a href="#decision" class="auto internal xref">Section 7</a> remains
 authoritative, and a persisted grant beyond the single action is a
 Mission expansion, not a property of the approval itself.<a href="#section-4.4-6" class="pilcrow">¶</a></p>
+<p id="section-4.4-7">Two proposed OAuth-native transports are converging on this same
+per-action moment, and both compose here rather than compete. The
+transaction authorization challenge
+(<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span>) has the protected
+resource return a signed challenge that the client presents to the
+AS, which obtains approval and issues a token whose
+<code>authorization_details</code> describe the approved operation; under a
+Mission, the approval event is the policy behind that challenge, the
+Authority Set bounds what any challenge can be approved into, and
+Consent Evidence is its record. The intent admission assertion
+(<span>[<a href="#I-D.draft-jiang-oauth-intent-admission" class="cite xref">I-D.draft-jiang-oauth-intent-admission</a>]</span>) has an admission point
+sign a short-lived assertion binding an intent digest, its
+originator, an authorized presenter key, and consent evidence, which
+the executing endpoint re-verifies; a Mission-governed admission
+point evaluates against the Authority Set, and its
+consent-by-prior-grant case is exactly a reference to the Mission's
+committed anchors. In both compositions the durable record this
+family defines is what makes the per-action artifact accountable to
+an approved task rather than to policy alone.<a href="#section-4.4-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pep-placement">
@@ -4450,6 +4469,10 @@ any decision-API wire members are defined by the binding
         <dd>
 <span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID AuthZEN Authorization API 1.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://openid.net/specs/authorization-api-1_0-final.html">https://openid.net/specs/authorization-api-1_0-final.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-jiang-oauth-intent-admission">[I-D.draft-jiang-oauth-intent-admission]</dt>
+        <dd>
+<span class="refAuthor">Jiang, Y.</span>, <span class="refAuthor">Lun, L.</span>, <span class="refAuthor">Song, Y.</span>, and <span class="refAuthor">F. Liu</span>, <span class="refTitle">"Intent Admission Assertions for Agentic Systems"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-jiang-oauth-intent-admission-00</span>, <time datetime="2026-06-23" class="refDate">23 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-jiang-oauth-intent-admission-00">https://datatracker.ietf.org/doc/html/draft-jiang-oauth-intent-admission-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-aauth">[I-D.draft-mcguinness-mission-aauth]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
@@ -4529,6 +4552,10 @@ any decision-API wire members are defined by the binding
 <dt id="I-D.draft-niyikiza-oauth-attenuating-agent-tokens">[I-D.draft-niyikiza-oauth-attenuating-agent-tokens]</dt>
         <dd>
 <span class="refAuthor">Aimable, N.</span>, <span class="refTitle">"Attenuating Authorization Tokens for Agentic Delegation Chains"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-niyikiza-oauth-attenuating-agent-tokens-01</span>, <time datetime="2026-06-15" class="refDate">15 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-01">https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-01</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-rosomakho-oauth-txn-challenge">[I-D.draft-rosomakho-oauth-txn-challenge]</dt>
+        <dd>
+<span class="refAuthor">Rosomakho, Y.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">McGuinness, K.</span>, and <span class="refAuthor">P. Kasselman</span>, <span class="refTitle">"OAuth Transaction Authorization Challenge"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-rosomakho-oauth-txn-challenge-00</span>, <time datetime="2026-06-25" class="refDate">25 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-rosomakho-oauth-txn-challenge-00">https://datatracker.ietf.org/doc/html/draft-rosomakho-oauth-txn-challenge-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9470">[RFC9470]</dt>
       <dd>
