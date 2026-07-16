@@ -1,0 +1,2787 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Expansion for OAuth 2.0</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       Mission-Bound Authorization for OAuth 2.0 commits a Mission's
+authority at a single approval event and defers widening: enlarging
+authority requires a new approval, a successor Mission. This document
+defines that successor mechanism as an optional, layered extension to
+the issuance profile. When an action falls outside an active Mission's
+Authority Set but the deployment's governance policy permits widening,
+a client initiates expansion: it submits a new Mission Intent through
+Pushed Authorization Requests, bound to the predecessor Mission's
+grant, and a fresh approval event records a successor Mission. The
+successor carries a  predecessor  member on its  mission  claim
+linking it to the Mission it replaces; on the successor's first
+redemption it activates and the predecessor enters a terminal
+ superseded  state, so an unredeemed code leaves the predecessor
+active. Expansion never
+widens authority without a new consent: the successor's authority
+comes only from its own approval. A deployment that never expands a
+Mission is unaffected by this document. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="expansion" name="keyword">
+<meta content="draft-mcguinness-oauth-mission-expansion-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-oauth-mission-expansion.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">OAuth Mission Expansion</td>
+<td class="right">July 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 17 January 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Web Authorization Protocol</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-oauth-mission-expansion-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-07-16" class="published">16 July 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-01-17">17 January 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Expansion for OAuth 2.0</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">Mission-Bound Authorization for OAuth 2.0 commits a Mission's
+authority at a single approval event and defers widening: enlarging
+authority requires a new approval, a successor Mission. This document
+defines that successor mechanism as an optional, layered extension to
+the issuance profile. When an action falls outside an active Mission's
+Authority Set but the deployment's governance policy permits widening,
+a client initiates expansion: it submits a new Mission Intent through
+Pushed Authorization Requests, bound to the predecessor Mission's
+grant, and a fresh approval event records a successor Mission. The
+successor carries a <code>predecessor</code> member on its <code>mission</code> claim
+linking it to the Mission it replaces; on the successor's first
+redemption it activates and the predecessor enters a terminal
+<code>superseded</code> state, so an unredeemed code leaves the predecessor
+active. Expansion never
+widens authority without a new consent: the successor's authority
+comes only from its own approval. A deployment that never expands a
+Mission is unaffected by this document.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-expansion/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-expansion/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 17 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-status-an-optional-extensio" class="internal xref">Status: an optional extension</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
+                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-relationship-to-the-issuanc" class="internal xref">Relationship to the issuance profile</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3">
+                <p id="section-toc.1-1.1.2.3.1" class="keepWithNext"><a href="#section-1.3" class="auto internal xref">1.3</a>.  <a href="#name-scope" class="internal xref">Scope</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-expansion-overview" class="internal xref">Expansion Overview</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-protocol-flow" class="internal xref">Protocol flow</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-eligibility" class="internal xref">Eligibility</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-expansion-is-not-step-up" class="internal xref">Expansion is not step-up</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-the-expansion-request" class="internal xref">The Expansion Request</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-submission-via-par" class="internal xref">Submission via PAR</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-binding-the-request-to-the-" class="internal xref">Binding the request to the predecessor's grant</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-predecessor-must-be-active" class="internal xref">Predecessor must be active</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-adjudication" class="internal xref">Adjudication</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-successor-expiry" class="internal xref">Successor expiry</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-the-predecessor-mission-ref" class="internal xref">The Predecessor Mission Reference</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-the-superseded-predecessor-" class="internal xref">The Superseded Predecessor State</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-no-implicit-rollback" class="internal xref">No implicit rollback</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-replacement-expansion" class="internal xref">Replacement Expansion</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-concurrent-expansion-reconc" class="internal xref">Concurrent Expansion Reconciliation</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-expansion-denial-reasons" class="internal xref">Expansion Denial Reasons</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-predecessor-confusion" class="internal xref">Predecessor confusion</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-authority-comes-only-from-n" class="internal xref">Authority comes only from new consent</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.3">
+                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-race-against-predecessor-li" class="internal xref">Race against predecessor lifecycle</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.4">
+                <p id="section-toc.1-1.13.2.4.1"><a href="#section-13.4" class="auto internal xref">13.4</a>.  <a href="#name-expansion-versus-step-up" class="internal xref">Expansion versus step-up</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.5">
+                <p id="section-toc.1-1.13.2.5.1"><a href="#section-13.5" class="auto internal xref">13.5</a>.  <a href="#name-policy-probing" class="internal xref">Policy probing</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.6">
+                <p id="section-toc.1-1.13.2.6.1"><a href="#section-13.6" class="auto internal xref">13.6</a>.  <a href="#name-audit-linkage" class="internal xref">Audit linkage</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-predecessor-chain-correlati" class="internal xref">Predecessor-chain correlation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-disclosure-of-the-broadened" class="internal xref">Disclosure of the broadened task</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#section-17" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.1">
+                <p id="section-toc.1-1.17.2.1.1"><a href="#section-17.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.2">
+                <p id="section-toc.1-1.17.2.2.1"><a href="#section-17.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">Mission-Bound Authorization for OAuth 2.0
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") makes
+a Mission a first-class OAuth artifact: a structured, human-approved,
+integrity-bound task whose authority bounds and outlives every token
+an agent derives. It commits the Authority Set once, at the approval
+event, and deliberately defines no mid-stream authorization upgrade.
+As that profile states, widening authority requires a new approval, a
+successor Mission, as specified by this companion profile.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document is that successor mechanism. A task an agent pursues
+does not always stay within the authority approved for it: the agent
+encounters an action the approved Authority Set does not cover, yet
+one the deployment's governance policy would permit under a fresh
+consent. Expansion is the governed path from that shortfall to a new
+approval. It does not patch or widen the existing Mission; it creates
+a new Mission, through the issuance profile's own flow, linked to the
+one it replaces.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The mechanism reuses the issuance profile end to end. An expansion is
+a new Mission Intent submitted through Pushed Authorization Requests
+(<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>), bound to the predecessor Mission's grant, leading to a
+fresh approval event (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) with its
+own <code>intent_hash</code>, <code>authority_hash</code>, and Mission record. The
+successor's authority comes only from that approval. This document
+adds exactly three things on top of the issuance profile: a way to
+bind an expansion request to the predecessor it expands; a
+<code>predecessor</code> lineage member on the resulting Mission; and a terminal
+<code>superseded</code> predecessor state with the reconciliation rules that keep
+concurrent expansions consistent.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<div id="optional-status">
+<section id="section-1.1">
+        <h3 id="name-status-an-optional-extensio">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-status-an-optional-extensio" class="section-name selfRef">Status: an optional extension</a>
+        </h3>
+<p id="section-1.1-1">This document is optional. It is a layered extension to the issuance
+profile, not a change to it. A deployment that implements
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and never expands a Mission is
+fully conformant to that profile and is unaffected by this document:
+it issues no expansion request, records no <code>predecessor</code> member, and
+never enters the <code>superseded</code> state this document introduces. The
+issuance profile's lifecycle (<code>active</code>, <code>revoked</code>, <code>expired</code>) is
+complete without expansion; the <code>superseded</code> state defined here
+(<a href="#superseded-state" class="auto internal xref">Section 7</a>) is relevant only when expansion is used.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<p id="section-1.1-2">A Mission Issuer claims conformance to this document only when it
+adjudicates expansion; otherwise it remains a plain issuance-profile
+Mission Issuer. Nothing here places a new requirement back on the
+issuance profile.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="relationship">
+<section id="section-1.2">
+        <h3 id="name-relationship-to-the-issuanc">
+<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-relationship-to-the-issuanc" class="section-name selfRef">Relationship to the issuance profile</a>
+        </h3>
+<p id="section-1.2-1">This document depends normatively on the issuance profile and is not
+implementable alone. It reuses, without restating, that profile's
+Mission Intent, submission via PAR, authority
+derivation, approval event with its integrity anchors, Mission record,
+the <code>mission</code> claim, the subset rule, and the lifecycle and issuance
+gating. It uses the terms Agent (Client), Subject, Approver, Mission
+Issuer, Mission Intent, Authority Set, Mission, and derived token as
+defined there.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
+<p id="section-1.2-2">Where this document refers to "the issuance profile" without a section,
+it means <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> as a whole.<a href="#section-1.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="scope">
+<section id="section-1.3">
+        <h3 id="name-scope">
+<a href="#section-1.3" class="section-number selfRef">1.3. </a><a href="#name-scope" class="section-name selfRef">Scope</a>
+        </h3>
+<p id="section-1.3-1">This document defines:<a href="#section-1.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1.3-2.1">
+            <p id="section-1.3-2.1.1">the expansion request: how a client initiates a successor Mission
+and how that request is bound to the predecessor's grant
+(<a href="#expansion-request" class="auto internal xref">Section 4</a>);<a href="#section-1.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.3-2.2">
+            <p id="section-1.3-2.2.1">the <code>predecessor</code> lineage member on the successor's <code>mission</code> claim
+and Mission record (<a href="#predecessor-member" class="auto internal xref">Section 6</a>);<a href="#section-1.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.3-2.3">
+            <p id="section-1.3-2.3.1">the terminal <code>superseded</code> predecessor state and its transition
+(<a href="#superseded-state" class="auto internal xref">Section 7</a>);<a href="#section-1.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.3-2.4">
+            <p id="section-1.3-2.4.1">replacement expansion as the mode, with branch expansion deferred
+(<a href="#replacement" class="auto internal xref">Section 8</a>);<a href="#section-1.3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.3-2.5">
+            <p id="section-1.3-2.5.1">concurrent-expansion reconciliation, with a closed set of
+reconciliation status codes (<a href="#reconciliation" class="auto internal xref">Section 9</a>); and<a href="#section-1.3-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.3-2.6">
+            <p id="section-1.3-2.6.1">the expansion denial reasons (<a href="#denial-reasons" class="auto internal xref">Section 10</a>).<a href="#section-1.3-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-1.3-3">This document does NOT define:<a href="#section-1.3-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1.3-4.1">
+            <p id="section-1.3-4.1.1">a way to widen an existing Mission in place; expansion always
+creates a new Mission;<a href="#section-1.3-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.3-4.2">
+            <p id="section-1.3-4.2.1">runtime per-action enforcement or the classification of a denial as
+expansion-eligible; that is the runtime layer's concern
+(<a href="#eligibility" class="auto internal xref">Section 3.2</a>, <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>);<a href="#section-1.3-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.3-4.3">
+            <p id="section-1.3-4.3.1">branch expansion, in which predecessor and successor both remain
+active (<a href="#replacement" class="auto internal xref">Section 8</a>);<a href="#section-1.3-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.3-4.4">
+            <p id="section-1.3-4.4.1">multi-hop or cross-domain expansion; an expansion is adjudicated by
+the predecessor's Mission Issuer (its <code>issuer</code>); or<a href="#section-1.3-4.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.3-4.5">
+            <p id="section-1.3-4.5.1">policy-adjudicated expansion within a pre-consented authority
+ceiling; that is progressive authorization, defined by an
+experimental companion
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>). Under this
+document alone, every expansion is adjudicated by a fresh human
+approval.<a href="#section-1.3-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="conventions-and-terminology">
+<section id="section-2">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">All JSON shown in this document is non-normative and illustrative; the
+member definitions in the surrounding text are authoritative.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">The following terms apply in addition to those inherited from the
+issuance profile (<a href="#relationship" class="auto internal xref">Section 1.2</a>).<a href="#section-2-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-4">
+        <dt id="section-2-4.1">Predecessor Mission:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.2">
+          <p id="section-2-4.2.1">The active Mission an expansion enlarges. It is the baseline for the
+successor and is referenced by the successor's <code>mission.predecessor</code>
+member (<a href="#predecessor-member" class="auto internal xref">Section 6</a>).<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.3">Successor Mission:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.4">
+          <p id="section-2-4.4.1">The Mission a replacement expansion creates through a fresh approval
+event. It carries its own Authority Set, integrity anchors, and
+<code>mission_id</code>, and a <code>predecessor</code> member linking it to the
+predecessor (<a href="#predecessor-member" class="auto internal xref">Section 6</a>).<a href="#section-2-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.5">Expansion request:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.6">
+          <p id="section-2-4.6.1">A Mission Intent submitted via PAR, bound to a predecessor Mission's
+grant, that asks the Mission Issuer to adjudicate a successor
+(<a href="#expansion-request" class="auto internal xref">Section 4</a>).<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="expansion-overview">
+<section id="section-3">
+      <h2 id="name-expansion-overview">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-expansion-overview" class="section-name selfRef">Expansion Overview</a>
+      </h2>
+<div id="protocol-flow">
+<section id="section-3.1">
+        <h3 id="name-protocol-flow">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-protocol-flow" class="section-name selfRef">Protocol flow</a>
+        </h3>
+<div class="alignLeft art-text artwork" id="section-3.1-1">
+<pre>
+ Agent (client)               Mission Issuer (AS)
+     |                            |
+     | denied: action outside     |
+     | active Mission's authority |
+     |                            |
+     | 1. PAR: mission_intent +   | resolve predecessor
+     |    predecessor grant -----&gt; | from the grant;
+     |    &lt;----- request_uri ----- | gate predecessor active
+     |                            |
+     | 2. authorization request -&gt;| fresh consent for the
+     |                            | broader authority;
+     |    &lt;-------- code --------- | predecessor stays active
+     |                            |
+     | 3. token request --------&gt; | first redemption:
+     |    (redeem code)           | -&gt; successor active
+     |                            |    -&gt; predecessor
+     |                            |       superseded (atomic)
+     |    &lt;----- access token ---- | (mission.predecessor set)
+     v
+</pre><a href="#section-3.1-1" class="pilcrow">¶</a>
+</div>
+<p id="section-3.1-2">The shape is the issuance profile's own creation flow
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), with one addition at step 1:
+the request is bound to the predecessor Mission's grant, so the
+Mission Issuer adjudicates a successor of a specific predecessor rather
+than an unrelated new Mission. The fresh consent at step 2 is what
+supplies the broader authority; the successor's authority comes only
+from this approval. Supersession is deferred to step 3: the successor
+activates and the predecessor becomes <code>superseded</code> atomically at the
+first redemption of the successor's authorization code, so an
+unredeemed or expired code leaves the predecessor <code>active</code>
+(<a href="#superseded-state" class="auto internal xref">Section 7</a>).<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="eligibility">
+<section id="section-3.2">
+        <h3 id="name-eligibility">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-eligibility" class="section-name selfRef">Eligibility</a>
+        </h3>
+<p id="section-3.2-1">A client initiates expansion after an action is denied because the
+requested authority is outside the active Mission's Authority Set and
+the deployment's governance policy permits widening it. This document
+does not define how a denial is classified as expansion-eligible; that
+classification belongs to the component that denies the action.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<p id="section-3.2-2">A Mission-aware Resource Server enforces the token's authority
+statelessly and refuses an out-of-bounds action with its usual
+insufficient-authority error (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).
+The runtime enforcement profile
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> is one source of an
+expansion-eligible denial: in that profile a deny is terminal for the
+attempted action, and the authority-expandable-denial escalation that
+turns such a deny into an expansion is named there as out of scope.
+This document defines that expansion. This document does not require any
+particular denial source: a client that knows, by any means, that an
+action needs authority the active Mission lacks <span class="bcp14">MAY</span> initiate expansion.
+Whether the Mission Issuer adjudicates a successor remains its decision
+(<a href="#adjudication" class="auto internal xref">Section 5</a>); an eligible denial is not an authorization in favor
+of expansion.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="not-step-up">
+<section id="section-3.3">
+        <h3 id="name-expansion-is-not-step-up">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-expansion-is-not-step-up" class="section-name selfRef">Expansion is not step-up</a>
+        </h3>
+<p id="section-3.3-1">Expansion is a governance operation. It is distinct from
+authentication step-up <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>. A request denied because an <code>acr</code>
+or <code>amr</code> constraint requires fresh authentication is satisfied by
+step-up, not by expansion: the Authority Set does not change. A
+request denied because the requested authority is not in the active
+Mission's Authority Set requires expansion: the Authority Set must be
+enlarged through a new approval event. The two are not interchangeable;
+<a href="#step-up-distinction" class="auto internal xref">Section 13.4</a> treats the security consequence of conflating
+them.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="expansion-request">
+<section id="section-4">
+      <h2 id="name-the-expansion-request">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-the-expansion-request" class="section-name selfRef">The Expansion Request</a>
+      </h2>
+<p id="section-4-1">An expansion request is an ordinary Mission creation request under the
+issuance profile, with one added binding to the predecessor.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<div id="submission">
+<section id="section-4.1">
+        <h3 id="name-submission-via-par">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-submission-via-par" class="section-name selfRef">Submission via PAR</a>
+        </h3>
+<p id="section-4.1-1">A client initiates an expansion exactly as it creates any Mission: it
+submits a Mission Intent through a Pushed Authorization Request
+(<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>) using the <code>mission_intent</code> request parameter, per
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. The Mission Intent describes
+the broadened task: it carries the <code>goal</code>, <code>resources</code>, <code>constraints</code>,
+and <code>controls</code> the successor needs, including the authority the denied
+action required. The Mission Issuer derives the successor's Authority
+Set from this Intent and bounds it by policy exactly as for any
+Mission; this document adds no authority-derivation rule.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">To mark the request as an expansion, the client additionally supplies
+the <code>predecessor</code> request parameter:<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.1-3">
+          <dt id="section-4.1-3.1">
+<code>predecessor</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-3.2">
+            <p id="section-4.1-3.2.1"><span class="bcp14">REQUIRED</span> for an expansion request. A string. The <code>mission_id</code> of the
+predecessor Mission the successor expands. Its presence signals that
+this Mission creation is an expansion and names the predecessor whose
+<code>mission.predecessor</code> lineage member and <code>superseded</code> transition the
+Mission Issuer applies. It names the predecessor for cross-checking
+and audit; it does not by itself select or authorize one (the grant
+does, <a href="#request-binding" class="auto internal xref">Section 4.2</a>).<a href="#section-4.1-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-3.3">
+<code>predecessor_token</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-3.4">
+            <p id="section-4.1-3.4.1"><span class="bcp14">REQUIRED</span> for an expansion request. A string. The predecessor
+Mission's refresh token, presented as proof that the client controls
+the predecessor's grant. The Mission Issuer resolves the predecessor
+from this token and binds the expansion to it (<a href="#request-binding" class="auto internal xref">Section 4.2</a>);
+this value, not <code>predecessor</code>, selects the predecessor
+authoritatively.<a href="#section-4.1-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-4.1-4">Both parameters are carried through PAR with <code>mission_intent</code>. Like
+<code>mission_intent</code>, an AS <span class="bcp14">MUST</span> reject a <code>predecessor</code> or
+<code>predecessor_token</code> value presented directly on a front-channel
+authorization request rather than through a PAR-issued <code>request_uri</code>
+with <code>invalid_request</code>. Because <code>predecessor_token</code> carries a refresh
+token, it <span class="bcp14">MUST</span> be sent only on the PAR back channel and <span class="bcp14">MUST NOT</span>
+appear on any front channel.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
+<p id="section-4.1-5">The <code>predecessor</code> parameter names the predecessor but does not
+by itself authorize expanding it. Authorization comes from the grant
+binding of <a href="#request-binding" class="auto internal xref">Section 4.2</a>: a client <span class="bcp14">MUST NOT</span> be able to expand a
+Mission merely by naming its <code>mission_id</code>.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="request-binding">
+<section id="section-4.2">
+        <h3 id="name-binding-the-request-to-the-">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-binding-the-request-to-the-" class="section-name selfRef">Binding the request to the predecessor's grant</a>
+        </h3>
+<p id="section-4.2-1">The issuance profile binds a Mission to the authorization grant the
+Mission Issuer issues, and resolves the Mission from the grant the
+client presents, never from a client-supplied <code>mission_id</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, grant binding). An expansion
+request <span class="bcp14">MUST</span> be bound to the predecessor's grant the same way.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">Because expansion runs as an interactive approval event, a PAR
+submission followed by an authorization-code flow (<a href="#adjudication" class="auto internal xref">Section 5</a>),
+the binding is established at the PAR submission, a back-channel
+request. The binding procedure is:<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4.2-3">
+<li id="section-4.2-3.1">
+            <p id="section-4.2-3.1.1">In the same PAR request that carries <code>mission_intent</code> and
+<code>predecessor</code>, the client <span class="bcp14">MUST</span> present the predecessor Mission's
+refresh token in the <code>predecessor_token</code> parameter
+(<a href="#submission" class="auto internal xref">Section 4.1</a>).<a href="#section-4.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.2-3.2">
+            <p id="section-4.2-3.2.1">The expansion <span class="bcp14">MUST</span> rest on an authenticated proof of control over
+the predecessor's grant: a confidential client supplies this by
+authenticating to the PAR endpoint; a public client's proof is a
+sender-constrained <code>predecessor_token</code>, as required below.<a href="#section-4.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.2-3.3">
+            <p id="section-4.2-3.3.1">The Mission Issuer <span class="bcp14">MUST</span> resolve the predecessor from the presented
+refresh token, applying the same grant-to-Mission resolution the
+issuance profile uses for a presented refresh token.<a href="#section-4.2-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.2-3.4">
+            <p id="section-4.2-3.4.1">The Mission Issuer <span class="bcp14">MUST</span> verify that the resolved Mission is the
+Mission named in <code>predecessor</code>.<a href="#section-4.2-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-4.2-4">PAR permits a public client to submit without client authentication
+(<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>), so a public client's expansion rests solely on the
+presented <code>predecessor_token</code>. That token <span class="bcp14">MUST</span> be sender-constrained
+(<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> or <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) so it is not a bearer proof. The Mission
+Issuer <span class="bcp14">MUST</span> reject a public-client expansion whose <code>predecessor_token</code>
+is not sender-constrained with <code>invalid_request</code>.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+<p id="section-4.2-5">Establishing the binding at PAR, before the approval event, is
+deliberate: the Mission Issuer resolves the predecessor from a real
+grant and confirms it is active and owned by this client before
+prompting the Approver. A client that merely names a <code>mission_id</code> it
+does not hold a grant for cannot reach the consent step, so expansion
+cannot be used to drive approval prompts against another party's
+Mission.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
+<p id="section-4.2-6">The grant, not the identifier, determines the predecessor. The Mission
+Issuer <span class="bcp14">MUST</span> refuse an expansion request whose <code>predecessor</code>
+value does not match the Mission resolved from the presented grant,
+with <code>invalid_grant</code>. A client that does not hold a grant for the named
+predecessor cannot present its refresh token and so cannot expand it.<a href="#section-4.2-6" class="pilcrow">¶</a></p>
+<p id="section-4.2-7">Stated as the eligibility rule rather than a consequence: this
+profile's expansion requires a refresh-token-bearing grant, and a
+deployment that issues no refresh token for a Mission forgoes it.
+Nothing else is lost. Succession stays reachable through a fresh
+approval, a new Mission whose disclosure references the work it
+continues, since the successor's authority comes only from the fresh
+consent in any case; and the Subject or an administrator acts on the
+predecessor at the management plane regardless, whose standing is
+the authenticated principal, never a token's possession
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). The grant proof
+gates the proposal channel (who may put an expansion wearing this
+predecessor's name in front of the Approver, and who may trigger the
+atomic supersession), never the authority: no proof failure can
+widen anything.<a href="#section-4.2-7" class="pilcrow">¶</a></p>
+<p id="section-4.2-8">Presenting the predecessor's refresh token in the PAR request <span class="bcp14">MUST</span>
+follow the issuance profile's handling for that token:<a href="#section-4.2-8" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4.2-9">
+<li id="section-4.2-9.1">
+            <p id="section-4.2-9.1.1">A sender-constrained refresh token <span class="bcp14">MUST</span> be presented in conformance
+with its sender constraint. When the token is DPoP-bound
+<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, the PAR request <span class="bcp14">MUST</span> carry a DPoP proof bound to the
+PAR endpoint (its <code>htu</code> and <code>htm</code>); when it is mTLS-bound
+<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>, the mutual-TLS connection of the PAR request satisfies
+the constraint.<a href="#section-4.2-9.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.2-9.2">
+            <p id="section-4.2-9.2.1">Presenting the token for expansion <span class="bcp14">MUST NOT</span> rotate it. It <span class="bcp14">MUST NOT</span>
+register as a replay in the deployment's refresh-token replay
+detection. The token is used here only to bind and resolve the
+predecessor, not to refresh.<a href="#section-4.2-9.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.2-9.3">
+            <p id="section-4.2-9.3.1">Each expansion presentation <span class="bcp14">MUST</span> be recorded and counted toward the
+deployment's anomaly detection.<a href="#section-4.2-9.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.2-9.4">
+            <p id="section-4.2-9.4.1">The per-predecessor rate limit (<a href="#policy-probing" class="auto internal xref">Section 13.5</a>) applies
+unconditionally. A deployment <span class="bcp14">SHOULD</span> apply a tighter bound when the
+presented token is not sender-constrained.<a href="#section-4.2-9.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-4.2-10">The record-and-count rule exists because, in a rotation-based
+deployment, the no-rotation and no-replay carve-out would otherwise
+let a stolen bearer refresh token be presented repeatedly without
+detection. The successor's authority still comes only from the fresh
+consent at the approval event, never from authority the binding token
+could itself derive.<a href="#section-4.2-10" class="pilcrow">¶</a></p>
+<p id="section-4.2-11">This binding requires the predecessor to have a refresh token to
+present. A Mission issued without one (for example an
+access-token-only grant) has no <code>predecessor_token</code> to carry and so
+cannot be expanded through this binding; a deployment that must expand
+such a Mission defines an alternative grant proof by extension, or the
+task obtains its broadened authority as an ordinary new Mission under
+the issuance profile, linked by the successor's <code>related_to</code> member
+(<a href="#predecessor-member" class="auto internal xref">Section 6</a>) for lineage.<a href="#section-4.2-11" class="pilcrow">¶</a></p>
+<p id="section-4.2-12">Because expansion reuses the issuance profile's grant binding, it
+needs no opaque expansion ticket or other new bearer: the predecessor
+is identified and authorized by the grant the client already holds for
+it, and a client cannot name an arbitrary predecessor.<a href="#section-4.2-12" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="predecessor-active">
+<section id="section-4.3">
+        <h3 id="name-predecessor-must-be-active">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-predecessor-must-be-active" class="section-name selfRef">Predecessor must be active</a>
+        </h3>
+<p id="section-4.3-1">The Mission Issuer <span class="bcp14">MUST</span> resolve the predecessor from the presented
+grant and verify it is in the <code>active</code> state before adjudicating. An
+expansion request against a predecessor that is not <code>active</code> <span class="bcp14">MUST</span> be
+refused with <code>invalid_grant</code> and a reconciliation status
+(<a href="#reconciliation" class="auto internal xref">Section 9</a>):<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.3-2.1">
+            <p id="section-4.3-2.1.1">if the predecessor made a terminal exit from <code>active</code> (it is
+<code>revoked</code>, <code>expired</code>, or already <code>superseded</code>, <a href="#superseded-state" class="auto internal xref">Section 7</a>),
+the status is <code>predecessor_state_changed</code>;<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.3-2.2">
+            <p id="section-4.3-2.2.1">if the predecessor is in a non-terminal non-active state, for example
+<code>suspended</code> where the Mission Status profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> is deployed, the status
+is <code>predecessor_not_active</code>.<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-4.3-3">Issuance gating in the issuance profile already refuses to derive from a
+non-active Mission; this rule extends the same gate to adjudicating an
+expansion of one.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="adjudication">
+<section id="section-5">
+      <h2 id="name-adjudication">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-adjudication" class="section-name selfRef">Adjudication</a>
+      </h2>
+<p id="section-5-1">Adjudication of an expansion is a fresh approval event under the
+issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The Mission
+Issuer runs the approval event as it does for any Mission, with the
+expansion-specific steps noted:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5-2">
+<li id="section-5-2.1">
+          <p id="section-5-2.1.1">Resolve the predecessor from the presented grant and verify it is
+the Mission named in <code>predecessor</code> and is <code>active</code>
+(<a href="#request-binding" class="auto internal xref">Section 4.2</a>, <a href="#predecessor-active" class="auto internal xref">Section 4.3</a>).<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-2.2">
+          <p id="section-5-2.2.1">Derive the successor's Authority Set from the submitted Mission
+Intent and bound it by policy, exactly as for any Mission. The
+successor's authority is whatever this derivation and the fresh
+consent yield; it is not the predecessor's authority plus a delta
+computed by this document. A deployment that wants the successor to
+retain the predecessor's authority expresses that authority in the
+expansion Mission Intent so the derivation reproduces it.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-2.3">
+          <p id="section-5-2.3.1">Authenticate the Approver and obtain fresh consent for the derived
+Authority Set, satisfying any <code>controls.acr</code>, and render the Subject
+when the Approver is not the Subject, per the issuance profile's
+approval event. The consent disclosure <span class="bcp14">MUST</span> reflect the successor's
+authority being adjudicated. (The experimental progressive
+authorization companion defines a policy-adjudicated override of
+this step for expansions within a pre-consented ceiling,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>.)<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-2.4">
+          <p id="section-5-2.4.1">Compute the successor's integrity anchors (<code>intent_hash</code>,
+<code>authority_hash</code>) and commit them in the authorization code the
+approval event issues; defer materializing the successor. On the
+first redemption of that authorization code (the successor's
+grant), create the successor Mission record in the <code>active</code> state,
+with its <code>predecessor</code> member set (<a href="#predecessor-member" class="auto internal xref">Section 6</a>),
+atomically with the predecessor's transition to <code>superseded</code>
+(<a href="#superseded-state" class="auto internal xref">Section 7</a>). Until that redemption the predecessor
+remains <code>active</code>; an authorization code that is never redeemed or
+that expires creates no successor and leaves the predecessor
+<code>active</code>.<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-5-3">The expansion is governed by the consent obtained at step 3. Expansion
+never widens authority without a new consent: if the Approver declines,
+no successor is created and the predecessor is untouched
+(<a href="#denial-reasons" class="auto internal xref">Section 10</a>).<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">Supersession is a terminal exit from <code>active</code>, so it is a terminal
+cascade trigger for the predecessor's entire delegation tree under the
+child-delegation profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). When the
+predecessor has non-terminal Child Missions, the expansion consent
+disclosure <span class="bcp14">SHOULD</span> surface that fact as a material notice: at minimum
+the count of live Child Missions and that supersession terminates
+them. A child still needed after the expansion is re-created under the
+successor through ordinary child creation, in generation order. A
+deployment <span class="bcp14">MAY</span> additionally support an expansion-request parameter by
+which the client asks the Mission Issuer to refuse the expansion while
+live Child Missions exist.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<div id="successor-expiry">
+<section id="section-5.1">
+        <h3 id="name-successor-expiry">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-successor-expiry" class="section-name selfRef">Successor expiry</a>
+        </h3>
+<p id="section-5.1-1">The successor's <code>expires_at</code> <span class="bcp14">MUST NOT</span> exceed the predecessor's
+<code>expires_at</code> unless the Mission Issuer's policy explicitly permits
+extension and the extension is disclosed to the Approver at the
+expansion consent event. Expansion is an authority-addition mechanism,
+not a lifetime-extension mechanism. The issuance profile caps every
+derived credential's <code>exp</code> at the Mission's <code>expires_at</code>; a successor that
+silently outlived its predecessor would let expansion launder a
+longer-lived Mission past the originally approved horizon.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="predecessor-member">
+<section id="section-6">
+      <h2 id="name-the-predecessor-mission-ref">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-the-predecessor-mission-ref" class="section-name selfRef">The Predecessor Mission Reference</a>
+      </h2>
+<p id="section-6-1">The successor records a lineage link to the predecessor as a
+<code>predecessor</code> member, both on the successor's <code>mission</code> claim and on
+the successor's Mission record.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">The issuance profile's <code>mission</code> claim is an open object: additional
+members <span class="bcp14">MAY</span> appear alongside <code>id</code>, <code>issuer</code>, and <code>authority_hash</code>, each
+defined by the profile that introduces it, and a consumer <span class="bcp14">MUST</span> ignore
+members it does not understand and <span class="bcp14">MUST NOT</span> use any additional member
+to grant or widen authority (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).
+This document introduces one such member:<a href="#section-6-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6-3">
+        <dt id="section-6-3.1">
+<code>predecessor</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-3.2">
+          <p id="section-6-3.2.1"><span class="bcp14">REQUIRED</span> on a successor Mission; absent otherwise. A string. The
+<code>mission_id</code> of the Mission this Mission succeeded by expansion.
+Present on every Mission created by expansion and absent on a Mission
+that was not created by expansion. It links the successor to the
+Mission it replaced so that the expansion chain is observable in
+audit.<a href="#section-6-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-6-4">The same <code>predecessor</code> value is recorded on the successor's immutable
+Mission record so that the lineage is durable independently of any
+derived token.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">This document defines two further lineage members:<a href="#section-6-5" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6-6">
+        <dt id="section-6-6.1">
+<code>related_to</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-6.2">
+          <p id="section-6-6.2.1"><span class="bcp14">OPTIONAL</span>. A string. The <code>mission_id</code> of a Mission this Mission is
+related to by lineage without superseding it, used for a non-superseding
+link such as a branch (<a href="#replacement" class="auto internal xref">Section 8</a>). Unlike <code>predecessor</code>, its
+presence does not imply that the referenced Mission was superseded and
+it carries no lifecycle consequence.<a href="#section-6-6.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-6.3">
+<code>successor</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-6.4">
+          <p id="section-6-6.4.1"><span class="bcp14">OPTIONAL</span>. A string. The <code>mission_id</code> of the successor that superseded
+this Mission by expansion, recorded on the superseded predecessor's
+Mission record at supersession (<a href="#superseded-state" class="auto internal xref">Section 7</a>). It is the
+reverse of the successor's <code>predecessor</code> link, letting a consumer that
+holds a superseded predecessor discover its successor directly.
+The Status profile surfaces it in the status response
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) and the Signals profile
+in the superseded lifecycle event
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>).<a href="#section-6-6.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-6-7"><code>predecessor</code>, <code>related_to</code>, and <code>successor</code> are lineage and audit
+context only. Consistent with the issuance profile's
+open-<code>mission</code>-claim rule, each of them <span class="bcp14">MUST NOT</span> grant or widen
+authority, and a consumer that does not understand one <span class="bcp14">MUST</span> ignore it.
+The successor's authority comes only from its own <code>authority_hash</code>,
+never from its predecessor.<a href="#section-6-7" class="pilcrow">¶</a></p>
+<p id="section-6-8"><code>predecessor</code>, <code>related_to</code>, and <code>successor</code> are each a bare Mission
+Identifier string, not an object like the <code>parent</code> member of a Child
+Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>): same-issuer
+succession needs only the identifier to resolve the linked Mission at the
+shared <code>issuer</code>, whereas parentage carries cascade semantics and
+cross-object integrity that require a structured member.<a href="#section-6-8" class="pilcrow">¶</a></p>
+<p id="section-6-9">Properties:<a href="#section-6-9" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6-10.1">
+          <p id="section-6-10.1.1"><strong>Cardinality.</strong> A successor has at most one <code>predecessor</code>. An
+expansion chain is expressed by walking <code>predecessor</code> links from a
+successor back toward the original Mission.<a href="#section-6-10.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-10.2">
+          <p id="section-6-10.2.1"><strong>Immutability.</strong> <code>predecessor</code> is set at the successor's approval
+event and <span class="bcp14">MUST NOT</span> change thereafter. The Mission record is immutable
+except for its <code>state</code> and the one-time <code>successor</code> link a supersession
+sets on the predecessor (<a href="#superseded-state" class="auto internal xref">Section 7</a>).<a href="#section-6-10.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-10.3">
+          <p id="section-6-10.3.1"><strong>Origin.</strong> The predecessor and successor share an <code>issuer</code>: an
+expansion is adjudicated by the predecessor's Mission Issuer. A
+consumer correlating a chain resolves each link at that issuer.<a href="#section-6-10.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-6-11">Example successor <code>mission</code> claim on a derived token (non-normative;
+other token claims omitted):<a href="#section-6-11" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6-12">
+<pre>
+{
+  "mission": {
+    "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
+    "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  }
+}
+</pre><a href="#section-6-12" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="superseded-state">
+<section id="section-7">
+      <h2 id="name-the-superseded-predecessor-">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-the-superseded-predecessor-" class="section-name selfRef">The Superseded Predecessor State</a>
+      </h2>
+<p id="section-7-1">This document adds one terminal state to the issuance profile's
+lifecycle, used only by expansion:<a href="#section-7-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7-2">
+        <dt id="section-7-2.1">
+<code>superseded</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.2">
+          <p id="section-7-2.2.1">A predecessor Mission that a successor has replaced through a
+replacement expansion. Terminal and non-active.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-7-3">A deployment that never expands a Mission never produces this state;
+the issuance profile's <code>active</code>/<code>revoked</code>/<code>expired</code> lifecycle is
+unchanged for it. The transition is:<a href="#section-7-3" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">From</th>
+            <th class="text-left" rowspan="1" colspan="1">Event</th>
+            <th class="text-left" rowspan="1" colspan="1">To</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>active</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">successor activates on first redemption of its grant</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>superseded</code>
+</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-7-5">The transition has these requirements:<a href="#section-7-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-6.1">
+          <p id="section-7-6.1.1"><strong>Atomic with successor activation at first redemption.</strong> The
+successor activates, and the predecessor enters <code>superseded</code>, in one
+atomic operation at the first redemption of the successor's
+authorization code (its grant), not at the approval event
+(<a href="#adjudication" class="auto internal xref">Section 5</a>). In that same operation the Mission Issuer sets
+the predecessor's <code>successor</code> member to the successor's <code>mission_id</code>
+(<a href="#predecessor-member" class="auto internal xref">Section 6</a>). Until that redemption the predecessor
+remains <code>active</code>.<a href="#section-7-6.1.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-6.1.2.1">
+              <p id="section-7-6.1.2.1.1">An authorization code that is never redeemed or that expires
+activates no successor and leaves the predecessor <code>active</code>, so an
+unredeemed or expired code never strands the task's authority nor
+cascade-terminates the predecessor's Child Missions.<a href="#section-7-6.1.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-6.1.2.2">
+              <p id="section-7-6.1.2.2.1">If the atomic operation fails, the predecessor remains <code>active</code>
+and no successor record exists. The Mission Issuer <span class="bcp14">MUST NOT</span>
+produce a partial successor or a predecessor left in an
+indeterminate state.<a href="#section-7-6.1.2.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</li>
+        <li class="normal" id="section-7-6.2">
+          <p id="section-7-6.2.1"><strong>Non-active: no further derivation.</strong> A <code>superseded</code> Mission is not
+<code>active</code>, so the issuance profile's issuance gating refuses to derive
+any new token, refresh, token exchange, or cross-domain grant under
+it: derivation proceeds only from an <code>active</code> Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). New authority for the task
+flows through the successor.<a href="#section-7-6.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-6.3">
+          <p id="section-7-6.3.1"><strong>Already-issued predecessor tokens.</strong> Tokens already derived under
+the predecessor before it was superseded remain valid until their own
+<code>exp</code>, exactly as in the issuance profile's revocation model:
+superseding a Mission stops new derivation; it does not retroactively
+invalidate access tokens already issued.<a href="#section-7-6.3.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-6.3.2.1">
+              <p id="section-7-6.3.2.1.1">These tokens <span class="bcp14">MUST NOT</span> be silently rebound to the successor.
+Authority under the successor is obtained only by deriving from
+the successor's grant, which is a new derivation governed by the
+successor's Authority Set.<a href="#section-7-6.3.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-6.3.2.2">
+              <p id="section-7-6.3.2.2.1">A deployment that needs a lower cutoff latency on the
+predecessor's outstanding tokens <span class="bcp14">SHOULD</span> use short token lifetimes.
+It <span class="bcp14">MAY</span> additionally revoke the predecessor's refresh token where
+the issuance profile's optional revocation composition is in use.<a href="#section-7-6.3.2.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</li>
+        <li class="normal" id="section-7-6.4">
+          <p id="section-7-6.4.1"><strong>Reported as non-active.</strong> A <code>superseded</code> predecessor is reported
+through the same mechanisms that report a <code>revoked</code> or <code>expired</code>
+Mission. Where the issuance profile's optional token introspection is
+offered, the composite <code>active</code> is <code>false</code> and, from the issuer, the
+<code>mission.state</code> member gives <code>superseded</code>. Where the Mission Status
+profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> is deployed, the
+dedicated Status operation reports <code>superseded</code> among the terminal
+states and the Status Response <code>mission.state</code> gives <code>superseded</code>. A
+deployment that offers either surface and this document <span class="bcp14">MUST</span> include
+<code>superseded</code> among the lifecycle states its issuer may report.
+Consumers rely on the issuance profile's forward-compatibility rule:
+<code>superseded</code>, like any non-<code>active</code> state, is non-deriving.<a href="#section-7-6.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<div id="no-rollback">
+<section id="section-7.1">
+        <h3 id="name-no-implicit-rollback">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-no-implicit-rollback" class="section-name selfRef">No implicit rollback</a>
+        </h3>
+<p id="section-7.1-1">The Mission Issuer <span class="bcp14">MUST NOT</span> implicitly resurrect a <code>superseded</code>
+predecessor when its successor is later revoked, expired, or itself
+superseded; <code>superseded</code> is terminal. A deployment that needs
+"revert to the predecessor's authority" semantics expresses that as a
+new approval event creating a new Mission that carries the relevant
+authority, with its own <code>predecessor</code> link preserving the lineage. A
+rollback is therefore a new governed Mission, not a state reversal.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="replacement">
+<section id="section-8">
+      <h2 id="name-replacement-expansion">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-replacement-expansion" class="section-name selfRef">Replacement Expansion</a>
+      </h2>
+<p id="section-8-1">A successful expansion is a <strong>replacement</strong>: the successor replaces the
+predecessor, and the predecessor becomes <code>superseded</code>
+(<a href="#superseded-state" class="auto internal xref">Section 7</a>). Replacement is the only mode this document
+defines.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">Under replacement, exactly one successor is created per predecessor,
+and the predecessor is no longer active once the successor activates.
+The successor carries its own complete Authority Set as derived and
+consented at the expansion approval event; it does not inherit the
+predecessor's authority by reference. A deployment that wants the
+successor to retain the predecessor's authority alongside the new
+authority expresses the combined authority in the expansion Mission
+Intent, so the successor's <code>authority_hash</code> commits exactly the
+authority the Approver saw and approved (<a href="#adjudication" class="auto internal xref">Section 5</a>).<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-3">A <strong>branch</strong> mode, in which the predecessor and the successor both
+remain <code>active</code> after expansion (for example, a separately scoped child
+task running alongside the original), is <span class="bcp14">OPTIONAL</span> and is not defined
+here. A deployment that needs a separately scoped task alongside a
+still-active Mission creates an ordinary new Mission under the issuance
+profile and <span class="bcp14">MAY</span> set that Mission's <code>related_to</code> member
+(<a href="#predecessor-member" class="auto internal xref">Section 6</a>) to the original Mission's <code>mission_id</code> to
+preserve lineage; it does not set <code>predecessor</code>, which would imply a
+supersession, so the original remains <code>active</code>. An atomic, grant-bound
+branch
+expansion that creates such a child within a single expansion approval
+event is deferred to a future revision of this document.<a href="#section-8-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="reconciliation">
+<section id="section-9">
+      <h2 id="name-concurrent-expansion-reconc">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-concurrent-expansion-reconc" class="section-name selfRef">Concurrent Expansion Reconciliation</a>
+      </h2>
+<p id="section-9-1">More than one expansion request <span class="bcp14">MAY</span> be in flight against the same
+predecessor at once, and more than one <span class="bcp14">MAY</span> be adjudicated and hold an
+unredeemed authorization code. Because replacement produces exactly one
+successor per predecessor (<a href="#replacement" class="auto internal xref">Section 8</a>) and supersession is
+deferred to first redemption (<a href="#superseded-state" class="auto internal xref">Section 7</a>), the Mission Issuer
+<span class="bcp14">MUST</span> serialize the redemptions that would activate a successor of the
+same predecessor, so that concurrent expansions cannot each activate
+one.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">The Mission Issuer <span class="bcp14">MUST</span> apply compare-and-set semantics at the first
+redemption of a successor's authorization code. In the same atomic step
+that would activate the successor and supersede the predecessor, the
+Mission Issuer <span class="bcp14">MUST</span> verify:<a href="#section-9-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-9-3">
+<li id="section-9-3.1">
+          <p id="section-9-3.1.1">the predecessor is still in the <code>active</code> state; and<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-3.2">
+          <p id="section-9-3.2.1">no other replacement expansion has already activated a successor for
+this predecessor (equivalently, the predecessor has not already
+transitioned to <code>superseded</code>).<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-9-4">If either check fails, the Mission Issuer <span class="bcp14">MUST</span> refuse the redemption
+with <code>invalid_grant</code> and the applicable reconciliation status from the
+closed set below. The losing or otherwise stale expansion is rejected
+at redemption; it activates no successor.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-5">The reconciliation status codes are:<a href="#section-9-5" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-6">
+        <dt id="section-9-6.1">
+<code>superseded_by_concurrent_expansion</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-6.2">
+          <p id="section-9-6.2.1">A concurrent replacement expansion has already produced a successor;
+the predecessor is now <code>superseded</code> rather than <code>active</code>. The client
+<span class="bcp14">SHOULD</span> discover the existing successor and re-evaluate whether a
+further expansion is still required (an expansion of the successor is
+a new expansion against the successor as predecessor).<a href="#section-9-6.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-6.3">
+<code>predecessor_state_changed</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-6.4">
+          <p id="section-9-6.4.1">The predecessor made a terminal exit from <code>active</code> (to <code>revoked</code>,
+<code>expired</code>, or <code>superseded</code>) before this expansion could complete,
+whether caught at request binding (<a href="#predecessor-active" class="auto internal xref">Section 4.3</a>) or at the
+compare-and-set on first redemption (<a href="#reconciliation" class="auto internal xref">Section 9</a>). The client
+<span class="bcp14">MUST NOT</span> retry the same expansion against this predecessor.<a href="#section-9-6.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-6.5">
+<code>predecessor_not_active</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-6.6">
+          <p id="section-9-6.6.1">The predecessor is in a non-terminal non-active state (for example
+<code>suspended</code> under the Mission Status profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) and cannot be expanded
+until it returns to <code>active</code>. The client <span class="bcp14">MAY</span> retry the expansion after
+the predecessor is <code>active</code> again.<a href="#section-9-6.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-9-7">The two terminal-exit codes overlap in the <code>superseded</code> case by design:
+<code>superseded_by_concurrent_expansion</code> is the specific reconciliation
+outcome when the cause is a concurrent expansion that has already won,
+and <code>predecessor_state_changed</code> is the general outcome for any other
+terminal exit from <code>active</code>. A Mission Issuer <span class="bcp14">SHOULD</span> return the specific
+code when it can attribute the change to a concurrent expansion.
+<code>predecessor_not_active</code> is distinct from both: it reports a reversible,
+non-terminal state, so it invites the retry the terminal codes forbid.<a href="#section-9-7" class="pilcrow">¶</a></p>
+<p id="section-9-8">The Mission Issuer conveys the reconciliation status in a
+<code>mission_expansion_status</code> member of the OAuth error response body,
+alongside the <code>invalid_grant</code> error:<a href="#section-9-8" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-9">
+        <dt id="section-9-9.1">
+<code>mission_expansion_status</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-9.2">
+          <p id="section-9-9.2.1">A string carrying one reconciliation status from this document's
+closed set (<a href="#reconciliation" class="auto internal xref">Section 9</a>). It is returned by the step that
+failed. At the PAR and token endpoints it is a member of the JSON
+error response body, alongside the OAuth <code>error</code> member. On the
+front-channel authorization error response, which carries error
+parameters rather than a JSON body, it is carried as an error
+response parameter of the same name. Adjudication denial reasons
+ride the separate <code>mission_denial_reason</code> member
+(<a href="#denial-reasons" class="auto internal xref">Section 10</a>).<a href="#section-9-9.2.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="denial-reasons">
+<section id="section-10">
+      <h2 id="name-expansion-denial-reasons">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-expansion-denial-reasons" class="section-name selfRef">Expansion Denial Reasons</a>
+      </h2>
+<p id="section-10-1">An adjudication that completes with the Approver declining, or with the
+Mission Issuer refusing on policy grounds, denies the expansion: no
+successor is created and the predecessor remains <code>active</code> and
+untouched. Such a denial is an OAuth error at the approval or token
+step per the issuance profile (typically <code>invalid_request</code> for a
+request the Mission Issuer will not derive a valid Authority Set from,
+or the approval flow's own decline path). It <span class="bcp14">MAY</span> additionally carry one
+machine-readable reason code from the closed set below:<a href="#section-10-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10-2">
+        <dt id="section-10-2.1">
+<code>out_of_policy</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.2">
+          <p id="section-10-2.2.1">The Mission Issuer's governance policy refuses the requested
+authority class for this Mission, independent of who approves.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.3">
+<code>approver_rejected</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.4">
+          <p id="section-10-2.4.1">The Approver declined the expansion at the consent step.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.5">
+<code>out_of_scope_for_purpose</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.6">
+          <p id="section-10-2.6.1">The requested authority is incompatible with the Mission's recorded
+<code>purpose</code>; a different Mission, not an expansion of this one, is the
+appropriate vehicle.<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-10-3">A companion profile <span class="bcp14">MAY</span> extend this set by specification (the
+experimental progressive authorization companion defines
+<code>out_of_ceiling</code>, <span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>);
+a consumer <span class="bcp14">MUST</span> treat an unrecognized reason code as a denial with no
+further semantics.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4">A Mission Issuer <span class="bcp14">MUST NOT</span> use a reason code to disclose policy
+boundaries beyond the adjudicated request (<a href="#policy-probing" class="auto internal xref">Section 13.5</a>); omitting
+the reason code is always permitted. When present, a reason code is
+carried in a <code>mission_denial_reason</code> member: at the PAR and token
+endpoints a member of the JSON error response body alongside the OAuth
+<code>error</code> member, on the front-channel authorization error response an
+error response parameter of the same name.<a href="#section-10-4" class="pilcrow">¶</a></p>
+<p id="section-10-5"><code>mission_denial_reason</code> is the shared carrier for adjudication denial
+reasons across the profiles that mint a Mission related to an existing
+one: the child delegation profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) carries its
+own closed denial-reason set in the same member, and further such
+profiles do likewise. Each profile defines its values by
+specification; the unrecognized-code rule above applies to the member
+wherever it appears.<a href="#section-10-5" class="pilcrow">¶</a></p>
+<p id="section-10-6">Two failure classes are not denial reasons and use the issuance
+profile's error vocabulary directly: an expansion request whose
+<code>predecessor</code> does not match the grant-resolved Mission, or
+whose predecessor is not <code>active</code>, fails with <code>invalid_grant</code>
+(<a href="#request-binding" class="auto internal xref">Section 4.2</a>, <a href="#predecessor-active" class="auto internal xref">Section 4.3</a>); an expansion Mission
+Intent the Mission Issuer cannot parse or cannot derive a valid
+Authority Set from fails with <code>invalid_request</code> or, where the issuance
+profile uses it, <code>invalid_authorization_details</code> (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>), exactly
+as for any Mission creation.<a href="#section-10-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="example">
+<section id="section-11">
+      <h2 id="name-worked-example">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
+      </h2>
+<p id="section-11-1">The Q3 reconciliation Mission
+<code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code> authorizes reading invoices and
+posting journal entries under $500. Mid-task the agent finds an
+adjustment of $1,200, outside the active Mission's authority. It cannot
+widen in place; it requests an expansion, submitting a new Mission
+Intent through PAR bound to the predecessor's grant:<a href="#section-11-1" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="section-11-2">
+<pre>
+POST /par HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+mission_intent=%7B...journal-entries%20cap%20%242000...%7D&amp;
+predecessor=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&amp;
+predecessor_token=&lt;refresh%20token%20bound%20to%20the%20predecessor&gt;&amp;
+client_id=s6BhdRkqt3
+</pre><a href="#section-11-2" class="pilcrow">¶</a>
+</div>
+<p id="section-11-3">The Mission Issuer resolves the predecessor from the grant, confirms it
+matches <code>predecessor</code> and is <code>active</code>, derives the successor's Authority
+Set, and obtains fresh consent from <code>alice</code> for the widened cap,
+issuing an authorization code. When the client redeems that code, the
+Mission Issuer activates the successor and supersedes the predecessor
+atomically; until then the predecessor stays <code>active</code>. The successor's
+token carries a <code>predecessor</code> member:<a href="#section-11-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-11-4">
+<pre>
+{
+  "mission": {
+    "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
+    "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  }
+}
+</pre><a href="#section-11-4" class="pilcrow">¶</a>
+</div>
+<p id="section-11-5">The predecessor is now <code>superseded</code>: it derives no new tokens, its
+already-issued tokens run out their short lifetimes, and the task
+continues under the successor. The widening came only from <code>alice</code>'s
+fresh consent; the successor's <code>authority_hash</code> commits the widened
+Authority Set it was actually approved for, not the predecessor's plus a
+delta.<a href="#section-11-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conformance">
+<section id="section-12">
+      <h2 id="name-conformance">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-12-1">An implementation claims conformance to this document only in the
+Mission Issuer role and only when it adjudicates expansion. A
+conforming <strong>expansion-capable Mission Issuer</strong> <span class="bcp14">MUST</span>:<a href="#section-12-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12-2.1">
+          <p id="section-12-2.1.1">accept the <code>predecessor</code> and <code>predecessor_token</code>
+request parameters on a Mission creation via PAR and treat the
+request as an expansion (<a href="#submission" class="auto internal xref">Section 4.1</a>);<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.2">
+          <p id="section-12-2.2.1">bind the expansion request to the predecessor's grant and refuse a
+request whose <code>predecessor</code> does not match the grant-resolved
+Mission, or whose predecessor is not <code>active</code>, with <code>invalid_grant</code>
+(<a href="#request-binding" class="auto internal xref">Section 4.2</a>, <a href="#predecessor-active" class="auto internal xref">Section 4.3</a>);<a href="#section-12-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.3">
+          <p id="section-12-2.3.1">adjudicate the expansion as a fresh approval event that obtains new
+consent for the successor's authority (<a href="#adjudication" class="auto internal xref">Section 5</a>), enforcing
+the successor-expiry rule (<a href="#successor-expiry" class="auto internal xref">Section 5.1</a>);<a href="#section-12-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.4">
+          <p id="section-12-2.4.1">record the <code>predecessor</code> member on the successor's <code>mission</code> claim
+and Mission record (<a href="#predecessor-member" class="auto internal xref">Section 6</a>);<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.5">
+          <p id="section-12-2.5.1">activate the successor and transition the predecessor to <code>superseded</code>
+atomically at the first redemption of the successor's grant, leaving
+the predecessor <code>active</code> until then, and refuse further derivation
+under a <code>superseded</code> Mission (<a href="#superseded-state" class="auto internal xref">Section 7</a>); and<a href="#section-12-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.6">
+          <p id="section-12-2.6.1">serialize concurrent expansions against the same predecessor with the
+reconciliation semantics of <a href="#reconciliation" class="auto internal xref">Section 9</a>.<a href="#section-12-2.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-12-3">An expansion-capable Mission Issuer is also a conforming issuance-profile
+Mission Issuer (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); this document
+adds the expansion surface to that role. A Resource Server requires no
+new behavior: it enforces a successor's tokens exactly as it enforces
+any Mission-bound token, and treats the <code>predecessor</code> member, if it
+reads it at all, as audit context it <span class="bcp14">MUST NOT</span> use to grant authority
+(<a href="#predecessor-member" class="auto internal xref">Section 6</a>).<a href="#section-12-3" class="pilcrow">¶</a></p>
+<p id="section-12-4">Every expansion this document defines is adjudicated as a fresh
+approval event (<a href="#adjudication" class="auto internal xref">Section 5</a>). The experimental progressive
+authorization companion defines a further <span class="bcp14">OPTIONAL</span> capability,
+<strong>Expansion with Progressive Authorization</strong>, with its own conformance
+requirements (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-12-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-13">
+      <h2 id="name-security-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-13-1">Expansion's central guarantee is the issuance profile's, applied to
+the successor: a user's fresh approval bounds every token derived for
+the broadened task. The risks specific to expansion are in the
+predecessor binding, the predecessor-to-successor handoff, and the
+lineage link.<a href="#section-13-1" class="pilcrow">¶</a></p>
+<div id="predecessor-confusion">
+<section id="section-13.1">
+        <h3 id="name-predecessor-confusion">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-predecessor-confusion" class="section-name selfRef">Predecessor confusion</a>
+        </h3>
+<p id="section-13.1-1">A client could attempt to expand a Mission it does not control, for
+example by naming another tenant's or subject's <code>mission_id</code> in the
+<code>predecessor</code> parameter.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+<p id="section-13.1-2">Mitigations:<a href="#section-13.1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.1-3.1">
+            <p id="section-13.1-3.1.1">The predecessor is resolved from the grant the client presents, not
+from the <code>predecessor</code> value; the Mission Issuer verifies that the
+resolved Mission matches the named one and refuses a mismatch with
+<code>invalid_grant</code> (<a href="#request-binding" class="auto internal xref">Section 4.2</a>). A client that holds no grant
+for the named predecessor cannot expand it.<a href="#section-13.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-3.2">
+            <p id="section-13.1-3.2.1">The issuance profile's integrity anchors are issuer-bound, so a
+Mission's governance state cannot be transplanted across Mission
+Issuers; an expansion is adjudicated only at the predecessor's own
+<code>issuer</code>.<a href="#section-13.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="new-consent">
+<section id="section-13.2">
+        <h3 id="name-authority-comes-only-from-n">
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-authority-comes-only-from-n" class="section-name selfRef">Authority comes only from new consent</a>
+        </h3>
+<p id="section-13.2-1">An expansion could be misused to widen authority without the Approver
+re-consenting, if a successor were allowed to inherit or extend
+authority without a fresh approval.<a href="#section-13.2-1" class="pilcrow">¶</a></p>
+<p id="section-13.2-2">Mitigations:<a href="#section-13.2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.2-3.1">
+            <p id="section-13.2-3.1.1">The successor's authority comes only from the Authority Set derived
+and consented at the expansion approval event; the <code>authority_hash</code>
+commits exactly that set (<a href="#adjudication" class="auto internal xref">Section 5</a>). The <code>predecessor</code> member
+carries no authority and cannot widen the successor
+(<a href="#predecessor-member" class="auto internal xref">Section 6</a>).<a href="#section-13.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.2-3.2">
+            <p id="section-13.2-3.2.1">The successor-expiry rule (<a href="#successor-expiry" class="auto internal xref">Section 5.1</a>) keeps the
+successor's <code>expires_at</code> from silently exceeding the predecessor's,
+so expansion cannot launder a longer lifetime past the originally
+approved horizon.<a href="#section-13.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="lifecycle-race">
+<section id="section-13.3">
+        <h3 id="name-race-against-predecessor-li">
+<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-race-against-predecessor-li" class="section-name selfRef">Race against predecessor lifecycle</a>
+        </h3>
+<p id="section-13.3-1">Between the moment a client decides to expand and the moment the
+successor activates at first redemption, the predecessor may be
+revoked, expire, or be superseded by a concurrent expansion. Without
+serialization an expansion could appear to succeed against a
+predecessor that is no longer authoritative, or two successors could be
+created.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+<p id="section-13.3-2">Mitigations:<a href="#section-13.3-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.3-3.1">
+            <p id="section-13.3-3.1.1">The Mission Issuer verifies predecessor state and the
+no-existing-successor condition in the same atomic step that would
+activate the successor at first redemption, and serializes the
+redemptions that activate a successor of the same predecessor
+(<a href="#reconciliation" class="auto internal xref">Section 9</a>).<a href="#section-13.3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.3-3.2">
+            <p id="section-13.3-3.2.1">A failed check refuses with <code>invalid_grant</code> and a reconciliation
+status that tells the client whether to discover an existing
+successor or stop, without leaking the predecessor's new internal
+state beyond that (<a href="#reconciliation" class="auto internal xref">Section 9</a>).<a href="#section-13.3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="step-up-distinction">
+<section id="section-13.4">
+        <h3 id="name-expansion-versus-step-up">
+<a href="#section-13.4" class="section-number selfRef">13.4. </a><a href="#name-expansion-versus-step-up" class="section-name selfRef">Expansion versus step-up</a>
+        </h3>
+<p id="section-13.4-1">Conflating expansion with authentication step-up <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span> would
+route an authentication shortfall through an approval event the
+Approver did not need to perform, surfacing irrelevant consent and
+risking approval fatigue, or conversely would treat a genuine
+authority shortfall as a mere re-authentication and silently widen
+nothing.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
+<p id="section-13.4-2">Mitigation: a denial that is an authentication shortfall (<code>acr</code>,
+<code>amr</code>) is satisfied by step-up and <span class="bcp14">MUST NOT</span> be routed to expansion; a
+denial that is an authority shortfall is the one expansion addresses
+(<a href="#not-step-up" class="auto internal xref">Section 3.3</a>). The component that classifies the denial
+(<a href="#eligibility" class="auto internal xref">Section 3.2</a>) makes this distinction.<a href="#section-13.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="policy-probing">
+<section id="section-13.5">
+        <h3 id="name-policy-probing">
+<a href="#section-13.5" class="section-number selfRef">13.5. </a><a href="#name-policy-probing" class="section-name selfRef">Policy probing</a>
+        </h3>
+<p id="section-13.5-1">A client could submit many expansion requests for the same predecessor
+to map the Mission Issuer's policy boundary from the denial reasons.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
+<p id="section-13.5-2">Mitigations:<a href="#section-13.5-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.5-3.1">
+            <p id="section-13.5-3.1.1">The Mission Issuer <span class="bcp14">MUST</span> rate-limit expansion requests per predecessor
+per client. The bound is unconditional: it caps both policy probing
+and the approval prompts a client can drive against an Approver
+(prompt fatigue). A deployment <span class="bcp14">SHOULD</span> apply a tighter bound when the
+presented <code>predecessor_token</code> is not sender-constrained
+(<a href="#request-binding" class="auto internal xref">Section 4.2</a>).<a href="#section-13.5-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.5-3.2">
+            <p id="section-13.5-3.2.1">A denial reason <span class="bcp14">MUST NOT</span> disclose policy boundaries beyond the
+adjudicated request (<a href="#denial-reasons" class="auto internal xref">Section 10</a>); a denial reports whether
+the requested authority was approved, not the full surface of what
+would have been.<a href="#section-13.5-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="audit-linkage">
+<section id="section-13.6">
+        <h3 id="name-audit-linkage">
+<a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-audit-linkage" class="section-name selfRef">Audit linkage</a>
+        </h3>
+<p id="section-13.6-1">The <code>predecessor</code> member makes the expansion chain observable: an
+authorized auditor can trace a successor back through its predecessors
+to the original Mission. This is a core governance property of
+expansion. An implementation that omits the member breaks the chain
+and defeats it; the member is therefore mandatory on a successor
+(<a href="#predecessor-member" class="auto internal xref">Section 6</a>).<a href="#section-13.6-1" class="pilcrow">¶</a></p>
+<p id="section-13.6-2">General OAuth security guidance applies to the underlying credentials
+through the issuance profile.<a href="#section-13.6-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-14">
+      <h2 id="name-privacy-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-14-1">The privacy surface expansion adds over the issuance profile is the
+lineage link and the authority detail disclosed when a task is
+broadened.<a href="#section-14-1" class="pilcrow">¶</a></p>
+<div id="chain-correlation">
+<section id="section-14.1">
+        <h3 id="name-predecessor-chain-correlati">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-predecessor-chain-correlati" class="section-name selfRef">Predecessor-chain correlation</a>
+        </h3>
+<p id="section-14.1-1">The <code>predecessor</code> member that gives audit linkage (<a href="#audit-linkage" class="auto internal xref">Section 13.6</a>)
+is also a correlation surface: it links a successor to its predecessor
+across distinct approval events, so a party that can read the chain can
+correlate the evolving task over time, which is more than any single
+Mission discloses. This is intrinsic to the governance value of
+expansion. Deployments <span class="bcp14">SHOULD</span> scope read access to the <code>predecessor</code>
+member, and to any Mission-state surface that exposes it, to parties
+with a governance need, rather than exposing the chain to every
+credential audience. The issuance profile's Mission Identifier
+correlation considerations apply to each Mission in the chain.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="broadened-task">
+<section id="section-14.2">
+        <h3 id="name-disclosure-of-the-broadened">
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-disclosure-of-the-broadened" class="section-name selfRef">Disclosure of the broadened task</a>
+        </h3>
+<p id="section-14.2-1">The expansion Mission Intent and the consent disclosure rendered at the
+expansion approval event reveal how the approved task is evolving. The
+Mission Issuer <span class="bcp14">SHOULD</span> render that disclosure only to the Approver and
+authorized governance consumers, consistent with the issuance profile's
+treatment of consent disclosure.<a href="#section-14.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-15">
+      <h2 id="name-iana-considerations">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-15-1">The <code>predecessor</code> member of the <code>mission</code> claim
+(<a href="#predecessor-member" class="auto internal xref">Section 6</a>) is not registered in a dedicated registry: it
+is carried inside the already-registered <code>mission</code> claim, an open
+object for which the issuance profile establishes no member registry.
+No new claim, parameter, or token-introspection registration is
+required for the lineage link.<a href="#section-15-1" class="pilcrow">¶</a></p>
+<p id="section-15-2">This document defines two closed sets of symbolic codes, the expansion
+reconciliation status codes (<a href="#reconciliation" class="auto internal xref">Section 9</a>), conveyed in
+<code>mission_expansion_status</code>, and the expansion denial reasons
+(<a href="#denial-reasons" class="auto internal xref">Section 10</a>), conveyed in the shared <code>mission_denial_reason</code>
+member. As members of the OAuth error response JSON body at the PAR
+and token endpoints, both are namespaced to their error responses and
+require no registration; their authorization error response parameter
+forms are registered below. This document creates no registry for the
+codes: the closed sets are small and fully specified in their defining
+specifications. Should interoperable extension prove necessary, a
+future revision can create a "Mission Expansion Reconciliation Status"
+registry and a shared "Mission Denial Reason" registry with a
+Specification Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> policy.<a href="#section-15-2" class="pilcrow">¶</a></p>
+<p id="section-15-3">This document registers the following parameters in the "OAuth
+Parameters" registry:<a href="#section-15-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-15-4.1">
+          <p id="section-15-4.1.1">Name: <code>predecessor</code><a href="#section-15-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.2">
+          <p id="section-15-4.2.1">Parameter Usage Location: authorization request<a href="#section-15-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.3">
+          <p id="section-15-4.3.1">Change Controller: IETF<a href="#section-15-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.4">
+          <p id="section-15-4.4.1">Reference: this document, <a href="#submission" class="auto internal xref">Section 4.1</a><a href="#section-15-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.5">
+          <p id="section-15-4.5.1">Name: <code>predecessor_token</code><a href="#section-15-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.6">
+          <p id="section-15-4.6.1">Parameter Usage Location: authorization request<a href="#section-15-4.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.7">
+          <p id="section-15-4.7.1">Change Controller: IETF<a href="#section-15-4.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.8">
+          <p id="section-15-4.8.1">Reference: this document, <a href="#submission" class="auto internal xref">Section 4.1</a><a href="#section-15-4.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.9">
+          <p id="section-15-4.9.1">Name: <code>mission_expansion_status</code><a href="#section-15-4.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.10">
+          <p id="section-15-4.10.1">Parameter Usage Location: authorization response<a href="#section-15-4.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.11">
+          <p id="section-15-4.11.1">Change Controller: IETF<a href="#section-15-4.11.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.12">
+          <p id="section-15-4.12.1">Reference: this document, <a href="#reconciliation" class="auto internal xref">Section 9</a><a href="#section-15-4.12.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.13">
+          <p id="section-15-4.13.1">Name: <code>mission_denial_reason</code><a href="#section-15-4.13.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.14">
+          <p id="section-15-4.14.1">Parameter Usage Location: authorization response<a href="#section-15-4.14.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.15">
+          <p id="section-15-4.15.1">Change Controller: IETF<a href="#section-15-4.15.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.16">
+          <p id="section-15-4.16.1">Reference: this document, <a href="#denial-reasons" class="auto internal xref">Section 10</a>; also carried by the
+child delegation profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)<a href="#section-15-4.16.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-15-5">As with <code>mission_intent</code> in the issuance profile, PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>
+carries authorization-request parameters without a distinct usage
+location, so the pushed submission of these parameters needs no
+separate registration. <code>predecessor_token</code> carries a refresh token and
+is submitted only through PAR, never on a front-channel authorization
+request (<a href="#submission" class="auto internal xref">Section 4.1</a>).<a href="#section-15-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="section-16">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="section-16-1">The author thanks the reviewers of the Mission-Bound Authorization for
+OAuth 2.0 profile for feedback on the expansion model and its
+composition with the issuance flow.<a href="#section-16-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-17">
+      <h2 id="name-references">
+<a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-17.1">
+        <h3 id="name-normative-references">
+<a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8705">[RFC8705]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">T. Lodderstedt</span>, <span class="refTitle">"OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"</span>, <span class="seriesInfo">RFC 8705</span>, <span class="seriesInfo">DOI 10.17487/RFC8705</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8705">https://www.rfc-editor.org/rfc/rfc8705</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9126">[RFC9126]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Tonge, D.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"OAuth 2.0 Pushed Authorization Requests"</span>, <span class="seriesInfo">RFC 9126</span>, <span class="seriesInfo">DOI 10.17487/RFC9126</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9126">https://www.rfc-editor.org/rfc/rfc9126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9449">[RFC9449]</dt>
+      <dd>
+<span class="refAuthor">Fett, D.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">D. Waite</span>, <span class="refTitle">"OAuth 2.0 Demonstrating Proof of Possession (DPoP)"</span>, <span class="seriesInfo">RFC 9449</span>, <span class="seriesInfo">DOI 10.17487/RFC9449</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9449">https://www.rfc-editor.org/rfc/rfc9449</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-17.2">
+        <h3 id="name-informative-references">
+<a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Progressive Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8126">[RFC8126]</dt>
+        <dd>
+<span class="refAuthor">Cotton, M.</span>, <span class="refAuthor">Leiba, B.</span>, and <span class="refAuthor">T. Narten</span>, <span class="refTitle">"Guidelines for Writing an IANA Considerations Section in RFCs"</span>, <span class="seriesInfo">BCP 26</span>, <span class="seriesInfo">RFC 8126</span>, <span class="seriesInfo">DOI 10.17487/RFC8126</span>, <time datetime="2017-06" class="refDate">June 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8126">https://www.rfc-editor.org/rfc/rfc8126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9470">[RFC9470]</dt>
+      <dd>
+<span class="refAuthor">Bertocci, V.</span> and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Step Up Authentication Challenge Protocol"</span>, <span class="seriesInfo">RFC 9470</span>, <span class="seriesInfo">DOI 10.17487/RFC9470</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9470">https://www.rfc-editor.org/rfc/rfc9470</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-A">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
