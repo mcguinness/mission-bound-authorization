@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                              15 July 2026
-Expires: 16 January 2027
+Intended status: Informational                              16 July 2026
+Expires: 17 January 2027
 
 
                          Mission Security Model
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 January 2027.
+   This Internet-Draft will expire on 17 January 2027.
 
 Copyright Notice
 

@@ -1075,7 +1075,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 16 January 2027</td>
+<td class="center">Expires 17 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1088,12 +1088,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-aauth-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-15" class="published">15 July 2026</time>
+<time datetime="2026-07-16" class="published">16 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-16">16 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-17">17 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1160,7 +1160,7 @@ a non-OAuth substrate.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 16 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 17 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1354,7 +1354,8 @@ the PS issues the auth token itself; in the federated mode the PS is
 the mandatory gate through which the resource's Access Server is
 reached. Either way, no auth token exists under a Mission without
 passing the PS, so this binding gates credential issuance on Mission
-state exactly as the issuance profile gates derivation. That is the
+state exactly as the issuance profile gates derivation (<a href="#gating" class="auto internal xref">Section 7.1</a>).
+That is the
 property the family's standalone OAuth binding, the Mission Authority
 Server <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>, structurally
 forgoes.<a href="#section-1-3" class="pilcrow">¶</a></p>
@@ -1532,20 +1533,30 @@ profile.<a href="#section-4-5.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-4-6">What deliberately does not appear in the blob: the record's <code>state</code>
-(the blob is immutable under <code>s256</code>; state is served by the
-lifecycle surfaces (<a href="#lifecycle" class="auto internal xref">Section 7</a>)); the integrity anchors (they are
-computed from the blob, <a href="#two-commitments" class="auto internal xref">Section 4.1</a>); and the <code>subject</code> and
-<code>approver</code> principals with their <code>approval_event_id</code>. The PS
-establishes the principals at approval as <code>{iss, sub}</code> objects whose
-<code>iss</code> is its own issuer URL and records them PS-side, where evidence
-and the status surfaces join them: keeping the person out of the
-portable artifact is AAuth's own directed-identity posture, and this
-binding follows it.<a href="#section-4-6" class="pilcrow">¶</a></p>
-<p id="section-4-7">The AAuth-native blob members are otherwise unchanged, and the blob
-<span class="bcp14">MAY</span> carry additional session members per AAuth; they are committed
-by <code>s256</code> and, apart from <code>mission_intent</code>, not by the integrity
-anchors.<a href="#section-4-7" class="pilcrow">¶</a></p>
+<p id="section-4-6">What deliberately does not appear in the blob:<a href="#section-4-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-7.1">
+          <p id="section-4-7.1.1">the record's <code>state</code>: the blob is immutable under <code>s256</code>, and
+state is served by the lifecycle surfaces (<a href="#lifecycle" class="auto internal xref">Section 7</a>);<a href="#section-4-7.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-7.2">
+          <p id="section-4-7.2.1">the integrity anchors: they are computed from the blob
+(<a href="#two-commitments" class="auto internal xref">Section 4.1</a>); and<a href="#section-4-7.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-7.3">
+          <p id="section-4-7.3.1">the <code>subject</code> and <code>approver</code> principals with their
+<code>approval_event_id</code>: the PS establishes the principals at approval
+as <code>{iss, sub}</code> objects whose <code>iss</code> is its own issuer URL and
+records them PS-side, where evidence and the status surfaces join
+them.<a href="#section-4-7.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-4-8">Keeping the person out of the portable artifact is AAuth's own
+directed-identity posture, and this binding follows it.<a href="#section-4-8" class="pilcrow">¶</a></p>
+<p id="section-4-9">The AAuth-native blob members are otherwise unchanged, and the blob
+<span class="bcp14">MAY</span> carry additional session members per AAuth. Additional members
+are committed by <code>s256</code> and, apart from <code>mission_intent</code>, not by
+the integrity anchors.<a href="#section-4-9" class="pilcrow">¶</a></p>
 <div id="two-commitments">
 <section id="section-4.1">
         <h3 id="name-the-anchor-projection">
@@ -1598,17 +1609,19 @@ family.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
 The <code>AAuth-Mission</code> header is unchanged by this binding: no new
 parameters are defined, and this document gives its existing
 parameters family semantics (<code>approver</code> names the <code>issuer</code>, <code>s256</code>
-locates the record). A Mission-Bound Person Server <span class="bcp14">MUST</span> resolve <code>s256</code>
-to the Mission record at every PS endpoint that takes a mission
-reference. Per AAuth, a Resource or Access Server never dereferences
-the reference; it consumes mission semantics through token claims and
-PS evaluation. <code>mission_id</code>, carried as the blob's flat <code>mission_id</code>
+locates the record).<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">A Mission-Bound Person Server <span class="bcp14">MUST</span> resolve <code>s256</code> to the Mission
+record at every PS endpoint that takes a mission reference. Per
+AAuth, a Resource or Access Server never dereferences the reference;
+it consumes mission semantics through token claims and PS
+evaluation.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<p id="section-4.2-3"><code>mission_id</code>, carried as the blob's flat <code>mission_id</code>
 member (<a href="#mission-record" class="auto internal xref">Section 4</a>), is the family-surface identifier: the
 Mission Status operation, lifecycle signals, consent evidence, runtime
 evidence, and audit key on it
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). The two names identify the
-same Mission, and the record binds them.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+same Mission, and the record binds them.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="record-example">
@@ -1693,8 +1706,8 @@ Markdown <code>description</code> and an optional <code>tools</code> array
         <dd style="margin-left: 1.5em" id="section-5-2.2">
           <p id="section-5-2.2.1">A Mission Intent object as the issuance profile defines it. The
 issuance profile's syntactic rules apply unchanged: the object is
-closed at the top level, the PS <span class="bcp14">MUST</span> bound its size and array
-lengths, and it is untrusted client input, never authority.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+closed at the top level, and it is untrusted client input, never
+authority. The PS <span class="bcp14">MUST</span> bound its size and array lengths.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.3">
@@ -1717,12 +1730,13 @@ structured Intent the PS derives the Authority Set by narrowing, which
 the issuance profile makes reproducible and auditable; from
 <code>description</code> and <code>tools</code> alone the derivation is generative, under
 that profile's disclosure and recording rules for generative
-derivation. In either case the approved Intent is carried by the
-canonical projection where it fits, and verbatim in the blob's
-<code>mission_intent</code> member where it does not (<a href="#mission-record" class="auto internal xref">Section 4</a>); when
-the proposal's Intent carries no <code>expires_at</code>, the PS <span class="bcp14">MUST</span> set one by
-policy, since the record requires it.<a href="#section-5-3" class="pilcrow">¶</a></p>
-<p id="section-5-4">Derivation lands in the <code>approved_tools</code> shape, consistent with the
+derivation.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">In either case the approved Intent is carried by the canonical
+projection where it fits, and verbatim in the blob's
+<code>mission_intent</code> member where it does not (<a href="#mission-record" class="auto internal xref">Section 4</a>). When
+the proposal's Intent carries no <code>expires_at</code>, the PS <span class="bcp14">MUST</span> set one
+by policy, since the record requires it.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<p id="section-5-5">Derivation lands in the <code>approved_tools</code> shape, consistent with the
 issuance profile's Modeling Tools and Function Calls section: each
 derived Authority Set entry is one tool entry, its provider the
 entry's <code>resource</code>, its name the entry's action, its bounds the
@@ -1733,14 +1747,14 @@ structure. For a tool with no <code>resource</code> (a local tool with no
 remote provider), the projection sets the entry's <code>resource</code> to the
 PS's own issuer URL: the authority is PS-governed local action, and
 its point-of-use evaluation belongs to the runtime layer, not to
-issuance.<a href="#section-5-4" class="pilcrow">¶</a></p>
-<p id="section-5-5">AAuth's permission endpoint remains the per-call path for actions
+issuance.<a href="#section-5-5" class="pilcrow">¶</a></p>
+<p id="section-5-6">AAuth's permission endpoint remains the per-call path for actions
 outside the Authority Set: each grant there is an individually
 approved action recorded in the mission log, and it does not widen the
 committed set. The proposal is exactly the shaping profile's Mission
 Intent proposal; a deployment that shapes free-text instructions into
 structured Intents composes here unchanged
-(<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>).<a href="#section-5-5" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>).<a href="#section-5-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="approval">
@@ -1764,8 +1778,8 @@ class.<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-2.2">
           <p id="section-6-2.2.1">Establish the Subject: the PS <span class="bcp14">MUST</span> itself establish the Subject's
-(<code>iss</code>, <code>sub</code>), with <code>iss</code> its own issuer URL, and <span class="bcp14">MUST NOT</span> take
-the Subject from unauthenticated client input.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+(<code>iss</code>, <code>sub</code>), with <code>iss</code> its own issuer URL. The PS <span class="bcp14">MUST NOT</span>
+take the Subject from unauthenticated client input.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-2.3">
           <p id="section-6-2.3.1">Derive the Authority Set from the proposal (<a href="#mission-intent" class="auto internal xref">Section 5</a>)
@@ -1793,21 +1807,22 @@ approved (<code>approver</code>, <code>s256</code>) reference before the record 
       </ol>
 <p id="section-6-3">Per AAuth, the PS or user <span class="bcp14">MAY</span> refine the description and tools during
 clarification, and the approved mission <span class="bcp14">MAY</span> differ from the proposal.
-The recorded Intent and Authority Set are the refined ones; if the
+The recorded Intent and Authority Set are the refined ones. If the
 derived Authority Set changes between rendering and consent, the PS
-<span class="bcp14">MUST</span> recompute and re-obtain consent per the issuance profile.
-Mission Consent Evidence composes unchanged, with the PS as the
+<span class="bcp14">MUST</span> recompute and re-obtain consent per the issuance profile.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">Mission Consent Evidence composes unchanged, with the PS as the
 committing issuer
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>). AAuth's
-clarification chat is the shaping profile's clarification step
-(<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>) and, when the user
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">AAuth's clarification chat is the shaping profile's clarification
+step (<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>). When the user
 questions the proposal rather than the task ("why does this need
-write access to my finance folder?"), the consent-evidence profile's
-Disclosure Interrogation: an answer the PS presents in its own voice
-is grounded in recorded shaping or provenance material, the agent's
-chat replies stay attacker-influenceable text under
-<a href="#security-rendering" class="auto internal xref">Section 14.1</a>, and the chat the mission log retains
-(<a href="#security-mission-log" class="auto internal xref">Section 14.4</a>) is the interrogation record.<a href="#section-6-3" class="pilcrow">¶</a></p>
+write access to my finance folder?"), the chat is also the
+consent-evidence profile's Disclosure Interrogation: an answer the
+PS presents in its own voice is grounded in recorded shaping or
+provenance material, the agent's chat replies stay
+attacker-influenceable text under <a href="#security-rendering" class="auto internal xref">Section 14.1</a>, and the
+chat the mission log retains (<a href="#security-mission-log" class="auto internal xref">Section 14.4</a>) is the
+interrogation record.<a href="#section-6-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="lifecycle">
@@ -1878,7 +1893,7 @@ AAuth's model:<a href="#section-7-3" class="pilcrow">¶</a></p>
 Subject, the Approver, or an administrator to revoke a Mission by
 <code>mission_id</code>, independent of any token, per the issuance profile.
 AAuth's revocation scenario in which "the PS revokes a mission" is
-this transition to <code>revoked</code>; on revocation the PS <span class="bcp14">SHOULD</span> revoke
+this transition to <code>revoked</code>. On revocation the PS <span class="bcp14">SHOULD</span> revoke
 outstanding auth tokens issued under the Mission at the resources'
 revocation endpoints, as AAuth provides.<a href="#section-7-4.1.1" class="pilcrow">¶</a></p>
 </li>
@@ -1898,7 +1913,7 @@ section).<a href="#section-7-4.3.1" class="pilcrow">¶</a></p>
         <li class="normal" id="section-7-4.4">
           <p id="section-7-4.4.1"><strong>Suspension.</strong> A PS that adopts the status profile's <code>suspended</code>
 state <span class="bcp14">MUST NOT</span> report <code>mission_terminated</code> for a suspended Mission,
-since termination is permanent to the agent; it defers processing
+since termination is permanent to the agent. It defers processing
 instead, using AAuth's 202 deferred mechanism, which AAuth's design
 rationale names as the waiting path for short pauses. For long
 pauses the PS <span class="bcp14">SHOULD</span> terminate and let a new proposal re-scope the
@@ -1912,27 +1927,41 @@ work, per that rationale.<a href="#section-7-4.4.1" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-7.1-1">This gate rests on an AAuth structural precondition: no auth token
 exists under a Mission without passing the Person Server, in either
-mode. On that precondition the PS <span class="bcp14">MUST NOT</span> process a token request,
-federate with an Access Server, grant a permission, or otherwise extend
-authority under a Mission that is not <code>active</code>. This extends AAuth's rule that any PS
-endpoint referencing a non-active mission returns the mission status
-error, and it is the issuance profile's derivation gate: in the
-PS-asserted mode the PS refuses to issue the auth token, and in the
-federated mode it refuses to federate, so no credential is derived
-under a non-active Mission in any mode. The <code>active</code> check <span class="bcp14">MUST</span> be
-atomic with issuance.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
-<p id="section-7.1-2">Each auth-token issuance and each federation event counts as one
+mode. On that precondition, under a Mission that is not <code>active</code>,
+the PS <span class="bcp14">MUST NOT</span>:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.1-2.1">
+            <p id="section-7.1-2.1.1">process a token request;<a href="#section-7.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.2">
+            <p id="section-7.1-2.2.1">federate with an Access Server;<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.3">
+            <p id="section-7.1-2.3.1">grant a permission; or<a href="#section-7.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.4">
+            <p id="section-7.1-2.4.1">otherwise extend authority.<a href="#section-7.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.1-3">The <code>active</code> check <span class="bcp14">MUST</span> be atomic with issuance.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+<p id="section-7.1-4">This gate extends AAuth's rule that any PS endpoint referencing a
+non-active mission returns the mission status error, and it is the
+issuance profile's derivation gate: in the PS-asserted mode the PS
+refuses to issue the auth token, and in the federated mode it
+refuses to federate, so no credential is derived under a non-active
+Mission in any mode.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+<p id="section-7.1-5">Each auth-token issuance and each federation event counts as one
 derivation under the Mission. The PS maintains the derivation count
 and, where the Intent's <code>controls.max_derivations</code> is present, <span class="bcp14">MUST</span>
 refuse the issuance or federation that would exceed it, per the
-issuance profile's count-and-gate rule.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
-<p id="section-7.1-3">An auth token issued under a Mission <span class="bcp14">MUST NOT</span> have an <code>exp</code> later
+issuance profile's count-and-gate rule.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+<p id="section-7.1-6">An auth token issued under a Mission <span class="bcp14">MUST NOT</span> have an <code>exp</code> later
 than the Mission's <code>expires_at</code>, so no credential outlives the
 Mission. AAuth
 already caps auth-token lifetime at one hour, so every issuance is a
 fresh evaluation point and revocation latency is bounded by the
 auth-token lifetime; the state surfaces below give a tighter cutoff
-where a deployment needs one.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+where a deployment needs one.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="state-surfaces">
@@ -1942,29 +1971,30 @@ where a deployment needs one.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-7.2-1">The mission log is the native state substrate, and the family
 surfaces are views over it: a status read reports the log's latest
-lifecycle event, and a signal transmits one. A Mission-Bound Person
-Server <span class="bcp14">SHOULD</span> serve the Mission Status
+lifecycle event, and a signal transmits one.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">A Mission-Bound Person Server <span class="bcp14">SHOULD</span> serve the Mission Status
 operation of <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, with its
 signed responses, authentication, anti-oracle property, and caching
-rules, and <span class="bcp14">MAY</span> serve it at its existing mission endpoint, keyed by
-the native reference, rather than at a distinct endpoint; it <span class="bcp14">MAY</span>
-serve that profile's Mission Lifecycle endpoint as its
-management surface. A PS whose deployment claims runtime enforcement
-of the high-consequence classes <span class="bcp14">MUST</span> serve signed Mission Status as
-an active freshness source with a published staleness bound: this is
+rules. It <span class="bcp14">MAY</span> serve the operation at its existing mission endpoint,
+keyed by the native reference, rather than at a distinct endpoint.
+It <span class="bcp14">MAY</span> serve that profile's Mission Lifecycle endpoint as its
+management surface. It <span class="bcp14">MAY</span> emit Mission Lifecycle Signals, with the
+PS as the transmitting Mission Issuer
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>).<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+<p id="section-7.2-3">A PS whose deployment claims runtime enforcement of the
+high-consequence classes <span class="bcp14">MUST</span> serve signed Mission Status as an
+active freshness source with a published staleness bound: this is
 the runtime profile's active-freshness requirement for those classes
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and auth-token-lifetime
-expiry alone does not meet it. It <span class="bcp14">MAY</span> emit Mission Lifecycle Signals, with the PS
-as the transmitting Mission Issuer
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>).<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<p id="section-7.2-2">A PS that serves these surfaces at distinct endpoints publishes the
+expiry alone does not meet it.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-4">A PS that serves these surfaces at distinct endpoints publishes the
 corresponding members
 (<code>mission_status_endpoint</code>,
 <code>mission_status_signing_alg_values_supported</code>,
 <code>mission_lifecycle_endpoint</code>, <code>mission_event_stream_endpoint</code>,
 <code>mission_max_stale_seconds</code>) in its AAuth PS metadata document, with
 the semantics those profiles define. The PS's existing <code>jwks_uri</code> is
-the published key material for its signed artifacts.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+the published key material for its signed artifacts.<a href="#section-7.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1983,23 +2013,24 @@ the published key material for its signed artifacts.<a href="#section-7.2-2" cla
 <p id="section-8.1-1">An auth token a Mission-Bound Person Server issues under a Mission
 <span class="bcp14">MUST</span> carry, in its <code>mission</code> claim, the family members <code>id</code>,
 <code>issuer</code>, and <code>authority_hash</code> as the issuance profile defines them,
-alongside AAuth's native members <code>approver</code> and <code>s256</code>, and <span class="bcp14">SHOULD</span>
-carry the <code>expires_at</code> member as the issuance-grant profile defines
-it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>): a
-bounding commitment with no liveness. One object
-carries all five; <code>issuer</code> equals <code>approver</code> in this binding, and both
-appear because each specification's consumers read their own members.
-AAuth parties ignore members they do not recognize, and a family
+alongside AAuth's native members <code>approver</code> and <code>s256</code>. The claim
+<span class="bcp14">SHOULD</span> also carry the <code>expires_at</code> member as the issuance-grant
+profile defines it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>): a bounding
+commitment with no liveness. One object carries all five; <code>issuer</code>
+equals <code>approver</code> in this binding, and both appear because each
+specification's consumers read their own members.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">AAuth parties ignore members they do not recognize. A family
 consumer <span class="bcp14">MUST NOT</span> use any <code>mission</code> member to grant or widen
-authority, per the issuance profile.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
-<p id="section-8.1-2">In the federated mode the Access Server mints the auth token and
+authority, per the issuance profile.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+<p id="section-8.1-3">In the federated mode the Access Server mints the auth token and
 copies the AAuth-native reference per AAuth. The family members
 appear only when the Access Server supports this profile; when it
 does not, the credential still names the Mission by (<code>approver</code>,
 <code>s256</code>), the PS's gate still holds (<a href="#gating" class="auto internal xref">Section 7.1</a>), and a consumer that
 needs the family members resolves them through the Mission Status
 operation or a Mission Mandate
-(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>).<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>).<a href="#section-8.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="subset">
@@ -2010,35 +2041,50 @@ operation or a Mission Mandate
 <p id="section-8.2-1">The authority an auth token grants <span class="bcp14">MUST</span> be a subset of the Mission's
 Authority Set. The granted <code>scope</code> is a coarse projection under the
 issuance profile's scope rule: every scope value <span class="bcp14">MUST</span> correspond to
-authority present in the Authority Set, and no scope value may convey
+authority present in the Authority Set, and no scope value conveys
 authority, or relaxation of a constraint, that the set does not
-grant. In the federated mode the PS <span class="bcp14">MUST NOT</span> federate a request whose
-requested authority exceeds this subset, and it <span class="bcp14">MUST NOT</span> deliver to
-the agent an Access Server-issued token whose granted scope does. The
-delivery check also bounds lifetime: the PS <span class="bcp14">MUST NOT</span> deliver an
-Access Server-issued token whose <code>exp</code> is later than the Mission's
-<code>expires_at</code>, so no federated credential outlives the Mission
-(<a href="#gating" class="auto internal xref">Section 7.1</a>), and it <span class="bcp14">MUST NOT</span> initiate federation when the Mission's
-remaining lifetime is too short to yield a deliverable token.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
-<p id="section-8.2-2">An auth token <span class="bcp14">MAY</span> additionally carry Mission-derived authorization
-details entries as the issuance profile defines them; each carried
-entry <span class="bcp14">MUST</span> be a subset of a Mission entry under the subset rule, and a
-Resource Server that consumes them enforces per the issuance profile's
-Resource Server enforcement rules, including failing closed on
-constraints it cannot enforce.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
-<p id="section-8.2-3">The subset rule binds the issuer PS's own derivations to the recorded
+grant.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2">In the federated mode this subset, and the Mission's lifetime, are
+the PS's federation and delivery checks:<a href="#section-8.2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.2-3.1">
+            <p id="section-8.2-3.1.1">the PS <span class="bcp14">MUST NOT</span> federate a request whose requested authority
+exceeds this subset;<a href="#section-8.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-3.2">
+            <p id="section-8.2-3.2.1">the PS <span class="bcp14">MUST NOT</span> deliver to the agent an Access Server-issued token
+whose granted scope exceeds this subset;<a href="#section-8.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-3.3">
+            <p id="section-8.2-3.3.1">the PS <span class="bcp14">MUST NOT</span> deliver an Access Server-issued token whose <code>exp</code>
+is later than the Mission's <code>expires_at</code>, so no federated
+credential outlives the Mission (<a href="#gating" class="auto internal xref">Section 7.1</a>); and<a href="#section-8.2-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-3.4">
+            <p id="section-8.2-3.4.1">the PS <span class="bcp14">MUST NOT</span> initiate federation when the Mission's remaining
+lifetime is too short to yield a deliverable token.<a href="#section-8.2-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.2-4">An auth token <span class="bcp14">MAY</span> additionally carry Mission-derived authorization
+details entries as the issuance profile defines them. Each carried
+entry <span class="bcp14">MUST</span> be a subset of a Mission entry under the subset rule, and
+a Resource Server that consumes them enforces per the issuance
+profile's Resource Server enforcement rules, including failing
+closed on constraints it cannot enforce.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+<p id="section-8.2-5">The subset rule binds the issuer PS's own derivations to the recorded
 Authority Set. It does not impose cross-hop attenuation in AAuth call
 chaining, where AAuth deliberately does not require a downstream grant
 to be a subset of the upstream scope: a downstream hop is governed at
 that hop's own decision point, under its own Mission or per-call
-permission, not by algebra over this Mission's set. This is a boundary
-on the family's only-narrows invariant, not an exception to it. The
-invariant governs derivation: a credential derived from a Mission only
-narrows that Mission's authority. A chained hop derives no credential
-from this Mission; it is a fresh decision at a new decision point,
-evaluated against its own authority source, so it falls outside the
-invariant rather than violating it. Attenuation within any one
-Mission's own derivations stays strict (<a href="#gating" class="auto internal xref">Section 7.1</a>, <a href="#credential" class="auto internal xref">Section 8</a>).<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+permission, not by algebra over this Mission's set.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
+<p id="section-8.2-6">This is a boundary on the family's only-narrows invariant, not an
+exception to it. The invariant governs derivation: a credential
+derived from a Mission only narrows that Mission's authority. A
+chained hop derives no credential from this Mission; it is a fresh
+decision at a new decision point, evaluated against its own
+authority source, so it falls outside the invariant rather than
+violating it. Attenuation within any one Mission's own derivations
+stays strict (<a href="#gating" class="auto internal xref">Section 7.1</a>, <a href="#credential" class="auto internal xref">Section 8</a>).<a href="#section-8.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="subject-directedness">
@@ -2049,7 +2095,7 @@ Mission's own derivations stays strict (<a href="#gating" class="auto internal x
 <p id="section-8.3-1">The issuance profile sets a derived token's <code>sub</code> to the Mission
 Subject's <code>sub</code>. AAuth directs <code>sub</code> per resource for privacy. This
 binding follows AAuth on the wire: the auth token's <code>sub</code> <span class="bcp14">MAY</span> be the
-directed identifier for its audience, and the PS <span class="bcp14">MUST</span> maintain the
+directed identifier for its audience. The PS <span class="bcp14">MUST</span> maintain the
 mapping from each directed identifier to the Mission's <code>subject</code> so
 that evidence, audit, and the status surfaces resolve the same
 principal.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
@@ -2405,22 +2451,24 @@ deployment serves.<a href="#section-13-3.7.1" class="pilcrow">¶</a></p>
 <p id="section-13-4">A <strong>Mission-Bound Agent</strong>:<a href="#section-13-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13-5.1">
-          <p id="section-13-5.1.1"><span class="bcp14">SHOULD</span> propose a structured Mission Intent (<a href="#mission-intent" class="auto internal xref">Section 5</a>) and
-treats every proposal as a proposal, never as authority;<a href="#section-13-5.1.1" class="pilcrow">¶</a></p>
+          <p id="section-13-5.1.1"><span class="bcp14">SHOULD</span> propose a structured Mission Intent (<a href="#mission-intent" class="auto internal xref">Section 5</a>);<a href="#section-13-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-5.2">
-          <p id="section-13-5.2.1">stores the blob bytes exactly as received, carries the Mission
-reference on resource requests, and covers <code>aauth-mission</code> in its
-request signatures, per AAuth;<a href="#section-13-5.2.1" class="pilcrow">¶</a></p>
+          <p id="section-13-5.2.1">treats every proposal as a proposal, never as authority;<a href="#section-13-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-5.3">
-          <p id="section-13-5.3.1">respects the only-<code>active</code> rule: it stops on <code>mission_terminated</code>,
-treats an unrecognized <code>mission_status</code> as non-active, and proposes
-completion when the task is done; and<a href="#section-13-5.3.1" class="pilcrow">¶</a></p>
+          <p id="section-13-5.3.1">stores the blob bytes exactly as received, carries the Mission
+reference on resource requests, and covers <code>aauth-mission</code> in its
+request signatures, per AAuth;<a href="#section-13-5.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-5.4">
-          <p id="section-13-5.4.1">treats <code>mission_id</code> and the Mission reference as references, never
-as credentials.<a href="#section-13-5.4.1" class="pilcrow">¶</a></p>
+          <p id="section-13-5.4.1">respects the only-<code>active</code> rule: it stops on <code>mission_terminated</code>,
+treats an unrecognized <code>mission_status</code> as non-active, and proposes
+completion when the task is done; and<a href="#section-13-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-5.5">
+          <p id="section-13-5.5.1">treats <code>mission_id</code> and the Mission reference as references, never
+as credentials.<a href="#section-13-5.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2438,13 +2486,11 @@ as credentials.<a href="#section-13-5.4.1" class="pilcrow">¶</a></p>
 <p id="section-14.1-1">The Markdown <code>description</code>, the proposal, and every <code>justification</code>
 are attacker-influenceable text that the PS renders to the person at
 the consent surface. The issuance profile's rendering rules apply
-unchanged: render client text inert and sanitized, mitigate
-direction-override and confusable-character presentation, and visually
-distinguish the derived Authority Set from client-supplied text so
-crafted text cannot pass as derived authority. AAuth's own
-Markdown-sanitization requirement is necessary but not sufficient; the
-consent surface <span class="bcp14">MUST</span> also make clear which rendered content is
-authority and which is the agent's narrative.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+unchanged, as the approval event applies them (<a href="#approval" class="auto internal xref">Section 6</a>); their
+point is that crafted text cannot pass as derived authority. AAuth's
+own Markdown-sanitization requirement is necessary but not
+sufficient. The consent surface <span class="bcp14">MUST</span> also make clear which rendered
+content is authority and which is the agent's narrative.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-two-commitments">
@@ -2504,16 +2550,34 @@ apply: tamper-evident storage, retention for the audit horizon, and a
 grant recorded before the authority it grants is used
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-14.4-1" class="pilcrow">¶</a></p>
 <p id="section-14.4-2">For a runtime-enforced deployment the log <span class="bcp14">MUST</span> record, in commit
-order, at least: the Mission Intent proposal; any clarification
-exchange; the approval rendering and the approval decision with the
-committed <code>authority_hash</code>; each auth-token request and the token
-issued; each permission request and its decision (permit or the
-denial reason); and each lifecycle transition (revocation,
-completion, or expiry). Ordering <span class="bcp14">MUST</span> place a grant before any use of
-the authority it grants, so the log reconstructs what was authorized,
-by what decision, under what Mission state, and to what outcome. A
+order, at least:<a href="#section-14.4-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14.4-3.1">
+            <p id="section-14.4-3.1.1">the Mission Intent proposal;<a href="#section-14.4-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.4-3.2">
+            <p id="section-14.4-3.2.1">any clarification exchange;<a href="#section-14.4-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.4-3.3">
+            <p id="section-14.4-3.3.1">the approval rendering and the approval decision with the
+committed <code>authority_hash</code>;<a href="#section-14.4-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.4-3.4">
+            <p id="section-14.4-3.4.1">each auth-token request and the token issued;<a href="#section-14.4-3.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.4-3.5">
+            <p id="section-14.4-3.5.1">each permission request and its decision (permit or the denial
+reason); and<a href="#section-14.4-3.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.4-3.6">
+            <p id="section-14.4-3.6.1">each lifecycle transition (revocation, completion, or expiry).<a href="#section-14.4-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-14.4-4">Ordering <span class="bcp14">MUST</span> place a grant before any use of the authority it
+grants, so the log reconstructs what was authorized, by what
+decision, under what Mission state, and to what outcome. A
 deployment <span class="bcp14">MAY</span> map these to the runtime profile's decision and
-execution evidence records, which is the interoperable form.<a href="#section-14.4-2" class="pilcrow">¶</a></p>
+execution evidence records, which is the interoperable form.<a href="#section-14.4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2540,16 +2604,14 @@ correlate the Mission's activity within and across services, and
 <code>approver</code> identifies the person's PS. This is the deliberate
 property of the issuance profile's Mission Identifier correlation,
 and that profile's guidance applies: the stable anchor is what audit
-and governance key on, and a deployment <span class="bcp14">SHOULD</span> document the
-correlation it implies. AAuth's directed <code>sub</code> limits subject
-correlation; the Mission reference is not directed, because it is
-the anchor.<a href="#section-15-2" class="pilcrow">¶</a></p>
+and governance key on. A deployment <span class="bcp14">SHOULD</span> document the correlation
+it implies. AAuth's directed <code>sub</code> limits subject correlation; the
+Mission reference is not directed, because it is the anchor.<a href="#section-15-2" class="pilcrow">¶</a></p>
 <p id="section-15-3">Directed Mission references, in which the PS presents a distinct
 per-audience reference that still verifies back to the same Mission
 through PS-signed evidence, would limit this cross-resource
-correlation as AAuth's directed <code>sub</code> limits subject correlation.
-They are future work here, parallel to the audience-pairwise
-references the issuance profile defers
+correlation in the same way. They are future work here, parallel to
+the audience-pairwise references the issuance profile defers
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): both trade the stable audit
 anchor for unlinkability, and neither is a v1 property.<a href="#section-15-3" class="pilcrow">¶</a></p>
 </section>
