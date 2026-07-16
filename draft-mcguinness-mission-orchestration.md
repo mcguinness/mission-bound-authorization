@@ -143,6 +143,34 @@ This is a newer, experimental profile and is not required by any
 Mission Assurance Level
 ({{I-D.draft-mcguinness-mission-architecture}}).
 
+# Conventions and Terminology {#conventions}
+
+{::boilerplate bcp14-tagged}
+
+This document uses the terms Mission, Mission state, and consequential
+action from {{I-D.draft-mcguinness-oauth-mission}}; and PEP, PDP, and
+runtime enforcement evidence from
+{{I-D.draft-mcguinness-mission-runtime}}. Where a deployment
+uses the AuthZEN profile ({{I-D.draft-mcguinness-mission-authzen}}),
+its Decision Evidence and Execution Evidence objects are examples of
+the runtime enforcement evidence records this document links.
+
+Orchestrator:
+: The component that schedules, sequences, retries, or coordinates
+  governed actions in a Mission.
+
+Unwind plan:
+: The per-step plan describing what the orchestrator does if Mission
+  authority ends or cannot be established before or during that step.
+
+Compensation:
+: A deployment-defined action intended to offset or reverse a prior
+  action's effect. Compensation is not guaranteed reversal.
+
+Safe point:
+: A workflow point at which the orchestrator can stop without starting
+  another consequential action and with all prior outcomes recorded.
+
 # Scope
 
 This document is experimental: adopt it for evaluation, not as a
@@ -195,49 +223,24 @@ The orchestration profile is deployment documentation. It is not an
 OAuth Authorization Server metadata extension and does not alter token
 format.
 
-# Conventions and Terminology {#conventions}
-
-{::boilerplate bcp14-tagged}
-
-This document uses the terms Mission, Mission state, and consequential
-action from {{I-D.draft-mcguinness-oauth-mission}}; and PEP, PDP, and
-runtime enforcement evidence from
-{{I-D.draft-mcguinness-mission-runtime}}. Where a deployment
-uses the AuthZEN profile ({{I-D.draft-mcguinness-mission-authzen}}),
-its Decision Evidence and Execution Evidence objects are examples of
-the runtime enforcement evidence records this document links.
-
-Orchestrator:
-: The component that schedules, sequences, retries, or coordinates
-  governed actions in a Mission.
-
-Unwind plan:
-: The per-step plan describing what the orchestrator does if Mission
-  authority ends or cannot be established before or during that step.
-
-Compensation:
-: A deployment-defined action intended to offset or reverse a prior
-  action's effect. Compensation is not guaranteed reversal.
-
-Safe point:
-: A workflow point at which the orchestrator can stop without starting
-  another consequential action and with all prior outcomes recorded.
-
 # Mission Substrate {#mission-substrate}
 
 This profile is defined against the Mission model rather than against
-OAuth 2.0 mechanics. It consumes these substrate primitives: the
-Mission identifier; the lifecycle state space with its
-only-`active`-permits rule; the runtime enforcement evidence its
-records link; the integrity-anchor envelope, used for
-`unwind_plan_hash`; and the substrate's Mission state, against which
-a compensation authority basis resolves ({{compensation-authority}}):
-a `separate_mission` basis requires a Mission that is `active` under
-the binding in use, and a `resource_policy` basis lies outside Mission
-authority entirely. The issuance profile
-{{I-D.draft-mcguinness-oauth-mission}} is this version's normative
-substrate; another substrate that provides the same primitives can
-host this profile unchanged.
+OAuth 2.0 mechanics. It consumes these substrate primitives:
+
+- the Mission identifier;
+- the lifecycle state space with its only-`active`-permits rule;
+- the runtime enforcement evidence its records link;
+- the integrity-anchor envelope, used for `unwind_plan_hash`; and
+- the substrate's Mission state, against which a compensation
+  authority basis resolves ({{compensation-authority}}): a
+  `separate_mission` basis requires a Mission that is `active` under
+  the binding in use, and a `resource_policy` basis lies outside
+  Mission authority entirely.
+
+The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
+version's normative substrate; another substrate that provides the
+same primitives can host this profile unchanged.
 
 # Reversibility Classes {#reversibility}
 
@@ -297,11 +300,11 @@ The orchestrator MUST derive reversibility class from a trusted source:
 - workflow definition reviewed under deployment policy; or
 - Resource policy response.
 
-An agent plan, model output, or tool description MAY suggest a class
-but MUST NOT be the sole authority for lowering class. If sources
-conflict, the orchestrator MUST use the class that is at least the
-minimum the mapping table of {{reversibility}} requires for the
-operation's runtime action class.
+An agent plan, model output, or tool description MAY suggest a class.
+Such a suggestion MUST NOT be the sole authority for lowering class.
+If sources conflict, the orchestrator MUST use the class that is at
+least the minimum the mapping table of {{reversibility}} requires for
+the operation's runtime action class.
 
 # Unwind Plan {#unwind-plan}
 
@@ -358,33 +361,39 @@ deployment commits. The plan has these members:
 
 The unwind plan does not authorize compensation by itself. A
 compensation action that is consequential MUST itself be authorized
-under one of the compensation authority bases ({{compensation-authority}}):
-resource policy or a separate active Mission, never the terminated
-Mission.
+under one of the compensation authority bases
+({{compensation-authority}}).
 
 ## Unwind Plan Integrity {#unwind-plan-integrity}
 
 The `unwind_plan_hash` over the step's unwind plan MUST be durably
-recorded strictly before the step's dispatch: a hash first recorded
-after a trigger proves later alteration, not that the plan existed when
-the step was dispatched, and a record written only after dispatch
-leaves a crash indistinguishable from evasion. The orchestrator MUST
-commit it in an Orchestration Evidence record durably written before
-dispatch ({{orchestration-evidence}}), and MUST NOT dispatch the step
-if that evidence write fails: evidence is fail-closed. As an
-alternative, a deployment MAY commit it instead as a coordinated member
-of the step's Decision Evidence, through the AuthZEN profile's
-coordinated-extension seam
-({{I-D.draft-mcguinness-mission-authzen}}); the step's first
-Orchestration Evidence record then repeats the committed value. The
-durability and fail-closed rule applies to whichever path commits the
-hash: the committing write MUST complete durably before dispatch, and a
-failed write MUST prevent dispatch. The
-hash is computed with the integrity-anchor envelope of the issuance
-profile ({{I-D.draft-mcguinness-oauth-mission}}) under a new `typ`
-value `mission-unwind-plan`, where `value` is the unwind plan object.
-This lets an auditor verify that the plan a step ran under existed at
-dispatch and detect any later alteration.
+recorded strictly before the step's dispatch. The hash is computed
+with the integrity-anchor envelope of the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) under a new `typ` value
+`mission-unwind-plan`, where `value` is the unwind plan object.
+
+The commit procedure is:
+
+1. The orchestrator MUST commit the hash in an Orchestration Evidence
+   record durably written before dispatch
+   ({{orchestration-evidence}}). As an alternative, a deployment MAY
+   commit it instead as a coordinated member of the step's Decision
+   Evidence, through the AuthZEN profile's coordinated-extension seam
+   ({{I-D.draft-mcguinness-mission-authzen}}); the step's first
+   Orchestration Evidence record then repeats the committed value.
+2. On whichever path commits the hash, the committing write MUST
+   complete durably before dispatch.
+3. The orchestrator MUST NOT dispatch the step if that committing
+   write fails: evidence is fail-closed. On either path, a failed
+   write MUST prevent dispatch.
+
+Recording the hash strictly before dispatch is what makes the record
+probative: a hash first recorded after a trigger proves later
+alteration, not that the plan existed when the step was dispatched,
+and a record written only after dispatch leaves a crash
+indistinguishable from evasion. This lets an auditor verify that the
+plan a step ran under existed at dispatch and detect any later
+alteration.
 
 Every unwind-plan member MUST derive from a trusted source. The
 compensation action, review queue, and safe point, like the
@@ -393,13 +402,14 @@ reviewed workflow definition or operation profile. Model output MUST
 NOT define them.
 
 A model-proposed plan is not excluded; it is unadopted. A deployment
-MAY admit one through its review surface, a human review or a
-deterministic validation against a reviewed operation profile, which
-adopts the proposal into the deployment's committed documentation
-before dispatch; the adopted plan is then a reviewed definition, and
-the Orchestration Evidence that commits its hash records the
-admission. What the rule excludes is model output defining an
-unwind-plan member with nothing between proposal and dispatch.
+MAY admit one through its review surface: a human review or a
+deterministic validation against a reviewed operation profile.
+Admission adopts the proposal into the deployment's committed
+documentation before dispatch. The adopted plan is then a reviewed
+definition, and the Orchestration Evidence that commits its hash
+records the admission. What the rule excludes is model output
+defining an unwind-plan member with nothing between proposal and
+dispatch.
 
 ## Worked Unwind Plan {#worked-unwind-plan}
 
@@ -462,23 +472,32 @@ it MUST:
 The two triggers differ in what they permit. An established
 non-active state runs the full sequence. Staleness alone, an active
 state that cannot be established within the bound, performs items 1,
-2, 3, and 5 and MUST NOT execute post-completion behavior (item 4):
-compensation is itself consequential work, and unwinding work nobody
+2, 3, and 5 and MUST NOT execute post-completion behavior (item 4).
+Compensation is itself consequential work, and unwinding work nobody
 stopped is not fail-closed. Post-completion behavior runs only on an
 established non-active state.
 
-The states `revoked` and `expired` ({{I-D.draft-mcguinness-oauth-mission}}),
-`suspended` and `completed` ({{I-D.draft-mcguinness-oauth-mission-status}}),
-and `superseded` ({{I-D.draft-mcguinness-oauth-mission-expansion}}) are
-all non-active. The orchestrator needs none of those companion profiles
-to be conformant: per the issuance profile's forward-compatibility rule
-it treats any state other than `active` as non-active. A deployment MAY
-define different operator handling for each state, but none allows new
-governed execution without a fresh authority path. In particular, a
-`superseded` Mission's continued work SHOULD proceed under the successor
-Mission through a fresh derivation from the successor's grant, not by
-rebinding the predecessor's authority; the successor carries its own
-Authority Set ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+These states are all non-active:
+
+| State | Defined by |
+|---|---|
+| `revoked` | {{I-D.draft-mcguinness-oauth-mission}} |
+| `expired` | {{I-D.draft-mcguinness-oauth-mission}} |
+| `suspended` | {{I-D.draft-mcguinness-oauth-mission-status}} |
+| `completed` | {{I-D.draft-mcguinness-oauth-mission-status}} |
+| `superseded` | {{I-D.draft-mcguinness-oauth-mission-expansion}} |
+
+The orchestrator needs none of those companion profiles to be
+conformant: per the issuance profile's forward-compatibility rule it
+treats any state other than `active` as non-active. A deployment MAY
+define different operator handling for each state, but none allows
+new governed execution without a fresh authority path.
+
+In particular, a `superseded` Mission's continued work SHOULD proceed
+under the successor Mission through a fresh derivation from the
+successor's grant, not by rebinding the predecessor's authority; the
+successor carries its own Authority Set
+({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 ## Trigger Sources {#trigger-sources}
 
@@ -593,7 +612,7 @@ compensation is one of:
 An operator may gate either basis, but operator approval is not itself
 an authority basis: it does not create authority a PEP would enforce
 over a terminated Mission. If neither basis applies, the orchestrator
-MUST NOT compensate and MUST record a `human_review` decision.
+MUST NOT compensate. It MUST record a `human_review` decision.
 
 Under either basis, the compensating action's decision MUST carry the
 `decision_id` of the decision it reverses in the runtime profile's
@@ -668,11 +687,14 @@ members:
 : REQUIRED. One of `suppress`, `pause`, `cancel`,
   `continue_to_safe_point`, `compensate`, `human_review`, or
   `record_only`. An unwind plan's
-  `pre_start_behavior`/`in_flight_behavior` values map to these: both
-  `cancel_workflow` and `cancel_if_possible` record as `cancel`,
-  `continue_to_safe_point` carries through unchanged,
-  `wait_then_review` and a review queue record as `human_review`, and
-  `suppress`/`pause` carry through unchanged.
+  `pre_start_behavior`/`in_flight_behavior` values map to these:
+
+  - both `cancel_workflow` and `cancel_if_possible` record as
+    `cancel`;
+  - `continue_to_safe_point` carries through unchanged;
+  - `wait_then_review` and a review queue record as `human_review`;
+    and
+  - `suppress` and `pause` carry through unchanged.
 
 `reason`:
 : REQUIRED. A string naming the condition.
@@ -711,24 +733,28 @@ members:
   of the compensation action.
 
 `evidence_envelope`:
-: OPTIONAL, except REQUIRED when `orchestration_decision` is
+: Integrity protection over the Orchestration Evidence object.
+  OPTIONAL, except REQUIRED when `orchestration_decision` is
   `compensate` and the compensated step's reversibility class is
   `irreversible_action`, `external_commitment`, or
   `privileged_administration`. Compensation in those classes is
   consequential work in its own right; its record does not rest on
   an unsigned self-report by the orchestrator that performed it.
-  Integrity protection over the Orchestration Evidence
-  object. When present with `format` `jws-compact`, it is a JWS
-  {{RFC7515}} Compact Serialization whose payload is the JCS
-  {{RFC8785}} canonical bytes of the object with `evidence_envelope`
-  removed. When present, it MUST identify the signer: the JWS protected
-  header MUST carry `kid`, whose resolution under deployment policy
-  identifies the issuer, `alg`, and `typ`, matching the suite's
-  evidence-envelope convention
-  ({{I-D.draft-mcguinness-mission-runtime}}). This document registers
-  no media type; its two local-use type identifiers are
-  `mission-orchestration-evidence`, which `typ` carries here, and
-  `mission-unwind-plan` ({{unwind-plan-integrity}}).
+
+  When present:
+
+  - With `format` `jws-compact`, it is a JWS {{RFC7515}} Compact
+    Serialization whose payload is the JCS {{RFC8785}} canonical
+    bytes of the object with `evidence_envelope` removed.
+  - It MUST identify the signer. The JWS protected header MUST carry
+    `kid`, whose resolution under deployment policy identifies the
+    issuer, `alg`, and `typ`, matching the suite's evidence-envelope
+    convention ({{I-D.draft-mcguinness-mission-runtime}}).
+
+  This document registers no media type; its two local-use type
+  identifiers are `mission-orchestration-evidence`, which `typ`
+  carries here, and `mission-unwind-plan`
+  ({{unwind-plan-integrity}}).
 
 Example:
 
@@ -794,9 +820,12 @@ the step's first record:
 Orchestration Evidence records are subject to the record integrity and
 retention requirements of the runtime profile
 ({{I-D.draft-mcguinness-mission-runtime}}), imported here by
-reference: append-only integrity protection under a named mechanism, a
-per-Mission sequence indicator, no raw parameters in the record, and a
-retention window no shorter than the Mission's audit horizon.
+reference:
+
+- append-only integrity protection under a named mechanism;
+- a per-Mission sequence indicator;
+- no raw parameters in the record; and
+- a retention window no shorter than the Mission's audit horizon.
 
 ## Evidence Ordering {#evidence-ordering}
 
@@ -823,15 +852,20 @@ execution profile stops or unwinds the work.
 A deployment running both this profile and the harness profile MUST
 provide a means for the harness to determine whether a work item is
 under an active unwind decision; the mechanism is deployment-defined.
+
 Where harness stop policy and an active unwind decision would produce
 different outcomes for the same work item, the stage split chooses how
-to stop, not whether: where both would stop the item, the
-orchestrator's in-flight handling governs a dispatched or in-flight
-step, since only the orchestrator can unwind committed or partially
-committed work, and the harness stop policy governs an undispatched
-one; where one would stop and the other continue, the item stops, and
-the harness still honors an orchestrator cancel or hold per the harness
-resume algorithm ({{I-D.draft-mcguinness-mission-harness}}).
+to stop, not whether:
+
+- Where both would stop a dispatched or in-flight step, the
+  orchestrator's in-flight handling governs, since only the
+  orchestrator can unwind committed or partially committed work.
+- Where both would stop an undispatched item, the harness stop policy
+  governs.
+- Where one would stop the item and the other would continue it, the
+  item stops, and the harness still honors an orchestrator cancel or
+  hold per the harness resume algorithm
+  ({{I-D.draft-mcguinness-mission-harness}}).
 
 # Conformance {#conformance}
 
@@ -847,8 +881,8 @@ A conforming Mission-aware orchestrator MUST:
 - emit Orchestration Evidence; and
 - document the policy basis for compensation after Mission termination.
 
-A deployment MAY claim this profile for only some workflows, but it
-MUST identify workflows and paths outside the claim.
+A deployment MAY claim this profile for only some workflows. It MUST
+identify workflows and paths outside the claim.
 
 # Security Considerations {#security-considerations}
 
@@ -871,8 +905,8 @@ or handled under stricter policy.
 
 An orchestrator can evade review by classifying a step as reversible
 when it is not. Resource policy and operation profiles SHOULD define
-minimum reversibility classes for protected operations, and
-orchestrators MUST NOT lower them.
+minimum reversibility classes for protected operations. Orchestrators
+MUST NOT lower them.
 
 ## Compensation Loops
 
@@ -884,7 +918,7 @@ when repeated compensation would create additional external effects.
 
 A runtime permit obtained before revocation might still be presented
 after the orchestrator learns the Mission is non-active. The
-orchestrator MUST stop dispatching such work, and the runtime PEP MUST
+orchestrator MUST stop dispatching such work. The runtime PEP MUST
 still enforce its own permit freshness and Mission-state checks.
 
 # Privacy Considerations {#privacy-considerations}
