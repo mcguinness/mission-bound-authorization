@@ -44,6 +44,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-deployment-profile:
+    title: "Mission Deployment Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-deployment-profile.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
@@ -668,6 +676,11 @@ named optional claim, and Rungs 2 through 4 are additionally
 **experimental**, each importing a trust infrastructure (platform or
 TEE attestation; transaction-confirming authenticators) this profile
 cannot supply.
+
+A deployment states the rung it claims in its Mission Deployment
+Profile manifest, as the `consent-rendering` claim with its `rung`
+parameter; the identifier and the manifest are defined by
+{{I-D.draft-mcguinness-mission-deployment-profile}}.
 
 No rung proves the Approver perceived or understood the disclosure; a
 compromised authenticator or trusted execution environment, or an
