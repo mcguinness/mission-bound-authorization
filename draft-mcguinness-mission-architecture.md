@@ -1343,20 +1343,30 @@ Resource-Declared Semantics:
   Home: the AAuth binding, informative
   ({{I-D.draft-mcguinness-mission-aauth}}).
 
-Behind the five mechanisms sits one direction axis. The family
-inherits OAuth's client-proposed ontology: the client names the
+Behind the five mechanisms sits one direction axis, and the
+direction is chosen per encounter, not fixed by binding. The family
+inherits OAuth's client-proposed default: the client names the
 authority it wants and the resource's meaning arrives through
 metadata, catalogs, and profiles ({{capability-envelope}}).
-Resource-Declared Semantics demonstrates the inversion, where the
-resource speaks first and approval consumes its declaration. The
-direction is substrate-accidental: the fundamentals, meaning bound
-at approval, enforced at use, translation never widening, hold in
-both directions, and a binding chooses the direction its substrate
-gives it. The OAuth direction has its own resource-declared half in
-proposed RAR-type metadata
+Resource-Declared Semantics is the inversion, where the resource
+speaks first and approval consumes its declaration, and it is valid
+under every binding: the fundamentals, meaning bound at approval,
+enforced at use, translation never widening, hold in both
+directions. Under the OAuth binding the resource-declared direction
+runs entirely through seams the family already has: the encounter
+contract routes the declaration
+({{I-D.draft-mcguinness-mission-discovery}}), narrowing-mode
+derivation consumes the declared operations as candidate vocabulary
+({{I-D.draft-mcguinness-oauth-mission}}), consent composes the
+resource-authored material, and the declaration's digest rides the
+derived authority (the progressive companion's
+`resource_declaration_digest`,
+{{I-D.draft-mcguinness-oauth-mission-progressive}}). The AAuth
+binding's R3 composition is the worked example of the full
+inversion, not its only home. Proposed RAR-type metadata
 ({{I-D.draft-zehavi-oauth-rar-metadata}}), a resource publishing the
-`authorization_details` types and fields it understands, which is
-the descriptive counterpart of `r3_s256` without the inversion.
+`authorization_details` types and fields it understands, is the
+OAuth-native descriptive surface the direction builds on.
 
 Both directions close the same loop: the meaning source's digest
 becomes part of the derived authority. A catalog-sourced capability
