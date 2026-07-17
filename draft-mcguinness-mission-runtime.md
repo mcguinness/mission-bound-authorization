@@ -70,6 +70,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-shaping:
+    title: "Mission Intent Shaping"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-mandate:
     title: "Mission Mandate"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
@@ -1124,7 +1132,9 @@ reach an applicable PDP.
 
 ## Decision Inputs {#decision-inputs}
 
-Runtime enforcement MUST evaluate every input below.
+Runtime enforcement MUST evaluate every input below except the last:
+History ({{input-history}}) is OPTIONAL, evaluated where the
+deployment declares it.
 
 ### Authority {#input-authority}
 
@@ -1247,6 +1257,36 @@ PEP's reverification, not a decision input ({{parameter-binding}}).
 
 The PDP MUST refuse unless the Mission is `active`
 ({{state-freshness}}).
+
+### History {#input-history}
+
+The inputs above evaluate the request; this input evaluates where
+the undertaking stands. A deployment MAY evaluate policy predicates
+over the Mission's prior Decision and Execution Evidence (for
+example, a precondition that a named action class completed) as
+deployment-local context keyed on the Mission's identity. This is
+the sequence-aware half of the context asymmetry the architecture
+names ({{I-D.draft-mcguinness-mission-architecture}}): the resource
+prices "delete database" the same in isolation and inside an
+approved migration whose copy steps completed, and only the layer
+where the undertaking's history accumulates can tell the two apart.
+
+History is a decision input, never a grant. A history predicate
+MUST NOT expand authority beyond the issued
+`authorization_details`. Where deployment or Resource policy
+requires a history predicate, the PDP MUST fail closed when the
+predicate cannot be established or the evidence store cannot be
+consulted. A deployment that declares history evaluation in its
+Enforcement Scope Statement treats the evidence store as a state
+source under this profile's freshness discipline: a declared
+staleness bound, and refusal when the required history cannot be
+established within the bound ({{state-freshness}}). Cross-PDP
+history composes through the deployment's evidence store or
+registered transparency records
+({{I-D.draft-mcguinness-mission-audit}}) and is otherwise out of
+scope. How a decision request names a history predicate, and how
+its evaluation is recorded, is the decision-API binding's
+({{authzen}}).
 
 ## Mission Binding Establishment {#mission-binding}
 
@@ -1682,6 +1722,7 @@ refusal.
 | Mission governance is required but the token lacks a `mission` claim | Refuse before runtime Mission evaluation, unless the Mission binding is externally established ({{mission-binding}}) |
 | PEP-PDP channel authentication or integrity protection fails | Fail closed |
 | Mission state cannot be established within the staleness bound | Fail closed for consequential actions |
+| A policy-required history predicate cannot be established, or the evidence store cannot be consulted ({{input-history}}) | Fail closed |
 | PDP unreachable | Fail closed for consequential actions; do not proceed on cached permits past the window. An unexpired, unconsumed permit MAY execute during a PDP outage: executing-PEP reverification needs no PDP |
 | Mission not `active` | Refuse |
 | The Mission's `expires_at` passed, when known from the Mission state source | Refuse |
@@ -2291,6 +2332,22 @@ fail closed for consequential actions within the published bound
 enforcement it does not perform ({{metering}}); where cumulative
 bounds are metered, the exactness and consistency claims of the
 metering companion apply ({{I-D.draft-mcguinness-mission-metering}}).
+
+## The History Input
+
+The history input ({{input-history}}) makes prior evidence
+load-bearing for later decisions, so it is attacker-adjacent
+wherever evidence producers are compromised: a forged record is a
+forged precondition, and a suppressed record denies the step that
+depends on it. This is the existing evidence-integrity story, not a
+new one; the record integrity requirements of {{record-integrity}}
+and the transparency mechanisms of the audit companion
+({{I-D.draft-mcguinness-mission-audit}}) are the countermeasures,
+and a deployment that makes history load-bearing weighs them as
+part of the decision path, not only as after-the-fact audit.
+Shaping Evidence is never an input to this or any authorization
+decision; the shaping profile's existing prohibition stands
+unchanged ({{I-D.draft-mcguinness-mission-shaping}}).
 
 ## Resource Policy Remains Authoritative
 

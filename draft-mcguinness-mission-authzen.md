@@ -684,6 +684,64 @@ bound to a different `parameter_digest`, the PDP MUST deny with
 `action_approval_required` ({{runtime-denial-classification}}). The PDP
 MUST record the presented approval `id` in Decision Evidence.
 
+## History Context {#context-history}
+
+The OPTIONAL `mission_history` member carries the runtime profile's
+History decision input ({{I-D.draft-mcguinness-mission-runtime}}) on
+the wire, as the value of `context.mission_history`: an array of
+objects, each naming one predicate over the established Mission's
+prior evidence that the requested action depends on. Members of each
+entry:
+
+`predicate`:
+: REQUIRED. A string. The predicate identifier. This document
+  defines `action_class_completed`. An extension value MUST be
+  either a collision-resistant name or a name coordinated within
+  this document family, under the same rule as denial reasons
+  ({{runtime-denial-classification}}).
+
+`action_class`:
+: REQUIRED when `predicate` is `action_class_completed`. A string.
+  A runtime action class name, from the same value space as the
+  Decision Evidence `action_class` member
+  ({{decision-evidence-object}}).
+
+`action_class_completed` is satisfied when the PDP's evidence store
+holds, for the established Mission, at least one Decision Evidence
+record with `decision` `permit` and the named `action_class`, and
+every such record has a linked Execution Evidence record
+({{execution-evidence-object}}) whose `outcome` is `completed`. For
+a migration Mission whose copy steps are consequential writes, the
+delete step names its precondition:
+
+~~~ json
+[
+  {
+    "predicate": "action_class_completed",
+    "action_class": "consequential_write"
+  }
+]
+~~~
+
+The PDP MUST evaluate each named predicate against its own evidence
+store. A caller-supplied history value is never evidence: an entry
+names the predicate the request depends on and carries no result
+member, and the PDP MUST NOT accept a predicate outcome asserted
+through any other context member.
+
+The PDP MUST refuse the evaluation of an entry whose `predicate`
+value it does not recognize, treating the predicate as not
+establishable, consistent with this binding's unknown-value
+conventions ({{runtime-denial-classification}}). Where deployment or
+Resource policy requires a history predicate that is unsatisfied or
+cannot be established, the PDP MUST deny with
+`history_not_satisfied` ({{runtime-denial-classification}}); the
+runtime profile fixes the fail-closed posture and the evidence
+store's freshness discipline
+({{I-D.draft-mcguinness-mission-runtime}}). The PDP MUST record the
+evaluated predicates and their outcomes in Decision Evidence
+({{decision-evidence-object}}).
+
 ## Capability Source Context {#context-capability-source}
 
 For catalog-sourced actions, the PEP supplies the capability-source
@@ -1244,6 +1302,14 @@ carried in Decision Evidence:
   enforce it and refuses ({{I-D.draft-mcguinness-mission-runtime}}).
   This is distinct from `parameter_violation`, which is a constraint the
   PDP evaluated and found violated.
+- `history_not_satisfied`: a deployment- or Resource-policy-required
+  history predicate ({{context-history}}) is not satisfied: the PDP
+  established it false, could not establish it, could not consult
+  its evidence store within the declared staleness bound, or does
+  not recognize the presented `predicate` value. The per-predicate
+  outcomes are in Decision Evidence
+  ({{decision-evidence-object}}), so the unsatisfied and
+  unavailable cases stay distinguishable after the fact.
 
 `step_up_required` is a Resource-policy condition, not a Mission
 constraint: the issuance profile's `acr` is an approval-time
@@ -1378,6 +1444,7 @@ remain governed by each carrier's extensibility rule.
 | Capability or catalog drift, or invoked identity outside the approved set when a source binding was recorded | PDP denial | `capability_drift` |
 | Unsupported `authorization_details` type | PDP denial | `unsupported_authorization_type` |
 | Unrecognized or unmetered constraint | PDP denial | `constraint_unsupported` |
+| Policy-required history predicate unsatisfied or not establishable | PDP denial | `history_not_satisfied` |
 | Effective parameters differ at the executing PEP | Execution Evidence | `parameter_mismatch` |
 | Permit validity window passed at execution | Execution Evidence | `permit_expired` |
 | Consumed single-use identifier presented again | Execution Evidence | `permit_consumed` |
@@ -1624,6 +1691,16 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
 : OPTIONAL. An object. The presented taint context
   ({{context-taint}}), recorded as supplied. REQUIRED when the
   decision request carried `context.taint`.
+
+`mission_history`:
+: OPTIONAL. An array of objects. The presented history predicates
+  ({{context-history}}), each recorded as supplied and extended
+  with an `outcome` member (REQUIRED, a string): `satisfied`,
+  `not_satisfied` (established false), or `unavailable` (not
+  establishable, including an unrecognized `predicate` value or an
+  evidence store that could not be consulted within its bound).
+  REQUIRED when the decision request carried
+  `context.mission_history`.
 
 `evidence_envelope`:
 : REQUIRED. An object. Integrity protection

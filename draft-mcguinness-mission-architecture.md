@@ -1382,6 +1382,28 @@ cannot evaluate, a drifted capability definition, an unrecognized
 declaration, refuses rather than guesses. Meaning, like state, fails
 closed.
 
+The contract has a dual, and the two statements carry equal force.
+The resource owns what an action means; the Mission owns why it is
+happening and where the undertaking stands, and that context exists
+nowhere else in the stack. A resource evaluates each request at
+perfect local resolution and zero task resolution: it can price
+every consequence its ontology names and cannot see the undertaking
+the request belongs to. This is the context asymmetry, and a risk
+decision composes both sides of it: semantics without purpose prices
+every delete the same, and purpose without semantics cannot read the
+call.
+
+"Delete database" in isolation is indistinguishable from
+catastrophe. "Delete database" inside an approved migration whose
+copy steps already completed is a priced, checkable step. The only
+place that judgment is possible is where Decision and Execution
+Evidence join on the Mission's identity, because that join is the
+undertaking's recorded history and no resource-local view contains
+it. The runtime profile names the mechanism: sequence-aware
+evaluation over the undertaking's history is an optional decision
+input, guarded so that history informs a decision and never widens
+one ({{I-D.draft-mcguinness-mission-runtime}}).
+
 # The Mission Verbs {#layers}
 
 The family organizes along a verb spine: each verb answers one
