@@ -3739,95 +3739,42 @@ resolve before interoperating.
   policy-inspectability rules are retired, `policy_version` stays as
   an opaque audit correlator, generative derivation is demoted to a
   local-policy extension, and the derivation trust boundary (no
-  portable Intent semantics) is stated (#222, #118, #126).
-- New wire signals: the `mission_derivation` token-response
-  parameter for partial derivation (#174); the `mission_error`
-  member disambiguating non-active token-endpoint refusals and the
-  issuer-reported `derivations_remaining` introspection member
-  (#176); the `mission_denial` WWW-Authenticate attribute
-  distinguishing insufficient authority, step-up, and
-  unrecognized-constraint denials (#175); and the
-  `mission_constraints_supported` protected-resource metadata member
-  (#177).
-- The `mission` claim gains an OPTIONAL `expires_at` member, a
-  bounding commitment with no liveness (#157, #168); the
-  `mission_id` token-response parameter is promoted to a SHOULD
-  (#149).
-- New Common Constraints: `time_window`, `data_classification`,
-  `allowed_tools`, and `requires_action_approval` (#133); the
-  `prefix` match prohibits query and fragment components and fixes
-  the empty-path case (#181).
-- New OPTIONAL Intent control: `controls.agent_deployment`, pinning
-  a Mission to an approved Agent Deployment (#233);
-  `max_derivations` gains cadence-based sizing guidance (#147).
+  portable Intent semantics) is stated. Template mode publishes its
+  mapping space as deployment documentation and distinguishes
+  no-mapping from policy refusals.
+- New wire surface: the `mission_derivation` token-response
+  parameter, the `mission_error` and `derivations_remaining`
+  introspection members, the `mission_denial` WWW-Authenticate
+  attribute, and the `mission_constraints_supported`
+  protected-resource metadata member. The `mission` claim gains an
+  OPTIONAL `expires_at`; the `mission_id` token-response parameter
+  is promoted to SHOULD.
+- Authority vocabulary: four new Common Constraints (`time_window`,
+  `data_classification`, `allowed_tools`,
+  `requires_action_approval`) with `prefix`-match fixes; the
+  OPTIONAL `controls.agent_deployment` class pin; `max_derivations`
+  sizing guidance.
 - Delegation hardening: delegation-authorization policy applies at
   every exchange, `allowed_delegates` is RECOMMENDED and its absence
-  is never a blanket grant, a no-actor self-exchange is accepted
-  only from the Mission's `client_id`, the
-  audience-replay-into-exchange threat is named, the delegated-token
-  routing guardrail is raised to MUST NOT, and
-  `client-instance-jwt` is named as a concrete `actor_token_type`
-  (#179, #107).
-- Token-class taxonomy: Mission-referenced, Mission-derived, and
-  Mission-bound, with "Mission-bound" reserved for the gated class
-  (#132); the Cross-Domain capability's conformance bar is made
-  self-contained in this document, with the companion cited
-  informatively as the interoperable mechanism (#169).
-- Approval-event sequencing is named as an extensibility seam with a
-  forward pointer to the Mission Deferred Approval companion (#180,
-  #148); the `iss` authorization-response parameter is a SHOULD on
-  the consent-bearing redirect; `approval_event_id` is fixed as the
-  approval idempotency key; the approval-strength floor's home is
-  the published Deployment Profile (#181, #204).
-- Anchor-role precision: `intent_hash` and `authority_hash` are
-  independent commitments and the task-bounds-authority relation is
-  a governance assertion; at a narrowed-token Resource Server,
-  `authority_hash` is an audit correlator, not an enforcement input;
-  the subset rule is named type-specific and representational, not
-  semantic (#123, #124, #223).
-- Scope statements: the unit of governance (action, not content) in
-  Applicability (#120); class-differentiated token-lifetime guidance
-  (#119); the opaque-token position (#186); client guidance against
-  silent downgrade at a non-advertising AS (#187); introspection
-  freshness named per-use (#188); Intent carriage closed to the
-  form-encoded PAR parameter, client-set `expires_at` refusal
-  semantics, `proposed_authority` resources bound to the Intent's
-  `resources`, and the Resource Server multi-entry combination rule
-  (#181).
-- Key management: verification-key retention anchored to the audit
-  horizon (#183), custody guidance for issuer signing keys (#184),
-  and per-artifact-class `kid` segmentation (#185).
-- Privacy: a Mission-record and evidence-access section (#223); the
-  correlation-property documentation duty recast as guidance
-  (#204).
-- Editorial and registry hygiene: twice-stated rules de-duplicated
-  to one home each (#113); "security tiers" vocabulary retired
-  (#145); the substrate-generalization future-work item reworded
-  (#146); companions extending the worked example must diverge
-  anchors explicitly (#151); `example.net` replaces
-  `not-example.net` (#110); a third integrity-anchor test vector
-  exercising nested `controls` and `delegation` array ordering
-  (#114); change controller corrected to IESG and the malformed
-  refresh example fixed (#181).
-- Editorial restructuring for requirement signal, no normative
-  change: the PAR submission rules, consent-rendering hardening, and
-  approval-rendering duties become requirement lists; the `resource`
-  and `actions` member definitions, the audience and token-response
-  text, and the Mission Record introduction are tightened; the
-  rendering-to-consent change rule stands as its own paragraph.
-- Post-review fixes: `purpose` is stated consistently with the
-  pre-approval shaping invariant (it may key template-mode
-  derivation; it remains inert after approval and never widens);
-  `mission_denial` gains denial-detail disclosure considerations;
-  the `mission_error` registration's usage-location choice is
-  explained.
-- Pre-publication fixes: extended token lifetimes apply only to
-  tokens whose carried entries are all runtime-gated, with
-  single-audience narrowing as the splitting mechanism (#244);
-  template mode publishes its mapping space as deployment
-  documentation, distinguishes no-mapping from policy refusals, and
-  resolves Subject-keyed mappings at the approval event (#246 in
-  part).
+  is never a blanket grant, self-exchange is accepted only from the
+  Mission's `client_id`, and the delegated-token routing guardrail
+  is raised to MUST NOT.
+- Model precision: the Mission-referenced, Mission-derived, and
+  Mission-bound token-class taxonomy; anchors as independent
+  commitments with `authority_hash` an audit correlator at a
+  narrowed-token Resource Server; the subset rule named
+  representational, not semantic; approval-event sequencing named as
+  an extensibility seam; Intent carriage closed to the form-encoded
+  PAR parameter.
+- Operational and privacy: verification-key retention anchored to
+  the audit horizon, issuer-key custody and per-artifact-class `kid`
+  guidance, a Mission-record and evidence-access privacy section,
+  and extended token lifetimes scoped to fully runtime-gated tokens
+  with single-audience narrowing as the splitting mechanism.
+- Editorial throughout, no normative change: requirement lists for
+  the PAR submission and rendering duties, twice-stated rules
+  reduced to one home, a third integrity-anchor test vector, and
+  registry hygiene.
 
 -00
 
