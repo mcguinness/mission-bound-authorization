@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            16 July 2026
-Expires: 17 January 2027
+Intended status: Standards Track                            17 July 2026
+Expires: 18 January 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 17 January 2027.
+   This Internet-Draft will expire on 18 January 2027.
 
 Copyright Notice
 
@@ -109,6 +109,7 @@ Table of Contents
        7.1.5.  Actor
        7.1.6.  Time
        7.1.7.  State
+       7.1.8.  History
      7.2.  Mission Binding Establishment
      7.3.  Mission State and Freshness
      7.4.  Materialized Policy View
@@ -141,10 +142,11 @@ Table of Contents
      17.4.  Relationship to Inspection-Based Controls
      17.5.  Classification Integrity
      17.6.  Freshness and Consumption Honesty
-     17.7.  Resource Policy Remains Authoritative
-     17.8.  TOCTOU and Replay
-     17.9.  Confused Deputy Across Resources
-     17.10. Decision Channel and Token Disclosure
+     17.7.  The History Input
+     17.8.  Resource Policy Remains Authoritative
+     17.9.  TOCTOU and Replay
+     17.10. Confused Deputy Across Resources
+     17.11. Decision Channel and Token Disclosure
    18. Privacy Considerations
    19. IANA Considerations
      19.1.  OAuth Protected Resource Metadata Registration
@@ -1115,7 +1117,9 @@ Table of Contents
 
 7.1.  Decision Inputs
 
-   Runtime enforcement MUST evaluate every input below.
+   Runtime enforcement MUST evaluate every input below except the last:
+   History (Section 7.1.8) is OPTIONAL, evaluated where the deployment
+   declares it.
 
 7.1.1.  Authority
 
@@ -1233,6 +1237,34 @@ Table of Contents
 7.1.7.  State
 
    The PDP MUST refuse unless the Mission is active (Section 7.3).
+
+7.1.8.  History
+
+   The inputs above evaluate the request; this input evaluates where the
+   undertaking stands.  A deployment MAY evaluate policy predicates over
+   the Mission's prior Decision and Execution Evidence (for example, a
+   precondition that a named action class completed) as deployment-local
+   context keyed on the Mission's identity.  This is the sequence-aware
+   half of the context asymmetry the architecture names
+   ([I-D.draft-mcguinness-mission-architecture]): the resource prices
+   "delete database" the same in isolation and inside an approved
+   migration whose copy steps completed, and only the layer where the
+   undertaking's history accumulates can tell the two apart.
+
+   History is a decision input, never a grant.  A history predicate MUST
+   NOT expand authority beyond the issued authorization_details.  Where
+   deployment or Resource policy requires a history predicate, the PDP
+   MUST fail closed when the predicate cannot be established or the
+   evidence store cannot be consulted.  A deployment that declares
+   history evaluation in its Enforcement Scope Statement treats the
+   evidence store as a state source under this profile's freshness
+   discipline: a declared staleness bound, and refusal when the required
+   history cannot be established within the bound (Section 7.3).  Cross-
+   PDP history composes through the deployment's evidence store or
+   registered transparency records
+   ([I-D.draft-mcguinness-mission-audit]) and is otherwise out of scope.
+   How a decision request names a history predicate, and how its
+   evaluation is recorded, is the decision-API binding's (Section 15).
 
 7.2.  Mission Binding Establishment
 
@@ -1758,75 +1790,82 @@ Table of Contents
    MUST behave as follows; in all cases the evidence record (Section 11)
    MUST be sufficient to reconstruct which path produced a refusal.
 
-   +=======================+===========================================+
-   | Condition             | Required behavior                         |
-   +=======================+===========================================+
-   | Token validation      | Refuse before runtime Mission             |
-   | fails, including      | evaluation                                |
-   | sender-constraint     |                                           |
-   | verification          |                                           |
-   +-----------------------+-------------------------------------------+
-   | Mission governance is | Refuse before runtime Mission             |
-   | required but the      | evaluation, unless the Mission binding    |
-   | token lacks a mission | is externally established                 |
-   | claim                 | (Section 7.2)                             |
-   +-----------------------+-------------------------------------------+
-   | PEP-PDP channel       | Fail closed                               |
-   | authentication or     |                                           |
-   | integrity protection  |                                           |
-   | fails                 |                                           |
-   +-----------------------+-------------------------------------------+
-   | Mission state cannot  | Fail closed for consequential actions     |
-   | be established within |                                           |
-   | the staleness bound   |                                           |
-   +-----------------------+-------------------------------------------+
-   | PDP unreachable       | Fail closed for consequential actions;    |
-   |                       | do not proceed on cached permits past     |
-   |                       | the window.  An unexpired, unconsumed     |
-   |                       | permit MAY execute during a PDP           |
-   |                       | outage: executing-PEP reverification      |
-   |                       | needs no PDP                              |
-   +-----------------------+-------------------------------------------+
-   | Mission not active    | Refuse                                    |
-   +-----------------------+-------------------------------------------+
-   | The Mission's         | Refuse                                    |
-   | expires_at passed,    |                                           |
-   | when known from the   |                                           |
-   | Mission state source  |                                           |
-   +-----------------------+-------------------------------------------+
-   | Unsupported           | Refuse                                    |
-   | authorization_details |                                           |
-   | type for the action   |                                           |
-   +-----------------------+-------------------------------------------+
-   | Unknown or unmetered  | Refuse                                    |
-   | constraint on the     |                                           |
-   | applicable entry      |                                           |
-   +-----------------------+-------------------------------------------+
-   | Consumption bound     | Refuse                                    |
-   | would be exceeded     |                                           |
-   +-----------------------+-------------------------------------------+
-   | parameter_digest      | Refuse                                    |
-   | mismatch at the       |                                           |
-   | executing PEP         |                                           |
-   +-----------------------+-------------------------------------------+
-   | Re-presentation of a  | Refuse (fail closed)                      |
-   | consumed single-use   |                                           |
-   | decision identifier   |                                           |
-   +-----------------------+-------------------------------------------+
-   | Required act chain    | Refuse                                    |
-   | missing or malformed  |                                           |
-   +-----------------------+-------------------------------------------+
-   | Invoked capability    | Refuse                                    |
-   | identity outside the  |                                           |
-   | approved actions      |                                           |
-   +-----------------------+-------------------------------------------+
-   | Resource policy       | Refuse                                    |
-   | refuses the action    |                                           |
-   +-----------------------+-------------------------------------------+
-   | Request would broaden | Refuse (expansion is out of scope)        |
-   | the Mission's         |                                           |
-   | authority             |                                           |
-   +-----------------------+-------------------------------------------+
+    +========================+========================================+
+    | Condition              | Required behavior                      |
+    +========================+========================================+
+    | Token validation       | Refuse before runtime Mission          |
+    | fails, including       | evaluation                             |
+    | sender-constraint      |                                        |
+    | verification           |                                        |
+    +------------------------+----------------------------------------+
+    | Mission governance is  | Refuse before runtime Mission          |
+    | required but the token | evaluation, unless the Mission binding |
+    | lacks a mission claim  | is externally established              |
+    |                        | (Section 7.2)                          |
+    +------------------------+----------------------------------------+
+    | PEP-PDP channel        | Fail closed                            |
+    | authentication or      |                                        |
+    | integrity protection   |                                        |
+    | fails                  |                                        |
+    +------------------------+----------------------------------------+
+    | Mission state cannot   | Fail closed for consequential actions  |
+    | be established within  |                                        |
+    | the staleness bound    |                                        |
+    +------------------------+----------------------------------------+
+    | A policy-required      | Fail closed                            |
+    | history predicate      |                                        |
+    | cannot be established, |                                        |
+    | or the evidence store  |                                        |
+    | cannot be consulted    |                                        |
+    | (Section 7.1.8)        |                                        |
+    +------------------------+----------------------------------------+
+    | PDP unreachable        | Fail closed for consequential actions; |
+    |                        | do not proceed on cached permits past  |
+    |                        | the window.  An unexpired, unconsumed  |
+    |                        | permit MAY execute during a PDP        |
+    |                        | outage: executing-PEP reverification   |
+    |                        | needs no PDP                           |
+    +------------------------+----------------------------------------+
+    | Mission not active     | Refuse                                 |
+    +------------------------+----------------------------------------+
+    | The Mission's          | Refuse                                 |
+    | expires_at passed,     |                                        |
+    | when known from the    |                                        |
+    | Mission state source   |                                        |
+    +------------------------+----------------------------------------+
+    | Unsupported            | Refuse                                 |
+    | authorization_details  |                                        |
+    | type for the action    |                                        |
+    +------------------------+----------------------------------------+
+    | Unknown or unmetered   | Refuse                                 |
+    | constraint on the      |                                        |
+    | applicable entry       |                                        |
+    +------------------------+----------------------------------------+
+    | Consumption bound      | Refuse                                 |
+    | would be exceeded      |                                        |
+    +------------------------+----------------------------------------+
+    | parameter_digest       | Refuse                                 |
+    | mismatch at the        |                                        |
+    | executing PEP          |                                        |
+    +------------------------+----------------------------------------+
+    | Re-presentation of a   | Refuse (fail closed)                   |
+    | consumed single-use    |                                        |
+    | decision identifier    |                                        |
+    +------------------------+----------------------------------------+
+    | Required act chain     | Refuse                                 |
+    | missing or malformed   |                                        |
+    +------------------------+----------------------------------------+
+    | Invoked capability     | Refuse                                 |
+    | identity outside the   |                                        |
+    | approved actions       |                                        |
+    +------------------------+----------------------------------------+
+    | Resource policy        | Refuse                                 |
+    | refuses the action     |                                        |
+    +------------------------+----------------------------------------+
+    | Request would broaden  | Refuse (expansion is out of scope)     |
+    | the Mission's          |                                        |
+    | authority              |                                        |
+    +------------------------+----------------------------------------+
 
                                   Table 5
 
@@ -2486,7 +2525,23 @@ Table of Contents
    are metered, the exactness and consistency claims of the metering
    companion apply ([I-D.draft-mcguinness-mission-metering]).
 
-17.7.  Resource Policy Remains Authoritative
+17.7.  The History Input
+
+   The history input (Section 7.1.8) makes prior evidence load-bearing
+   for later decisions, so it is attacker-adjacent wherever evidence
+   producers are compromised: a forged record is a forged precondition,
+   and a suppressed record denies the step that depends on it.  This is
+   the existing evidence-integrity story, not a new one; the record
+   integrity requirements of Section 11.4 and the transparency
+   mechanisms of the audit companion
+   ([I-D.draft-mcguinness-mission-audit]) are the countermeasures, and a
+   deployment that makes history load-bearing weighs them as part of the
+   decision path, not only as after-the-fact audit.  Shaping Evidence is
+   never an input to this or any authorization decision; the shaping
+   profile's existing prohibition stands unchanged
+   ([I-D.draft-mcguinness-mission-shaping]).
+
+17.8.  Resource Policy Remains Authoritative
 
    Mission authority is a maximum authority envelope.  It does not force
    a Resource Server to perform an action, bypass local authorization,
@@ -2496,7 +2551,7 @@ Table of Contents
    can perform actions that the resource owner or service would
    otherwise forbid.
 
-17.8.  TOCTOU and Replay
+17.9.  TOCTOU and Replay
 
    Parameter binding (Section 8) ties a permit to specific normalized
    parameters and a short window or single use, so a permit cannot be
@@ -2517,7 +2572,7 @@ Table of Contents
    version, decision time) is deferred to implementation demand
    (Section 16).
 
-17.9.  Confused Deputy Across Resources
+17.10.  Confused Deputy Across Resources
 
    The permit binding of Section 8 ties a decision to the Mission, the
    token audience or protected resource, sub, client_id, actor context,
@@ -2530,7 +2585,7 @@ Table of Contents
    a resource, audience, tenant, or operation boundary it was not issued
    for.
 
-17.10.  Decision Channel and Token Disclosure
+17.11.  Decision Channel and Token Disclosure
 
    A separate PDP becomes part of the Resource Server's trusted
    authorization path for the operations in its enforcement scope.  The
@@ -2702,6 +2757,11 @@ Table of Contents
               McGuinness, K., "Mission Security Model", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-security-model.html>.
+
+   [I-D.draft-mcguinness-mission-shaping]
+              McGuinness, K., "Mission Intent Shaping", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-shaping.html>.
 
    [I-D.draft-mcguinness-oauth-actor-proofs]
               McGuinness, K., "OAuth Actor-Signed Hop Proofs", Work in
