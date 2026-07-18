@@ -6035,125 +6035,54 @@ and template. The deterministic-reproducibility and
 policy-inspectability rules are retired, <code>policy_version</code> stays as
 an opaque audit correlator, generative derivation is demoted to a
 local-policy extension, and the derivation trust boundary (no
-portable Intent semantics) is stated (#222, #118, #126).<a href="#appendix-C-3.1.1" class="pilcrow">¶</a></p>
+portable Intent semantics) is stated. Template mode publishes its
+mapping space as deployment documentation and distinguishes
+no-mapping from policy refusals.<a href="#appendix-C-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-3.2">
-          <p id="appendix-C-3.2.1">New wire signals: the <code>mission_derivation</code> token-response
-parameter for partial derivation (#174); the <code>mission_error</code>
-member disambiguating non-active token-endpoint refusals and the
-issuer-reported <code>derivations_remaining</code> introspection member
-(#176); the <code>mission_denial</code> WWW-Authenticate attribute
-distinguishing insufficient authority, step-up, and
-unrecognized-constraint denials (#175); and the
-<code>mission_constraints_supported</code> protected-resource metadata member
-(#177).<a href="#appendix-C-3.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-3.2.1">New wire surface: the <code>mission_derivation</code> token-response
+parameter, the <code>mission_error</code> and <code>derivations_remaining</code>
+introspection members, the <code>mission_denial</code> WWW-Authenticate
+attribute, and the <code>mission_constraints_supported</code>
+protected-resource metadata member. The <code>mission</code> claim gains an
+<span class="bcp14">OPTIONAL</span> <code>expires_at</code>; the <code>mission_id</code> token-response parameter
+is promoted to <span class="bcp14">SHOULD</span>.<a href="#appendix-C-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-3.3">
-          <p id="appendix-C-3.3.1">The <code>mission</code> claim gains an <span class="bcp14">OPTIONAL</span> <code>expires_at</code> member, a
-bounding commitment with no liveness (#157, #168); the
-<code>mission_id</code> token-response parameter is promoted to a <span class="bcp14">SHOULD</span>
-(#149).<a href="#appendix-C-3.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-3.3.1">Authority vocabulary: four new Common Constraints (<code>time_window</code>,
+<code>data_classification</code>, <code>allowed_tools</code>,
+<code>requires_action_approval</code>) with <code>prefix</code>-match fixes; the
+<span class="bcp14">OPTIONAL</span> <code>controls.agent_deployment</code> class pin; <code>max_derivations</code>
+sizing guidance.<a href="#appendix-C-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-3.4">
-          <p id="appendix-C-3.4.1">New Common Constraints: <code>time_window</code>, <code>data_classification</code>,
-<code>allowed_tools</code>, and <code>requires_action_approval</code> (#133); the
-<code>prefix</code> match prohibits query and fragment components and fixes
-the empty-path case (#181).<a href="#appendix-C-3.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-3.4.1">Delegation hardening: delegation-authorization policy applies at
+every exchange, <code>allowed_delegates</code> is <span class="bcp14">RECOMMENDED</span> and its absence
+is never a blanket grant, self-exchange is accepted only from the
+Mission's <code>client_id</code>, and the delegated-token routing guardrail
+is raised to <span class="bcp14">MUST NOT</span>.<a href="#appendix-C-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-3.5">
-          <p id="appendix-C-3.5.1">New <span class="bcp14">OPTIONAL</span> Intent control: <code>controls.agent_deployment</code>, pinning
-a Mission to an approved Agent Deployment (#233);
-<code>max_derivations</code> gains cadence-based sizing guidance (#147).<a href="#appendix-C-3.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-3.5.1">Model precision: the Mission-referenced, Mission-derived, and
+Mission-bound token-class taxonomy; anchors as independent
+commitments with <code>authority_hash</code> an audit correlator at a
+narrowed-token Resource Server; the subset rule named
+representational, not semantic; approval-event sequencing named as
+an extensibility seam; Intent carriage closed to the form-encoded
+PAR parameter.<a href="#appendix-C-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-3.6">
-          <p id="appendix-C-3.6.1">Delegation hardening: delegation-authorization policy applies at
-every exchange, <code>allowed_delegates</code> is <span class="bcp14">RECOMMENDED</span> and its absence
-is never a blanket grant, a no-actor self-exchange is accepted
-only from the Mission's <code>client_id</code>, the
-audience-replay-into-exchange threat is named, the delegated-token
-routing guardrail is raised to <span class="bcp14">MUST NOT</span>, and
-<code>client-instance-jwt</code> is named as a concrete <code>actor_token_type</code>
-(#179, #107).<a href="#appendix-C-3.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-3.6.1">Operational and privacy: verification-key retention anchored to
+the audit horizon, issuer-key custody and per-artifact-class <code>kid</code>
+guidance, a Mission-record and evidence-access privacy section,
+and extended token lifetimes scoped to fully runtime-gated tokens
+with single-audience narrowing as the splitting mechanism.<a href="#appendix-C-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-3.7">
-          <p id="appendix-C-3.7.1">Token-class taxonomy: Mission-referenced, Mission-derived, and
-Mission-bound, with "Mission-bound" reserved for the gated class
-(#132); the Cross-Domain capability's conformance bar is made
-self-contained in this document, with the companion cited
-informatively as the interoperable mechanism (#169).<a href="#appendix-C-3.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-3.8">
-          <p id="appendix-C-3.8.1">Approval-event sequencing is named as an extensibility seam with a
-forward pointer to the Mission Deferred Approval companion (#180,
-#148); the <code>iss</code> authorization-response parameter is a <span class="bcp14">SHOULD</span> on
-the consent-bearing redirect; <code>approval_event_id</code> is fixed as the
-approval idempotency key; the approval-strength floor's home is
-the published Deployment Profile (#181, #204).<a href="#appendix-C-3.8.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-3.9">
-          <p id="appendix-C-3.9.1">Anchor-role precision: <code>intent_hash</code> and <code>authority_hash</code> are
-independent commitments and the task-bounds-authority relation is
-a governance assertion; at a narrowed-token Resource Server,
-<code>authority_hash</code> is an audit correlator, not an enforcement input;
-the subset rule is named type-specific and representational, not
-semantic (#123, #124, #223).<a href="#appendix-C-3.9.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-3.10">
-          <p id="appendix-C-3.10.1">Scope statements: the unit of governance (action, not content) in
-Applicability (#120); class-differentiated token-lifetime guidance
-(#119); the opaque-token position (#186); client guidance against
-silent downgrade at a non-advertising AS (#187); introspection
-freshness named per-use (#188); Intent carriage closed to the
-form-encoded PAR parameter, client-set <code>expires_at</code> refusal
-semantics, <code>proposed_authority</code> resources bound to the Intent's
-<code>resources</code>, and the Resource Server multi-entry combination rule
-(#181).<a href="#appendix-C-3.10.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-3.11">
-          <p id="appendix-C-3.11.1">Key management: verification-key retention anchored to the audit
-horizon (#183), custody guidance for issuer signing keys (#184),
-and per-artifact-class <code>kid</code> segmentation (#185).<a href="#appendix-C-3.11.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-3.12">
-          <p id="appendix-C-3.12.1">Privacy: a Mission-record and evidence-access section (#223); the
-correlation-property documentation duty recast as guidance
-(#204).<a href="#appendix-C-3.12.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-3.13">
-          <p id="appendix-C-3.13.1">Editorial and registry hygiene: twice-stated rules de-duplicated
-to one home each (#113); "security tiers" vocabulary retired
-(#145); the substrate-generalization future-work item reworded
-(#146); companions extending the worked example must diverge
-anchors explicitly (#151); <code>example.net</code> replaces
-<code>not-example.net</code> (#110); a third integrity-anchor test vector
-exercising nested <code>controls</code> and <code>delegation</code> array ordering
-(#114); change controller corrected to IESG and the malformed
-refresh example fixed (#181).<a href="#appendix-C-3.13.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-3.14">
-          <p id="appendix-C-3.14.1">Editorial restructuring for requirement signal, no normative
-change: the PAR submission rules, consent-rendering hardening, and
-approval-rendering duties become requirement lists; the <code>resource</code>
-and <code>actions</code> member definitions, the audience and token-response
-text, and the Mission Record introduction are tightened; the
-rendering-to-consent change rule stands as its own paragraph.<a href="#appendix-C-3.14.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-3.15">
-          <p id="appendix-C-3.15.1">Post-review fixes: <code>purpose</code> is stated consistently with the
-pre-approval shaping invariant (it may key template-mode
-derivation; it remains inert after approval and never widens);
-<code>mission_denial</code> gains denial-detail disclosure considerations;
-the <code>mission_error</code> registration's usage-location choice is
-explained.<a href="#appendix-C-3.15.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-3.16">
-          <p id="appendix-C-3.16.1">Pre-publication fixes: extended token lifetimes apply only to
-tokens whose carried entries are all runtime-gated, with
-single-audience narrowing as the splitting mechanism (#244);
-template mode publishes its mapping space as deployment
-documentation, distinguishes no-mapping from policy refusals, and
-resolves Subject-keyed mappings at the approval event (#246 in
-part).<a href="#appendix-C-3.16.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-3.7.1">Editorial throughout, no normative change: requirement lists for
+the PAR submission and rendering duties, twice-stated rules
+reduced to one home, a third integrity-anchor test vector, and
+registry hygiene.<a href="#appendix-C-3.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-C-4">-00<a href="#appendix-C-4" class="pilcrow">¶</a></p>
