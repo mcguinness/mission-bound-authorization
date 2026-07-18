@@ -249,10 +249,17 @@ derived for, bound to, and gated on. It is not a new way to express
 authority. Read as one system, the Mission model defines a
 delegated-authority layer: authentication says who is acting, and
 entitlement governance says what a principal may hold; this layer
-governs the approved task itself. It exists because the authority an
-Approver consents to is a capability envelope, not a task script, and
-the gap between that envelope and what a run actually does is where
-agent risk lives; the family's mechanisms exist to narrow that gap.
+governs the approved task itself. The model has one semantic center
+and sibling realization paths: a binding-neutral governance model
+states the record and its rules, an AAuth profile carries it on the
+native agent-authorization protocol, an OAuth 2.0 profile deploys
+it on the installed IAM base, a standalone Mission Authority Server
+governs where no issuer can change, and runtime enforcement is
+transport-neutral across all of them. The layer exists because the
+authority an Approver consents to is a capability envelope, not a
+task script, and the gap between that envelope and what a run
+actually does is where agent risk lives; the family's mechanisms
+exist to narrow that gap.
 This document is the structural view: the object and its
 invariants, a Mission's life end to end, the roles and substrate, the
 verb spine the profiles form, the deployment patterns, the assurance
@@ -278,23 +285,38 @@ scoping, a human executing every write, or permanently fenced
 pilots, and the Mission is the representation those controls
 substitute for.
 
-The model is deliberately decomposed: a core profile (the "issuance
-profile", {{I-D.draft-mcguinness-oauth-mission}}, here "the core")
-defines the object and its OAuth 2.0 {{RFC6749}} binding, a
-standalone binding hosts the same object without changing an existing
-Authorization Server
-({{I-D.draft-mcguinness-mission-authority-server}}), an AAuth binding
-gives that protocol's native mission concept the model's structure and
-lifecycle ({{I-D.draft-mcguinness-mission-aauth}}), and optional
+The model is deliberately decomposed around one governance model
+and sibling realization paths. The governance semantics, the
+Mission, its Authority Set, the approval event and anchors, and the
+lifecycle, are stated normatively today by the OAuth 2.0 {{RFC6749}}
+profile (the "issuance profile",
+{{I-D.draft-mcguinness-oauth-mission}}, here "the core") and
+consolidated binding-neutrally by Mission Substrate Requirements
+({{I-D.draft-mcguinness-mission-substrate}}); the planned promotion
+of that contract to a Mission Governance Model gives the semantic
+center a document of its own, and until that phase lands, ownership
+migrates by touch, not by relocation. The paths are siblings, not a
+stack: the AAuth profile maps the model onto that protocol's native
+agent-authorization interaction, giving AAuth's own mission concept
+the model's structure and lifecycle
+({{I-D.draft-mcguinness-mission-aauth}}); the OAuth profile is the
+implementation-ready deployment path for the installed IAM base,
+and an OAuth deployment never requires AAuth; and the standalone
+Mission Authority Server hosts the same object without changing an
+existing Authorization Server
+({{I-D.draft-mcguinness-mission-authority-server}}), a peer
+architecture rather than a migration workaround. Optional
 companions layer approval, lifecycle, enforcement, runtime,
-delegation, and proof capabilities on top. The decomposition keeps
-each interface small but spreads the structure across many documents
-and four bindings; this document is the single structural view.
+delegation, and proof capabilities on top, and runtime enforcement
+is transport-neutral: it consumes Mission semantics identically
+from every path. The decomposition keeps each interface small but
+spreads the structure across many documents and four bindings; this
+document is the single structural view.
 
 Read as one system, the family defines a **delegated-authority
-layer**, with OAuth 2.0, the standalone Mission Authority Server,
-AAuth, and (as an experimental sketch) UMA 2.0 as peer bindings into
-it ({{the-mission}}).
+layer**, with AAuth, OAuth 2.0, the standalone Mission Authority
+Server, and (as an experimental sketch) UMA 2.0 as peer realization
+paths into it ({{the-mission}}).
 
 It defines no protocol, no object, and no requirement. It is a map,
 not the territory: every mechanism named points at the profile that
@@ -390,6 +412,15 @@ not loose:
 
 The plane the layer governs is authority, never operations: how an
 agent runs stays with the harness and the orchestrator.
+
+Placed against the adjacent layers an agent estate already runs,
+the same separation reads as five one-line jobs: the Model Context
+Protocol connects an agent to capabilities; AAuth carries the
+agent-authorization interaction; the Mission governs the approved
+undertaking; OAuth 2.0 connects the model to the existing IAM
+estate; and runtime enforcement holds the undertaking at action
+time. Each line answers a different question, and no line answers
+another's.
 
 # Non-Goals {#non-goals}
 
@@ -2225,6 +2256,17 @@ keep "oauth" in their names; profiles defined against the substrate
 of {{substrate}} are named without it. This document is named without
 it because the architecture is substrate-neutral by construction.
 
+Presented publicly, the suite is a five-document standards kernel
+plus grouped companions: this architecture; the governance model
+(today Mission Substrate Requirements,
+{{I-D.draft-mcguinness-mission-substrate}}, whose promotion to the
+model's definitional home is planned, not yet performed); the AAuth
+profile ({{I-D.draft-mcguinness-mission-aauth}}); the OAuth profile
+({{I-D.draft-mcguinness-oauth-mission}}); and runtime enforcement
+({{I-D.draft-mcguinness-mission-runtime}}), with the AuthZEN
+binding beside it ({{I-D.draft-mcguinness-mission-authzen}}). The
+groups below keep every document, one line each.
+
 Maturity is a dependency boundary. A Standards-Track profile never
 depends normatively on an experimental one: the experimental profiles
 (tagged below) extend the stable interface only through its declared
@@ -2234,12 +2276,12 @@ Standards-Track document cites them informatively at most. An
 experimental profile that stabilizes crosses the boundary by
 reclassification, not by a stable document absorbing a dependency.
 
-**The model and its bindings:**
+**The governance model and its realization paths:**
 
 `oauth-mission`:
-: The core issuance profile: the Mission, the approval event and
-  anchors, the `mission` claim, the subset rule, state-gated
-  issuance.
+: The core issuance profile, the installed-base OAuth 2.0
+  deployment path: the Mission, the approval event and anchors, the
+  `mission` claim, the subset rule, state-gated issuance.
 
 `mission-authority-server`:
 : The standalone Mission Issuer and the PDP join of ordinary
@@ -2251,9 +2293,10 @@ reclassification, not by a stable document absorbing a dependency.
   state-gated tokens.
 
 `mission-aauth`:
-: The AAuth binding: the Person Server as Mission Issuer, the mission
-  blob as the record under AAuth's `s256` commitment, issuance gating
-  at the token endpoint.
+: The AAuth profile, the native agent-authorization mapping: the
+  Person Server as Mission Issuer, the mission blob as the record
+  under AAuth's `s256` commitment, issuance gating at the token
+  endpoint.
 
 `mission-uma`:
 : Experimental sketch. The UMA 2.0 binding: the pushed Mission Intent
@@ -2264,7 +2307,8 @@ reclassification, not by a stable document absorbing a dependency.
 
 `mission-substrate`:
 : Normative requirements on any further binding of the model; the
-  existing bindings and the core are unchanged by it.
+  existing bindings and the core are unchanged by it. Its promotion
+  to the Mission Governance Model is planned.
 
 **Approval time:**
 
