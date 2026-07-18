@@ -13,10 +13,17 @@ derived for, bound to, and gated on. It is not a new way to express
 authority. Read as one system, the Mission model defines a
 delegated-authority layer: authentication says who is acting, and
 entitlement governance says what a principal may hold; this layer
-governs the approved task itself. It exists because the authority an
-Approver consents to is a capability envelope, not a task script, and
-the gap between that envelope and what a run actually does is where
-agent risk lives; the family's mechanisms exist to narrow that gap.
+governs the approved task itself. The model has one semantic center
+and sibling realization paths: a binding-neutral governance model
+states the record and its rules, an AAuth profile carries it on the
+native agent-authorization protocol, an OAuth 2.0 profile deploys
+it on the installed IAM base, a standalone Mission Authority Server
+governs where no issuer can change, and runtime enforcement is
+transport-neutral across all of them. The layer exists because the
+authority an Approver consents to is a capability envelope, not a
+task script, and the gap between that envelope and what a run
+actually does is where agent risk lives; the family's mechanisms
+exist to narrow that gap.
 This document is the structural view: the object and its
 invariants, a Mission's life end to end, the roles and substrate, the
 verb spine the profiles form, the deployment patterns, the assurance
@@ -1103,10 +1110,17 @@ derived for, bound to, and gated on. It is not a new way to express
 authority. Read as one system, the Mission model defines a
 delegated-authority layer: authentication says who is acting, and
 entitlement governance says what a principal may hold; this layer
-governs the approved task itself. It exists because the authority an
-Approver consents to is a capability envelope, not a task script, and
-the gap between that envelope and what a run actually does is where
-agent risk lives; the family's mechanisms exist to narrow that gap.
+governs the approved task itself. The model has one semantic center
+and sibling realization paths: a binding-neutral governance model
+states the record and its rules, an AAuth profile carries it on the
+native agent-authorization protocol, an OAuth 2.0 profile deploys
+it on the installed IAM base, a standalone Mission Authority Server
+governs where no issuer can change, and runtime enforcement is
+transport-neutral across all of them. The layer exists because the
+authority an Approver consents to is a capability envelope, not a
+task script, and the gap between that envelope and what a run
+actually does is where agent risk lives; the family's mechanisms
+exist to narrow that gap.
 This document is the structural view: the object and its
 invariants, a Mission's life end to end, the roles and substrate, the
 verb spine the profiles form, the deployment patterns, the assurance
@@ -1387,22 +1401,37 @@ that cannot size authority to a task compensates with read-only
 scoping, a human executing every write, or permanently fenced
 pilots, and the Mission is the representation those controls
 substitute for.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">The model is deliberately decomposed: a core profile (the "issuance
-profile", <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, here "the core")
-defines the object and its OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> binding, a
-standalone binding hosts the same object without changing an existing
-Authorization Server
-(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), an AAuth binding
-gives that protocol's native mission concept the model's structure and
-lifecycle (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), and optional
+<p id="section-1-3">The model is deliberately decomposed around one governance model
+and sibling realization paths. The governance semantics, the
+Mission, its Authority Set, the approval event and anchors, and the
+lifecycle, are stated normatively today by the OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>
+profile (the "issuance profile",
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, here "the core") and
+consolidated binding-neutrally by Mission Substrate Requirements
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>); the planned promotion
+of that contract to a Mission Governance Model gives the semantic
+center a document of its own, and until that phase lands, ownership
+migrates by touch, not by relocation. The paths are siblings, not a
+stack: the AAuth profile maps the model onto that protocol's native
+agent-authorization interaction, giving AAuth's own mission concept
+the model's structure and lifecycle
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>); the OAuth profile is the
+implementation-ready deployment path for the installed IAM base,
+and an OAuth deployment never requires AAuth; and the standalone
+Mission Authority Server hosts the same object without changing an
+existing Authorization Server
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), a peer
+architecture rather than a migration workaround. Optional
 companions layer approval, lifecycle, enforcement, runtime,
-delegation, and proof capabilities on top. The decomposition keeps
-each interface small but spreads the structure across many documents
-and four bindings; this document is the single structural view.<a href="#section-1-3" class="pilcrow">¶</a></p>
+delegation, and proof capabilities on top, and runtime enforcement
+is transport-neutral: it consumes Mission semantics identically
+from every path. The decomposition keeps each interface small but
+spreads the structure across many documents and four bindings; this
+document is the single structural view.<a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">Read as one system, the family defines a <strong>delegated-authority
-layer</strong>, with OAuth 2.0, the standalone Mission Authority Server,
-AAuth, and (as an experimental sketch) UMA 2.0 as peer bindings into
-it (<a href="#the-mission" class="auto internal xref">Section 4</a>).<a href="#section-1-4" class="pilcrow">¶</a></p>
+layer</strong>, with AAuth, OAuth 2.0, the standalone Mission Authority
+Server, and (as an experimental sketch) UMA 2.0 as peer realization
+paths into it (<a href="#the-mission" class="auto internal xref">Section 4</a>).<a href="#section-1-4" class="pilcrow">¶</a></p>
 <p id="section-1-5">It defines no protocol, no object, and no requirement. It is a map,
 not the territory: every mechanism named points at the profile that
 normatively defines it, and where this document and a profile appear
@@ -1506,6 +1535,14 @@ authority (policy views, status, the management surface);<a href="#section-4-10.
       </ul>
 <p id="section-4-11">The plane the layer governs is authority, never operations: how an
 agent runs stays with the harness and the orchestrator.<a href="#section-4-11" class="pilcrow">¶</a></p>
+<p id="section-4-12">Placed against the adjacent layers an agent estate already runs,
+the same separation reads as five one-line jobs: the Model Context
+Protocol connects an agent to capabilities; AAuth carries the
+agent-authorization interaction; the Mission governs the approved
+undertaking; OAuth 2.0 connects the model to the existing IAM
+estate; and runtime enforcement holds the undertaking at action
+time. Each line answers a different question, and no line answers
+another's.<a href="#section-4-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="non-goals">
@@ -3956,234 +3993,246 @@ boundary: profiles extending the Authorization Server's own surfaces
 keep "oauth" in their names; profiles defined against the substrate
 of <a href="#substrate" class="auto internal xref">Section 11</a> are named without it. This document is named without
 it because the architecture is substrate-neutral by construction.<a href="#section-20-1" class="pilcrow">¶</a></p>
-<p id="section-20-2">Maturity is a dependency boundary. A Standards-Track profile never
+<p id="section-20-2">Presented publicly, the suite is a five-document standards kernel
+plus grouped companions: this architecture; the governance model
+(today Mission Substrate Requirements,
+<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>, whose promotion to the
+model's definitional home is planned, not yet performed); the AAuth
+profile (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>); the OAuth profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); and runtime enforcement
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), with the AuthZEN
+binding beside it (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). The
+groups below keep every document, one line each.<a href="#section-20-2" class="pilcrow">¶</a></p>
+<p id="section-20-3">Maturity is a dependency boundary. A Standards-Track profile never
 depends normatively on an experimental one: the experimental profiles
 (tagged below) extend the stable interface only through its declared
 seams, the <code>controls</code> extension of the core and the
 coordinated-extension rules of the evidence objects, and a
 Standards-Track document cites them informatively at most. An
 experimental profile that stabilizes crosses the boundary by
-reclassification, not by a stable document absorbing a dependency.<a href="#section-20-2" class="pilcrow">¶</a></p>
-<p id="section-20-3"><strong>The model and its bindings:</strong><a href="#section-20-3" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-20-4">
-        <dt id="section-20-4.1">
+reclassification, not by a stable document absorbing a dependency.<a href="#section-20-3" class="pilcrow">¶</a></p>
+<p id="section-20-4"><strong>The governance model and its realization paths:</strong><a href="#section-20-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-20-5">
+        <dt id="section-20-5.1">
 <code>oauth-mission</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-4.2">
-          <p id="section-20-4.2.1">The core issuance profile: the Mission, the approval event and
-anchors, the <code>mission</code> claim, the subset rule, state-gated
-issuance.<a href="#section-20-4.2.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-5.2">
+          <p id="section-20-5.2.1">The core issuance profile, the installed-base OAuth 2.0
+deployment path: the Mission, the approval event and anchors, the
+<code>mission</code> claim, the subset rule, state-gated issuance.<a href="#section-20-5.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-4.3">
+<dt id="section-20-5.3">
 <code>mission-authority-server</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-4.4">
-          <p id="section-20-4.4.1">The standalone Mission Issuer and the PDP join of ordinary
-credentials to Missions.<a href="#section-20-4.4.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-5.4">
+          <p id="section-20-5.4.1">The standalone Mission Issuer and the PDP join of ordinary
+credentials to Missions.<a href="#section-20-5.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-4.5">
+<dt id="section-20-5.5">
 <code>oauth-mission-issuance-grant</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-4.6">
-          <p id="section-20-4.6.1">The issuance join: MAS-minted grants an estate Authorization
+        <dd style="margin-left: 1.5em" id="section-20-5.6">
+          <p id="section-20-5.6.1">The issuance join: MAS-minted grants an estate Authorization
 Server redeems at its token endpoint for Mission-bound,
-state-gated tokens.<a href="#section-20-4.6.1" class="pilcrow">¶</a></p>
+state-gated tokens.<a href="#section-20-5.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-4.7">
+<dt id="section-20-5.7">
 <code>mission-aauth</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-4.8">
-          <p id="section-20-4.8.1">The AAuth binding: the Person Server as Mission Issuer, the mission
-blob as the record under AAuth's <code>s256</code> commitment, issuance gating
-at the token endpoint.<a href="#section-20-4.8.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-5.8">
+          <p id="section-20-5.8.1">The AAuth profile, the native agent-authorization mapping: the
+Person Server as Mission Issuer, the mission blob as the record
+under AAuth's <code>s256</code> commitment, issuance gating at the token
+endpoint.<a href="#section-20-5.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-4.9">
+<dt id="section-20-5.9">
 <code>mission-uma</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-4.10">
-          <p id="section-20-4.10.1">Experimental sketch. The UMA 2.0 binding: the pushed Mission Intent
+        <dd style="margin-left: 1.5em" id="section-20-5.10">
+          <p id="section-20-5.10.1">Experimental sketch. The UMA 2.0 binding: the pushed Mission Intent
 rides claims pushing, the resource owner's decision fills UMA's
 authorization assessment, the RPT is the Mission-bound credential,
 and the PCT is continuity that is never authority; the first
-binding authored against the substrate contract.<a href="#section-20-4.10.1" class="pilcrow">¶</a></p>
+binding authored against the substrate contract.<a href="#section-20-5.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-4.11">
+<dt id="section-20-5.11">
 <code>mission-substrate</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-4.12">
-          <p id="section-20-4.12.1">Normative requirements on any further binding of the model; the
-existing bindings and the core are unchanged by it.<a href="#section-20-4.12.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-5.12">
+          <p id="section-20-5.12.1">Normative requirements on any further binding of the model; the
+existing bindings and the core are unchanged by it. Its promotion
+to the Mission Governance Model is planned.<a href="#section-20-5.12.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-20-5"><strong>Approval time:</strong><a href="#section-20-5" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-20-6">
-        <dt id="section-20-6.1">
+<p id="section-20-6"><strong>Approval time:</strong><a href="#section-20-6" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-20-7">
+        <dt id="section-20-7.1">
 <code>mission-shaping</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-6.2">
-          <p id="section-20-6.2.1">Client-side shaping of a user's request into a candidate Mission
-Intent, as untrusted proposal.<a href="#section-20-6.2.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-7.2">
+          <p id="section-20-7.2.1">Client-side shaping of a user's request into a candidate Mission
+Intent, as untrusted proposal.<a href="#section-20-7.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-6.3">
+<dt id="section-20-7.3">
 <code>oauth-mission-consent-evidence</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-6.4">
-          <p id="section-20-6.4.1">The <code>consent_rendering_hash</code> anchor and signed evidence of what the
+        <dd style="margin-left: 1.5em" id="section-20-7.4">
+          <p id="section-20-7.4.1">The <code>consent_rendering_hash</code> anchor and signed evidence of what the
 Approver was shown, with the translation floor and Disclosure
 Interrogation that keep the approval surface readable and
-questionable.<a href="#section-20-6.4.1" class="pilcrow">¶</a></p>
+questionable.<a href="#section-20-7.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-6.5">
+<dt id="section-20-7.5">
 <code>oauth-mission-approval</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-6.6">
-          <p id="section-20-6.6.1">Asynchronous approval over the deferred substrate.<a href="#section-20-6.6.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-7.6">
+          <p id="section-20-7.6.1">Asynchronous approval over the deferred substrate.<a href="#section-20-7.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-6.7">
+<dt id="section-20-7.7">
 <code>oauth-mission-approval-revision</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-6.8">
-          <p id="section-20-6.8.1">Experimental: in-review narrowing revision of a deferred proposal.<a href="#section-20-6.8.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-7.8">
+          <p id="section-20-7.8.1">Experimental: in-review narrowing revision of a deferred proposal.<a href="#section-20-7.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-20-7"><strong>Lifecycle:</strong><a href="#section-20-7" class="pilcrow">¶</a></p>
-<p id="section-20-8">Status is the lifecycle suite's root document (state reading,
+<p id="section-20-8"><strong>Lifecycle:</strong><a href="#section-20-8" class="pilcrow">¶</a></p>
+<p id="section-20-9">Status is the lifecycle suite's root document (state reading,
 including the swarm-scale Status List, lifecycle verbs, and
 completion), with Signals (the push channel) and Management (the
-operator plane) as its satellites.<a href="#section-20-8" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-20-9">
-        <dt id="section-20-9.1">
+operator plane) as its satellites.<a href="#section-20-9" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-20-10">
+        <dt id="section-20-10.1">
 <code>oauth-mission-status</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-9.2">
-          <p id="section-20-9.2.1">The signed pull surface and the lifecycle endpoint, with
+        <dd style="margin-left: 1.5em" id="section-20-10.2">
+          <p id="section-20-10.2.1">The signed pull surface and the lifecycle endpoint, with
 <code>suspended</code> and <code>completed</code>, and per-entry discharge via the
-<code>terminal_when</code> constraint.<a href="#section-20-9.2.1" class="pilcrow">¶</a></p>
+<code>terminal_when</code> constraint.<a href="#section-20-10.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-9.3">
+<dt id="section-20-10.3">
 <code>oauth-mission-signals</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-9.4">
-          <p id="section-20-9.4.1">A signed event per lifecycle transition, push or poll.<a href="#section-20-9.4.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-10.4">
+          <p id="section-20-10.4.1">A signed event per lifecycle transition, push or poll.<a href="#section-20-10.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-9.5">
+<dt id="section-20-10.5">
 <code>oauth-mission-expansion</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-9.6">
-          <p id="section-20-9.6.1">Widening through an approved successor Mission.<a href="#section-20-9.6.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-10.6">
+          <p id="section-20-10.6.1">Widening through an approved successor Mission.<a href="#section-20-10.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-9.7">
+<dt id="section-20-10.7">
 <code>oauth-mission-progressive</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-9.8">
-          <p id="section-20-9.8.1">Experimental: policy-adjudicated expansion within a pre-consented
-ceiling.<a href="#section-20-9.8.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-10.8">
+          <p id="section-20-10.8.1">Experimental: policy-adjudicated expansion within a pre-consented
+ceiling.<a href="#section-20-10.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-9.9">
+<dt id="section-20-10.9">
 <code>mission-discovery</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-9.10">
-          <p id="section-20-9.10.1">Experimental: the open-world encounter as a governed operation:
+        <dd style="margin-left: 1.5em" id="section-20-10.10">
+          <p id="section-20-10.10.1">Experimental: the open-world encounter as a governed operation:
 identity pinning, ceiling adjudication with the lying-resource and
-tainted-session floors, Discovery Evidence.<a href="#section-20-9.10.1" class="pilcrow">¶</a></p>
+tainted-session floors, Discovery Evidence.<a href="#section-20-10.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-9.11">
+<dt id="section-20-10.11">
 <code>oauth-mission-management</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-9.12">
-          <p id="section-20-9.12.1">Fleet enumeration and bulk lifecycle operations for operators and
-incident response; dry-run-first, per-Mission semantics.<a href="#section-20-9.12.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-10.12">
+          <p id="section-20-10.12.1">Fleet enumeration and bulk lifecycle operations for operators and
+incident response; dry-run-first, per-Mission semantics.<a href="#section-20-10.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-9.13">
+<dt id="section-20-10.13">
 <code>oauth-mission-cross-domain</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-9.14">
-          <p id="section-20-9.14.1">Single-hop projection of a Mission to another trust domain via the
-cross-domain grant.<a href="#section-20-9.14.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-10.14">
+          <p id="section-20-10.14.1">Single-hop projection of a Mission to another trust domain via the
+cross-domain grant.<a href="#section-20-10.14.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-20-10"><strong>Runtime enforcement:</strong><a href="#section-20-10" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-20-11">
-        <dt id="section-20-11.1">
+<p id="section-20-11"><strong>Runtime enforcement:</strong><a href="#section-20-11" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-20-12">
+        <dt id="section-20-12.1">
 <code>mission-runtime</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-11.2">
-          <p id="section-20-11.2.1">The per-action decision contract: parameter binding, custody,
-fail-closed behavior.<a href="#section-20-11.2.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-12.2">
+          <p id="section-20-12.2.1">The per-action decision contract: parameter binding, custody,
+fail-closed behavior.<a href="#section-20-12.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-11.3">
+<dt id="section-20-12.3">
 <code>mission-authzen</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-11.4">
-          <p id="section-20-11.4.1">The concrete decision-API binding and its Decision and Execution
-Evidence objects.<a href="#section-20-11.4.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-12.4">
+          <p id="section-20-12.4.1">The concrete decision-API binding and its Decision and Execution
+Evidence objects.<a href="#section-20-12.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-11.5">
+<dt id="section-20-12.5">
 <code>mission-metering</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-11.6">
-          <p id="section-20-11.6.1">Experimental: cumulative consumption bounds and the metering that
-enforces them.<a href="#section-20-11.6.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-12.6">
+          <p id="section-20-12.6.1">Experimental: cumulative consumption bounds and the metering that
+enforces them.<a href="#section-20-12.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-20-12"><strong>Agent runtime:</strong><a href="#section-20-12" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-20-13">
-        <dt id="section-20-13.1">
+<p id="section-20-13"><strong>Agent runtime:</strong><a href="#section-20-13" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-20-14">
+        <dt id="section-20-14.1">
 <code>mission-harness</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-13.2">
-          <p id="section-20-13.2.1">Binding sessions, queues, and sub-agent handles to Mission state;
-the mediated environment.<a href="#section-20-13.2.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-14.2">
+          <p id="section-20-14.2.1">Binding sessions, queues, and sub-agent handles to Mission state;
+the mediated environment.<a href="#section-20-14.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-13.3">
+<dt id="section-20-14.3">
 <code>mission-orchestration</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-13.4">
-          <p id="section-20-13.4.1">Experimental: reversibility classes, unwind plans, and compensation
-after a stop.<a href="#section-20-13.4.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-14.4">
+          <p id="section-20-14.4.1">Experimental: reversibility classes, unwind plans, and compensation
+after a stop.<a href="#section-20-14.4.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-20-14"><strong>Sub-agents:</strong><a href="#section-20-14" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-20-15">
-        <dt id="section-20-15.1">
+<p id="section-20-15"><strong>Sub-agents:</strong><a href="#section-20-15" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-20-16">
+        <dt id="section-20-16.1">
 <code>oauth-mission-child-delegation</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-15.2">
-          <p id="section-20-15.2.1">Child Missions with lineage, strict-subset authority, cascade
-revocation.<a href="#section-20-15.2.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-16.2">
+          <p id="section-20-16.2.1">Child Missions with lineage, strict-subset authority, cascade
+revocation.<a href="#section-20-16.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-15.3">
+<dt id="section-20-16.3">
 <code>oauth-mission-attenuation</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-15.4">
-          <p id="section-20-15.4.1">Experimental: narrower Mission-bound tokens minted offline; the
-kill switch preserved by runtime re-check.<a href="#section-20-15.4.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-16.4">
+          <p id="section-20-16.4.1">Experimental: narrower Mission-bound tokens minted offline; the
+kill switch preserved by runtime re-check.<a href="#section-20-16.4.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-20-16"><strong>Proof and portability:</strong><a href="#section-20-16" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-20-17">
-        <dt id="section-20-17.1">
+<p id="section-20-17"><strong>Proof and portability:</strong><a href="#section-20-17" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-20-18">
+        <dt id="section-20-18.1">
 <code>mission-mandate</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-17.2">
-          <p id="section-20-17.2.1">A signed, portable statement of a Mission's committed facts;
-evidence, not a credential.<a href="#section-20-17.2.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-18.2">
+          <p id="section-20-18.2.1">A signed, portable statement of a Mission's committed facts;
+evidence, not a credential.<a href="#section-20-18.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-20-17.3">
+<dt id="section-20-18.3">
 <code>mission-audit</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-17.4">
-          <p id="section-20-17.4.1">Registration of Mission evidence in a SCITT Transparency Service;
-receipts verifiable offline.<a href="#section-20-17.4.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-18.4">
+          <p id="section-20-18.4.1">Registration of Mission evidence in a SCITT Transparency Service;
+receipts verifiable offline.<a href="#section-20-18.4.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-20-18"><strong>Security model:</strong><a href="#section-20-18" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-20-19">
-        <dt id="section-20-19.1">
+<p id="section-20-19"><strong>Security model:</strong><a href="#section-20-19" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-20-20">
+        <dt id="section-20-20.1">
 <code>mission-security-model</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-19.2">
-          <p id="section-20-19.2.1">The trusted base in one view: what each component must achieve and
-what its compromise costs.<a href="#section-20-19.2.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-20-20.2">
+          <p id="section-20-20.2.1">The trusted base in one view: what each component must achieve and
+what its compromise costs.<a href="#section-20-20.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
