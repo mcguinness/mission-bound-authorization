@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-07-16T03:15:59.954622+00:00",
+  "timestamp": "2026-07-19T03:28:22.654460+00:00",
   "repo": "mcguinness/mission-bound-authorization",
   "labels": [
     {
@@ -52,6 +52,31 @@
       "name": "roadmap",
       "description": "",
       "color": "f62249"
+    },
+    {
+      "name": "decide",
+      "description": "Needs an owner ruling before work proceeds",
+      "color": "B60205"
+    },
+    {
+      "name": "now",
+      "description": "Executable immediately, no dependencies",
+      "color": "0E8A16"
+    },
+    {
+      "name": "coordinated",
+      "description": "Part of a planned multi-issue revision; do not execute piecemeal",
+      "color": "1D76DB"
+    },
+    {
+      "name": "foundation",
+      "description": "Sequenced foundation work with a stated dependency order",
+      "color": "5319E7"
+    },
+    {
+      "name": "parked",
+      "description": "Deliberately deferred; revisit at a named trigger",
+      "color": "C5DEF5"
     }
   ],
   "issues": [
@@ -128,12 +153,22 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "roadmap"
+      ],
       "body": "The metering companion now defines the exclusive controls member: consented exclusivity groups over Authority Set selectors, PDP-latched first-exercise-wins, turning the quarantine pattern into enforceable consented structure (an Approver approves read-sensitive-store or communicate-externally, never both under one Mission). It is deliberately homed in the experimental companion while the semantics bake, per the maturity dependency rule. When stable, promote the member into the core's controls vocabulary (and consider a Common Constraints treatment for per-entry exclusivity references) so it rides the standard consent rendering rules rather than the companion seam. Target: post-experimentation, -01 or later.",
       "createdAt": "2026-07-07T05:12:10Z",
-      "updatedAt": "2026-07-12T20:42:41Z",
+      "updatedAt": "2026-07-16T04:23:06Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled roadmap. Sequenced after #251: promotion criteria first, then this control rides them.",
+          "createdAt": "2026-07-16T04:23:05Z",
+          "updatedAt": "2026-07-16T04:23:05Z"
+        }
+      ]
     },
     {
       "number": 118,
@@ -448,12 +483,22 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "now"
+      ],
       "body": "From the family-wide Chief Architect review.\n\nThe core deliberately creates no registry for five extensible namespaces: Common Constraint names, integrity-anchor `typ` values, `mission` claim members, lifecycle states, and `controls` members. Extension rests on collision-resistant naming plus author coordination (e.g. the `mission-` prefixed `typ` values are \"author-coordinated\"). Companions have since grown parallel unregistered namespaces (denial-reason enums in expansion/child-delegation/authzen, cascade modes, evidence types), and typed-JWT media-type registration is inconsistent across the family (authzen registers three; audit defines three and defers; child-delegation uses one \"by local agreement\"; `mission-join+jwt` and the Mandate SD-JWT form are unregistered).\n\nThis is survivable for an individual-draft family but \"author-coordinated namespace\" is not an IETF change-control story, and reviewers will raise it at adoption.\n\n**Ask:** one deliberate family-wide decision, anchored in the core's IANA section, on:\n1. which namespaces get IANA registries at WG adoption (lifecycle states and Common Constraints are the strongest candidates: both are load-bearing for fail-closed behavior),\n2. which stay specification-defined with collision-resistant naming, and\n3. a single rule for registering typed-JWT media types.\n\nBecause the core is published, this is filed as an issue for the next revision rather than edited directly.",
       "createdAt": "2026-07-09T03:23:29Z",
-      "updatedAt": "2026-07-12T20:42:43Z",
+      "updatedAt": "2026-07-16T04:23:04Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled now. Execute with #290: that batch's pre-drafted registries are this issue's implementation for two of the five namespaces, and its decision should cover the remaining three (mission claim members, lifecycle states, controls members) plus the single typed-JWT media-type rule.",
+          "createdAt": "2026-07-16T04:23:03Z",
+          "updatedAt": "2026-07-16T04:23:03Z"
+        }
+      ]
     },
     {
       "number": 174,
@@ -673,13 +718,22 @@
       "authorAssociation": "OWNER",
       "assignees": [],
       "labels": [
-        "roadmap"
+        "roadmap",
+        "foundation"
       ],
       "body": "Roadmap prioritization from the handbook alignment review.\n\n**Current state.** The runtime profile (Section 11.3) names the Mission Receipt, the portable, tamper-evident projection of a runtime enforcement evidence record, and gives a SHOULD-bind list (mission id and issuer, decision, policy versions, executor and act chain, custody boundary, target, outcome, timestamps, previous-receipt digest), but the portable schema and canonical byte representation are explicitly deferred (its Section 16).\n\n**Why promote it.** The handbook's validation chapter argues the evidence family answers the AI governance frameworks' record-keeping demands with receipts, not logs. That argument leans on receipt portability, and the deferred schema is the gap between the promise and the wire.\n\n**Proposed home.** Define the schema and canonical byte representation in Mission Audit Transparency, since receipt chaining and tamper-evidence are transparency concerns and the family already does canonical bytes there (JCS, domain-separated envelopes), with the AuthZEN profile referencing it rather than defining a second shape.",
       "createdAt": "2026-07-09T21:23:37Z",
-      "updatedAt": "2026-07-12T20:42:44Z",
+      "updatedAt": "2026-07-16T04:21:16Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled foundation. Sequenced after #282 (the committed-evidence envelope): the receipt is that envelope's most important payload, and defining it first would build on sand.",
+          "createdAt": "2026-07-16T04:21:15Z",
+          "updatedAt": "2026-07-16T04:21:15Z"
+        }
+      ]
     },
     {
       "number": 198,
@@ -898,12 +952,22 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "coordinated"
+      ],
       "body": "From the external stack-ranked review (P0 finding 2). The MAS join proves the credential belongs to the Mission's subject and client, not that it was issued for the Mission, and the Enterprise profile already requires introspection, sender-constrained tokens, cnf propagation, runtime enforcement, and evidence infrastructure: nearly AS-integration-grade intrusiveness with weaker binding.\n\n**Proposal**: the Enterprise Mission Authority Profile requires the issuance grant (draft-mcguinness-oauth-mission-issuance-grant), or equivalent Mission-bound credentials, for the high-consequence action classes; the mapping join remains the crawl-stage governance mode with explicitly weaker claims (the join ceiling the MAS already states honestly).\n\n**Assessment**: recommend accept; coherent with the runtime profile's high-consequence posture and the join-assurance honesty rules. Raises the Enterprise bar materially, so it needs a deliberate MAS revision, not a drive-by edit.",
       "createdAt": "2026-07-12T20:23:48Z",
-      "updatedAt": "2026-07-12T20:48:43Z",
+      "updatedAt": "2026-07-16T04:21:11Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled coordinated. Execute as one MAS assurance revision together with #248 (J-classes) and #289 item 1 (join-mechanism selection); the three form one design and this issue's own assessment asks for a deliberate revision, not a drive-by edit.",
+          "createdAt": "2026-07-16T04:21:11Z",
+          "updatedAt": "2026-07-16T04:21:11Z"
+        }
+      ]
     },
     {
       "number": 238,
@@ -914,12 +978,22 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "coordinated"
+      ],
       "body": "From the external stack-ranked review (P0 finding 3). Runtime plus AuthZEN is ~5,000 source lines requiring an Enforcement Scope Statement, state-source policy, signed Decision Evidence, key publication, reconciliation ownership, parameter normalization, and transaction machinery: an enterprise target, not an adoption wedge.\n\n**Proposal**: a genuine runtime core consisting only of Mission binding establishment, state freshness, authority and Resource-policy intersection, permit/deny, and a short-lived decision identifier; signed evidence, leases, outcome reconciliation, and Operation Profiles become named assurance extensions (the assurance-claims axis already names most of them).\n\n**Status**: the naming half (retiring the Protocol MVP epithet) landed in #236. This issue is the restructure: execute as a planned revision with a relocation-only discipline, in the spirit of #207.",
       "createdAt": "2026-07-12T20:23:49Z",
-      "updatedAt": "2026-07-12T20:48:44Z",
+      "updatedAt": "2026-07-16T04:21:14Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled coordinated. Execute together with #242 and #287 as one planned revision (one cut of the dependency graph). Also the natural vehicle for the S5 pilot if the owner selects the runtime-pilot option on #292.",
+          "createdAt": "2026-07-16T04:21:14Z",
+          "updatedAt": "2026-07-16T04:21:14Z"
+        }
+      ]
     },
     {
       "number": 239,
@@ -930,10 +1004,12 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "parked"
+      ],
       "body": "From the external stack-ranked review (P1 finding 6). Delegated tokens keep the approved agent in client_id, deliberately overriding RFC 8693 Section 4.3 / RFC 9068 Section 2.2, with the immediate delegate in the outermost act. Existing RSs, gateways, policy engines, and audit systems commonly read client_id as the requesting client.\n\n**Reviewer proposal**: preserve standard client_id semantics and carry the approved agent as a mission claim member (e.g. mission.approved_client).\n\n**Recorded position**: the core's Design Alternative section documents why rebinding was rejected (rebinding is only safe where every RS processes act anyway, so it buys no relaxation, and it loses the stable approved-agent binding); -01 raised the routing guardrail to MUST NOT. The reviewer's ecosystem-compatibility argument is the strongest counterargument yet and the mission-member alternative is viable, so this stays open to be decided at WG-adoption time with deployment evidence rather than reversed quietly.",
       "createdAt": "2026-07-12T20:23:50Z",
-      "updatedAt": "2026-07-12T20:48:45Z",
+      "updatedAt": "2026-07-16T04:17:24Z",
       "closedAt": null,
       "comments": []
     },
@@ -946,12 +1022,22 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "decide"
+      ],
       "body": "From the external stack-ranked review (P1 finding 7). The core records one accountable Approver and defers multi-party approval; the Approval Decision Set (deferred-approval companion) is optional, experimental, off-wire, and omittable for ordinary approval. The reviewer argues delegated-authority IAM needs approval policy, thresholds, assertions, and provenance as substrate concepts.\n\n**Tension**: the Single Accountable Approver is a deliberate core decision (accountability concentrates; committees diffuse it), and round-one review already recast approval authority as a role (#197 merged).\n\n**Proposal to evaluate**: keep the core's single-accountable-approver model, and make the Decision Set (or an equivalent approval-governance record committed at the approval event) mandatory Enterprise-profile state, so provenance and threshold facts are first-class where estates need them without loading the core.",
       "createdAt": "2026-07-12T20:26:35Z",
-      "updatedAt": "2026-07-12T20:48:46Z",
+      "updatedAt": "2026-07-16T04:23:01Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled decide. Rule together with #292's S8 item: this issue's direction (approval governance as first-class Enterprise state) is the reason the recommendation there flipped to keeping the Approval Decision Set, with the consent-evidence duplication resolved by cross-reference.",
+          "createdAt": "2026-07-16T04:23:01Z",
+          "updatedAt": "2026-07-16T04:23:01Z"
+        }
+      ]
     },
     {
       "number": 241,
@@ -962,12 +1048,22 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "decide"
+      ],
       "body": "From the external stack-ranked review (P2 finding 11). Current expansion sends a refresh token through PAR, creates special non-rotation/replay behavior, delays successor creation until code redemption, and requires an atomic predecessor/successor transition with concurrency reconciliation.\n\n**Proposal**: a base mode that is just a newly approved Mission carrying a replaces lineage member, followed by explicit client handoff and predecessor revocation; the transactional replacement machinery is demoted to experimental until implementations prove it necessary.\n\n**Note**: distinct from #213 (revision-based evolution, rejected); this keeps successor semantics and questions only the handoff transaction's weight.",
       "createdAt": "2026-07-12T20:26:36Z",
-      "updatedAt": "2026-07-12T20:48:47Z",
+      "updatedAt": "2026-07-16T04:23:02Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled decide. Rule together with #292's S6 list: same subtraction question applied to expansion's transactional handoff. Not document consolidation, so the July 15 no-consolidation ruling does not settle it either way.",
+          "createdAt": "2026-07-16T04:23:02Z",
+          "updatedAt": "2026-07-16T04:23:02Z"
+        }
+      ]
     },
     {
       "number": 242,
@@ -978,12 +1074,22 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "coordinated"
+      ],
       "body": "From the external stack-ranked review (P2 finding 12). The status document owns status reads, the introspection projection, Status Lists, lifecycle mutation, concurrency, and experimental completion/discharge semantics in ~1,850 lines, while most consumers depend on it only as the freshness source.\n\n**Proposal**: keep status observation and lifecycle mutation together; extract the swarm-scale Status List and the completion/discharge semantics into optional extension documents so the stable freshness dependency stays small.\n\n**Weigh against**: the draft-count criticism from the same review; extraction adds documents. Decide with the runtime-core restructure so the dependency graph is cut once.",
       "createdAt": "2026-07-12T20:26:37Z",
-      "updatedAt": "2026-07-12T20:48:48Z",
+      "updatedAt": "2026-07-16T04:21:13Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled coordinated. Decide and execute together with #238 and #287 so the lifecycle/runtime dependency graph is cut once; this issue's own text already flags that coupling. Note #287 part 1 (Signals+Management merge) is document consolidation and is deferred by the owner ruling recorded on #292; the extraction question here stands on its own.",
+          "createdAt": "2026-07-16T04:21:13Z",
+          "updatedAt": "2026-07-16T04:21:13Z"
+        }
+      ]
     },
     {
       "number": 244,
@@ -1011,11 +1117,12 @@
       "authorAssociation": "OWNER",
       "assignees": [],
       "labels": [
-        "roadmap"
+        "roadmap",
+        "foundation"
       ],
       "body": "From the fresh critique of the -01 state. The runtime profile has a Negative Conformance Tests section; the issuance side has none, and -01 added MUSTs whose violation no defined party can observe (delegation-authorization policy applied at every exchange, template mode as lookup-never-synthesis, derivation bounded by Intent). Conformance currently rests on self-declaration, and the Deployment Profile schema (#212) does not exist yet.\n\n**Proposal**: an issuance-side negative-conformance suite in the core (or a test companion within the make-it-testable trio): for each issuance-gate MUST, the observable behavior a black-box tester can drive (submit an out-of-bounds Intent, attempt the forbidden exchange, replay an approval callback) and the refusal it must see. Pairs with #210's adapter and the trio in #212.",
       "createdAt": "2026-07-12T22:03:10Z",
-      "updatedAt": "2026-07-13T02:14:40Z",
+      "updatedAt": "2026-07-16T04:21:15Z",
       "closedAt": null,
       "comments": [
         {
@@ -1024,6 +1131,13 @@
           "body": "Architecture critique (P2-13) enumerates the invariant set an executable suite should drive, largely matching this issue's scope: non-active state rejection, unknown-constraint rejection, subset derivation, replayed-permit rejection, parameter mutation after permit, stale state, join ambiguity, child revocation, budget races, queued work after revocation, policy-version mismatch. Recording the list here so the suite's coverage target is explicit; the join-ambiguity and budget-race cases depend on the J-class and metering-promotion issues respectively.",
           "createdAt": "2026-07-13T01:57:56Z",
           "updatedAt": "2026-07-13T01:57:56Z"
+        },
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled foundation. Sequenced after #248 (J-classes) and #251 (metering promotion), which its join-ambiguity and budget-race cases depend on; the rest of the suite could start sooner if pulled forward.",
+          "createdAt": "2026-07-16T04:21:14Z",
+          "updatedAt": "2026-07-16T04:21:14Z"
         }
       ]
     },
@@ -1036,10 +1150,12 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "roadmap"
+      ],
       "body": "From the fresh critique of the -01 state. Template mode refuses an Intent that matches no configured mapping (`invalid_authorization_details`), so a client learns the supported purpose/resource mapping space only by collecting refusals.\n\n**Proposal to weigh**: either an AS metadata member enumerating supported template keys (more wire surface, against the accretion concern), or an explicit statement that template-mode deployments publish their mapping space out of band as deployment documentation, plus a distinct error detail separating no-mapping from policy-refusal. Decide alongside #238 (runtime-core restructure) so discovery surfaces are cut once.",
       "createdAt": "2026-07-12T22:03:11Z",
-      "updatedAt": "2026-07-13T04:07:35Z",
+      "updatedAt": "2026-07-16T04:17:20Z",
       "closedAt": null,
       "comments": [
         {
@@ -1060,12 +1176,22 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "coordinated"
+      ],
       "body": "From the architecture critique (P0-1), its strongest new idea. The join ceiling is stated honestly today, but as prose; naming the classes makes it checkable and answers the join-ambiguity questions (concurrent Missions for one subject/client, least-restrictive-Mission selection, retry and queued-work association, join-assertion replay boundary, what the join binds).\n\n**Proposal**: define in the MAS profile:\n- **J0, contextual association**: subject/client/time correlation only; audit convenience, never security-grade binding.\n- **J1, harness-bound**: the Mission reference is attached by a trusted harness and bound to an execution session.\n- **J2, instance-bound**: cryptographically binds Mission, credential identity, client instance, and session (the Enterprise profile's instance-bound joins).\n- **J3, action-bound**: additionally binds the operation and parameters or the runtime decision identifier.\n\nThen tie assurance claims and levels to a minimum class: a standalone MAS deployment does not qualify for strong Mission enforcement on J0 correlation. Composes with #237, which removes the join entirely for the highest tier via the issuance grant; J-classes grade every mode below it. The Enforcement Scope Statement and Deployment Profile carry the claimed class.",
       "createdAt": "2026-07-13T01:57:18Z",
-      "updatedAt": "2026-07-13T01:57:18Z",
+      "updatedAt": "2026-07-16T04:21:12Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled coordinated. Execute as one MAS assurance revision together with #237 and #289 item 1; the J-class ladder is the frame the other two resolve inside. #245's join-ambiguity test case consumes the result.",
+          "createdAt": "2026-07-16T04:21:12Z",
+          "updatedAt": "2026-07-16T04:21:12Z"
+        }
+      ]
     },
     {
       "number": 249,
@@ -1112,12 +1238,22 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "roadmap"
+      ],
       "body": "From the architecture critique (P0-5), with a correction recorded: consumable constraints are not decorative today, because the runtime profile fails closed on any unmetered consumption constraint. The real gap is that the usable path to consumable bounds (reservation vs consumption, atomic decrement, idempotency keys, concurrency, refunds and reversals, cross-resource aggregation, delegated budget partitioning, child budget return, reconciliation after uncertain outcomes) lives in an experimental companion.\n\n**Proposal**: define the promotion criteria that move metering's accounting model into the architectural baseline for any Authority Set carrying a consumable constraint (implementation exercise of the check-and-decrement and lease machinery, plus the distributed-accounting consistency statement). Links: #117 (the exclusive control promotion shares the same condition), #238 (assurance-extension restructure should name metering's tier).",
       "createdAt": "2026-07-13T01:57:52Z",
-      "updatedAt": "2026-07-13T01:57:52Z",
+      "updatedAt": "2026-07-16T04:23:05Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled roadmap. Sequenced before #117, which promotes the exclusive control only once this issue's accounting model stabilizes. Also feeds #245's budget-race test case. Note the S6 sub-item on #292 (promote max_budget/max_calls out of experimental metering) resolves through this issue's criteria.",
+          "createdAt": "2026-07-16T04:23:04Z",
+          "updatedAt": "2026-07-16T04:23:04Z"
+        }
+      ]
     },
     {
       "number": 252,
@@ -1128,12 +1264,22 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "coordinated"
+      ],
       "body": "From the architecture critique (P1-9). Classification has a floor today (classification-integrity rule, resource-owner class floors, purpose-raises-never-lowers), so the 'escape hatch' half of the critique is already answered. What is scattered is compound actions: real actions are distributed (draft/attach/resolve/send; validate/reserve/execute/settle), and the pieces live apart (orchestration's reversibility classes and unwind plans; the evidence layer's compensates_decision_id; permit windows).\n\n**Proposal**: name the compound-action model in the runtime profile's execution model (or the architecture's execution plane): action boundaries (preflight, prepare, commit, compensate, verify outcome), which boundary the permit binds, and how a multi-step action's steps share or renew a permit. Orchestration remains the unwind owner; this issue is about the boundary vocabulary being core rather than advanced.",
       "createdAt": "2026-07-13T01:57:53Z",
-      "updatedAt": "2026-07-13T01:57:53Z",
+      "updatedAt": "2026-07-16T04:24:12Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled coordinated. Execute with the #238 runtime-core restructure so the execution-model vocabulary lands in the reshaped document rather than being placed twice; added to the lifecycle/runtime group on #302.",
+          "createdAt": "2026-07-16T04:24:12Z",
+          "updatedAt": "2026-07-16T04:24:12Z"
+        }
+      ]
     },
     {
       "number": 253,
@@ -1162,12 +1308,22 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "now"
+      ],
       "body": "Companion to the native-first revision of the AAuth binding (PR #255). The binding now consumes minimal surface, which makes the remaining seams small, well-scoped upstream asks to the AAuth author rather than binding-side transplants. AAuth explicitly defers 'transitions beyond completion' to a companion specification, which is an invitation to fill the hole in AAuth's own idiom.\n\n**The asks, in priority order:**\n\n1. **`tools[].resource` and `tools[].constraints`** as AAuth-native proposal/blob members: an absolute provider URI and structured argument bounds per tool. Useful to AAuth independent of Missions (any PS policy benefits from knowing a tool's provider and bounds), which is what makes this a credible protocol improvement rather than a vendor wedge. The binding currently defines both.\n2. **A lifecycle companion in AAuth's idiom**: transitions beyond completion (revocation, expiry) defined as mission-log events surfacing through the existing `mission_terminated`/`mission_status` machinery, with an authenticated revocation operation. Authored or co-authored with the AAuth side; the Mission binding would then consume it instead of defining the transitions itself.\n3. **Blob extension-member conventions**: flat members, collision-resistant naming guidance, and consumer ignore rules, so extensions like `mission_id`/`expires_at`/`policy_version` have a stated home (AAuth currently permits additional session members without conventions).\n4. **Optional: `expires_at` as a native blob member**: a mission end date is useful to plain AAuth (its design rationale already discusses terminating long pauses), and adoption would reduce the binding's flat additions to two.\n\nTiming: AAuth is an individual draft at -08, the moment such asks are cheapest. Each ask that lands upstream shrinks this binding; none blocks it.",
       "createdAt": "2026-07-13T16:13:22Z",
-      "updatedAt": "2026-07-13T16:13:22Z",
+      "updatedAt": "2026-07-16T04:23:03Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled now. Execute with #286 as the upstream-engagement wave; its own timing argument (cheapest while AAuth is an individual draft) makes it the most time-sensitive item on the board alongside the two proposals tracked in #286.",
+          "createdAt": "2026-07-16T04:23:03Z",
+          "updatedAt": "2026-07-16T04:23:03Z"
+        }
+      ]
     },
     {
       "number": 271,
@@ -1190,16 +1346,26 @@
       "id": "I_kwDOTBXTi88AAAABIzZrUw",
       "title": "Architecture: consolidate the ontology contract (who owns meaning, and how it reaches derivation, consent, and enforcement)",
       "url": "https://github.com/mcguinness/mission-bound-authorization/issues/280",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "now"
+      ],
       "body": "## Problem\n\nThe family answers the ontology problem (the resource owns its operation and constraint semantics, while derivation, consent rendering, and enforcement must consume that meaning without owning it) with at least five mechanisms, each normative in its own home and none presented as one contract:\n\n- **Common Constraints** with registered semantics, and the `mission_constraints_supported` protected-resource metadata member (core).\n- **Capability-source binding** with content digests, failing closed on drift (AuthZEN profile).\n- **Operation Profiles** carrying resource-declared operation semantics such as idempotency, reversibility, and lease requirements (runtime/AuthZEN).\n- **The encounter contract** for resources the approval could not enumerate (discovery).\n- **Resource-Declared Semantics** on the AAuth binding: the R3 inversion, with `r3_s256` as the third commitment beside `intent_hash` and `authority_hash`, and consent composing the resource's own words (mission-aauth, informative).\n\nThe architecture document names the division of labor (the issuer owns the objective and global ceilings, the resource owns local actions and constraints, the PDP evaluates the intersection, translation is trusted, verified, or separately approved) but does not consolidate how resource-owned meaning actually reaches the three consuming layers, or state the direction question: the family inherits OAuth's client-proposed ontology (architecture already notes this in passing), while AAuth R3 demonstrates the resource-declared inversion.\n\n## Proposal\n\nAn architecture-level section (working title: \"The Ontology Contract\") that:\n\n1. States ownership once: the resource owns the ontology; derivation, consent rendering, and enforcement consume it; no layer invents meaning it does not own.\n2. Enumerates the supply mechanisms above as one composed contract, each with its normative home, mirroring the Mission Substrate section's consolidation style.\n3. States the direction axis explicitly: client-proposed (OAuth-inherited) versus resource-declared (R3-shape), with the family's position that the direction is substrate-accidental while the fundamentals (meaning binds at approval, is enforced at use, translation never widens) hold in both directions.\n4. Notes RAR-type metadata (draft-zehavi-oauth-rar-metadata) as the OAuth analog of R3's descriptive half, so the OAuth binding has a stated resource-declared story rather than an implied one.\n\n## Non-goals\n\nNo new mechanism and no normative changes to the core: this is a consolidation of existing surfaces into one legible contract, per the family's pattern of stating cross-document interfaces in the architecture.",
       "createdAt": "2026-07-14T18:00:27Z",
-      "updatedAt": "2026-07-14T18:00:27Z",
-      "closedAt": null,
-      "comments": []
+      "updatedAt": "2026-07-16T18:15:30Z",
+      "closedAt": "2026-07-16T18:15:30Z",
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Triage (July 2026): labeled now. Pure consolidation with no normative change, executable immediately; it also primes the later Resource Authorization Contract work (#249), which its enumeration will point at.",
+          "createdAt": "2026-07-16T04:23:06Z",
+          "updatedAt": "2026-07-16T04:23:06Z"
+        }
+      ]
     },
     {
       "number": 282,
@@ -1210,10 +1376,12 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "foundation"
+      ],
       "body": "From the July 2026 five-lens architectural review (complexity finding 1; re-confirms the earlier S7 finding independently). Supersedes the event-envelope half of #212 (the manifest half is staged in #281).\n\nThe family defines roughly 14 evidence/record artifact types across 16 media types (Consent Evidence/Disclosure, Decision, Execution, Refusal, Receipt, Harness, Child, Discovery, Orchestration + unwind plan, Shaping, and audit's approval/derivation/lifecycle/erasure records), each with its own members, canonical-bytes rule, integrity mechanism, and retention text. Domain separation is inconsistent three ways: anchors use the core's typ/iss envelope, audit records rely on media type, and parameter_digest is bare JCS+SHA-256.\n\nProposal: one Mission Evidence envelope reusing the core's typ-discriminated, issuer-bound anchor envelope; one signing/integrity/retention profile; per-profile payload schemas; one media type plus a typ value list. Consolidation, not invention: the family already owns the pattern. Cost: indirection plus a breaking change to worked examples and the audit registration table.",
       "createdAt": "2026-07-14T19:38:27Z",
-      "updatedAt": "2026-07-14T19:38:27Z",
+      "updatedAt": "2026-07-16T04:17:16Z",
       "closedAt": null,
       "comments": []
     },
@@ -1226,10 +1394,12 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "now"
+      ],
       "body": "From the July 2026 five-lens architectural review (implementer blocker 1); a normative gap, not friction.\n\nIn MAS mode tokens carry no mission claim, and the join says the PEP supplies mission_id from its Mission binding or deployment configuration. When the gateway PEP is not the harness process, no header, parameter, or MCP metadata field is defined by which the agent tells the gateway which Mission a given tools/call runs under; the registered Mission-Decision HTTP field is decision-id propagation only. Every implementer would invent the channel that everything downstream keys on.\n\nProposal: define the propagation binding, an HTTP request field plus an MCP metadata convention, with anti-confusion rules (the PEP treats the value as a claim to verify via the join, never as authority).",
       "createdAt": "2026-07-14T19:38:28Z",
-      "updatedAt": "2026-07-14T19:38:28Z",
+      "updatedAt": "2026-07-16T04:16:55Z",
       "closedAt": null,
       "comments": []
     },
@@ -1242,10 +1412,12 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "now"
+      ],
       "body": "From the July 2026 five-lens architectural review (standards findings 1-2, tradeoffs finding 5). Core changes ride this issue per the published-core rule.\n\n1. I-JSON: committed JSON is not required to be I-JSON, so the anchor mechanism accepts inputs JCS does not define behavior for (the number-range rule covers only Common Constraint values while arbitrary Intent JSON is committed verbatim). Fix: one normative paragraph in Canonicalization Rules requiring RFC 7493 conformance for every committed value and envelope, AS MUST reject non-conformant input, RFC 8785 security considerations inherited. Companions inherit via the substrate.\n2. Hash agility: BCP 201 on artifacts designed to outlive algorithms. Bind the sha-256: prefix to the RFC 6920 Named Information registry (or a small Mission registry), name sha-256 MTI, define dual-anchor carriage for transition.\n3. parameter_digest hardening: PDP and PEP recompute it independently over live parameters; normalization drift plus fail-closed is an outage. Require per-operation digest test vectors in every Operation Profile; consider a raw-bytes digest option where the PEP relays the exact request body.",
       "createdAt": "2026-07-14T19:38:29Z",
-      "updatedAt": "2026-07-14T19:38:29Z",
+      "updatedAt": "2026-07-16T04:16:56Z",
       "closedAt": null,
       "comments": []
     },
@@ -1258,10 +1430,12 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "now"
+      ],
       "body": "From the July 2026 five-lens architectural review (tradeoffs findings 1-2, complexity finding 6). The local-token sender-constraint MUST and the hard 300-second grant cap together price partners out of the family's most needed deployment surface.\n\n1. Parameterize the 300-second cap: default ceiling, with the actual value a pre-established-trust term published together with its revocation-latency consequence (the ESS bound-plus-consequence idiom).\n2. Parameterize the local-token sender-constraint MUST: allow a declared bearer-with-short-lifetime posture recorded in pre-established trust as a named lower claim; keep the mediated-class custody rule untouched.\n3. Unify the Mission Issuance Grant and the cross-domain grant into one issuer-signed redemption mechanism (the RFC 7523/ID-JAG shape) with estate and partner trust profiles; the MAS keeps its minting endpoint.\n\nEvidence to settle: PoP support survey across major IdPs/gateways, one pilot partner integration, load telemetry.",
       "createdAt": "2026-07-14T19:38:30Z",
-      "updatedAt": "2026-07-14T19:38:30Z",
+      "updatedAt": "2026-07-16T04:17:05Z",
       "closedAt": null,
       "comments": []
     },
@@ -1274,12 +1448,29 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "now"
+      ],
       "body": "From the July 2026 five-lens architectural review (landscape findings 1, 2, 5). Three live proposals are converging on problems this family already solved; early composition notes position the Mission record as their missing anchor. Engagement outranks new companions.\n\n- draft-rosomakho-oauth-txn-challenge (proposed, June 2026): a signed transaction-authorization challenge from the protected resource, redeemed at the AS for an operation-scoped token. Cite informatively from the runtime profile's Action-Bound Approval as an OAuth-native transport; the Mission approval event and Consent Evidence are the AS-side policy and record behind the challenge.\n- draft-oauth-transaction-tokens-for-agents (proposed, through -06): actchain plus an agentic_ctx claim carrying roles, intent, and constraints. Cite alongside the chaining profile; mission_id/authority_hash are the natural anchor to carry in agentic_ctx before the ecosystem grows an unanchored intent record.\n- MCP Cross App Access (shipped in MCP 2025-11-25 as SEP-990): a deployed surface for the same ID-JAG the cross-domain draft bets on; note it in the ID-JAG discussion. Repoint the stale MCP anchor while there (tracked in the hygiene batch).\n\nDeliverable per item: a composition paragraph in the owning draft plus an OAuth-list note where engagement is warranted.",
       "createdAt": "2026-07-14T19:46:37Z",
-      "updatedAt": "2026-07-14T19:46:37Z",
+      "updatedAt": "2026-07-16T17:25:28Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Addition to the engagement list: draft-jiang-oauth-intent-admission-00 (proposed individual draft, Huawei, June 2026). An Admission Point signs a short-lived Intent Admission Assertion (RAR intent_admission detail: JCS-digest intent_ref, originator with execution_context, presenter with cnf, structured consent evidence) that an Execution Endpoint re-verifies as the non-bypassable gate. Action-grain and stateless where the Mission is task-grain and durable; the substrate convergence is strong (JCS digest commitment, RAR shape, cnf custody, consent evidence, point-of-use reverification, delegated presentation naming the gateway pattern on the wire). The composition hook is their consent method 'prior_grant': it gestures at exactly the durable grant object the draft does not define. A Mission-governed Admission Point gets its Permission Policy from the Authority Set, scope_ref from intent_hash/authority_hash, and prior-grant semantics from the approval event; the IAA becomes the portable per-action artifact of a Mission-governed decision. Same engagement logic as the txn-challenge: offer the Mission record as the missing anchor before the pattern calcifies without one. It cites the WIMSE/transaction-token/agentic-JWT cluster and not the family.",
+          "createdAt": "2026-07-16T15:44:43Z",
+          "updatedAt": "2026-07-16T15:44:43Z"
+        },
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "The in-draft half is merged (PR #305): the runtime action-approval composition paragraph (txn-challenge, intent admission), the cross-domain Cross App Access shipped-surface note, and the agentic_ctx anchor paragraph. Remaining on this issue: the OAuth-list engagement note (drafted, with the author to send) and the core's MCP anchor repoint, which rides #290's hygiene batch.",
+          "createdAt": "2026-07-16T17:25:28Z",
+          "updatedAt": "2026-07-16T17:25:28Z"
+        }
+      ]
     },
     {
       "number": 287,
@@ -1290,10 +1481,12 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "coordinated"
+      ],
       "body": "From the July 2026 five-lens architectural review (complexity findings 3 and 5). Both parts touch open decisions; this issue holds the proposal until ruled.\n\n1. Merge Signals and Management into the Status document as one Mission State and Lifecycle companion (three documents to one, no mechanism removed), and converge the status/management and MAS error bodies on one shared shape (or document why RFC 9457 is not used and freeze the divergence). Note: this re-opens the conservative S4 ruling; a fresh independent reviewer reached the original recommendation from scratch.\n2. Replace terminal_when's embedded event-source verification subsystem (per-event-type signer trust, polling, re-evaluation duties inside the token path) with an authenticated per-entry discharge operation on the existing Lifecycle endpoint, keeping the monotonic latch and issuance gating unchanged. Deployments wanting event-driven discharge wire their event bus to the lifecycle call, which is where that integration lives anyway. Interacts with #242.",
       "createdAt": "2026-07-14T19:46:38Z",
-      "updatedAt": "2026-07-14T19:46:38Z",
+      "updatedAt": "2026-07-16T04:17:07Z",
       "closedAt": null,
       "comments": []
     },
@@ -1311,9 +1504,24 @@
       ],
       "body": "From the July 2026 five-lens architectural review (tradeoffs findings 3, 4, 6; standards finding 9). The strict postures are right and operators will quietly subvert them unless the family shows the math.\n\n- Specify the degraded mode for PDP/state-source outage rather than only requiring it be declared: recommended lease pre-issuance for reversible writes, queue-and-resume semantics (the harness already has the queue) as a named posture.\n- Publish a benchmark of the sharded single-use permit store at target QPS with the expected high-consequence fraction of real agent workloads.\n- Add the fleet-scale Status List cost table (fleet size x freshness window x bytes) as the headline rebuttal to the latency objection, plus an explicit statement that no per-request issuer call is ever required at any assurance level.\n- Add Operational Considerations sections (RFC 5706 shape) to runtime, status, and MAS, consolidating scattered alerting duties and naming the three or four metrics that operationalize the guarantees (fail-closed denial rate, freshness-cap breaches, revocation-to-action latency).",
       "createdAt": "2026-07-14T19:46:40Z",
-      "updatedAt": "2026-07-14T19:46:40Z",
+      "updatedAt": "2026-07-16T16:34:11Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Scope addition (owner direction, July 2026): present the freshness architecture as a dial, not a mandate. The TTL-only posture is the zero-infrastructure end of the spectrum and is legitimate at action grain and for short missions: verification is local crypto plus a clock, no state source, no availability coupling, worst-case exposure equals the lifetime by construction. The deliverable's cost/exposure table should cover at least three points: pure TTL (exposure = lifetime, issuer becomes the hot dependency at re-issuance, no suspend/complete/kill-now), TTL plus Status List (amortized fetch, exposure = freshness window), TTL plus introspection (per-action, exposure = staleness bound). The deep symmetry worth stating: TTL relocates the freshness check from the verification path to the issuance path, which is the family's own gates-new-derivation-only rule seen from the other side.",
+          "createdAt": "2026-07-16T15:44:42Z",
+          "updatedAt": "2026-07-16T15:44:42Z"
+        },
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Scope carve (owner direction): the freshness dial ships as its own PR (the runtime comparison table, the Status List fleet arithmetic, and the architecture pointer). Remaining in this issue: the degraded-mode posture (lease pre-issuance, queue-and-resume), the sharded permit-store benchmark, and the Operational Considerations sections for runtime, status, and MAS.",
+          "createdAt": "2026-07-16T16:34:11Z",
+          "updatedAt": "2026-07-16T16:34:11Z"
+        }
+      ]
     },
     {
       "number": 289,
@@ -1324,10 +1532,12 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "coordinated"
+      ],
       "body": "From the July 2026 five-lens architectural review (complexity findings 4, 11, 12). Interacts with the open wave-3 rulings; the third option below restructures that menu.\n\n1. MAS join mechanisms: keep the inference join as the explicit weak baseline, promote the Issuance Grant as the one recommended strong path (it restores the token-layer gate), retire the Join Assertion. Note: the Enterprise profile currently REQUIRES the Join Assertion for high-consequence classes, which mandates the weaker of the two strong proofs; needs an explicit call.\n2. Compress the UMA binding to a worked crosswalk appendix of the substrate document; re-issue standalone when a UMA implementer appears.\n3. Fold the four small experimental drafts (approval-revision, progressive, attenuation, metering) into one Mission Experimental Extensions document with per-section capability claims; discovery and orchestration stay standalone. This replaces the cut-vs-merge menu for approval-revision and attenuation with a consolidation that keeps every design on record at a tenth of the maintenance surface.",
       "createdAt": "2026-07-14T19:46:40Z",
-      "updatedAt": "2026-07-16T03:10:23Z",
+      "updatedAt": "2026-07-16T04:17:15Z",
       "closedAt": null,
       "comments": [
         {
@@ -1348,10 +1558,12 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "now"
+      ],
       "body": "From the July 2026 five-lens architectural review (landscape findings 1, 3, 4, 6, 7, 8, 12; standards findings 5, 8, 10, 11). Small mechanical items, one PR each or batched:\n\n- Repoint the MCP anchor to the shipped 2025-11-25 spec; do not assume long-lived MCP sessions in harness custody text once the stateless RC lands.\n- Add WIMSE architecture and s2s informative anchors where prose already names WIMSE (core, architecture).\n- Acknowledge draft-ietf-oauth-attestation-based-client-auth and draft-ietf-oauth-spiffe-client-auth alongside the client-instance-assertion and ai-agent-instance companions; EAT is RFC 9711 for attested claims.\n- OpenID Federation 1.0/1.1 (Final) as an informative option in cross-domain pre-established trust.\n- CIBA as the ratified precedent for the deferred-approval substrate's polling/notification pattern.\n- Pin SSF/CAEP/RISC anchors to their Final URLs; update AARP and COAZ to official AuthZEN WG-draft status; cite draft-brossard-oauth-rar-authzen where the profile maps entries to SARC.\n- Cite RFC 8725 from the five JWT-defining profiles with explicit-typing REQUIRED.\n- Document History appendices in the 27 companions that lack one.\n- OPTIONAL goal_lang (BCP 47) on the Intent plus an Internationalization Considerations subsection in the core (issue route).\n- Pre-draft the two IANA registries (Mission Committed Object Types; Mission Common Constraints) ready to activate at adoption; move the signals event type from the personal domain to the provisional urn:ietf:params URN its own text promises.\n- A2A AgentCard and the MCP Registry named as example registry/catalog sources where the architecture and runtime reference agent registries.\n- README: four rhetorical capitalized OPTIONALs to lowercase, and a row for the deployment-profile companion (README edits await explicit approval per repo practice).",
       "createdAt": "2026-07-14T21:18:41Z",
-      "updatedAt": "2026-07-14T21:18:41Z",
+      "updatedAt": "2026-07-16T04:16:58Z",
       "closedAt": null,
       "comments": []
     },
@@ -1364,10 +1576,12 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "now"
+      ],
       "body": "From the July 2026 five-lens architectural review (complexity findings 7, 8, 9, 10). Each is a contained yes/no:\n\n1. Drop max_derivations from committed controls: it is a rate bound, not an authority bound; its own text warns caps sized for single-domain refresh exhaust in hours cross-domain; runaway derivation is AS rate policy, and cumulative bounds live in metering. Core change: issue route.\n2. Unify the per-entry delegation vocabulary: one matcher list and one depth budget with a mechanisms selector (token, child) instead of parallel max_depth/allowed_delegates and children.max_child_depth/allowed_child_actors.\n3. Split capability-source binding and drift detection out of the AuthZEN base into a short companion in the discovery/shaping orbit; restructure the 18-value denial taxonomy into a small closed set of classes with the current identifiers as extensible detail.\n4. End the substrate interface's four-home statement: move the definitions into the substrate document now, delete the architecture's parallel consolidation in favor of a pointer, and drop the ownership-migrates-by-touch rule.",
       "createdAt": "2026-07-14T21:18:42Z",
-      "updatedAt": "2026-07-15T19:55:33Z",
+      "updatedAt": "2026-07-16T04:17:04Z",
       "closedAt": null,
       "comments": [
         {
@@ -1388,10 +1602,12 @@
       "author": "mcguinness",
       "authorAssociation": "OWNER",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "decide"
+      ],
       "body": "Tracker for the four open subtraction-wave decisions plus the S6 thin list, updated with the July 2026 review's findings:\n\n1. AAuth: defer or keep. Recommendation flipped to keep: PR #255 landed the native-first revision, #256 records upstream asking for native seams, and the binding is the substrate thesis's worked proof.\n2. Approval-revision: cut vs merge into approval vs consolidate into an experimental-extensions document (#289 option 3). Consent-evidence's refused_dimensions assigns duties here; #240 heads toward richer approval semantics a revision flow composes with.\n3. S5 scope: recategorize the ~350 non-wire MUSTs (normative force stays on wire-visible surfaces plus the four load-bearing internals). Options: full three-document pass; pilot on runtime riding #238's conformance-subset framing (recommended); decline.\n4. S8 un-adds: keep the Approval Decision Set and resolve its duplication with consent-evidence by cross-reference (recommendation updated: #240 builds on it); thin admin metadata to owner plus tenant with the scope-circularity fixed, or park.\n5. S6 thin list, yes/no each: attenuation to an issue or into #289's extensions doc; discovery thinned to its two floors moved into the Security Model; orchestration's three load-bearing rules folded into harness; Mandate trimmed to the steps 1-8 JWS; audit's deep end to the SCITT upgrade path; promote max_budget/max_calls out of experimental metering (#251).",
       "createdAt": "2026-07-14T21:18:43Z",
-      "updatedAt": "2026-07-16T03:10:22Z",
+      "updatedAt": "2026-07-16T04:16:51Z",
       "closedAt": null,
       "comments": [
         {
@@ -1417,6 +1633,85 @@
       "createdAt": "2026-07-15T19:50:25Z",
       "updatedAt": "2026-07-15T20:39:17Z",
       "closedAt": "2026-07-15T20:39:17Z",
+      "comments": []
+    },
+    {
+      "number": 302,
+      "id": "I_kwDOTBXTi88AAAABI_u4Sw",
+      "title": "Triage: execution order for the open issue set (July 2026)",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/issues/302",
+      "state": "OPEN",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "The stack rank from the July 2026 five-lens architectural review, applied to every open issue. Labels carry the tiers (decide / now / coordinated / foundation / roadmap / parked); this issue holds the order and the grouping. Updated in place as rulings land.\n\n## Tier 1: decide\n- #292 wave-3 rulings (rule #241 and #240 in the same sitting). July 15 ruling recorded: no document consolidation at this time; still open there: S5 scope, S8 un-adds, content-level thins.\n\n## Tier 2: now (independent, parallelizable)\n- #283 MAS attribution channel (best effort-to-unblock ratio on the board)\n- #284 core commitment underpinnings (I-JSON, hash agility, parameter_digest vectors)\n- #290 hygiene batch + #170 IANA registry strategy (one decision, one batch)\n- #286 upstream seams + #256 AAuth asks (time-sensitive: proposals being shaped now)\n- #291 four small design calls (call 1 flipped to keep by #293)\n- #285 cross-domain repricing\n- #280 ontology contract\n\n## Tier 3: coordinated revisions (one cut each)\n- Lifecycle/runtime graph: #287 + #242 + #238 together (note: #287 part 1 deferred by the no-consolidation ruling; #238 is the S5 pilot vehicle if selected)\n- MAS assurance: #237 + #248 + #289 item 1 together (#289 items 2-3 deferred by the ruling)\n\n## Tier 4: foundations (sequenced)\n- #282 evidence envelope, then #194 receipt schema on top of it\n- #245 negative-conformance suite (after #248 and #251)\n\n## Tier 5: roadmap\n- #288 operational credibility + #250 control-plane consistency (siblings)\n- #249 Resource Authorization Contract (absorbs #246's end state)\n- #251 metering promotion, then #117 exclusive-control promotion\n- #253 canonical implementation profile (capstone; after #246/#248/#249)\n- #207 model split, #213 revision alternative, #210 reference adapter, #220 RAR-free tier\n\n## Parked\n- #239 client_id semantics: deliberately held for WG-adoption-time deployment evidence.\n\n## Done since the review\n- #293 swarm naming (merged as PR #294)\n- #212 closed as split: manifest half staged in PR #281 (open, awaiting merge), envelope half tracked as #282\n- #271 core editorial pass (merged as PR #279); family-wide editorial review complete through PR #301",
+      "createdAt": "2026-07-16T04:23:31Z",
+      "updatedAt": "2026-07-16T16:34:12Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Amendment: #252 (compound-action semantics) joins the lifecycle/runtime coordinated group (#287 + #242 + #238 + #252).",
+          "createdAt": "2026-07-16T04:24:12Z",
+          "updatedAt": "2026-07-16T04:24:12Z"
+        },
+        {
+          "author": "mcguinness",
+          "authorAssociation": "OWNER",
+          "body": "Amendment: the freshness-dial slice of #288 was carved out and staged as its own PR per owner direction; #288 retains the degraded-mode posture, the permit-store benchmark, and the Operational Considerations sections.",
+          "createdAt": "2026-07-16T16:34:12Z",
+          "updatedAt": "2026-07-16T16:34:12Z"
+        }
+      ]
+    },
+    {
+      "number": 307,
+      "id": "I_kwDOTBXTi88AAAABJO0rYg",
+      "title": "Name the context asymmetry and sequence-aware evaluation: the undertaking's history as a decision input",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/issues/307",
+      "state": "CLOSED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "## Problem\n\nThe family states that the resource owns its operation and constraint semantics (the ontology direction, consolidation tracked in #280) but never states the dual with equal force: the Mission owns the why and where the undertaking stands, and that context exists nowhere else in the stack. A resource evaluates each request at perfect local resolution and zero task resolution.\n\nThe sharpest consequence is sequence-aware risk. \"Delete database\" in isolation is indistinguishable from catastrophe. \"Delete database, inside an approved migration whose copy steps already completed\" is a priced, checkable step. The only place that judgment is possible is the layer where Decision and Execution Evidence join on the Mission's identity. Deployments can already build this, because a PDP can consult its own evidence store, but the pattern is unnamed, has no stated guardrails, and is therefore not interoperable or claimable.\n\n## Proposal\n\nNaming and guardrails, no new wire object:\n\n1. **Architecture**: state the asymmetry as the dual of the ontology contract, in or beside the same section. The resource owns what an action means. The Mission owns why it is happening and where the undertaking stands. A risk decision composes both: semantics without purpose prices every delete the same, and purpose without semantics cannot read the call.\n2. **Runtime profile**: add an OPTIONAL Decision Input, the undertaking's recorded history. Policy MAY evaluate predicates over the Mission's prior decision and execution records (for example, a precondition that a named action class completed) as deployment-local context keyed on the Mission's identity. Guardrails: history is a decision input and never a grant, evaluation MUST fail closed when required history is unavailable or the store cannot be consulted, and the input follows the same freshness discipline as Mission state. Cross-PDP history composes through the deployment's evidence store or registered transparency records and is otherwise out of scope.\n3. **AuthZEN binding**: say how the decision context carries a history predicate or its result, consistent with the binding's existing context conventions, so two implementations mean the same thing by \"the copy steps completed.\"\n4. **Security considerations**: the history input is attacker-adjacent where evidence producers are compromised, which is the existing evidence-integrity story, and it must never launder Shaping Evidence into authorization (the existing prohibition stands).\n\n## Relationship to existing text\n\nThe runtime profile's Decision Inputs section is the natural home for item 2. The shaping profile's rule that Shaping Evidence is never a permit input is unchanged and is the model for the guardrail language. This proposal names what a conforming deployment may already do, so the reference security architecture's dependency claims are unaffected.\n\n## Non-goals\n\nNo semantic intent inference at enforcement time (advisory only, unchanged), no new evidence object, no requirement that any deployment maintain queryable history.",
+      "createdAt": "2026-07-17T20:13:15Z",
+      "updatedAt": "2026-07-17T21:09:07Z",
+      "closedAt": "2026-07-17T21:09:07Z",
+      "comments": []
+    },
+    {
+      "number": 309,
+      "id": "I_kwDOTBXTi88AAAABJPiIVA",
+      "title": "Informative derivation-policy guidance: the artifact, its contract, and a worked rule",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/issues/309",
+      "state": "OPEN",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "## Problem\n\nDerivation policy is the first artifact every deployment must author and the least specified thing in the family. The core fixes the contract (derivation is mechanical, happens once at the approval event, over the policy and capability catalog in force) and the modes (narrowing and template), but no document shows what the policy is as an artifact: no worked rule, no testing discipline, no authoring workflow, no ownership split. Reviewers consistently land on this as the gap between the architecture and a staffable plan, and the analogy the family offers (the same onboarding work scope design was) names the workload without shaping it.\n\n## Proposal\n\nInformative guidance only, no policy language standardized, most naturally an appendix to the core or a section in the shaping profile:\n\n1. **The contract, stated once**: a derivation policy is a function from a validated Mission Intent and registry facts (eligibility bounds, risk tier, deployment pin) to an Authority Set, deterministic, no model in the loop, no discretion at decision time.\n2. **One or two worked rules** in a language-neutral shape: match conditions over validated Intent fields, registry facts consulted, entries emitted with their constraints and notice classes, and what the rule never emits.\n3. **The testing discipline**: fixture Intents with expected Authority Sets, run per policy change, diff-reviewed, with `policy_version` as the record's pointer to the version that derived each Mission.\n4. **Ownership**: the issuer's operator owns the function and ceilings, resource owners own the entries touching their services (consistent with the ontology-contract division in #280).\n5. **The economics, honestly**: the authoring surface is bounded by resources and action classes rather than integrations, amortized across Missions, with templates carrying the common cases, and the three health signals a deployment should watch (unmapped-resource rate, template-hit rate, rule-exception rate).\n\n## Non-goals\n\nNo normative policy language, no new endpoint or artifact, no conformance class for policies.",
+      "createdAt": "2026-07-17T22:24:54Z",
+      "updatedAt": "2026-07-17T22:24:54Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 310,
+      "id": "I_kwDOTBXTi88AAAABJPiInA",
+      "title": "Operational availability considerations: state distribution, staleness bounds, and outage semantics",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/issues/310",
+      "state": "OPEN",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "## Problem\n\nThe family makes fail-closed enforcement a tier-0 dependency on Mission state freshness, and deployments will put business-critical unattended work (CI, scheduled jobs, RPA) on that path. The availability story is currently distributed across one-line statements (bounded caching, never fail-open; the permit-as-lease model; the break-glass path) without an operational-considerations treatment relating the pieces. The first questions an architecture review board asks (what happens when the Issuer is down, for how long can it be down, what exactly halts) have answers implied by the design but stated nowhere together.\n\n## Proposal\n\nAn operational/availability considerations section, most naturally in the runtime profile with a pointer from Status and the Security Model:\n\n1. **Availability follows the artifact, not the issuer**: Mission state distributes as signed, TTL-bounded artifacts (Status responses, the Mission Status List), cacheable and replica-servable like key material, so control-plane unavailability within the bound degrades nothing on the data plane.\n2. **The staleness bound is also the ride-through**: guidance to choose published bounds with the Issuer's recovery objective in view, since a bound shorter than recovery time is a designed halt.\n3. **Blast-radius semantics stated once**: an outage past the bound halts PDP-gated classes and only them, issuance-gated paths ride to token expiry, ungated paths are unaffected, and new issuance stops.\n4. **Break-glass claim semantics** consolidated with the above: dual control, auto-expiry, same evidence as the bypassed path, enforcement claim suspended for what it touches while active.\n5. **Replication guidance** for the Mission record and status surfaces (small state, read-mostly, verifiable artifacts), explicitly not a consensus-protocol mandate.\n\n## Non-goals\n\nNo SLO numbers standardized, no new wire surfaces, no high-availability architecture mandated. This names the design space and the semantics so deployments can state their posture in the enforcement-scope statement.",
+      "createdAt": "2026-07-17T22:24:55Z",
+      "updatedAt": "2026-07-17T22:24:55Z",
+      "closedAt": null,
       "comments": []
     }
   ],
@@ -7476,6 +7771,396 @@
       "mergeCommit": {
         "oid": "84ae3ee69676ba460f0aaf92cab16cb1fafde09c"
       },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 295,
+      "id": "PR_kwDOTBXTi87yU1x5",
+      "title": "Editorial: attenuation obligation-list pass",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/295",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Editorial pass for draft-mcguinness-oauth-mission-attenuation, unblocked by the no-consolidation ruling on #292 (findings re-verified against current main).\n\n- Holder and consumer conformance mega-sentences (4 and 3 MUSTs) become per-item lists.\n- The 24-line kill-switch paragraph restructures: lead MUST, numbered per-presentation checks with scope qualifiers hoisted to the lead-in, cached-chain and MUST NOT paragraphs separate.\n- The duplicate aud-subset MUST merges into the single 'equal or a subset' rule carrying the set semantics and byte-exact comparison (the one keyword delta, audit-prescribed; the Conformance checklist cites it).\n- Hot-path motivation de-echoed to its Introduction home; abstract kept self-contained; the audit's Conformance/Security echoes no longer exist in current text.\n- The pre-Conventions OPTIONAL rhetoric was already lowercase (reported, not re-applied).\n\nKeyword delta: bare MUST 26 to 25 (the aud merge). All else identical, MUST NOT's apparent +1 in naive line-based counts is a pre-existing wrapped 'MUST / NOT' now unwrapped. Zero em-dashes. Builds clean.",
+      "createdAt": "2026-07-16T03:43:43Z",
+      "updatedAt": "2026-07-16T03:58:39Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "84ae3ee69676ba460f0aaf92cab16cb1fafde09c",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "editorial-attenuation",
+      "headRefOid": "eb568f53fc5d829d6859ea8f974a6081159039c7",
+      "closedAt": "2026-07-16T03:58:39Z",
+      "mergedAt": "2026-07-16T03:58:39Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "d3310043446fbca0dfa1866ecd909fe74911ee73"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 296,
+      "id": "PR_kwDOTBXTi87yU4l4",
+      "title": "Editorial: approval-revision procedure pass",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/296",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Editorial pass for draft-mcguinness-oauth-mission-approval-revision, unblocked by the no-consolidation ruling on #292 (the document stays standalone; findings re-verified against current main).\n\n- Submitting a Revision: two long steps become six, with handle checks a three-item sub-list, re-derivation and narrowing verification separated, and the narrowing check a four-item checklist; reproducibility rationale trails intact.\n- The MUST+MUST NOT compound splits into three checklist items; the request_uri double-MUST NOT splits into two sentences.\n- Parameters become a four-entry definition list stating presence per entry.\n- Security's 'Revision bounding' bullet now cross-references the submission rule instead of restating it; the home statement's two MUSTs split into separate sentences.\n- Lowercase 'must not survive' reworded indicatively rather than promoted; stale anchors renamed ({#experimental-status}, {#profile-relationship}; verified uncited anywhere); the worked example's normative-sounding approver sentence moves to Integration with the example pointing at it.\n\nKeyword deltas, all documented: bare MUST 15 to 14 (the Security demotion, home intact), REQUIRED and OPTIONAL each +1 (the definition list states presence once per parameter instead of once for two; same requirements). Zero em-dashes. Builds clean.",
+      "createdAt": "2026-07-16T03:46:40Z",
+      "updatedAt": "2026-07-16T04:05:48Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "84ae3ee69676ba460f0aaf92cab16cb1fafde09c",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "editorial-approval-revision",
+      "headRefOid": "0445403343c2a2eec9d5240dbb01dc980c53b4f8",
+      "closedAt": "2026-07-16T04:05:48Z",
+      "mergedAt": "2026-07-16T04:05:48Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "0bbf8e0662c139eabb08ecf226017fe62f33a604"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 297,
+      "id": "PR_kwDOTBXTi87yU4oz",
+      "title": "Editorial: orchestration plan and evidence pass",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/297",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Editorial pass for draft-mcguinness-mission-orchestration, unblocked by the no-consolidation ruling on #292 (the document stays standalone; findings re-verified against current main).\n\n- The unwind_plan_hash mega-paragraph: strictly-before-dispatch MUST leads, hash computation follows, then a three-item numbered commit procedure with the fail-closed rules separated; all rationale trails intact.\n- evidence_envelope: definition first, presence rule, rationale, then a When-present sub-list with the signer-identification MUSTs one per sentence, matching the core's nested definition pattern.\n- The nine-line harness/unwind branch sentence becomes a three-case list; the five non-active states become a State/Defined-by table; the five substrate primitives bullet.\n- Conventions and Terminology moves ahead of Scope so BCP 14 boilerplate precedes the document's first MUST.\n- General pass: all remaining two-keyword sentences split; imported record-integrity requirements and orchestration_decision mappings bulleted; one slogan echo trimmed to its pointer.\n\nZero keyword deltas (verified token-identical, including the one pre-existing wrapped MUST/NOT left untouched). Zero em-dashes. Builds clean.",
+      "createdAt": "2026-07-16T03:46:43Z",
+      "updatedAt": "2026-07-16T03:58:42Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "84ae3ee69676ba460f0aaf92cab16cb1fafde09c",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "editorial-orchestration",
+      "headRefOid": "3ce193cdf4685866d86b5221cb30c24508364668",
+      "closedAt": "2026-07-16T03:58:42Z",
+      "mergedAt": "2026-07-16T03:58:42Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "da4de93baa8800870e12cd71c64af4a5b7c68fd9"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 298,
+      "id": "PR_kwDOTBXTi87yU5Kw",
+      "title": "Editorial: aauth post-rewrite polish",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/298",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Editorial pass for draft-mcguinness-mission-aauth, unblocked by the keep direction on #292 (findings predate the native-first rewrite in #255; each was re-verified against current text, and the overtaken ones are reported rather than force-applied: the embedded-record rules, the tool-mapping table, and the Conventions promotion no longer apply).\n\n- Approval wall splits into refinement/recompose, consent-evidence composition, and interrogation paragraphs; state surfaces go one keyword per sentence with the high-consequence active-freshness MUST standing alone; the mission-claim MUST/SHOULD/MUST NOT compound splits.\n- Federation's four prohibitions and gating's four prohibited actions become bulleted MUST NOT lists; the log's six record types bullet with the ordering MUST leading.\n- The security-rendering duplicate enumeration compresses to a cross-reference of approval step 3, keeping its own authority-vs-narrative MUST.\n- The no-token-without-PS motif keeps gating as its home with the intro pointing; the normative-weight lowercase 'may' rewrites indicatively rather than promoting to MUST NOT (promotion would add a requirement).\n- General sweep: nine remaining keyword splices split one obligation per sentence.\n\nZero keyword deltas (verified token-identical). Zero em-dashes. Builds clean.",
+      "createdAt": "2026-07-16T03:47:17Z",
+      "updatedAt": "2026-07-16T03:58:46Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "84ae3ee69676ba460f0aaf92cab16cb1fafde09c",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "editorial-aauth",
+      "headRefOid": "c5764455494eedd606302deaabe8d982ed80790e",
+      "closedAt": "2026-07-16T03:58:46Z",
+      "mergedAt": "2026-07-16T03:58:46Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "e97ae03b6554a185d7426702aa86682309a2feae"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 299,
+      "id": "PR_kwDOTBXTi87yU9bv",
+      "title": "Editorial: discovery adjudication pass",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/299",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Editorial pass for draft-mcguinness-mission-discovery, unblocked by the no-consolidation ruling on #292 (the document stays standalone; findings re-verified against current main).\n\n- The 17-line adjudication paragraph splits: six inputs bulleted, taint/classification requirements separated, outcome lead-in standing alone; the taint double-MUST and the identity MUST plus four-item MUST NOT split per obligation.\n- The rate bound becomes three sentences (bound, publish, rationale).\n- The lowercase floor 'may only make classification stricter, never laxer' promotes to 'A declaration MAY make classification stricter. It MUST NOT relax it.' (audit-directed; the two keyword deltas).\n- MAS, Mission Deployment Profile, and Enforcement Scope Statement gain their Conventions imports (all three were used undefined); authority-server informative reference added.\n- Route-to-human: triggers and disclosure items as nested lists; conventions and substrate chains listed; 'a request to a new origin is itself egress' keeps its home with pointers.\n\nKeyword deltas: MUST NOT 4 to 5, MAY 3 to 4, both the single audit-directed floor promotion. All else identical. Zero em-dashes. Builds clean.",
+      "createdAt": "2026-07-16T03:52:03Z",
+      "updatedAt": "2026-07-16T04:05:52Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "84ae3ee69676ba460f0aaf92cab16cb1fafde09c",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "editorial-discovery",
+      "headRefOid": "144ab01bfc31c1cf2b974f936975296687605aa9",
+      "closedAt": "2026-07-16T04:05:52Z",
+      "mergedAt": "2026-07-16T04:05:52Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "a30d5960f2d9ec19f7fdb004a73148f695e112f7"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 300,
+      "id": "PR_kwDOTBXTi87yU9jd",
+      "title": "Editorial: audit transparency pass",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/300",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Editorial pass for draft-mcguinness-mission-audit, unblocked by the no-consolidation ruling on #292 (findings re-verified against current main; the deep-end content, derivation and erasure records and multi-service monitoring, is restructured only, never trimmed or expanded, per the open content-level question on #292).\n\n- Registration availability: the lowercase conforming-deployment duties promote to 'MUST register each record within a documented time bound' and 'MUST record its registration backlog' (audit-directed; the +2 MUST delta), with the publication items bulleted.\n- The tamper-evidence-not-non-equivocation MUST NOT now leads its sentence; the receipt-verification-key pin-and-retain MUST gets its own bullet with its referent expanded.\n- Feed-enumeration conditions, Relationship reuses, substrate primitives, evidence-type media attributions, registration-policy bindings, and both IANA groups become lists; all five double-keyword sentences split.\n- 'Defines no consistency proofs or gossip' keeps one home in Limits, pointers elsewhere.\n- Conventions and Terminology moves to section 2 so the boilerplate precedes the document's first keyword.\n\nKeyword delta: MUST 30 to 32, the single audit-directed availability promotion, confirmed by a rendered-text cross-check showing no other drift. Zero em-dashes. Builds clean.",
+      "createdAt": "2026-07-16T03:52:07Z",
+      "updatedAt": "2026-07-16T04:05:57Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "84ae3ee69676ba460f0aaf92cab16cb1fafde09c",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "editorial-audit",
+      "headRefOid": "9ea745be466f0d853b85ea5b4dcc32d29c99dad4",
+      "closedAt": "2026-07-16T04:05:57Z",
+      "mergedAt": "2026-07-16T04:05:57Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "250b91df629f9caa9c0a80b2a84128a42ed12ac3"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 301,
+      "id": "PR_kwDOTBXTi87yU-Q5",
+      "title": "Editorial: mandate evidence pass",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/301",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Editorial pass for draft-mcguinness-mission-mandate, the last of the seven documents unblocked by the no-consolidation ruling on #292 (findings re-verified against current main; deep-end substance restructured only, never trimmed, per the open content-level question).\n\n- The partial-failure class becomes a three-item keyword list; the minting surface's authenticate and authorize MUSTs separate from the anti-oracle rationale; the three standing-provisioning options bullet; the verification-key retention paragraph leads with its requirement.\n- 'A Mandate is evidence, not a credential' consolidates to its Introduction home: the cross-domain echo becomes pointers to Non-goals and Security Considerations where the properties live verbatim; the abstract (self-contained) and the Security threat analysis (normative, not decorative) stay.\n- General sweep: every remaining two-plus-keyword sentence splits; the artifact triad, substrate primitives, state surfaces, minting-evidence fields, and privacy imperatives become lists; long normative paragraphs split requirement-first.\n- The audit's pre-boilerplate OPTIONAL nit was already fixed upstream (reported, not re-applied).\n\nZero keyword deltas (verified token-identical). Zero em-dashes. Builds clean.",
+      "createdAt": "2026-07-16T03:52:42Z",
+      "updatedAt": "2026-07-16T04:06:01Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "84ae3ee69676ba460f0aaf92cab16cb1fafde09c",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "editorial-mandate",
+      "headRefOid": "31170647ed29133259e35fe57ee8596b617ca26e",
+      "closedAt": "2026-07-16T04:06:01Z",
+      "mergedAt": "2026-07-16T04:06:01Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "fc73990a2618566206885fc6c66d72b6b946fdb3"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 303,
+      "id": "PR_kwDOTBXTi87ymzeX",
+      "title": "The freshness dial: TTL-only named as a first-class posture",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/303",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "From the owner direction following the intent-admission comparison: there is value in a TTL-based approach, and the architecture should say so rather than treating lifetime-bounded reliance as what a deployment settles for.\n\n- **Validity Model**: after the compose-by-minimum rule, a paragraph naming the freshness dial. TTL-only verifies with local crypto and a clock (no state source, no availability coupling, exposure equals lifetime by construction); it is the right posture at action grain and for short missions, and the family's own short-lived artifacts (permit, cross-domain grant, Join Assertion) already sit at that end. What lifetimes cannot do (suspend, complete, kill-now) is the task-grain residue the Mission's state carries. The relocation symmetry is stated: a lifetime moves the freshness check to the issuance path, the gates-new-derivation-only rule in its other reading. Deployments state their dial position via the bounded-revocation claim, honestly, with no state surface.\n- **Entry Ramps**: the short-mission ramp named: expires_at minutes out plus records mode plus lifetime-bounded reliance is a durable approval record at TTL-grade operational cost, adoptable per task, with state surfaces added only where missions grow long.\n\nCompanion notes landed with this set: the freshness-dial spectrum added to #288's scope (pure TTL / TTL+Status List / TTL+introspection with the cost math), and draft-jiang-oauth-intent-admission added to #286's engagement list with the prior_grant composition hook.\n\nInformational document: zero keywords before and after; zero em-dashes; +29 lines; builds clean.",
+      "createdAt": "2026-07-16T16:17:25Z",
+      "updatedAt": "2026-07-16T16:26:58Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "fc73990a2618566206885fc6c66d72b6b946fdb3",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "ttl-posture",
+      "headRefOid": "f44261eb35bb80e4fb9ea6a2b498eb5fc5b9aa60",
+      "closedAt": "2026-07-16T16:26:55Z",
+      "mergedAt": "2026-07-16T16:26:55Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "b91092fdefe9f49946316b4e64eaed5657592559"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 304,
+      "id": "PR_kwDOTBXTi87ynNER",
+      "title": "The freshness dial priced: comparison table and fleet arithmetic",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/304",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Carve-out from #288 per owner direction: the freshness dial ships as its own small PR, leaving #288 with the heavy operational work (degraded-mode posture, permit-store benchmark, Operational Considerations sections).\n\n- **Runtime, Mission State and Freshness**: an informative five-source comparison table (token-lifetime expiry, state-gated refresh, Status List, status/introspection, Signals) with exposure bound, per-action cost, dependency, and what each source cannot provide; followed by the explicit statement that no position on the dial requires a per-request issuer call, and that the ESS records the chosen position per class. Placed just before the per-class RECOMMENDED postures it feeds.\n- **Status, Mission Status List**: the fleet arithmetic (100,000 Missions at two bits is 25 KB pre-compression; one fetch per 30-second window is under a kilobyte per second for fleet-wide fresh state, versus 100,000 per-Mission reads), stating the point directly: fleet scale makes freshness cheaper per Mission.\n- **Architecture**: the #303 dial paragraph now points at the runtime pricing, closing the loop (architecture names, runtime prices, status shows the arithmetic).\n\nAll additions informative: keyword counts identical in runtime and status, architecture stays at zero. Zero em-dashes. +31/-1 across three files; all three build clean.",
+      "createdAt": "2026-07-16T16:34:10Z",
+      "updatedAt": "2026-07-16T17:02:19Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "b91092fdefe9f49946316b4e64eaed5657592559",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "freshness-dial",
+      "headRefOid": "89ba0b4139332002f2b3d279a94c68d2eb2357cc",
+      "closedAt": "2026-07-16T17:02:12Z",
+      "mergedAt": "2026-07-16T17:02:12Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "80fdab81f321e37e1930ebaa73e95f8057cc5c23"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 305,
+      "id": "PR_kwDOTBXTi87yoLCn",
+      "title": "Upstream seams: txn-challenge, intent admission, CAA, agentic_ctx",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/305",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Implements the in-draft half of #286 (the OAuth-list note is drafted separately for the author to send; the issue stays open until engagement happens).\n\n- **Runtime, Action-Bound Approval**: a composition paragraph naming the two proposed transports converging on the per-action approval moment. draft-rosomakho-oauth-txn-challenge: the Mission approval event is the policy behind the challenge, the Authority Set bounds what any challenge can be approved into, Consent Evidence is its record. draft-jiang-oauth-intent-admission: a Mission-governed admission point evaluates against the Authority Set, and consent-by-prior-grant is exactly a reference to the Mission's committed anchors. Both compose rather than compete; the durable record is what makes the per-action artifact accountable to an approved task.\n- **Cross-domain, ID-JAG discussion**: the shipped-surface note: MCP's Cross App Access extension (2025-11-25) carries the same Identity Assertion JWT Authorization Grant between enterprise IdPs and MCP applications.\n- **Cross-domain, Transaction Token Chaining**: the proposed agent profile (draft-araut-oauth-transaction-tokens-for-agents) composes the same way: the mission claim object rides agentic_ctx as inert evidence, keeping call-chain intent context joined to the committed record instead of growing an unanchored twin.\n\nAll additions informative; zero keyword changes; zero em-dashes; +44 lines across two files; both build clean (the three new external I-D references resolve from bibxml). The core's stale MCP anchor repoint stays with #290 per the issue route.",
+      "createdAt": "2026-07-16T17:16:07Z",
+      "updatedAt": "2026-07-16T17:25:24Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "80fdab81f321e37e1930ebaa73e95f8057cc5c23",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "upstream-seams",
+      "headRefOid": "df61cb029debddb44abdcc36a8ef2cc0220b5adc",
+      "closedAt": "2026-07-16T17:25:21Z",
+      "mergedAt": "2026-07-16T17:25:21Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "c7c5196e88db1a7e10dde8be4e64de41cd2875dc"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 306,
+      "id": "PR_kwDOTBXTi87yo1Ns",
+      "title": "The Ontology Contract: who owns meaning, stated once",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/306",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Implements #280 as specified: pure consolidation, no new mechanism, no normative core changes. Closes #280.\n\nNew architecture section between the Authority Derivation Boundary and the Mission Verbs:\n\n- **Ownership stated once**: the resource owns the ontology; derivation, consent rendering, and enforcement consume it; no layer invents meaning it does not own. The consuming contract: meaning binds at approval, is enforced at use, and translation is trusted, verified, or separately approved, never a place authority widens.\n- **The five supply mechanisms as one composed contract**, definition-list style mirroring the substrate consolidation, each with its normative home: Common Constraints with mission_constraints_supported (core), capability-source binding (AuthZEN), Operation Profiles (runtime), the encounter contract (discovery), Resource-Declared Semantics (AAuth, informative).\n- **The return path into Mission authority**: the R3 declaration is not consent material alone; its declared operations are the candidate vocabulary derivation narrows against, and the derived authority records the declaration's digest, so the Authority Set remembers which version of the resource's meaning it was derived under and enforcement refuses on drift.\n- **The direction axis, per owner correction**: the direction is chosen per encounter, not fixed by binding, and the resource-declared direction is valid under every binding. The OAuth path runs entirely through existing seams (the encounter contract, narrowing-mode derivation over the declared operations, resource-authored consent material, and the progressive companion's resource_declaration_digest); AAuth's R3 composition is the worked example of the full inversion, not its only home. Proposed RAR-type metadata (draft-zehavi-oauth-rar-metadata) is the OAuth-native descriptive surface the direction builds on.\n- **The digest symmetry**: catalog capabilities pin source_digest, declarations pin r3_s256, and in both directions the meaning source's digest becomes part of derived authority, committed at approval and re-verified at use. Meaning, like state, fails closed.\n- The Capability Envelope's open-world passage now points at the section.\n\nInformational document: zero keywords before and after; zero em-dashes; builds clean.",
+      "createdAt": "2026-07-16T17:45:05Z",
+      "updatedAt": "2026-07-16T18:15:33Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "c7c5196e88db1a7e10dde8be4e64de41cd2875dc",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "ontology-contract",
+      "headRefOid": "1eea2c44dedf2440a6dff7d1d1a1c2674376a193",
+      "closedAt": "2026-07-16T18:15:29Z",
+      "mergedAt": "2026-07-16T18:15:29Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "25c6c1452f7731efccaf11e514cb2ba5ddae54ad"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 308,
+      "id": "PR_kwDOTBXTi87zJrnN",
+      "title": "Sequence-aware evaluation: the undertaking's history as a decision input",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/308",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Implements #307 as specified: naming and guardrails, no new wire object, no new evidence object, no queryable-history requirement. Closes #307.\n\n- **Architecture** (stays keyword-free): the context asymmetry stated as the ontology contract's dual, with the worked example (a delete in isolation prices as catastrophe; inside an approved migration whose copy steps completed it is a priced, checkable step) and the observation that the judgment is only possible where Decision and Execution Evidence join on the Mission's identity.\n- **Runtime**: Decision Inputs gains the OPTIONAL History subsection; the section lead keeps the seven existing inputs mandatory. Guardrails, one per sentence, mapping one-to-one onto the issue: MAY evaluate predicates over prior Decision/Execution Evidence; a predicate MUST NOT expand authority (mirrors Actor); the PDP MUST fail closed when a required predicate cannot be established or the store cannot be consulted; ESS-declared history evaluation makes the evidence store a state source under the freshness discipline (mirrors the agent-registry sentence); cross-PDP history via the evidence store or registered transparency records, otherwise out of scope. Plus one failure-modes row and a Security Considerations item (evidence-producer compromise is the existing record-integrity story; Shaping Evidence remains excluded, prohibition untouched and cited).\n- **AuthZEN**: OPTIONAL context.mission_history carrying named predicates (action_class_completed defined as: at least one permit of the class, every such permit's linked Execution Evidence outcome completed); entries carry no result member and the PDP MUST NOT accept outcomes asserted elsewhere; unknown predicate values refuse per the binding's conventions; evaluations recorded in Decision Evidence following the taint member's pattern.\n- **One judgment call to review**: a new denial reason history_not_satisfied (list entry plus coverage-table row). The binding claims every runtime failure condition surfaces through exactly one identifier, and the runtime's new fail-closed condition would otherwise be unmapped; follows the taint_context_missing precedent. Easy to strip if unwanted.\n\nKeyword deltas, every instance justified in-line against the issue text: runtime +1 MAY, +1 MUST, +1 MUST NOT, +1 OPTIONAL; authzen +5 MUST, +1 MUST NOT, +4 REQUIRED, +2 OPTIONAL; architecture zero. Zero em-dashes. +157/-1 across three files; all build clean.",
+      "createdAt": "2026-07-17T21:00:46Z",
+      "updatedAt": "2026-07-17T21:09:06Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "25c6c1452f7731efccaf11e514cb2ba5ddae54ad",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "sequence-context",
+      "headRefOid": "02d53dded0f811fc87887e8bea1c8d3ba208835b",
+      "closedAt": "2026-07-17T21:09:06Z",
+      "mergedAt": "2026-07-17T21:09:06Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "47f3c3a6e9a3bf1d7998d0083bd1674b9ea88202"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 311,
+      "id": "PR_kwDOTBXTi87zMlZN",
+      "title": "Core: consolidate the -01 document history before publication",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/311",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Owner direction: the -01 history is too long to publish. Fourteen bullets (~100 lines) consolidate to seven thematic ones (~40 lines): mechanical derivation and its trust boundary, the new wire surface, authority vocabulary, delegation hardening, model precision, operational and privacy, editorial. Every change listed in the old entries is represented; the GitHub issue numbers are dropped for the datatracker audience (easy to restore if wanted). The diff is one hunk confined to the Document History appendix, which is marked for removal from the final specification; no normative text touched. Builds clean; zero em-dashes.",
+      "createdAt": "2026-07-17T23:49:31Z",
+      "updatedAt": "2026-07-17T23:59:17Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "47f3c3a6e9a3bf1d7998d0083bd1674b9ea88202",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "history-consolidation",
+      "headRefOid": "c2053e5f554bff92aef775f6dc8e84608faf5271",
+      "closedAt": "2026-07-17T23:58:46Z",
+      "mergedAt": "2026-07-17T23:58:46Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "dc7a897f18c9c21ce6f7f9aa03e0bea2e37cc3cb"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 312,
+      "id": "PR_kwDOTBXTi87zP28t",
+      "title": "Exploration: reposition the family around a governance-model center (Stage 1)",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/312",
+      "state": "OPEN",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Executes Phases 0-2 of the repositioning brief as an exploration, one commit per phase, per the brief's own migration strategy: Stage 1 is narrative-only, and this PR is the decision gate before any normative ownership moves.\n\n**Phase 0 (db7a312), inventory and safety baseline**: docs/refactor/ carries the 29-row document inventory, the dependency graph (325 family edges, 65 normative), and the 14-concept ownership-before matrix. Findings worth knowing: the OAuth core has inbound normative edges from 26 of 27 documents (the diagnosis, quantified); exactly one normative cycle exists (status and child-delegation reference each other; a Phase 7 item); the substrate is normatively referenced only by the UMA sketch. Full baseline build passes (28 txt + 28 html).\n\n**Phase 1 (6206722), the ADR**: docs/adr/0001-aauth-mission-oauth-layering.md carries the ten decisions, the normative ownership matrix, non-goals, preserved design principles, alternatives A-E with verdicts, the needs-upstream AAuth list (wired to #256), staged migration rules, and rollback strategy. The dependency shape is deliberately not a stack: the Governance Model is the common dependency; AAuth, OAuth, and the standalone MAS are sibling realization paths; runtime consumes their common output.\n\n**Phase 2 (this commit), the narrative**: README rewritten to the brief's thirteen-part sequence with its exact required opening, the canonical Mermaid diagram, the kernel by current filename with planned roles stated honestly (nothing renamed in this phase), the grouped companion catalog, and the replaced standardization ask. Architecture positioning reframed to sibling paths with the promotion marked planned. Verified: the three must-not-say constraints hold (no mandatory-core, no everything-builds-on-it, no universal definitional home outside planned-promotion statements) and the four must-says are present (OAuth never requires AAuth; the AAuth profile's maturity tracks the external draft; approval does not authorize actions; assurance rides the Deployment Profile). Architecture stays at zero keywords and builds clean.\n\n**Two review notes**: (1) the old README's role-based reading paths and What-to-deploy table were replaced per the brief's prescribed structure, with their load-bearing content folded into the kernel, assurance, minimal-implementation, and adoption sections; flag if you want them restored. (2) shaping was added to the Approval-and-lifecycle group (the brief's grouping omitted it).\n\n**What this PR deliberately does not do**: rename any file, move any normative definition, or touch any draft except the architecture's positioning surfaces. Phases 3-8 (Governance Model promotion, AAuth and OAuth profile refactors, runtime alignment, companion migration, interop fixtures) are gated on this review.",
+      "createdAt": "2026-07-18T04:18:46Z",
+      "updatedAt": "2026-07-18T04:18:46Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "dc7a897f18c9c21ce6f7f9aa03e0bea2e37cc3cb",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "repositioning-exploration",
+      "headRefOid": "23aae60f27b715cb1bcb08e104cd4ea93d21f99f",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
       "comments": [],
       "reviews": []
     }
