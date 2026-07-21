@@ -1,4 +1,5 @@
 /**
+ * @spec mission#canonicalization
  * JCS (RFC 8785) canonicalization, scoped to the JSON shapes the Mission
  * family commits to: objects, arrays, strings, finite numbers, booleans,
  * null. Member names sort by UTF-16 code units; array order is preserved

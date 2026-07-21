@@ -1,4 +1,5 @@
 /**
+ * @spec mission#integrity-anchors
  * Integrity anchors per core § integrity-anchors: a domain-separated,
  * issuer-bound envelope { typ, iss, value }, JCS-canonicalized, SHA-256
  * hashed, encoded as "sha-256:" + base64url (no padding).

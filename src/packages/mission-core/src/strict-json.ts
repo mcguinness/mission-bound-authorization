@@ -1,4 +1,5 @@
 /**
+ * @spec mission#canonicalization
  * Strict JSON parsing for committed inputs: rejects duplicate member names,
  * which core § canonicalization requires the AS to refuse before
  * canonicalization ("The AS MUST reject an input object containing
