@@ -27,12 +27,16 @@ Documents implemented (the required set for the level, per README § Assurance L
 | `draft-mcguinness-mission-authzen` | Concrete AuthZEN binding: decision envelope, evidence objects, requestable denials, capability source binding |
 | `draft-mcguinness-oauth-mission-status` | Freshness source: signed, `mission_id`-keyed Status |
 | `draft-mcguinness-oauth-mission-expansion` | Successor-mission widening (backs AROP token issuance) |
+| `draft-mcguinness-svc-connectivity-disco` (external repo) | Resource discovery: the per-user service connectivity catalog the agent bootstraps from |
 | AuthZEN ARAP (external, OpenID) | Access request / approval lifecycle behind requestable denials |
 | AuthZEN AROP (external, openid/authzen PR #531) | Token-issuance completion: DTR and Transaction Challenge bindings |
 
 Out of scope for the first pass: signals (SSF push), harness session binding,
 child delegation, metering, cross-domain, mandate, audit/SCITT, CIBA binding.
-Each is a candidate follow-on once the level is reached.
+Each is a candidate follow-on once the level is reached. Naming note: resource
+discovery in this plan means `svc-connectivity-disco` (the service catalog);
+the family's own `draft-mcguinness-mission-discovery` (open-world Encounter
+adjudication) is a different concern and is also out of scope.
 
 ## 2. Decision Log (captured answers)
 
@@ -47,6 +51,9 @@ Decisions confirmed with Karl on 2026-07-20:
 | D5 | AROP binding scope | DTR + Transaction Challenge. CIBA out of scope |
 | D6 | AROP x Mission composition | Both completion modes, demoed separately: runtime PEP denials resolve via ARAP `reevaluate` (approval is input context, PDP stays authoritative); token-endpoint and challenge denials resolve via AROP token issuance backed by a Mission Expansion (successor mission), so issuance never bypasses per-action enforcement |
 | D7 | UX shape | Separate apps per persona: approver app, operator app, agent console |
+| D8 | Resource discovery | Adopt `draft-mcguinness-svc-connectivity-disco` (github.com/mcguinness/draft-mcguinness-svc-connectivity-disco); the Mission AS co-hosts the Catalog Provider role and serves the Service Catalog Endpoint, advertised as `service_catalog_endpoint` in its RFC 8414 metadata |
+| D9 | Catalog status semantics | Per-connection `status` is mission-derived: an active covering mission renders `connected`, approvable issuance renders `consent_required`, revoked/suspended renders `unavailable` |
+| D10 | request-access linkage | Catalog `request-access` links deep-link into the ARS intake, joining discovery of unreachable services to the approval flow |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -74,8 +81,8 @@ Defaults adopted (not separately asked; flag if wrong):
 | scenario |    | mission layer |    +---------------+    | policy view    |
 | runner / |    +-------+-------+                         +-------+--------+
 | LLM loop |            ^                                         |
-+----+-----+            | PAR intent, code+DPoP, token             v
-     |                  | exchange, DTR poll, txn-authz     +-------------+
++----+-----+            | catalog, PAR intent, code+DPoP,          v
+     |                  | token exchange, DTR, txn-authz    +-------------+
      v                  |                                   |   OpenFGA   |
 +---------+   MCP tools |  401 + signed txn challenge       | (in-memory) |
 |  Agent  +-------------+--------------------------+        +-------------+
@@ -94,7 +101,11 @@ Trust-base components and their spec roles:
   event, Mission Records with integrity anchors, mission-bound token issuance (DPoP),
   the subset rule, state-gated issuance/refresh, revocation by `mission_id`,
   introspection with the `mission` member, the signed Status endpoint, the DTR
-  deferred grant, and the `transaction_authorization_endpoint`.
+  deferred grant, and the `transaction_authorization_endpoint`. Also hosts the
+  Catalog Provider role of `svc-connectivity-disco`: the Service Catalog
+  Endpoint, advertised as `service_catalog_endpoint` in its own metadata,
+  serving the per-user catalog with mission-derived per-connection `status`
+  and `request-access` links into the ARS.
 - **PDP** (`services/pdp`): AuthZEN Access Evaluation (and bulk Evaluations) API.
   Materializes each approved Mission into an OpenFGA tuple set (the materialized
   policy view, correlated by `policy_view_id`), layers the mission overlay checks
@@ -110,8 +121,10 @@ Trust-base components and their spec roles:
   action with parameter binding and capability source context; runs the
   transaction-assurance tier for the wire transfer (single-use permit, execution
   lease, Execution Evidence, outcome reconciliation); signs Transaction
-  Authorization Challenges; publishes RFC 9728 protected resource metadata with
-  `mission_bound_authorization_required` and its Enforcement Scope Statement.
+  Authorization Challenges; publishes its MCP Server Card (the catalog
+  references it via `server_card_uri`) and RFC 9728 protected resource
+  metadata with `mission_bound_authorization_required`, plus its Enforcement
+  Scope Statement.
 - **Agent** (`services/agent`): OAuth client built on panva `openid-client`
   (PAR + DPoP + token exchange), MCP client, scripted scenario runner, optional
   LLM loop.
@@ -122,7 +135,10 @@ Trust-base components and their spec roles:
 Seeded entities: principals `alice` (mission owner) and `bob` (approver / AP manager);
 OAuth client `ap-agent` (DPoP-bound); vendors `acme` (approved) and `globex`
 (not yet approved); invoices in several amounts, at least one above the mission's
-payment cap; a payments ledger for reconciliation.
+payment cap; a payments ledger for reconciliation. The catalog seeds two
+services: the payments MCP server and an out-of-reach `hr-files` service (no
+authority path for `alice`) whose entry carries a `request-access` link into
+the ARS.
 
 Tools on the MCP server (action classification per runtime § action classification floor):
 
@@ -144,6 +160,12 @@ Revocation and completion delete or bypass the view (state check precedes FGA).
 
 ### End-to-end scenarios (the demo script)
 
+0. **Discovery bootstrap**: agent signs in, reads `service_catalog_endpoint`
+   from the AS metadata, makes a scoped catalog request (`type=mcp` plus a
+   category/tag filter), selects the payments server, re-anchors trust via the
+   server's protected resource metadata, and reads its Server Card before
+   shaping intent. With no mission yet, the connection reports
+   `consent_required`.
 1. **Issuance**: agent shapes intent, submits via PAR, Alice approves in the
    approver app (intent + authority set + anchors rendered), mission-bound
    DPoP token issued; operator app shows the new Mission.
@@ -167,6 +189,10 @@ Revocation and completion delete or bypass the view (state check precedes FGA).
 8. **Revocation freshness**: operator revokes mid-mission; next action denied
    within the published staleness bound; issuance/refresh also gated.
 9. **Completion**: mission completes; residual tokens no longer authorize.
+10. **Catalog reflection**: per-connection `status` tracks the fleet
+    (`connected` while the mission is active, `unavailable` after revocation),
+    and the out-of-reach service's `request-access` link opens an ARS intake
+    that, once adjudicated, flips its status.
 
 ## 4. Repo Layout
 
@@ -244,11 +270,20 @@ Each milestone lands as its own PR with tests; acceptance criteria are the exit 
   token, re-presentation checks), both completing through Mission Expansion.
   *Exit: scenarios 6 and 7; issued tokens never broaden the originating request
   and never outlive `approved_until`.*
-- **M7. Full UX.** The three persona apps complete: approvals inbox with intent
+- **M7. Service connectivity discovery.** Catalog Provider co-located in the
+  AS: Service Catalog Endpoint with filtering (`category`, `type`, `status`,
+  `profile`, `tag`), `service_catalog_endpoint` in AS metadata, entries seeded
+  from demo-data, mission-derived per-connection `status`, `request-access`
+  links into the ARS, and the payments server's Server Card published and
+  referenced via `server_card_uri`.
+  *Exit: scenarios 0 and 10 pass headless; catalog status flips on approval,
+  revocation, and expansion without restart.*
+- **M8. Full UX.** The three persona apps complete: approvals inbox with intent
   rendering, fleet dashboard with revoke/expand and status transitions, evidence
-  timeline joining decisions, executions, refusals, and reconciliation.
-  *Exit: scenarios 1-9 all runnable from the UIs alone.*
-- **M8. Agent + demos + conformance.** Scenario runner covering scenarios 1-9,
+  timeline joining decisions, executions, refusals, and reconciliation, and the
+  agent console's discovery/catalog view.
+  *Exit: scenarios 0-10 all runnable from the UIs alone.*
+- **M9. Agent + demos + conformance.** Scenario runner covering scenarios 0-10,
   optional LLM chat mode, seed polish, a `pnpm demo` one-command boot, and a
   written self-assessment against the six Runtime-Enforced invariants.
   *Exit: fresh clone to full demo in under five minutes; self-assessment complete.*
@@ -276,6 +311,12 @@ Working references into the drafts (line numbers as of commit `dc7a897`):
 - Expansion: `draft-mcguinness-oauth-mission-expansion.md`.
 - AROP: openid/authzen PR #531,
   `profiles/authzen-access-request-oauth/authzen-access-request-oauth-profile-1_0.md`.
+- Discovery: `draft-mcguinness-svc-connectivity-disco.md` (repo
+  mcguinness/draft-mcguinness-svc-connectivity-disco): endpoint discovery
+  § endpoint-discovery, request/filtering § catalog-request, `mcp` service
+  type § type-mcp, connection object/status § connection-object, OAuth
+  profile § profile-oauth, `request-access` link rel § link-object,
+  intent-based use § intent.
 
 ## 7. Issue Log
 
@@ -319,7 +360,22 @@ resolution and date; never delete them.
   `binding_token` verification rules) before M5.
 - **O-11. Consent Evidence scope.** The approver app renders intent at approval;
   decide whether to include `consent_rendering_hash` + signed Consent Evidence
-  (companion draft) in M7 or defer.
+  (companion draft) in M8 or defer.
+- **O-12. Mission-derived status mapping.** Exact mapping from mission
+  lifecycle states (and issuance feasibility) to `connected` / `available` /
+  `consent_required` / `unavailable`, and how the catalog decides a mission
+  "covers" a service. Decide in M7.
+- **O-13. MCP Server Card shape.** Which Server Card format/location the
+  payments server publishes for `server_card_uri`, and whether the capability
+  source `source_digest` (mission-authzen § capability source) is computed
+  over the same card. Decide in M3, revisit in M7.
+- **O-14. Catalog vocabulary for the AP domain.** The category registry seeds
+  email/calendar/files/etc.; payments is not seeded. Namespaced category vs
+  `tags` for the demo services. Decide in M7.
+- **O-15. request-access intake shape.** What the `request-access` href
+  carries (service id, requested capability, return URI) and whether an
+  adjudicated request materializes as a first mission issuance or as an
+  Expansion. Decide alongside M5, wire in M7.
 
 ### Resolved
 
@@ -336,6 +392,10 @@ resolution and date; never delete them.
 - **R-8 (2026-07-20). MAS binding not used.** The build implements the core
   Mission-aware AS, not the standalone Mission Authority Server binding; the MAS
   join (issuance-grant draft) is a candidate follow-on.
+- **R-9 (2026-07-20). Resource discovery adopted.** svc-connectivity-disco
+  integrated as the discovery layer: Catalog Provider co-located with the AS,
+  mission-derived `status`, `request-access` wired to the ARS (decisions
+  D8-D10). New milestone M7; UX and agent milestones renumbered to M8/M9.
 
 ## 8. Runbook (target state)
 
@@ -345,7 +405,7 @@ docker compose -f src/docker-compose.yml up -d   # OpenFGA, in-memory
 pnpm -C src install
 pnpm -C src seed                    # load users/clients/vendors/invoices + FGA model
 pnpm -C src dev                     # AS, PDP, ARS, MCP server, three SPAs
-pnpm -C src demo                    # scripted scenarios 1-9 against the running stack
+pnpm -C src demo                    # scripted scenarios 0-10 against the running stack
 ```
 
 All state is in memory: restarting a service reseeds it. The seed scripts are the
