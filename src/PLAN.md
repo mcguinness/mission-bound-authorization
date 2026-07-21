@@ -123,6 +123,7 @@ Decisions confirmed with Karl on 2026-07-20:
 | D38 | Token, client, and interop profile | JWT access tokens validated locally (issuer, audience, expiry, `mission`, `cnf.jkt`); the agent is a confidential client using `private_key_jwt` with a separate DPoP key, both owned by the agent service; DPoP checks (replay cache, nonce policy, `ath`, `htu`, `htm`, `iat`, `jti`) are explicit tests; one canonical MCP resource URI is used byte-for-byte in PRM, OAuth `resource`, token audience, DPoP, AuthZEN context, and evidence; MCP pinned to the stable 2025-11-25 authorization profile (draft changes tracked via O-20/O-33) |
 | D39 | Hardening bundle | Per-edge channel/auth/key matrix as an M0 artifact (browser->BFF, agent->AS, agent->MCP, PEP->PDP, AS<->ARS, PDP->OpenFGA, producers->transparency), OpenFGA with pre-shared auth + TLS from setup; separated key purposes (AS tokens/status, PDP evidence + `binding_token`, PEP evidence, transaction challenges, transparency). FGA hygiene: explicit `authorization_model_id` on every check, higher-consistency mode on checks after domain-substrate writes, 100-tuple write limit respected in seeds. Restart semantics without persistence: per-boot instance epochs bound into permits (a restarted PEP rejects prior-epoch permits), no deterministic ID reuse after reseeding, pending ARAP/AROP work terminally unavailable after its owner restarts, unknown state fails closed. Dependency policy: pin at the pre-flight spike (first oidc-provider version that passes), OpenFGA image by digest, MCP SDK + spec revision |
 | D40 | Final readiness sweep | `src/` code is BSD-2-Clause (own LICENSE, landed in M0). Execution conventions: a live milestone status table in § 5, a per-milestone definition of done (tests green, spec-feedback pass done, status + logs updated, PR merged), implementation bugs tracked as GitHub issues (the O-log stays design-only), and a how-to-use note for implementation sessions. The M0 channel/key matrix artifact includes a trusted-base statement (shaper, agent, and tool outputs untrusted; AS/PDP/ARS/PEPs/transparency trusted; the headless adjudication path trusted-but-test-only). Each scenario is one named spec file with a stable ID referenced from milestone exits; M12 ships `DEMO.md`, the guided walkthrough matching the runner |
+| D41 | Spec traceability | `SPEC_VERSIONS.md` is a per-spec traceability matrix (spec, pinned version, implementing components, conformance tests) and spec-derived code carries greppable `@spec <doc>#<section>` tags, so a spec update resolves to a concrete implementation change list; every version bump is deliberate and names its affected modules and tests |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -488,10 +489,15 @@ pre-shared auth + TLS) / 8081 (grpc), playground disabled, Jaeger 16686
   version that passes the pre-flight spike; the OpenFGA image pinned by
   digest; the MCP SDK and spec revision pinned (D38: stable 2025-11-25
   authorization profile).
-- Spec pinning: `src/SPEC_VERSIONS.md` records the draft-repo commit and
-  external spec revisions the implementation currently tracks. Goal 2 means
-  companions will change during implementation; version bumps are
-  deliberate, reviewed against the Spec Feedback Log, never implicit.
+- Spec traceability (D41): `src/SPEC_VERSIONS.md` is a matrix mapping every
+  implemented spec to its pinned version, its implementing components, and
+  its conformance tests; spec-derived code carries greppable
+  `@spec <doc>#<section>` tags. A spec update becomes a change list by
+  diffing the spec from its pinned version and following the touched
+  sections through the matrix and tags. Goal 2 means companions will change
+  during implementation; version bumps are deliberate, reviewed against the
+  Spec Feedback Log, never implicit, and each bump commit names the
+  affected modules and tests.
 
 ## 5. Milestones
 
@@ -1005,6 +1011,10 @@ resolution and date; never delete them.
   logged. O-27: local max depth 4; sub-agent spawn = presenter rebind,
   self-exchange = continuation. Pins: MCP SDK 1.29.0, OpenFGA v1.18.1 by
   digest. Full detail: `src/spikes/SPIKE-REPORT.md`.
+- **R-27 (2026-07-21). Spec traceability adopted.** `SPEC_VERSIONS.md`
+  upgraded from a pin list to a traceability matrix with `@spec` code
+  tags, seeded in the M0 PR with the mission-core row and the spike pins
+  (decision D41).
 
 ## 8. Spec Feedback Log
 
