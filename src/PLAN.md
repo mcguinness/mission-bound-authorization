@@ -104,6 +104,7 @@ Decisions confirmed with Karl on 2026-07-20:
 | D28 | Stateless PDP (debate #2) | The PDP is a pure decision function (envelope, FGA check with contextual tuples, fresh record read, clock, keys). It **declares** permit properties in the decision response (single-use decision identifier, `permit_expires_at`, lease requirement, PEP/channel binding); the PEP **owns** redemption and lease state (atomic redeem-on-execute in its store; replay refused as `permit_consumed` in Execution Evidence). ARAP linkage stays stateless via the signed `binding_token`; the Status freshness cache is a soft optimization only; evidence is emitted outward, never read back as decision input. Cumulative caps are deferred to the metering follow-on: this build enforces per-payment caps only. Companion feedback logged as S-6 |
 | D29 | Two-tier freshness (debate #3) | One mechanism, two consumption modes, both spec branches exercised: signed Status is the single freshness surface. Core tier consumes it through the polled cache under the published staleness bound. `execute_wire_transfer` (irreversible) takes the **immediate-check** branch: a cache-bypassed Status read at decision time plus the execution lease, so revocation denies instantly. `send_remittance_email` (external commitment) takes the **single-use-permit-within-bound** branch plus the egress PEP. Fail-closed when Status is unreachable: high-consequence actions deny immediately; the core tier rides the cache until the bound expires, then fails closed. Introspection stays implemented as an AS capability; the bound, fail-closed posture, and skew assumptions are published in the Enforcement Scope Statement |
 | D30 | Single AS, mission-kernel (debate #4) | One AS service, validating the core profile's co-location claim (Mission Issuer = the OAuth AS; the split shape is the MAS binding declined in R-8, and one AS keeps one issuer/one `jwks_uri`/one metadata document). Internally, a **mission-kernel** module (mission records, approval events, derivation, status, expansion, catalog computation, management ops, cross-domain projection policy) behind a typed interface; node-oidc-provider hooks and the custom HTTP routes are thin adapters over it. Boundary enforced: hooks call the kernel only through its interface, the kernel never imports provider types. The O-2 go/fallback decision is scoped to the adapter layer; a future MAS follow-on lifts the kernel |
+| D31 | Act-chain transform ownership (debate #5) | The PEP flattens the token's nested `act` chain into the root-to-leaf `context.actor.act` array via `packages/actor-chain` (it already validated the token, and only the PEP can verify proof-of-possession); the PDP performs shape and consistency validation on the supplied chain (non-empty, `iss`/`sub` per entry, root consistent with `subject`, leaf consistent with `client_instance_id`) without becoming credential-aware. Golden transform vectors live in the shared package and are the candidate contribution behind S-2 (normative spec vectors) |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -196,15 +197,19 @@ Trusted-base components and their spec roles:
   `context.access_request` and a PDP-signed `binding_token`. Stateless by
   design (decision D28): a pure function of its inputs; permit redemption
   and lease state live at the PEP, and the freshness cache is a soft
-  optimization that never changes decision semantics. Builds
-  `context.actor` by flattening the token's nested `act` chain into the
-  root-to-leaf array via `packages/actor-chain`.
+  optimization that never changes decision semantics. Validates the shape
+  and consistency of the `context.actor` chain the PEP supplies (root vs
+  `subject`, leaf vs `client_instance_id`) via `packages/actor-chain`; the
+  flattening itself is PEP-side (decision D31).
 - **ARS** (`services/access-request`): ARAP Access Request Service. Verifies
   `binding_token` denial bindings, runs the approval task lifecycle, exposes the
   adjudication queue the approver app consumes.
 - **MCP Payments Server** (`services/mcp-payments`): the resource server and PEP.
   Streamable-HTTP MCP server exposing the AP tools; validates DPoP-bound access
-  tokens and the `mission` claim; obtains a PDP permit for every consequential
+  tokens and the `mission` claim; constructs the AuthZEN envelope, including
+  flattening the token's nested `act` chain into the root-to-leaf
+  `context.actor.act` array via `packages/actor-chain` (decision D31);
+  obtains a PDP permit for every consequential
   action with parameter binding and capability source context; runs the
   transaction-assurance tier for the wire transfer (single-use permit, execution
   lease, Execution Evidence, outcome reconciliation), owning permit
@@ -489,8 +494,9 @@ in the Spec Feedback Log.
   sub-agent demo (scenario 13) lands with M12.*
 - **M3. PDP + OpenFGA.** AuthZEN evaluation + evaluations endpoints, envelope
   parsing (note: approved-entry `resource` matches `context.audience`, not the
-  AuthZEN `resource` member), `context.actor` built via `packages/actor-chain`
-  from day one, FGA model for the domain substrate with mission authority
+  AuthZEN `resource` member), `context.actor` shape/consistency validation
+  via `packages/actor-chain` (flattening is PEP-side per D31),
+  FGA model for the domain substrate with mission authority
   injected as contextual tuples derived from the Mission Record per check
   (decision D26), content-addressed `policy_view_id`, freshness via signed
   Status per D29 (polled cache under the published bound for the core tier;
@@ -874,6 +880,11 @@ resolution and date; never delete them.
   the kernel boundary (typed interface, no provider types in the kernel)
   contains the O-2 risk to the adapter layer and makes a future MAS
   follow-on a mechanical lift (decision D30).
+- **R-22 (2026-07-21). Debate #5 resolved: PEP flattens, PDP shape-checks.**
+  The act-chain transform is PEP-side (only the PEP can verify PoP; the PDP
+  stays credential-agnostic); the PDP validates chain shape and
+  consistency; golden vectors in `packages/actor-chain` back S-2's proposal
+  for normative spec vectors (decision D31).
 
 ## 8. Spec Feedback Log
 
@@ -904,7 +915,8 @@ their repositories or working groups.
   the transform from the token's nested `act` (outermost-first) to the flat
   root-to-leaf `context.actor.act` array is left entirely to implementers.
   A normative transform example or test vector in the companion would
-  prevent divergent orderings. Candidate: direct companion edit.
+  prevent divergent orderings; per D31 the shared package's golden vectors
+  are the candidate contribution. Candidate: direct companion edit.
 - **S-3 (open).** Ambiguity — mission-authzen x AROP: the companion says an
   ARAP approval is input context, never a bearer grant, while AROP completes
   by token issuance; the composition only closes through Expansion (our D6),
