@@ -102,19 +102,27 @@ Decisions confirmed with Karl on 2026-07-20:
 | D26 | Mission authority in FGA (debate #1) | Hybrid contextual: OpenFGA stores only the durable domain substrate (invoice ownership, vendor approval, roles); mission authority is derived from the Mission Record as **contextual tuples** per check, computed by the PDP alongside the state/freshness check. No dual-write, revocation is instant via the record, `policy_view_id` = content hash of (Mission Record version + FGA model version). Companion feedback logged as S-5 |
 | D27 | Store architecture | Record-shaped stores (missions, approval events, ARAP tasks, permits/leases, ledger/outbox/journal oracles, catalog entries, evidence index) live in SQLite `:memory:` (better-sqlite3) behind repository interfaces: UNIQUE constraints and transactions where the spec implies them, SQL for management/catalog/timeline queries. No ORM; optional non-default `--persist` flag; pure in-process structures where SQL adds nothing (keys, Merkle nodes); OpenFGA keeps its own memory storage; node-oidc-provider artifacts stay on its default adapter |
 | D28 | Stateless PDP (debate #2) | The PDP is a pure decision function (envelope, FGA check with contextual tuples, fresh record read, clock, keys). It **declares** permit properties in the decision response (single-use decision identifier, `permit_expires_at`, lease requirement, PEP/channel binding); the PEP **owns** redemption and lease state (atomic redeem-on-execute in its store; replay refused as `permit_consumed` in Execution Evidence). ARAP linkage stays stateless via the signed `binding_token`; the Status freshness cache is a soft optimization only; evidence is emitted outward, never read back as decision input. Cumulative caps are deferred to the metering follow-on: this build enforces per-payment caps only. Companion feedback logged as S-6 |
-| D29 | Two-tier freshness (debate #3) | One mechanism, two consumption modes, both spec branches exercised: signed Status is the single freshness surface. Core tier consumes it through the polled cache under the published staleness bound. `execute_wire_transfer` (irreversible) takes the **immediate-check** branch: a cache-bypassed Status read at decision time plus the execution lease, so revocation denies instantly. `send_remittance_email` (external commitment) takes the **single-use-permit-within-bound** branch plus the egress PEP. Fail-closed when Status is unreachable: high-consequence actions deny immediately; the core tier rides the cache until the bound expires, then fails closed. Introspection stays implemented as an AS capability; the bound, fail-closed posture, and skew assumptions are published in the Enforcement Scope Statement |
+| D29 | Two-tier freshness (debate #3) | One mechanism, two consumption modes, both spec branches exercised: signed Status is the single freshness surface. Core tier consumes it through the polled cache under the published staleness bound. `execute_wire_transfer` (irreversible) takes the **immediate-check** branch: a cache-bypassed Status read at decision time plus the execution lease, so revocation denies instantly. `send_remittance_email` (external commitment) takes the **single-use-permit-within-bound** branch plus the egress PEP. Fail-closed when Status is unreachable: high-consequence actions deny immediately; the core tier rides the cache until the bound expires, then fails closed. Introspection stays implemented as an AS capability; the bound, fail-closed posture, and skew assumptions are published in the Enforcement Scope Statement. Branches revised by D33 |
 | D30 | Single AS, mission-kernel (debate #4) | One AS service, validating the core profile's co-location claim (Mission Issuer = the OAuth AS; the split shape is the MAS binding declined in R-8, and one AS keeps one issuer/one `jwks_uri`/one metadata document). Internally, a **mission-kernel** module (mission records, approval events, derivation, status, expansion, catalog computation, management ops, cross-domain projection policy) behind a typed interface; node-oidc-provider hooks and the custom HTTP routes are thin adapters over it. Boundary enforced: hooks call the kernel only through its interface, the kernel never imports provider types. The O-2 go/fallback decision is scoped to the adapter layer; a future MAS follow-on lifts the kernel |
 | D31 | Act-chain transform ownership (debate #5) | The PEP flattens the token's nested `act` chain into the root-to-leaf `context.actor.act` array via `packages/actor-chain` (it already validated the token, and only the PEP can verify proof-of-possession); the PDP performs shape and consistency validation on the supplied chain (non-empty, `iss`/`sub` per entry, root consistent with `subject`, leaf consistent with `client_instance_id`) without becoming credential-aware. Golden transform vectors live in the shared package and are the candidate contribution behind S-2 (normative spec vectors) |
 | D32 | Evidence retention (debate #6) | Feed-driven distributed: producers (AS, PDP, MCP server) retain their own evidence and Receipts in their own stores; the Transparency Service holds hash commitments only. The operator timeline is assembled by walking the mission's transparency feed, retrieving evidence from producers under access control, and verifying digests on render, so the timeline is a continuous run of the audit draft's five-step verification; tampering renders as a failed row. Direct producer queries remain for pre-M10 development and tests |
+| D33 | Freshness plane, production form | Revises D29's branches; both recognized freshness sources, each in its production role. Polled plane: the **Mission Status List** (the companion's optional IETF Token Status List profile: signed compressed 2-bit array, `status_list` refs on the Status response/introspection projection, list `ttl` as the published bound, anti-oracle indices) backs the PDP's core-tier cache with one fetch per window. Immediate check on irreversible actions: **introspection with the mission projection** (one authenticated call validates credential standing AND mission state); the PDP's signed Decision Evidence records the observation. External commitment keeps the permit-within-bound branch. The per-mission signed Status operation remains the authoritative surface |
+| D34 | Operation Profile + business state | `payments-runtime-profile-v1` is an M0 architecture artifact: exact action/resource URIs, JSON schemas and normalization per tool, money as integer minor units in decimal strings + ISO 4217 (never a JS `number`), authoritative vs caller-supplied fields, parameter-digest membership + resource-version binding, idempotency-key construction, permit lifetime/commit point/evidence fields. The payments service is authoritative for business state: the PEP loads invoice/vendor records, builds effective parameters carrying their versions for the PDP, and conditionally re-verifies those versions at commit; agent-supplied amounts/payees are never authoritative. Resource policy (invoice payable, vendor active, not already paid, remittance only after successful payment) is defined independently of Mission authority |
+| D35 | BFF topology | The agent service is the Agent Console's BFF and exclusively owns the OAuth/DPoP/client keys; a dedicated `services/console-bff` owns approver/operator browser sessions (HttpOnly SameSite cookies) and hosts the feed-driven audit read model (joins, orphan detection, sequence-gap checks per `(Mission, emitter)` per the companion). Browsers never hold service credentials or call service-only endpoints |
+| D36 | Irreversible operation state machine | `reserved -> permit_consumed -> connector_committed -> evidence_emitted -> reconciled`, owned by the payments service; the ledger/outbox connectors take an operation idempotency key; the execution lease covers validation and pre-commit, and after connector commit cancellation is meaningless (the commit point is defined in the Operation Profile). No PDP outcome callback: duplicate suppression is PEP-side (operation state + idempotency key), preserving D28's stateless PDP |
+| D37 | Approval ownership + governance | The AS owns Mission/Expansion interactions and OAuth pending artifacts (deferral codes, transaction ids); the ARS owns ARAP/AROP tasks and approvals; the AS stores the task handle and validated terminal approval and is the only credential issuer; approval completion never directly executes an action. An AROP approval never satisfies `action_approval_required` implicitly: the parameter-bound approval is explicitly passed as `context.approval` for PDP validation. Governance: missions containing writes or irreversible actions require Bob (subject != approver); Alice self-approves read-only missions only |
+| D38 | Token, client, and interop profile | JWT access tokens validated locally (issuer, audience, expiry, `mission`, `cnf.jkt`); the agent is a confidential client using `private_key_jwt` with a separate DPoP key, both owned by the agent service; DPoP checks (replay cache, nonce policy, `ath`, `htu`, `htm`, `iat`, `jti`) are explicit tests; one canonical MCP resource URI is used byte-for-byte in PRM, OAuth `resource`, token audience, DPoP, AuthZEN context, and evidence; MCP pinned to the stable 2025-11-25 authorization profile (draft changes tracked via O-20/O-33) |
+| D39 | Hardening bundle | Per-edge channel/auth/key matrix as an M0 artifact (browser->BFF, agent->AS, agent->MCP, PEP->PDP, AS<->ARS, PDP->OpenFGA, producers->transparency), OpenFGA with pre-shared auth + TLS from setup; separated key purposes (AS tokens/status, PDP evidence + `binding_token`, PEP evidence, transaction challenges, transparency). FGA hygiene: explicit `authorization_model_id` on every check, higher-consistency mode on checks after domain-substrate writes, 100-tuple write limit respected in seeds. Restart semantics without persistence: per-boot instance epochs bound into permits (a restarted PEP rejects prior-epoch permits), no deterministic ID reuse after reseeding, pending ARAP/AROP work terminally unavailable after its owner restarts, unknown state fails closed. Dependency policy: pin at the pre-flight spike (first oidc-provider version that passes), OpenFGA image by digest, MCP SDK + spec revision |
 
 Defaults adopted (not separately asked; flag if wrong):
 
 - pnpm workspace monorepo under `src/`; TypeScript everywhere; Node 22+.
 - OpenFGA runs via docker compose in its in-memory storage mode; our PDP fronts it.
-- Freshness rides signed Status per D29 (polled cache for the core tier,
-  cache-bypassed immediate check for the irreversible class, permit-within-
-  bound for external commitment); introspection implemented as an AS
-  capability; signals push is a stretch goal.
+- Freshness per D29/D33: the Mission Status List backs the core-tier polled
+  plane; introspection (mission projection) is the immediate check on
+  irreversible actions; permit-within-bound covers external commitment; the
+  per-mission signed Status operation remains the authoritative surface.
+  Signals push is a stretch goal.
 - All state is in-memory and reseeded on boot. Record-shaped stores use
   SQLite `:memory:` behind repository interfaces (decision D27); pure
   in-process structures elsewhere; OpenFGA memory storage.
@@ -167,7 +175,9 @@ Trusted-base components and their spec roles:
   (PAR), derivation to `mission_resource_access` authorization_details, the approval
   event, Mission Records with integrity anchors, mission-bound token issuance (DPoP),
   the subset rule, state-gated issuance/refresh, revocation by `mission_id`,
-  introspection with the `mission` member, the signed Status endpoint, the DTR
+  introspection with the `mission` member, the signed Status endpoint (and
+  the Mission Status List token, republished on each lifecycle transition
+  per D33), the DTR
   deferred grant, and the `transaction_authorization_endpoint`. Also hosts the
   Catalog Provider role of `svc-connectivity-disco`: the Service Catalog
   Endpoint, advertised as `service_catalog_endpoint` in its own metadata,
@@ -214,8 +224,12 @@ Trusted-base components and their spec roles:
   action with parameter binding and capability source context; runs the
   transaction-assurance tier for the wire transfer (single-use permit, execution
   lease, Execution Evidence, outcome reconciliation), owning permit
-  redemption and lease state per D28 (atomic redeem-on-execute; replay
-  refused as `permit_consumed`); signs Transaction
+  redemption, lease state, and the irreversible-operation state machine per
+  D28/D36 (atomic redeem-on-execute; replay refused as `permit_consumed`;
+  connector idempotency keys; per-boot instance epoch bound into permits per
+  D39). Authoritative for business state per D34: loads invoice/vendor
+  records, builds effective parameters carrying resource versions for the
+  PDP, and conditionally re-verifies them at commit; signs Transaction
   Authorization Challenges; publishes its MCP Server Card (the catalog
   references it via `server_card_uri`) and RFC 9728 protected resource
   metadata with `mission_bound_authorization_required`, plus its Enforcement
@@ -255,8 +269,15 @@ Trusted-base components and their spec roles:
   evidence as the `actor_token`. Hosts the shaper module (intent proposals
   are untrusted input per the shaping draft) and the minimal harness duty:
   on resume it checks mission Status and stops on a non-active state before
-  attempting any action.
+  attempting any action. Acts as the Agent Console's BFF and exclusively
+  owns the OAuth, DPoP, and client keys (decision D35).
+- **Console BFF** (`services/console-bff`): owns approver/operator browser
+  sessions (HttpOnly SameSite cookies), fronts the AS management surfaces
+  and the ARS queue, and hosts the feed-driven audit read model behind the
+  operator timeline: joins across producers, orphan detection, and
+  sequence-gap checks per `(Mission, emitter)` (decisions D32/D35).
 - **Apps** (`apps/approver`, `apps/operator`, `apps/agent-console`): persona UIs.
+  Browsers never hold service credentials.
 
 Cross-cutting: every service adopts `packages/telemetry` (OpenTelemetry with
 W3C trace context propagated across OAuth requests, PDP evaluations, MCP tool
@@ -320,10 +341,12 @@ they fit and in the PDP overlay where they do not; see issue O-6.
    `consent_required`.
 1. **Issuance**: the shaper proposes intent (untrusted input per the shaping
    draft), the agent submits it via PAR, the issuer derives the authority,
-   Alice approves in the approver app (intent + authority set + anchors
-   rendered), mission-bound DPoP token issued; operator app shows the new
-   Mission. Includes the compromised-shaper test: an over-broad proposal
-   never widens the derived authority.
+   and Bob, the AP manager, approves in the approver app (intent + authority
+   set + anchors rendered): the mission carries writes, so subject and
+   approver must differ per D37, with Alice as the mission's subject.
+   Mission-bound DPoP token issued; operator app shows the new Mission.
+   Includes the compromised-shaper test: an over-broad proposal never widens
+   the derived authority.
 2. **Happy path**: agent pays an in-authority invoice under the cap; per-action
    PDP permits; Decision + Execution Evidence visible in the operator timeline.
 3. **Parameter binding / TOCTOU**: scenario mutates payment params between
@@ -420,6 +443,7 @@ src/
     mcp-saas/                 LedgerCloud SaaS MCP server (token-only
                               enforcement, EMA declared)
     transparency/             SCITT Transparency Service (audit draft)
+    console-bff/              approver/operator sessions + audit read model
     agent/                    OAuth+MCP client, scenario runner, LLM loop
   apps/
     approver/                 approvals inbox (missions, ARAP tasks, deferred queue)
@@ -431,9 +455,10 @@ src/
 ```
 
 Port map (defaults, overridable via `.env`): AS 4400, PDP 4401, ARS 4402,
-MCP/payments 4403, transparency 4404, RAS 4405, SaaS MCP 4406, approver 5173,
-operator 5174, agent-console 5175, OpenFGA 8080 (http) / 8081 (grpc),
-playground disabled, Jaeger 16686 (UI) / 4317 (OTLP).
+MCP/payments 4403, transparency 4404, RAS 4405, SaaS MCP 4406, console-bff
+4407, approver 5173, operator 5174, agent-console 5175, OpenFGA 8080 (http,
+pre-shared auth + TLS) / 8081 (grpc), playground disabled, Jaeger 16686
+(UI) / 4317 (OTLP).
 
 ### Testing and delivery
 
@@ -447,7 +472,10 @@ playground disabled, Jaeger 16686 (UI) / 4317 (OTLP).
   Jobs: lint, typecheck, unit, scenario integration (OpenFGA service
   container), evals (from M13).
 - Toolchain: Node and pnpm pinned via `engines` + corepack; lockfile
-  committed.
+  committed. Dependency policy per D39: `oidc-provider` pinned to the first
+  version that passes the pre-flight spike; the OpenFGA image pinned by
+  digest; the MCP SDK and spec revision pinned (D38: stable 2025-11-25
+  authorization profile).
 - Spec pinning: `src/SPEC_VERSIONS.md` records the draft-repo commit and
   external spec revisions the implementation currently tracks. Goal 2 means
   companions will change during implementation; version bumps are
@@ -475,15 +503,24 @@ in the Spec Feedback Log.
   Jaeger), `packages/telemetry` (the OTel + pino baseline every service
   adopts), `packages/store` (the SQLite `:memory:` repository baseline,
   decision D27), `mission-core` with canonicalization + anchors passing the
-  core test vectors (`draft-mcguinness-oauth-mission` § test vectors).
+  core test vectors (`draft-mcguinness-oauth-mission` § test vectors), and
+  four architecture artifacts: `payments-runtime-profile-v1` (the Operation
+  Profile, D34), the channel/auth/key matrix (D39), the approval and
+  irreversible-operation state machines (D36/D37), and the FGA hygiene
+  policy (D39).
   *Exit: `pnpm test` green on anchor vectors; `docker compose up` serves
-  OpenFGA and Jaeger; a sample service's span is visible in Jaeger.*
+  OpenFGA (pre-shared auth + TLS) and Jaeger; a sample service's span is
+  visible in Jaeger; the four artifacts reviewed and committed.*
 - **M1. Baseline Issuance AS.** PAR intent intake, derivation, approval event
   (minimal approver page), Mission Record store, `mission` claim + DPoP binding,
   subset rule, state-gated issuance/refresh, revocation by `mission_id`,
   introspection `mission` member, signed Status endpoint, AS metadata flags.
   *Exit: core conformance checklist items 1-6 (core § Conformance) demonstrably met;
-  scenario 1 runs headless, including the compromised-shaper test.*
+  scenario 1 runs headless, including the compromised-shaper test; a thin
+  tracer slice (PAR intent -> approval -> token -> minimal PDP evaluation ->
+  `get_invoice` through an MCP skeleton, wire-real but throwaway-grade) runs
+  end to end before M2 begins, surfacing URI/token/evidence mismatches
+  early.*
 - **M2. Actor profile + agent instance.** Base actor-profile conformance at
   the AS (chain construction/validation, presenter transitions, local max
   depth, errors, metadata, introspection) with `packages/actor-chain` shared
@@ -501,9 +538,10 @@ in the Spec Feedback Log.
   via `packages/actor-chain` (flattening is PEP-side per D31),
   FGA model for the domain substrate with mission authority
   injected as contextual tuples derived from the Mission Record per check
-  (decision D26), content-addressed `policy_view_id`, freshness via signed
-  Status per D29 (polled cache under the published bound for the core tier;
-  cache-bypassed immediate check for the irreversible class).
+  (decision D26), content-addressed `policy_view_id`, freshness per D33
+  (Mission Status List fetch per window backs the core-tier polled plane;
+  introspection with the mission projection is the immediate check for the
+  irreversible class).
   *Exit: golden-file decision tests: in-authority allow, out-of-authority deny,
   revoked-mission deny within bound.*
 - **M4. MCP server + core enforcement tier.** AP tools, streamable HTTP, RFC 9728
@@ -692,9 +730,10 @@ resolution and date; never delete them.
   per-payment cap. (Cumulative caps are deferred to the metering follow-on
   per D28.) Decide during M3 with a spike; record the rationale here.
 - **O-8. Freshness numbers.** The authoritative-source question is resolved
-  by D29; what remains is picking values: Status poll interval, the
-  published staleness bound per action class (floor target: under 300 s for
-  high-consequence), and lease durations. Decide in M3/M4.
+  by D29/D33; what remains is picking values: the Status List fetch window
+  and token `ttl`, the published staleness bound per action class (floor
+  target: under 300 s for high-consequence), and lease durations. Decide in
+  M3/M4.
 - **O-9. COAZ alignment.** mission-authzen composes with COAZ for MCP tool
   mapping. Decide whether to fetch COAZ and mirror its subject/action/resource
   mapping or keep the profile's own `context.capability_source` members only.
@@ -791,6 +830,15 @@ resolution and date; never delete them.
   Server Card publication and EMA declarations are not SDK-supported and
   are hand-rolled. Track SDK evolution and replace hand-rolled pieces when
   the SDK catches up. Pin in the pre-flight spike, revisit in M4.
+- **O-34. Status List mechanics.** Pin the Mission Status List
+  implementation details per the companion § status-list and
+  `draft-ietf-oauth-status-list`: 2-bit entries, compression, list token
+  shape and `ttl`, anti-oracle index allocation, republication on
+  transition, and library vs hand-roll. Decide in M3.
+- **O-35. Introspection projection details.** Pin the introspection mission
+  projection (status draft § introspection-projection): the `mission`
+  member's contents, how the PDP authenticates as a caller, and how the
+  observation is recorded in Decision Evidence. Before M3.
 
 ### Resolved
 
@@ -895,6 +943,23 @@ resolution and date; never delete them.
   the operator timeline is the verified per-mission feed rendered
   continuously (decision D32). This closes the architecture-debate series:
   all six debates resolved as D26-D32.
+- **R-24 (2026-07-21). External critique answered item by item.** Adopted:
+  the Operation Profile artifact and authoritative business state (D34),
+  the BFF topology with a dedicated console-bff hosting the audit read
+  model (D35), the irreversible-operation state machine minus the PDP
+  outcome callback, which was rejected to preserve D28 (D36), approval
+  ownership/reuse rules and write-approval governance, changing scenario 1
+  to Bob as approver (D37), the token/client/interop profile with the
+  canonical resource URI rule and the pinned MCP authorization profile
+  (D38), and the hardening bundle: channel/key matrix, FGA hygiene, restart
+  epochs, pin-at-spike policy (D39). Freshness revised on production
+  realism (D33): Mission Status List backs the polled plane, introspection
+  is the irreversible-action immediate check. Superseded by earlier
+  decisions: the policy-view staging protocol (no tuple publication exists
+  under D26) and central evidence collection (D32). Corrected premises: the
+  plan never claimed all-HTTPS transport nor pinned oidc-provider 9.10.0.
+  M0 gains four architecture artifacts; M1 gains the tracer slice; O-34 and
+  O-35 opened.
 
 ## 8. Spec Feedback Log
 
