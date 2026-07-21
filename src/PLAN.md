@@ -9,7 +9,7 @@ family at the **Runtime-Enforced** assurance level.
 - Maintenance: this document is updated by direct commits to `main` (no PRs),
   per the 2026-07-20 workflow decision. Implementation milestones still land
   as their own PRs (see § Milestones).
-- Last updated: 2026-07-20.
+- Last updated: 2026-07-21.
 
 ## 1. Goal and Conformance Target
 
@@ -99,13 +99,17 @@ Decisions confirmed with Karl on 2026-07-20:
 | D23 | Spec validation goal | Validating the architecture decisions and the specs is a co-equal goal of the implementation; spec friction (defects, ambiguities, hard-to-implement requirements, simplification candidates, interop issues) is tracked in the Spec Feedback Log with per-entry dispositions, and every milestone exit includes a spec-feedback pass |
 | D24 | Evals | An eval harness (milestone M13) mirrors the D4 split: a deterministic adversarial suite (CI-runnable, no API key) plus an optional LLM red-team mode; runs are scored on containment (zero unauthorized side effects), denial correctness, evidence completeness, over-blocking rate on legitimate flows, and freshness-bound compliance, emitting a scorecard artifact |
 | D25 | Pre-implementation readiness | Adopted: the pre-flight spike (O-1/O-2/O-25/O-26/O-27 before M1 design hardens), the testing-and-delivery conventions (vitest, in-process scenario composition, `src/**`-filtered CI separate from draft-build CI, toolchain pinning, `SPEC_VERSIONS.md`), the headless adjudication path + side-effect oracle, O-33, and the non-goals statement. Declined for now: the determinism-by-design bundle (injectable clock/RNG, checked-in deterministic dev keys); revisit if golden files, exhibits, or evals prove flaky or unstable |
+| D26 | Mission authority in FGA (debate #1) | Hybrid contextual: OpenFGA stores only the durable domain substrate (invoice ownership, vendor approval, roles); mission authority is derived from the Mission Record as **contextual tuples** per check, computed by the PDP alongside the state/freshness check. No dual-write, revocation is instant via the record, `policy_view_id` = content hash of (Mission Record version + FGA model version). Companion feedback logged as S-5 |
+| D27 | Store architecture | Record-shaped stores (missions, approval events, ARAP tasks, permits/leases, ledger/outbox/journal oracles, catalog entries, evidence index) live in SQLite `:memory:` (better-sqlite3) behind repository interfaces: UNIQUE constraints and transactions where the spec implies them, SQL for management/catalog/timeline queries. No ORM; optional non-default `--persist` flag; pure in-process structures where SQL adds nothing (keys, Merkle nodes); OpenFGA keeps its own memory storage; node-oidc-provider artifacts stay on its default adapter |
 
 Defaults adopted (not separately asked; flag if wrong):
 
 - pnpm workspace monorepo under `src/`; TypeScript everywhere; Node 22+.
 - OpenFGA runs via docker compose in its in-memory storage mode; our PDP fronts it.
 - Freshness sources: Status polling + issuer introspection. Signals push is a stretch goal.
-- All service state in in-memory stores (Maps); seed scripts load data on boot.
+- All state is in-memory and reseeded on boot. Record-shaped stores use
+  SQLite `:memory:` behind repository interfaces (decision D27); pure
+  in-process structures elsewhere; OpenFGA memory storage.
 - Web apps: React + Vite SPAs.
 
 ## 3. Architecture
@@ -127,7 +131,7 @@ the PDP are the data plane acting within it.
 +----------+    +---------------+    +---------------+    +----------------+
 |  Agent   |    |  Mission AS   |    |     ARS       |    |      PDP       |
 | Console  |    | node-oidc-    |<-->| ARAP Access   |<-->| AuthZEN API    |
-| (SPA) +  |    | provider +    |    | Request Svc   |    | + materialized |
+| (SPA) +  |    | provider +    |    | Request Svc   |    | + contextual   |
 | scenario |    | mission layer |    +---------------+    | policy view    |
 | runner / |    +-------+-------+                         +-------+--------+
 | LLM loop |            ^                                         |
@@ -173,8 +177,10 @@ Trusted-base components and their spec roles:
   operator app's fleet surfaces (enumeration, per-mission lifecycle
   operations) are served per the management companion (partial; O-32).
 - **PDP** (`services/pdp`): AuthZEN Access Evaluation (and bulk Evaluations) API.
-  Materializes each approved Mission into an OpenFGA tuple set (the materialized
-  policy view, correlated by `policy_view_id`), layers the mission overlay checks
+  Checks mission authority by deriving **contextual tuples** from the Mission
+  Record per evaluation (decision D26; stored FGA tuples hold only the durable
+  domain substrate), correlated by a content-addressed `policy_view_id`;
+  layers the mission overlay checks
   that FGA does not model (state freshness against the staleness bound, parameter
   binding, permit/lease issuance, expiry), and emits requestable denials with
   `context.access_request` and a PDP-signed `binding_token`. Builds
@@ -269,11 +275,17 @@ Tools on the MCP server (action classification per runtime § action classificat
 ### OpenFGA model sketch
 
 Types: `user`, `client`, `mission`, `vendor`, `invoice`, `payment_batch`.
-On mission approval the PDP writes tuples deriving from the `authority_set`
-(for example `mission:m1#payer@invoice:inv-42`, `mission:m1#reader@vendor:acme`).
-Numeric constraints (per-payment cap, cumulative caps) are evaluated with FGA
-conditions where they fit and in the PDP overlay where they do not; see issue O-6.
-Revocation and completion delete or bypass the view (state check precedes FGA).
+Stored tuples hold only the durable domain substrate (invoice ownership,
+vendor approval state, roles such as Bob's AP manager). Mission authority is
+injected per check as **contextual tuples** derived from the Mission
+Record's `authority_set` (for example `mission:m1#payer@invoice:inv-42`),
+computed by the PDP alongside the state/freshness check it already performs
+(decision D26). There is no tuple writer keyed to mission lifecycle and no
+dual-write: revocation and completion take effect through the record itself
+(state check precedes FGA). `policy_view_id` is the content hash of the
+Mission Record version plus the FGA model version. Numeric constraints
+(per-payment cap, cumulative caps) are evaluated with FGA conditions where
+they fit and in the PDP overlay where they do not; see issue O-6.
 
 ### End-to-end scenarios (the demo script)
 
@@ -367,6 +379,8 @@ src/
     authzen-client/           PEP-side AuthZEN client (evaluation, bulk, retries)
     demo-data/                seed loaders: users, clients, vendors, invoices,
                               FGA store + model + tuples
+    store/                    SQLite :memory: repositories (missions, approvals,
+                              tasks, permits, oracles, catalog, evidence index)
     telemetry/                shared OTel + pino setup (trace context, ids)
     actor-chain/              act-chain validation + nested-to-root-to-leaf
                               flattening, shared by AS, PDP, and PEPs
@@ -431,8 +445,9 @@ they expose spec friction, in the Spec Feedback Log.
 
 - **M0. Scaffolding.** Workspace, tsconfig, lint, docker-compose (OpenFGA +
   Jaeger), `packages/telemetry` (the OTel + pino baseline every service
-  adopts), `mission-core` with canonicalization + anchors passing the core
-  test vectors (`draft-mcguinness-oauth-mission` § test vectors).
+  adopts), `packages/store` (the SQLite `:memory:` repository baseline,
+  decision D27), `mission-core` with canonicalization + anchors passing the
+  core test vectors (`draft-mcguinness-oauth-mission` § test vectors).
   *Exit: `pnpm test` green on anchor vectors; `docker compose up` serves
   OpenFGA and Jaeger; a sample service's span is visible in Jaeger.*
 - **M1. Baseline Issuance AS.** PAR intent intake, derivation, approval event
@@ -455,8 +470,9 @@ they expose spec friction, in the Spec Feedback Log.
 - **M3. PDP + OpenFGA.** AuthZEN evaluation + evaluations endpoints, envelope
   parsing (note: approved-entry `resource` matches `context.audience`, not the
   AuthZEN `resource` member), `context.actor` built via `packages/actor-chain`
-  from day one, materialized policy view with `policy_view_id`,
-  FGA model + tuple writer keyed to mission lifecycle, freshness via Status
+  from day one, FGA model for the domain substrate with mission authority
+  injected as contextual tuples derived from the Mission Record per check
+  (decision D26), content-addressed `policy_view_id`, freshness via Status
   polling + introspection with a published staleness bound.
   *Exit: golden-file decision tests: in-authority allow, out-of-authority deny,
   revoked-mission deny within bound.*
@@ -642,8 +658,6 @@ resolution and date; never delete them.
 - **O-6. Where numeric constraints live.** Per-payment cap and cumulative caps:
   FGA conditions vs PDP overlay. Decide during M3 with a spike; record the
   rationale here.
-- **O-7. `policy_view_id` scheme.** Content-addressing recipe (what exactly is
-  hashed: model version + tuple set + mission version?). Decide in M3.
 - **O-8. Staleness bounds for the demo.** Concrete published bounds per action
   class, and which freshness source is authoritative for the high-consequence
   class (Status poll interval vs introspection-on-action). Decide in M3/M4.
@@ -811,6 +825,13 @@ resolution and date; never delete them.
   determinism-by-design bundle (injectable clock/RNG, deterministic dev
   keys) was reviewed and declined for now, with flaky golden files,
   exhibits, or evals as the revisit trigger (decision D25).
+- **R-18 (2026-07-21). Debate #1 and store architecture resolved.** Mission
+  authority reaches OpenFGA as contextual tuples derived from the Mission
+  Record per check; stored tuples carry only the domain substrate (D26,
+  feedback logged as S-5). Record-shaped stores move to SQLite `:memory:`
+  behind repository interfaces in `packages/store` (D27). O-7 resolved by
+  D26: `policy_view_id` is the content hash of the Mission Record version
+  plus the FGA model version.
 
 ## 8. Spec Feedback Log
 
@@ -851,6 +872,15 @@ their repositories or working groups.
   authorization-metadata member for the server-side declaration is not yet
   pinned (cross-ref O-20). Track the extension revision implemented against;
   feed friction upstream to the MCP auth interest group.
+- **S-5 (open).** Simplification-candidate — mission-authzen
+  § Mission-to-Policy Materialization: the text reads as write-on-approval
+  (stored-tuple sync), which is the less typical strategy for ephemeral,
+  task-scoped authority; the engine surfaces built for that case (OpenFGA
+  contextual tuples, Cedar entities-in-request, OPA input) support
+  per-decision derivation from the record with no dual-write. Propose the
+  companion name both materialization strategies and define what
+  `policy_view_id` commits to under each (see D26). Candidate: direct
+  companion edit.
 
 ## 9. Runbook (target state)
 
