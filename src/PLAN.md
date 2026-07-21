@@ -13,10 +13,21 @@ family at the **Runtime-Enforced** assurance level.
 
 ## 1. Goal and Conformance Target
 
-Build a complete, running system that reaches **Runtime-Enforced Mission conformance**
-as defined by the six invariants in `draft-mcguinness-mission-architecture.md`
-(§ Runtime-Enforced Mission conformance): the four Baseline invariants plus
-per-action runtime enforcement and evidence that joins.
+Two goals, equal in rank:
+
+1. **Reach the level.** Build a complete, running system that reaches
+   **Runtime-Enforced Mission conformance** as defined by the six invariants
+   in `draft-mcguinness-mission-architecture.md` (§ Runtime-Enforced Mission
+   conformance): the four Baseline invariants plus per-action runtime
+   enforcement and evidence that joins.
+2. **Validate the architecture and the specs.** The implementation is a
+   validation instrument for the draft family: every architecture decision
+   and normative requirement it touches gets tested by being built. Friction
+   is a deliverable, not a nuisance: spec defects, ambiguities, requirements
+   that are disproportionately hard to implement, complexity worth
+   simplifying, and interop issues are captured in the Spec Feedback Log
+   (§ 8) with a disposition, and the M9 self-assessment consolidates them
+   into a spec-feedback report.
 
 Documents implemented (the required set for the level, per README § Assurance Levels):
 
@@ -78,6 +89,7 @@ Decisions confirmed with Karl on 2026-07-20:
 | D20 | Sub-agent delegation demo | Orchestrator to sub-agent token exchange is a first-class scenario (13) and milestone (M12): authority narrows by subset, the chain grows a hop, the PDP sees the root-to-leaf `context.actor.act` |
 | D21 | act.cnf stance | The `act.cnf` conflict is filed upstream (actor-profile issue #4); this implementation validates proof of possession against the top-level `cnf` only and treats `act.cnf` as informative |
 | D22 | Handbook alignment | From the handbook-cover review: Shaper (shaping draft) in scope with the compromised-shaper test; minimal harness stop-on-non-active with the 02:00-resume scenario; five-laws mapping table; vendor-test demonstration + Field Reference checklist in M9; mission-scoped `tools/list`; wire-exhibit mode; control-plane framing. Declined: consent evidence remains undecided (O-11 stays open) |
+| D23 | Spec validation goal | Validating the architecture decisions and the specs is a co-equal goal of the implementation; spec friction (defects, ambiguities, hard-to-implement requirements, simplification candidates, interop issues) is tracked in the Spec Feedback Log with per-entry dispositions, and every milestone exit includes a spec-feedback pass |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -365,7 +377,11 @@ playground disabled, Jaeger 16686 (UI) / 4317 (OTLP).
 
 ## 5. Milestones
 
-Each milestone lands as its own PR with tests; acceptance criteria are the exit bar.
+Each milestone lands as its own PR with tests; acceptance criteria are the exit
+bar. Every milestone's exit also includes a **spec-feedback pass**: anything
+found during the milestone that is ambiguous, disproportionately hard to
+implement, over-complex, or non-interoperable lands in the Spec Feedback Log
+(§ 8) with a category and disposition before the milestone closes.
 
 - **M0. Scaffolding.** Workspace, tsconfig, lint, docker-compose (OpenFGA +
   Jaeger), `packages/telemetry` (the OTel + pino baseline every service
@@ -430,7 +446,8 @@ Each milestone lands as its own PR with tests; acceptance criteria are the exit 
   captures shaped like the handbook's Appendix B, and a written
   self-assessment against the six Runtime-Enforced invariants, the handbook
   vendor test's six questions, and the Field Reference implementation
-  checklist. `pnpm demo:vendor-test` runs the four valid-token-but-denied
+  checklist, plus a consolidated spec-feedback report drawn from the Spec
+  Feedback Log. `pnpm demo:vendor-test` runs the four valid-token-but-denied
   cases back to back (state: scenario 8, bounds: 7, parameters: 3,
   delegation chain: 13).
   *Exit: fresh clone to full demo in under five minutes; self-assessments
@@ -677,8 +694,53 @@ resolution and date; never delete them.
   and Field Reference checklist in M9, mission-scoped `tools/list`,
   wire-exhibit mode, control-plane framing (decision D22). Consent evidence
   was reviewed and left undecided: O-11 remains open.
+- **R-14 (2026-07-20). Spec validation goal added.** Validating the
+  architecture and specs is goal 2, co-equal with reaching the level; the
+  Spec Feedback Log (§ 8) tracks findings with routing conventions and
+  seeds S-1..S-4; every milestone exit gains a spec-feedback pass; M9
+  produces the consolidated report (decision D23).
 
-## 8. Runbook (target state)
+## 8. Spec Feedback Log
+
+The record backing goal 2. Implementation-driven findings about the specs
+themselves, distinct from the implementation issues in § 7.
+
+Entry format: `S-n (status)` — category, affected spec + section, one-line
+finding, disposition. Categories: **defect**, **ambiguity**,
+**hard-to-implement**, **simplification-candidate**, **interop**. Statuses:
+`open` → `filed` (upstream issue opened), `fixed-in-spec`, or `accepted`
+(complexity acknowledged and kept, with the rationale recorded). Entries are
+never deleted.
+
+Routing: findings against the **published core** are filed as GitHub issues
+on the mission repo (the core is never edited directly). Findings against
+**companions** may be fixed directly in their drafts in this repo. Findings
+against **external specs** (the actor suite, AuthZEN ARAP/AROP,
+svc-connectivity-disco, MCP EMA, ID-JAG, CIA-CORE) are filed upstream on
+their repositories or working groups.
+
+- **S-1 (filed).** Interop/defect — actor-profile x actor-receipts x
+  ai-agent-instance: `act.cnf` placement. The base profile leaves its
+  semantics undefined, receipts prohibit it in receipt hops, and the
+  agent-instance examples duplicate the top-level `cnf.jkt` inside `act`.
+  Filed as actor-profile issue #4; implementation stance in D21
+  (cross-ref O-24).
+- **S-2 (open).** Simplification-candidate — mission-authzen § context.actor:
+  the transform from the token's nested `act` (outermost-first) to the flat
+  root-to-leaf `context.actor.act` array is left entirely to implementers.
+  A normative transform example or test vector in the companion would
+  prevent divergent orderings. Candidate: direct companion edit.
+- **S-3 (open).** Ambiguity — mission-authzen x AROP: the companion says an
+  ARAP approval is input context, never a bearer grant, while AROP completes
+  by token issuance; the composition only closes through Expansion (our D6),
+  and neither document names it. Candidate: companion note plus upstream
+  AROP feedback once the implementation confirms the shape.
+- **S-4 (open).** Interop — MCP EMA: the extension is young and the exact
+  authorization-metadata member for the server-side declaration is not yet
+  pinned (cross-ref O-20). Track the extension revision implemented against;
+  feed friction upstream to the MCP auth interest group.
+
+## 9. Runbook (target state)
 
 ```
 cp src/.env.example src/.env        # optionally add ANTHROPIC_API_KEY
