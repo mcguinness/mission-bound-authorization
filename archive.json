@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-07-19T03:28:22.654460+00:00",
+  "timestamp": "2026-07-21T03:21:59.780539+00:00",
   "repo": "mcguinness/mission-bound-authorization",
   "labels": [
     {
@@ -1711,6 +1711,22 @@
       "body": "## Problem\n\nThe family makes fail-closed enforcement a tier-0 dependency on Mission state freshness, and deployments will put business-critical unattended work (CI, scheduled jobs, RPA) on that path. The availability story is currently distributed across one-line statements (bounded caching, never fail-open; the permit-as-lease model; the break-glass path) without an operational-considerations treatment relating the pieces. The first questions an architecture review board asks (what happens when the Issuer is down, for how long can it be down, what exactly halts) have answers implied by the design but stated nowhere together.\n\n## Proposal\n\nAn operational/availability considerations section, most naturally in the runtime profile with a pointer from Status and the Security Model:\n\n1. **Availability follows the artifact, not the issuer**: Mission state distributes as signed, TTL-bounded artifacts (Status responses, the Mission Status List), cacheable and replica-servable like key material, so control-plane unavailability within the bound degrades nothing on the data plane.\n2. **The staleness bound is also the ride-through**: guidance to choose published bounds with the Issuer's recovery objective in view, since a bound shorter than recovery time is a designed halt.\n3. **Blast-radius semantics stated once**: an outage past the bound halts PDP-gated classes and only them, issuance-gated paths ride to token expiry, ungated paths are unaffected, and new issuance stops.\n4. **Break-glass claim semantics** consolidated with the above: dual control, auto-expiry, same evidence as the bypassed path, enforcement claim suspended for what it touches while active.\n5. **Replication guidance** for the Mission record and status surfaces (small state, read-mostly, verifiable artifacts), explicitly not a consensus-protocol mandate.\n\n## Non-goals\n\nNo SLO numbers standardized, no new wire surfaces, no high-availability architecture mandated. This names the design space and the semantics so deployments can state their posture in the enforcement-scope statement.",
       "createdAt": "2026-07-17T22:24:55Z",
       "updatedAt": "2026-07-17T22:24:55Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 313,
+      "id": "I_kwDOTBXTi88AAAABJZci5g",
+      "title": "Core: state the boundary between free-text Intent constraints and machine-enforceable bounds in derivation",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/issues/313",
+      "state": "OPEN",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "## Problem\n\nThe core defines the Intent's `constraints` as free-text strings that \"inform derivation and consent rendering,\" and separately defines derivation as mechanical: a deterministic function over the validated Intent and registry facts, with no model in the loop. An external review of the handbook caught the gap between those two sentences: a mechanical function cannot parse \"Q3 2026, audit-committee\" out of a free-text array, so either the free-text constraints bind at disclosure only, or derivation is quietly interpretive. The phrase \"inform derivation\" leaves the trust boundary unstated, and the whole safety story leans on it.\n\n## Proposal\n\nOne or two clarifying sentences in the Intent member definitions and/or {{authorization-derivation}}, no new members and no new mechanism:\n\n1. Derivation consumes the Intent's structured members only: `resources`, `controls`, and `proposed_authority` entries with their machine-actionable constraints, evaluated against the deployment's derivation-policy rules and registry facts.\n2. The Intent's free-text `constraints` are disclosure and bounding context. They are what the Approver reads beside the derived authority and what a human rule author reads when writing the rule. They are never parsed for machine semantics.\n3. A bound the PDP must enforce therefore enters as structure at one of two doors: an untrusted `proposed_authority` entry (the shaper may translate the request's words into a structured candidate; the AS only ever narrows it), or the derivation-policy rule itself. The Approver's disclosure review is the check that the structure matches the words.\n\n## Non-goals\n\nNo NLP or extraction step in the trusted path, no new Intent members, no constraint grammar. Relates to #309 (the informative derivation-policy guidance should restate the same boundary in its contract statement).\n\n## Where it bites\n\nWithout the boundary stated, an implementer can read \"inform derivation\" as license to parse free text inside the AS, which puts attacker-influenceable natural language on the trusted side of the admission boundary, the exact move the model exists to reject.",
+      "createdAt": "2026-07-20T03:54:40Z",
+      "updatedAt": "2026-07-20T03:54:40Z",
       "closedAt": null,
       "comments": []
     }
