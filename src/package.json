@@ -1,0 +1,26 @@
+{
+  "name": "@mission/workspace",
+  "private": true,
+  "license": "BSD-2-Clause",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.15.1",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "lint": "biome check .",
+    "typecheck": "tsc --build",
+    "test": "vitest run",
+    "demo:span": "tsx scripts/demo-span.mts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.4",
+    "@types/node": "^22.20.1",
+    "tsx": "^4.23.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "@mission/telemetry": "workspace:*"
+  }
+}

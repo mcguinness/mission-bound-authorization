@@ -1,0 +1,30 @@
+# OpenFGA pinned by digest (D39); pre-shared auth + TLS enabled.
+# Run `pnpm setup` first: it generates certs/ and .env.
+services:
+  openfga:
+    image: openfga/openfga:v1.18.1@sha256:efde89d24487da1a8bc37d85b61341f1fb7024943a1ded65f4b7d51a75666688
+    command: run
+    environment:
+      OPENFGA_DATASTORE_ENGINE: memory
+      OPENFGA_AUTHN_METHOD: preshared
+      OPENFGA_AUTHN_PRESHARED_KEYS: ${OPENFGA_PRESHARED_KEY:-dev-preshared-key-change-me}
+      OPENFGA_HTTP_TLS_ENABLED: "true"
+      OPENFGA_HTTP_TLS_CERT: /certs/openfga.crt
+      OPENFGA_HTTP_TLS_KEY: /certs/openfga.key
+      OPENFGA_GRPC_TLS_ENABLED: "true"
+      OPENFGA_GRPC_TLS_CERT: /certs/openfga.crt
+      OPENFGA_GRPC_TLS_KEY: /certs/openfga.key
+      OPENFGA_PLAYGROUND_ENABLED: "false"
+    volumes:
+      - ./certs:/certs:ro
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"

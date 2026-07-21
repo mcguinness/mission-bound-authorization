@@ -1,0 +1,10 @@
+packages:
+  - packages/*
+  - services/*
+  - apps/*
+  - evals/*
+allowBuilds:
+  better-sqlite3: true
+  protobufjs: true
+  esbuild: true
+  '@biomejs/biome': true
