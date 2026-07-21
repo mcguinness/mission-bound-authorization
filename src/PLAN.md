@@ -103,6 +103,7 @@ Decisions confirmed with Karl on 2026-07-20:
 | D27 | Store architecture | Record-shaped stores (missions, approval events, ARAP tasks, permits/leases, ledger/outbox/journal oracles, catalog entries, evidence index) live in SQLite `:memory:` (better-sqlite3) behind repository interfaces: UNIQUE constraints and transactions where the spec implies them, SQL for management/catalog/timeline queries. No ORM; optional non-default `--persist` flag; pure in-process structures where SQL adds nothing (keys, Merkle nodes); OpenFGA keeps its own memory storage; node-oidc-provider artifacts stay on its default adapter |
 | D28 | Stateless PDP (debate #2) | The PDP is a pure decision function (envelope, FGA check with contextual tuples, fresh record read, clock, keys). It **declares** permit properties in the decision response (single-use decision identifier, `permit_expires_at`, lease requirement, PEP/channel binding); the PEP **owns** redemption and lease state (atomic redeem-on-execute in its store; replay refused as `permit_consumed` in Execution Evidence). ARAP linkage stays stateless via the signed `binding_token`; the Status freshness cache is a soft optimization only; evidence is emitted outward, never read back as decision input. Cumulative caps are deferred to the metering follow-on: this build enforces per-payment caps only. Companion feedback logged as S-6 |
 | D29 | Two-tier freshness (debate #3) | One mechanism, two consumption modes, both spec branches exercised: signed Status is the single freshness surface. Core tier consumes it through the polled cache under the published staleness bound. `execute_wire_transfer` (irreversible) takes the **immediate-check** branch: a cache-bypassed Status read at decision time plus the execution lease, so revocation denies instantly. `send_remittance_email` (external commitment) takes the **single-use-permit-within-bound** branch plus the egress PEP. Fail-closed when Status is unreachable: high-consequence actions deny immediately; the core tier rides the cache until the bound expires, then fails closed. Introspection stays implemented as an AS capability; the bound, fail-closed posture, and skew assumptions are published in the Enforcement Scope Statement |
+| D30 | Single AS, mission-kernel (debate #4) | One AS service, validating the core profile's co-location claim (Mission Issuer = the OAuth AS; the split shape is the MAS binding declined in R-8, and one AS keeps one issuer/one `jwks_uri`/one metadata document). Internally, a **mission-kernel** module (mission records, approval events, derivation, status, expansion, catalog computation, management ops, cross-domain projection policy) behind a typed interface; node-oidc-provider hooks and the custom HTTP routes are thin adapters over it. Boundary enforced: hooks call the kernel only through its interface, the kernel never imports provider types. The O-2 go/fallback decision is scoped to the adapter layer; a future MAS follow-on lifts the kernel |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -181,6 +182,9 @@ Trusted-base components and their spec roles:
   client_instance`, `ai_agent_instance_profile_supported` metadata). The
   operator app's fleet surfaces (enumeration, per-mission lifecycle
   operations) are served per the management companion (partial; O-32).
+  Structured per D30: a mission-kernel module behind a typed interface,
+  with node-oidc-provider hooks and the custom HTTP routes as thin
+  adapters over it.
 - **PDP** (`services/pdp`): AuthZEN Access Evaluation (and bulk Evaluations) API.
   Checks mission authority by deriving **contextual tuples** from the Mission
   Record per evaluation (decision D26; stored FGA tuples hold only the durable
@@ -398,7 +402,8 @@ src/
     actor-chain/              act-chain validation + nested-to-root-to-leaf
                               flattening, shared by AS, PDP, and PEPs
   services/
-    authorization-server/     node-oidc-provider + mission layer
+    authorization-server/     mission-kernel module + thin adapters
+                              (node-oidc-provider hooks, custom routes)
     pdp/                      AuthZEN PDP + OpenFGA integration
     access-request/           ARAP ARS
     mcp-payments/             MCP server + RS/PEP + payments API + ledger
@@ -453,8 +458,10 @@ issues gating the early milestones: O-1 (PAR intent carriage), O-25
 (CIA-CORE carriers), O-26 (entity-profile values), and O-27 (chain
 depth/rebind) by reading; and O-2 (node-oidc-provider fit) as a timeboxed
 coding spike with an explicit go/fallback decision (fallback: thin custom
-endpoints beside the provider). Results land in the issue log and, where
-they expose spec friction, in the Spec Feedback Log.
+endpoints beside the provider). Per D30, the go/fallback decision is scoped
+to the AS's adapter layer only; the mission-kernel is unaffected either
+way. Results land in the issue log and, where they expose spec friction,
+in the Spec Feedback Log.
 
 - **M0. Scaffolding.** Workspace, tsconfig, lint, docker-compose (OpenFGA +
   Jaeger), `packages/telemetry` (the OTel + pino baseline every service
@@ -862,6 +869,11 @@ resolution and date; never delete them.
   egress PEP for external commitment; fail-closed on Status unavailability.
   Both branches of the runtime floor table are exercised; scenario 8 now
   demonstrates the contrast; O-8 narrowed to picking values (decision D29).
+- **R-21 (2026-07-21). Debate #4 resolved: single AS with a mission-kernel
+  module.** The core profile's co-location claim is validated as written;
+  the kernel boundary (typed interface, no provider types in the kernel)
+  contains the O-2 risk to the adapter layer and makes a future MAS
+  follow-on a mechanical lift (decision D30).
 
 ## 8. Spec Feedback Log
 
