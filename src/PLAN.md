@@ -105,6 +105,7 @@ Decisions confirmed with Karl on 2026-07-20:
 | D29 | Two-tier freshness (debate #3) | One mechanism, two consumption modes, both spec branches exercised: signed Status is the single freshness surface. Core tier consumes it through the polled cache under the published staleness bound. `execute_wire_transfer` (irreversible) takes the **immediate-check** branch: a cache-bypassed Status read at decision time plus the execution lease, so revocation denies instantly. `send_remittance_email` (external commitment) takes the **single-use-permit-within-bound** branch plus the egress PEP. Fail-closed when Status is unreachable: high-consequence actions deny immediately; the core tier rides the cache until the bound expires, then fails closed. Introspection stays implemented as an AS capability; the bound, fail-closed posture, and skew assumptions are published in the Enforcement Scope Statement |
 | D30 | Single AS, mission-kernel (debate #4) | One AS service, validating the core profile's co-location claim (Mission Issuer = the OAuth AS; the split shape is the MAS binding declined in R-8, and one AS keeps one issuer/one `jwks_uri`/one metadata document). Internally, a **mission-kernel** module (mission records, approval events, derivation, status, expansion, catalog computation, management ops, cross-domain projection policy) behind a typed interface; node-oidc-provider hooks and the custom HTTP routes are thin adapters over it. Boundary enforced: hooks call the kernel only through its interface, the kernel never imports provider types. The O-2 go/fallback decision is scoped to the adapter layer; a future MAS follow-on lifts the kernel |
 | D31 | Act-chain transform ownership (debate #5) | The PEP flattens the token's nested `act` chain into the root-to-leaf `context.actor.act` array via `packages/actor-chain` (it already validated the token, and only the PEP can verify proof-of-possession); the PDP performs shape and consistency validation on the supplied chain (non-empty, `iss`/`sub` per entry, root consistent with `subject`, leaf consistent with `client_instance_id`) without becoming credential-aware. Golden transform vectors live in the shared package and are the candidate contribution behind S-2 (normative spec vectors) |
+| D32 | Evidence retention (debate #6) | Feed-driven distributed: producers (AS, PDP, MCP server) retain their own evidence and Receipts in their own stores; the Transparency Service holds hash commitments only. The operator timeline is assembled by walking the mission's transparency feed, retrieving evidence from producers under access control, and verifying digests on render, so the timeline is a continuous run of the audit draft's five-step verification; tampering renders as a failed row. Direct producer queries remain for pre-M10 development and tests |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -238,9 +239,11 @@ Trusted-base components and their spec roles:
 - **Transparency Service** (`services/transparency`): the audit draft's SCITT
   Transparency Service, in memory: append-only Merkle log, COSE Signed
   Statements committed by hash envelope, Receipts and signed tree heads,
-  per-mission feeds (`sub` is the Mission). The AS, PDP, and MCP server
-  register their evidence; a CLI verifier and the operator app's audit view
-  run the draft's five-step offline verification.
+  per-mission feeds (`sub` is the Mission). The log holds commitments only;
+  producers retain their own evidence and Receipts (decision D32). The AS,
+  PDP, and MCP server register their evidence; a CLI verifier and the
+  operator app run the draft's five-step verification, and from M11 the
+  operator timeline's normal read path is the verified feed itself.
 - **Agent** (`services/agent`): OAuth client built on panva `openid-client`
   (PAR + DPoP + token exchange), MCP client, scripted scenario runner, optional
   LLM loop. Declares the MCP EMA extension capability
@@ -557,9 +560,11 @@ in the Spec Feedback Log.
   evidence fails digest verification, a dropped record fails inclusion).*
 - **M11. Full UX.** The three persona apps complete: approvals inbox with intent
   rendering, fleet dashboard on the management companion's surfaces
-  (enumeration, revoke/expand, status transitions), evidence timeline joining
-  decisions, executions, refusals, and reconciliation, the audit feed view,
-  and the agent console's discovery/catalog view.
+  (enumeration, revoke/expand, status transitions), the evidence timeline
+  assembled feed-first per D32 (walk the mission's transparency feed,
+  retrieve from producers, verify digests on render) joining decisions,
+  executions, refusals, and reconciliation, and the agent console's
+  discovery/catalog view.
   *Exit: scenarios 0-12 all runnable from the UIs alone (13 and 14 join in
   M12).*
 - **M12. Agent + demos.** Scenario runner covering scenarios 0-14; the
@@ -885,6 +890,11 @@ resolution and date; never delete them.
   stays credential-agnostic); the PDP validates chain shape and
   consistency; golden vectors in `packages/actor-chain` back S-2's proposal
   for normative spec vectors (decision D31).
+- **R-23 (2026-07-21). Debate #6 resolved: feed-driven distributed evidence.**
+  Producers retain evidence + Receipts, the log holds commitments only, and
+  the operator timeline is the verified per-mission feed rendered
+  continuously (decision D32). This closes the architecture-debate series:
+  all six debates resolved as D26-D32.
 
 ## 8. Spec Feedback Log
 
