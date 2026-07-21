@@ -6,6 +6,9 @@ family at the **Runtime-Enforced** assurance level.
 
 - Location: all implementation code lives under `src/` in this repo.
 - Language: TypeScript (Node 22+), pnpm workspaces.
+- Maintenance: this document is updated by direct commits to `main` (no PRs),
+  per the 2026-07-20 workflow decision. Implementation milestones still land
+  as their own PRs (see § Milestones).
 - Last updated: 2026-07-20.
 
 ## 1. Goal and Conformance Target
