@@ -102,12 +102,16 @@ Decisions confirmed with Karl on 2026-07-20:
 | D26 | Mission authority in FGA (debate #1) | Hybrid contextual: OpenFGA stores only the durable domain substrate (invoice ownership, vendor approval, roles); mission authority is derived from the Mission Record as **contextual tuples** per check, computed by the PDP alongside the state/freshness check. No dual-write, revocation is instant via the record, `policy_view_id` = content hash of (Mission Record version + FGA model version). Companion feedback logged as S-5 |
 | D27 | Store architecture | Record-shaped stores (missions, approval events, ARAP tasks, permits/leases, ledger/outbox/journal oracles, catalog entries, evidence index) live in SQLite `:memory:` (better-sqlite3) behind repository interfaces: UNIQUE constraints and transactions where the spec implies them, SQL for management/catalog/timeline queries. No ORM; optional non-default `--persist` flag; pure in-process structures where SQL adds nothing (keys, Merkle nodes); OpenFGA keeps its own memory storage; node-oidc-provider artifacts stay on its default adapter |
 | D28 | Stateless PDP (debate #2) | The PDP is a pure decision function (envelope, FGA check with contextual tuples, fresh record read, clock, keys). It **declares** permit properties in the decision response (single-use decision identifier, `permit_expires_at`, lease requirement, PEP/channel binding); the PEP **owns** redemption and lease state (atomic redeem-on-execute in its store; replay refused as `permit_consumed` in Execution Evidence). ARAP linkage stays stateless via the signed `binding_token`; the Status freshness cache is a soft optimization only; evidence is emitted outward, never read back as decision input. Cumulative caps are deferred to the metering follow-on: this build enforces per-payment caps only. Companion feedback logged as S-6 |
+| D29 | Two-tier freshness (debate #3) | One mechanism, two consumption modes, both spec branches exercised: signed Status is the single freshness surface. Core tier consumes it through the polled cache under the published staleness bound. `execute_wire_transfer` (irreversible) takes the **immediate-check** branch: a cache-bypassed Status read at decision time plus the execution lease, so revocation denies instantly. `send_remittance_email` (external commitment) takes the **single-use-permit-within-bound** branch plus the egress PEP. Fail-closed when Status is unreachable: high-consequence actions deny immediately; the core tier rides the cache until the bound expires, then fails closed. Introspection stays implemented as an AS capability; the bound, fail-closed posture, and skew assumptions are published in the Enforcement Scope Statement |
 
 Defaults adopted (not separately asked; flag if wrong):
 
 - pnpm workspace monorepo under `src/`; TypeScript everywhere; Node 22+.
 - OpenFGA runs via docker compose in its in-memory storage mode; our PDP fronts it.
-- Freshness sources: Status polling + issuer introspection. Signals push is a stretch goal.
+- Freshness rides signed Status per D29 (polled cache for the core tier,
+  cache-bypassed immediate check for the irreversible class, permit-within-
+  bound for external commitment); introspection implemented as an AS
+  capability; signals push is a stretch goal.
 - All state is in-memory and reseeded on boot. Record-shaped stores use
   SQLite `:memory:` behind repository interfaces (decision D27); pure
   in-process structures elsewhere; OpenFGA memory storage.
@@ -325,8 +329,10 @@ they fit and in the PDP overlay where they do not; see issue O-6.
    `transaction_challenge` for an over-cap wire; agent presents it at the AS
    `transaction_authorization_endpoint`; approval; txn-bound audience-restricted
    single-use token; re-presented and honored exactly once.
-8. **Revocation freshness**: operator revokes mid-mission; next action denied
-   within the published staleness bound; issuance/refresh also gated.
+8. **Revocation freshness**: operator revokes mid-mission; a wire transfer
+   is denied instantly (immediate-check branch), while a read is denied
+   within the published staleness bound (polled-cache branch); issuance and
+   refresh are also gated. The two-tier contrast is the demo.
 9. **Completion**: mission completes; residual tokens no longer authorize.
 10. **Catalog reflection**: per-connection `status` tracks the fleet
     (`connected` while the mission is active, `unavailable` after revocation),
@@ -479,8 +485,9 @@ they expose spec friction, in the Spec Feedback Log.
   AuthZEN `resource` member), `context.actor` built via `packages/actor-chain`
   from day one, FGA model for the domain substrate with mission authority
   injected as contextual tuples derived from the Mission Record per check
-  (decision D26), content-addressed `policy_view_id`, freshness via Status
-  polling + introspection with a published staleness bound.
+  (decision D26), content-addressed `policy_view_id`, freshness via signed
+  Status per D29 (polled cache under the published bound for the core tier;
+  cache-bypassed immediate check for the irreversible class).
   *Exit: golden-file decision tests: in-authority allow, out-of-authority deny,
   revoked-mission deny within bound.*
 - **M4. MCP server + core enforcement tier.** AP tools, streamable HTTP, RFC 9728
@@ -666,9 +673,10 @@ resolution and date; never delete them.
 - **O-6. Per-payment cap placement.** FGA condition vs PDP overlay for the
   per-payment cap. (Cumulative caps are deferred to the metering follow-on
   per D28.) Decide during M3 with a spike; record the rationale here.
-- **O-8. Staleness bounds for the demo.** Concrete published bounds per action
-  class, and which freshness source is authoritative for the high-consequence
-  class (Status poll interval vs introspection-on-action). Decide in M3/M4.
+- **O-8. Freshness numbers.** The authoritative-source question is resolved
+  by D29; what remains is picking values: Status poll interval, the
+  published staleness bound per action class (floor target: under 300 s for
+  high-consequence), and lease durations. Decide in M3/M4.
 - **O-9. COAZ alignment.** mission-authzen composes with COAZ for MCP tool
   mapping. Decide whether to fetch COAZ and mirror its subject/action/resource
   mapping or keep the profile's own `context.capability_source` members only.
@@ -847,6 +855,13 @@ resolution and date; never delete them.
   under Execution Evidence). Cumulative caps deferred to the metering
   follow-on; O-6 narrowed to per-payment cap placement; S-6 logged
   (decision D28).
+- **R-20 (2026-07-21). Debate #3 resolved: two-tier freshness, both spec
+  branches.** Signed Status is the single freshness surface consumed two
+  ways: polled cache under the published bound (core tier), cache-bypassed
+  immediate check for the irreversible class, and permit-within-bound plus
+  egress PEP for external commitment; fail-closed on Status unavailability.
+  Both branches of the runtime floor table are exercised; scenario 8 now
+  demonstrates the contrast; O-8 narrowed to picking values (decision D29).
 
 ## 8. Spec Feedback Log
 
