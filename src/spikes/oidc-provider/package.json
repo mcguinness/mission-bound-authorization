@@ -1,0 +1,9 @@
+{
+  "name": "spike-oidc-provider",
+  "private": true,
+  "type": "module",
+  "license": "BSD-2-Clause",
+  "dependencies": {
+    "oidc-provider": "^9.10.0"
+  }
+}
