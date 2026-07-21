@@ -59,6 +59,10 @@ Out of scope for the first pass: signals (SSF push), harness session binding
 child delegation (Child Missions; token-level actor chains ARE in scope),
 metering, mandate, CIBA binding, and the actor suite companions (receipts,
 proofs, authority bounds).
+Implementation non-goals: persistence, high availability, horizontal scale,
+and production hardening. In-memory stores and dev keys are deliberate;
+nothing here is production code.
+
 Each is a candidate follow-on once the level is reached. Naming note: resource
 discovery in this plan means `svc-connectivity-disco` (the service catalog);
 the family's own `draft-mcguinness-mission-discovery` (open-world Encounter
@@ -94,6 +98,7 @@ Decisions confirmed with Karl on 2026-07-20:
 | D22 | Handbook alignment | From the handbook-cover review: Shaper (shaping draft) in scope with the compromised-shaper test; minimal harness stop-on-non-active with the 02:00-resume scenario; five-laws mapping table; vendor-test demonstration + Field Reference checklist in M14; mission-scoped `tools/list`; wire-exhibit mode; control-plane framing. Declined: consent evidence remains undecided (O-11 stays open) |
 | D23 | Spec validation goal | Validating the architecture decisions and the specs is a co-equal goal of the implementation; spec friction (defects, ambiguities, hard-to-implement requirements, simplification candidates, interop issues) is tracked in the Spec Feedback Log with per-entry dispositions, and every milestone exit includes a spec-feedback pass |
 | D24 | Evals | An eval harness (milestone M13) mirrors the D4 split: a deterministic adversarial suite (CI-runnable, no API key) plus an optional LLM red-team mode; runs are scored on containment (zero unauthorized side effects), denial correctness, evidence completeness, over-blocking rate on legitimate flows, and freshness-bound compliance, emitting a scorecard artifact |
+| D25 | Pre-implementation readiness | Adopted: the pre-flight spike (O-1/O-2/O-25/O-26/O-27 before M1 design hardens), the testing-and-delivery conventions (vitest, in-process scenario composition, `src/**`-filtered CI separate from draft-build CI, toolchain pinning, `SPEC_VERSIONS.md`), the headless adjudication path + side-effect oracle, O-33, and the non-goals statement. Declined for now: the determinism-by-design bundle (injectable clock/RNG, checked-in deterministic dev keys); revisit if golden files, exhibits, or evals prove flaky or unstable |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -229,6 +234,15 @@ W3C trace context propagated across OAuth requests, PDP evaluations, MCP tool
 calls, and evidence registrations, exported to Jaeger; pino structured logs
 carrying `trace_id` and `mission_id`). Evidence objects carry the producing
 span's `trace_id` as an extension member (decision D13).
+
+Two demo-correctness facilities: (1) a **headless adjudication path**, a
+test-only API to approve or deny as a seeded approver, drives approvals in
+scenario and eval runs; it is clearly marked test-only, disabled outside
+dev, and its use is visible in the evidence so evals cannot be fooled by
+it. (2) The **side-effect oracle**: the payments ledger, the email outbox,
+and the SaaS journal record every mutation together with the authorizing
+permit or token identity, giving evals ground truth for "zero unauthorized
+side effects".
 
 ### Demo domain model (accounts payable)
 
@@ -381,6 +395,24 @@ MCP/payments 4403, transparency 4404, RAS 4405, SaaS MCP 4406, approver 5173,
 operator 5174, agent-console 5175, OpenFGA 8080 (http) / 8081 (grpc),
 playground disabled, Jaeger 16686 (UI) / 4317 (OTLP).
 
+### Testing and delivery
+
+- Tests: vitest across the workspace. Unit tests per package (anchor vectors
+  in `mission-core`); scenario tests compose all services **in-process**
+  (everything is in-memory, so one Node process can host the full stack),
+  with real HTTP reserved for wire-shape assertions (PAR, token endpoint,
+  AuthZEN, MCP transport); golden files for PDP decisions and exhibits.
+- CI: a dedicated GitHub Actions workflow gated on `src/**` path filters so
+  the draft-build/publish CI and the implementation CI never interfere.
+  Jobs: lint, typecheck, unit, scenario integration (OpenFGA service
+  container), evals (from M13).
+- Toolchain: Node and pnpm pinned via `engines` + corepack; lockfile
+  committed.
+- Spec pinning: `src/SPEC_VERSIONS.md` records the draft-repo commit and
+  external spec revisions the implementation currently tracks. Goal 2 means
+  companions will change during implementation; version bumps are
+  deliberate, reviewed against the Spec Feedback Log, never implicit.
+
 ## 5. Milestones
 
 Each milestone lands as its own PR with tests; acceptance criteria are the exit
@@ -388,6 +420,14 @@ bar. Every milestone's exit also includes a **spec-feedback pass**: anything
 found during the milestone that is ambiguous, disproportionately hard to
 implement, over-complex, or non-interoperable lands in the Spec Feedback Log
 (§ 8) with a category and disposition before the milestone closes.
+
+Before M1 design hardens, a **pre-flight spike** burns down the pin-type
+issues gating the early milestones: O-1 (PAR intent carriage), O-25
+(CIA-CORE carriers), O-26 (entity-profile values), and O-27 (chain
+depth/rebind) by reading; and O-2 (node-oidc-provider fit) as a timeboxed
+coding spike with an explicit go/fallback decision (fallback: thin custom
+endpoints beside the provider). Results land in the issue log and, where
+they expose spec friction, in the Spec Feedback Log.
 
 - **M0. Scaffolding.** Workspace, tsconfig, lint, docker-compose (OpenFGA +
   Jaeger), `packages/telemetry` (the OTel + pino baseline every service
@@ -699,6 +739,10 @@ resolution and date; never delete them.
   draft's surfaces the operator app consumes (fleet enumeration,
   per-mission lifecycle operations; bulk operations if needed) and how the
   operator app authenticates to them. Decide in M11.
+- **O-33. MCP TS SDK gaps.** Pin the `@modelcontextprotocol/sdk` version;
+  Server Card publication and EMA declarations are not SDK-supported and
+  are hand-rolled. Track SDK evolution and replace hand-rolled pieces when
+  the SDK catches up. Pin in the pre-flight spike, revisit in M4.
 
 ### Resolved
 
@@ -759,6 +803,14 @@ resolution and date; never delete them.
   LedgerCloud catalog-entry sequencing was noted in M8, a stray empty
   diagram fence was removed, and the runbook service list was corrected.
   R-entries above reference the pre-reorder numbering.
+- **R-17 (2026-07-20). Pre-implementation readiness pass.** Pre-flight spike
+  defined ahead of M1; testing-and-delivery conventions added (vitest,
+  in-process scenario composition, separate `src/**` CI, toolchain pinning,
+  SPEC_VERSIONS); headless adjudication path and side-effect oracle
+  specified; O-33 opened for MCP SDK gaps; non-goals stated. The
+  determinism-by-design bundle (injectable clock/RNG, deterministic dev
+  keys) was reviewed and declined for now, with flaky golden files,
+  exhibits, or evals as the revisit trigger (decision D25).
 
 ## 8. Spec Feedback Log
 
