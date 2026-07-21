@@ -1,0 +1,22 @@
+name: impl-ci
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', '.github/workflows/impl-ci.yml']
+  pull_request:
+    paths: ['src/**', '.github/workflows/impl-ci.yml']
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run: { working-directory: src }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.15.1 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: src/pnpm-lock.yaml }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test

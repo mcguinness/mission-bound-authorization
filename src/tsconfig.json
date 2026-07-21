@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/mission-core" },
+    { "path": "packages/store" },
+    { "path": "packages/telemetry" }
+  ]
+}
