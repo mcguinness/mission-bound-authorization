@@ -27,6 +27,8 @@ Documents implemented (the required set for the level, per README § Assurance L
 | `draft-mcguinness-mission-authzen` | Concrete AuthZEN binding: decision envelope, evidence objects, requestable denials, capability source binding |
 | `draft-mcguinness-oauth-mission-status` | Freshness source: signed, `mission_id`-keyed Status |
 | `draft-mcguinness-oauth-mission-expansion` | Successor-mission widening (backs AROP token issuance) |
+| `draft-mcguinness-mission-shaping` | Client-side Intent Shaping: the untrusted proposal arm (shaper proposes, issuer derives, approver decides) |
+| `draft-mcguinness-mission-harness` (partial) | Only the minimal harness duty: agent-side stop on non-active mission state at resume; session/task-graph binding stays out |
 | `draft-mcguinness-svc-connectivity-disco` (external repo) | Resource discovery: the per-user service connectivity catalog the agent bootstraps from |
 | `draft-mcguinness-mission-audit` | SCITT transparency for Mission evidence: Signed Statements, Receipts, per-mission feeds, offline verification |
 | `draft-mcguinness-oauth-mission-cross-domain` | One Mission honored in the SaaS trust domain: cross-domain grant (ID-JAG profile), audience-scoped projection, Resource AS validation |
@@ -38,7 +40,8 @@ Documents implemented (the required set for the level, per README § Assurance L
 | AuthZEN ARAP (external, OpenID) | Access request / approval lifecycle behind requestable denials |
 | AuthZEN AROP (external, openid/authzen PR #531) | Token-issuance completion: DTR and Transaction Challenge bindings |
 
-Out of scope for the first pass: signals (SSF push), harness session binding,
+Out of scope for the first pass: signals (SSF push), harness session binding
+(only the minimal stop-on-non-active duty is in scope),
 child delegation (Child Missions; token-level actor chains ARE in scope),
 metering, mandate, CIBA binding, and the actor suite companions (receipts,
 proofs, authority bounds).
@@ -74,6 +77,7 @@ Decisions confirmed with Karl on 2026-07-20:
 | D19 | Agent instance | Full ai-agent-instance profile: every agent and sub-agent holds a per-instance key and presents Client Instance Assertion evidence (`agent_instance_id`, `agent_platform`, `agent_model`) at token requests; AS validates carriers and publishes `ai_agent_instance_profile_supported`; surfaced `sub_profile` carries `ai_agent client_instance`; PEPs get per-instance controls |
 | D20 | Sub-agent delegation demo | Orchestrator to sub-agent token exchange is a first-class scenario (13) and milestone (M12): authority narrows by subset, the chain grows a hop, the PDP sees the root-to-leaf `context.actor.act` |
 | D21 | act.cnf stance | The `act.cnf` conflict is filed upstream (actor-profile issue #4); this implementation validates proof of possession against the top-level `cnf` only and treats `act.cnf` as informative |
+| D22 | Handbook alignment | From the handbook-cover review: Shaper (shaping draft) in scope with the compromised-shaper test; minimal harness stop-on-non-active with the 02:00-resume scenario; five-laws mapping table; vendor-test demonstration + Field Reference checklist in M9; mission-scoped `tools/list`; wire-exhibit mode; control-plane framing. Declined: consent evidence remains undecided (O-11 stays open) |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -84,6 +88,11 @@ Defaults adopted (not separately asked; flag if wrong):
 - Web apps: React + Vite SPAs.
 
 ## 3. Architecture
+
+Operationally the stack follows the handbook's control-plane reading: the
+Mission AS is the control plane for delegated authority, holding desired
+state (the approved task, its authority, its lifecycle); tokens, PEPs, and
+the PDP are the data plane acting within it.
 
 ```
                  +-----------------+       +-----------------+
@@ -165,7 +174,9 @@ Trust-base components and their spec roles:
   metadata with `mission_bound_authorization_required`, plus its Enforcement
   Scope Statement. Validates proof of possession against the top-level `cnf`
   only (decision D21) and applies per-instance controls keyed on
-  `(act.iss, act.sub)`.
+  `(act.iss, act.sub)`. Returns a mission-scoped `tools/list` (least exposure
+  at the tool boundary: the agent only sees tools within the mission's
+  authority).
 - **RAS + SaaS MCP Server** (`services/ras`, `services/mcp-saas`): the SaaS
   trust domain, "LedgerCloud" (accounting SaaS). The RAS is a second
   node-oidc-provider instance whose custom RFC 7523 JWT-bearer grant redeems
@@ -174,7 +185,8 @@ Trust-base components and their spec roles:
   mints short-lived local access tokens preserving `mission.id`,
   `mission.issuer`, and `authority_hash`. The SaaS MCP server (vendor bank
   details, journal entry posting) declares the MCP EMA extension in its
-  authorization metadata and enforces from the token alone: the estate runs
+  authorization metadata and enforces from the token alone (including a
+  `tools/list` filtered to the token's granted authority): the estate runs
   at lifetime-bounded reliance, in deliberate contrast with the
   Runtime-Enforced internal estate.
 - **Transparency Service** (`services/transparency`): the audit draft's SCITT
@@ -191,7 +203,10 @@ Trust-base components and their spec roles:
   agent instance holds a per-instance key and presents Client Instance
   Assertion evidence (`agent_instance_id`, `agent_platform`, `agent_model`);
   sub-agent spawn is a further token exchange presenting the sub-agent's own
-  evidence as the `actor_token`.
+  evidence as the `actor_token`. Hosts the shaper module (intent proposals
+  are untrusted input per the shaping draft) and the minimal harness duty:
+  on resume it checks mission Status and stops on a non-active state before
+  attempting any action.
 - **Apps** (`apps/approver`, `apps/operator`, `apps/agent-console`): persona UIs.
 
 Cross-cutting: every service adopts `packages/telemetry` (OpenTelemetry with
@@ -239,9 +254,12 @@ Revocation and completion delete or bypass the view (state check precedes FGA).
    server's protected resource metadata, and reads its Server Card before
    shaping intent. With no mission yet, the connection reports
    `consent_required`.
-1. **Issuance**: agent shapes intent, submits via PAR, Alice approves in the
-   approver app (intent + authority set + anchors rendered), mission-bound
-   DPoP token issued; operator app shows the new Mission.
+1. **Issuance**: the shaper proposes intent (untrusted input per the shaping
+   draft), the agent submits it via PAR, the issuer derives the authority,
+   Alice approves in the approver app (intent + authority set + anchors
+   rendered), mission-bound DPoP token issued; operator app shows the new
+   Mission. Includes the compromised-shaper test: an over-broad proposal
+   never widens the derived authority.
 2. **Happy path**: agent pays an in-authority invoice under the cap; per-action
    PDP permits; Decision + Execution Evidence visible in the operator timeline.
 3. **Parameter binding / TOCTOU**: scenario mutates payment params between
@@ -285,6 +303,24 @@ Revocation and completion delete or bypass the view (state check precedes FGA).
     token's nested `act` grows a hop while `sub` is preserved, the PDP
     evaluates the root-to-leaf chain, and revoking the sub-agent's instance
     at the PEP kills only the sub-agent (the orchestrator continues).
+14. **The 02:00 resume**: while the agent idles, the mission completes (or is
+    cancelled); on wake the agent's harness check reads Status, sees the
+    non-active state, and stops before attempting any action; if the check
+    is bypassed, the PEP denies and the Refusal Record is written (the
+    handbook's running example, both fears closed).
+
+### The five laws, enforced
+
+The handbook's five laws map onto the build as follows; the M9
+self-assessment walks this table.
+
+| Law | Enforced by | Scenarios |
+|---|---|---|
+| Durability | the Mission Record outlives sessions and tokens; signed Status is the authoritative state | 1, 8, 9, 14 |
+| Attribution | subject/approver on the record; `act` chains + instance identity; evidence that joins | 1, 11, 13 |
+| Narrowing | subset rule, audience-scoped projection, caps, delegation narrows | 6, 7, 12, 13 |
+| Termination | state-gated issuance, revocation, completion, freshness bounds, cross-domain lease expiry | 8, 9, 12, 14 |
+| Containment | per-action PEP/PDP, parameter binding, single-use permits, per-instance revocation | 2, 3, 4, 13 |
 
 ## 4. Repo Layout
 
@@ -342,7 +378,7 @@ Each milestone lands as its own PR with tests; acceptance criteria are the exit 
   subset rule, state-gated issuance/refresh, revocation by `mission_id`,
   introspection `mission` member, signed Status endpoint, AS metadata flags.
   *Exit: core conformance checklist items 1-6 (core § Conformance) demonstrably met;
-  scenario 1 runs headless.*
+  scenario 1 runs headless, including the compromised-shaper test.*
 - **M2. PDP + OpenFGA.** AuthZEN evaluation + evaluations endpoints, envelope
   parsing (note: approved-entry `resource` matches `context.audience`, not the
   AuthZEN `resource` member), materialized policy view with `policy_view_id`,
@@ -354,8 +390,9 @@ Each milestone lands as its own PR with tests; acceptance criteria are the exit 
   PRM, token + `mission` claim validation, per-action PDP calls with
   `context.mission` / `context.actor` / `context.audience` / `parameter_digest` /
   `context.capability_source` (tool_id `mcp://` URI, source_uri, source_digest,
-  operation_ref), Decision Evidence and Refusal Records, Enforcement Scope
-  Statement published.
+  operation_ref), mission-scoped `tools/list` filtering (least exposure),
+  Decision Evidence and Refusal Records, Enforcement Scope Statement
+  published.
   *Exit: scenarios 2 and 3 pass as integration tests.*
 - **M4. Transaction-assurance tier.** Single-use permits, execution leases,
   Execution Evidence, outcome reconciliation for `execute_wire_transfer` and
@@ -386,10 +423,18 @@ Each milestone lands as its own PR with tests; acceptance criteria are the exit 
   timeline joining decisions, executions, refusals, and reconciliation, and the
   agent console's discovery/catalog view.
   *Exit: scenarios 0-10 all runnable from the UIs alone.*
-- **M9. Agent + demos + conformance.** Scenario runner covering scenarios 0-10,
-  optional LLM chat mode, seed polish, a `pnpm demo` one-command boot, and a
-  written self-assessment against the six Runtime-Enforced invariants.
-  *Exit: fresh clone to full demo in under five minutes; self-assessment complete.*
+- **M9. Agent + demos + conformance.** Scenario runner covering scenarios 0-10
+  and 14 (the 02:00 resume), the minimal harness duty in the agent (Status
+  check on resume, stop on non-active), optional LLM chat mode, seed polish,
+  a `pnpm demo` one-command boot, an exhibit mode emitting annotated wire
+  captures shaped like the handbook's Appendix B, and a written
+  self-assessment against the six Runtime-Enforced invariants, the handbook
+  vendor test's six questions, and the Field Reference implementation
+  checklist. `pnpm demo:vendor-test` runs the four valid-token-but-denied
+  cases back to back (state: scenario 8, bounds: 7, parameters: 3,
+  delegation chain: 13).
+  *Exit: fresh clone to full demo in under five minutes; self-assessments
+  complete; the vendor-test demo passes.*
 - **M10. Transparent audit (SCITT).** Transparency Service per the audit
   draft: in-memory append-only Merkle log, COSE Signed Statements with
   hash-envelope commitments, Receipts and signed tree heads; registration
@@ -399,7 +444,7 @@ Each milestone lands as its own PR with tests; acceptance criteria are the exit 
   evidence.
   *Exit: scenario 11 passes headless, including the tamper demo (mutated
   evidence fails digest verification, a dropped record fails inclusion);
-  scenario runner extended to 0-11.*
+  scenario runner adds scenario 11.*
 - **M11. Cross-domain SaaS leg (EMA + ID-JAG).** Second trust domain per the
   cross-domain companion: Mission AS token-exchange issuance of the
   cross-domain grant with audience-scoped projection; RAS (second
@@ -408,7 +453,7 @@ Each milestone lands as its own PR with tests; acceptance criteria are the exit 
   MCP server with EMA declared, enforcing from the token alone; catalog
   entry with the `id_jag` connection; agent EMA capability and flow.
   *Exit: scenario 12 passes headless, including grant replay rejection and
-  the revocation-lease demonstration; scenario runner extended to 0-12.*
+  the revocation-lease demonstration; scenario runner adds scenario 12.*
 - **M12. Actor profile + agent instance (delegation).** Base actor-profile
   conformance at the AS (chain construction/validation, presenter
   transitions, local max depth, errors, metadata, introspection) with
@@ -419,7 +464,7 @@ Each milestone lands as its own PR with tests; acceptance criteria are the exit 
   service.
   *Exit: scenario 13 passes headless, including per-instance revocation and
   a rejection test for an `actor_token` that itself carries `act`; scenario
-  runner extended to 0-13.*
+  runner adds scenario 13.*
 
 ## 6. Spec Anchor Index
 
@@ -451,6 +496,10 @@ Working references into the drafts (line numbers as of commit `dc7a897`):
 - MCP EMA: modelcontextprotocol repo,
   `docs/extensions/auth/enterprise-managed-authorization.mdx` (capability id
   `io.modelcontextprotocol/enterprise-managed-authorization`).
+- Handbook: `~/src/mcguinness-blog/content/mission-handbook/_index.md` (the
+  cover: five laws, canonical picture, running example, vendor test); the
+  wire appendix (`/notes/mission-bound-authorization-on-the-wire/`) is the
+  exhibit-mode reference (O-28).
 - Actor profile: local repo `~/src/draft-mcguinness-oauth-actor-profile/`,
   `draft-mcguinness-oauth-actor-profile.md`: actor object + chain
   `:245-320`, presenter binding `:422-433`, errors `:1237`, introspection
@@ -581,6 +630,12 @@ resolution and date; never delete them.
 - **O-27. Chain depth and rebind policy.** The demo's local max chain depth
   (the profile says SHOULD support >= 4) and which hops use presenter
   continuation vs rebind. Decide in M12.
+- **O-28. Appendix B exhibit fidelity.** Fetch the handbook's wire appendix
+  and pin the exhibit format the scenario runner's exhibit mode emits, so
+  captures are comparable to the published exhibits. Before M9.
+- **O-29. Resume-check semantics.** Which non-active states stop vs pause
+  the agent's harness check, and the check cadence on wake, consistent with
+  the published staleness bounds (O-8). Decide in M9.
 
 ### Resolved
 
@@ -616,6 +671,12 @@ resolution and date; never delete them.
   profile, with an orchestrator/sub-agent delegation scenario (decisions
   D18-D21, milestone M12, scenario 13). The act.cnf conflict was filed
   upstream as actor-profile issue #4.
+- **R-13 (2026-07-20). Handbook review applied.** Against the handbook
+  cover: Shaper + compromised-shaper test, minimal harness stop with the
+  02:00-resume scenario (14), five-laws mapping, vendor-test demonstration
+  and Field Reference checklist in M9, mission-scoped `tools/list`,
+  wire-exhibit mode, control-plane framing (decision D22). Consent evidence
+  was reviewed and left undecided: O-11 remains open.
 
 ## 8. Runbook (target state)
 
@@ -625,7 +686,8 @@ docker compose -f src/docker-compose.yml up -d   # OpenFGA, in-memory
 pnpm -C src install
 pnpm -C src seed                    # load users/clients/vendors/invoices + FGA model
 pnpm -C src dev                     # AS, PDP, ARS, MCP server, three SPAs
-pnpm -C src demo                    # scripted scenarios 0-13 against the running stack
+pnpm -C src demo                    # scripted scenarios 0-14 against the running stack
+pnpm -C src demo:vendor-test        # the four valid-token-but-denied cases
 ```
 
 All state is in memory: restarting a service reseeds it. The seed scripts are the
