@@ -9,7 +9,16 @@ family at the **Runtime-Enforced** assurance level.
 - Maintenance: this document is updated by direct commits to `main` (no PRs),
   per the 2026-07-20 workflow decision. Implementation milestones still land
   as their own PRs (see § Milestones).
+- License: implementation code under `src/` is BSD-2-Clause (own LICENSE
+  file + `license` fields, D40), harmonizing with the TLP's code-component
+  terms; the drafts remain under the repo's IETF terms.
 - Last updated: 2026-07-21.
+
+How to use this document in an implementation session: read § 1 (goals),
+then only the decision rows (D-n) and open issues (O-n) referenced by the
+milestone you are working, then that milestone's entry. Do not re-read the
+whole document. Implementation bugs go to GitHub issues on this repo; the
+O-log records design questions only.
 
 ## 1. Goal and Conformance Target
 
@@ -113,6 +122,7 @@ Decisions confirmed with Karl on 2026-07-20:
 | D37 | Approval ownership + governance | The AS owns Mission/Expansion interactions and OAuth pending artifacts (deferral codes, transaction ids); the ARS owns ARAP/AROP tasks and approvals; the AS stores the task handle and validated terminal approval and is the only credential issuer; approval completion never directly executes an action. An AROP approval never satisfies `action_approval_required` implicitly: the parameter-bound approval is explicitly passed as `context.approval` for PDP validation. Governance: missions containing writes or irreversible actions require Bob (subject != approver); Alice self-approves read-only missions only |
 | D38 | Token, client, and interop profile | JWT access tokens validated locally (issuer, audience, expiry, `mission`, `cnf.jkt`); the agent is a confidential client using `private_key_jwt` with a separate DPoP key, both owned by the agent service; DPoP checks (replay cache, nonce policy, `ath`, `htu`, `htm`, `iat`, `jti`) are explicit tests; one canonical MCP resource URI is used byte-for-byte in PRM, OAuth `resource`, token audience, DPoP, AuthZEN context, and evidence; MCP pinned to the stable 2025-11-25 authorization profile (draft changes tracked via O-20/O-33) |
 | D39 | Hardening bundle | Per-edge channel/auth/key matrix as an M0 artifact (browser->BFF, agent->AS, agent->MCP, PEP->PDP, AS<->ARS, PDP->OpenFGA, producers->transparency), OpenFGA with pre-shared auth + TLS from setup; separated key purposes (AS tokens/status, PDP evidence + `binding_token`, PEP evidence, transaction challenges, transparency). FGA hygiene: explicit `authorization_model_id` on every check, higher-consistency mode on checks after domain-substrate writes, 100-tuple write limit respected in seeds. Restart semantics without persistence: per-boot instance epochs bound into permits (a restarted PEP rejects prior-epoch permits), no deterministic ID reuse after reseeding, pending ARAP/AROP work terminally unavailable after its owner restarts, unknown state fails closed. Dependency policy: pin at the pre-flight spike (first oidc-provider version that passes), OpenFGA image by digest, MCP SDK + spec revision |
+| D40 | Final readiness sweep | `src/` code is BSD-2-Clause (own LICENSE, landed in M0). Execution conventions: a live milestone status table in § 5, a per-milestone definition of done (tests green, spec-feedback pass done, status + logs updated, PR merged), implementation bugs tracked as GitHub issues (the O-log stays design-only), and a how-to-use note for implementation sessions. The M0 channel/key matrix artifact includes a trusted-base statement (shaper, agent, and tool outputs untrusted; AS/PDP/ARS/PEPs/transparency trusted; the headless adjudication path trusted-but-test-only). Each scenario is one named spec file with a stable ID referenced from milestone exits; M12 ships `DEMO.md`, the guided walkthrough matching the runner |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -462,6 +472,8 @@ pre-shared auth + TLS) / 8081 (grpc), playground disabled, Jaeger 16686
 
 ### Testing and delivery
 
+- Traceability: each scenario (0-14) is one named spec file with a stable
+  ID, referenced from milestone exits (D40).
 - Tests: vitest across the workspace. Unit tests per package (anchor vectors
   in `mission-core`); scenario tests compose all services **in-process**
   (everything is in-memory, so one Node process can host the full stack),
@@ -482,6 +494,30 @@ pre-shared auth + TLS) / 8081 (grpc), playground disabled, Jaeger 16686
   deliberate, reviewed against the Spec Feedback Log, never implicit.
 
 ## 5. Milestones
+
+Status (update this table as work lands):
+
+| Milestone | Status |
+|---|---|
+| Pre-flight spike | not started |
+| M0 Scaffolding + artifacts | not started |
+| M1 Baseline AS | not started |
+| M2 Actor + instance | not started |
+| M3 PDP + OpenFGA | not started |
+| M4 MCP core tier | not started |
+| M5 Transaction tier | not started |
+| M6 ARAP | not started |
+| M7 AROP | not started |
+| M8 Discovery | not started |
+| M9 Cross-domain | not started |
+| M10 Audit (SCITT) | not started |
+| M11 Full UX | not started |
+| M12 Agent + demos | not started |
+| M13 Evals | not started |
+| M14 Conformance + reports | not started |
+
+Definition of done, every milestone: tests green, the spec-feedback pass
+done, this status table and the logs updated, the PR merged.
 
 Each milestone lands as its own PR with tests; acceptance criteria are the exit
 bar. Every milestone's exit also includes a **spec-feedback pass**: anything
@@ -505,9 +541,10 @@ in the Spec Feedback Log.
   decision D27), `mission-core` with canonicalization + anchors passing the
   core test vectors (`draft-mcguinness-oauth-mission` § test vectors), and
   four architecture artifacts: `payments-runtime-profile-v1` (the Operation
-  Profile, D34), the channel/auth/key matrix (D39), the approval and
-  irreversible-operation state machines (D36/D37), and the FGA hygiene
-  policy (D39).
+  Profile, D34), the channel/auth/key matrix with the trusted-base
+  statement (D39/D40), the approval and irreversible-operation state
+  machines (D36/D37), and the FGA hygiene policy (D39). Also lands
+  `src/LICENSE` (BSD-2-Clause) and the `license` fields (D40).
   *Exit: `pnpm test` green on anchor vectors; `docker compose up` serves
   OpenFGA (pre-shared auth + TLS) and Jaeger; a sample service's span is
   visible in Jaeger; the four artifacts reviewed and committed.*
@@ -608,7 +645,8 @@ in the Spec Feedback Log.
 - **M12. Agent + demos.** Scenario runner covering scenarios 0-14; the
   minimal harness duty in the agent (Status check on resume, stop on
   non-active); orchestrator/sub-agent support (scenario 13); optional LLM
-  chat mode; seed polish; a `pnpm demo` one-command boot; and the exhibit
+  chat mode; seed polish; a `pnpm demo` one-command boot; `DEMO.md`, the
+  guided walkthrough matching the runner (D40); and the exhibit
   mode emitting annotated wire captures shaped like the handbook's
   Appendix B.
   *Exit: fresh clone to full demo in under five minutes; scenarios 0-14 pass
@@ -960,6 +998,13 @@ resolution and date; never delete them.
   plan never claimed all-HTTPS transport nor pinned oidc-provider 9.10.0.
   M0 gains four architecture artifacts; M1 gains the tracer slice; O-34 and
   O-35 opened.
+- **R-25 (2026-07-21). Final readiness sweep.** `src/` code licensed
+  BSD-2-Clause (harmonizing with the TLP's code-component terms);
+  execution conventions added (milestone status table, definition of done,
+  bugs-to-GitHub convention, how-to-use note); trusted-base statement
+  folded into the M0 matrix artifact; scenario-spec traceability and
+  `DEMO.md` adopted (decision D40). The plan is declared
+  implementation-ready; next action is the pre-flight spike.
 
 ## 8. Spec Feedback Log
 
