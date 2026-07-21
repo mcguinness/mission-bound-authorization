@@ -500,7 +500,7 @@ Status (update this table as work lands):
 | Milestone | Status |
 |---|---|
 | Pre-flight spike | **done** 2026-07-21 (PR #317, `src/spikes/SPIKE-REPORT.md`) |
-| M0 Scaffolding + artifacts | not started |
+| M0 Scaffolding + artifacts | **in review** (PR #318) |
 | M1 Baseline AS | not started |
 | M2 Actor + instance | not started |
 | M3 PDP + OpenFGA | not started |
