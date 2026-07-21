@@ -499,7 +499,7 @@ Status (update this table as work lands):
 
 | Milestone | Status |
 |---|---|
-| Pre-flight spike | not started |
+| Pre-flight spike | **done** 2026-07-21 (PR #317, `src/spikes/SPIKE-REPORT.md`) |
 | M0 Scaffolding + artifacts | not started |
 | M1 Baseline AS | not started |
 | M2 Actor + instance | not started |
@@ -745,14 +745,6 @@ resolution and date; never delete them.
 
 ### Open
 
-- **O-1. Mission Intent PAR carriage.** Pin the exact request shape from core
-  § submission-via-PAR (parameter name, JSON shape, interaction with RAR
-  `authorization_details`) before M1 endpoint work.
-- **O-2. node-oidc-provider feature fit.** Verify the installed major supports
-  RAR (`features.richAuthorizationRequests`) with custom type validation strong
-  enough for `mission_resource_access` derivation, and confirm the extension
-  points for a token-exchange custom grant and the DTR deferred grant alongside
-  DPoP. Fallback: thin custom endpoints beside the provider for the gaps.
 - **O-3. DTR draft fidelity.** Fetch `draft-gerber-oauth-deferred-token-response`
   and pin parameter names, error codes (`authorization_pending`, `slow_down`,
   `expired_token`), and the deferred grant URN before M7.
@@ -836,16 +828,6 @@ resolution and date; never delete them.
   receipt hops, agent-instance examples duplicate the top-level `cnf.jkt`
   inside `act`. Our stance until resolved: PoP against top-level `cnf` only,
   `act.cnf` informative (D21). Revisit when the upstream issue closes.
-- **O-25. CIA-CORE fidelity.** Read the local
-  `draft-mcguinness-oauth-client-instance-assertion` checkout and pin the
-  carrier header/`typ` values, token endpoint processing, chain merging, and
-  introspection members the instance profile inherits. Before M2.
-- **O-26. Entity-profile vocabulary.** Pin the `sub_profile` values
-  (`ai_agent`, `client_instance`) against the referenced
-  `draft-mora-oauth-entity-profiles` revision. Before M2.
-- **O-27. Chain depth and rebind policy.** The demo's local max chain depth
-  (the profile says SHOULD support >= 4) and which hops use presenter
-  continuation vs rebind. Decide in M2.
 - **O-28. Appendix B exhibit fidelity.** Fetch the handbook's wire appendix
   and pin the exhibit format the scenario runner's exhibit mode emits, so
   captures are comparable to the published exhibits. Before M12.
@@ -867,7 +849,8 @@ resolution and date; never delete them.
 - **O-33. MCP TS SDK gaps.** Pin the `@modelcontextprotocol/sdk` version;
   Server Card publication and EMA declarations are not SDK-supported and
   are hand-rolled. Track SDK evolution and replace hand-rolled pieces when
-  the SDK catches up. Pin in the pre-flight spike, revisit in M4.
+  the SDK catches up. SDK pinned at 1.29.0 by the spike; gap tracking
+  remains. Revisit in M4.
 - **O-34. Status List mechanics.** Pin the Mission Status List
   implementation details per the companion § status-list and
   `draft-ietf-oauth-status-list`: 2-bit entries, compression, list token
@@ -1005,6 +988,23 @@ resolution and date; never delete them.
   folded into the M0 matrix artifact; scenario-spec traceability and
   `DEMO.md` adopted (decision D40). The plan is declared
   implementation-ready; next action is the pre-flight spike.
+- **R-26 (2026-07-21). Pre-flight spike complete (PR #317).** O-2: GO on
+  `oidc-provider@9.10.0`, 10/11 empirical checks (issuer-derived RAR via
+  `Grant.addRar`; `mission_intent` as a validated PAR extra param flowing
+  to the interaction; custom token-exchange and DTR grants; `mission`
+  claim via `extraTokenClaims`). One scoped D30 fallback: JWT ATs cannot
+  use the built-in introspection endpoint, so the mission-kernel adapter
+  implements the introspection route (RFC 7662 + mission projection,
+  mirroring the JWT claim set per CIA-CORE). RAR is experimental
+  (`ack: 'experimental-01'`), reinforcing exact pins; Node 22 LTS
+  required. O-1: `mission_intent` carriage pinned and wire-verified.
+  O-25: CIA-CORE carriers pinned (`client-instance+jwt` typ vs the
+  actor-token URN, 12-step processing, chain merge, cnf rules); CIA-CORE
+  § security-binding answers half of actor-profile#4 (commented
+  upstream). O-26: position-keyed `sub_profile` allowlists pinned; S-7
+  logged. O-27: local max depth 4; sub-agent spawn = presenter rebind,
+  self-exchange = continuation. Pins: MCP SDK 1.29.0, OpenFGA v1.18.1 by
+  digest. Full detail: `src/spikes/SPIKE-REPORT.md`.
 
 ## 8. Spec Feedback Log
 
@@ -1063,6 +1063,11 @@ their repositories or working groups.
   sentence ("the PDP remains stateless; consumption tracking is a PEP
   duty") would settle it for implementers. Candidate: direct companion
   edit (see D28).
+- **S-7 (open).** Ambiguity — draft-mora-oauth-entity-profiles rev 01: the
+  "OAuth Entity Profiles Registry" describes Designated Expert review
+  guidance but states no formal IANA registration policy keyword
+  (Specification Required / Expert Review / etc.). One sentence would fix
+  it. Candidate: upstream issue on the entity-profiles repo.
 
 ## 9. Runbook (target state)
 
