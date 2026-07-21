@@ -32,11 +32,16 @@ Documents implemented (the required set for the level, per README § Assurance L
 | `draft-mcguinness-oauth-mission-cross-domain` | One Mission honored in the SaaS trust domain: cross-domain grant (ID-JAG profile), audience-scoped projection, Resource AS validation |
 | ID-JAG (external, IETF OAuth WG) | `draft-ietf-oauth-identity-assertion-authz-grant`, the recommended cross-domain grant profile |
 | MCP EMA (external, MCP auth extension) | Enterprise-Managed Authorization: capability + metadata declarations and the ID-JAG redemption flow for the SaaS MCP server |
+| `draft-mcguinness-oauth-actor-profile` (external repo, local checkout) | Base actor profile: normalized RFC 8693 `act` chains (`act.iss`, `act.sub`, `sub_profile`), presenter transitions, metadata, introspection, errors |
+| `draft-mcguinness-oauth-ai-agent-instance` (external, datatracker) | AI agent instance identity: `agent_instance_id` / `agent_platform` / `agent_model` presented via Client Instance Assertion carriers and surfaced into `act` |
+| CIA-CORE (external) | `draft-mcguinness-oauth-client-instance-assertion`, the carrier and token-endpoint processing base the instance profile builds on |
 | AuthZEN ARAP (external, OpenID) | Access request / approval lifecycle behind requestable denials |
 | AuthZEN AROP (external, openid/authzen PR #531) | Token-issuance completion: DTR and Transaction Challenge bindings |
 
 Out of scope for the first pass: signals (SSF push), harness session binding,
-child delegation, metering, mandate, CIBA binding.
+child delegation (Child Missions; token-level actor chains ARE in scope),
+metering, mandate, CIBA binding, and the actor suite companions (receipts,
+proofs, authority bounds).
 Each is a candidate follow-on once the level is reached. Naming note: resource
 discovery in this plan means `svc-connectivity-disco` (the service catalog);
 the family's own `draft-mcguinness-mission-discovery` (open-world Encounter
@@ -65,6 +70,10 @@ Decisions confirmed with Karl on 2026-07-20:
 | D15 | SaaS app | The SaaS MCP server represents "LedgerCloud", an accounting/books SaaS: vendor bank details, payment journal entry posting |
 | D16 | SaaS estate assurance | The SaaS estate runs at lifetime-bounded reliance: the SaaS MCP server enforces from the token alone (mission claim + audience-scoped authorization_details, short lifetimes sized to the cross-domain lease); no PDP in that domain, contrasting the levels in one demo |
 | D17 | RAS construction | The RAS is a second node-oidc-provider instance with a custom RFC 7523 JWT-bearer grant for ID-JAG redemption (uniform AS codebase preferred over a slim custom RAS) |
+| D18 | Actor suite depth | Base actor-profile only: conformant nested `act` chains with required `act.iss`, presenter continuation/rebind, local max depth, `actor_unauthorized`, AS + protected-resource metadata, introspection surfaces. Receipts, proofs, and bounds are follow-ons |
+| D19 | Agent instance | Full ai-agent-instance profile: every agent and sub-agent holds a per-instance key and presents Client Instance Assertion evidence (`agent_instance_id`, `agent_platform`, `agent_model`) at token requests; AS validates carriers and publishes `ai_agent_instance_profile_supported`; surfaced `sub_profile` carries `ai_agent client_instance`; PEPs get per-instance controls |
+| D20 | Sub-agent delegation demo | Orchestrator to sub-agent token exchange is a first-class scenario (13) and milestone (M12): authority narrows by subset, the chain grows a hop, the PDP sees the root-to-leaf `context.actor.act` |
+| D21 | act.cnf stance | The `act.cnf` conflict is filed upstream (actor-profile issue #4); this implementation validates proof of possession against the top-level `cnf` only and treats `act.cnf` as informative |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -127,13 +136,21 @@ Trust-base components and their spec roles:
   and `request-access` links into the ARS. As the enterprise IdP of the
   cross-domain companion, it also issues the cross-domain grant: an RFC 8693
   token exchange mints the PoP-bound, single-use ID-JAG audienced to the RAS,
-  projecting only the audience-scoped Authority Set entries.
+  projecting only the audience-scoped Authority Set entries. Implements the
+  base actor profile at issuance (nested `act` with required `act.iss`, chain
+  construction/validation, local max depth, presenter continuation/rebind,
+  rejection of any `actor_token` carrying `act`, `actor_unauthorized`) and
+  the agent-instance profile (Client Instance Assertion carrier validation,
+  `agent_instance_id` requirements, `sub_profile` of `ai_agent
+  client_instance`, `ai_agent_instance_profile_supported` metadata).
 - **PDP** (`services/pdp`): AuthZEN Access Evaluation (and bulk Evaluations) API.
   Materializes each approved Mission into an OpenFGA tuple set (the materialized
   policy view, correlated by `policy_view_id`), layers the mission overlay checks
   that FGA does not model (state freshness against the staleness bound, parameter
   binding, permit/lease issuance, expiry), and emits requestable denials with
-  `context.access_request` and a PDP-signed `binding_token`.
+  `context.access_request` and a PDP-signed `binding_token`. Builds
+  `context.actor` by flattening the token's nested `act` chain into the
+  root-to-leaf array via `packages/actor-chain`.
 - **ARS** (`services/access-request`): ARAP Access Request Service. Verifies
   `binding_token` denial bindings, runs the approval task lifecycle, exposes the
   adjudication queue the approver app consumes.
@@ -146,7 +163,9 @@ Trust-base components and their spec roles:
   Authorization Challenges; publishes its MCP Server Card (the catalog
   references it via `server_card_uri`) and RFC 9728 protected resource
   metadata with `mission_bound_authorization_required`, plus its Enforcement
-  Scope Statement.
+  Scope Statement. Validates proof of possession against the top-level `cnf`
+  only (decision D21) and applies per-instance controls keyed on
+  `(act.iss, act.sub)`.
 - **RAS + SaaS MCP Server** (`services/ras`, `services/mcp-saas`): the SaaS
   trust domain, "LedgerCloud" (accounting SaaS). The RAS is a second
   node-oidc-provider instance whose custom RFC 7523 JWT-bearer grant redeems
@@ -168,7 +187,11 @@ Trust-base components and their spec roles:
   (PAR + DPoP + token exchange), MCP client, scripted scenario runner, optional
   LLM loop. Declares the MCP EMA extension capability
   (`io.modelcontextprotocol/enterprise-managed-authorization`) at `initialize`
-  and drives the ID-JAG acquisition/redemption for the SaaS domain.
+  and drives the ID-JAG acquisition/redemption for the SaaS domain. Each
+  agent instance holds a per-instance key and presents Client Instance
+  Assertion evidence (`agent_instance_id`, `agent_platform`, `agent_model`);
+  sub-agent spawn is a further token exchange presenting the sub-agent's own
+  evidence as the `actor_token`.
 - **Apps** (`apps/approver`, `apps/operator`, `apps/agent-console`): persona UIs.
 
 Cross-cutting: every service adopts `packages/telemetry` (OpenTelemetry with
@@ -256,6 +279,12 @@ Revocation and completion delete or bypass the view (state check precedes FGA).
     journal entry for the executed wire. A replayed grant is rejected; after
     mission revocation the next grant request is refused at the issuer, and
     the residual local token dies with its lease (lifetime-bounded estate).
+13. **Sub-agent delegation**: the orchestrator agent spawns a sub-agent for
+    invoice triage; the token exchange presents the sub-agent's instance
+    assertion as the `actor_token`, authority narrows to a subset, the
+    token's nested `act` grows a hop while `sub` is preserved, the PDP
+    evaluates the root-to-leaf chain, and revoking the sub-agent's instance
+    at the PEP kills only the sub-agent (the orchestrator continues).
 
 ## 4. Repo Layout
 
@@ -274,6 +303,8 @@ src/
     demo-data/                seed loaders: users, clients, vendors, invoices,
                               FGA store + model + tuples
     telemetry/                shared OTel + pino setup (trace context, ids)
+    actor-chain/              act-chain validation + nested-to-root-to-leaf
+                              flattening, shared by AS, PDP, and PEPs
   services/
     authorization-server/     node-oidc-provider + mission layer
     pdp/                      AuthZEN PDP + OpenFGA integration
@@ -378,6 +409,17 @@ Each milestone lands as its own PR with tests; acceptance criteria are the exit 
   entry with the `id_jag` connection; agent EMA capability and flow.
   *Exit: scenario 12 passes headless, including grant replay rejection and
   the revocation-lease demonstration; scenario runner extended to 0-12.*
+- **M12. Actor profile + agent instance (delegation).** Base actor-profile
+  conformance at the AS (chain construction/validation, presenter
+  transitions, local max depth, errors, metadata, introspection) with
+  `packages/actor-chain` shared by AS, PDP, and PEPs; full ai-agent-instance
+  profile (per-instance keys, Client Instance Assertion carrier validation,
+  instance claims, metadata flags); PDP `context.actor` flattening;
+  per-instance PEP controls; orchestrator/sub-agent support in the agent
+  service.
+  *Exit: scenario 13 passes headless, including per-instance revocation and
+  a rejection test for an `actor_token` that itself carries `act`; scenario
+  runner extended to 0-13.*
 
 ## 6. Spec Anchor Index
 
@@ -409,6 +451,18 @@ Working references into the drafts (line numbers as of commit `dc7a897`):
 - MCP EMA: modelcontextprotocol repo,
   `docs/extensions/auth/enterprise-managed-authorization.mdx` (capability id
   `io.modelcontextprotocol/enterprise-managed-authorization`).
+- Actor profile: local repo `~/src/draft-mcguinness-oauth-actor-profile/`,
+  `draft-mcguinness-oauth-actor-profile.md`: actor object + chain
+  `:245-320`, presenter binding `:422-433`, errors `:1237`, introspection
+  `:1201`, metadata `:1264-1340`, AS/RS conformance `:1508-1537`.
+- Agent instance: `draft-mcguinness-oauth-ai-agent-instance-00`
+  (datatracker): instance claims § 4, carriers § 5, DCR/AS metadata flags,
+  access-token surfacing § 8; base is CIA-CORE
+  (`draft-mcguinness-oauth-client-instance-assertion`, local checkout at
+  `~/src/`).
+- Mission joins: delegation via the actor profile `mission.md:2502-2543`
+  (actor token type `client-instance-jwt` `:2513`); `context.actor` as a
+  root-to-leaf array `authzen.md:441-457`.
 - Audit: `draft-mcguinness-mission-audit.md`: registration `:267`, hash
   commitment `:279`, evidence types `:307`, mission-as-subject feed `:687`,
   receipts + offline verification `:756`, conformance `:935`.
@@ -511,6 +565,22 @@ resolution and date; never delete them.
   redemptions in our Transparency Service (cross-domain producers) or the
   audit feed stays internal-side only, with the revocation lease documented
   in the demo. Decide in M10/M11.
+- **O-24. act.cnf semantics.** Filed upstream as actor-profile issue #4
+  (github.com/mcguinness/draft-mcguinness-oauth-actor-profile/issues/4):
+  base profile leaves `act.cnf` semantics undefined, receipts prohibit it in
+  receipt hops, agent-instance examples duplicate the top-level `cnf.jkt`
+  inside `act`. Our stance until resolved: PoP against top-level `cnf` only,
+  `act.cnf` informative (D21). Revisit when the upstream issue closes.
+- **O-25. CIA-CORE fidelity.** Read the local
+  `draft-mcguinness-oauth-client-instance-assertion` checkout and pin the
+  carrier header/`typ` values, token endpoint processing, chain merging, and
+  introspection members the instance profile inherits. Before M12.
+- **O-26. Entity-profile vocabulary.** Pin the `sub_profile` values
+  (`ai_agent`, `client_instance`) against the referenced
+  `draft-mora-oauth-entity-profiles` revision. Before M12.
+- **O-27. Chain depth and rebind policy.** The demo's local max chain depth
+  (the profile says SHOULD support >= 4) and which hops use presenter
+  continuation vs rebind. Decide in M12.
 
 ### Resolved
 
@@ -541,6 +611,11 @@ resolution and date; never delete them.
   accounting SaaS at lifetime-bounded reliance; RAS as a second
   node-oidc-provider (decisions D14-D17, milestone M11, scenario 12).
   Cross-domain removed from the out-of-scope list.
+- **R-12 (2026-07-20). Actor profile + agent instance adopted.** Base
+  actor-profile (companions deferred) plus the full ai-agent-instance
+  profile, with an orchestrator/sub-agent delegation scenario (decisions
+  D18-D21, milestone M12, scenario 13). The act.cnf conflict was filed
+  upstream as actor-profile issue #4.
 
 ## 8. Runbook (target state)
 
@@ -550,7 +625,7 @@ docker compose -f src/docker-compose.yml up -d   # OpenFGA, in-memory
 pnpm -C src install
 pnpm -C src seed                    # load users/clients/vendors/invoices + FGA model
 pnpm -C src dev                     # AS, PDP, ARS, MCP server, three SPAs
-pnpm -C src demo                    # scripted scenarios 0-12 against the running stack
+pnpm -C src demo                    # scripted scenarios 0-13 against the running stack
 ```
 
 All state is in memory: restarting a service reseeds it. The seed scripts are the
