@@ -28,11 +28,12 @@ Documents implemented (the required set for the level, per README § Assurance L
 | `draft-mcguinness-oauth-mission-status` | Freshness source: signed, `mission_id`-keyed Status |
 | `draft-mcguinness-oauth-mission-expansion` | Successor-mission widening (backs AROP token issuance) |
 | `draft-mcguinness-svc-connectivity-disco` (external repo) | Resource discovery: the per-user service connectivity catalog the agent bootstraps from |
+| `draft-mcguinness-mission-audit` | SCITT transparency for Mission evidence: Signed Statements, Receipts, per-mission feeds, offline verification |
 | AuthZEN ARAP (external, OpenID) | Access request / approval lifecycle behind requestable denials |
 | AuthZEN AROP (external, openid/authzen PR #531) | Token-issuance completion: DTR and Transaction Challenge bindings |
 
 Out of scope for the first pass: signals (SSF push), harness session binding,
-child delegation, metering, cross-domain, mandate, audit/SCITT, CIBA binding.
+child delegation, metering, cross-domain, mandate, CIBA binding.
 Each is a candidate follow-on once the level is reached. Naming note: resource
 discovery in this plan means `svc-connectivity-disco` (the service catalog);
 the family's own `draft-mcguinness-mission-discovery` (open-world Encounter
@@ -54,6 +55,9 @@ Decisions confirmed with Karl on 2026-07-20:
 | D8 | Resource discovery | Adopt `draft-mcguinness-svc-connectivity-disco` (github.com/mcguinness/draft-mcguinness-svc-connectivity-disco); the Mission AS co-hosts the Catalog Provider role and serves the Service Catalog Endpoint, advertised as `service_catalog_endpoint` in its RFC 8414 metadata |
 | D9 | Catalog status semantics | Per-connection `status` is mission-derived: an active covering mission renders `connected`, approvable issuance renders `consent_required`, revoked/suspended renders `unavailable` |
 | D10 | request-access linkage | Catalog `request-access` links deep-link into the ARS intake, joining discovery of unreachable services to the approval flow |
+| D11 | Audit depth | Full `mission-audit` SCITT profile: in-memory Transparency Service (append-only Merkle log, COSE Signed Statements via hash envelope, Receipts, signed tree heads), evidence registered by the AS, PDP, and MCP server, five-step offline verification |
+| D12 | Observability | OpenTelemetry in every service with W3C trace context propagated across OAuth requests, PDP evaluations, and MCP tool calls; Jaeger (docker-compose) for traces; pino structured logs carrying `trace_id` and `mission_id` |
+| D13 | Trace-evidence correlation | Evidence and audit records carry the producing span's `trace_id` as a non-normative extension member (consumers ignore unknown members); the operator timeline links evidence to its trace |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -94,6 +98,13 @@ Defaults adopted (not separately asked; flag if wrong):
                +--------------------------------------+
 ```
 
+Not shown above: the **Transparency Service** every trusted-base component
+registers evidence with, and the telemetry plane (OTel collector view in
+Jaeger).
+
+```
+```
+
 Trust-base components and their spec roles:
 
 - **Mission AS** (`services/authorization-server`): Mission Issuer. Owns intent intake
@@ -125,10 +136,22 @@ Trust-base components and their spec roles:
   references it via `server_card_uri`) and RFC 9728 protected resource
   metadata with `mission_bound_authorization_required`, plus its Enforcement
   Scope Statement.
+- **Transparency Service** (`services/transparency`): the audit draft's SCITT
+  Transparency Service, in memory: append-only Merkle log, COSE Signed
+  Statements committed by hash envelope, Receipts and signed tree heads,
+  per-mission feeds (`sub` is the Mission). The AS, PDP, and MCP server
+  register their evidence; a CLI verifier and the operator app's audit view
+  run the draft's five-step offline verification.
 - **Agent** (`services/agent`): OAuth client built on panva `openid-client`
   (PAR + DPoP + token exchange), MCP client, scripted scenario runner, optional
   LLM loop.
 - **Apps** (`apps/approver`, `apps/operator`, `apps/agent-console`): persona UIs.
+
+Cross-cutting: every service adopts `packages/telemetry` (OpenTelemetry with
+W3C trace context propagated across OAuth requests, PDP evaluations, MCP tool
+calls, and evidence registrations, exported to Jaeger; pino structured logs
+carrying `trace_id` and `mission_id`). Evidence objects carry the producing
+span's `trace_id` as an extension member (decision D13).
 
 ### Demo domain model (accounts payable)
 
@@ -193,6 +216,11 @@ Revocation and completion delete or bypass the view (state check precedes FGA).
     (`connected` while the mission is active, `unavailable` after revocation),
     and the out-of-reach service's `request-access` link opens an ARS intake
     that, once adjudicated, flips its status.
+11. **Transparent audit**: evidence from the scenarios above is registered as
+    Signed Statements; the operator assembles the mission's feed, runs the
+    five-step offline verification, and follows a Decision Evidence record's
+    `trace_id` into Jaeger; tampering with stored evidence or dropping a
+    registered record is detected.
 
 ## 4. Repo Layout
 
@@ -201,7 +229,7 @@ src/
   PLAN.md                     this document
   package.json                workspace root (scripts: dev, seed, test, demo)
   pnpm-workspace.yaml
-  docker-compose.yml          OpenFGA (in-memory storage mode)
+  docker-compose.yml          OpenFGA (in-memory storage mode) + Jaeger
   .env.example                ports, issuer URL, optional ANTHROPIC_API_KEY
   packages/
     mission-core/             shared types (Mission Record, mission claim, AuthZEN
@@ -210,11 +238,13 @@ src/
     authzen-client/           PEP-side AuthZEN client (evaluation, bulk, retries)
     demo-data/                seed loaders: users, clients, vendors, invoices,
                               FGA store + model + tuples
+    telemetry/                shared OTel + pino setup (trace context, ids)
   services/
     authorization-server/     node-oidc-provider + mission layer
     pdp/                      AuthZEN PDP + OpenFGA integration
     access-request/           ARAP ARS
     mcp-payments/             MCP server + RS/PEP + payments API + ledger
+    transparency/             SCITT Transparency Service (audit draft)
     agent/                    OAuth+MCP client, scenario runner, LLM loop
   apps/
     approver/                 approvals inbox (missions, ARAP tasks, deferred queue)
@@ -223,17 +253,20 @@ src/
 ```
 
 Port map (defaults, overridable via `.env`): AS 4400, PDP 4401, ARS 4402,
-MCP/payments 4403, approver 5173, operator 5174, agent-console 5175,
-OpenFGA 8080 (http) / 8081 (grpc), playground disabled.
+MCP/payments 4403, transparency 4404, approver 5173, operator 5174,
+agent-console 5175, OpenFGA 8080 (http) / 8081 (grpc), playground disabled,
+Jaeger 16686 (UI) / 4317 (OTLP).
 
 ## 5. Milestones
 
 Each milestone lands as its own PR with tests; acceptance criteria are the exit bar.
 
-- **M0. Scaffolding.** Workspace, tsconfig, lint, docker-compose, `mission-core`
-  with canonicalization + anchors passing the core test vectors
-  (`draft-mcguinness-oauth-mission` § test vectors).
-  *Exit: `pnpm test` green on anchor vectors; `docker compose up` serves OpenFGA.*
+- **M0. Scaffolding.** Workspace, tsconfig, lint, docker-compose (OpenFGA +
+  Jaeger), `packages/telemetry` (the OTel + pino baseline every service
+  adopts), `mission-core` with canonicalization + anchors passing the core
+  test vectors (`draft-mcguinness-oauth-mission` § test vectors).
+  *Exit: `pnpm test` green on anchor vectors; `docker compose up` serves
+  OpenFGA and Jaeger; a sample service's span is visible in Jaeger.*
 - **M1. Baseline Issuance AS.** PAR intent intake, derivation, approval event
   (minimal approver page), Mission Record store, `mission` claim + DPoP binding,
   subset rule, state-gated issuance/refresh, revocation by `mission_id`,
@@ -287,6 +320,16 @@ Each milestone lands as its own PR with tests; acceptance criteria are the exit 
   optional LLM chat mode, seed polish, a `pnpm demo` one-command boot, and a
   written self-assessment against the six Runtime-Enforced invariants.
   *Exit: fresh clone to full demo in under five minutes; self-assessment complete.*
+- **M10. Transparent audit (SCITT).** Transparency Service per the audit
+  draft: in-memory append-only Merkle log, COSE Signed Statements with
+  hash-envelope commitments, Receipts and signed tree heads; registration
+  hooks in the AS, PDP, and MCP server for every evidence type the draft
+  fixes; per-mission feed retrieval; CLI verifier plus an operator app audit
+  view running the five-step offline check; `trace_id` extension member on
+  evidence.
+  *Exit: scenario 11 passes headless, including the tamper demo (mutated
+  evidence fails digest verification, a dropped record fails inclusion);
+  scenario runner extended to 0-11.*
 
 ## 6. Spec Anchor Index
 
@@ -311,6 +354,9 @@ Working references into the drafts (line numbers as of commit `dc7a897`):
 - Expansion: `draft-mcguinness-oauth-mission-expansion.md`.
 - AROP: openid/authzen PR #531,
   `profiles/authzen-access-request-oauth/authzen-access-request-oauth-profile-1_0.md`.
+- Audit: `draft-mcguinness-mission-audit.md`: registration `:267`, hash
+  commitment `:279`, evidence types `:307`, mission-as-subject feed `:687`,
+  receipts + offline verification `:756`, conformance `:935`.
 - Discovery: `draft-mcguinness-svc-connectivity-disco.md` (repo
   mcguinness/draft-mcguinness-svc-connectivity-disco): endpoint discovery
   § endpoint-discovery, request/filtering § catalog-request, `mcp` service
@@ -376,6 +422,19 @@ resolution and date; never delete them.
   carries (service id, requested capability, return URI) and whether an
   adjudicated request materializes as a first mission issuance or as an
   Expansion. Decide alongside M5, wire in M7.
+- **O-16. COSE and Merkle tooling.** Pick the TS COSE_Sign1 library (or
+  hand-roll over WebCrypto) and the Merkle tree approach (RFC 9162-style)
+  for the Transparency Service, including the hash-envelope headers
+  (payload-hash-alg 258, payload-preimage-content-type 259). Decide in M10.
+- **O-17. Evidence-type registration map.** Map the audit draft's
+  § evidence-types table onto our producers (AS: lifecycle transitions,
+  derivation records; PDP: Decision Evidence, Refusal Records; MCP server:
+  Execution Evidence, reconciliation) and pin the exact hashed bytes for
+  each. Pin in M10.
+- **O-18. trace_id extension member.** Name and placement of the trace
+  correlation member on evidence objects (it is part of the signed and
+  hashed evidence bytes once included, so it must be set before signing).
+  Decide in M3.
 
 ### Resolved
 
@@ -396,6 +455,11 @@ resolution and date; never delete them.
   integrated as the discovery layer: Catalog Provider co-located with the AS,
   mission-derived `status`, `request-access` wired to the ARS (decisions
   D8-D10). New milestone M7; UX and agent milestones renumbered to M8/M9.
+- **R-10 (2026-07-20). Audit and observability adopted.** Full mission-audit
+  SCITT profile as milestone M10 with a dedicated Transparency Service;
+  OTel + Jaeger + pino as the M0 telemetry baseline; evidence carries
+  `trace_id` correlation (decisions D11-D13). Audit removed from the
+  out-of-scope list.
 
 ## 8. Runbook (target state)
 
@@ -405,7 +469,7 @@ docker compose -f src/docker-compose.yml up -d   # OpenFGA, in-memory
 pnpm -C src install
 pnpm -C src seed                    # load users/clients/vendors/invoices + FGA model
 pnpm -C src dev                     # AS, PDP, ARS, MCP server, three SPAs
-pnpm -C src demo                    # scripted scenarios 0-10 against the running stack
+pnpm -C src demo                    # scripted scenarios 0-11 against the running stack
 ```
 
 All state is in memory: restarting a service reseeds it. The seed scripts are the
