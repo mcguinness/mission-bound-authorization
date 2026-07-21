@@ -57,8 +57,8 @@ Documents implemented (the required set for the level, per README § Assurance L
 Out of scope for the first pass: signals (SSF push), harness session binding
 (only the minimal stop-on-non-active duty is in scope),
 child delegation (Child Missions; token-level actor chains ARE in scope),
-metering, mandate, CIBA binding, and the actor suite companions (receipts,
-proofs, authority bounds).
+metering (cumulative caps land there; D28), mandate, CIBA binding, and the
+actor suite companions (receipts, proofs, authority bounds).
 Implementation non-goals: persistence, high availability, horizontal scale,
 and production hardening. In-memory stores and dev keys are deliberate;
 nothing here is production code.
@@ -101,6 +101,7 @@ Decisions confirmed with Karl on 2026-07-20:
 | D25 | Pre-implementation readiness | Adopted: the pre-flight spike (O-1/O-2/O-25/O-26/O-27 before M1 design hardens), the testing-and-delivery conventions (vitest, in-process scenario composition, `src/**`-filtered CI separate from draft-build CI, toolchain pinning, `SPEC_VERSIONS.md`), the headless adjudication path + side-effect oracle, O-33, and the non-goals statement. Declined for now: the determinism-by-design bundle (injectable clock/RNG, checked-in deterministic dev keys); revisit if golden files, exhibits, or evals prove flaky or unstable |
 | D26 | Mission authority in FGA (debate #1) | Hybrid contextual: OpenFGA stores only the durable domain substrate (invoice ownership, vendor approval, roles); mission authority is derived from the Mission Record as **contextual tuples** per check, computed by the PDP alongside the state/freshness check. No dual-write, revocation is instant via the record, `policy_view_id` = content hash of (Mission Record version + FGA model version). Companion feedback logged as S-5 |
 | D27 | Store architecture | Record-shaped stores (missions, approval events, ARAP tasks, permits/leases, ledger/outbox/journal oracles, catalog entries, evidence index) live in SQLite `:memory:` (better-sqlite3) behind repository interfaces: UNIQUE constraints and transactions where the spec implies them, SQL for management/catalog/timeline queries. No ORM; optional non-default `--persist` flag; pure in-process structures where SQL adds nothing (keys, Merkle nodes); OpenFGA keeps its own memory storage; node-oidc-provider artifacts stay on its default adapter |
+| D28 | Stateless PDP (debate #2) | The PDP is a pure decision function (envelope, FGA check with contextual tuples, fresh record read, clock, keys). It **declares** permit properties in the decision response (single-use decision identifier, `permit_expires_at`, lease requirement, PEP/channel binding); the PEP **owns** redemption and lease state (atomic redeem-on-execute in its store; replay refused as `permit_consumed` in Execution Evidence). ARAP linkage stays stateless via the signed `binding_token`; the Status freshness cache is a soft optimization only; evidence is emitted outward, never read back as decision input. Cumulative caps are deferred to the metering follow-on: this build enforces per-payment caps only. Companion feedback logged as S-6 |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -181,9 +182,13 @@ Trusted-base components and their spec roles:
   Record per evaluation (decision D26; stored FGA tuples hold only the durable
   domain substrate), correlated by a content-addressed `policy_view_id`;
   layers the mission overlay checks
-  that FGA does not model (state freshness against the staleness bound, parameter
-  binding, permit/lease issuance, expiry), and emits requestable denials with
-  `context.access_request` and a PDP-signed `binding_token`. Builds
+  that FGA does not model (state freshness against the staleness bound,
+  parameter binding, permit property declaration, expiry), and emits
+  requestable denials with
+  `context.access_request` and a PDP-signed `binding_token`. Stateless by
+  design (decision D28): a pure function of its inputs; permit redemption
+  and lease state live at the PEP, and the freshness cache is a soft
+  optimization that never changes decision semantics. Builds
   `context.actor` by flattening the token's nested `act` chain into the
   root-to-leaf array via `packages/actor-chain`.
 - **ARS** (`services/access-request`): ARAP Access Request Service. Verifies
@@ -194,7 +199,9 @@ Trusted-base components and their spec roles:
   tokens and the `mission` claim; obtains a PDP permit for every consequential
   action with parameter binding and capability source context; runs the
   transaction-assurance tier for the wire transfer (single-use permit, execution
-  lease, Execution Evidence, outcome reconciliation); signs Transaction
+  lease, Execution Evidence, outcome reconciliation), owning permit
+  redemption and lease state per D28 (atomic redeem-on-execute; replay
+  refused as `permit_consumed`); signs Transaction
   Authorization Challenges; publishes its MCP Server Card (the catalog
   references it via `server_card_uri`) and RFC 9728 protected resource
   metadata with `mission_bound_authorization_required`, plus its Enforcement
@@ -484,11 +491,12 @@ they expose spec friction, in the Spec Feedback Log.
   per-instance controls keyed on `(act.iss, act.sub)`, Decision Evidence and
   Refusal Records, Enforcement Scope Statement published.
   *Exit: scenarios 2 and 3 pass as integration tests.*
-- **M5. Transaction-assurance tier.** Single-use permits, execution leases,
-  Execution Evidence, outcome reconciliation for `execute_wire_transfer` and
-  `send_remittance_email`.
-  *Exit: scenario 4; replayed permit is refused; reconciliation report joins
-  evidence to ledger entries.*
+- **M5. Transaction-assurance tier.** Single-use permits and execution
+  leases (properties declared by the PDP in the decision; redemption and
+  lease state owned by the PEP per D28), Execution Evidence, outcome
+  reconciliation for `execute_wire_transfer` and `send_remittance_email`.
+  *Exit: scenario 4; a replayed permit is refused as `permit_consumed`;
+  reconciliation report joins evidence to ledger entries.*
 - **M6. ARAP reevaluate mode.** Requestable denials from the PDP
   (`context.access_request` + PDP-signed `binding_token`), ARS task lifecycle,
   approver adjudication UI, PEP re-evaluation with `context.approval`.
@@ -655,9 +663,9 @@ resolution and date; never delete them.
 - **O-5. Expansion lifecycle detail.** Read the expansion draft closely: successor
   mission state transitions, predecessor disposition, and how the AROP-issued
   token's `mission` claim references the successor. Needed for M7.
-- **O-6. Where numeric constraints live.** Per-payment cap and cumulative caps:
-  FGA conditions vs PDP overlay. Decide during M3 with a spike; record the
-  rationale here.
+- **O-6. Per-payment cap placement.** FGA condition vs PDP overlay for the
+  per-payment cap. (Cumulative caps are deferred to the metering follow-on
+  per D28.) Decide during M3 with a spike; record the rationale here.
 - **O-8. Staleness bounds for the demo.** Concrete published bounds per action
   class, and which freshness source is authoritative for the high-consequence
   class (Status poll interval vs introspection-on-action). Decide in M3/M4.
@@ -832,6 +840,13 @@ resolution and date; never delete them.
   behind repository interfaces in `packages/store` (D27). O-7 resolved by
   D26: `policy_view_id` is the content hash of the Mission Record version
   plus the FGA model version.
+- **R-19 (2026-07-21). Debate #2 resolved: stateless PDP.** The PDP is a
+  pure decision function; permit properties are declared in the decision
+  and redemption/lease state is owned by the PEP, matching the companion's
+  own duty assignment (`permit_expires_at` at the PEP, `permit_consumed`
+  under Execution Evidence). Cumulative caps deferred to the metering
+  follow-on; O-6 narrowed to per-payment cap placement; S-6 logged
+  (decision D28).
 
 ## 8. Spec Feedback Log
 
@@ -881,6 +896,14 @@ their repositories or working groups.
   companion name both materialization strategies and define what
   `policy_view_id` commits to under each (see D26). Candidate: direct
   companion edit.
+- **S-6 (open).** Ambiguity — mission-authzen: the draft implies PEP-side
+  consumption tracking (`permit_expires_at` is checked "at the PEP",
+  § clock-skew; a consumed single-use identifier re-presented is refused
+  under Execution Evidence as `permit_consumed`, refusal taxonomy) but
+  never states in one place where single-use consumption state lives. One
+  sentence ("the PDP remains stateless; consumption tracking is a PEP
+  duty") would settle it for implementers. Candidate: direct companion
+  edit (see D28).
 
 ## 9. Runbook (target state)
 
