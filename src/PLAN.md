@@ -27,7 +27,9 @@ Two goals, equal in rank:
    that are disproportionately hard to implement, complexity worth
    simplifying, and interop issues are captured in the Spec Feedback Log
    (§ 8) with a disposition, and the M9 self-assessment consolidates them
-   into a spec-feedback report.
+   into a spec-feedback report. The eval harness (M13) is the empirical arm:
+   it measures the containment claims against adversarial agent behavior
+   rather than assuming them.
 
 Documents implemented (the required set for the level, per README § Assurance Levels):
 
@@ -90,6 +92,7 @@ Decisions confirmed with Karl on 2026-07-20:
 | D21 | act.cnf stance | The `act.cnf` conflict is filed upstream (actor-profile issue #4); this implementation validates proof of possession against the top-level `cnf` only and treats `act.cnf` as informative |
 | D22 | Handbook alignment | From the handbook-cover review: Shaper (shaping draft) in scope with the compromised-shaper test; minimal harness stop-on-non-active with the 02:00-resume scenario; five-laws mapping table; vendor-test demonstration + Field Reference checklist in M9; mission-scoped `tools/list`; wire-exhibit mode; control-plane framing. Declined: consent evidence remains undecided (O-11 stays open) |
 | D23 | Spec validation goal | Validating the architecture decisions and the specs is a co-equal goal of the implementation; spec friction (defects, ambiguities, hard-to-implement requirements, simplification candidates, interop issues) is tracked in the Spec Feedback Log with per-entry dispositions, and every milestone exit includes a spec-feedback pass |
+| D24 | Evals | An eval harness (milestone M13) mirrors the D4 split: a deterministic adversarial suite (CI-runnable, no API key) plus an optional LLM red-team mode; runs are scored on containment (zero unauthorized side effects), denial correctness, evidence completeness, over-blocking rate on legitimate flows, and freshness-bound compliance, emitting a scorecard artifact |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -368,6 +371,9 @@ src/
     approver/                 approvals inbox (missions, ARAP tasks, deferred queue)
     operator/                 fleet dashboard, evidence timeline, status controls
     agent-console/            chat + scenario runner UI, live token/mission state
+  evals/
+    suites/                   adversarial + legitimate-flow eval cases
+    runner/                   drives agent modes, scores runs, emits scorecards
 ```
 
 Port map (defaults, overridable via `.env`): AS 4400, PDP 4401, ARS 4402,
@@ -482,6 +488,24 @@ implement, over-complex, or non-interoperable lands in the Spec Feedback Log
   *Exit: scenario 13 passes headless, including per-instance revocation and
   a rejection test for an `actor_token` that itself carries `act`; scenario
   runner adds scenario 13.*
+- **M13. Evals.** The eval harness (`evals/`): a deterministic adversarial
+  suite driving misbehaving agents at the running stack (prompt-injected
+  tool output steering the agent off-mission, over-broad shaper proposals,
+  parameter mutation between decision and execution, out-of-authority tool
+  calls, sub-agent escalation attempts, replayed permits and cross-domain
+  grants, confused-deputy attempts against the RAS, resumed work on a dead
+  mission) and a legitimate-flow suite (scenarios 0-14 as the baseline);
+  optional LLM red-team mode (Anthropic API) generating adversarial agent
+  behavior against the same scoring. Each run is scored on: containment
+  (unauthorized side effects MUST be zero), denial correctness (right
+  `denial_reason` for the right cause), evidence completeness (every
+  consequential attempt joins decision, execution or refusal, and audit
+  records), over-blocking rate on the legitimate suite, and freshness-bound
+  compliance. Emits a scorecard artifact; regressions gate CI.
+  *Exit: `pnpm evals` runs headless in CI with 100% containment and zero
+  evidence gaps on the adversarial suite; over-blocking on the legitimate
+  suite is at or below the threshold set in O-30; red-team mode produces a
+  reproducible transcript + scorecard when an API key is present.*
 
 ## 6. Spec Anchor Index
 
@@ -653,6 +677,14 @@ resolution and date; never delete them.
 - **O-29. Resume-check semantics.** Which non-active states stop vs pause
   the agent's harness check, and the check cadence on wake, consistent with
   the published staleness bounds (O-8). Decide in M9.
+- **O-30. Eval taxonomy and pass bars.** Pin the misbehavior-class taxonomy
+  (drawing on the handbook's Testing chapter framings, including the lethal
+  trifecta), the over-blocking threshold for the legitimate suite, and
+  which scorecard metrics gate CI vs merely report. Decide in M13.
+- **O-31. Red-team eval methodology.** How the LLM adversary is prompted
+  and seeded, how nondeterministic runs stay comparable (persisted
+  transcripts as replayable fixtures), and how red-team findings feed new
+  deterministic cases. Decide in M13.
 
 ### Resolved
 
@@ -699,6 +731,11 @@ resolution and date; never delete them.
   Spec Feedback Log (§ 8) tracks findings with routing conventions and
   seeds S-1..S-4; every milestone exit gains a spec-feedback pass; M9
   produces the consolidated report (decision D23).
+- **R-15 (2026-07-20). Evals adopted.** Milestone M13: deterministic
+  adversarial + legitimate-flow suites with an optional LLM red-team mode,
+  scored on containment, denial correctness, evidence completeness,
+  over-blocking, and freshness compliance; scorecard gates CI
+  (decision D24, issues O-30/O-31).
 
 ## 8. Spec Feedback Log
 
@@ -750,6 +787,8 @@ pnpm -C src seed                    # load users/clients/vendors/invoices + FGA 
 pnpm -C src dev                     # AS, PDP, ARS, MCP server, three SPAs
 pnpm -C src demo                    # scripted scenarios 0-14 against the running stack
 pnpm -C src demo:vendor-test        # the four valid-token-but-denied cases
+pnpm -C src evals                   # adversarial + legitimate suites, scorecard
+pnpm -C src evals:redteam           # LLM red-team mode (needs ANTHROPIC_API_KEY)
 ```
 
 All state is in memory: restarting a service reseeds it. The seed scripts are the
