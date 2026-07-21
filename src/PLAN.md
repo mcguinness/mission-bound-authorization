@@ -29,11 +29,14 @@ Documents implemented (the required set for the level, per README § Assurance L
 | `draft-mcguinness-oauth-mission-expansion` | Successor-mission widening (backs AROP token issuance) |
 | `draft-mcguinness-svc-connectivity-disco` (external repo) | Resource discovery: the per-user service connectivity catalog the agent bootstraps from |
 | `draft-mcguinness-mission-audit` | SCITT transparency for Mission evidence: Signed Statements, Receipts, per-mission feeds, offline verification |
+| `draft-mcguinness-oauth-mission-cross-domain` | One Mission honored in the SaaS trust domain: cross-domain grant (ID-JAG profile), audience-scoped projection, Resource AS validation |
+| ID-JAG (external, IETF OAuth WG) | `draft-ietf-oauth-identity-assertion-authz-grant`, the recommended cross-domain grant profile |
+| MCP EMA (external, MCP auth extension) | Enterprise-Managed Authorization: capability + metadata declarations and the ID-JAG redemption flow for the SaaS MCP server |
 | AuthZEN ARAP (external, OpenID) | Access request / approval lifecycle behind requestable denials |
 | AuthZEN AROP (external, openid/authzen PR #531) | Token-issuance completion: DTR and Transaction Challenge bindings |
 
 Out of scope for the first pass: signals (SSF push), harness session binding,
-child delegation, metering, cross-domain, mandate, CIBA binding.
+child delegation, metering, mandate, CIBA binding.
 Each is a candidate follow-on once the level is reached. Naming note: resource
 discovery in this plan means `svc-connectivity-disco` (the service catalog);
 the family's own `draft-mcguinness-mission-discovery` (open-world Encounter
@@ -58,6 +61,10 @@ Decisions confirmed with Karl on 2026-07-20:
 | D11 | Audit depth | Full `mission-audit` SCITT profile: in-memory Transparency Service (append-only Merkle log, COSE Signed Statements via hash envelope, Receipts, signed tree heads), evidence registered by the AS, PDP, and MCP server, five-step offline verification |
 | D12 | Observability | OpenTelemetry in every service with W3C trace context propagated across OAuth requests, PDP evaluations, and MCP tool calls; Jaeger (docker-compose) for traces; pino structured logs carrying `trace_id` and `mission_id` |
 | D13 | Trace-evidence correlation | Evidence and audit records carry the producing span's `trace_id` as a non-normative extension member (consumers ignore unknown members); the operator timeline links evidence to its trace |
+| D14 | Cross-domain SaaS leg | Add a second trust domain per the cross-domain companion: internal MCP server plus a SaaS MCP server fronted by a Resource AS (RAS), reached via ID-JAG with MCP Enterprise-Managed Authorization (EMA) |
+| D15 | SaaS app | The SaaS MCP server represents "LedgerCloud", an accounting/books SaaS: vendor bank details, payment journal entry posting |
+| D16 | SaaS estate assurance | The SaaS estate runs at lifetime-bounded reliance: the SaaS MCP server enforces from the token alone (mission claim + audience-scoped authorization_details, short lifetimes sized to the cross-domain lease); no PDP in that domain, contrasting the levels in one demo |
+| D17 | RAS construction | The RAS is a second node-oidc-provider instance with a custom RFC 7523 JWT-bearer grant for ID-JAG redemption (uniform AS codebase preferred over a slim custom RAS) |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -99,8 +106,9 @@ Defaults adopted (not separately asked; flag if wrong):
 ```
 
 Not shown above: the **Transparency Service** every trusted-base component
-registers evidence with, and the telemetry plane (OTel collector view in
-Jaeger).
+registers evidence with; the telemetry plane (OTel collector view in Jaeger);
+and the **SaaS trust domain** (RAS + LedgerCloud MCP server) the agent reaches
+by redeeming a Mission-AS-issued ID-JAG at the RAS.
 
 ```
 ```
@@ -116,7 +124,10 @@ Trust-base components and their spec roles:
   Catalog Provider role of `svc-connectivity-disco`: the Service Catalog
   Endpoint, advertised as `service_catalog_endpoint` in its own metadata,
   serving the per-user catalog with mission-derived per-connection `status`
-  and `request-access` links into the ARS.
+  and `request-access` links into the ARS. As the enterprise IdP of the
+  cross-domain companion, it also issues the cross-domain grant: an RFC 8693
+  token exchange mints the PoP-bound, single-use ID-JAG audienced to the RAS,
+  projecting only the audience-scoped Authority Set entries.
 - **PDP** (`services/pdp`): AuthZEN Access Evaluation (and bulk Evaluations) API.
   Materializes each approved Mission into an OpenFGA tuple set (the materialized
   policy view, correlated by `policy_view_id`), layers the mission overlay checks
@@ -136,6 +147,17 @@ Trust-base components and their spec roles:
   references it via `server_card_uri`) and RFC 9728 protected resource
   metadata with `mission_bound_authorization_required`, plus its Enforcement
   Scope Statement.
+- **RAS + SaaS MCP Server** (`services/ras`, `services/mcp-saas`): the SaaS
+  trust domain, "LedgerCloud" (accounting SaaS). The RAS is a second
+  node-oidc-provider instance whose custom RFC 7523 JWT-bearer grant redeems
+  ID-JAGs per the cross-domain companion: signature against the Mission AS
+  JWKS, audience, proof-of-possession, and a single-use replay check, then
+  mints short-lived local access tokens preserving `mission.id`,
+  `mission.issuer`, and `authority_hash`. The SaaS MCP server (vendor bank
+  details, journal entry posting) declares the MCP EMA extension in its
+  authorization metadata and enforces from the token alone: the estate runs
+  at lifetime-bounded reliance, in deliberate contrast with the
+  Runtime-Enforced internal estate.
 - **Transparency Service** (`services/transparency`): the audit draft's SCITT
   Transparency Service, in memory: append-only Merkle log, COSE Signed
   Statements committed by hash envelope, Receipts and signed tree heads,
@@ -144,7 +166,9 @@ Trust-base components and their spec roles:
   run the draft's five-step offline verification.
 - **Agent** (`services/agent`): OAuth client built on panva `openid-client`
   (PAR + DPoP + token exchange), MCP client, scripted scenario runner, optional
-  LLM loop.
+  LLM loop. Declares the MCP EMA extension capability
+  (`io.modelcontextprotocol/enterprise-managed-authorization`) at `initialize`
+  and drives the ID-JAG acquisition/redemption for the SaaS domain.
 - **Apps** (`apps/approver`, `apps/operator`, `apps/agent-console`): persona UIs.
 
 Cross-cutting: every service adopts `packages/telemetry` (OpenTelemetry with
@@ -158,10 +182,11 @@ span's `trace_id` as an extension member (decision D13).
 Seeded entities: principals `alice` (mission owner) and `bob` (approver / AP manager);
 OAuth client `ap-agent` (DPoP-bound); vendors `acme` (approved) and `globex`
 (not yet approved); invoices in several amounts, at least one above the mission's
-payment cap; a payments ledger for reconciliation. The catalog seeds two
-services: the payments MCP server and an out-of-reach `hr-files` service (no
-authority path for `alice`) whose entry carries a `request-access` link into
-the ARS.
+payment cap; a payments ledger for reconciliation. The catalog seeds three
+services: the internal payments MCP server, the LedgerCloud SaaS MCP server
+(an `id_jag` connection naming the RAS as `authorization_server`), and an
+out-of-reach `hr-files` service (no authority path for `alice`) whose entry
+carries a `request-access` link into the ARS.
 
 Tools on the MCP server (action classification per runtime § action classification floor):
 
@@ -171,6 +196,8 @@ Tools on the MCP server (action classification per runtime § action classificat
 | `schedule_payment` | consequential, reversible | core tier |
 | `execute_wire_transfer` | high-consequence, irreversible | transaction-assurance tier |
 | `send_remittance_email` | external communication | transaction-assurance tier |
+| `get_vendor_bank_details` (SaaS) | read | token-only (lifetime-bounded estate) |
+| `post_journal_entry` (SaaS) | consequential, reversible | token-only (lifetime-bounded estate) |
 
 ### OpenFGA model sketch
 
@@ -221,6 +248,14 @@ Revocation and completion delete or bypass the view (state check precedes FGA).
     five-step offline verification, and follows a Decision Evidence record's
     `trace_id` into Jaeger; tampering with stored evidence or dropping a
     registered record is detected.
+12. **Cross-domain via EMA/ID-JAG**: the catalog lists LedgerCloud with an
+    `id_jag` connection; the agent declares the EMA extension at `initialize`,
+    obtains a PoP-bound single-use ID-JAG from the Mission AS by token
+    exchange (audience-scoped authority only), redeems it at the RAS for a
+    short-lived local token preserving the mission anchors, and posts the
+    journal entry for the executed wire. A replayed grant is rejected; after
+    mission revocation the next grant request is refused at the issuer, and
+    the residual local token dies with its lease (lifetime-bounded estate).
 
 ## 4. Repo Layout
 
@@ -244,6 +279,10 @@ src/
     pdp/                      AuthZEN PDP + OpenFGA integration
     access-request/           ARAP ARS
     mcp-payments/             MCP server + RS/PEP + payments API + ledger
+    ras/                      SaaS-domain Resource AS (node-oidc-provider,
+                              JWT-bearer ID-JAG redemption)
+    mcp-saas/                 LedgerCloud SaaS MCP server (token-only
+                              enforcement, EMA declared)
     transparency/             SCITT Transparency Service (audit draft)
     agent/                    OAuth+MCP client, scenario runner, LLM loop
   apps/
@@ -253,9 +292,9 @@ src/
 ```
 
 Port map (defaults, overridable via `.env`): AS 4400, PDP 4401, ARS 4402,
-MCP/payments 4403, transparency 4404, approver 5173, operator 5174,
-agent-console 5175, OpenFGA 8080 (http) / 8081 (grpc), playground disabled,
-Jaeger 16686 (UI) / 4317 (OTLP).
+MCP/payments 4403, transparency 4404, RAS 4405, SaaS MCP 4406, approver 5173,
+operator 5174, agent-console 5175, OpenFGA 8080 (http) / 8081 (grpc),
+playground disabled, Jaeger 16686 (UI) / 4317 (OTLP).
 
 ## 5. Milestones
 
@@ -330,6 +369,15 @@ Each milestone lands as its own PR with tests; acceptance criteria are the exit 
   *Exit: scenario 11 passes headless, including the tamper demo (mutated
   evidence fails digest verification, a dropped record fails inclusion);
   scenario runner extended to 0-11.*
+- **M11. Cross-domain SaaS leg (EMA + ID-JAG).** Second trust domain per the
+  cross-domain companion: Mission AS token-exchange issuance of the
+  cross-domain grant with audience-scoped projection; RAS (second
+  node-oidc-provider) with the JWT-bearer redemption grant, PoP and
+  single-use validation, mission-preserving local tokens; LedgerCloud SaaS
+  MCP server with EMA declared, enforcing from the token alone; catalog
+  entry with the `id_jag` connection; agent EMA capability and flow.
+  *Exit: scenario 12 passes headless, including grant replay rejection and
+  the revocation-lease demonstration; scenario runner extended to 0-12.*
 
 ## 6. Spec Anchor Index
 
@@ -354,6 +402,13 @@ Working references into the drafts (line numbers as of commit `dc7a897`):
 - Expansion: `draft-mcguinness-oauth-mission-expansion.md`.
 - AROP: openid/authzen PR #531,
   `profiles/authzen-access-request-oauth/authzen-access-request-oauth-profile-1_0.md`.
+- Cross-domain: `draft-mcguinness-oauth-mission-cross-domain.md`: projection
+  model `:213`, what crosses `:260`, grant requirements `:380`, validation at
+  the Resource AS `:524`, AS metadata `:714`, worked stages `:857`.
+- ID-JAG: `draft-ietf-oauth-identity-assertion-authz-grant` (IETF OAuth WG).
+- MCP EMA: modelcontextprotocol repo,
+  `docs/extensions/auth/enterprise-managed-authorization.mdx` (capability id
+  `io.modelcontextprotocol/enterprise-managed-authorization`).
 - Audit: `draft-mcguinness-mission-audit.md`: registration `:267`, hash
   commitment `:279`, evidence types `:307`, mission-as-subject feed `:687`,
   receipts + offline verification `:756`, conformance `:935`.
@@ -435,6 +490,27 @@ resolution and date; never delete them.
   correlation member on evidence objects (it is part of the signed and
   hashed evidence bytes once included, so it must be set before signing).
   Decide in M3.
+- **O-19. ID-JAG draft fidelity.** Fetch
+  `draft-ietf-oauth-identity-assertion-authz-grant` and pin the token
+  exchange request parameters, the grant JWT claims, and how the
+  cross-domain companion's proof-of-possession and single-use floors attach
+  to it. Before M11.
+- **O-20. EMA metadata surface.** Pin exactly how the SaaS MCP server
+  "declares the extension in its authorization metadata" (member name and
+  shape); the extension is young, so track the MCP spec revision we
+  implement against. Before M11.
+- **O-21. Catalog status for id_jag connections.** The mission-derived
+  `status` mapping (O-12) assumed the internal domain; for the SaaS service
+  it also depends on issuer-side projection policy. Extend the mapping.
+  Decide in M11.
+- **O-22. Audience-scoped projection derivation.** How the Mission AS
+  decides which Authority Set entries a given RAS is authoritative for
+  (the resource-to-AS mapping seed), per cross-domain § audience-scope.
+  Decide in M11.
+- **O-23. SaaS-side audit registration.** Whether the RAS registers grant
+  redemptions in our Transparency Service (cross-domain producers) or the
+  audit feed stays internal-side only, with the revocation lease documented
+  in the demo. Decide in M10/M11.
 
 ### Resolved
 
@@ -460,6 +536,11 @@ resolution and date; never delete them.
   OTel + Jaeger + pino as the M0 telemetry baseline; evidence carries
   `trace_id` correlation (decisions D11-D13). Audit removed from the
   out-of-scope list.
+- **R-11 (2026-07-20). Cross-domain SaaS leg adopted.** Internal + SaaS MCP
+  topology per the cross-domain companion, ID-JAG grant, MCP EMA; LedgerCloud
+  accounting SaaS at lifetime-bounded reliance; RAS as a second
+  node-oidc-provider (decisions D14-D17, milestone M11, scenario 12).
+  Cross-domain removed from the out-of-scope list.
 
 ## 8. Runbook (target state)
 
@@ -469,7 +550,7 @@ docker compose -f src/docker-compose.yml up -d   # OpenFGA, in-memory
 pnpm -C src install
 pnpm -C src seed                    # load users/clients/vendors/invoices + FGA model
 pnpm -C src dev                     # AS, PDP, ARS, MCP server, three SPAs
-pnpm -C src demo                    # scripted scenarios 0-11 against the running stack
+pnpm -C src demo                    # scripted scenarios 0-12 against the running stack
 ```
 
 All state is in memory: restarting a service reseeds it. The seed scripts are the
