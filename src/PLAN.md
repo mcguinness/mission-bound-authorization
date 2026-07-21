@@ -26,7 +26,7 @@ Two goals, equal in rank:
    is a deliverable, not a nuisance: spec defects, ambiguities, requirements
    that are disproportionately hard to implement, complexity worth
    simplifying, and interop issues are captured in the Spec Feedback Log
-   (§ 8) with a disposition, and the M9 self-assessment consolidates them
+   (§ 8) with a disposition, and the final milestone (M14) consolidates them
    into a spec-feedback report. The eval harness (M13) is the empirical arm:
    it measures the containment claims against adversarial agent behavior
    rather than assuming them.
@@ -50,6 +50,7 @@ Documents implemented (the required set for the level, per README § Assurance L
 | `draft-mcguinness-oauth-actor-profile` (external repo, local checkout) | Base actor profile: normalized RFC 8693 `act` chains (`act.iss`, `act.sub`, `sub_profile`), presenter transitions, metadata, introspection, errors |
 | `draft-mcguinness-oauth-ai-agent-instance` (external, datatracker) | AI agent instance identity: `agent_instance_id` / `agent_platform` / `agent_model` presented via Client Instance Assertion carriers and surfaced into `act` |
 | CIA-CORE (external) | `draft-mcguinness-oauth-client-instance-assertion`, the carrier and token-endpoint processing base the instance profile builds on |
+| `draft-mcguinness-oauth-mission-management` (partial) | Fleet enumeration and per-mission lifecycle operations backing the operator app; scope subset pinned in O-32 |
 | AuthZEN ARAP (external, OpenID) | Access request / approval lifecycle behind requestable denials |
 | AuthZEN AROP (external, openid/authzen PR #531) | Token-issuance completion: DTR and Transaction Challenge bindings |
 
@@ -88,9 +89,9 @@ Decisions confirmed with Karl on 2026-07-20:
 | D17 | RAS construction | The RAS is a second node-oidc-provider instance with a custom RFC 7523 JWT-bearer grant for ID-JAG redemption (uniform AS codebase preferred over a slim custom RAS) |
 | D18 | Actor suite depth | Base actor-profile only: conformant nested `act` chains with required `act.iss`, presenter continuation/rebind, local max depth, `actor_unauthorized`, AS + protected-resource metadata, introspection surfaces. Receipts, proofs, and bounds are follow-ons |
 | D19 | Agent instance | Full ai-agent-instance profile: every agent and sub-agent holds a per-instance key and presents Client Instance Assertion evidence (`agent_instance_id`, `agent_platform`, `agent_model`) at token requests; AS validates carriers and publishes `ai_agent_instance_profile_supported`; surfaced `sub_profile` carries `ai_agent client_instance`; PEPs get per-instance controls |
-| D20 | Sub-agent delegation demo | Orchestrator to sub-agent token exchange is a first-class scenario (13) and milestone (M12): authority narrows by subset, the chain grows a hop, the PDP sees the root-to-leaf `context.actor.act` |
+| D20 | Sub-agent delegation demo | Orchestrator to sub-agent token exchange is a first-class scenario (13) and milestone (M2, demoed end to end in M12): authority narrows by subset, the chain grows a hop, the PDP sees the root-to-leaf `context.actor.act` |
 | D21 | act.cnf stance | The `act.cnf` conflict is filed upstream (actor-profile issue #4); this implementation validates proof of possession against the top-level `cnf` only and treats `act.cnf` as informative |
-| D22 | Handbook alignment | From the handbook-cover review: Shaper (shaping draft) in scope with the compromised-shaper test; minimal harness stop-on-non-active with the 02:00-resume scenario; five-laws mapping table; vendor-test demonstration + Field Reference checklist in M9; mission-scoped `tools/list`; wire-exhibit mode; control-plane framing. Declined: consent evidence remains undecided (O-11 stays open) |
+| D22 | Handbook alignment | From the handbook-cover review: Shaper (shaping draft) in scope with the compromised-shaper test; minimal harness stop-on-non-active with the 02:00-resume scenario; five-laws mapping table; vendor-test demonstration + Field Reference checklist in M14; mission-scoped `tools/list`; wire-exhibit mode; control-plane framing. Declined: consent evidence remains undecided (O-11 stays open) |
 | D23 | Spec validation goal | Validating the architecture decisions and the specs is a co-equal goal of the implementation; spec friction (defects, ambiguities, hard-to-implement requirements, simplification candidates, interop issues) is tracked in the Spec Feedback Log with per-entry dispositions, and every milestone exit includes a spec-feedback pass |
 | D24 | Evals | An eval harness (milestone M13) mirrors the D4 split: a deterministic adversarial suite (CI-runnable, no API key) plus an optional LLM red-team mode; runs are scored on containment (zero unauthorized side effects), denial correctness, evidence completeness, over-blocking rate on legitimate flows, and freshness-bound compliance, emitting a scorecard artifact |
 
@@ -143,10 +144,7 @@ registers evidence with; the telemetry plane (OTel collector view in Jaeger);
 and the **SaaS trust domain** (RAS + LedgerCloud MCP server) the agent reaches
 by redeeming a Mission-AS-issued ID-JAG at the RAS.
 
-```
-```
-
-Trust-base components and their spec roles:
+Trusted-base components and their spec roles:
 
 - **Mission AS** (`services/authorization-server`): Mission Issuer. Owns intent intake
   (PAR), derivation to `mission_resource_access` authorization_details, the approval
@@ -166,7 +164,9 @@ Trust-base components and their spec roles:
   rejection of any `actor_token` carrying `act`, `actor_unauthorized`) and
   the agent-instance profile (Client Instance Assertion carrier validation,
   `agent_instance_id` requirements, `sub_profile` of `ai_agent
-  client_instance`, `ai_agent_instance_profile_supported` metadata).
+  client_instance`, `ai_agent_instance_profile_supported` metadata). The
+  operator app's fleet surfaces (enumeration, per-mission lifecycle
+  operations) are served per the management companion (partial; O-32).
 - **PDP** (`services/pdp`): AuthZEN Access Evaluation (and bulk Evaluations) API.
   Materializes each approved Mission into an OpenFGA tuple set (the materialized
   policy view, correlated by `policy_view_id`), layers the mission overlay checks
@@ -326,7 +326,7 @@ Revocation and completion delete or bypass the view (state check precedes FGA).
 
 ### The five laws, enforced
 
-The handbook's five laws map onto the build as follows; the M9
+The handbook's five laws map onto the build as follows; the M14
 self-assessment walks this table.
 
 | Law | Enforced by | Scenarios |
@@ -401,63 +401,67 @@ implement, over-complex, or non-interoperable lands in the Spec Feedback Log
   introspection `mission` member, signed Status endpoint, AS metadata flags.
   *Exit: core conformance checklist items 1-6 (core § Conformance) demonstrably met;
   scenario 1 runs headless, including the compromised-shaper test.*
-- **M2. PDP + OpenFGA.** AuthZEN evaluation + evaluations endpoints, envelope
+- **M2. Actor profile + agent instance.** Base actor-profile conformance at
+  the AS (chain construction/validation, presenter transitions, local max
+  depth, errors, metadata, introspection) with `packages/actor-chain` shared
+  by AS, PDP, and PEPs; full ai-agent-instance profile (per-instance keys,
+  Client Instance Assertion carrier validation, instance claims, metadata
+  flags). Foundational: the PDP envelope, PEP controls, and agent identity
+  in every later milestone consume these surfaces.
+  *Exit: delegated issuance produces conformant chains in token-level
+  integration tests, including rejection of an `actor_token` that itself
+  carries `act` and the actor-chain flattening vectors; the end-to-end
+  sub-agent demo (scenario 13) lands with M12.*
+- **M3. PDP + OpenFGA.** AuthZEN evaluation + evaluations endpoints, envelope
   parsing (note: approved-entry `resource` matches `context.audience`, not the
-  AuthZEN `resource` member), materialized policy view with `policy_view_id`,
+  AuthZEN `resource` member), `context.actor` built via `packages/actor-chain`
+  from day one, materialized policy view with `policy_view_id`,
   FGA model + tuple writer keyed to mission lifecycle, freshness via Status
   polling + introspection with a published staleness bound.
   *Exit: golden-file decision tests: in-authority allow, out-of-authority deny,
   revoked-mission deny within bound.*
-- **M3. MCP server + core enforcement tier.** AP tools, streamable HTTP, RFC 9728
+- **M4. MCP server + core enforcement tier.** AP tools, streamable HTTP, RFC 9728
   PRM, token + `mission` claim validation, per-action PDP calls with
   `context.mission` / `context.actor` / `context.audience` / `parameter_digest` /
   `context.capability_source` (tool_id `mcp://` URI, source_uri, source_digest,
   operation_ref), mission-scoped `tools/list` filtering (least exposure),
-  Decision Evidence and Refusal Records, Enforcement Scope Statement
-  published.
+  per-instance controls keyed on `(act.iss, act.sub)`, Decision Evidence and
+  Refusal Records, Enforcement Scope Statement published.
   *Exit: scenarios 2 and 3 pass as integration tests.*
-- **M4. Transaction-assurance tier.** Single-use permits, execution leases,
+- **M5. Transaction-assurance tier.** Single-use permits, execution leases,
   Execution Evidence, outcome reconciliation for `execute_wire_transfer` and
   `send_remittance_email`.
   *Exit: scenario 4; replayed permit is refused; reconciliation report joins
   evidence to ledger entries.*
-- **M5. ARAP reevaluate mode.** Requestable denials from the PDP
+- **M6. ARAP reevaluate mode.** Requestable denials from the PDP
   (`context.access_request` + PDP-signed `binding_token`), ARS task lifecycle,
   approver adjudication UI, PEP re-evaluation with `context.approval`.
   *Exit: scenario 5; approval is provably input context (no token change).*
-- **M6. AROP.** DTR custom grant (`completion_mode=deferred`, `deferral_code`,
+- **M7. AROP.** DTR custom grant (`completion_mode=deferred`, `deferral_code`,
   deferred grant polling, idempotent submission, approval-bounded lifetime) and
   Transaction Challenge (RS challenge signing + `txn_challenge_jwks_uri`, AS
   `transaction_authorization_endpoint`, txn-bound audience-restricted single-use
   token, re-presentation checks), both completing through Mission Expansion.
   *Exit: scenarios 6 and 7; issued tokens never broaden the originating request
   and never outlive `approved_until`.*
-- **M7. Service connectivity discovery.** Catalog Provider co-located in the
+- **M8. Service connectivity discovery.** Catalog Provider co-located in the
   AS: Service Catalog Endpoint with filtering (`category`, `type`, `status`,
   `profile`, `tag`), `service_catalog_endpoint` in AS metadata, entries seeded
   from demo-data, mission-derived per-connection `status`, `request-access`
   links into the ARS, and the payments server's Server Card published and
-  referenced via `server_card_uri`.
+  referenced via `server_card_uri`. The LedgerCloud `id_jag` entry is seeded
+  here and becomes actionable with M9.
   *Exit: scenarios 0 and 10 pass headless; catalog status flips on approval,
   revocation, and expansion without restart.*
-- **M8. Full UX.** The three persona apps complete: approvals inbox with intent
-  rendering, fleet dashboard with revoke/expand and status transitions, evidence
-  timeline joining decisions, executions, refusals, and reconciliation, and the
-  agent console's discovery/catalog view.
-  *Exit: scenarios 0-10 all runnable from the UIs alone.*
-- **M9. Agent + demos + conformance.** Scenario runner covering scenarios 0-10
-  and 14 (the 02:00 resume), the minimal harness duty in the agent (Status
-  check on resume, stop on non-active), optional LLM chat mode, seed polish,
-  a `pnpm demo` one-command boot, an exhibit mode emitting annotated wire
-  captures shaped like the handbook's Appendix B, and a written
-  self-assessment against the six Runtime-Enforced invariants, the handbook
-  vendor test's six questions, and the Field Reference implementation
-  checklist, plus a consolidated spec-feedback report drawn from the Spec
-  Feedback Log. `pnpm demo:vendor-test` runs the four valid-token-but-denied
-  cases back to back (state: scenario 8, bounds: 7, parameters: 3,
-  delegation chain: 13).
-  *Exit: fresh clone to full demo in under five minutes; self-assessments
-  complete; the vendor-test demo passes.*
+- **M9. Cross-domain SaaS leg (EMA + ID-JAG).** Second trust domain per the
+  cross-domain companion: Mission AS token-exchange issuance of the
+  cross-domain grant with audience-scoped projection; RAS (second
+  node-oidc-provider) with the JWT-bearer redemption grant, PoP and
+  single-use validation, mission-preserving local tokens; LedgerCloud SaaS
+  MCP server with EMA declared, enforcing from the token alone; catalog
+  entry with the `id_jag` connection; agent EMA capability and flow.
+  *Exit: scenario 12 passes as integration tests, including grant replay
+  rejection and the revocation-lease demonstration.*
 - **M10. Transparent audit (SCITT).** Transparency Service per the audit
   draft: in-memory append-only Merkle log, COSE Signed Statements with
   hash-envelope commitments, Receipts and signed tree heads; registration
@@ -466,28 +470,23 @@ implement, over-complex, or non-interoperable lands in the Spec Feedback Log
   view running the five-step offline check; `trace_id` extension member on
   evidence.
   *Exit: scenario 11 passes headless, including the tamper demo (mutated
-  evidence fails digest verification, a dropped record fails inclusion);
-  scenario runner adds scenario 11.*
-- **M11. Cross-domain SaaS leg (EMA + ID-JAG).** Second trust domain per the
-  cross-domain companion: Mission AS token-exchange issuance of the
-  cross-domain grant with audience-scoped projection; RAS (second
-  node-oidc-provider) with the JWT-bearer redemption grant, PoP and
-  single-use validation, mission-preserving local tokens; LedgerCloud SaaS
-  MCP server with EMA declared, enforcing from the token alone; catalog
-  entry with the `id_jag` connection; agent EMA capability and flow.
-  *Exit: scenario 12 passes headless, including grant replay rejection and
-  the revocation-lease demonstration; scenario runner adds scenario 12.*
-- **M12. Actor profile + agent instance (delegation).** Base actor-profile
-  conformance at the AS (chain construction/validation, presenter
-  transitions, local max depth, errors, metadata, introspection) with
-  `packages/actor-chain` shared by AS, PDP, and PEPs; full ai-agent-instance
-  profile (per-instance keys, Client Instance Assertion carrier validation,
-  instance claims, metadata flags); PDP `context.actor` flattening;
-  per-instance PEP controls; orchestrator/sub-agent support in the agent
-  service.
-  *Exit: scenario 13 passes headless, including per-instance revocation and
-  a rejection test for an `actor_token` that itself carries `act`; scenario
-  runner adds scenario 13.*
+  evidence fails digest verification, a dropped record fails inclusion).*
+- **M11. Full UX.** The three persona apps complete: approvals inbox with intent
+  rendering, fleet dashboard on the management companion's surfaces
+  (enumeration, revoke/expand, status transitions), evidence timeline joining
+  decisions, executions, refusals, and reconciliation, the audit feed view,
+  and the agent console's discovery/catalog view.
+  *Exit: scenarios 0-12 all runnable from the UIs alone (13 and 14 join in
+  M12).*
+- **M12. Agent + demos.** Scenario runner covering scenarios 0-14; the
+  minimal harness duty in the agent (Status check on resume, stop on
+  non-active); orchestrator/sub-agent support (scenario 13); optional LLM
+  chat mode; seed polish; a `pnpm demo` one-command boot; and the exhibit
+  mode emitting annotated wire captures shaped like the handbook's
+  Appendix B.
+  *Exit: fresh clone to full demo in under five minutes; scenarios 0-14 pass
+  headless via the runner, including per-instance revocation (13) and the
+  02:00 resume (14).*
 - **M13. Evals.** The eval harness (`evals/`): a deterministic adversarial
   suite driving misbehaving agents at the running stack (prompt-injected
   tool output steering the agent off-mission, over-broad shaper proposals,
@@ -506,6 +505,15 @@ implement, over-complex, or non-interoperable lands in the Spec Feedback Log
   evidence gaps on the adversarial suite; over-blocking on the legitimate
   suite is at or below the threshold set in O-30; red-team mode produces a
   reproducible transcript + scorecard when an API key is present.*
+- **M14. Conformance + reports.** The written self-assessment against the
+  six Runtime-Enforced invariants, the handbook vendor test's six questions,
+  and the Field Reference implementation checklist; the five-laws table
+  walked with links into recorded evidence; the consolidated spec-feedback
+  report drawn from the Spec Feedback Log (goal 2's deliverable).
+  `pnpm demo:vendor-test` runs the four valid-token-but-denied cases back to
+  back (state: scenario 8, bounds: 7, parameters: 3, delegation chain: 13).
+  *Exit: all assessments published in-repo; the vendor-test demo passes on
+  the eval-gated build.*
 
 ## 6. Spec Anchor Index
 
@@ -556,6 +564,8 @@ Working references into the drafts (line numbers as of commit `dc7a897`):
 - Audit: `draft-mcguinness-mission-audit.md`: registration `:267`, hash
   commitment `:279`, evidence types `:307`, mission-as-subject feed `:687`,
   receipts + offline verification `:756`, conformance `:935`.
+- Management: `draft-mcguinness-oauth-mission-management.md` (fleet
+  enumeration + lifecycle operations; subset pinned in O-32).
 - Discovery: `draft-mcguinness-svc-connectivity-disco.md` (repo
   mcguinness/draft-mcguinness-svc-connectivity-disco): endpoint discovery
   § endpoint-discovery, request/filtering § catalog-request, `mcp` service
@@ -580,47 +590,47 @@ resolution and date; never delete them.
   DPoP. Fallback: thin custom endpoints beside the provider for the gaps.
 - **O-3. DTR draft fidelity.** Fetch `draft-gerber-oauth-deferred-token-response`
   and pin parameter names, error codes (`authorization_pending`, `slow_down`,
-  `expired_token`), and the deferred grant URN before M6.
+  `expired_token`), and the deferred grant URN before M7.
 - **O-4. Transaction challenge draft fidelity.** Fetch
   `draft-rosomakho-oauth-txn-challenge` and pin the challenge JWS claims
   (`txn`, `authorization_details`, `iss`, `aud`, `reason`), the
   `Accept-Txn-Challenge` header, endpoint request/response shapes, and
-  `txn_challenge_jwks_uri` metadata before M6.
+  `txn_challenge_jwks_uri` metadata before M7.
 - **O-5. Expansion lifecycle detail.** Read the expansion draft closely: successor
   mission state transitions, predecessor disposition, and how the AROP-issued
-  token's `mission` claim references the successor. Needed for M6.
+  token's `mission` claim references the successor. Needed for M7.
 - **O-6. Where numeric constraints live.** Per-payment cap and cumulative caps:
-  FGA conditions vs PDP overlay. Decide during M2 with a spike; record the
+  FGA conditions vs PDP overlay. Decide during M3 with a spike; record the
   rationale here.
 - **O-7. `policy_view_id` scheme.** Content-addressing recipe (what exactly is
-  hashed: model version + tuple set + mission version?). Decide in M2.
+  hashed: model version + tuple set + mission version?). Decide in M3.
 - **O-8. Staleness bounds for the demo.** Concrete published bounds per action
   class, and which freshness source is authoritative for the high-consequence
-  class (Status poll interval vs introspection-on-action). Decide in M2/M3.
+  class (Status poll interval vs introspection-on-action). Decide in M3/M4.
 - **O-9. COAZ alignment.** mission-authzen composes with COAZ for MCP tool
   mapping. Decide whether to fetch COAZ and mirror its subject/action/resource
   mapping or keep the profile's own `context.capability_source` members only.
 - **O-10. ARAP draft fidelity.** Fetch the ARAP profile itself (access request
   submission shape, task states, `approval` object, `approved_until`,
-  `binding_token` verification rules) before M5.
+  `binding_token` verification rules) before M6.
 - **O-11. Consent Evidence scope.** The approver app renders intent at approval;
   decide whether to include `consent_rendering_hash` + signed Consent Evidence
-  (companion draft) in M8 or defer.
+  (companion draft) in M11 or defer.
 - **O-12. Mission-derived status mapping.** Exact mapping from mission
   lifecycle states (and issuance feasibility) to `connected` / `available` /
   `consent_required` / `unavailable`, and how the catalog decides a mission
-  "covers" a service. Decide in M7.
+  "covers" a service. Decide in M8.
 - **O-13. MCP Server Card shape.** Which Server Card format/location the
   payments server publishes for `server_card_uri`, and whether the capability
   source `source_digest` (mission-authzen § capability source) is computed
-  over the same card. Decide in M3, revisit in M7.
+  over the same card. Decide in M4, revisit in M8.
 - **O-14. Catalog vocabulary for the AP domain.** The category registry seeds
   email/calendar/files/etc.; payments is not seeded. Namespaced category vs
-  `tags` for the demo services. Decide in M7.
+  `tags` for the demo services. Decide in M8.
 - **O-15. request-access intake shape.** What the `request-access` href
   carries (service id, requested capability, return URI) and whether an
   adjudicated request materializes as a first mission issuance or as an
-  Expansion. Decide alongside M5, wire in M7.
+  Expansion. Decide alongside M6, wire in M8.
 - **O-16. COSE and Merkle tooling.** Pick the TS COSE_Sign1 library (or
   hand-roll over WebCrypto) and the Merkle tree approach (RFC 9162-style)
   for the Transparency Service, including the hash-envelope headers
@@ -633,28 +643,28 @@ resolution and date; never delete them.
 - **O-18. trace_id extension member.** Name and placement of the trace
   correlation member on evidence objects (it is part of the signed and
   hashed evidence bytes once included, so it must be set before signing).
-  Decide in M3.
+  Decide in M4.
 - **O-19. ID-JAG draft fidelity.** Fetch
   `draft-ietf-oauth-identity-assertion-authz-grant` and pin the token
   exchange request parameters, the grant JWT claims, and how the
   cross-domain companion's proof-of-possession and single-use floors attach
-  to it. Before M11.
+  to it. Before M9.
 - **O-20. EMA metadata surface.** Pin exactly how the SaaS MCP server
   "declares the extension in its authorization metadata" (member name and
   shape); the extension is young, so track the MCP spec revision we
-  implement against. Before M11.
+  implement against. Before M9.
 - **O-21. Catalog status for id_jag connections.** The mission-derived
   `status` mapping (O-12) assumed the internal domain; for the SaaS service
   it also depends on issuer-side projection policy. Extend the mapping.
-  Decide in M11.
+  Decide in M9.
 - **O-22. Audience-scoped projection derivation.** How the Mission AS
   decides which Authority Set entries a given RAS is authoritative for
   (the resource-to-AS mapping seed), per cross-domain § audience-scope.
-  Decide in M11.
+  Decide in M9.
 - **O-23. SaaS-side audit registration.** Whether the RAS registers grant
   redemptions in our Transparency Service (cross-domain producers) or the
   audit feed stays internal-side only, with the revocation lease documented
-  in the demo. Decide in M10/M11.
+  in the demo. Decide in M9/M10.
 - **O-24. act.cnf semantics.** Filed upstream as actor-profile issue #4
   (github.com/mcguinness/draft-mcguinness-oauth-actor-profile/issues/4):
   base profile leaves `act.cnf` semantics undefined, receipts prohibit it in
@@ -664,19 +674,19 @@ resolution and date; never delete them.
 - **O-25. CIA-CORE fidelity.** Read the local
   `draft-mcguinness-oauth-client-instance-assertion` checkout and pin the
   carrier header/`typ` values, token endpoint processing, chain merging, and
-  introspection members the instance profile inherits. Before M12.
+  introspection members the instance profile inherits. Before M2.
 - **O-26. Entity-profile vocabulary.** Pin the `sub_profile` values
   (`ai_agent`, `client_instance`) against the referenced
-  `draft-mora-oauth-entity-profiles` revision. Before M12.
+  `draft-mora-oauth-entity-profiles` revision. Before M2.
 - **O-27. Chain depth and rebind policy.** The demo's local max chain depth
   (the profile says SHOULD support >= 4) and which hops use presenter
-  continuation vs rebind. Decide in M12.
+  continuation vs rebind. Decide in M2.
 - **O-28. Appendix B exhibit fidelity.** Fetch the handbook's wire appendix
   and pin the exhibit format the scenario runner's exhibit mode emits, so
-  captures are comparable to the published exhibits. Before M9.
+  captures are comparable to the published exhibits. Before M12.
 - **O-29. Resume-check semantics.** Which non-active states stop vs pause
   the agent's harness check, and the check cadence on wake, consistent with
-  the published staleness bounds (O-8). Decide in M9.
+  the published staleness bounds (O-8). Decide in M12.
 - **O-30. Eval taxonomy and pass bars.** Pin the misbehavior-class taxonomy
   (drawing on the handbook's Testing chapter framings, including the lethal
   trifecta), the over-blocking threshold for the legitimate suite, and
@@ -685,6 +695,10 @@ resolution and date; never delete them.
   and seeded, how nondeterministic runs stay comparable (persisted
   transcripts as replayable fixtures), and how red-team findings feed new
   deterministic cases. Decide in M13.
+- **O-32. Management companion subset.** Pin which of the management
+  draft's surfaces the operator app consumes (fleet enumeration,
+  per-mission lifecycle operations; bulk operations if needed) and how the
+  operator app authenticates to them. Decide in M11.
 
 ### Resolved
 
@@ -736,6 +750,15 @@ resolution and date; never delete them.
   scored on containment, denial correctness, evidence completeness,
   over-blocking, and freshness compliance; scorecard gates CI
   (decision D24, issues O-30/O-31).
+- **R-16 (2026-07-20). Review pass: milestones reordered into dependency
+  order.** Actor profile + agent instance moved up to M2 (its surfaces are
+  consumed by the PDP, PEPs, and agent from the start); cross-domain to M9;
+  UX to M11; agent + demos to M12; conformance + reports split out as the
+  final M14 (audit stays M10, evals stays M13). The management companion
+  was adopted partially for the operator app's fleet surfaces (O-32), the
+  LedgerCloud catalog-entry sequencing was noted in M8, a stray empty
+  diagram fence was removed, and the runbook service list was corrected.
+  R-entries above reference the pre-reorder numbering.
 
 ## 8. Spec Feedback Log
 
@@ -781,10 +804,11 @@ their repositories or working groups.
 
 ```
 cp src/.env.example src/.env        # optionally add ANTHROPIC_API_KEY
-docker compose -f src/docker-compose.yml up -d   # OpenFGA, in-memory
+docker compose -f src/docker-compose.yml up -d   # OpenFGA (in-memory) + Jaeger
 pnpm -C src install
 pnpm -C src seed                    # load users/clients/vendors/invoices + FGA model
-pnpm -C src dev                     # AS, PDP, ARS, MCP server, three SPAs
+pnpm -C src dev                     # AS, PDP, ARS, 2 MCP servers, RAS,
+                                    # transparency, three SPAs
 pnpm -C src demo                    # scripted scenarios 0-14 against the running stack
 pnpm -C src demo:vendor-test        # the four valid-token-but-denied cases
 pnpm -C src evals                   # adversarial + legitimate suites, scorecard
