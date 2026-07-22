@@ -10,6 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run: { working-directory: src }
+    services:
+      # OpenFGA pinned by digest (D39); plain HTTP + preshared auth in CI
+      # (the dev/demo compose adds TLS, which the decision logic doesn't need).
+      openfga:
+        image: openfga/openfga:v1.18.1@sha256:efde89d24487da1a8bc37d85b61341f1fb7024943a1ded65f4b7d51a75666688
+        env:
+          OPENFGA_DATASTORE_ENGINE: memory
+          OPENFGA_AUTHN_METHOD: preshared
+          OPENFGA_AUTHN_PRESHARED_KEYS: dev-preshared-key-change-me
+        ports:
+          - 8080:8080
+    env:
+      OPENFGA_HTTP_URL: http://localhost:8080
+      OPENFGA_PRESHARED_KEY: dev-preshared-key-change-me
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
