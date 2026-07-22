@@ -508,8 +508,8 @@ Status (update this table as work lands):
 | Pre-flight spike | **done** 2026-07-21 (PR #317, `src/spikes/SPIKE-REPORT.md`) |
 | M0 Scaffolding + artifacts | **done** 2026-07-21 (PR #318) |
 | M1 Baseline AS | **done** 2026-07-22 (PR #319) |
-| M2 Actor + instance | **in review** (PR #321) |
-| M3 PDP + OpenFGA | not started |
+| M2 Actor + instance | **done** 2026-07-22 (PR #321) |
+| M3 PDP + OpenFGA | **in progress** |
 | M4 MCP core tier | not started |
 | M5 Transaction tier | not started |
 | M6 ARAP | not started |
