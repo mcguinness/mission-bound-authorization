@@ -6,6 +6,7 @@
     { "path": "../../packages/mission-core" },
     { "path": "../../packages/store" },
     { "path": "../../packages/demo-data" },
-    { "path": "../../packages/telemetry" }
+    { "path": "../../packages/telemetry" },
+    { "path": "../../packages/actor-chain" }
   ]
 }

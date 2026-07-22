@@ -13,7 +13,8 @@
     "@mission/store": "workspace:*",
     "@mission/telemetry": "workspace:*",
     "jose": "^6.1.3",
-    "oidc-provider": "9.10.0"
+    "oidc-provider": "9.10.0",
+    "@mission/actor-chain": "workspace:*"
   },
   "scripts": {
     "typecheck": "tsc --build",
