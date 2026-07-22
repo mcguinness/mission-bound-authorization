@@ -29,15 +29,17 @@ this matrix and the `@spec` tags to the affected code and tests.
 | Spec | Pinned version | Component | Surfaces (`@spec` doc key) | Tests |
 |---|---|---|---|---|
 | `draft-mcguinness-oauth-mission` | `c2053e5` (2026-07-17) | `packages/mission-core` | `mission#integrity-anchors`, `mission#canonicalization`, `mission#test-vectors` | `packages/mission-core/test/anchors.test.ts` |
+| `draft-mcguinness-oauth-mission` | `c2053e5` (2026-07-17) | `services/authorization-server` (kernel + adapters) | `mission#submission-via-par`, `mission#mission-intent`, `mission#authorization-derivation`, `mission#subset`, `mission#integrity-anchors`, `mission#the-mission-claim`, `mission#lifecycle`, `mission#introspection`, `mission#as-metadata` | `services/authorization-server/test/{kernel,tracer}.test.ts` |
+| `draft-mcguinness-oauth-mission-status` | `89ba0b4` (2026-07-16) | `services/authorization-server` (kernel + adapters) | `status#legal-transitions`, `status#state-machine`, `status#mission-status-response` | `services/authorization-server/test/{kernel,tracer}.test.ts` |
+| `oidc-provider` | `9.10.0` (RAR ack `experimental-01`) | `services/authorization-server/src/adapters` | PAR, RAR (issuer-derived via `rarFor*`), DPoP, resource indicators, custom routes | `services/authorization-server/test/tracer.test.ts` |
 
 ## Adopted for planning, not yet implemented (pins from the pre-flight spike)
 
 | Spec | Pinned version | Lands in |
 |---|---|---|
-| `draft-mcguinness-oauth-mission` (remaining surfaces) | `c2053e5` | M1 AS kernel + adapters |
 | `draft-mcguinness-mission-runtime` | `02d53dd` | M4/M5 PEP + PDP |
 | `draft-mcguinness-mission-authzen` | `02d53dd` | M3 PDP, M4 PEP |
-| `draft-mcguinness-oauth-mission-status` | `89ba0b4` | M1 status, M3 freshness (Status List + introspection projection) |
+| `draft-mcguinness-oauth-mission-status` (Status List, introspection projection) | `89ba0b4` | M3 freshness |
 | `draft-mcguinness-oauth-actor-profile` | local repo @ spike date 2026-07-21 | M2 |
 | CIA-CORE (`client-instance-assertion`) | local `-latest` @ 2026-06-23 | M2 |
 | `draft-mcguinness-oauth-ai-agent-instance` | rev 00 | M2 |
@@ -47,6 +49,12 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-oauth-mission-cross-domain` + ID-JAG | in-repo / datatracker current | M9 |
 | `draft-mcguinness-mission-audit` + SCITT (RFC 9943) | in-repo current | M10 |
 | MCP authorization profile | 2025-11-25 (stable) | M4/M8/M9 |
-| `oidc-provider` | 9.10.0 exact (RAR ack `experimental-01`) | M1 |
 | `@modelcontextprotocol/sdk` | 1.29.0 | M4 |
 | OpenFGA | `v1.18.1@sha256:efde89d2...6688` | M0 compose (done) |
+
+## Notes
+
+- `oidc-provider@9.10.0` ships no first-party TypeScript types; the build
+  depends on `@types/oidc-provider@9.5.0` (behind the runtime). Gaps handled
+  with narrow local aliases (e.g. `InvalidAuthorizationDetails`, present at
+  runtime in 9.10, absent from the 9.5 types). Re-check on any provider bump.

@@ -1,0 +1,16 @@
+{
+  "name": "@mission/demo-data",
+  "version": "0.0.1",
+  "private": true,
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "jose": "^6.1.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --build"
+  }
+}

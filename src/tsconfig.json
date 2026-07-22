@@ -3,6 +3,8 @@
   "references": [
     { "path": "packages/mission-core" },
     { "path": "packages/store" },
-    { "path": "packages/telemetry" }
+    { "path": "packages/telemetry" },
+    { "path": "packages/demo-data" },
+    { "path": "services/authorization-server" }
   ]
 }
