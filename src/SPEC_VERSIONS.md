@@ -40,6 +40,9 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-mission-authzen` (PDP request/decision) | `02d53dd` | `services/pdp` | `authzen#pdp-request` (envelope, context.audience rule), `authzen#denial-response`, `authzen#runtime-denial-classification`, `authzen#materialization` | `services/pdp/test/evaluate.test.ts` |
 | `draft-mcguinness-mission-runtime` (decision contract) | `02d53dd` | `services/pdp` | abstract decision inputs, staleness bound, permit properties | `services/pdp/test/evaluate.test.ts` |
 | OpenFGA | `v1.18.1` (by digest) | `services/pdp/src/fga.ts` | domain model, contextual-tuple check, explicit model id (D26/fga-hygiene) | `services/pdp/test/evaluate.test.ts` (live) |
+| `draft-mcguinness-oauth-mission` (RS enforcement) | `c2053e5` | `services/mcp-payments` | `mission#rs-enforcement` (token + mission claim + DPoP cnf validation, mission-scoped tools/list) | `services/mcp-payments/test/enforcement.test.ts` |
+| `draft-mcguinness-mission-authzen` (PEP envelope + evidence) | `02d53dd` | `services/mcp-payments/src/pep.ts` | envelope build (context.actor, parameter_digest, capability_source), Decision Evidence, Refusal Records | `services/mcp-payments/test/enforcement.test.ts` |
+| RFC 9728 (Protected Resource Metadata) | RFC 9728 | `services/mcp-payments/src/server.ts` | `mission_bound_authorization_required`, `mission_constraints_supported` | `services/mcp-payments/test/enforcement.test.ts` |
 
 ## Adopted for planning, not yet implemented (pins from the pre-flight spike)
 
