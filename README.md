@@ -105,7 +105,10 @@ ownership migrates by touch, not by relocation.
 [Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html),
 then the kernel profile for your path.** Everything else is optional
 companion work, and the minimal implementations below each fit on
-one screen.
+one screen. For the story told in prose rather than protocol, the
+**[Mission Handbook](https://notes.karlmcguinness.com/mission-handbook/)**
+is the published narrative companion: it motivates the model,
+chapter by chapter, for readers who want the why before the wire.
 
 ## The governance model on one screen
 
