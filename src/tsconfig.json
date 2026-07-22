@@ -6,6 +6,7 @@
     { "path": "packages/telemetry" },
     { "path": "packages/demo-data" },
     { "path": "packages/actor-chain" },
-    { "path": "services/authorization-server" }
+    { "path": "services/authorization-server" },
+    { "path": "services/pdp" }
   ]
 }

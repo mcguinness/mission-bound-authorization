@@ -37,13 +37,16 @@ this matrix and the `@spec` tags to the affected code and tests.
 | CIA-CORE (`client-instance-assertion`) | local `-latest` @ 2026-06-23 | `services/authorization-server/src/kernel/instance-assertion.ts` | carrier validation (typ, 12-step processing, cnf, replay, chain merge) | `services/authorization-server/test/delegation.test.ts` |
 | `draft-mcguinness-oauth-ai-agent-instance` | rev 00 | `services/authorization-server/src/kernel` (instance-assertion, delegation) | instance claims, sub_profile `ai_agent client_instance`, delegated act population | `services/authorization-server/test/delegation.test.ts` |
 | `draft-mora-oauth-entity-profiles` | rev 01 (local 2026-04-12) | `packages/actor-chain` | position-keyed `sub_profile` allowlists + pass-through | `packages/actor-chain/test/actor-chain.test.ts` |
+| `draft-mcguinness-mission-authzen` (PDP request/decision) | `02d53dd` | `services/pdp` | `authzen#pdp-request` (envelope, context.audience rule), `authzen#denial-response`, `authzen#runtime-denial-classification`, `authzen#materialization` | `services/pdp/test/evaluate.test.ts` |
+| `draft-mcguinness-mission-runtime` (decision contract) | `02d53dd` | `services/pdp` | abstract decision inputs, staleness bound, permit properties | `services/pdp/test/evaluate.test.ts` |
+| OpenFGA | `v1.18.1` (by digest) | `services/pdp/src/fga.ts` | domain model, contextual-tuple check, explicit model id (D26/fga-hygiene) | `services/pdp/test/evaluate.test.ts` (live) |
 
 ## Adopted for planning, not yet implemented (pins from the pre-flight spike)
 
 | Spec | Pinned version | Lands in |
 |---|---|---|
-| `draft-mcguinness-mission-runtime` | `02d53dd` | M4/M5 PEP + PDP |
-| `draft-mcguinness-mission-authzen` | `02d53dd` | M3 PDP, M4 PEP |
+| `draft-mcguinness-mission-runtime` (PEP tier) | `02d53dd` | M4/M5 PEP |
+| `draft-mcguinness-mission-authzen` (PEP evidence, requestable denials) | `02d53dd` | M4/M6 PEP |
 | `draft-mcguinness-oauth-mission-status` (Status List, introspection projection) | `89ba0b4` | M3 freshness |
 | AuthZEN ARAP / AROP | openid/authzen PR #531 head @ 2026-07-20 | M6/M7 |
 | `draft-mcguinness-svc-connectivity-disco` | repo main @ 2026-07-20 | M8 |

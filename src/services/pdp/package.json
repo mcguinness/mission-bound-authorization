@@ -1,0 +1,16 @@
+{
+  "name": "@mission/pdp",
+  "version": "0.0.1",
+  "private": true,
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@mission/actor-chain": "workspace:*",
+    "@mission/core": "workspace:*",
+    "@mission/store": "workspace:*",
+    "@mission/telemetry": "workspace:*",
+    "@openfga/sdk": "^0.9.0"
+  },
+  "scripts": { "typecheck": "tsc --build", "dev": "tsx watch src/server.ts" }
+}
