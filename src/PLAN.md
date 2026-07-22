@@ -510,8 +510,8 @@ Status (update this table as work lands):
 | M1 Baseline AS | **done** 2026-07-22 (PR #319) |
 | M2 Actor + instance | **done** 2026-07-22 (PR #321) |
 | M3 PDP + OpenFGA | **done** 2026-07-22 (PR #322) |
-| M4 MCP core tier | **in review** (PR #323) |
-| M5 Transaction tier | not started |
+| M4 MCP core tier | **done** 2026-07-22 (PR #323) |
+| M5 Transaction tier | **in progress** |
 | M6 ARAP | not started |
 | M7 AROP | not started |
 | M8 Discovery | not started |
