@@ -509,7 +509,7 @@ Status (update this table as work lands):
 | M0 Scaffolding + artifacts | **done** 2026-07-21 (PR #318) |
 | M1 Baseline AS | **done** 2026-07-22 (PR #319) |
 | M2 Actor + instance | **done** 2026-07-22 (PR #321) |
-| M3 PDP + OpenFGA | **in progress** |
+| M3 PDP + OpenFGA | **in review** (PR #322) |
 | M4 MCP core tier | not started |
 | M5 Transaction tier | not started |
 | M6 ARAP | not started |
