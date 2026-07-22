@@ -91,6 +91,27 @@ importers:
         specifier: 9.5.0
         version: 9.5.0
 
+  services/mcp-payments:
+    dependencies:
+      '@mission/actor-chain':
+        specifier: workspace:*
+        version: link:../../packages/actor-chain
+      '@mission/core':
+        specifier: workspace:*
+        version: link:../../packages/mission-core
+      '@mission/pdp':
+        specifier: workspace:*
+        version: link:../pdp
+      '@mission/store':
+        specifier: workspace:*
+        version: link:../../packages/store
+      '@mission/telemetry':
+        specifier: workspace:*
+        version: link:../../packages/telemetry
+      jose:
+        specifier: ^6.1.3
+        version: 6.2.3
+
   services/pdp:
     dependencies:
       '@mission/actor-chain':

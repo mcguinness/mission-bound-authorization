@@ -7,6 +7,7 @@
     { "path": "packages/demo-data" },
     { "path": "packages/actor-chain" },
     { "path": "services/authorization-server" },
-    { "path": "services/pdp" }
+    { "path": "services/pdp" },
+    { "path": "services/mcp-payments" }
   ]
 }

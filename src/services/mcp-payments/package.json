@@ -1,0 +1,17 @@
+{
+  "name": "@mission/mcp-payments",
+  "version": "0.0.1",
+  "private": true,
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@mission/actor-chain": "workspace:*",
+    "@mission/core": "workspace:*",
+    "@mission/pdp": "workspace:*",
+    "@mission/store": "workspace:*",
+    "@mission/telemetry": "workspace:*",
+    "jose": "^6.1.3"
+  },
+  "scripts": { "typecheck": "tsc --build", "dev": "tsx watch src/server.ts" }
+}
