@@ -10,6 +10,9 @@ import type { ActObject } from "@mission/actor-chain";
 import type { MissionView } from "@mission/pdp";
 import { CANONICAL_RESOURCE, type Pep, type TokenFacts, TOOL_ACTIONS } from "./pep.js";
 import type { PaymentsStore } from "./payments-store.js";
+import type { Connectors } from "./connectors.js";
+import type { EvidenceStore } from "./evidence.js";
+import { operationKey, type TransactionEngine } from "./transaction.js";
 
 export interface ToolDef {
   name: string;
@@ -33,6 +36,8 @@ export interface McpServerDeps {
   jwks: { keys: Record<string, unknown>[] };
   issuer: string;
   serverCard: unknown;
+  /** Transaction-assurance tier (M5); omit for a core-tier-only server. */
+  transaction?: { engine: TransactionEngine; connectors: Connectors; evidence: EvidenceStore };
 }
 
 export class McpPaymentsServer {
@@ -134,6 +139,97 @@ export class McpPaymentsServer {
       return { ok: false, refusal_reason: "parameter_mismatch" };
     }
     return { ok: true, result: this.execute(tool, args) };
+  }
+
+  /**
+   * @spec runtime transaction-assurance tier, D36 state machine.
+   * High-consequence tools (execute_wire_transfer, send_remittance_email):
+   * enforce (permit) -> redeem single-use permit -> reverify (TOCTOU) ->
+   * commit connector (the commit point) -> Execution Evidence -> reconcile.
+   * `beforeCommit` is a test hook for the decision->commit window.
+   */
+  async callTransactionTool(
+    tool: string,
+    args: Record<string, unknown>,
+    token: TokenFacts,
+    beforeCommit?: () => void,
+  ): Promise<{ ok: boolean; result?: unknown; denial_reason?: string; refusal_reason?: string; deduped?: boolean }> {
+    const tx = this.deps.transaction;
+    if (!tx) throw new Error("transaction tier not configured");
+
+    const res = await this.deps.pep.enforce(tool, args, token);
+    if (!res.permitted || !res.effective || !res.decision) {
+      return {
+        ok: false,
+        ...(res.denial_reason ? { denial_reason: res.denial_reason } : {}),
+        ...(res.refusal_reason ? { refusal_reason: res.refusal_reason } : {}),
+      };
+    }
+    const digest = res.decision.context.parameter_digest as string;
+    const permitId = res.decision.context.decision_id as string;
+    const opKey = operationKey(token.mission.id, res.effective.action, digest);
+
+    // Single-use permit redemption (D28): replay -> permit_consumed refusal.
+    const redeem = tx.engine.redeemPermit({
+      permitId,
+      opKey,
+      missionId: token.mission.id,
+      action: res.effective.action,
+      leaseSeconds: 30,
+    });
+    if (!redeem.ok) return { ok: false, refusal_reason: redeem.reason ?? "permit_consumed" };
+
+    beforeCommit?.();
+
+    // TOCTOU re-verify inside the lease, before commit.
+    if (!tx.engine.leaseValid(opKey) || !this.deps.pep.reverify(res.effective, digest, token)) {
+      tx.engine.advance(opKey, "abandoned");
+      return { ok: false, refusal_reason: "parameter_mismatch" };
+    }
+
+    // Commit point (D36): connector accepts with the idempotency key.
+    const invoice = this.deps.payments.getInvoice(res.effective.invoice_id);
+    const commit =
+      tool === "execute_wire_transfer"
+        ? tx.connectors.postWire({
+            opKey,
+            invoiceId: res.effective.invoice_id,
+            payeeAccount: res.effective.payee_account,
+            amount: res.effective.amount.amount,
+            currency: res.effective.amount.currency,
+            permitId,
+            missionId: token.mission.id,
+          })
+        : tx.connectors.sendEmail({
+            opKey,
+            invoiceId: res.effective.invoice_id,
+            to: `${res.effective.vendor_id}@vendor.example`,
+            permitId,
+            missionId: token.mission.id,
+          });
+    tx.engine.advance(opKey, "connector_committed");
+
+    // Execution Evidence, then reconciliation state.
+    tx.evidence.record({
+      kind: "execution",
+      permit_id: permitId,
+      op_key: opKey,
+      outcome: commit.deduped ? "deduped" : "committed",
+      decision_id: permitId,
+      mission_id: token.mission.id,
+      authority_hash: token.mission.authority_hash,
+      action: res.effective.action,
+      parameter_digest: digest,
+      instance_epoch: tx.engine.instanceEpoch,
+    });
+    tx.engine.advance(opKey, "evidence_emitted");
+    tx.engine.advance(opKey, "reconciled");
+
+    return {
+      ok: true,
+      deduped: commit.deduped,
+      result: { executed: true, invoice_id: res.effective.invoice_id, op_key: opKey, payee: invoice?.payee_account },
+    };
   }
 
   private execute(tool: string, args: Record<string, unknown>): unknown {
