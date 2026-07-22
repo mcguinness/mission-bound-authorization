@@ -32,6 +32,11 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-oauth-mission` | `c2053e5` (2026-07-17) | `services/authorization-server` (kernel + adapters) | `mission#submission-via-par`, `mission#mission-intent`, `mission#authorization-derivation`, `mission#subset`, `mission#integrity-anchors`, `mission#the-mission-claim`, `mission#lifecycle`, `mission#introspection`, `mission#as-metadata` | `services/authorization-server/test/{kernel,tracer}.test.ts` |
 | `draft-mcguinness-oauth-mission-status` | `89ba0b4` (2026-07-16) | `services/authorization-server` (kernel + adapters) | `status#legal-transitions`, `status#state-machine`, `status#mission-status-response` | `services/authorization-server/test/{kernel,tracer}.test.ts` |
 | `oidc-provider` | `9.10.0` (RAR ack `experimental-01`) | `services/authorization-server/src/adapters` | PAR, RAR (issuer-derived via `rarFor*`), DPoP, resource indicators, custom routes | `services/authorization-server/test/tracer.test.ts` |
+| `draft-mcguinness-oauth-actor-profile` | local @ 2026-07-21 | `packages/actor-chain` | `actor-profile#actor-object-structure`, `actor-profile#delegation-chains` (flatten, validate, depth, presenter transitions) | `packages/actor-chain/test/actor-chain.test.ts` |
+| `draft-mcguinness-mission-authzen` (context.actor) | `02d53dd` | `packages/actor-chain` | `authzen#context-actor` (root-to-leaf projection, PEP build / PDP validate, D31) | `packages/actor-chain/test/actor-chain.test.ts` |
+| CIA-CORE (`client-instance-assertion`) | local `-latest` @ 2026-06-23 | `services/authorization-server/src/kernel/instance-assertion.ts` | carrier validation (typ, 12-step processing, cnf, replay, chain merge) | `services/authorization-server/test/delegation.test.ts` |
+| `draft-mcguinness-oauth-ai-agent-instance` | rev 00 | `services/authorization-server/src/kernel` (instance-assertion, delegation) | instance claims, sub_profile `ai_agent client_instance`, delegated act population | `services/authorization-server/test/delegation.test.ts` |
+| `draft-mora-oauth-entity-profiles` | rev 01 (local 2026-04-12) | `packages/actor-chain` | position-keyed `sub_profile` allowlists + pass-through | `packages/actor-chain/test/actor-chain.test.ts` |
 
 ## Adopted for planning, not yet implemented (pins from the pre-flight spike)
 
@@ -40,10 +45,6 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-mission-runtime` | `02d53dd` | M4/M5 PEP + PDP |
 | `draft-mcguinness-mission-authzen` | `02d53dd` | M3 PDP, M4 PEP |
 | `draft-mcguinness-oauth-mission-status` (Status List, introspection projection) | `89ba0b4` | M3 freshness |
-| `draft-mcguinness-oauth-actor-profile` | local repo @ spike date 2026-07-21 | M2 |
-| CIA-CORE (`client-instance-assertion`) | local `-latest` @ 2026-06-23 | M2 |
-| `draft-mcguinness-oauth-ai-agent-instance` | rev 00 | M2 |
-| `draft-mora-oauth-entity-profiles` | rev 01 (local 2026-04-12) | M2 (`sub_profile` allowlists) |
 | AuthZEN ARAP / AROP | openid/authzen PR #531 head @ 2026-07-20 | M6/M7 |
 | `draft-mcguinness-svc-connectivity-disco` | repo main @ 2026-07-20 | M8 |
 | `draft-mcguinness-oauth-mission-cross-domain` + ID-JAG | in-repo / datatracker current | M9 |

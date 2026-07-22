@@ -10,6 +10,20 @@ export { MissionKernel, GateError, LifecycleConflictError } from "./kernel/kerne
 export { validateMissionIntent, IntentError } from "./kernel/intent.js";
 export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
 export * from "./kernel/types.js";
+export {
+  validateInstanceAssertion,
+  newReplayCache,
+  InstanceAssertionError,
+  CLIENT_INSTANCE_JWT_TYP,
+  CLIENT_INSTANCE_TOKEN_TYPE,
+  type InstanceIssuer,
+  type ValidatedInstance,
+} from "./kernel/instance-assertion.js";
+export {
+  constructDelegatedIssuance,
+  delegatedContextActor,
+  type DelegatedIssuance,
+} from "./kernel/delegation.js";
 
 export interface BuiltAs {
   provider: Provider;
