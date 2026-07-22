@@ -32,7 +32,15 @@ export interface RefusalRecord extends EvidenceBase {
   refusal_reason: string;
 }
 
-export type Evidence = DecisionEvidence | RefusalRecord;
+/** @spec authzen Execution Evidence: the outcome joined to the decision. */
+export interface ExecutionEvidence extends EvidenceBase {
+  kind: "execution";
+  permit_id: string;
+  op_key: string;
+  outcome: "committed" | "deduped";
+}
+
+export type Evidence = DecisionEvidence | RefusalRecord | ExecutionEvidence;
 
 /** Distributive omit so the union's discriminated shapes are preserved. */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;

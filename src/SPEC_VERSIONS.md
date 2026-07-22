@@ -43,12 +43,12 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-oauth-mission` (RS enforcement) | `c2053e5` | `services/mcp-payments` | `mission#rs-enforcement` (token + mission claim + DPoP cnf validation, mission-scoped tools/list) | `services/mcp-payments/test/enforcement.test.ts` |
 | `draft-mcguinness-mission-authzen` (PEP envelope + evidence) | `02d53dd` | `services/mcp-payments/src/pep.ts` | envelope build (context.actor, parameter_digest, capability_source), Decision Evidence, Refusal Records | `services/mcp-payments/test/enforcement.test.ts` |
 | RFC 9728 (Protected Resource Metadata) | RFC 9728 | `services/mcp-payments/src/server.ts` | `mission_bound_authorization_required`, `mission_constraints_supported` | `services/mcp-payments/test/enforcement.test.ts` |
+| `draft-mcguinness-mission-runtime` (transaction-assurance tier) | `02d53dd` | `services/mcp-payments` (transaction, connectors, reconcile) | single-use permits, execution leases, operation state machine (D36), Execution Evidence, outcome reconciliation | `services/mcp-payments/test/transaction.test.ts` |
 
 ## Adopted for planning, not yet implemented (pins from the pre-flight spike)
 
 | Spec | Pinned version | Lands in |
 |---|---|---|
-| `draft-mcguinness-mission-runtime` (PEP tier) | `02d53dd` | M4/M5 PEP |
 | `draft-mcguinness-mission-authzen` (PEP evidence, requestable denials) | `02d53dd` | M4/M6 PEP |
 | `draft-mcguinness-oauth-mission-status` (Status List, introspection projection) | `89ba0b4` | M3 freshness |
 | AuthZEN ARAP / AROP | openid/authzen PR #531 head @ 2026-07-20 | M6/M7 |
