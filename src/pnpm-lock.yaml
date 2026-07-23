@@ -129,6 +129,18 @@ importers:
         specifier: ^6.1.3
         version: 6.2.3
 
+  services/agent:
+    dependencies:
+      '@mission/authorization-server':
+        specifier: workspace:*
+        version: link:../authorization-server
+      '@mission/demo-data':
+        specifier: workspace:*
+        version: link:../../packages/demo-data
+      jose:
+        specifier: ^6.1.3
+        version: 6.2.3
+
   services/authorization-server:
     dependencies:
       '@mission/actor-chain':

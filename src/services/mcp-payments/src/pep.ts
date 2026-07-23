@@ -9,7 +9,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { type ActObject, buildContextActor } from "@mission/actor-chain";
+import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
   type Decision,
   evaluate,
@@ -67,6 +67,12 @@ export interface PepDeps {
   maxApprovalAgeSeconds?: number;
   /** PDP signer + ARS endpoint for requestable denials (M6). */
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
+  /**
+   * Per-instance revocation (M12 / D19): "iss sub" keys of agent instances the
+   * PEP refuses. Revoking one sub-agent instance kills only that instance;
+   * other actors in the chain (the orchestrator) keep working.
+   */
+  revokedInstances?: Set<string>;
 }
 
 export interface ActionApprovalInput {
@@ -112,6 +118,16 @@ export class Pep {
 
     const view = this.deps.loadView(token.mission.id);
     if (!view) return this.refuse(token, "unknown_mission", mapping.action);
+
+    // Per-instance revocation (M12): refuse if any actor in the chain is
+    // revoked, keyed on (act.iss, act.sub). Kills one instance, not the chain.
+    if (this.deps.revokedInstances?.size) {
+      for (const hop of flattenActChain(token.act)) {
+        if (this.deps.revokedInstances.has(`${hop.iss} ${hop.sub}`)) {
+          return this.refuse(token, "instance_revoked", mapping.action, view);
+        }
+      }
+    }
 
     // Effective parameters from authoritative store state (D34).
     let effective: EffectiveParams | undefined;
