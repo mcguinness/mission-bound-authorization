@@ -522,8 +522,8 @@ Status (update this table as work lands):
 | M9 Cross-domain | **done** 2026-07-22 (PR #328) |
 | M10 Audit (SCITT) | **done** 2026-07-22 (PR #330) |
 | M11 Full UX | **done** 2026-07-23 (PR #331) |
-| M12 Agent + demos | **in review** (PR #332) |
-| M13 Evals | not started |
+| M12 Agent + demos | **done** 2026-07-23 (PR #332) |
+| M13 Evals | **in progress** |
 | M14 Conformance + reports | not started |
 
 Definition of done, every milestone: tests green, the spec-feedback pass
