@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "dist" },
+  "include": ["src"],
+  "references": [
+    { "path": "../services/authorization-server" },
+    { "path": "../services/pdp" },
+    { "path": "../services/mcp-payments" },
+    { "path": "../services/access-request" },
+    { "path": "../services/transparency" },
+    { "path": "../services/console-bff" },
+    { "path": "../packages/telemetry" },
+    { "path": "../packages/demo-data" }
+  ]
+}

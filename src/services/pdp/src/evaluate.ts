@@ -9,6 +9,7 @@
  */
 
 import { type ContextActor, validateContextActor } from "@mission/actor-chain";
+import { getTracer } from "@mission/telemetry";
 import { SignJWT, type CryptoKey } from "jose";
 import type { Fga } from "./fga.js";
 import { type AuthorityEntry, deriveContextualTuples, type MissionView, policyViewId } from "./policy-view.js";
@@ -76,6 +77,22 @@ function newDecisionId(): string {
 }
 
 export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): Promise<Decision> {
+  return getTracer("pdp").startActiveSpan("pdp.evaluate", async (span) => {
+    try {
+      const decision = await evaluateInner(req, opts);
+      span.setAttribute("mission.action", req.action.name);
+      span.setAttribute("mission.decision", decision.decision);
+      if (decision.context.denial_reason) {
+        span.setAttribute("mission.denial_reason", String(decision.context.denial_reason));
+      }
+      return decision;
+    } finally {
+      span.end();
+    }
+  });
+}
+
+async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Promise<Decision> {
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;

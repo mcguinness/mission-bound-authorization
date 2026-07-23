@@ -15,6 +15,7 @@
     { "path": "services/console-bff" },
     { "path": "services/agent" },
     { "path": "evals" },
+    { "path": "demo" },
     { "path": "services/ras" }
   ]
 }

@@ -3,6 +3,7 @@ packages:
   - services/*
   - apps/*
   - evals
+  - demo
 allowBuilds:
   better-sqlite3: true
   protobufjs: true

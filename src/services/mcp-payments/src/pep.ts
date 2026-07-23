@@ -10,6 +10,7 @@
 
 import { createHash } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
+import { getTracer } from "@mission/telemetry";
 import {
   type Decision,
   evaluate,
@@ -108,6 +109,27 @@ export class Pep {
    * a PEP-side refusal (e.g. unknown mission, missing invoice).
    */
   async enforce(
+    tool: string,
+    args: Record<string, unknown>,
+    token: TokenFacts,
+    actionApproval?: ActionApprovalInput,
+  ): Promise<EnforceResult> {
+    return getTracer("pep").startActiveSpan(`pep.enforce ${tool}`, async (span) => {
+      span.setAttribute("mission.tool", tool);
+      span.setAttribute("mission.id", token.mission.id);
+      try {
+        const res = await this.enforceInner(tool, args, token, actionApproval);
+        span.setAttribute("mission.permitted", res.permitted);
+        if (res.denial_reason) span.setAttribute("mission.denial_reason", res.denial_reason);
+        if (res.refusal_reason) span.setAttribute("mission.refusal_reason", res.refusal_reason);
+        return res;
+      } finally {
+        span.end();
+      }
+    });
+  }
+
+  private async enforceInner(
     tool: string,
     args: Record<string, unknown>,
     token: TokenFacts,

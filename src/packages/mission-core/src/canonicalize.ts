@@ -21,7 +21,12 @@ export function canonicalize(value: JsonValue): string {
     return `[${value.map((v) => canonicalize(v)).join(",")}]`;
   }
   if (typeof value === "object") {
-    const keys = Object.keys(value).sort((a, b) => compareUtf16(a, b));
+    // Drop members whose value is undefined, matching JSON.stringify / JCS
+    // (a JSON object has no undefined members). Prevents a throw on objects
+    // that carry optional-but-unset fields (e.g. an absent trace_id).
+    const keys = Object.keys(value)
+      .filter((k) => value[k] !== undefined)
+      .sort((a, b) => compareUtf16(a, b));
     const members = keys.map((k) => `${JSON.stringify(k)}:${canonicalize(value[k] as JsonValue)}`);
     return `{${members.join(",")}}`;
   }

@@ -126,7 +126,7 @@ export function buildContextActor(input: {
  * non-empty entries, iss/sub per entry, root consistent with subject, leaf
  * consistent with client_instance_id when both are present.
  */
-export function validateContextActor(actor: ContextActor, opts: { subject?: string } = {}): void {
+export function validateContextActor(actor: ContextActor, _opts: { subject?: string } = {}): void {
   if (!actor.act || actor.act.length === 0) return;
   for (const entry of actor.act) {
     if (typeof entry.iss !== "string" || typeof entry.sub !== "string") {
