@@ -13,8 +13,8 @@
     "test": "vitest run",
     "demo:span": "tsx scripts/demo-span.mts",
     "demo": "node scripts/demo.mjs",
-    "evals": "pnpm -C evals exec tsx src/run.ts",
-    "demo:vendor-test": "pnpm -C evals exec tsx src/vendor-test-run.ts"
+    "evals": "node scripts/evals.mjs",
+    "demo:vendor-test": "node scripts/vendor-test.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
