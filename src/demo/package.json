@@ -1,0 +1,22 @@
+{
+  "name": "@mission/demo",
+  "version": "0.0.1",
+  "private": true,
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "dependencies": {
+    "@mission/access-request": "workspace:*",
+    "@mission/authorization-server": "workspace:*",
+    "@mission/console-bff": "workspace:*",
+    "@mission/mcp-payments": "workspace:*",
+    "@mission/pdp": "workspace:*",
+    "@mission/telemetry": "workspace:*",
+    "@mission/transparency": "workspace:*",
+    "jose": "^6.1.3",
+    "@mission/demo-data": "workspace:*"
+  },
+  "scripts": {
+    "exhibit": "node ../scripts/exhibit.mjs",
+    "typecheck": "tsc --build"
+  }
+}
