@@ -9,8 +9,17 @@
  */
 
 import { type ContextActor, validateContextActor } from "@mission/actor-chain";
+import { SignJWT, type CryptoKey } from "jose";
 import type { Fga } from "./fga.js";
 import { type AuthorityEntry, deriveContextualTuples, type MissionView, policyViewId } from "./policy-view.js";
+
+/** @spec authzen#context-approval */
+export interface ActionApproval {
+  id: string;
+  approved_at: string;
+  parameter_digest: string;
+  state?: string;
+}
 
 export interface EvaluationRequest {
   subject: { id: string; type?: string };
@@ -25,6 +34,7 @@ export interface EvaluationRequest {
     parameter_digest?: string;
     amount?: { amount: string; currency: string };
     action_class?: string;
+    action_approval?: ActionApproval;
   };
 }
 
@@ -34,7 +44,8 @@ export type DenialReason =
   | "view_inconsistent"
   | "mission_inactive"
   | "actor_invalid"
-  | "constraint_exceeded";
+  | "constraint_exceeded"
+  | "action_approval_required";
 
 export interface Decision {
   decision: boolean;
@@ -50,6 +61,12 @@ export interface EvaluateOptions {
   stalenessBoundSeconds: (actionClass: string | undefined) => number;
   /** Map an action name to the FGA relation and object type it needs. */
   relationForAction: (action: string) => { relation: "payer" | "reader"; needsAmount: boolean } | null;
+  /** Deployment/Resource policy: does this action require an action-bound approval? */
+  requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
+  /** Max approval age (seconds) the PDP enforces on context.action_approval. */
+  maxApprovalAgeSeconds?: number;
+  /** For requestable denials: sign the PDP denial binding + the ARS endpoint. */
+  requestable?: { sign: CryptoKey; kid: string; endpoint: string };
 }
 
 let decisionCounter = 0;
@@ -62,8 +79,9 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
+  const decisionId = newDecisionId();
   const base = (extra: Record<string, unknown>) => ({
-    decision_id: newDecisionId(),
+    decision_id: decisionId,
     policy_view_id: pvid,
     ...(actionClass ? { action_class: actionClass, class_source: "deployment" } : {}),
     ...extra,
@@ -137,6 +155,42 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       if (amt.currency !== cap.currency || Number.parseFloat(amt.amount) > Number.parseFloat(cap.amount)) {
         return deny("constraint_exceeded");
       }
+    }
+  }
+
+  // 8. Action-bound approval (@spec authzen#context-approval): when policy
+  //    requires one, the presented approval MUST match the request's
+  //    parameter_digest and be within the max approval age; else deny
+  //    action_approval_required, marked requestable (@spec requestable-denials).
+  if (opts.requiresActionApproval?.(req.action.name, actionClass)) {
+    const appr = req.context.action_approval;
+    const maxAge = (opts.maxApprovalAgeSeconds ?? 300) * 1000;
+    const valid =
+      appr !== undefined &&
+      appr.parameter_digest === req.context.parameter_digest &&
+      now().getTime() - Date.parse(appr.approved_at) <= maxAge;
+    if (!valid) {
+      const ctx: Record<string, unknown> = base({
+        denial_reason: "action_approval_required",
+        ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
+      });
+      if (opts.requestable && req.context.parameter_digest) {
+        const binding = await new SignJWT({
+          decision_id: decisionId,
+          mission_id: view.id,
+          action: req.action.name,
+          parameter_digest: req.context.parameter_digest,
+        })
+          .setProtectedHeader({ alg: "ES256", kid: opts.requestable.kid, typ: "pdp-denial-binding+jwt" })
+          .setIssuedAt()
+          .sign(opts.requestable.sign);
+        ctx.access_request = {
+          endpoint: opts.requestable.endpoint,
+          denial_binding: decisionId,
+          binding_token: binding,
+        };
+      }
+      return { decision: false, context: ctx };
     }
   }
 

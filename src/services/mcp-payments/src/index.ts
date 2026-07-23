@@ -6,6 +6,7 @@ export {
   type PepDeps,
   type TokenFacts,
   type EnforceResult,
+  type ActionApprovalInput,
   CANONICAL_RESOURCE,
   TOOL_BASE,
   sourceDigestOf,
