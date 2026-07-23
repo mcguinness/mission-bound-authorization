@@ -521,8 +521,8 @@ Status (update this table as work lands):
 | M8 Discovery | **done** 2026-07-22 (PR #327) |
 | M9 Cross-domain | **done** 2026-07-22 (PR #328) |
 | M10 Audit (SCITT) | **done** 2026-07-22 (PR #330) |
-| M11 Full UX | **in review** (PR #331) |
-| M12 Agent + demos | not started |
+| M11 Full UX | **done** 2026-07-23 (PR #331) |
+| M12 Agent + demos | **in progress** |
 | M13 Evals | not started |
 | M14 Conformance + reports | not started |
 
