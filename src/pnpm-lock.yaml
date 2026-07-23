@@ -178,6 +178,15 @@ importers:
         specifier: ^6.1.3
         version: 6.2.3
 
+  services/transparency:
+    dependencies:
+      '@mission/core':
+        specifier: workspace:*
+        version: link:../../packages/mission-core
+      jose:
+        specifier: ^6.1.3
+        version: 6.2.3
+
 packages:
 
   '@biomejs/biome@2.5.4':
