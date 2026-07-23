@@ -524,7 +524,7 @@ Status (update this table as work lands):
 | M11 Full UX | **done** 2026-07-23 (PR #331) |
 | M12 Agent + demos | **done** 2026-07-23 (PR #332) |
 | M13 Evals | **done** 2026-07-23 (PR #333) |
-| M14 Conformance + reports | **in progress** |
+| M14 Conformance + reports | **in review** (PR #334) |
 
 Definition of done, every milestone: tests green, the spec-feedback pass
 done, this status table and the logs updated, the PR merged.
