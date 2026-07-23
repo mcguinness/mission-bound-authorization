@@ -29,6 +29,13 @@ async function main() {
       }
     });
 
+  // Capture the last enforced decision's digest to bind a JIT access request.
+  let lastDigest = "";
+  stack.onEnforce((e) => {
+    const d = e.decision.context.parameter_digest;
+    if (typeof d === "string") lastDigest = d;
+  });
+
   const mission = await traced("flow.issuance", () => approveDemoMission(stack));
   const record = stack.kernel.get(mission.id);
   const token = (): TokenFacts => ({
@@ -41,6 +48,23 @@ async function main() {
 
   await traced("flow.read", () => stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, token()));
   await traced("flow.wire", () => stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, token()));
+  // JIT/ARAP: deny (approval required) -> ARS submit -> approve -> retry -> permit.
+  await traced("flow.jit", async () => {
+    const first = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, token());
+    const ar = (first as { access_request?: { binding_token: string } }).access_request;
+    if (!ar) return first;
+    const submitted = await stack.ars.submit({
+      binding_token: ar.binding_token,
+      requested: { action: "payments:remittance.send", mission_id: mission.id, parameter_digest: lastDigest, subject: "alice" },
+    });
+    const approval = await stack.ars.adjudicate(submitted.taskId, "approve", "bob");
+    if (!approval) return first;
+    return stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, token(), undefined, {
+      id: approval.id,
+      approved_at: approval.approved_at,
+      parameter_digest: approval.parameter_digest,
+    });
+  });
   await traced("flow.over_cap", () => stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-2" }, token()));
   await traced("flow.revoke", async () => {
     stack.kernel.transition(mission.id, "revoke");

@@ -12,8 +12,11 @@
 import { readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
-import type { TokenFacts } from "@mission/mcp-payments";
+import { type TokenFacts, TOOLS } from "@mission/mcp-payments";
 import { approveDemoMission, composeStack, type DemoStack, ISS } from "./stack.js";
+
+const TX_TOOLS = new Set(["execute_wire_transfer", "send_remittance_email"]);
+const actionFor = (tool: string): string => TOOLS.find((t) => t.name === tool)?.action ?? "";
 
 const PORT = Number(process.env.CONSOLE_BFF_PORT ?? 4407);
 const INDEX = fileURLToPath(new URL("../public/index.html", import.meta.url));
@@ -66,6 +69,26 @@ async function main() {
     return { sub: "alice", clientId: "ap-agent", clientInstanceId: "inst-1", mission: { id: missionId, authority_hash: r?.authority_hash ?? "" }, cnfJkt: "jkt-demo" };
   };
 
+  // Capture the digest of the last enforced decision so a JIT access request
+  // can be bound to the exact parameters that were denied.
+  let lastDigest = "";
+  stack.onEnforce((e) => {
+    const d = e.decision.context.parameter_digest;
+    if (typeof d === "string") lastDigest = d;
+  });
+
+  // Publish any evidence produced since the last call to the transparency log
+  // so the operator timeline reflects the newest agent activity.
+  let published = stack.evidence.forMission(missionId).length;
+  const publishNew = async () => {
+    const all = stack.evidence.forMission(missionId);
+    for (const ev of all.slice(published)) {
+      const t = ev.kind === "decision" ? "decision-evidence" : ev.kind === "execution" ? "execution-evidence" : "refusal-record";
+      await stack.publishEvidence(missionId, t, ev as unknown as Record<string, unknown>);
+    }
+    published = all.length;
+  };
+
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
     const p = url.pathname;
@@ -85,16 +108,48 @@ async function main() {
         return json(res, 200, stack.bff.lifecycle(session, lc[1] as string, body.operation as never, session.csrf));
       }
       if (p === "/bff/approver/queue") return json(res, 200, stack.bff.approverQueue(session));
+      // Approver adjudicates a pending ARAP task (JIT approval).
+      if (p === "/bff/approver/adjudicate" && req.method === "POST") {
+        const body = await readBody(req);
+        const r = await stack.bff.adjudicateTask(session, String(body.taskId), body.decision as "approve" | "deny", session.csrf);
+        return json(res, 200, r);
+      }
       if (p === "/agent/catalog") return json(res, 200, stack.catalog.catalog("alice", { type: "mcp" }));
       // Agent action: attempt a tool call and report the enforcement outcome.
+      // A requestable action_approval_required denial opens an ARS access
+      // request and hands the pending task back to the agent (JIT/ARAP).
       if (p === "/agent/act" && req.method === "POST") {
         const body = await readBody(req);
         const tool = String(body.tool);
         const args = (body.args as Record<string, unknown>) ?? {};
-        const r =
-          tool === "execute_wire_transfer"
-            ? await stack.server.callTransactionTool(tool, args, missionToken())
-            : await stack.server.callReadTool(tool, args, missionToken());
+        const r = TX_TOOLS.has(tool)
+          ? await stack.server.callTransactionTool(tool, args, missionToken())
+          : await stack.server.callReadTool(tool, args, missionToken());
+        await publishNew();
+        const ar = (r as { access_request?: { endpoint: string; denial_binding: string; binding_token: string } }).access_request;
+        if (!r.ok && ar) {
+          const submitted = await stack.ars.submit({
+            binding_token: ar.binding_token,
+            requested: { action: actionFor(tool), mission_id: missionId, parameter_digest: lastDigest, subject: "alice" },
+          });
+          return json(res, 200, { ...r, taskId: submitted.taskId, task_state: submitted.state });
+        }
+        return json(res, 200, r);
+      }
+      // Agent retries a JIT-gated call, carrying the approval as context.
+      if (p === "/agent/retry" && req.method === "POST") {
+        const body = await readBody(req);
+        const taskId = String(body.taskId);
+        const tool = String(body.tool);
+        const args = (body.args as Record<string, unknown>) ?? {};
+        const task = stack.ars.getTask(taskId);
+        if (!task || task.state !== "approved" || !task.approval) {
+          return json(res, 200, { ok: false, pending: true, state: task?.state ?? "unknown" });
+        }
+        const a = task.approval;
+        const approvalCtx = { id: a.id, approved_at: a.approved_at, parameter_digest: a.parameter_digest };
+        const r = await stack.server.callTransactionTool(tool, args, missionToken(), undefined, approvalCtx);
+        await publishNew();
         return json(res, 200, r);
       }
       json(res, 404, { error: "not found" });

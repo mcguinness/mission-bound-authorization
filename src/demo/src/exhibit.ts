@@ -66,7 +66,7 @@ async function main() {
     resources: [RESOURCE],
     expiresAt: "2027-01-01T00:00:00Z",
     // A deliberately over-broad proposal: a bogus action, extra vendors, a huge cap.
-    proposedActions: ["payments:invoice.read", "payments:payment.execute", "payments:vendor.delete"],
+    proposedActions: ["payments:invoice.read", "payments:payment.execute", "payments:remittance.send", "payments:vendor.delete"],
     vendors: ["acme", "globex", "evilcorp"],
   });
   // shapeIntent omits max_amount; add an over-broad cap to the proposal to show clamping.
@@ -147,14 +147,65 @@ async function main() {
   await traceCall("Read tool call — in-authority (get_invoice)", "read", "get_invoice", { invoice_id: "inv-1" });
   await traceCall("Wire transfer — transaction-assurance tier (execute_wire_transfer)", "wire", "execute_wire_transfer", { invoice_id: "inv-1" });
 
+  // ---- 6. JIT access via ARAP --------------------------------------------
+  step(6, "JIT access: an in-mission action, gated behind a per-action approval (ARAP)");
+  note("send_remittance_email is WITHIN the mission's authority, but deployment policy requires an action-bound approval, resolved just-in-time.");
+
+  // Attempt 1: no approval → the PDP denies action_approval_required and
+  // marks the denial requestable (a signed binding + the ARS intake endpoint).
+  block("MCP tools/call — send_remittance_email (first attempt, no approval)", {
+    tool: "send_remittance_email",
+    arguments: { invoice_id: "inv-1" },
+    authorization: `DPoP <mission-bound token for ${full.id}>`,
+  });
+  const attempt = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, token());
+  if (captured) {
+    block("PDP request (AuthZEN envelope)", captured.envelope);
+    block("PDP decision (requestable: approval required)", captured.decision);
+  }
+  verdict(attempt.ok, `send_remittance_email(inv-1) → ${attempt.denial_reason ?? attempt.refusal_reason}`);
+  const denial = attempt.access_request;
+  const digest = captured?.decision.context.parameter_digest as string;
+  if (!denial) throw new Error("expected a requestable denial with an access_request");
+  block("requestable denial → access_request (ARAP intake)", denial);
+
+  // The agent submits an access request to the ARS: a distinct trusted-base
+  // component (not the PDP) that verifies the PDP-signed denial binding.
+  note("Agent submits an access request to the ARS; the ARS verifies the PDP-signed denial binding before it opens a task.");
+  const submitted = await stack.ars.submit({
+    binding_token: denial.binding_token,
+    requested: { action: "payments:remittance.send", mission_id: full.id, parameter_digest: digest, subject: "alice" },
+  });
+  note(`ARS task ${submitted.taskId} → ${submitted.state}`);
+  block("ARS approver queue", stack.ars.pending());
+
+  // Bob adjudicates (distinct from the acting subject alice). On approval the
+  // ARS mints an action-bound approval object, scoped to this parameter_digest.
+  const approval = await stack.ars.adjudicate(submitted.taskId, "approve", "bob");
+  if (!approval) throw new Error("expected an approval object");
+  block("action-bound approval (ARAP reevaluate: input context, NOT a bearer grant)", approval);
+
+  // Attempt 2: retry the SAME tool call, now carrying the approval as
+  // context.action_approval. The PDP re-evaluates; no new token is issued.
+  const approvalCtx = { id: approval.id, approved_at: approval.approved_at, parameter_digest: approval.parameter_digest };
+  block("MCP tools/call — send_remittance_email (retry with approval context)", {
+    tool: "send_remittance_email",
+    arguments: { invoice_id: "inv-1" },
+    context: { action_approval: approvalCtx },
+  });
+  const granted = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, token(), undefined, approvalCtx);
+  if (captured) block("PDP decision (permit: approval matched parameter_digest, within max age)", captured.decision);
+  verdict(granted.ok, `send_remittance_email(inv-1) → ${granted.ok ? JSON.stringify(granted.result) : (granted.denial_reason ?? granted.refusal_reason)}`);
+  note("The mission was never widened. The JIT approval satisfied a per-action gate that already sat inside the mission's authority.");
+
   // Publish evidence produced so far to the transparency log.
   for (const ev of stack.evidence.forMission(full.id)) {
     const t = ev.kind === "decision" ? "decision-evidence" : ev.kind === "execution" ? "execution-evidence" : "refusal-record";
     await stack.publishEvidence(full.id, t, ev as unknown as Record<string, unknown>);
   }
 
-  // ---- 6. Denials ---------------------------------------------------------
-  step(6, "Denials: valid token, but out of bounds / authority");
+  // ---- 7. Denials ---------------------------------------------------------
+  step(7, "Denials: valid token, but out of bounds / authority");
   const over = await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-2" }, token());
   if (captured) block("PDP decision (over-cap $900)", captured.decision);
   verdict(over.ok, `execute_wire_transfer(inv-2, $900) → ${over.denial_reason ?? over.refusal_reason}`);
@@ -162,16 +213,16 @@ async function main() {
   if (captured) block("PDP decision (globex vendor)", captured.decision);
   verdict(globex.ok, `execute_wire_transfer(inv-3, globex) → ${globex.denial_reason ?? globex.refusal_reason}`);
 
-  // ---- 7. Revocation freshness --------------------------------------------
-  step(7, "Termination: operator revokes; the next action is denied");
+  // ---- 8. Revocation freshness --------------------------------------------
+  step(8, "Termination: operator revokes; the next action is denied");
   stack.kernel.transition(full.id, "revoke");
   note(`mission ${full.id} state → ${stack.kernel.get(full.id)?.state}`);
   const afterRevoke = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, token());
   if (captured) block("PDP decision (after revoke)", captured.decision);
   verdict(afterRevoke.ok, `get_invoice(inv-1) → ${afterRevoke.denial_reason ?? afterRevoke.refusal_reason}`);
 
-  // ---- 8. Evidence --------------------------------------------------------
-  step(8, "Evidence: the tamper-evident feed, five-step verified");
+  // ---- 9. Evidence --------------------------------------------------------
+  step(9, "Evidence: the tamper-evident feed, five-step verified");
   const op = stack.bff.sessions.create("olivia", ["operator"]);
   for (const row of await stack.bff.timeline(op, full.id)) {
     console.log(`  ${row.verified ? C.green + "✓ VERIFIED" : C.red + "✗ FAILED  "}${C.reset} ${row.evidence_type} ${C.dim}from ${row.producer}${C.reset}`);

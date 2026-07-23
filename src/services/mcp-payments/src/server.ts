@@ -8,7 +8,7 @@
 import { calculateJwkThumbprint, createLocalJWKSet, decodeProtectedHeader, jwtVerify } from "jose";
 import type { ActObject } from "@mission/actor-chain";
 import type { MissionView } from "@mission/pdp";
-import { CANONICAL_RESOURCE, type Pep, type TokenFacts, TOOL_ACTIONS } from "./pep.js";
+import { type ActionApprovalInput, CANONICAL_RESOURCE, type EnforceResult, type Pep, type TokenFacts, TOOL_ACTIONS } from "./pep.js";
 import type { PaymentsStore } from "./payments-store.js";
 import type { Connectors } from "./connectors.js";
 import type { EvidenceStore } from "./evidence.js";
@@ -153,16 +153,25 @@ export class McpPaymentsServer {
     args: Record<string, unknown>,
     token: TokenFacts,
     beforeCommit?: () => void,
-  ): Promise<{ ok: boolean; result?: unknown; denial_reason?: string; refusal_reason?: string; deduped?: boolean }> {
+    actionApproval?: ActionApprovalInput,
+  ): Promise<{
+    ok: boolean;
+    result?: unknown;
+    denial_reason?: string;
+    refusal_reason?: string;
+    deduped?: boolean;
+    access_request?: EnforceResult["access_request"];
+  }> {
     const tx = this.deps.transaction;
     if (!tx) throw new Error("transaction tier not configured");
 
-    const res = await this.deps.pep.enforce(tool, args, token);
+    const res = await this.deps.pep.enforce(tool, args, token, actionApproval);
     if (!res.permitted || !res.effective || !res.decision) {
       return {
         ok: false,
         ...(res.denial_reason ? { denial_reason: res.denial_reason } : {}),
         ...(res.refusal_reason ? { refusal_reason: res.refusal_reason } : {}),
+        ...(res.access_request ? { access_request: res.access_request } : {}),
       };
     }
     const digest = res.decision.context.parameter_digest as string;
