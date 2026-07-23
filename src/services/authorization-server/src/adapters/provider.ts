@@ -259,6 +259,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     if (ctx.path === "/.well-known/openid-configuration" && ctx.status === 200) {
       const meta = ctx.body as Record<string, unknown>;
       meta.mission_bound_authorization_supported = true;
+      meta.service_catalog_endpoint = `${opts.issuer}/service-catalog`;
       meta.introspection_endpoint = `${opts.issuer}/introspect`;
     }
   };
