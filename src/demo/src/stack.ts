@@ -24,6 +24,7 @@ import {
 } from "@mission/mcp-payments";
 import { signStatement, TransparencyService, type Receipt, type SignedStatement } from "@mission/transparency";
 import { ConsoleBff } from "@mission/console-bff";
+import type { AccessRequestService } from "@mission/access-request";
 
 export const ISS = "https://as.demo";
 
@@ -39,6 +40,7 @@ export interface DemoStack {
   transparency: TransparencyService;
   catalog: CatalogProvider;
   bff: ConsoleBff;
+  ars: AccessRequestService;
   revokedInstances: Set<string>;
   viewFor: (missionId: string) => MissionView | undefined;
   /** Register evidence to the transparency log + retain it for the timeline. */
@@ -88,6 +90,12 @@ export async function composeStack(opts: { openfgaUrl: string; presharedKey: str
     };
   };
 
+  // PDP denial-binding key: the PEP's requestable signer and the ARS trust the
+  // same key so a real binding_token round-trips (M6 JIT/ARAP flow).
+  const { exportJWK } = await import("jose");
+  const pdpDenialKeys = await generateKeyPair("ES256", { extractable: true });
+  const pdpDenialPub = { ...(await exportJWK(pdpDenialKeys.publicKey)), kid: "pdp-denial", alg: "ES256" };
+
   let observer: PepDeps["observe"];
   const pep = new Pep({
     payments,
@@ -99,6 +107,11 @@ export async function composeStack(opts: { openfgaUrl: string; presharedKey: str
     sourceDigest: sourceDigestOf({ name: "payments" }),
     revokedInstances,
     observe: (e) => observer?.(e),
+    // JIT gate: sending a remittance email is in the mission's authority but
+    // requires an action-bound approval, resolved just-in-time via ARAP (M6).
+    requiresActionApproval: (action) => action === "payments:remittance.send",
+    maxApprovalAgeSeconds: 300,
+    requestable: { sign: pdpDenialKeys.privateKey, kid: "pdp-denial", endpoint: "https://ars.demo/access-requests" },
   });
 
   const { TransactionEngine } = await import("@mission/mcp-payments");
@@ -116,7 +129,6 @@ export async function composeStack(opts: { openfgaUrl: string; presharedKey: str
   const tKeys = await generateKeyPair("ES256", { extractable: true });
   const transparency = new TransparencyService({ key: tKeys.privateKey, kid: "transparency", issuer: "https://transparency.demo" });
   const pdpProducerKeys = await generateKeyPair("ES256", { extractable: true });
-  const { exportJWK } = await import("jose");
   const producerPub = { ...(await exportJWK(pdpProducerKeys.publicKey)), kid: "pdp-evidence", alg: "ES256" };
   const tPub = { ...(await exportJWK(tKeys.publicKey)), kid: "transparency", alg: "ES256" };
   const producerKey = { iss: "https://pdp.demo", key: pdpProducerKeys.privateKey, kid: "pdp-evidence" };
@@ -129,12 +141,12 @@ export async function composeStack(opts: { openfgaUrl: string; presharedKey: str
     retainedEvidence.set(stmt.digest, ev);
   };
 
-  // ARS (denial binding not exercised in the exhibit; present for completeness).
+  // ARS trusts the same PDP denial-binding key the PEP signs requestable
+  // denials with, so a JIT access request verifies (M6).
   const { AccessRequestService } = await import("@mission/access-request");
   const arsKeys = await generateKeyPair("ES256", { extractable: true });
-  const pdpDenialKeys = await generateKeyPair("ES256", { extractable: true });
   const ars = new AccessRequestService({
-    pdpJwks: { keys: [{ ...(await exportJWK(pdpDenialKeys.publicKey)), kid: "pdp", alg: "ES256" } as never] },
+    pdpJwks: { keys: [pdpDenialPub as never] },
     approvalKey: arsKeys.privateKey,
     approvalKid: "ars",
   });
@@ -163,6 +175,7 @@ export async function composeStack(opts: { openfgaUrl: string; presharedKey: str
     transparency,
     catalog,
     bff,
+    ars,
     revokedInstances,
     viewFor,
     publishEvidence,
@@ -183,7 +196,7 @@ export function approveDemoMission(stack: DemoStack): { id: string } {
         {
           type: "mission_resource_access",
           resource: DERIVATION_POLICY.ceiling[0].resource,
-          actions: ["payments:invoice.read", "payments:payment.schedule", "payments:payment.execute"],
+          actions: ["payments:invoice.read", "payments:payment.schedule", "payments:payment.execute", "payments:remittance.send"],
           constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
         },
       ],
