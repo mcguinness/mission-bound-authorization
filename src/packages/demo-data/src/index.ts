@@ -113,3 +113,41 @@ export async function seedAgentClient(): Promise<SeededClient> {
 
 /** Dev-only service token for control-plane edges (channel matrix). */
 export const DEV_SERVICE_TOKEN = "dev-service-token";
+
+/** @spec svc-connectivity-disco: seeded catalog services (D8). */
+export const CATALOG_SERVICES = [
+  {
+    id: "payments",
+    display_name: "AP Payments (internal MCP)",
+    type: "mcp" as const,
+    endpoint: CANONICAL_RESOURCE,
+    categories: ["payments"],
+    tags: ["internal", "ap"],
+    server_card_uri: `${CANONICAL_RESOURCE.replace(/\/mcp$/, "")}/.well-known/mcp`,
+    resource: CANONICAL_RESOURCE,
+    connection: { profile: "oauth" as const, type: "authorization_code" as const },
+    approvable: true,
+  },
+  {
+    id: "ledgercloud",
+    display_name: "LedgerCloud (accounting SaaS)",
+    type: "mcp" as const,
+    endpoint: "http://localhost:4406/mcp",
+    categories: ["accounting"],
+    tags: ["saas"],
+    resource: "http://localhost:4406/mcp",
+    connection: { profile: "oauth" as const, type: "id_jag" as const },
+    approvable: true,
+  },
+  {
+    id: "hr-files",
+    display_name: "HR Files",
+    type: "mcp" as const,
+    endpoint: "http://localhost:4499/mcp",
+    categories: ["files"],
+    tags: ["hr"],
+    resource: "http://localhost:4499/mcp",
+    connection: { profile: "oauth" as const, type: "authorization_code" as const },
+    approvable: false, // no authority path for alice -> request-access
+  },
+];

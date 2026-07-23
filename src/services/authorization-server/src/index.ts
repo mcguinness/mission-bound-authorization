@@ -11,6 +11,13 @@ export { validateMissionIntent, IntentError } from "./kernel/intent.js";
 export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
 export * from "./kernel/types.js";
 export {
+  CatalogProvider,
+  type ServiceSeed,
+  type CatalogService,
+  type CatalogFilter,
+  type ConnectionStatus,
+} from "./kernel/catalog.js";
+export {
   validateInstanceAssertion,
   newReplayCache,
   InstanceAssertionError,

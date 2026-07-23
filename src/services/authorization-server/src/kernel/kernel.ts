@@ -217,6 +217,14 @@ export class MissionKernel {
     this.db.prepare("UPDATE missions SET grant_id = ? WHERE id = ?").run(grantId, missionId);
   }
 
+  /** Active (non-expired) missions for a subject, for catalog status (D9). */
+  activeMissionsForSubject(sub: string): MissionRecord[] {
+    const rows = this.db
+      .prepare("SELECT * FROM missions WHERE subject_sub = ? AND state = 'active'")
+      .all(sub) as Array<Record<string, unknown>>;
+    return rows.map(rowToRecord).map((r) => this.applyExpiry(r)).filter((r) => r.state === "active");
+  }
+
   /**
    * @spec status#legal-transitions — idempotent success when the resulting
    * state equals the current state, except `resume`, which is legal only

@@ -50,6 +50,7 @@ this matrix and the `@spec` tags to the affected code and tests.
 | AuthZEN AROP (openid/authzen#531) | PR #531 @ 2026-07-20 | `services/authorization-server/src/kernel` (deferred, txn-challenge) | DTR deferred grant + Transaction Challenge, token-issuance completion via Expansion | `services/authorization-server/test/arop.test.ts` |
 | DTR (`draft-gerber-oauth-deferred-token-response`) | via AROP #531 | `services/authorization-server/src/kernel/deferred.ts` | `completion_mode=deferred`, `deferral_code`, `authorization_pending`, deferred grant, idempotent submission | `services/authorization-server/test/arop.test.ts` |
 | Txn Challenge (`draft-rosomakho-oauth-txn-challenge`) | via AROP #531 | `services/authorization-server/src/kernel/txn-challenge.ts` | signed challenge (txn/authorization_details/iss/aud/reason), txn-bound single-use audience-restricted token | `services/authorization-server/test/arop.test.ts` |
+| `draft-mcguinness-svc-connectivity-disco` | repo main @ 2026-07-20 | `services/authorization-server/src/kernel/catalog.ts` | per-user catalog, filtering, mission-derived status (D9), request-access link (D10), service_catalog_endpoint metadata | `services/authorization-server/test/catalog.test.ts` |
 
 ## Adopted for planning, not yet implemented (pins from the pre-flight spike)
 
@@ -57,7 +58,6 @@ this matrix and the `@spec` tags to the affected code and tests.
 |---|---|---|
 | `draft-mcguinness-mission-authzen` (PEP evidence, requestable denials) | `02d53dd` | M4/M6 PEP |
 | `draft-mcguinness-oauth-mission-status` (Status List, introspection projection) | `89ba0b4` | M3 freshness |
-| `draft-mcguinness-svc-connectivity-disco` | repo main @ 2026-07-20 | M8 |
 | `draft-mcguinness-oauth-mission-cross-domain` + ID-JAG | in-repo / datatracker current | M9 |
 | `draft-mcguinness-mission-audit` + SCITT (RFC 9943) | in-repo current | M10 |
 | MCP authorization profile | 2025-11-25 (stable) | M4/M8/M9 |
