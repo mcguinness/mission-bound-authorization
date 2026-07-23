@@ -24,6 +24,23 @@ export {
   delegatedContextActor,
   type DelegatedIssuance,
 } from "./kernel/delegation.js";
+export {
+  createExpansion,
+  successorMissionClaim,
+  successorWidensOnly,
+  type ExpansionInput,
+  type ExpansionResult,
+} from "./kernel/expansion.js";
+export { DeferralStore, DEFERRED_GRANT_TYPE, type DeferralPending } from "./kernel/deferred.js";
+export {
+  signChallenge,
+  validateChallenge,
+  issueTxnToken,
+  TxnReplayCache,
+  TXN_CHALLENGE_TYP,
+  TXN_TOKEN_TYP,
+  type TxnChallengeClaims,
+} from "./kernel/txn-challenge.js";
 
 export interface BuiltAs {
   provider: Provider;

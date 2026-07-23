@@ -43,7 +43,9 @@ CREATE TABLE IF NOT EXISTS missions (
   version INTEGER NOT NULL DEFAULT 1,
   max_derivations INTEGER,
   derivation_count INTEGER NOT NULL DEFAULT 0,
-  grant_id TEXT
+  grant_id TEXT,
+  predecessor TEXT,
+  successor TEXT
 ) STRICT;
 `;
 
@@ -119,38 +121,7 @@ export class MissionKernel {
       grant_id: null,
     };
     try {
-      withTransaction(this.db, () => {
-        this.db
-          .prepare(
-            `INSERT INTO missions (id, issuer, state, intent_json, authority_set_json, intent_hash,
-             authority_hash, subject_iss, subject_sub, approver_iss, approver_sub, client_id,
-             policy_version, approval_event_id, created_at, expires_at, version, max_derivations,
-             derivation_count, grant_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          )
-          .run(
-            record.id,
-            record.issuer,
-            record.state,
-            JSON.stringify(record.intent),
-            JSON.stringify(record.authority_set),
-            record.intent_hash,
-            record.authority_hash,
-            record.subject.iss,
-            record.subject.sub,
-            record.approver.iss,
-            record.approver.sub,
-            record.client_id,
-            record.policy_version,
-            record.approval_event_id,
-            record.created_at,
-            record.expires_at,
-            record.version,
-            record.max_derivations,
-            record.derivation_count,
-            record.grant_id,
-          );
-      });
+      this.insertRecord(record);
     } catch (e) {
       if (e instanceof UniqueViolationError) {
         // Idempotent approval: return the record this event already created.
@@ -160,6 +131,65 @@ export class MissionKernel {
       throw e;
     }
     return record;
+  }
+
+  /** Insert a full record (shared by approve and expansion). */
+  insertRecord(record: MissionRecord): void {
+    withTransaction(this.db, () => {
+      this.db
+        .prepare(
+          `INSERT INTO missions (id, issuer, state, intent_json, authority_set_json, intent_hash,
+           authority_hash, subject_iss, subject_sub, approver_iss, approver_sub, client_id,
+           policy_version, approval_event_id, created_at, expires_at, version, max_derivations,
+           derivation_count, grant_id, predecessor)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          record.id,
+          record.issuer,
+          record.state,
+          JSON.stringify(record.intent),
+          JSON.stringify(record.authority_set),
+          record.intent_hash,
+          record.authority_hash,
+          record.subject.iss,
+          record.subject.sub,
+          record.approver.iss,
+          record.approver.sub,
+          record.client_id,
+          record.policy_version,
+          record.approval_event_id,
+          record.created_at,
+          record.expires_at,
+          record.version,
+          record.max_derivations,
+          record.derivation_count,
+          record.grant_id,
+          record.predecessor ?? null,
+        );
+    });
+  }
+
+  nowDate(): Date {
+    return this.now();
+  }
+
+  /**
+   * @spec expansion#superseded-state: on the successor's first grant
+   * redemption, the successor stays active and the predecessor enters
+   * `superseded` atomically. Returns false if already superseded.
+   */
+  supersedeOnRedemption(successorId: string): boolean {
+    const successor = this.get(successorId);
+    if (!successor?.predecessor) return false;
+    return withTransaction(this.db, () => {
+      const pred = this.get(successor.predecessor as string);
+      if (!pred || pred.state !== "active") return false;
+      this.db
+        .prepare("UPDATE missions SET state = 'superseded', successor = ?, version = version + 1 WHERE id = ? AND state = 'active'")
+        .run(successorId, pred.id);
+      return true;
+    });
   }
 
   get(id: string): MissionRecord | undefined {
@@ -327,5 +357,6 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     max_derivations: (row.max_derivations as number | null) ?? null,
     derivation_count: row.derivation_count as number,
     grant_id: (row.grant_id as string | null) ?? null,
+    ...(row.predecessor ? { predecessor: row.predecessor as string } : {}),
   };
 }
