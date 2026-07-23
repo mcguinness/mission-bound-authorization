@@ -1,0 +1,21 @@
+{
+  "name": "@mission/console-bff",
+  "version": "0.0.1",
+  "private": true,
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@mission/access-request": "workspace:*",
+    "@mission/authorization-server": "workspace:*",
+    "@mission/transparency": "workspace:*",
+    "@mission/demo-data": "workspace:*",
+    "jose": "^6.1.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --build",
+    "dev": "tsx watch src/server.ts"
+  }
+}

@@ -12,6 +12,7 @@
     { "path": "services/access-request" },
     { "path": "services/mcp-saas" },
     { "path": "services/transparency" },
+    { "path": "services/console-bff" },
     { "path": "services/ras" }
   ]
 }

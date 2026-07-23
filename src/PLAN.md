@@ -643,6 +643,14 @@ in the Spec Feedback Log.
   evidence.
   *Exit: scenario 11 passes headless, including the tamper demo (mutated
   evidence fails digest verification, a dropped record fails inclusion).*
+- **M11 scope note.** The three SPAs (`apps/approver`, `apps/operator`,
+  `apps/agent-console`) are thin views over `services/console-bff` (D35);
+  interactive UI is not headlessly verifiable, so M11's testable substance is
+  the BFF persona layer (sessions, role/CSRF, approver queue + adjudication,
+  operator fleet + lifecycle, the D32 feed-driven evidence timeline), covered
+  by `console-bff/test`. The scenarios are "runnable from the UIs" at the BFF
+  API the SPAs consume; a manual UI pass is a follow-on, not a gate.
+
 - **M11. Full UX.** The three persona apps complete: approvals inbox with intent
   rendering, fleet dashboard on the management companion's surfaces
   (enumeration, revoke/expand, status transitions), the evidence timeline
