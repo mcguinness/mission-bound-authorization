@@ -62,6 +62,18 @@ export interface PepDeps {
   instanceEpoch: string;
   now?: () => Date;
   sourceDigest: string;
+  /** Deployment policy: which actions require an action-bound approval (M6). */
+  requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
+  maxApprovalAgeSeconds?: number;
+  /** PDP signer + ARS endpoint for requestable denials (M6). */
+  requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
+}
+
+export interface ActionApprovalInput {
+  id: string;
+  approved_at: string;
+  parameter_digest: string;
+  state?: string;
 }
 
 export interface EnforceResult {
@@ -70,6 +82,8 @@ export interface EnforceResult {
   denial_reason?: string;
   refusal_reason?: string;
   effective?: EffectiveParams;
+  /** Present on a requestable denial: the ARAP access-request context. */
+  access_request?: { endpoint: string; denial_binding: string; binding_token: string };
 }
 
 export class Pep {
@@ -87,7 +101,12 @@ export class Pep {
    * `permitted`. Records Decision Evidence (always) and a Refusal Record on
    * a PEP-side refusal (e.g. unknown mission, missing invoice).
    */
-  async enforce(tool: string, args: Record<string, unknown>, token: TokenFacts): Promise<EnforceResult> {
+  async enforce(
+    tool: string,
+    args: Record<string, unknown>,
+    token: TokenFacts,
+    actionApproval?: ActionApprovalInput,
+  ): Promise<EnforceResult> {
     const mapping = this.toolAction(tool);
     if (!mapping) return this.refuse(token, "unknown_tool", tool);
 
@@ -130,6 +149,7 @@ export class Pep {
         ...(effective ? { parameter_digest: parameterDigest(effective) } : {}),
         ...(amount ? { amount } : {}),
         ...(mapping.actionClass ? { action_class: mapping.actionClass } : {}),
+        ...(actionApproval ? { action_approval: actionApproval } : {}),
       } as EvaluationRequest["context"],
     };
 
@@ -140,6 +160,9 @@ export class Pep {
       now: this.now,
       stalenessBoundSeconds,
       relationForAction,
+      ...(this.deps.requiresActionApproval ? { requiresActionApproval: this.deps.requiresActionApproval } : {}),
+      ...(this.deps.maxApprovalAgeSeconds ? { maxApprovalAgeSeconds: this.deps.maxApprovalAgeSeconds } : {}),
+      ...(this.deps.requestable ? { requestable: this.deps.requestable } : {}),
     });
 
     this.deps.evidence.record({
@@ -156,11 +179,13 @@ export class Pep {
     });
 
     if (!decision.decision) {
+      const ar = decision.context.access_request as EnforceResult["access_request"] | undefined;
       return {
         permitted: false,
         decision,
         denial_reason: decision.context.denial_reason as string,
         ...(effective ? { effective } : {}),
+        ...(ar ? { access_request: ar } : {}),
       };
     }
     return { permitted: true, decision, ...(effective ? { effective } : {}) };

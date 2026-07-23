@@ -11,5 +11,6 @@ export {
   type DenialReason,
   type EvaluateOptions,
   type EvaluationRequest,
+  type ActionApproval,
 } from "./evaluate.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBoundSeconds } from "./policy.js";

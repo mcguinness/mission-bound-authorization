@@ -8,6 +8,7 @@
     { "path": "packages/actor-chain" },
     { "path": "services/authorization-server" },
     { "path": "services/pdp" },
-    { "path": "services/mcp-payments" }
+    { "path": "services/mcp-payments" },
+    { "path": "services/access-request" }
   ]
 }
