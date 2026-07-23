@@ -130,6 +130,21 @@ importers:
         specifier: ^6.1.3
         version: 6.2.3
 
+  services/mcp-saas:
+    dependencies:
+      '@mission/authorization-server':
+        specifier: workspace:*
+        version: link:../authorization-server
+      '@mission/ras':
+        specifier: workspace:*
+        version: link:../ras
+      '@mission/store':
+        specifier: workspace:*
+        version: link:../../packages/store
+      jose:
+        specifier: ^6.1.3
+        version: 6.2.3
+
   services/pdp:
     dependencies:
       '@mission/actor-chain':
@@ -147,6 +162,18 @@ importers:
       '@openfga/sdk':
         specifier: ^0.9.0
         version: 0.9.6(debug@4.4.3)
+      jose:
+        specifier: ^6.1.3
+        version: 6.2.3
+
+  services/ras:
+    dependencies:
+      '@mission/store':
+        specifier: workspace:*
+        version: link:../../packages/store
+      '@mission/telemetry':
+        specifier: workspace:*
+        version: link:../../packages/telemetry
       jose:
         specifier: ^6.1.3
         version: 6.2.3
