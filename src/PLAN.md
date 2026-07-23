@@ -520,8 +520,8 @@ Status (update this table as work lands):
 | M7 AROP | **done** 2026-07-22 (PR #326) |
 | M8 Discovery | **done** 2026-07-22 (PR #327) |
 | M9 Cross-domain | **done** 2026-07-22 (PR #328) |
-| M10 Audit (SCITT) | **in review** (PR #330) |
-| M11 Full UX | not started |
+| M10 Audit (SCITT) | **done** 2026-07-22 (PR #330) |
+| M11 Full UX | **in progress** |
 | M12 Agent + demos | not started |
 | M13 Evals | not started |
 | M14 Conformance + reports | not started |
