@@ -10,11 +10,11 @@
     "setup": "node scripts/setup.mjs",
     "lint": "biome check .",
     "typecheck": "tsc --build",
-    "test": "NODE_EXTRA_CA_CERTS=$PWD/certs/openfga.crt OPENFGA_CA_CERT=$PWD/certs/openfga.crt vitest run",
+    "test": "vitest run",
     "demo:span": "tsx scripts/demo-span.mts",
     "demo": "node scripts/demo.mjs",
-    "evals": "NODE_EXTRA_CA_CERTS=$PWD/certs/openfga.crt OPENFGA_CA_CERT=$PWD/certs/openfga.crt pnpm -C evals exec tsx src/run.ts",
-    "demo:vendor-test": "NODE_EXTRA_CA_CERTS=$PWD/certs/openfga.crt OPENFGA_CA_CERT=$PWD/certs/openfga.crt pnpm -C evals exec tsx src/vendor-test-run.ts"
+    "evals": "node scripts/evals.mjs",
+    "demo:vendor-test": "node scripts/vendor-test.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
