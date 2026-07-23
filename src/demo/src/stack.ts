@@ -19,6 +19,7 @@ import {
   McpPaymentsServer,
   PaymentsStore,
   Pep,
+  type PepDeps,
   sourceDigestOf,
 } from "@mission/mcp-payments";
 import { signStatement, TransparencyService, type Receipt, type SignedStatement } from "@mission/transparency";
@@ -42,6 +43,8 @@ export interface DemoStack {
   viewFor: (missionId: string) => MissionView | undefined;
   /** Register evidence to the transparency log + retain it for the timeline. */
   publishEvidence: (missionId: string, evidenceType: string, evidence: Record<string, unknown>) => Promise<void>;
+  /** Install a PEP observer to capture the AuthZEN envelope + PDP decision (demo). */
+  onEnforce: (fn: PepDeps["observe"]) => void;
 }
 
 export async function composeStack(opts: { openfgaUrl: string; presharedKey: string; caCertPath?: string }): Promise<DemoStack> {
@@ -85,6 +88,7 @@ export async function composeStack(opts: { openfgaUrl: string; presharedKey: str
     };
   };
 
+  let observer: PepDeps["observe"];
   const pep = new Pep({
     payments,
     evidence,
@@ -94,6 +98,7 @@ export async function composeStack(opts: { openfgaUrl: string; presharedKey: str
     instanceEpoch: "demo-epoch",
     sourceDigest: sourceDigestOf({ name: "payments" }),
     revokedInstances,
+    observe: (e) => observer?.(e),
   });
 
   const { TransactionEngine } = await import("@mission/mcp-payments");
@@ -161,6 +166,9 @@ export async function composeStack(opts: { openfgaUrl: string; presharedKey: str
     revokedInstances,
     viewFor,
     publishEvidence,
+    onEnforce: (fn) => {
+      observer = fn;
+    },
   };
 }
 

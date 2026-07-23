@@ -10,6 +10,7 @@
     { "path": "../services/transparency" },
     { "path": "../services/console-bff" },
     { "path": "../packages/telemetry" },
-    { "path": "../packages/demo-data" }
+    { "path": "../packages/demo-data" },
+    { "path": "../services/agent" }
   ]
 }

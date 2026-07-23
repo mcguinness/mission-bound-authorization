@@ -74,6 +74,19 @@ export interface PepDeps {
    * other actors in the chain (the orchestrator) keep working.
    */
   revokedInstances?: Set<string>;
+  /**
+   * Optional observer for tooling/demos: receives the AuthZEN request the PEP
+   * built and the raw PDP decision for each enforced action. Never affects
+   * the decision; unset in production.
+   */
+  observe?: (e: {
+    tool: string;
+    args: Record<string, unknown>;
+    token: TokenFacts;
+    envelope: EvaluationRequest;
+    decision: Decision;
+    effective?: EffectiveParams;
+  }) => void;
 }
 
 export interface ActionApprovalInput {
@@ -202,6 +215,8 @@ export class Pep {
       ...(this.deps.maxApprovalAgeSeconds ? { maxApprovalAgeSeconds: this.deps.maxApprovalAgeSeconds } : {}),
       ...(this.deps.requestable ? { requestable: this.deps.requestable } : {}),
     });
+
+    this.deps.observe?.({ tool, args, token, envelope: req, decision, ...(effective ? { effective } : {}) });
 
     this.deps.evidence.record({
       kind: "decision",

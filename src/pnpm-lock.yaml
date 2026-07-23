@@ -81,6 +81,9 @@ importers:
       '@mission/access-request':
         specifier: workspace:*
         version: link:../services/access-request
+      '@mission/agent':
+        specifier: workspace:*
+        version: link:../services/agent
       '@mission/authorization-server':
         specifier: workspace:*
         version: link:../services/authorization-server
