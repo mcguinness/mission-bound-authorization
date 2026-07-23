@@ -11,6 +11,12 @@ export { validateMissionIntent, IntentError } from "./kernel/intent.js";
 export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
 export * from "./kernel/types.js";
 export {
+  issueCrossDomainGrant,
+  audienceScopedAuthority,
+  ID_JAG_TYP,
+  ID_JAG_TOKEN_TYPE,
+} from "./kernel/cross-domain.js";
+export {
   CatalogProvider,
   type ServiceSeed,
   type CatalogService,

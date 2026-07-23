@@ -1,0 +1,19 @@
+{
+  "name": "@mission/mcp-saas",
+  "version": "0.0.1",
+  "private": true,
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@mission/store": "workspace:*",
+    "jose": "^6.1.3",
+    "@mission/authorization-server": "workspace:*",
+    "@mission/ras": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --build"
+  }
+}

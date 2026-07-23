@@ -9,6 +9,8 @@
     { "path": "services/authorization-server" },
     { "path": "services/pdp" },
     { "path": "services/mcp-payments" },
-    { "path": "services/access-request" }
+    { "path": "services/access-request" },
+    { "path": "services/mcp-saas" },
+    { "path": "services/ras" }
   ]
 }
