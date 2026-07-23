@@ -514,8 +514,8 @@ Status (update this table as work lands):
 | M5 Transaction tier | **done** 2026-07-22 (PR #324) |
 | M6 ARAP | **done** 2026-07-22 (PR #325) |
 | M7 AROP | **done** 2026-07-22 (PR #326) |
-| M8 Discovery | **in review** (PR #327) |
-| M9 Cross-domain | not started |
+| M8 Discovery | **done** 2026-07-22 (PR #327) |
+| M9 Cross-domain | **in progress** |
 | M10 Audit (SCITT) | not started |
 | M11 Full UX | not started |
 | M12 Agent + demos | not started |
