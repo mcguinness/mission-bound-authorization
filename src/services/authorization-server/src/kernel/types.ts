@@ -71,6 +71,8 @@ export interface MissionRecord {
   max_derivations: number | null;
   derivation_count: number;
   grant_id: string | null;
+  /** @spec expansion#predecessor-member: set on a successor Mission only. */
+  predecessor?: string;
 }
 
 /** @spec mission#the-mission-claim — the token projection of the record. */

@@ -46,6 +46,10 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-mission-runtime` (transaction-assurance tier) | `02d53dd` | `services/mcp-payments` (transaction, connectors, reconcile) | single-use permits, execution leases, operation state machine (D36), Execution Evidence, outcome reconciliation | `services/mcp-payments/test/transaction.test.ts` |
 | `draft-mcguinness-mission-authzen` (requestable denials, action approval) | `02d53dd` | `services/pdp`, `services/mcp-payments` | `authzen#requestable-denials`, `authzen#context-approval` (action_approval validation, PDP-signed binding_token) | `services/access-request/test/reevaluate.test.ts` |
 | AuthZEN ARAP (external, OpenID) | consumed | `services/access-request` | access request submission, task lifecycle, adjudication, action-bound approval object (reevaluate mode) | `services/access-request/test/reevaluate.test.ts` |
+| `draft-mcguinness-oauth-mission-expansion` | `dc7a897` | `services/authorization-server/src/kernel/expansion.ts` | successor Mission, `predecessor` member, supersede-on-redemption, approved_until bounding | `services/authorization-server/test/arop.test.ts` |
+| AuthZEN AROP (openid/authzen#531) | PR #531 @ 2026-07-20 | `services/authorization-server/src/kernel` (deferred, txn-challenge) | DTR deferred grant + Transaction Challenge, token-issuance completion via Expansion | `services/authorization-server/test/arop.test.ts` |
+| DTR (`draft-gerber-oauth-deferred-token-response`) | via AROP #531 | `services/authorization-server/src/kernel/deferred.ts` | `completion_mode=deferred`, `deferral_code`, `authorization_pending`, deferred grant, idempotent submission | `services/authorization-server/test/arop.test.ts` |
+| Txn Challenge (`draft-rosomakho-oauth-txn-challenge`) | via AROP #531 | `services/authorization-server/src/kernel/txn-challenge.ts` | signed challenge (txn/authorization_details/iss/aud/reason), txn-bound single-use audience-restricted token | `services/authorization-server/test/arop.test.ts` |
 
 ## Adopted for planning, not yet implemented (pins from the pre-flight spike)
 
@@ -53,7 +57,6 @@ this matrix and the `@spec` tags to the affected code and tests.
 |---|---|---|
 | `draft-mcguinness-mission-authzen` (PEP evidence, requestable denials) | `02d53dd` | M4/M6 PEP |
 | `draft-mcguinness-oauth-mission-status` (Status List, introspection projection) | `89ba0b4` | M3 freshness |
-| AuthZEN AROP (token issuance) | openid/authzen PR #531 head @ 2026-07-20 | M7 |
 | `draft-mcguinness-svc-connectivity-disco` | repo main @ 2026-07-20 | M8 |
 | `draft-mcguinness-oauth-mission-cross-domain` + ID-JAG | in-repo / datatracker current | M9 |
 | `draft-mcguinness-mission-audit` + SCITT (RFC 9943) | in-repo current | M10 |
