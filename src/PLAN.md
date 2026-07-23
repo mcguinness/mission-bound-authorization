@@ -513,7 +513,7 @@ Status (update this table as work lands):
 | M4 MCP core tier | **done** 2026-07-22 (PR #323) |
 | M5 Transaction tier | **done** 2026-07-22 (PR #324) |
 | M6 ARAP | **done** 2026-07-22 (PR #325) |
-| M7 AROP | **in progress** |
+| M7 AROP | **in review** (PR #326) |
 | M8 Discovery | not started |
 | M9 Cross-domain | not started |
 | M10 Audit (SCITT) | not started |
