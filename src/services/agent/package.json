@@ -1,0 +1,18 @@
+{
+  "name": "@mission/agent",
+  "version": "0.0.1",
+  "private": true,
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@mission/authorization-server": "workspace:*",
+    "jose": "^6.1.3",
+    "@mission/demo-data": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --build"
+  }
+}
