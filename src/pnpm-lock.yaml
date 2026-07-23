@@ -76,6 +76,15 @@ importers:
         specifier: ^8.1.5
         version: 8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(tsx@4.23.1)
 
+  evals:
+    dependencies:
+      '@mission/mcp-payments':
+        specifier: workspace:*
+        version: link:../services/mcp-payments
+      '@mission/pdp':
+        specifier: workspace:*
+        version: link:../services/pdp
+
   packages/actor-chain: {}
 
   packages/demo-data:

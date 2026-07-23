@@ -1,0 +1,13 @@
+{
+  "name": "@mission/evals",
+  "version": "0.0.1",
+  "private": true,
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@mission/mcp-payments": "workspace:*",
+    "@mission/pdp": "workspace:*"
+  },
+  "scripts": { "typecheck": "tsc --build", "evals": "tsx src/run.ts" }
+}

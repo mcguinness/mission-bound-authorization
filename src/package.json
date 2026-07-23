@@ -12,7 +12,8 @@
     "typecheck": "tsc --build",
     "test": "vitest run",
     "demo:span": "tsx scripts/demo-span.mts",
-    "demo": "node scripts/demo.mjs"
+    "demo": "node scripts/demo.mjs",
+    "evals": "pnpm -C evals exec tsx src/run.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
