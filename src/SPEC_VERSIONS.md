@@ -56,6 +56,7 @@ this matrix and the `@spec` tags to the affected code and tests.
 | MCP EMA | 2025-11-25 track | `services/ras`, `services/mcp-saas` | enterprise-managed-authorization declaration; token-only SaaS enforcement | `services/mcp-saas/test/cross-domain.test.ts` |
 | `draft-mcguinness-mission-audit` (SCITT profile) | `dc7a897` | `services/transparency` | append-only Merkle log, hash-committed Signed Statements, Receipts + signed tree heads, per-mission feeds, five-step offline verification | `services/transparency/test/transparency.test.ts` |
 | RFC 9162 (Merkle tree) | RFC 9162 | `services/transparency/src/merkle.ts` | leaf/node domain separation, inclusion proofs | `services/transparency/test/transparency.test.ts` |
+| `draft-mcguinness-oauth-mission-management` (partial) | `dc7a897` | `services/console-bff`, `authorization-server` (allMissions) | fleet enumeration + operator lifecycle surfaces | `services/console-bff/test/console.test.ts` |
 
 ## Adopted for planning, not yet implemented (pins from the pre-flight spike)
 

@@ -217,6 +217,14 @@ export class MissionKernel {
     this.db.prepare("UPDATE missions SET grant_id = ? WHERE id = ?").run(grantId, missionId);
   }
 
+  /** @spec mission-management: enumerate the full fleet for the operator. */
+  allMissions(): MissionRecord[] {
+    const rows = this.db.prepare("SELECT * FROM missions ORDER BY created_at").all() as Array<
+      Record<string, unknown>
+    >;
+    return rows.map(rowToRecord);
+  }
+
   /** Active (non-expired) missions for a subject, for catalog status (D9). */
   activeMissionsForSubject(sub: string): MissionRecord[] {
     const rows = this.db
