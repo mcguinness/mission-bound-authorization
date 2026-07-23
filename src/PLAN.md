@@ -852,11 +852,11 @@ resolution and date; never delete them.
 - **O-29. Resume-check semantics.** Which non-active states stop vs pause
   the agent's harness check, and the check cadence on wake, consistent with
   the published staleness bounds (O-8). Decide in M12.
-- **O-30. Eval taxonomy and pass bars.** Pin the misbehavior-class taxonomy
+- **O-30. Eval taxonomy and pass bars. (addressed in M13: taxonomy = out-of-authority tool, vendor-constraint, over-cap, TOCTOU, unknown-mission, view-tamper; over-block threshold 0%; CI-gating metrics = containment/evidence-gaps/over-block/denial-correctness.)** Pin the misbehavior-class taxonomy
   (drawing on the handbook's Testing chapter framings, including the lethal
   trifecta), the over-blocking threshold for the legitimate suite, and
   which scorecard metrics gate CI vs merely report. Decide in M13.
-- **O-31. Red-team eval methodology.** How the LLM adversary is prompted
+- **O-31. Red-team eval methodology. (deferred: deterministic suite ships in M13; LLM red-team mode is a documented follow-on.)** How the LLM adversary is prompted
   and seeded, how nondeterministic runs stay comparable (persisted
   transcripts as replayable fixtures), and how red-team findings feed new
   deterministic cases. Decide in M13.

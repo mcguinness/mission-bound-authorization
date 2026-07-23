@@ -14,6 +14,7 @@
     { "path": "services/transparency" },
     { "path": "services/console-bff" },
     { "path": "services/agent" },
+    { "path": "evals" },
     { "path": "services/ras" }
   ]
 }
