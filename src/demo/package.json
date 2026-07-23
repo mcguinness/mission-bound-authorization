@@ -17,6 +17,7 @@
   },
   "scripts": {
     "exhibit": "node ../scripts/exhibit.mjs",
-    "typecheck": "tsc --build"
+    "typecheck": "tsc --build",
+    "serve": "tsx src/server.ts"
   }
 }

@@ -1,5 +1,28 @@
 # Mission Reference Implementation — Guided Demo
 
+## Seeing it work — three surfaces
+
+All three need OpenFGA up (`docker compose up -d`) and run from `src/`.
+
+1. **Live browser console** — `pnpm demo:serve`, then open
+   http://localhost:4407. A clickable dashboard driving the real stack: the
+   agent panel (catalog + action buttons: read, in-cap wire, over-cap wire,
+   out-of-vendor wire), the operator fleet with suspend/revoke/resume, and
+   the verified evidence timeline. Watch the catalog status and timeline
+   update as you act; a revoke flips `payments` from connected to
+   consent_required.
+2. **Terminal exhibit** — `pnpm exhibit`. A narrated end-to-end walk
+   (discovery → issuance → read → wire → bounds deny → vendor deny → revoke →
+   verified feed) printing the real wire artifacts at each step.
+3. **Distributed traces** — `pnpm demo:trace`, then open
+   http://localhost:16686 and select service `mission-demo`. Each action is
+   one trace: `flow.wire → pep.enforce → pdp.evaluate → fga.check`.
+
+The three SPAs under `apps/` are production-shaped thin views; the browser
+console above is the runnable interactive surface.
+
+## The headless scenario runner
+
 `pnpm demo` runs scenarios 0–14 against the composed in-process stack. The
 scenario bodies are the per-milestone integration tests (they compose the
 services in one process; OpenFGA must be up). Boot:
