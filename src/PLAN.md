@@ -512,7 +512,7 @@ Status (update this table as work lands):
 | M3 PDP + OpenFGA | **done** 2026-07-22 (PR #322) |
 | M4 MCP core tier | **done** 2026-07-22 (PR #323) |
 | M5 Transaction tier | **done** 2026-07-22 (PR #324) |
-| M6 ARAP | **in progress** |
+| M6 ARAP | **in review** (PR #325) |
 | M7 AROP | not started |
 | M8 Discovery | not started |
 | M9 Cross-domain | not started |
