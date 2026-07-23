@@ -11,6 +11,7 @@
     { "path": "services/mcp-payments" },
     { "path": "services/access-request" },
     { "path": "services/mcp-saas" },
+    { "path": "services/transparency" },
     { "path": "services/ras" }
   ]
 }

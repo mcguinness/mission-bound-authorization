@@ -1060,6 +1060,12 @@ their repositories or working groups.
   authorization-metadata member for the server-side declaration is not yet
   pinned (cross-ref O-20). Track the extension revision implemented against;
   feed friction upstream to the MCP auth interest group.
+- **S-8 (open).** Deviation — mission-audit mandates COSE hash-envelope
+  Signed Statements (payload-hash-alg 258, payload-preimage-content-type
+  259); this reference commits by hash under JWS to stay in the JOSE stack
+  (O-16). SCITT semantics are faithful (commit-by-hash, Merkle inclusion,
+  receipts, offline verification, tamper detection). Swap to COSE for
+  wire-fidelity; feed back whether a JOSE profile is worth an option.
 - **S-5 (open).** Simplification-candidate — mission-authzen
   § Mission-to-Policy Materialization: the text reads as write-on-approval
   (stored-tuple sync), which is the less typical strategy for ephemeral,
