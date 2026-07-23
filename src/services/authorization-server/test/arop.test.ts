@@ -9,6 +9,7 @@ import { calculateJwkThumbprint, createLocalJWKSet, exportJWK, generateKeyPair, 
 import { beforeAll, describe, expect, it } from "vitest";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import {
+  type AuthorityEntry,
   createExpansion,
   DeferralStore,
   issueTxnToken,
@@ -77,53 +78,64 @@ beforeAll(async () => {
   });
 });
 
-describe("M7 scenario 6: AROP over DTR (deferred token -> expansion)", () => {
-  it("requestable-denied deferred request -> deferral_code -> approve -> successor mission claim", () => {
-    const predecessor = approveMission(1, ["acme"]); // narrow: acme only
+describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never expands)", () => {
+  it("deferred request for authority already in the Mission -> approve -> token carries the active Mission unchanged", () => {
+    const mission = approveMission(1, ["acme"]); // active Mission with acme authority
     const deferrals = new DeferralStore(kernel);
 
-    // Agent requests widened authority (globex) with completion_mode=deferred.
-    const pending = deferrals.open({
-      predecessorId: predecessor.id,
-      intent: intent(["acme", "globex"]),
-      clientId: "ap-agent",
-    });
+    // Agent's held token is narrow; it defers for a subset of the Mission's authority.
+    const requested: AuthorityEntry[] = [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:payment.execute"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ];
+    const pending = deferrals.open({ missionId: mission.id, requested, clientId: "ap-agent" });
     expect(pending.error).toBe("authorization_pending");
     expect(pending.deferral_code).toMatch(/^dfr_/);
 
     // Polling before approval stays pending.
-    const poll1 = deferrals.redeem(pending.deferral_code, { iss: ISS, sub: "bob" });
-    expect((poll1 as { error: string }).error).toBe("authorization_pending");
+    expect((deferrals.redeem(pending.deferral_code) as { error: string }).error).toBe("authorization_pending");
 
     // Idempotent submission: same request returns the same handle.
-    const again = deferrals.open({ predecessorId: predecessor.id, intent: intent(["acme", "globex"]), clientId: "ap-agent" });
-    expect(again.deferral_code).toBe(pending.deferral_code);
+    expect(deferrals.open({ missionId: mission.id, requested, clientId: "ap-agent" }).deferral_code).toBe(pending.deferral_code);
 
     // Bob approves with an approval expiry that bounds the credential.
     deferrals.approve(pending.deferral_code, "2026-12-31T00:00:00Z");
-    const result = deferrals.redeem(pending.deferral_code, { iss: ISS, sub: "bob" });
-    const issued = result as { mission: Record<string, unknown>; successorId: string };
-    expect(issued.mission.id).toBe(issued.successorId);
-    // Successor carries the predecessor lineage member.
-    expect(issued.mission.predecessor).toBe(predecessor.id);
+    const issued = deferrals.redeem(pending.deferral_code) as {
+      mission: Record<string, unknown>;
+      authorization_details: AuthorityEntry[];
+      approved_until: string;
+    };
+    // D42: the token carries the ACTIVE Mission unchanged -- no successor, no predecessor.
+    expect(issued.mission.id).toBe(mission.id);
+    expect(issued.mission.predecessor).toBeUndefined();
+    // No new Mission was created.
+    expect(kernel.get(mission.id)?.state).toBe("active");
+    // Granted authority is a subset of the active Mission.
+    expect(issued.authorization_details[0]?.actions).toEqual(["payments:payment.execute"]);
+    expect(issued.approved_until).toBe("2026-12-31T00:00:00Z");
 
-    // Authority widened (globex now included) but only via the approval.
-    const successor = kernel.get(issued.successorId);
-    expect(successor?.authority_set[0]?.constraints?.vendors).toContain("globex");
-
-    // Predecessor is superseded on first redemption.
-    expect(kernel.get(predecessor.id)?.state).toBe("superseded");
-
-    // Successor expiry is bounded by approved_until (never outlives it).
-    expect(Date.parse(successor?.expires_at as string)).toBeLessThanOrEqual(Date.parse("2026-12-31T00:00:00Z"));
-
-    // Single redemption: a second redeem fails.
-    const replay = deferrals.redeem(pending.deferral_code, { iss: ISS, sub: "bob" });
-    expect((replay as { error: string }).error).toBe("access_denied");
+    // Single redemption.
+    expect((deferrals.redeem(pending.deferral_code) as { error: string }).error).toBe("access_denied");
   });
 
-  it("expansion refuses when the predecessor is not active", () => {
-    const predecessor = approveMission(2, ["acme"]);
+  it("a request that would widen the Mission is refused out_of_authority (use Expansion, not AROP)", () => {
+    const mission = approveMission(2, ["acme"]); // acme only
+    const deferrals = new DeferralStore(kernel);
+    // globex is NOT in this Mission's authority -> AROP must not defer/widen.
+    const widen: AuthorityEntry[] = [
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:payment.execute"], constraints: { vendors: ["globex"] } },
+    ];
+    expect(() => deferrals.open({ missionId: mission.id, requested: widen, clientId: "ap-agent" })).toThrow(
+      /exceeds the active Mission/,
+    );
+  });
+
+  it("Mission Expansion (the separate widening flow) refuses when the predecessor is not active", () => {
+    const predecessor = approveMission(3, ["acme"]);
     kernel.transition(predecessor.id, "revoke");
     expect(() =>
       createExpansion(kernel, {
@@ -135,11 +147,27 @@ describe("M7 scenario 6: AROP over DTR (deferred token -> expansion)", () => {
       }),
     ).toThrow(/not active/);
   });
+
+  it("Mission Expansion widens via a fresh successor and supersedes the predecessor on redemption", () => {
+    const predecessor = approveMission(4, ["acme"]);
+    const { successor } = createExpansion(kernel, {
+      predecessorId: predecessor.id,
+      intent: intent(["acme", "globex"]),
+      approver: { iss: ISS, sub: "bob" },
+      approvalEventId: "apev-exp",
+      approvedUntil: "2026-12-31T00:00:00Z",
+    });
+    expect(successor.predecessor).toBe(predecessor.id);
+    expect(successor.authority_set[0]?.constraints?.vendors).toContain("globex");
+    kernel.supersedeOnRedemption(successor.id);
+    expect(kernel.get(predecessor.id)?.state).toBe("superseded");
+    expect(Date.parse(successor.expires_at)).toBeLessThanOrEqual(Date.parse("2026-12-31T00:00:00Z"));
+  });
 });
 
 describe("M7 scenario 7: AROP over Transaction Challenge", () => {
   it("RS signs a challenge -> AS validates + issues a txn-bound single-use token -> re-presented once", async () => {
-    const predecessor = approveMission(3, ["acme"]);
+    const predecessor = approveMission(7, ["acme"]);
     // RS signing key (rs-txn / txn_challenge_jwks_uri) and client DPoP key.
     const rsKeys = await generateKeyPair("ES256", { extractable: true });
     const rsPubJwk = { ...(await exportJWK(rsKeys.publicKey)), kid: "rs-txn", alg: "ES256" };

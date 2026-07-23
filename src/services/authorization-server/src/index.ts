@@ -44,7 +44,13 @@ export {
   type ExpansionInput,
   type ExpansionResult,
 } from "./kernel/expansion.js";
-export { DeferralStore, DEFERRED_GRANT_TYPE, type DeferralPending } from "./kernel/deferred.js";
+export {
+  DeferralStore,
+  DeferralError,
+  DEFERRED_GRANT_TYPE,
+  type DeferralPending,
+  type DeferredToken,
+} from "./kernel/deferred.js";
 export {
   signChallenge,
   validateChallenge,
