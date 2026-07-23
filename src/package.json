@@ -15,7 +15,8 @@
     "demo": "node scripts/demo.mjs",
     "evals": "node scripts/evals.mjs",
     "demo:vendor-test": "node scripts/vendor-test.mjs",
-    "exhibit": "node scripts/exhibit.mjs"
+    "exhibit": "node scripts/exhibit.mjs",
+    "demo:trace": "node scripts/trace.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",

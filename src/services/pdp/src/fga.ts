@@ -9,6 +9,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { getTracer } from "@mission/telemetry";
 import { CredentialsMethod, OpenFgaClient, type TupleKey } from "@openfga/sdk";
 
 /**
@@ -102,6 +103,22 @@ export class Fga {
    * caller just wrote substrate (fga-hygiene).
    */
   async checkWithContext(
+    check: { user: string; relation: string; object: string },
+    contextualTuples: TupleKey[],
+    opts: { higherConsistency?: boolean } = {},
+  ): Promise<boolean> {
+    return getTracer("pdp").startActiveSpan("fga.check", async (span) => {
+      span.setAttribute("fga.relation", check.relation);
+      span.setAttribute("fga.object", check.object);
+      try {
+        return await this.doCheck(check, contextualTuples, opts);
+      } finally {
+        span.end();
+      }
+    });
+  }
+
+  private async doCheck(
     check: { user: string; relation: string; object: string },
     contextualTuples: TupleKey[],
     opts: { higherConsistency?: boolean } = {},
