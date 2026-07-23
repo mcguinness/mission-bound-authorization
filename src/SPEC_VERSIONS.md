@@ -60,6 +60,7 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-mission-harness` (partial) | `dc7a897` | `services/agent/src/harness.ts` | stop-on-non-active at resume (minimal duty only) | `services/agent/test/harness.test.ts` |
 | `draft-mcguinness-mission-shaping` | `dc7a897` | `services/agent/src/index.ts` (shapeIntent) | untrusted intent proposal; derivation still bounds | `services/agent/test/harness.test.ts` |
 | (eval harness, goal 2) | n/a | `evals` | adversarial + legitimate suites, containment scorecard, CI gate (D24) | `evals/test/evals.test.ts` |
+| (vendor test, handbook) | n/a | `evals/src/vendor-test.ts` | four-axis valid-token-but-denied demonstration | `evals/test/vendor-test.test.ts` |
 
 ## Adopted for planning, not yet implemented (pins from the pre-flight spike)
 

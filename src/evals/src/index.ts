@@ -69,6 +69,8 @@ export interface HarnessDeps {
   modelId: string;
   view: MissionView;
   seedStore: () => PaymentsStore;
+  /** Per-instance revocation set for the PEP (M12/D19; vendor-test delegation axis). */
+  revokedInstances?: Set<string>;
 }
 
 /** Run one case against a fresh composed stack; measure side effects + evidence. */
@@ -85,6 +87,7 @@ export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResul
     loadView: (id) => (id === deps.view.id ? deps.view : undefined),
     instanceEpoch: "epoch-eval",
     sourceDigest: sourceDigestOf({ name: "payments" }),
+    ...(deps.revokedInstances ? { revokedInstances: deps.revokedInstances } : {}),
   });
   const server = new McpPaymentsServer({
     pep,
