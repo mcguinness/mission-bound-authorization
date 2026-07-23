@@ -523,8 +523,8 @@ Status (update this table as work lands):
 | M10 Audit (SCITT) | **done** 2026-07-22 (PR #330) |
 | M11 Full UX | **done** 2026-07-23 (PR #331) |
 | M12 Agent + demos | **done** 2026-07-23 (PR #332) |
-| M13 Evals | **in review** (PR #333) |
-| M14 Conformance + reports | not started |
+| M13 Evals | **done** 2026-07-23 (PR #333) |
+| M14 Conformance + reports | **in progress** |
 
 Definition of done, every milestone: tests green, the spec-feedback pass
 done, this status table and the logs updated, the PR merged.
