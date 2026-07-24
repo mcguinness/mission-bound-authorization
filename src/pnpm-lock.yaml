@@ -99,9 +99,15 @@ importers:
       '@mission/mcp-payments':
         specifier: workspace:*
         version: link:../services/mcp-payments
+      '@mission/mcp-saas':
+        specifier: workspace:*
+        version: link:../services/mcp-saas
       '@mission/pdp':
         specifier: workspace:*
         version: link:../services/pdp
+      '@mission/ras':
+        specifier: workspace:*
+        version: link:../services/ras
       '@mission/telemetry':
         specifier: workspace:*
         version: link:../packages/telemetry
@@ -128,6 +134,9 @@ importers:
 
   packages/demo-data:
     dependencies:
+      '@mission/mcp-saas':
+        specifier: workspace:*
+        version: link:../../services/mcp-saas
       jose:
         specifier: ^6.1.3
         version: 6.2.3
