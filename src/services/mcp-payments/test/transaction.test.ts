@@ -8,10 +8,12 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
+  buildEffectiveParams,
   CANONICAL_RESOURCE,
   Connectors,
   EvidenceStore,
   McpPaymentsServer,
+  parameterDigest,
   PaymentsStore,
   Pep,
   reconcile,
@@ -62,7 +64,18 @@ const TOKEN: TokenFacts = {
 let fga: Fga;
 let modelId: string;
 
-function build(opts: { jit?: { sign: import("jose").CryptoKey; kid: string; endpoint: string } } = {}) {
+function build(
+  opts: {
+    jit?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
+    /** AROP: RS-side challenge signer (rs-txn key). */
+    challengeSigner?: { sign: import("jose").CryptoKey; kid: string; txnEndpoint: string; asIssuer: string };
+    /** AROP: AS txn public JWKS + issuer for validating a presented txn-token. */
+    txnTokenJwks?: { keys: Record<string, unknown>[] };
+    asIssuer?: string;
+    /** Gate remittance on a per-action approval without wiring the ARAP signer. */
+    gateRemittance?: boolean;
+  } = {},
+) {
   const payments = new PaymentsStore();
   payments.seed(
     [{ id: "acme", name: "Acme", status: "approved" }],
@@ -72,6 +85,7 @@ function build(opts: { jit?: { sign: import("jose").CryptoKey; kid: string; endp
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   const card = { name: "payments" };
+  const gated = Boolean(opts.jit || opts.challengeSigner || opts.gateRemittance);
   const pep = new Pep({
     payments,
     evidence,
@@ -80,13 +94,11 @@ function build(opts: { jit?: { sign: import("jose").CryptoKey; kid: string; endp
     loadView: (id) => (id === VIEW.id ? VIEW : undefined),
     instanceEpoch: "epoch-1",
     sourceDigest: sourceDigestOf(card),
-    ...(opts.jit
-      ? {
-          requiresActionApproval: (action: string) => action === "payments:remittance.send",
-          maxApprovalAgeSeconds: 300,
-          requestable: opts.jit,
-        }
+    ...(gated
+      ? { requiresActionApproval: (action: string) => action === "payments:remittance.send", maxApprovalAgeSeconds: 300 }
       : {}),
+    ...(opts.jit ? { requestable: opts.jit } : {}),
+    ...(opts.challengeSigner ? { challengeSigner: opts.challengeSigner } : {}),
   });
   const server = new McpPaymentsServer({
     pep,
@@ -96,8 +108,42 @@ function build(opts: { jit?: { sign: import("jose").CryptoKey; kid: string; endp
     issuer: "https://as.test",
     serverCard: card,
     transaction: { engine, connectors, evidence },
+    ...(opts.txnTokenJwks ? { txnTokenJwks: opts.txnTokenJwks } : {}),
+    ...(opts.asIssuer ? { asIssuer: opts.asIssuer } : {}),
   });
   return { payments, evidence, connectors, engine, server };
+}
+
+// AROP Transaction Challenge (phase 2) test helpers.
+const AS_ISSUER = "https://as.test";
+const TXN_ENDPOINT = "https://as.test/transaction";
+
+/** parameter_digest for the seeded remittance operation (inv-1/acme), the way
+ * the PEP computes it -- so a derived approval matches at step 8. */
+function digestFor(payments: PaymentsStore): string {
+  const invoice = payments.getInvoice("inv-1");
+  const vendor = invoice ? payments.getVendor(invoice.vendor_id) : undefined;
+  if (!invoice || !vendor) throw new Error("seed missing inv-1/acme");
+  return parameterDigest(
+    buildEffectiveParams({ action: "payments:remittance.send", invoice, vendor, resource: CANONICAL_RESOURCE }),
+  );
+}
+
+/** Sign an AS-shaped txn-token inline (mirrors the shape in txn-endpoint.test.ts). */
+async function signTxnToken(input: {
+  key: import("jose").CryptoKey;
+  txn: string;
+  cnfJkt: string;
+  approval: { id: string; approved_at: string; approved_until: string; parameter_digest: string };
+}): Promise<string> {
+  const { SignJWT } = await import("jose");
+  return new SignJWT({ txn: input.txn, single_use: true, cnf: { jkt: input.cnfJkt }, approval: input.approval })
+    .setProtectedHeader({ alg: "ES256", kid: "as-txn", typ: "txn-token+jwt" })
+    .setIssuer(AS_ISSUER)
+    .setAudience(CANONICAL_RESOURCE)
+    .setIssuedAt()
+    .setExpirationTime(Math.floor(Date.parse(input.approval.approved_until) / 1000))
+    .sign(input.key);
 }
 
 d("M5 transaction-assurance tier", () => {
@@ -203,5 +249,99 @@ d("M5 transaction-assurance tier", () => {
     });
     expect(granted.ok, JSON.stringify(granted)).toBe(true);
     expect(granted.result).toMatchObject({ executed: true, invoice_id: "inv-1" });
+  });
+
+  it("AROP: a gated action with challengeSigner and no txn-token yields a signed txn-challenge", async () => {
+    const { generateKeyPair, exportJWK, createLocalJWKSet, jwtVerify } = await import("jose");
+    const rsTxn = await generateKeyPair("ES256", { extractable: true });
+    const rsTxnPub = { ...(await exportJWK(rsTxn.publicKey)), kid: "rs-txn", alg: "ES256" };
+    const { server, payments } = build({
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", txnEndpoint: TXN_ENDPOINT, asIssuer: AS_ISSUER },
+    });
+
+    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN);
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("action_approval_required");
+    expect(res.access_challenge?.txn_endpoint).toBe(TXN_ENDPOINT);
+
+    // The challenge is a real rs-txn-signed txn-challenge, aud=AS, bound to the
+    // exact operation parameter_digest the PEP gated on.
+    const challenge = res.access_challenge?.challenge as string;
+    expect(challenge).toBeTruthy();
+    const { payload, protectedHeader } = await jwtVerify(challenge, createLocalJWKSet({ keys: [rsTxnPub] } as never), {
+      audience: AS_ISSUER,
+      typ: "txn-challenge+jwt",
+    });
+    expect(protectedHeader.typ).toBe("txn-challenge+jwt");
+    expect(payload.iss).toBe(CANONICAL_RESOURCE);
+    expect(payload.parameter_digest).toBe(digestFor(payments));
+    // The challenge carries the active Mission's authority_set entry for this
+    // resource+action (what the AS subset-gate consumes) -- not an empty set.
+    const details = payload.authorization_details as { resource: string; actions: string[] }[];
+    expect(details).toHaveLength(1);
+    expect(details[0]?.resource).toBe(CANONICAL_RESOURCE);
+    expect(details[0]?.actions).toContain("payments:remittance.send");
+  });
+
+  it("AROP: a valid presented txn-token derives the approval and commits (hybrid)", async () => {
+    const { generateKeyPair, exportJWK } = await import("jose");
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    const { server, payments } = build({ gateRemittance: true, txnTokenJwks: { keys: [asTxnPub] }, asIssuer: AS_ISSUER });
+
+    const approvedUntil = new Date(Date.now() + 300_000).toISOString();
+    const txnToken = await signTxnToken({
+      key: asTxn.privateKey,
+      txn: "txn_unit_ok",
+      cnfJkt: TOKEN.cnfJkt,
+      approval: { id: "apr_unit", approved_at: new Date().toISOString(), approved_until: approvedUntil, parameter_digest: digestFor(payments) },
+    });
+
+    // No agent-supplied actionApproval; the approval is derived from the token.
+    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, undefined, txnToken);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect(res.result).toMatchObject({ executed: true, invoice_id: "inv-1" });
+  });
+
+  it("AROP: a txn-token bound to a different key is rejected (cnf mismatch)", async () => {
+    const { generateKeyPair, exportJWK } = await import("jose");
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    const { server, payments } = build({ gateRemittance: true, txnTokenJwks: { keys: [asTxnPub] }, asIssuer: AS_ISSUER });
+
+    const approvedUntil = new Date(Date.now() + 300_000).toISOString();
+    const txnToken = await signTxnToken({
+      key: asTxn.privateKey,
+      txn: "txn_unit_cnf",
+      cnfJkt: "jkt-someone-else", // not TOKEN.cnfJkt
+      approval: { id: "apr_unit", approved_at: new Date().toISOString(), approved_until: approvedUntil, parameter_digest: digestFor(payments) },
+    });
+
+    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, undefined, txnToken);
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("txn_cnf_mismatch");
+  });
+
+  it("AROP: replaying the same txn is rejected (txn_replayed) and does not double-execute", async () => {
+    const { generateKeyPair, exportJWK } = await import("jose");
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    const { server, evidence, payments } = build({ gateRemittance: true, txnTokenJwks: { keys: [asTxnPub] }, asIssuer: AS_ISSUER });
+
+    const approvedUntil = new Date(Date.now() + 300_000).toISOString();
+    const txnToken = await signTxnToken({
+      key: asTxn.privateKey,
+      txn: "txn_unit_replay",
+      cnfJkt: TOKEN.cnfJkt,
+      approval: { id: "apr_unit", approved_at: new Date().toISOString(), approved_until: approvedUntil, parameter_digest: digestFor(payments) },
+    });
+
+    const first = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, undefined, txnToken);
+    expect(first.ok, JSON.stringify(first)).toBe(true);
+    // Replay is refused before enforce/redeem/commit, so nothing executes twice.
+    const second = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, undefined, txnToken);
+    expect(second.ok).toBe(false);
+    expect(second.refusal_reason).toBe("txn_replayed");
+    expect(evidence.forMission("msn_m5").filter((e) => e.kind === "execution")).toHaveLength(1);
   });
 });

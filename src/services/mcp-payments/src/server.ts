@@ -13,6 +13,7 @@ import type { PaymentsStore } from "./payments-store.js";
 import type { Connectors } from "./connectors.js";
 import type { EvidenceStore } from "./evidence.js";
 import { operationKey, type TransactionEngine } from "./transaction.js";
+import { TxnReplayCache, TXN_TOKEN_TYP } from "./txn-challenge.js";
 
 export interface ToolDef {
   name: string;
@@ -38,12 +39,22 @@ export interface McpServerDeps {
   serverCard: unknown;
   /** Transaction-assurance tier (M5); omit for a core-tier-only server. */
   transaction?: { engine: TransactionEngine; connectors: Connectors; evidence: EvidenceStore };
+  /**
+   * AROP Transaction Challenge (RS side): the AS's txn public JWKS (as-txn key)
+   * and issuer, used to validate a presented txn-token. Omit to disable the
+   * hybrid txn-token path.
+   */
+  txnTokenJwks?: { keys: Record<string, unknown>[] };
+  asIssuer?: string;
 }
 
 export class McpPaymentsServer {
   private readonly resolveKey;
+  private readonly resolveTxnKey?: ReturnType<typeof createLocalJWKSet>;
+  private readonly txnReplay = new TxnReplayCache();
   constructor(private readonly deps: McpServerDeps) {
     this.resolveKey = createLocalJWKSet(deps.jwks as never);
+    if (deps.txnTokenJwks) this.resolveTxnKey = createLocalJWKSet(deps.txnTokenJwks as never);
   }
 
   /** RFC 9728 Protected Resource Metadata. */
@@ -154,6 +165,7 @@ export class McpPaymentsServer {
     token: TokenFacts,
     beforeCommit?: () => void,
     actionApproval?: ActionApprovalInput,
+    txnToken?: string,
   ): Promise<{
     ok: boolean;
     result?: unknown;
@@ -161,17 +173,31 @@ export class McpPaymentsServer {
     refusal_reason?: string;
     deduped?: boolean;
     access_request?: EnforceResult["access_request"];
+    access_challenge?: EnforceResult["access_challenge"];
   }> {
     const tx = this.deps.transaction;
     if (!tx) throw new Error("transaction tier not configured");
 
-    const res = await this.deps.pep.enforce(tool, args, token, actionApproval);
+    // Hybrid AROP path: an AS-signed txn-token carries the verified approval.
+    // Validate it (signature/iss/aud/typ, cnf chaining, single-use) and derive
+    // the action-bound approval, which the UNCHANGED PDP step 8 then checks.
+    // The approval's source is now the AS signature; the carrier is the trusted
+    // RS, not an agent input.
+    let derivedApproval = actionApproval;
+    if (txnToken !== undefined) {
+      const derived = await this.deriveApprovalFromTxnToken(txnToken, token);
+      if (!derived.ok) return { ok: false, refusal_reason: derived.refusal_reason };
+      derivedApproval = derived.approval;
+    }
+
+    const res = await this.deps.pep.enforce(tool, args, token, derivedApproval);
     if (!res.permitted || !res.effective || !res.decision) {
       return {
         ok: false,
         ...(res.denial_reason ? { denial_reason: res.denial_reason } : {}),
         ...(res.refusal_reason ? { refusal_reason: res.refusal_reason } : {}),
         ...(res.access_request ? { access_request: res.access_request } : {}),
+        ...(res.access_challenge ? { access_challenge: res.access_challenge } : {}),
       };
     }
     const digest = res.decision.context.parameter_digest as string;
@@ -238,6 +264,41 @@ export class McpPaymentsServer {
       ok: true,
       deduped: commit.deduped,
       result: { executed: true, invoice_id: res.effective.invoice_id, op_key: opKey, payee: invoice?.payee_account },
+    };
+  }
+
+  /**
+   * Validate a presented AROP txn-token and derive the action-bound approval.
+   * Checks (in order): AS signature + issuer/audience/typ; `cnf.jkt` chains to
+   * the base mission token's key; single-use per `txn` (replay -> txn_replayed).
+   */
+  private async deriveApprovalFromTxnToken(
+    txnToken: string,
+    token: TokenFacts,
+  ): Promise<{ ok: true; approval: ActionApprovalInput } | { ok: false; refusal_reason: string }> {
+    if (!this.resolveTxnKey || !this.deps.asIssuer) return { ok: false, refusal_reason: "txn_not_configured" };
+    let payload: Record<string, unknown>;
+    try {
+      ({ payload } = await jwtVerify(txnToken, this.resolveTxnKey, {
+        issuer: this.deps.asIssuer,
+        audience: CANONICAL_RESOURCE,
+        typ: TXN_TOKEN_TYP,
+      }));
+    } catch {
+      return { ok: false, refusal_reason: "txn_invalid" };
+    }
+    // The txn-token must be bound to the same key as the base mission token.
+    const cnf = payload.cnf as { jkt?: string } | undefined;
+    if (cnf?.jkt !== token.cnfJkt) return { ok: false, refusal_reason: "txn_cnf_mismatch" };
+    // Single-use across presentations (checked after cnf so a bad-cnf token
+    // never burns a replay slot).
+    const txn = payload.txn as string | undefined;
+    if (!txn || !this.txnReplay.accept(txn)) return { ok: false, refusal_reason: "txn_replayed" };
+    const approval = payload.approval as { id: string; approved_at: string; parameter_digest: string } | undefined;
+    if (!approval) return { ok: false, refusal_reason: "txn_missing_approval" };
+    return {
+      ok: true,
+      approval: { id: approval.id, approved_at: approval.approved_at, parameter_digest: approval.parameter_digest },
     };
   }
 
