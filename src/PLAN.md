@@ -1096,6 +1096,17 @@ their repositories or working groups.
   guidance but states no formal IANA registration policy keyword
   (Specification Required / Expert Review / etc.). One sentence would fix
   it. Candidate: upstream issue on the entity-profiles repo.
+- **S-9 (open).** Ambiguity — mission core x OIDC: the core profile is silent
+  on OpenID Connect id_tokens. Authority and the mission binding travel in the
+  mission-bound access token (`aud` = resource, `cnf.jkt`, `mission`,
+  `authorization_details`); whether the AS also issues a standard id_token
+  (`aud` = client_id, identifying the user to the client) is undefined. This
+  reference enables the `openid` scope so `/token` returns a real id_token
+  alongside the access token (exercised end to end in the exhibit); the
+  id_token is non-authoritative. Disposition: no spec change needed; the
+  access token, not an id_token, is the authority carrier. Candidate: a
+  one-sentence core clarification, filed as a mission core issue (the core is
+  never edited directly).
 
 ## 9. Runbook (target state)
 
