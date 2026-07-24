@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@mission/mcp-saas": "workspace:*",
     "jose": "^6.1.3"
   },
   "scripts": {

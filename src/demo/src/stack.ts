@@ -5,9 +5,12 @@
  * surfaces exercise the identical enforcement path.
  */
 
-import { generateKeyPair } from "jose";
+import { exportJWK, generateKeyPair } from "jose";
 import {
+  type AuthorityEntry,
+  buildAuthorizationServer,
   CatalogProvider,
+  issueCrossDomainGrant,
   MissionKernel,
   validateMissionIntent,
 } from "@mission/authorization-server";
@@ -22,11 +25,35 @@ import {
   type PepDeps,
   sourceDigestOf,
 } from "@mission/mcp-payments";
+import { ResourceAuthorizationServer } from "@mission/ras";
+import { SaasMcpServer, SAAS_RESOURCE } from "@mission/mcp-saas";
 import { signStatement, TransparencyService, type Receipt, type SignedStatement } from "@mission/transparency";
 import { ConsoleBff } from "@mission/console-bff";
 import type { AccessRequestService } from "@mission/access-request";
 
+/** Logical issuer for the in-process (non-auth-server) surfaces. */
 export const ISS = "https://as.demo";
+/** The second trust domain (LedgerCloud) for the cross-domain leg (M9). */
+export const RAS_ISS = "https://ras.ledgercloud.test";
+
+/** The cross-domain / real-issuance extras, present only with withAuthServer. */
+export interface AuthServerExtras {
+  /** Base URL of the running AS provider (all OAuth endpoints derive from it). */
+  asUrl: string;
+  /** The agent confidential client's private JWK (private_key_jwt signer). */
+  agentClientJwk: Record<string, unknown>;
+  ras: ResourceAuthorizationServer;
+  saas: SaasMcpServer;
+  rasIssuer: string;
+  saasResource: string;
+  /** Issue an ID-JAG cross-domain grant from a mission, DPoP-bound to cnfJkt. */
+  issueCrossDomainGrant: (
+    missionId: string,
+    cnfJkt: string,
+  ) => Promise<{ grant: string; jti: string; audienceScoped: AuthorityEntry[] }>;
+  /** Stop the AS HTTP listener (the exhibit calls this before exit). */
+  closeAuthServer: () => void;
+}
 
 export interface DemoStack {
   kernel: MissionKernel;
@@ -42,20 +69,85 @@ export interface DemoStack {
   bff: ConsoleBff;
   ars: AccessRequestService;
   revokedInstances: Set<string>;
+  /** The issuer this stack's kernel/tokens use (ISS, or the AS URL). */
+  issuer: string;
   viewFor: (missionId: string) => MissionView | undefined;
   /** Register evidence to the transparency log + retain it for the timeline. */
   publishEvidence: (missionId: string, evidenceType: string, evidence: Record<string, unknown>) => Promise<void>;
   /** Install a PEP observer to capture the AuthZEN envelope + PDP decision (demo). */
   onEnforce: (fn: PepDeps["observe"]) => void;
+  /** Real-issuance + cross-domain extras; only set when withAuthServer is true. */
+  authServer?: AuthServerExtras;
 }
 
-export async function composeStack(opts: { openfgaUrl: string; presharedKey: string; caCertPath?: string }): Promise<DemoStack> {
+export async function composeStack(opts: {
+  openfgaUrl: string;
+  presharedKey: string;
+  caCertPath?: string;
+  /**
+   * Stand up the real AS provider (buildAuthorizationServer) on an HTTP port and
+   * wire the cross-domain RAS + SaaS servers, so a caller can drive real OAuth
+   * issuance (PAR -> token) and the ID-JAG leg. The exhibit sets this; the
+   * browser and trace surfaces leave it off and use the in-process kernel.
+   */
+  withAuthServer?: boolean;
+  asPort?: number;
+}): Promise<DemoStack> {
   const conn = await Fga.connect({ apiUrl: opts.openfgaUrl, presharedKey: opts.presharedKey, ...(opts.caCertPath ? { caCertPath: opts.caCertPath } : {}) });
   const fga = conn.fga;
   const modelId = conn.modelId;
 
-  const asKeys = await generateKeyPair("ES256", { extractable: true });
-  const kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, statusKey: asKeys.privateKey, statusKid: "as-status" });
+  // Kernel + token-issuer + the RS's token-verification JWKS differ by mode:
+  // with the auth server, the real provider owns the kernel and signs tokens;
+  // without it, an in-process kernel backs the TokenFacts-driven surfaces.
+  let kernel: MissionKernel;
+  let issuer: string;
+  let serverJwks: { keys: Record<string, unknown>[] };
+  let authServer: AuthServerExtras | undefined;
+
+  if (opts.withAuthServer) {
+    const asPort = opts.asPort ?? 4400;
+    const asUrl = `http://localhost:${asPort}`;
+    const as = await buildAuthorizationServer({ issuer: asUrl, allowHeadlessAdjudication: true });
+    const asServer = as.provider.listen(asPort);
+    kernel = as.kernel;
+    issuer = asUrl;
+    // The RS verifies real tokens against the AS's published public JWKS.
+    serverJwks = (await (await fetch(`${asUrl}/jwks`)).json()) as { keys: Record<string, unknown>[] };
+
+    // Cross-domain (M9): a dedicated ES256 grant key the RAS trusts under the AS
+    // issuer (the AS's own token key is RS256 and not exposed; this mirrors the
+    // separated-key-purpose design, D39). RAS mints a local token; SaaS enforces
+    // from that token alone (token-only PEP, no PDP).
+    const xdKeys = await generateKeyPair("ES256", { extractable: true });
+    const xdPub = { ...(await exportJWK(xdKeys.publicKey)), kid: "as-crossdomain", alg: "ES256" };
+    const rasKeys = await generateKeyPair("ES256", { extractable: true });
+    const rasPub = { ...(await exportJWK(rasKeys.publicKey)), kid: "ras-token", alg: "ES256" };
+    const ras = new ResourceAuthorizationServer({
+      issuer: RAS_ISS,
+      trustedIssuers: { [asUrl]: { keys: [xdPub as never] } },
+      signKey: rasKeys.privateKey,
+      signKid: "ras-token",
+    });
+    const saas = new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasPub as never] } });
+    const resourceToAs = (r: string) => (r === SAAS_RESOURCE ? RAS_ISS : asUrl);
+    authServer = {
+      asUrl,
+      agentClientJwk: as.agentClientJwk,
+      ras,
+      saas,
+      rasIssuer: RAS_ISS,
+      saasResource: SAAS_RESOURCE,
+      issueCrossDomainGrant: (missionId, cnfJkt) =>
+        issueCrossDomainGrant(kernel, xdKeys.privateKey, "as-crossdomain", { missionId, targetAs: RAS_ISS, cnfJkt, resourceToAs }),
+      closeAuthServer: () => asServer.close(),
+    };
+  } else {
+    const asKeys = await generateKeyPair("ES256", { extractable: true });
+    kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, statusKey: asKeys.privateKey, statusKid: "as-status" });
+    issuer = ISS;
+    serverJwks = { keys: [] };
+  }
 
   const payments = new PaymentsStore();
   payments.seed(
@@ -92,7 +184,6 @@ export async function composeStack(opts: { openfgaUrl: string; presharedKey: str
 
   // PDP denial-binding key: the PEP's requestable signer and the ARS trust the
   // same key so a real binding_token round-trips (M6 JIT/ARAP flow).
-  const { exportJWK } = await import("jose");
   const pdpDenialKeys = await generateKeyPair("ES256", { extractable: true });
   const pdpDenialPub = { ...(await exportJWK(pdpDenialKeys.publicKey)), kid: "pdp-denial", alg: "ES256" };
 
@@ -119,8 +210,8 @@ export async function composeStack(opts: { openfgaUrl: string; presharedKey: str
     pep,
     payments,
     loadView: viewFor,
-    jwks: { keys: [] },
-    issuer: ISS,
+    jwks: serverJwks,
+    issuer,
     serverCard: { name: "payments" },
     transaction: { engine: new TransactionEngine("demo-epoch"), connectors, evidence },
   });
@@ -161,7 +252,7 @@ export async function composeStack(opts: { openfgaUrl: string; presharedKey: str
     receiptFor: (s: SignedStatement) => receipts.get(s.jws),
   });
 
-  const catalog = new CatalogProvider(kernel, CATALOG_SERVICES, { arsIntakeUrl: "https://ars.demo/access-requests", issuer: ISS });
+  const catalog = new CatalogProvider(kernel, CATALOG_SERVICES, { arsIntakeUrl: "https://ars.demo/access-requests", issuer });
 
   return {
     kernel,
@@ -176,12 +267,14 @@ export async function composeStack(opts: { openfgaUrl: string; presharedKey: str
     catalog,
     bff,
     ars,
+    issuer,
     revokedInstances,
     viewFor,
     publishEvidence,
     onEnforce: (fn) => {
       observer = fn;
     },
+    ...(authServer ? { authServer } : {}),
   };
 }
 

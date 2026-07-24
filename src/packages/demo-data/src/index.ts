@@ -3,6 +3,7 @@
  * generated per boot: nothing here is deterministic across restarts (D25).
  */
 
+import { SAAS_RESOURCE } from "@mission/mcp-saas";
 import { exportJWK, generateKeyPair } from "jose";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
@@ -78,6 +79,16 @@ export const DERIVATION_POLICY = {
         vendors: ["acme"],
       },
     },
+    {
+      // Cross-domain (M9): the LedgerCloud SaaS estate. A mission may span this
+      // resource too; the AS audience-scopes it into the ID-JAG grant for the RAS.
+      type: "mission_resource_access",
+      resource: SAAS_RESOURCE,
+      actions: ["ledger:vendor.read", "ledger:journal.write"],
+      constraints: {
+        vendors: ["acme"],
+      },
+    },
   ],
 } as const;
 
@@ -104,7 +115,7 @@ export async function seedAgentClient(): Promise<SeededClient> {
       token_endpoint_auth_method: "private_key_jwt",
       token_endpoint_auth_signing_alg: "ES256",
       jwks: { keys: [pub] },
-      scope: "payments",
+      scope: "openid payments",
       authorization_details_types: ["mission_resource_access"],
     },
     privateJwk: priv as Record<string, unknown>,

@@ -47,7 +47,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
   const configuration: Configuration = {
     clients: opts.clients as never,
     jwks: opts.jwks as never,
-    scopes: ["payments"],
+    scopes: ["openid", "payments"],
     issueRefreshToken: async (_ctx, client) => client.grantTypeAllowed("refresh_token"),
     pkce: { required: () => true },
     interactions: { url: (_ctx, interaction) => `/interaction/${interaction.uid}` },
@@ -304,7 +304,8 @@ async function decide(
   });
 
   const grant = new provider.Grant({ accountId: subject, clientId: String(params.client_id) });
-  grant.addOIDCScope("payments");
+  // Grant exactly the requested scopes (openid enables an id_token when asked).
+  grant.addOIDCScope(typeof params.scope === "string" ? params.scope : "payments");
   const resource = record.authority_set[0]?.resource ?? opts.issuer;
   grant.addResourceScope(resource, "payments");
   for (const entry of record.authority_set) {
