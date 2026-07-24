@@ -1,0 +1,4 @@
+[
+  { "id": "acme", "name": "Acme Corp", "status": "approved" },
+  { "id": "globex", "name": "Globex", "status": "pending" }
+]

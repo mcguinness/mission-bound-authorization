@@ -1,0 +1,7 @@
+{
+  "resources": {
+    "payments": "http://localhost:4403/mcp",
+    "saas": "http://localhost:4406/mcp",
+    "hrFiles": "http://localhost:4499/mcp"
+  }
+}

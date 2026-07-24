@@ -1,0 +1,34 @@
+{
+  "policy_version": "demo-policy-1",
+  "ceiling": [
+    {
+      "type": "mission_resource_access",
+      "resource": "http://localhost:4403/mcp",
+      "actions": [
+        "payments:invoice.list",
+        "payments:invoice.read",
+        "payments:vendor.read",
+        "payments:payment.schedule",
+        "payments:payment.execute",
+        "payments:remittance.send"
+      ],
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" },
+        "vendors": ["acme"]
+      }
+    },
+    {
+      "type": "mission_resource_access",
+      "resource": "http://localhost:4406/mcp",
+      "actions": ["ledger:vendor.read", "ledger:journal.write"],
+      "constraints": {
+        "vendors": ["acme"]
+      }
+    }
+  ],
+  "write_actions": [
+    "payments:payment.schedule",
+    "payments:payment.execute",
+    "payments:remittance.send"
+  ]
+}
