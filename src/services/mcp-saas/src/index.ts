@@ -30,18 +30,20 @@ interface SaasToken {
 
 export class SaasMcpServer {
   private readonly resolveKey;
+  private readonly resource: string;
   private readonly journal: Array<{ vendor_id: string; amount: string; mission_id: string }> = [];
 
   constructor(
-    private readonly deps: { rasIssuer: string; rasJwks: { keys: JWK[] } },
+    private readonly deps: { rasIssuer: string; rasJwks: { keys: JWK[] }; resource?: string },
   ) {
     this.resolveKey = createLocalJWKSet(deps.rasJwks as never);
+    this.resource = deps.resource ?? SAAS_RESOURCE;
   }
 
   /** RFC 9728 PRM + EMA declaration (client uses ID-JAG/EMA, not local login). */
   protectedResourceMetadata(): Record<string, unknown> {
     return {
-      resource: SAAS_RESOURCE,
+      resource: this.resource,
       authorization_servers: [this.deps.rasIssuer],
       bearer_methods_supported: ["dpop"],
       "io.modelcontextprotocol/enterprise-managed-authorization": { required: true },
@@ -51,7 +53,7 @@ export class SaasMcpServer {
   private async validate(accessToken: string, dpopProof: string, htu: string): Promise<SaasToken> {
     const { payload } = await jwtVerify(accessToken, this.resolveKey, {
       issuer: this.deps.rasIssuer,
-      audience: SAAS_RESOURCE,
+      audience: this.resource,
     });
     const cnf = payload.cnf as { jkt?: string } | undefined;
     if (!cnf?.jkt) throw new Error("token missing cnf.jkt");
@@ -79,14 +81,14 @@ export class SaasMcpServer {
   ): Promise<{ ok: boolean; result?: unknown; error?: string }> {
     let token: SaasToken;
     try {
-      token = await this.validate(accessToken, dpopProof, SAAS_RESOURCE);
+      token = await this.validate(accessToken, dpopProof, this.resource);
     } catch (e) {
       return { ok: false, error: (e as Error).message };
     }
     const def = SAAS_TOOLS.find((t) => t.name === tool);
     if (!def) return { ok: false, error: "unknown_tool" };
     const authorized = token.authorizationDetails.some(
-      (e) => e.resource === SAAS_RESOURCE && e.actions.includes(def.action),
+      (e) => e.resource === this.resource && e.actions.includes(def.action),
     );
     if (!authorized) return { ok: false, error: "out_of_authority" };
     if (tool === "post_journal_entry") {

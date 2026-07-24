@@ -1,6 +1,6 @@
 /** Assembly: kernel + adapters + keys. Used by server.ts and tests. */
 
-import { CANONICAL_RESOURCE, DERIVATION_POLICY, seedAgentClient, USERS } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, DERIVATION_POLICY, seedAgentClient, TOPOLOGY, USERS } from "@mission/demo-data";
 import { exportJWK, generateKeyPair } from "jose";
 import type Provider from "oidc-provider";
 import { buildProvider } from "./adapters/provider.js";
@@ -75,19 +75,20 @@ export async function buildAuthorizationServer(opts: {
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses.
-  const tokenKeys = await generateKeyPair("RS256", { extractable: true });
-  const statusKeys = await generateKeyPair("ES256", { extractable: true });
-  const tokenJwk = { ...(await exportJWK(tokenKeys.privateKey)), kid: "as-token", alg: "RS256", use: "sig" };
-  const statusJwkPriv = { ...(await exportJWK(statusKeys.privateKey)), kid: "as-status", alg: "ES256", use: "sig" };
-  const tokenJwkPub = { ...(await exportJWK(tokenKeys.publicKey)), kid: "as-token", alg: "RS256", use: "sig" };
-  const statusJwkPub = { ...(await exportJWK(statusKeys.publicKey)), kid: "as-status", alg: "ES256", use: "sig" };
+  const { asToken, asStatus } = TOPOLOGY.keys;
+  const tokenKeys = await generateKeyPair(asToken.alg, { extractable: true });
+  const statusKeys = await generateKeyPair(asStatus.alg, { extractable: true });
+  const tokenJwk = { ...(await exportJWK(tokenKeys.privateKey)), kid: asToken.kid, alg: asToken.alg, use: "sig" };
+  const statusJwkPriv = { ...(await exportJWK(statusKeys.privateKey)), kid: asStatus.kid, alg: asStatus.alg, use: "sig" };
+  const tokenJwkPub = { ...(await exportJWK(tokenKeys.publicKey)), kid: asToken.kid, alg: asToken.alg, use: "sig" };
+  const statusJwkPub = { ...(await exportJWK(statusKeys.publicKey)), kid: asStatus.kid, alg: asStatus.alg, use: "sig" };
 
   const agent = await seedAgentClient();
   const kernel = new MissionKernel({
     issuer: opts.issuer,
     policy: DERIVATION_POLICY as never,
     statusKey: statusKeys.privateKey,
-    statusKid: "as-status",
+    statusKid: asStatus.kid,
   });
 
   const provider = buildProvider({
@@ -98,6 +99,7 @@ export async function buildAuthorizationServer(opts: {
     publicJwks: { keys: [tokenJwkPub, statusJwkPub] },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     approverRoleSubs: new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub)),
+    accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
   });
 
   return {

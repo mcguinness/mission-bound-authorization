@@ -10,7 +10,7 @@
  */
 
 import { createExpansion, successorWidensOnly, validateMissionIntent } from "@mission/authorization-server";
-import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import { SAAS_RESOURCE } from "@mission/mcp-saas";
 import type { TokenFacts } from "@mission/mcp-payments";
 import type { Decision, EvaluationRequest } from "@mission/pdp";
@@ -55,11 +55,10 @@ function truncTok(jwt: string): string {
 async function main() {
   const ca = `${process.cwd()}/certs/openfga.crt`;
   const stack = await composeStack({
-    openfgaUrl: process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080",
-    presharedKey: process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me",
+    openfgaUrl: process.env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url,
+    presharedKey: process.env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
     caCertPath: ca,
     withAuthServer: true,
-    asPort: 4400,
   });
   if (!stack.authServer) throw new Error("expected authServer extras (composeStack withAuthServer)");
   const as = stack.authServer;

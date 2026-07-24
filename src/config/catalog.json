@@ -1,0 +1,36 @@
+[
+  {
+    "id": "payments",
+    "display_name": "AP Payments (internal MCP)",
+    "type": "mcp",
+    "endpoint": "http://localhost:4403/mcp",
+    "categories": ["payments"],
+    "tags": ["internal", "ap"],
+    "server_card_uri": "http://localhost:4403/.well-known/mcp",
+    "resource": "http://localhost:4403/mcp",
+    "connection": { "profile": "oauth", "type": "authorization_code" },
+    "approvable": true
+  },
+  {
+    "id": "ledgercloud",
+    "display_name": "LedgerCloud (accounting SaaS)",
+    "type": "mcp",
+    "endpoint": "http://localhost:4406/mcp",
+    "categories": ["accounting"],
+    "tags": ["saas"],
+    "resource": "http://localhost:4406/mcp",
+    "connection": { "profile": "oauth", "type": "id_jag" },
+    "approvable": true
+  },
+  {
+    "id": "hr-files",
+    "display_name": "HR Files",
+    "type": "mcp",
+    "endpoint": "http://localhost:4499/mcp",
+    "categories": ["files"],
+    "tags": ["hr"],
+    "resource": "http://localhost:4499/mcp",
+    "connection": { "profile": "oauth", "type": "authorization_code" },
+    "approvable": false
+  }
+]

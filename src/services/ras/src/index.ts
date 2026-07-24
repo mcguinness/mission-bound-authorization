@@ -21,6 +21,8 @@ export interface RasConfig {
   signKey: CryptoKey;
   signKid: string;
   localTokenTtlSeconds?: number;
+  /** Audience stamped on minted local tokens (the SaaS resource). */
+  localTokenAudience?: string;
   now?: () => Date;
 }
 
@@ -98,7 +100,7 @@ export class ResourceAuthorizationServer {
       .setProtectedHeader({ alg: "ES256", kid: this.cfg.signKid, typ: "at+jwt" })
       .setSubject(String(payload.sub))
       .setIssuer(this.cfg.issuer)
-      .setAudience("http://localhost:4406/mcp")
+      .setAudience(this.cfg.localTokenAudience ?? "http://localhost:4406/mcp")
       .setIssuedAt(nowS)
       .setExpirationTime(exp)
       .sign(this.cfg.signKey);

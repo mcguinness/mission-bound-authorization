@@ -1,0 +1,23 @@
+[
+  {
+    "id": "inv-1",
+    "vendor_id": "acme",
+    "amount": { "amount": "125.00", "currency": "USD" },
+    "status": "payable",
+    "version": 1
+  },
+  {
+    "id": "inv-2",
+    "vendor_id": "acme",
+    "amount": { "amount": "900.00", "currency": "USD" },
+    "status": "payable",
+    "version": 1
+  },
+  {
+    "id": "inv-3",
+    "vendor_id": "globex",
+    "amount": { "amount": "50.00", "currency": "USD" },
+    "status": "payable",
+    "version": 1
+  }
+]

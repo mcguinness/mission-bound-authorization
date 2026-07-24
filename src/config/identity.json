@@ -1,0 +1,4 @@
+[
+  { "sub": "alice", "name": "Alice", "roles": ["subject"] },
+  { "sub": "bob", "name": "Bob", "roles": ["subject", "approver"] }
+]

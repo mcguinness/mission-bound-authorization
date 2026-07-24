@@ -14,7 +14,7 @@ import {
   MissionKernel,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { CATALOG_SERVICES, DERIVATION_POLICY } from "@mission/demo-data";
+import { CATALOG_SERVICES, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
   Connectors,
@@ -26,15 +26,15 @@ import {
   sourceDigestOf,
 } from "@mission/mcp-payments";
 import { ResourceAuthorizationServer } from "@mission/ras";
-import { SaasMcpServer, SAAS_RESOURCE } from "@mission/mcp-saas";
+import { SaasMcpServer } from "@mission/mcp-saas";
 import { signStatement, TransparencyService, type Receipt, type SignedStatement } from "@mission/transparency";
 import { ConsoleBff } from "@mission/console-bff";
 import type { AccessRequestService } from "@mission/access-request";
 
 /** Logical issuer for the in-process (non-auth-server) surfaces. */
-export const ISS = "https://as.demo";
+export const ISS = TOPOLOGY.issuers.as;
 /** The second trust domain (LedgerCloud) for the cross-domain leg (M9). */
-export const RAS_ISS = "https://ras.ledgercloud.test";
+export const RAS_ISS = TOPOLOGY.issuers.ras;
 
 /** The cross-domain / real-issuance extras, present only with withAuthServer. */
 export interface AuthServerExtras {
@@ -106,7 +106,7 @@ export async function composeStack(opts: {
   let authServer: AuthServerExtras | undefined;
 
   if (opts.withAuthServer) {
-    const asPort = opts.asPort ?? 4400;
+    const asPort = opts.asPort ?? TOPOLOGY.ports.as;
     const asUrl = `http://localhost:${asPort}`;
     const as = await buildAuthorizationServer({ issuer: asUrl, allowHeadlessAdjudication: true });
     const asServer = as.provider.listen(asPort);
@@ -119,32 +119,41 @@ export async function composeStack(opts: {
     // issuer (the AS's own token key is RS256 and not exposed; this mirrors the
     // separated-key-purpose design, D39). RAS mints a local token; SaaS enforces
     // from that token alone (token-only PEP, no PDP).
-    const xdKeys = await generateKeyPair("ES256", { extractable: true });
-    const xdPub = { ...(await exportJWK(xdKeys.publicKey)), kid: "as-crossdomain", alg: "ES256" };
-    const rasKeys = await generateKeyPair("ES256", { extractable: true });
-    const rasPub = { ...(await exportJWK(rasKeys.publicKey)), kid: "ras-token", alg: "ES256" };
+    const crossDomainKey = TOPOLOGY.keys.crossDomain;
+    const rasTokenKey = TOPOLOGY.keys.rasToken;
+    const saasResource = TOPOLOGY.resources.saas;
+    const xdKeys = await generateKeyPair(crossDomainKey.alg, { extractable: true });
+    const xdPub = { ...(await exportJWK(xdKeys.publicKey)), kid: crossDomainKey.kid, alg: crossDomainKey.alg };
+    const rasKeys = await generateKeyPair(rasTokenKey.alg, { extractable: true });
+    const rasPub = { ...(await exportJWK(rasKeys.publicKey)), kid: rasTokenKey.kid, alg: rasTokenKey.alg };
     const ras = new ResourceAuthorizationServer({
       issuer: RAS_ISS,
       trustedIssuers: { [asUrl]: { keys: [xdPub as never] } },
       signKey: rasKeys.privateKey,
-      signKid: "ras-token",
+      signKid: rasTokenKey.kid,
+      localTokenTtlSeconds: TOPOLOGY.ttls.rasLocalTokenSeconds,
+      localTokenAudience: saasResource,
     });
-    const saas = new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasPub as never] } });
-    const resourceToAs = (r: string) => (r === SAAS_RESOURCE ? RAS_ISS : asUrl);
+    const saas = new SaasMcpServer({
+      rasIssuer: RAS_ISS,
+      rasJwks: { keys: [rasPub as never] },
+      resource: saasResource,
+    });
+    const resourceToAs = (r: string) => (r === saasResource ? RAS_ISS : asUrl);
     authServer = {
       asUrl,
       agentClientJwk: as.agentClientJwk,
       ras,
       saas,
       rasIssuer: RAS_ISS,
-      saasResource: SAAS_RESOURCE,
+      saasResource,
       issueCrossDomainGrant: (missionId, cnfJkt) =>
-        issueCrossDomainGrant(kernel, xdKeys.privateKey, "as-crossdomain", { missionId, targetAs: RAS_ISS, cnfJkt, resourceToAs }),
+        issueCrossDomainGrant(kernel, xdKeys.privateKey, crossDomainKey.kid, { missionId, targetAs: RAS_ISS, cnfJkt, resourceToAs }),
       closeAuthServer: () => asServer.close(),
     };
   } else {
-    const asKeys = await generateKeyPair("ES256", { extractable: true });
-    kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, statusKey: asKeys.privateKey, statusKid: "as-status" });
+    const asKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });
+    kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, statusKey: asKeys.privateKey, statusKid: TOPOLOGY.keys.asStatus.kid });
     issuer = ISS;
     serverJwks = { keys: [] };
   }
@@ -184,8 +193,9 @@ export async function composeStack(opts: {
 
   // PDP denial-binding key: the PEP's requestable signer and the ARS trust the
   // same key so a real binding_token round-trips (M6 JIT/ARAP flow).
-  const pdpDenialKeys = await generateKeyPair("ES256", { extractable: true });
-  const pdpDenialPub = { ...(await exportJWK(pdpDenialKeys.publicKey)), kid: "pdp-denial", alg: "ES256" };
+  const pdpDenialKey = TOPOLOGY.keys.pdpDenial;
+  const pdpDenialKeys = await generateKeyPair(pdpDenialKey.alg, { extractable: true });
+  const pdpDenialPub = { ...(await exportJWK(pdpDenialKeys.publicKey)), kid: pdpDenialKey.kid, alg: pdpDenialKey.alg };
 
   let observer: PepDeps["observe"];
   const pep = new Pep({
@@ -201,8 +211,8 @@ export async function composeStack(opts: {
     // JIT gate: sending a remittance email is in the mission's authority but
     // requires an action-bound approval, resolved just-in-time via ARAP (M6).
     requiresActionApproval: (action) => action === "payments:remittance.send",
-    maxApprovalAgeSeconds: 300,
-    requestable: { sign: pdpDenialKeys.privateKey, kid: "pdp-denial", endpoint: "https://ars.demo/access-requests" },
+    maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
+    requestable: { sign: pdpDenialKeys.privateKey, kid: pdpDenialKey.kid, endpoint: TOPOLOGY.endpoints.arsIntake },
   });
 
   const { TransactionEngine } = await import("@mission/mcp-payments");
@@ -217,12 +227,14 @@ export async function composeStack(opts: {
   });
 
   // Transparency + producers.
-  const tKeys = await generateKeyPair("ES256", { extractable: true });
-  const transparency = new TransparencyService({ key: tKeys.privateKey, kid: "transparency", issuer: "https://transparency.demo" });
-  const pdpProducerKeys = await generateKeyPair("ES256", { extractable: true });
-  const producerPub = { ...(await exportJWK(pdpProducerKeys.publicKey)), kid: "pdp-evidence", alg: "ES256" };
-  const tPub = { ...(await exportJWK(tKeys.publicKey)), kid: "transparency", alg: "ES256" };
-  const producerKey = { iss: "https://pdp.demo", key: pdpProducerKeys.privateKey, kid: "pdp-evidence" };
+  const transparencyKey = TOPOLOGY.keys.transparency;
+  const pdpEvidenceKey = TOPOLOGY.keys.pdpEvidence;
+  const tKeys = await generateKeyPair(transparencyKey.alg, { extractable: true });
+  const transparency = new TransparencyService({ key: tKeys.privateKey, kid: transparencyKey.kid, issuer: TOPOLOGY.issuers.transparency });
+  const pdpProducerKeys = await generateKeyPair(pdpEvidenceKey.alg, { extractable: true });
+  const producerPub = { ...(await exportJWK(pdpProducerKeys.publicKey)), kid: pdpEvidenceKey.kid, alg: pdpEvidenceKey.alg };
+  const tPub = { ...(await exportJWK(tKeys.publicKey)), kid: transparencyKey.kid, alg: transparencyKey.alg };
+  const producerKey = { iss: TOPOLOGY.issuers.pdp, key: pdpProducerKeys.privateKey, kid: pdpEvidenceKey.kid };
   const retainedEvidence = new Map<string, unknown>();
   const receipts = new Map<string, Receipt>();
 
@@ -240,6 +252,7 @@ export async function composeStack(opts: {
     pdpJwks: { keys: [pdpDenialPub as never] },
     approvalKey: arsKeys.privateKey,
     approvalKid: "ars",
+    approvalTtlSeconds: TOPOLOGY.ttls.approvalSeconds,
   });
 
   const bff = new ConsoleBff({
@@ -252,7 +265,7 @@ export async function composeStack(opts: {
     receiptFor: (s: SignedStatement) => receipts.get(s.jws),
   });
 
-  const catalog = new CatalogProvider(kernel, CATALOG_SERVICES, { arsIntakeUrl: "https://ars.demo/access-requests", issuer });
+  const catalog = new CatalogProvider(kernel, CATALOG_SERVICES, { arsIntakeUrl: TOPOLOGY.endpoints.arsIntake, issuer });
 
   return {
     kernel,

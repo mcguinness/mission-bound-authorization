@@ -1,0 +1,14 @@
+[
+  {
+    "client_id": "ap-agent",
+    "client_name": "AP Agent",
+    "grant_types": ["authorization_code", "refresh_token"],
+    "response_types": ["code"],
+    "redirect_uris": ["http://localhost:9999/cb"],
+    "token_endpoint_auth_method": "private_key_jwt",
+    "token_endpoint_auth_signing_alg": "ES256",
+    "scope": "openid payments",
+    "authorization_details_types": ["mission_resource_access"],
+    "key": { "kid": "ap-agent-auth", "alg": "ES256" }
+  }
+]

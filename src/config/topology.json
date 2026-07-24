@@ -1,0 +1,40 @@
+{
+  "resources": {
+    "payments": "http://localhost:4403/mcp",
+    "saas": "http://localhost:4406/mcp",
+    "hrFiles": "http://localhost:4499/mcp"
+  },
+  "issuers": {
+    "as": "https://as.demo",
+    "ras": "https://ras.ledgercloud.test",
+    "transparency": "https://transparency.demo",
+    "pdp": "https://pdp.demo"
+  },
+  "endpoints": {
+    "arsIntake": "https://ars.demo/access-requests"
+  },
+  "ports": {
+    "as": 4400,
+    "console": 4407
+  },
+  "ttls": {
+    "accessTokenSeconds": 300,
+    "rasLocalTokenSeconds": 120,
+    "approvalSeconds": 300,
+    "maxApprovalAgeSeconds": 300
+  },
+  "devServiceToken": "dev-service-token",
+  "keys": {
+    "asToken": { "kid": "as-token", "alg": "RS256" },
+    "asStatus": { "kid": "as-status", "alg": "ES256" },
+    "pdpDenial": { "kid": "pdp-denial", "alg": "ES256" },
+    "pdpEvidence": { "kid": "pdp-evidence", "alg": "ES256" },
+    "transparency": { "kid": "transparency", "alg": "ES256" },
+    "rasToken": { "kid": "ras-token", "alg": "ES256" },
+    "crossDomain": { "kid": "as-crossdomain", "alg": "ES256" }
+  },
+  "openfga": {
+    "url": "https://localhost:8080",
+    "presharedKey": "dev-preshared-key-change-me"
+  }
+}
