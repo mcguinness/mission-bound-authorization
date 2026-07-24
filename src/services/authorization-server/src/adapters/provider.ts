@@ -27,6 +27,8 @@ export interface AdapterOptions {
   /** Test-only headless adjudication (D40): disabled unless set. */
   allowHeadlessAdjudication?: boolean;
   approverRoleSubs: Set<string>;
+  /** Access-token lifetime (seconds) for issued mission tokens. Default 300. */
+  accessTokenTTL?: number;
 }
 
 interface KoaCtx {
@@ -91,7 +93,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           scope: "payments",
           audience: resourceIndicator,
           accessTokenFormat: "jwt",
-          accessTokenTTL: 300,
+          accessTokenTTL: opts.accessTokenTTL ?? 300,
         }),
         useGrantedResource: () => true,
       },

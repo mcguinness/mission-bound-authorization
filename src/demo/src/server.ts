@@ -16,12 +16,13 @@ import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono, type Context } from "hono";
 import { type TokenFacts, TOOLS } from "@mission/mcp-payments";
+import { TOPOLOGY } from "@mission/demo-data";
 import { approveDemoMission, composeStack, type DemoStack } from "./stack.js";
 
 const TX_TOOLS = new Set(["execute_wire_transfer", "send_remittance_email"]);
 const actionFor = (tool: string): string => TOOLS.find((t) => t.name === tool)?.action ?? "";
 
-const PORT = Number(process.env.CONSOLE_BFF_PORT ?? 4407);
+const PORT = Number(process.env.CONSOLE_BFF_PORT ?? TOPOLOGY.ports.console);
 const INDEX = fileURLToPath(new URL("../public/index.html", import.meta.url));
 
 /** Parse a JSON request body, tolerating an empty body. */
@@ -52,8 +53,8 @@ async function seed(stack: DemoStack): Promise<{ missionId: string }> {
 async function main() {
   const ca = `${process.cwd()}/certs/openfga.crt`;
   const stack = await composeStack({
-    openfgaUrl: process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080",
-    presharedKey: process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me",
+    openfgaUrl: process.env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url,
+    presharedKey: process.env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
     caCertPath: ca,
   });
   const { missionId } = await seed(stack);

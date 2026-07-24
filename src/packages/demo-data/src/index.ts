@@ -106,24 +106,106 @@ function reqEnum<T extends string>(
   return v as T;
 }
 
-interface Topology {
+function reqNumber(file: string, obj: Record<string, unknown>, key: string, ctx: string): number {
+  const v = obj[key];
+  if (typeof v !== "number" || !Number.isFinite(v)) {
+    throw new ConfigError(file, `${ctx}.${key} must be a number`);
+  }
+  return v;
+}
+
+export interface TopologyKey {
+  kid: string;
+  alg: string;
+}
+
+/** The full deployment topology (issuers, ports, ttls, keys, resources). */
+export interface Topology {
   resources: { payments: string; saas: string; hrFiles: string };
+  issuers: { as: string; ras: string; transparency: string; pdp: string };
+  endpoints: { arsIntake: string };
+  ports: { as: number; console: number };
+  ttls: {
+    accessTokenSeconds: number;
+    rasLocalTokenSeconds: number;
+    approvalSeconds: number;
+    maxApprovalAgeSeconds: number;
+  };
+  devServiceToken: string;
+  keys: {
+    asToken: TopologyKey;
+    asStatus: TopologyKey;
+    pdpDenial: TopologyKey;
+    pdpEvidence: TopologyKey;
+    transparency: TopologyKey;
+    rasToken: TopologyKey;
+    crossDomain: TopologyKey;
+  };
+  openfga: { url: string; presharedKey: string };
+}
+
+function reqKey(file: string, obj: Record<string, unknown>, key: string, ctx: string): TopologyKey {
+  const k = asObject(file, obj[key], `${ctx}.${key}`);
+  return {
+    kid: reqString(file, k, "kid", `${ctx}.${key}`),
+    alg: reqString(file, k, "alg", `${ctx}.${key}`),
+  };
 }
 
 function loadTopology(): Topology {
   const file = "topology.json";
   const root = asObject(file, readJson(file), "topology");
   const resources = asObject(file, root.resources, "resources");
+  const issuers = asObject(file, root.issuers, "issuers");
+  const endpoints = asObject(file, root.endpoints, "endpoints");
+  const ports = asObject(file, root.ports, "ports");
+  const ttls = asObject(file, root.ttls, "ttls");
+  const keys = asObject(file, root.keys, "keys");
+  const openfga = asObject(file, root.openfga, "openfga");
   return {
     resources: {
       payments: reqString(file, resources, "payments", "resources"),
       saas: reqString(file, resources, "saas", "resources"),
       hrFiles: reqString(file, resources, "hrFiles", "resources"),
     },
+    issuers: {
+      as: reqString(file, issuers, "as", "issuers"),
+      ras: reqString(file, issuers, "ras", "issuers"),
+      transparency: reqString(file, issuers, "transparency", "issuers"),
+      pdp: reqString(file, issuers, "pdp", "issuers"),
+    },
+    endpoints: {
+      arsIntake: reqString(file, endpoints, "arsIntake", "endpoints"),
+    },
+    ports: {
+      as: reqNumber(file, ports, "as", "ports"),
+      console: reqNumber(file, ports, "console", "ports"),
+    },
+    ttls: {
+      accessTokenSeconds: reqNumber(file, ttls, "accessTokenSeconds", "ttls"),
+      rasLocalTokenSeconds: reqNumber(file, ttls, "rasLocalTokenSeconds", "ttls"),
+      approvalSeconds: reqNumber(file, ttls, "approvalSeconds", "ttls"),
+      maxApprovalAgeSeconds: reqNumber(file, ttls, "maxApprovalAgeSeconds", "ttls"),
+    },
+    devServiceToken: reqString(file, root, "devServiceToken", "topology"),
+    keys: {
+      asToken: reqKey(file, keys, "asToken", "keys"),
+      asStatus: reqKey(file, keys, "asStatus", "keys"),
+      pdpDenial: reqKey(file, keys, "pdpDenial", "keys"),
+      pdpEvidence: reqKey(file, keys, "pdpEvidence", "keys"),
+      transparency: reqKey(file, keys, "transparency", "keys"),
+      rasToken: reqKey(file, keys, "rasToken", "keys"),
+      crossDomain: reqKey(file, keys, "crossDomain", "keys"),
+    },
+    openfga: {
+      url: reqString(file, openfga, "url", "openfga"),
+      presharedKey: reqString(file, openfga, "presharedKey", "openfga"),
+    },
   };
 }
 
-const TOPOLOGY = loadTopology();
+/** The validated deployment topology; consumers inject these values (no cycles). */
+export const TOPOLOGY: Topology = loadTopology();
 
 /** The default (pre-env-override) payments resource, from topology.json. */
 const DEFAULT_PAYMENTS_RESOURCE = TOPOLOGY.resources.payments;
@@ -354,7 +436,7 @@ export async function seedAgentClient(): Promise<SeededClient> {
 }
 
 /** Dev-only service token for control-plane edges (channel matrix). */
-export const DEV_SERVICE_TOKEN = "dev-service-token";
+export const DEV_SERVICE_TOKEN = TOPOLOGY.devServiceToken;
 
 export interface CatalogServiceSeed {
   id: string;

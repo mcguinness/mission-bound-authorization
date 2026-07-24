@@ -8,6 +8,7 @@
 
 import { getTracer, initTelemetry } from "@mission/telemetry";
 import type { TokenFacts } from "@mission/mcp-payments";
+import { TOPOLOGY } from "@mission/demo-data";
 import { approveDemoMission, composeStack } from "./stack.js";
 
 async function main() {
@@ -15,8 +16,8 @@ async function main() {
   const tracer = getTracer("mission-demo");
   const ca = `${process.cwd()}/certs/openfga.crt`;
   const stack = await composeStack({
-    openfgaUrl: process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080",
-    presharedKey: process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me",
+    openfgaUrl: process.env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url,
+    presharedKey: process.env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
     caCertPath: ca,
   });
 
