@@ -17,7 +17,40 @@ import type { Decision, EvaluationRequest } from "@mission/pdp";
 import { composeStack } from "./stack.js";
 import { dpopProofFor, issueMissionToken } from "./oauth-client.js";
 
-const C = { dim: "\x1b[2m", green: "\x1b[32m", red: "\x1b[31m", cyan: "\x1b[36m", yellow: "\x1b[33m", bold: "\x1b[1m", reset: "\x1b[0m" };
+const C = {
+  dim: "\x1b[2m",
+  green: "\x1b[32m",
+  red: "\x1b[31m",
+  cyan: "\x1b[36m",
+  yellow: "\x1b[33m",
+  magenta: "\x1b[35m",
+  bold: "\x1b[1m",
+  reset: "\x1b[0m",
+};
+
+/**
+ * Minimal ANSI JSON syntax highlighter (dependency-free, matching the
+ * exhibit's hand-rolled color style): keys cyan, string values green, numbers
+ * yellow, booleans/null magenta; punctuation stays the terminal default.
+ * Quoted strings are matched as whole tokens first, so digits or braces inside
+ * a string are never recolored.
+ */
+function highlightJson(obj: unknown): string {
+  const src = JSON.stringify(obj, null, 2);
+  return src.replace(
+    /"(?:\\.|[^"\\])*"(:)?|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|\b(?:true|false|null)\b/g,
+    (match: string, colon: string | undefined) => {
+      if (colon !== undefined) {
+        // a quoted string immediately followed by ':' is an object key
+        const key = match.slice(0, -1);
+        return `${C.cyan}${key}${C.reset}:`;
+      }
+      if (match[0] === '"') return `${C.green}${match}${C.reset}`;
+      if (match === "true" || match === "false" || match === "null") return `${C.magenta}${match}${C.reset}`;
+      return `${C.yellow}${match}${C.reset}`;
+    },
+  );
+}
 
 function step(n: number, title: string) {
   console.log(`\n${C.bold}${C.cyan}${"─".repeat(3)} [${n}] ${title} ${"─".repeat(Math.max(0, 60 - title.length))}${C.reset}`);
@@ -25,7 +58,7 @@ function step(n: number, title: string) {
 function block(label: string, obj: unknown) {
   console.log(`${C.dim}${label}:${C.reset}`);
   console.log(
-    JSON.stringify(obj, null, 2)
+    highlightJson(obj)
       .split("\n")
       .map((l) => `  ${l}`)
       .join("\n"),
