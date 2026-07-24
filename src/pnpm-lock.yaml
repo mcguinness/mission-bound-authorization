@@ -219,6 +219,9 @@ importers:
         specifier: 9.10.0
         version: 9.10.0
     devDependencies:
+      '@mission/access-request':
+        specifier: workspace:*
+        version: link:../access-request
       '@types/oidc-provider':
         specifier: 9.5.0
         version: 9.5.0

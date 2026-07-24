@@ -21,6 +21,7 @@
     "dev": "tsx watch src/server.ts"
   },
   "devDependencies": {
+    "@mission/access-request": "workspace:*",
     "@types/oidc-provider": "9.5.0"
   }
 }

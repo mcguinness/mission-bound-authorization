@@ -6,7 +6,14 @@
 
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { DEV_SERVICE_TOKEN, WRITE_ACTIONS } from "@mission/demo-data";
-import { createLocalJWKSet, jwtVerify } from "jose";
+import {
+  calculateJwkThumbprint,
+  createLocalJWKSet,
+  decodeProtectedHeader,
+  jwtVerify,
+  type CryptoKey,
+  type JWK,
+} from "jose";
 import Provider, { errors, type Configuration } from "oidc-provider";
 
 // @types/oidc-provider (9.5) predates InvalidAuthorizationDetails, present at
@@ -14,9 +21,11 @@ import Provider, { errors, type Configuration } from "oidc-provider";
 const InvalidAuthorizationDetails = (errors as unknown as {
   InvalidAuthorizationDetails: new (message?: string) => Error;
 }).InvalidAuthorizationDetails;
+import { isSubsetSet } from "../kernel/derive.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError, LifecycleConflictError, type MissionKernel } from "../kernel/kernel.js";
-import type { LifecycleOperation, MissionIntent } from "../kernel/types.js";
+import { issueTxnToken, validateChallenge } from "../kernel/txn-challenge.js";
+import type { AuthorityEntry, LifecycleOperation, MissionIntent } from "../kernel/types.js";
 
 export interface AdapterOptions {
   issuer: string;
@@ -29,6 +38,42 @@ export interface AdapterOptions {
   approverRoleSubs: Set<string>;
   /** Access-token lifetime (seconds) for issued mission tokens. Default 300. */
   accessTokenTTL?: number;
+  /** AS-txn signing key + kid: signs txn-bound, single-use approval tokens. */
+  txnKey?: CryptoKey;
+  txnKid?: string;
+  /**
+   * The resource's txn-challenge verification keys (its
+   * txn_challenge_jwks_uri). Required for the transaction_authorization_endpoint;
+   * phase 3 wires it from composeStack, the phase-1 test injects a generated
+   * rs-txn pub.
+   */
+  resourceTxnJwks?: { keys: JWK[] };
+  /**
+   * AROP transaction task store. The AS vouches for the RS-validated challenge
+   * and opens/polls a task here (D37: AS owns the txn pending id, ARS owns the
+   * approval). Injected so the AS package takes no dependency on the ARS.
+   */
+  ars?: TxnArs;
+}
+
+/**
+ * The subset of the Access Request Service the transaction endpoint uses.
+ * Structural so the AS package needs no compile-time dependency on the ARS.
+ */
+export interface TxnArs {
+  openForTxn(input: {
+    txn: string;
+    missionId: string;
+    action: string;
+    parameter_digest: string;
+    subject: string;
+  }): { taskId: string; state: string };
+  getTask(taskId: string):
+    | {
+        state: string;
+        approval?: { id: string; approved_at: string; approved_until: string; parameter_digest: string };
+      }
+    | undefined;
 }
 
 interface KoaCtx {
@@ -144,6 +189,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
 function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const { kernel } = opts;
   const jwksResolver = createLocalJWKSet(opts.publicJwks as never);
+  // txn -> ARS taskId. Idempotency for repeated /transaction polls (AROP).
+  const txnTasks = new Map<string, string>();
 
   const requireServiceToken = (ctx: KoaCtx): boolean => {
     if (ctx.get("x-service-token") !== DEV_SERVICE_TOKEN) {
@@ -255,6 +302,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       return;
     }
 
+    // --- AROP Transaction Challenge (@spec txn-challenge; openid/authzen#531) ---
+    // The client presents its base mission token (DPoP) + the RS-signed
+    // txn-challenge; the AS validates + subset-gates against the ACTIVE Mission
+    // (D42), obtains approval, and issues a txn-bound single-use token.
+    if (ctx.path === "/transaction" && ctx.method === "POST") {
+      await handleTransaction(opts, ctx, txnTasks);
+      return;
+    }
+
     await next();
 
     // --- AS metadata flags (@spec mission#as-metadata) ---
@@ -263,8 +319,185 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       meta.mission_bound_authorization_supported = true;
       meta.service_catalog_endpoint = `${opts.issuer}/service-catalog`;
       meta.introspection_endpoint = `${opts.issuer}/introspect`;
+      meta.transaction_authorization_endpoint = `${opts.issuer}/transaction`;
     }
   };
+}
+
+/**
+ * transaction_authorization_endpoint handler. Client-authenticated by its base
+ * mission token (DPoP), bodied with the RS-signed txn-challenge. On approval it
+ * issues a txn-bound, audience-restricted, single-use token carrying the ACTIVE
+ * Mission unchanged (D42) plus the verified approval.
+ */
+async function handleTransaction(
+  opts: AdapterOptions,
+  ctx: KoaCtx,
+  txnTasks: Map<string, string>,
+) {
+  const { kernel } = opts;
+
+  // 1. Base mission token + DPoP proof (the client authenticates with these).
+  const auth = ctx.get("authorization");
+  if (!auth || !auth.startsWith("DPoP ")) {
+    ctx.status = 401;
+    ctx.body = { error: "invalid_token", error_description: "DPoP-bound base mission token required" };
+    return;
+  }
+  const baseToken = auth.slice("DPoP ".length);
+  const proofJws = ctx.get("dpop");
+  if (!proofJws) {
+    ctx.status = 401;
+    ctx.body = { error: "invalid_dpop_proof", error_description: "missing DPoP proof" };
+    return;
+  }
+  let baseClaims: Record<string, unknown>;
+  try {
+    const { payload } = await jwtVerify(baseToken, createLocalJWKSet(opts.publicJwks as never), {
+      issuer: opts.issuer,
+    });
+    baseClaims = payload as Record<string, unknown>;
+  } catch {
+    ctx.status = 401;
+    ctx.body = { error: "invalid_token" };
+    return;
+  }
+  const cnf = baseClaims.cnf as { jkt?: string } | undefined;
+  if (!cnf?.jkt) {
+    ctx.status = 401;
+    ctx.body = { error: "invalid_token", error_description: "base token missing cnf.jkt" };
+    return;
+  }
+  // Bind the DPoP proof to this endpoint (htu/htm) and to the token's cnf.jkt.
+  try {
+    const header = decodeProtectedHeader(proofJws);
+    const proofJkt = await calculateJwkThumbprint(header.jwk as never);
+    if (proofJkt !== cnf.jkt) throw new Error("DPoP key does not match token cnf.jkt");
+    const { payload: proof } = await jwtVerify(proofJws, header.jwk as never, { typ: "dpop+jwt" });
+    if (proof.htu !== `${opts.issuer}/transaction` || proof.htm !== "POST") {
+      throw new Error("DPoP htu/htm mismatch");
+    }
+  } catch {
+    ctx.status = 401;
+    ctx.body = { error: "invalid_dpop_proof" };
+    return;
+  }
+  const missionRef = baseClaims.mission as { id?: string } | undefined;
+  const missionId = missionRef?.id;
+  const subject = baseClaims.sub as string;
+  if (!missionId) {
+    ctx.status = 401;
+    ctx.body = { error: "invalid_token", error_description: "base token missing mission claim" };
+    return;
+  }
+
+  // 2. Body: the RS-signed txn-challenge.
+  const body = await readJsonBody(ctx.req);
+  const challenge = body.challenge;
+  if (typeof challenge !== "string") {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: "challenge (a JWS) required" };
+    return;
+  }
+  if (!opts.resourceTxnJwks || !opts.txnKey || !opts.txnKid || !opts.ars) {
+    ctx.status = 501;
+    ctx.body = { error: "transaction_authorization_unsupported" };
+    return;
+  }
+
+  // 3. Validate the challenge against the resource's txn-challenge keys.
+  let claims;
+  try {
+    claims = await validateChallenge(challenge, opts.resourceTxnJwks, opts.issuer);
+  } catch {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_challenge" };
+    return;
+  }
+  if (!claims.parameter_digest) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_challenge", error_description: "parameter_digest required" };
+    return;
+  }
+  const requested = claims.authorization_details as AuthorityEntry[];
+
+  // 4. D42 subset gate: the requested authority MUST be within the ACTIVE
+  // Mission. Widening is not an AROP case (that is the separate Expansion flow).
+  const record = kernel.get(missionId);
+  if (!record) {
+    ctx.status = 404;
+    ctx.body = { error: "unknown_mission" };
+    return;
+  }
+  const active = kernel.applyExpiry(record);
+  if (active.state !== "active") {
+    ctx.status = 403;
+    ctx.body = { error: "mission_not_active" };
+    return;
+  }
+  if (!isSubsetSet(requested, active.authority_set)) {
+    ctx.status = 403;
+    ctx.body = { error: "out_of_authority" };
+    return;
+  }
+
+  // 5. Approval, idempotent by txn. First call opens an AS-vouched ARS task;
+  // subsequent calls poll it.
+  const existing = txnTasks.get(claims.txn);
+  if (!existing) {
+    const action = requested[0]?.actions?.[0] ?? claims.reason;
+    const { taskId } = opts.ars.openForTxn({
+      txn: claims.txn,
+      missionId,
+      action,
+      parameter_digest: claims.parameter_digest,
+      subject,
+    });
+    txnTasks.set(claims.txn, taskId);
+    ctx.status = 200;
+    ctx.body = { status: "authorization_pending", txn: claims.txn };
+    return;
+  }
+  const task = opts.ars.getTask(existing);
+  if (!task || task.state !== "approved" || !task.approval) {
+    ctx.status = 200;
+    ctx.body = { status: "authorization_pending", txn: claims.txn };
+    return;
+  }
+
+  // 6. Approved: gate a derivation on the active Mission and issue the
+  // txn-bound single-use token carrying the ACTIVE Mission unchanged (D42).
+  const approval = task.approval;
+  let gated;
+  try {
+    gated = kernel.gateDerivation(missionId);
+  } catch (e) {
+    if (e instanceof GateError) {
+      ctx.status = 403;
+      ctx.body = { error: "mission_not_active", error_description: e.message };
+      return;
+    }
+    throw e;
+  }
+  const token = await issueTxnToken({
+    txn: claims.txn,
+    audience: claims.iss, // the resource
+    mission: kernel.missionClaim(gated),
+    authorizationDetails: requested,
+    approval: {
+      id: approval.id,
+      approved_at: approval.approved_at,
+      approved_until: approval.approved_until,
+      parameter_digest: approval.parameter_digest,
+    },
+    approvedUntil: approval.approved_until,
+    cnfJkt: cnf.jkt,
+    key: opts.txnKey,
+    kid: opts.txnKid,
+    issuer: opts.issuer,
+  });
+  ctx.status = 200;
+  ctx.body = { access_token: token, token_type: "DPoP", txn: claims.txn };
 }
 
 async function decide(
