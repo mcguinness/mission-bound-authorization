@@ -10,22 +10,29 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run: { working-directory: src }
-    services:
-      # OpenFGA pinned by digest (D39); plain HTTP + preshared auth in CI
-      # (the dev/demo compose adds TLS, which the decision logic doesn't need).
-      openfga:
-        image: openfga/openfga:v1.18.1@sha256:efde89d24487da1a8bc37d85b61341f1fb7024943a1ded65f4b7d51a75666688
-        env:
-          OPENFGA_DATASTORE_ENGINE: memory
-          OPENFGA_AUTHN_METHOD: preshared
-          OPENFGA_AUTHN_PRESHARED_KEYS: dev-preshared-key-change-me
-        ports:
-          - 8080:8080
     env:
       OPENFGA_HTTP_URL: http://localhost:8080
       OPENFGA_PRESHARED_KEY: dev-preshared-key-change-me
     steps:
       - uses: actions/checkout@v4
+      # OpenFGA as a step, not a `services:` container: the OpenFGA image needs
+      # the `run` subcommand to start the server, and `services:` cannot pass a
+      # command. Plain HTTP + preshared auth in CI (the dev/demo compose adds
+      # TLS, which the decision logic does not need). Pinned by digest (D39).
+      - name: Start OpenFGA
+        run: |
+          docker run -d --name openfga -p 8080:8080 \
+            -e OPENFGA_DATASTORE_ENGINE=memory \
+            -e OPENFGA_AUTHN_METHOD=preshared \
+            -e OPENFGA_AUTHN_PRESHARED_KEYS=dev-preshared-key-change-me \
+            openfga/openfga:v1.18.1@sha256:efde89d24487da1a8bc37d85b61341f1fb7024943a1ded65f4b7d51a75666688 run
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then echo "openfga up"; exit 0; fi
+            sleep 1
+          done
+          echo "openfga did not become ready" >&2
+          docker logs openfga || true
+          exit 1
       - uses: pnpm/action-setup@v4
         with: { version: 11.15.1 }
       - uses: actions/setup-node@v4
