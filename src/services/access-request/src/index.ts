@@ -91,6 +91,30 @@ export class AccessRequestService {
     return { taskId, state: "pending" };
   }
 
+  /**
+   * Open a task for an AROP Transaction Challenge, vouched by the AS. The AS
+   * has already validated the RS-signed txn-challenge against the resource's
+   * txn-challenge keys, so no PDP-signed denial binding is required here
+   * (contrast `submit`, which verifies one for a separate ARS). D37: the AS
+   * owns the txn pending id; the ARS owns the approval. Reuses the same tasks
+   * table + `adjudicate`/`getTask` unchanged.
+   */
+  openForTxn(input: {
+    txn: string;
+    missionId: string;
+    action: string;
+    parameter_digest: string;
+    subject: string;
+  }): { taskId: string; state: TaskState } {
+    const taskId = `arq_txn_${input.txn}`;
+    this.db
+      .prepare(
+        "INSERT INTO tasks (id, state, mission_id, action, parameter_digest, subject, approval_json, created_at) VALUES (?, 'pending', ?, ?, ?, ?, NULL, ?)",
+      )
+      .run(taskId, input.missionId, input.action, input.parameter_digest, input.subject, this.now().getTime());
+    return { taskId, state: "pending" };
+  }
+
   /** The approver's adjudication queue (approver app consumes this). */
   pending(): Array<{ id: string; mission_id: string; action: string; subject: string }> {
     return this.db

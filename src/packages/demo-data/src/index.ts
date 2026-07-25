@@ -135,6 +135,8 @@ export interface Topology {
   keys: {
     asToken: TopologyKey;
     asStatus: TopologyKey;
+    asTxn: TopologyKey;
+    rsTxn: TopologyKey;
     pdpDenial: TopologyKey;
     pdpEvidence: TopologyKey;
     transparency: TopologyKey;
@@ -191,6 +193,8 @@ function loadTopology(): Topology {
     keys: {
       asToken: reqKey(file, keys, "asToken", "keys"),
       asStatus: reqKey(file, keys, "asStatus", "keys"),
+      asTxn: reqKey(file, keys, "asTxn", "keys"),
+      rsTxn: reqKey(file, keys, "rsTxn", "keys"),
       pdpDenial: reqKey(file, keys, "pdpDenial", "keys"),
       pdpEvidence: reqKey(file, keys, "pdpEvidence", "keys"),
       transparency: reqKey(file, keys, "transparency", "keys"),

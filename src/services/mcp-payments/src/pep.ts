@@ -8,7 +8,7 @@
  * tier (M4); the transaction-assurance tier (permits/leases) lands in M5.
  */
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import { getTracer } from "@mission/telemetry";
 import {
@@ -23,6 +23,7 @@ import {
 import { buildEffectiveParams, type EffectiveParams, parameterDigest } from "./effective-params.js";
 import type { EvidenceStore } from "./evidence.js";
 import type { PaymentsStore } from "./payments-store.js";
+import { signChallenge } from "./txn-challenge.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
 export const TOOL_BASE = "mcp://payments.demo/tools";
@@ -69,6 +70,13 @@ export interface PepDeps {
   /** PDP signer + ARS endpoint for requestable denials (M6). */
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
   /**
+   * AROP Transaction Challenge signer (rs-txn key). When configured, an
+   * `action_approval_required` denial also yields an RS-signed txn-challenge the
+   * client presents to the AS transaction_authorization_endpoint. `txnEndpoint`
+   * is that endpoint URL; `asIssuer` is the AS issuer used as the challenge aud.
+   */
+  challengeSigner?: { sign: import("jose").CryptoKey; kid: string; txnEndpoint: string; asIssuer: string };
+  /**
    * Per-instance revocation (M12 / D19): "iss sub" keys of agent instances the
    * PEP refuses. Revoking one sub-agent instance kills only that instance;
    * other actors in the chain (the orchestrator) keep working.
@@ -104,6 +112,12 @@ export interface EnforceResult {
   effective?: EffectiveParams;
   /** Present on a requestable denial: the ARAP access-request context. */
   access_request?: { endpoint: string; denial_binding: string; binding_token: string };
+  /**
+   * Present when `challengeSigner` is configured and the action needs a
+   * per-action approval: an RS-signed AROP txn-challenge plus the AS endpoint to
+   * present it to.
+   */
+  access_challenge?: { challenge: string; txn_endpoint: string };
 }
 
 export class Pep {
@@ -233,13 +247,47 @@ export class Pep {
 
     if (!decision.decision) {
       const ar = decision.context.access_request as EnforceResult["access_request"] | undefined;
-      return {
+      const result: EnforceResult = {
         permitted: false,
         decision,
         denial_reason: decision.context.denial_reason as string,
         ...(effective ? { effective } : {}),
         ...(ar ? { access_request: ar } : {}),
       };
+      // AROP Transaction Challenge (additive to the access_request path above):
+      // on an action_approval_required denial, if the RS is configured to sign
+      // challenges, emit an rs-txn-signed txn-challenge scoped to the active
+      // Mission's entry for this resource+action and bound to the operation's
+      // parameter_digest. The client presents it to the AS transaction endpoint.
+      if (
+        this.deps.challengeSigner &&
+        decision.context.denial_reason === "action_approval_required" &&
+        effective &&
+        view
+      ) {
+        const signer = this.deps.challengeSigner;
+        // Narrow to the specific gated action (keeping the entry's constraints):
+        // a proper subset of the active Mission entry, so the AROP grant and the
+        // approver task are scoped to the operation actually being approved, not
+        // the whole Mission entry. Still passes the AS subset-gate (D42).
+        const requested = view.authority_set
+          .filter((e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action))
+          .map((e) => ({ ...e, actions: [mapping.action] }));
+        const challenge = await signChallenge(
+          {
+            txn: randomUUID(),
+            authorization_details: requested,
+            parameter_digest: parameterDigest(effective),
+            iss: CANONICAL_RESOURCE,
+            aud: signer.asIssuer,
+            reason: "action_approval_required",
+          },
+          signer.sign,
+          signer.kid,
+        );
+        result.access_challenge = { challenge, txn_endpoint: signer.txnEndpoint };
+      }
+      return result;
     }
     return { permitted: true, decision, ...(effective ? { effective } : {}) };
   }

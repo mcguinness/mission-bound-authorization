@@ -27,6 +27,8 @@
   "keys": {
     "asToken": { "kid": "as-token", "alg": "RS256" },
     "asStatus": { "kid": "as-status", "alg": "ES256" },
+    "asTxn": { "kid": "as-txn", "alg": "ES256" },
+    "rsTxn": { "kid": "rs-txn", "alg": "ES256" },
     "pdpDenial": { "kid": "pdp-denial", "alg": "ES256" },
     "pdpEvidence": { "kid": "pdp-evidence", "alg": "ES256" },
     "transparency": { "kid": "transparency", "alg": "ES256" },

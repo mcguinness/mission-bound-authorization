@@ -1,9 +1,10 @@
 /**
- * Live demo server: composes the full stack, seeds a scenario, and serves a
- * clickable dashboard (demo/public/index.html) plus the persona HTTP APIs the
- * dashboard drives. This is the interactive browser demo -- every button hits
- * the real console-bff / catalog / MCP PEP path. `pnpm demo:serve`, open
- * http://localhost:4407.
+ * Live demo server: composes the full stack against a real authorization
+ * server, mints a real DPoP-bound mission token, and serves a clickable
+ * dashboard (demo/public/index.html) plus the persona HTTP APIs the dashboard
+ * drives. Every button hits the real console-bff / catalog / MCP PEP path, and
+ * the JIT step runs the AROP Transaction Challenge over real HTTP against the
+ * AS transaction endpoint. `pnpm demo:serve`, open http://localhost:4407.
  *
  * Routing is a small Hono app (readable route table + JSON/error middleware);
  * the demo remains a single one-command process. The apps/ React SPAs are the
@@ -15,12 +16,12 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono, type Context } from "hono";
-import { type TokenFacts, TOOLS } from "@mission/mcp-payments";
-import { TOPOLOGY } from "@mission/demo-data";
-import { approveDemoMission, composeStack, type DemoStack } from "./stack.js";
+import type { TokenFacts } from "@mission/mcp-payments";
+import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
+import { composeStack } from "./stack.js";
+import { dpopProofFor, issueMissionToken } from "./oauth-client.js";
 
 const TX_TOOLS = new Set(["execute_wire_transfer", "send_remittance_email"]);
-const actionFor = (tool: string): string => TOOLS.find((t) => t.name === tool)?.action ?? "";
 
 const PORT = Number(process.env.CONSOLE_BFF_PORT ?? TOPOLOGY.ports.console);
 const INDEX = fileURLToPath(new URL("../public/index.html", import.meta.url));
@@ -29,25 +30,9 @@ const INDEX = fileURLToPath(new URL("../public/index.html", import.meta.url));
 const readJson = (c: Context): Promise<Record<string, unknown>> =>
   c.req.json().catch(() => ({}) as Record<string, unknown>);
 
-async function seed(stack: DemoStack): Promise<{ missionId: string }> {
-  const mission = approveDemoMission(stack);
-  const record = stack.kernel.get(mission.id);
-  const token = (): TokenFacts => ({
-    sub: "alice",
-    clientId: "ap-agent",
-    clientInstanceId: "inst-1",
-    mission: { id: mission.id, authority_hash: record?.authority_hash ?? "" },
-    cnfJkt: "jkt-demo",
-  });
-  // Generate some evidence to populate the timeline. Use inv-seed for the
-  // wire so inv-1's single-use permit stays fresh for the dashboard button.
-  await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, token());
-  await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-seed" }, token());
-  for (const ev of stack.evidence.forMission(mission.id)) {
-    const t = ev.kind === "decision" ? "decision-evidence" : ev.kind === "execution" ? "execution-evidence" : "refusal-record";
-    await stack.publishEvidence(mission.id, t, ev as unknown as Record<string, unknown>);
-  }
-  return { missionId: mission.id };
+/** Decode a compact JWS payload (base64url) without verifying, for display. */
+function decodeClaims(jwt: string): Record<string, unknown> {
+  return JSON.parse(Buffer.from(jwt.split(".")[1] as string, "base64url").toString());
 }
 
 async function main() {
@@ -56,22 +41,47 @@ async function main() {
     openfgaUrl: process.env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url,
     presharedKey: process.env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
     caCertPath: ca,
+    withAuthServer: true,
   });
-  const { missionId } = await seed(stack);
+  if (!stack.authServer) throw new Error("expected authServer extras (composeStack withAuthServer)");
+  const asUrl = stack.authServer.asUrl;
+
+  // Real issuance: PAR -> authorize -> Bob approves alice -> DPoP-bound token.
+  // The mission covers reading, wire execution, and remittance (the JIT-gated
+  // action). The base token + its DPoP key are held server-side to drive the
+  // resource calls and the AROP transaction endpoint.
+  const missionIntent = JSON.stringify({
+    goal: "Pay approved Acme invoices and send remittance",
+    resources: [CANONICAL_RESOURCE],
+    expires_at: "2027-01-01T00:00:00Z",
+    proposed_authority: [
+      {
+        type: "mission_resource_access",
+        resource: CANONICAL_RESOURCE,
+        actions: ["payments:invoice.read", "payments:payment.execute", "payments:remittance.send"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ],
+  });
+  const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, scope: "payments" });
+  const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST");
+  const facts: TokenFacts = {
+    ...(await stack.server.validateToken(issued.accessToken, rsProof, CANONICAL_RESOURCE, "POST")),
+    clientInstanceId: "inst-1",
+  };
+  const missionId = facts.mission.id;
+
+  // Seed evidence: one wire on inv-seed (keeps inv-1's single-use permit fresh
+  // for the dashboard button), then publish it to the transparency log.
+  await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
+  await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-seed" }, facts);
+  for (const ev of stack.evidence.forMission(missionId)) {
+    const t = ev.kind === "decision" ? "decision-evidence" : ev.kind === "execution" ? "execution-evidence" : "refusal-record";
+    await stack.publishEvidence(missionId, t, ev as unknown as Record<string, unknown>);
+  }
+
   // One dev session with both persona roles (auto-login for the demo).
   const session = stack.bff.sessions.create("demo-operator", ["operator", "approver"]);
-  const missionToken = (): TokenFacts => {
-    const r = stack.kernel.get(missionId);
-    return { sub: "alice", clientId: "ap-agent", clientInstanceId: "inst-1", mission: { id: missionId, authority_hash: r?.authority_hash ?? "" }, cnfJkt: "jkt-demo" };
-  };
-
-  // Capture the digest of the last enforced decision so a JIT access request
-  // can be bound to the exact parameters that were denied.
-  let lastDigest = "";
-  stack.onEnforce((e) => {
-    const d = e.decision.context.parameter_digest;
-    if (typeof d === "string") lastDigest = d;
-  });
 
   // Publish any evidence produced since the last call to the transparency log
   // so the operator timeline reflects the newest agent activity.
@@ -84,6 +94,24 @@ async function main() {
     }
     published = all.length;
   };
+
+  // POST the RS-signed txn-challenge to the AS transaction endpoint, presenting
+  // the base mission token (DPoP). First call opens the AROP task (pending);
+  // re-presenting the SAME challenge after approval returns the txn-token.
+  const postTransaction = async (challenge: string) => {
+    const res = await fetch(`${asUrl}/transaction`, {
+      method: "POST",
+      headers: {
+        authorization: `DPoP ${issued.accessToken}`,
+        dpop: await dpopProofFor(issued.dpopKeys, `${asUrl}/transaction`, "POST"),
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ challenge }),
+    });
+    return (await res.json()) as { status?: string; txn?: string; access_token?: string; token_type?: string };
+  };
+  // taskId -> the challenge JWS, so /agent/retry re-POSTs the SAME challenge.
+  const challenges = new Map<string, string>();
 
   const app = new Hono();
   app.onError((err, c) => c.json({ error: err.message }, 500));
@@ -103,7 +131,7 @@ async function main() {
     return c.json(stack.bff.lifecycle(session, c.req.param("id"), body.operation as never, session.csrf));
   });
   app.get("/bff/approver/queue", (c) => c.json(stack.bff.approverQueue(session)));
-  // Approver adjudicates a pending ARAP task (JIT approval).
+  // Approver adjudicates a pending AROP task on the shared ARS (JIT approval).
   app.post("/bff/approver/adjudicate", async (c) => {
     const body = await readJson(c);
     return c.json(await stack.bff.adjudicateTask(session, String(body.taskId), body.decision as "approve" | "deny", session.csrf));
@@ -111,41 +139,52 @@ async function main() {
 
   // Agent surface.
   app.get("/agent/catalog", (c) => c.json(stack.catalog.catalog("alice", { type: "mcp" })));
-  // Agent action: attempt a tool call and report the enforcement outcome. A
-  // requestable action_approval_required denial opens an ARS access request and
-  // hands the pending task back to the agent (JIT/ARAP).
+  // Agent action: attempt a tool call and report the enforcement outcome. When
+  // a gated action yields an access_challenge (AROP), the server presents it to
+  // the AS transaction endpoint on the agent's behalf, opening an AROP task on
+  // the shared ARS, and hands the pending txn back to the agent.
   app.post("/agent/act", async (c) => {
     const body = await readJson(c);
     const tool = String(body.tool);
     const args = (body.args as Record<string, unknown>) ?? {};
     const r = TX_TOOLS.has(tool)
-      ? await stack.server.callTransactionTool(tool, args, missionToken())
-      : await stack.server.callReadTool(tool, args, missionToken());
+      ? await stack.server.callTransactionTool(tool, args, facts)
+      : await stack.server.callReadTool(tool, args, facts);
     await publishNew();
-    const ar = (r as { access_request?: { endpoint: string; denial_binding: string; binding_token: string } }).access_request;
-    if (!r.ok && ar) {
-      const submitted = await stack.ars.submit({
-        binding_token: ar.binding_token,
-        requested: { action: actionFor(tool), mission_id: missionId, parameter_digest: lastDigest, subject: "alice" },
+    const ch = (r as { access_challenge?: { challenge: string; txn_endpoint: string } }).access_challenge;
+    if (!r.ok && ch) {
+      const pending = await postTransaction(ch.challenge);
+      const taskId = pending.txn ? `arq_txn_${pending.txn}` : undefined;
+      if (taskId) challenges.set(taskId, ch.challenge);
+      return c.json({
+        ...r,
+        txn: pending.txn,
+        taskId,
+        task_state: pending.status,
+        access_challenge: { txn_endpoint: ch.txn_endpoint, challenge: decodeClaims(ch.challenge) },
       });
-      return c.json({ ...r, taskId: submitted.taskId, task_state: submitted.state });
     }
     return c.json(r);
   });
-  // Agent retries a JIT-gated call, carrying the approval as context.
+  // Agent retries a JIT-gated call after approval: re-POST the SAME challenge to
+  // the AS transaction endpoint for the txn-token, then re-present it to the RS.
+  // The approval is carried by the AS-issued token, never as a tool input.
   app.post("/agent/retry", async (c) => {
     const body = await readJson(c);
     const taskId = String(body.taskId);
     const tool = String(body.tool);
     const args = (body.args as Record<string, unknown>) ?? {};
+    const challenge = challenges.get(taskId);
     const task = stack.ars.getTask(taskId);
-    if (!task || task.state !== "approved" || !task.approval) {
+    if (!challenge || !task || task.state !== "approved") {
       return c.json({ ok: false, pending: true, state: task?.state ?? "unknown" });
     }
-    const a = task.approval;
-    const approvalCtx = { id: a.id, approved_at: a.approved_at, parameter_digest: a.parameter_digest };
-    const r = await stack.server.callTransactionTool(tool, args, missionToken(), undefined, approvalCtx);
+    const issuedTxn = await postTransaction(challenge);
+    const txnToken = issuedTxn.access_token;
+    if (!txnToken) return c.json({ ok: false, pending: true, state: task.state });
+    const r = await stack.server.callTransactionTool(tool, args, facts, undefined, txnToken);
     await publishNew();
+    challenges.delete(taskId);
     return c.json(r);
   });
 

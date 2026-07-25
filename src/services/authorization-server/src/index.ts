@@ -1,9 +1,9 @@
 /** Assembly: kernel + adapters + keys. Used by server.ts and tests. */
 
 import { CANONICAL_RESOURCE, DERIVATION_POLICY, seedAgentClient, TOPOLOGY, USERS } from "@mission/demo-data";
-import { exportJWK, generateKeyPair } from "jose";
+import { exportJWK, generateKeyPair, type JWK } from "jose";
 import type Provider from "oidc-provider";
-import { buildProvider } from "./adapters/provider.js";
+import { buildProvider, type TxnArs } from "./adapters/provider.js";
 import { MissionKernel } from "./kernel/kernel.js";
 
 export { MissionKernel, GateError, LifecycleConflictError } from "./kernel/kernel.js";
@@ -72,16 +72,24 @@ export interface BuiltAs {
 export async function buildAuthorizationServer(opts: {
   issuer: string;
   allowHeadlessAdjudication?: boolean;
+  /** The resource's txn-challenge keys, for the transaction endpoint. */
+  resourceTxnJwks?: { keys: JWK[] };
+  /** AROP transaction task store (AS vouches; owns the txn pending id, D37). */
+  ars?: TxnArs;
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
-  // as-token signs tokens, as-status signs Status responses.
-  const { asToken, asStatus } = TOPOLOGY.keys;
+  // as-token signs tokens, as-status signs Status responses, as-txn signs
+  // txn-bound single-use approval tokens (AROP Transaction Challenge).
+  const { asToken, asStatus, asTxn } = TOPOLOGY.keys;
   const tokenKeys = await generateKeyPair(asToken.alg, { extractable: true });
   const statusKeys = await generateKeyPair(asStatus.alg, { extractable: true });
+  const txnKeys = await generateKeyPair(asTxn.alg, { extractable: true });
   const tokenJwk = { ...(await exportJWK(tokenKeys.privateKey)), kid: asToken.kid, alg: asToken.alg, use: "sig" };
   const statusJwkPriv = { ...(await exportJWK(statusKeys.privateKey)), kid: asStatus.kid, alg: asStatus.alg, use: "sig" };
+  const txnJwkPriv = { ...(await exportJWK(txnKeys.privateKey)), kid: asTxn.kid, alg: asTxn.alg, use: "sig" };
   const tokenJwkPub = { ...(await exportJWK(tokenKeys.publicKey)), kid: asToken.kid, alg: asToken.alg, use: "sig" };
   const statusJwkPub = { ...(await exportJWK(statusKeys.publicKey)), kid: asStatus.kid, alg: asStatus.alg, use: "sig" };
+  const txnJwkPub = { ...(await exportJWK(txnKeys.publicKey)), kid: asTxn.kid, alg: asTxn.alg, use: "sig" };
 
   const agent = await seedAgentClient();
   const kernel = new MissionKernel({
@@ -95,11 +103,15 @@ export async function buildAuthorizationServer(opts: {
     issuer: opts.issuer,
     kernel,
     clients: [agent.metadata],
-    jwks: { keys: [tokenJwk, statusJwkPriv] },
-    publicJwks: { keys: [tokenJwkPub, statusJwkPub] },
+    jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv] },
+    publicJwks: { keys: [tokenJwkPub, statusJwkPub, txnJwkPub] },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     approverRoleSubs: new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub)),
     accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
+    txnKey: txnKeys.privateKey,
+    txnKid: asTxn.kid,
+    ...(opts.resourceTxnJwks ? { resourceTxnJwks: opts.resourceTxnJwks } : {}),
+    ...(opts.ars ? { ars: opts.ars } : {}),
   });
 
   return {

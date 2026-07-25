@@ -1,6 +1,7 @@
 /**
  * M7 AROP token-issuance completion. Scenario 6 (DTR) and scenario 7
- * (Transaction Challenge), both completing through a Mission Expansion.
+ * (Transaction Challenge) both carry the ACTIVE Mission unchanged (D42: AROP
+ * never widens); the separate Expansion flow (widening) is exercised alongside.
  * Exit invariants: issued tokens never broaden the originating request and
  * never outlive approved_until.
  */
@@ -15,7 +16,6 @@ import {
   issueTxnToken,
   MissionKernel,
   signChallenge,
-  successorMissionClaim,
   TxnReplayCache,
   TXN_TOKEN_TYP,
   validateChallenge,
@@ -165,53 +165,59 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
   });
 });
 
-describe("M7 scenario 7: AROP over Transaction Challenge", () => {
-  it("RS signs a challenge -> AS validates + issues a txn-bound single-use token -> re-presented once", async () => {
-    const predecessor = approveMission(7, ["acme"]);
-    // RS signing key (rs-txn / txn_challenge_jwks_uri) and client DPoP key.
+describe("M7 scenario 7: AROP over Transaction Challenge (D42 -- carries the active Mission)", () => {
+  it("RS signs a challenge -> AS validates + issues a txn-bound single-use token carrying the ACTIVE Mission -> re-presented once", async () => {
+    const mission = approveMission(7, ["acme"]); // the active Mission (unchanged by AROP)
+    // RS signing key (rs-txn / txn_challenge_jwks_uri), AS-txn key, client DPoP key.
     const rsKeys = await generateKeyPair("ES256", { extractable: true });
     const rsPubJwk = { ...(await exportJWK(rsKeys.publicKey)), kid: "rs-txn", alg: "ES256" };
     const asKeys = await generateKeyPair("ES256", { extractable: true });
-    const asPubJwk = { ...(await exportJWK(asKeys.publicKey)), kid: "as-token", alg: "ES256" };
+    const asPubJwk = { ...(await exportJWK(asKeys.publicKey)), kid: "as-txn", alg: "ES256" };
     const clientKeys = await generateKeyPair("ES256", { extractable: true });
     const cnfJkt = await calculateJwkThumbprint(await exportJWK(clientKeys.publicKey));
 
-    // RS returns a 401 challenge for an over-authority wire.
+    // RS returns a 401 challenge for a gated action. The requested authority is
+    // a subset of the active Mission's Authority Set (the RS read the mission).
     const txn = "txn_abc123";
+    const parameter_digest = "sha-256:deadbeefcafefeed";
+    const requested = mission.authority_set.filter((e) => e.actions.includes("payments:payment.execute"));
     const challenge = await signChallenge(
       {
         txn,
-        authorization_details: [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:payment.execute"] }],
+        authorization_details: requested,
         iss: RESOURCE,
         aud: ISS,
         reason: "over-cap wire requires approval",
+        parameter_digest,
       },
       rsKeys.privateKey,
       "rs-txn",
     );
 
-    // AS validates the challenge against the RS keys.
+    // AS validates the challenge against the RS keys; the digest round-trips.
     const validated = await validateChallenge(challenge, { keys: [rsPubJwk as never] }, ISS);
     expect(validated.txn).toBe(txn);
     expect(validated.iss).toBe(RESOURCE);
+    expect(validated.parameter_digest).toBe(parameter_digest);
 
-    // AS issues a txn-bound, audience-restricted, single-use token via expansion.
-    const { successor } = createExpansion(kernel, {
-      predecessorId: predecessor.id,
-      intent: intent(["acme"]),
-      approver: { iss: ISS, sub: "bob" },
-      approvalEventId: `apev_txn_${txn}`,
-      approvedUntil: "2026-12-31T00:00:00Z",
-    });
+    // AS issues a txn-bound, audience-restricted, single-use token carrying the
+    // ACTIVE Mission unchanged (D42 -- no Expansion) plus the verified approval.
+    const approvedUntil = "2026-12-31T00:00:00Z";
     const token = await issueTxnToken({
       txn,
       audience: RESOURCE,
-      mission: successorMissionClaim(kernel, successor),
+      mission: kernel.missionClaim(mission),
       authorizationDetails: validated.authorization_details,
-      approvedUntil: "2026-12-31T00:00:00Z",
+      approval: {
+        id: "apr_txn_1",
+        approved_at: "2026-07-20T00:00:00Z",
+        approved_until: approvedUntil,
+        parameter_digest,
+      },
+      approvedUntil,
       cnfJkt,
       key: asKeys.privateKey,
-      kid: "as-token",
+      kid: "as-txn",
       issuer: ISS,
     });
 
@@ -224,7 +230,14 @@ describe("M7 scenario 7: AROP over Transaction Challenge", () => {
     expect(payload.txn).toBe(txn);
     expect(payload.single_use).toBe(true);
     expect((payload.cnf as { jkt: string }).jkt).toBe(cnfJkt);
-    expect(Date.parse("2026-12-31T00:00:00Z") / 1000).toBe(payload.exp);
+    expect(Date.parse(approvedUntil) / 1000).toBe(payload.exp);
+    // D42: the token carries the ACTIVE Mission -- no successor, no predecessor.
+    expect((payload.mission as { id: string }).id).toBe(mission.id);
+    expect((payload.mission as { predecessor?: string }).predecessor).toBeUndefined();
+    expect((payload.mission as { successor?: string }).successor).toBeUndefined();
+    expect(kernel.get(mission.id)?.state).toBe("active");
+    // Carries the verified approval, incl. the parameter_digest.
+    expect((payload.approval as { parameter_digest: string }).parameter_digest).toBe(parameter_digest);
 
     // RS honors the txn exactly once.
     const cache = new TxnReplayCache();

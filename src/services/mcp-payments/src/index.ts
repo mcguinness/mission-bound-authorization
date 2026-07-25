@@ -16,3 +16,4 @@ export { Connectors, type WireCommit, type EmailCommit, type CommitResult } from
 export { TransactionEngine, operationKey, type OpState } from "./transaction.js";
 export { reconcile, type ReconciliationReport } from "./reconcile.js";
 export type { ExecutionEvidence } from "./evidence.js";
+export { signChallenge, TxnReplayCache, TXN_CHALLENGE_TYP, TXN_TOKEN_TYP, type TxnChallengeClaims } from "./txn-challenge.js";
