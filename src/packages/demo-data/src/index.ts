@@ -219,6 +219,7 @@ export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? DEFAULT_P
 export interface SeededUser {
   sub: string;
   name: string;
+  email: string;
   roles: string[];
 }
 
@@ -229,6 +230,7 @@ function loadUsers(): SeededUser[] {
     return {
       sub: reqString(file, u, "sub", `identity[${i}]`),
       name: reqString(file, u, "name", `identity[${i}]`),
+      email: reqString(file, u, "email", `identity[${i}]`),
       roles: reqStringArray(file, u, "roles", `identity[${i}]`),
     };
   });

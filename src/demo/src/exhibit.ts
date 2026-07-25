@@ -139,7 +139,7 @@ async function main() {
 
   // ---- 2. REAL issuance: PAR -> authorize -> approve -> token --------------
   step(2, "Real issuance: the live OAuth dance mints a real token pair");
-  const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, scope: "openid payments" });
+  const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, scope: "openid profile email payments" });
 
   block("PAR request (POST /request, form-encoded, private_key_jwt)", {
     ...issued.artifacts.par.request,
@@ -176,11 +176,14 @@ async function main() {
     iss: idt.iss,
     sub: idt.sub,
     aud: idt.aud,
+    ...(idt.name ? { name: idt.name } : {}),
+    ...(idt.preferred_username ? { preferred_username: idt.preferred_username } : {}),
+    ...(idt.email ? { email: idt.email } : {}),
     ...(idt.auth_time ? { auth_time: idt.auth_time } : {}),
     iat: idt.iat,
     exp: idt.exp,
   });
-  note("aud = client_id ap-agent: the id_token identifies the USER to the client, distinct from the resource-audienced access token.");
+  note("aud = client_id ap-agent: the id_token identifies the USER to the client (name/email from the identity store), distinct from the resource-audienced access token.");
 
   const missionId = (at.mission as { id: string }).id;
   const record = stack.kernel.get(missionId);

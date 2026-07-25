@@ -5,7 +5,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { DEV_SERVICE_TOKEN, WRITE_ACTIONS } from "@mission/demo-data";
+import { DEV_SERVICE_TOKEN, USERS, WRITE_ACTIONS } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createLocalJWKSet,
@@ -94,12 +94,24 @@ export function buildProvider(opts: AdapterOptions): Provider {
   const configuration: Configuration = {
     clients: opts.clients as never,
     jwks: opts.jwks as never,
-    scopes: ["openid", "payments"],
+    scopes: ["openid", "profile", "email", "payments"],
+    // OIDC claims by scope, sourced from the identity store; put them in the
+    // id_token itself (not only at userinfo) so the token carries the subject's
+    // identity for the demo. `sub` is always present.
+    claims: { profile: ["name", "preferred_username"], email: ["email"] },
+    conformIdTokenClaims: false,
     issueRefreshToken: async (_ctx, client) => client.grantTypeAllowed("refresh_token"),
     pkce: { required: () => true },
     interactions: { url: (_ctx, interaction) => `/interaction/${interaction.uid}` },
     async findAccount(_ctx, id) {
-      return { accountId: id, claims: async () => ({ sub: id }) };
+      const user = USERS.find((u) => u.sub === id);
+      return {
+        accountId: id,
+        claims: async () => ({
+          sub: id,
+          ...(user ? { name: user.name, email: user.email, preferred_username: user.sub } : {}),
+        }),
+      };
     },
     features: {
       // We serve our own approval interaction (the mission-kernel adapter).
