@@ -1,8 +1,10 @@
 /**
  * Phase 1 AROP Transaction Challenge over real HTTP: the AS
  * transaction_authorization_endpoint. A client presents its base mission token
- * (DPoP) + an RS-signed txn-challenge; the AS validates + subset-gates against
- * the ACTIVE Mission (D42), the ARS approves, and the AS issues a txn-bound,
+ * (DPoP) + an RS-signed txn-challenge ONCE (initiation); the AS validates +
+ * subset-gates against the ACTIVE Mission (D42), opens an ARS task, and returns
+ * a continuation handle (transaction_authorization_id). The client then POLLS
+ * the same endpoint WITH the handle: pending until approval, then a txn-bound,
  * audience-restricted, single-use token carrying the active Mission unchanged
  * plus the verified approval (incl. parameter_digest). The hybrid design: the
  * AS signature is the source of the approval, the RS (phase 2) is the carrier.
@@ -34,25 +36,27 @@ const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
 
+type DpopKeys = { privateKey: CryptoKey; publicKey: CryptoKey };
+
 let as: BuiltAs;
 let asServer: Server;
 let ars: AccessRequestService;
 let clientKey: CryptoKey;
-let dpopKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
+let dpopKeys: DpopKeys;
 let dpopJkt: string;
 let rsTxnKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
 let baseToken = "";
 let missionId = "";
 
 const cookies = new Map<string, string>();
-function cookieHeader(): string {
-  return [...cookies.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+function cookieHeader(jar: Map<string, string> = cookies): string {
+  return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
 }
-function storeCookies(res: Response): void {
+function storeCookies(res: Response, jar: Map<string, string> = cookies): void {
   for (const line of res.headers.getSetCookie()) {
     const [pair] = line.split(";");
     const eq = (pair as string).indexOf("=");
-    cookies.set((pair as string).slice(0, eq), (pair as string).slice(eq + 1));
+    jar.set((pair as string).slice(0, eq), (pair as string).slice(eq + 1));
   }
 }
 
@@ -68,19 +72,24 @@ async function clientAssertion(): Promise<string> {
     .sign(clientKey);
 }
 
-async function dpopProof(htu: string, htm: string, extra: Record<string, unknown> = {}): Promise<string> {
+async function dpopProof(
+  htu: string,
+  htm: string,
+  keys: DpopKeys = dpopKeys,
+  extra: Record<string, unknown> = {},
+): Promise<string> {
   return new SignJWT({ htu, htm, ...extra })
-    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(dpopKeys.publicKey) })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(keys.publicKey) })
     .setIssuedAt()
     .setJti(crypto.randomUUID())
-    .sign(dpopKeys.privateKey);
+    .sign(keys.privateKey);
 }
 
-async function tokenRequest(params: Record<string, string>): Promise<Response> {
+async function tokenRequest(params: Record<string, string>, keys: DpopKeys = dpopKeys): Promise<Response> {
   const htu = `${ISSUER}/token`;
   let res = await fetch(htu, {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST") },
+    headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST", keys) },
     body: new URLSearchParams({
       ...params,
       client_assertion: await clientAssertion(),
@@ -91,7 +100,7 @@ async function tokenRequest(params: Record<string, string>): Promise<Response> {
   if (res.status === 400 && nonce) {
     res = await fetch(htu, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST", { nonce }) },
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST", keys, { nonce }) },
       body: new URLSearchParams({
         ...params,
         client_assertion: await clientAssertion(),
@@ -103,7 +112,10 @@ async function tokenRequest(params: Record<string, string>): Promise<Response> {
 }
 
 /** Full PAR -> approval -> token dance yielding a base DPoP-bound mission token. */
-async function issueBaseMissionToken(): Promise<{ token: string; missionId: string }> {
+async function issueBaseMissionToken(
+  keys: DpopKeys = dpopKeys,
+  jar: Map<string, string> = cookies,
+): Promise<{ token: string; missionId: string }> {
   const verifier = "txn-endpoint-verifier-0123456789-0123456789-01234";
   const challenge = Buffer.from(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
@@ -141,32 +153,35 @@ async function issueBaseMissionToken(): Promise<{ token: string; missionId: stri
 
   const authUrl = `${ISSUER}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri })}`;
   let res = await fetch(authUrl, { redirect: "manual" });
-  storeCookies(res);
+  storeCookies(res, jar);
   let location = res.headers.get("location") as string;
   const uid = location.split("/interaction/")[1] as string;
 
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { "content-type": "application/json", cookie: cookieHeader() },
+    headers: { "content-type": "application/json", cookie: cookieHeader(jar) },
     body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
   });
-  storeCookies(res);
+  storeCookies(res, jar);
   location = res.headers.get("location") as string;
   while (location?.startsWith(ISSUER)) {
-    res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader() } });
-    storeCookies(res);
+    res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader(jar) } });
+    storeCookies(res, jar);
     location = res.headers.get("location") as string;
   }
   const code = new URL(location).searchParams.get("code") as string;
 
-  const tok = await tokenRequest({
-    grant_type: "authorization_code",
-    code,
-    redirect_uri: REDIRECT_URI,
-    code_verifier: verifier,
-    resource: RESOURCE,
-  });
+  const tok = await tokenRequest(
+    {
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: REDIRECT_URI,
+      code_verifier: verifier,
+      resource: RESOURCE,
+    },
+    keys,
+  );
   const body = (await tok.json()) as { access_token: string };
   const claims = JSON.parse(Buffer.from(body.access_token.split(".")[1] as string, "base64url").toString()) as {
     mission: { id: string };
@@ -174,17 +189,23 @@ async function issueBaseMissionToken(): Promise<{ token: string; missionId: stri
   return { token: body.access_token, missionId: claims.mission.id };
 }
 
-/** POST /transaction with the base token (DPoP) + a body-carried challenge. */
-async function postTransaction(challengeJws: string): Promise<Response> {
+/**
+ * POST /transaction with the base token (DPoP). The body is EITHER
+ * `{ challenge }` (initiation) OR `{ transaction_authorization_id }` (poll).
+ */
+async function postTransaction(
+  payload: Record<string, unknown>,
+  opts: { token?: string; keys?: DpopKeys } = {},
+): Promise<Response> {
   const htu = `${ISSUER}/transaction`;
   return fetch(htu, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `DPoP ${baseToken}`,
-      dpop: await dpopProof(htu, "POST"),
+      authorization: `DPoP ${opts.token ?? baseToken}`,
+      dpop: await dpopProof(htu, "POST", opts.keys ?? dpopKeys),
     },
-    body: JSON.stringify({ challenge: challengeJws }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -230,7 +251,7 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
     expect(meta.transaction_authorization_endpoint).toBe(`${ISSUER}/transaction`);
   });
 
-  it("pends, then on approval issues a txn-bound single-use token carrying the ACTIVE Mission", async () => {
+  it("initiates with a handle, pends on poll, then on approval issues a txn-bound single-use token carrying the ACTIVE Mission", async () => {
     // Requested authority is a genuine subset of the active Mission (the RS
     // read the Mission's Authority Set from the base token).
     const record = as.kernel.get(missionId);
@@ -255,16 +276,29 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
       "rs-txn",
     );
 
-    // First call -> pending (task opened by the AS-vouched ARS).
-    const first = await postTransaction(challenge);
-    const firstBody = (await first.json()) as { status?: string; txn?: string };
-    expect(first.status, JSON.stringify(firstBody)).toBe(200);
-    expect(firstBody.status).toBe("authorization_pending");
-    expect(firstBody.txn).toBe(txn);
+    // Initiation: the client presents the challenge ONCE -> a continuation
+    // handle, expires_in, interval; and NO access_token yet.
+    const initRes = await postTransaction({ challenge });
+    const initBody = (await initRes.json()) as {
+      transaction_authorization_id?: string;
+      expires_in?: number;
+      interval?: number;
+      access_token?: string;
+    };
+    expect(initRes.status, JSON.stringify(initBody)).toBe(200);
+    expect(initBody.transaction_authorization_id).toMatch(/^txa_/);
+    expect(typeof initBody.expires_in).toBe("number");
+    expect(initBody.expires_in as number).toBeGreaterThan(0);
+    expect(initBody.interval).toBe(5);
+    expect(initBody.access_token).toBeUndefined();
+    const txaId = initBody.transaction_authorization_id as string;
 
-    // Polling before approval stays pending.
-    const poll = await postTransaction(challenge);
-    expect(((await poll.json()) as { status: string }).status).toBe("authorization_pending");
+    // Poll WITH the handle before approval -> still pending, no token.
+    const pollPending = await postTransaction({ transaction_authorization_id: txaId });
+    const pendingBody = (await pollPending.json()) as { transaction_authorization_id?: string; access_token?: string };
+    expect(pollPending.status).toBe(200);
+    expect(pendingBody.transaction_authorization_id).toBe(txaId);
+    expect(pendingBody.access_token).toBeUndefined();
 
     // Bob approves via the AS's ARS (endpoint ARS == injected ARS).
     const queued = ars.pending();
@@ -273,16 +307,16 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
     expect(approval).not.toBeNull();
     const approvedUntil = (approval as { approved_until: string }).approved_until;
 
-    // Next call -> 200 with the txn-token.
-    const second = await postTransaction(challenge);
-    const secondBody = (await second.json()) as { access_token?: string; token_type?: string; txn?: string };
-    expect(second.status, JSON.stringify(secondBody)).toBe(200);
-    expect(secondBody.token_type).toBe("DPoP");
-    expect(secondBody.txn).toBe(txn);
+    // Poll WITH the handle after approval -> 200 with the txn-token.
+    const tokenRes = await postTransaction({ transaction_authorization_id: txaId });
+    const tokenBody = (await tokenRes.json()) as { access_token?: string; token_type?: string; txn?: string };
+    expect(tokenRes.status, JSON.stringify(tokenBody)).toBe(200);
+    expect(tokenBody.token_type).toBe("DPoP");
+    expect(tokenBody.txn).toBe(txn);
 
     // Verify the AS-signed txn-token against the AS /jwks (as-txn published).
     const jwks = createRemoteJWKSet(new URL(`${ISSUER}/jwks`));
-    const { payload, protectedHeader } = await jwtVerify(secondBody.access_token as string, jwks, {
+    const { payload, protectedHeader } = await jwtVerify(tokenBody.access_token as string, jwks, {
       issuer: ISSUER,
       audience: RESOURCE,
     });
@@ -322,9 +356,52 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
       rsTxnKeys.privateKey,
       "rs-txn",
     );
-    const res = await postTransaction(challenge);
+    const res = await postTransaction({ challenge });
     const body = (await res.json()) as { error?: string };
     expect(res.status, JSON.stringify(body)).toBe(403);
     expect(body.error).toBe("out_of_authority");
+  });
+
+  it("returns 404 for a poll with an unknown transaction_authorization_id", async () => {
+    const res = await postTransaction({ transaction_authorization_id: "txa_does-not-exist" });
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(404);
+    expect(body.error).toBe("invalid_request");
+  });
+
+  it("rejects a poll from a different client (cnf.jkt mismatch) with 403 invalid_token", async () => {
+    // Initiate a fresh handle, bound to the real base token's DPoP key.
+    const record = as.kernel.get(missionId);
+    const requested = (record as { authority_set: AuthorityEntry[] }).authority_set.filter((e) =>
+      e.actions.includes("payments:remittance.send"),
+    );
+    const challenge = await signChallenge(
+      {
+        txn: "txn_http_cnf",
+        authorization_details: requested,
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "cnf-binding test",
+        parameter_digest: "sha-256:cccccccccccccccc",
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const initBody = (await (await postTransaction({ challenge })).json()) as { transaction_authorization_id: string };
+    const txaId = initBody.transaction_authorization_id;
+
+    // A DIFFERENT client: a second base token minted under a different DPoP key.
+    const otherKeys = await generateKeyPair("ES256", { extractable: true });
+    const other = await issueBaseMissionToken(otherKeys, new Map());
+
+    // Polling the handle with that client's token + DPoP passes the base-token
+    // DPoP check but fails the handle-to-client binding -> 403 invalid_token.
+    const res = await postTransaction(
+      { transaction_authorization_id: txaId },
+      { token: other.token, keys: otherKeys },
+    );
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(403);
+    expect(body.error).toBe("invalid_token");
   });
 });
