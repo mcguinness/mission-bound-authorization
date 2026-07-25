@@ -267,12 +267,13 @@ async function main() {
   block("access_challenge — protected header", decodeHeader(accessChallenge.challenge));
   block("access_challenge — decoded txn-challenge", decodeClaims(accessChallenge.challenge));
 
-  // 7.2 Agent POSTs the challenge to the AS transaction endpoint over HTTP,
-  // authenticating with its base mission token (DPoP). First call → pending.
-  const txnBody = JSON.stringify({ challenge: accessChallenge.challenge });
-  // Present the base mission token (DPoP) + the challenge; a fresh DPoP proof
-  // per call binds htu=/transaction, htm=POST to the base token's cnf.jkt.
-  const postTxn = async () =>
+  // 7.2 Agent POSTs the challenge to the AS transaction endpoint over HTTP ONCE
+  // (initiation), authenticating with its base mission token (DPoP). The AS
+  // mints an opaque continuation handle (transaction_authorization_id) bound to
+  // the validated challenge; the client polls WITH that handle from here on.
+  // A fresh DPoP proof per call binds htu=/transaction, htm=POST to the base
+  // token's cnf.jkt.
+  const postTxn = async (payload: Record<string, unknown>) =>
     fetch(accessChallenge.txn_endpoint, {
       method: "POST",
       headers: {
@@ -280,19 +281,28 @@ async function main() {
         dpop: await dpopProofFor(issued.dpopKeys, accessChallenge.txn_endpoint, "POST"),
         "content-type": "application/json",
       },
-      body: txnBody,
+      body: JSON.stringify(payload),
     });
-  block(`POST ${accessChallenge.txn_endpoint} (base token DPoP + challenge)`, {
+  block(`POST ${accessChallenge.txn_endpoint} (initiation: base token DPoP + challenge, presented ONCE)`, {
     authorization: "DPoP <real mission-bound access token>",
     dpop: "<DPoP proof: htu=/transaction, htm=POST>",
     body: { challenge: `${accessChallenge.challenge.slice(0, 40)}... (the txn-challenge above)` },
   });
-  const pendingRes = await postTxn();
-  const pendingBody = (await pendingRes.json()) as { status?: string; txn?: string };
-  block(`transaction response (${pendingRes.status})`, pendingBody);
-  if (pendingBody.status !== "authorization_pending") {
-    throw new Error(`expected authorization_pending, got ${JSON.stringify(pendingBody)}`);
+  const pendingRes = await postTxn({ challenge: accessChallenge.challenge });
+  const pendingBody = (await pendingRes.json()) as {
+    transaction_authorization_id?: string;
+    expires_in?: number;
+    interval?: number;
+  };
+  block(`transaction response (${pendingRes.status}) — pending`, pendingBody);
+  const txaId = pendingBody.transaction_authorization_id;
+  if (!txaId) {
+    throw new Error(`expected a transaction_authorization_id, got ${JSON.stringify(pendingBody)}`);
   }
+  note(
+    `the transaction_authorization_id is the AS's continuation handle, bound to the validated challenge; the client ` +
+      `presents the challenge only once and polls with this handle (expires_in=${pendingBody.expires_in}s, interval=${pendingBody.interval}s).`,
+  );
 
   // 7.3 Approver (Bob) adjudicates the AS-vouched task on the SAME ARS the AS
   // opened it on (distinct from the acting subject alice).
@@ -303,10 +313,16 @@ async function main() {
   if (!approval) throw new Error("expected an approval object");
   block("action-bound approval (ARS mints it, scoped to the parameter_digest)", approval);
 
-  // 7.4 Agent re-POSTs the SAME challenge (fresh DPoP proof). Now the AS issues
-  // the txn-token: ACTIVE mission unchanged (D42), carrying the verified
-  // approval + cnf(base jkt), single-use.
-  const tokenRes = await postTxn();
+  // 7.4 Agent POLLS the transaction endpoint WITH the handle (fresh DPoP proof),
+  // never re-presenting the challenge. Now the AS issues the txn-token: ACTIVE
+  // mission unchanged (D42), carrying the verified approval + cnf(base jkt),
+  // single-use.
+  block(`POST ${accessChallenge.txn_endpoint} (poll: base token DPoP + transaction_authorization_id)`, {
+    authorization: "DPoP <real mission-bound access token>",
+    dpop: "<DPoP proof: htu=/transaction, htm=POST>",
+    body: { transaction_authorization_id: txaId },
+  });
+  const tokenRes = await postTxn({ transaction_authorization_id: txaId });
   const tokenBody = (await tokenRes.json()) as { access_token?: string; token_type?: string; txn?: string };
   block(`transaction response (${tokenRes.status})`, {
     ...tokenBody,

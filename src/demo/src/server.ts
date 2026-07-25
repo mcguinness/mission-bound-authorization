@@ -95,10 +95,11 @@ async function main() {
     published = all.length;
   };
 
-  // POST the RS-signed txn-challenge to the AS transaction endpoint, presenting
-  // the base mission token (DPoP). First call opens the AROP task (pending);
-  // re-presenting the SAME challenge after approval returns the txn-token.
-  const postTransaction = async (challenge: string) => {
+  // POST to the AS transaction endpoint, presenting the base mission token
+  // (DPoP). Initiation carries { challenge } (presented once) and returns a
+  // continuation handle; the poll carries { transaction_authorization_id } and
+  // returns the txn-token once the AROP task is approved.
+  const postTransaction = async (payload: Record<string, unknown>) => {
     const res = await fetch(`${asUrl}/transaction`, {
       method: "POST",
       headers: {
@@ -106,12 +107,19 @@ async function main() {
         dpop: await dpopProofFor(issued.dpopKeys, `${asUrl}/transaction`, "POST"),
         "content-type": "application/json",
       },
-      body: JSON.stringify({ challenge }),
+      body: JSON.stringify(payload),
     });
-    return (await res.json()) as { status?: string; txn?: string; access_token?: string; token_type?: string };
+    return (await res.json()) as {
+      transaction_authorization_id?: string;
+      expires_in?: number;
+      interval?: number;
+      access_token?: string;
+      token_type?: string;
+    };
   };
-  // taskId -> the challenge JWS, so /agent/retry re-POSTs the SAME challenge.
-  const challenges = new Map<string, string>();
+  // taskId -> transaction_authorization_id, so /agent/retry polls the AS by the
+  // continuation handle (the challenge is presented only once, at act time).
+  const txnHandles = new Map<string, string>();
 
   const app = new Hono();
   app.onError((err, c) => c.json({ error: err.message }, 500));
@@ -153,38 +161,47 @@ async function main() {
     await publishNew();
     const ch = (r as { access_challenge?: { challenge: string; txn_endpoint: string } }).access_challenge;
     if (!r.ok && ch) {
-      const pending = await postTransaction(ch.challenge);
-      const taskId = pending.txn ? `arq_txn_${pending.txn}` : undefined;
-      if (taskId) challenges.set(taskId, ch.challenge);
+      // Initiate the AROP flow: present the challenge ONCE and capture the AS's
+      // continuation handle. The ARS task id is derived from the challenge's txn
+      // (openForTxn keys the task arq_txn_<txn>), so the approver queue + retry
+      // correlate on it while the client polls the AS by the handle.
+      const challengeClaims = decodeClaims(ch.challenge);
+      const txn = challengeClaims.sub as string | undefined;
+      const taskId = txn ? `arq_txn_${txn}` : undefined;
+      const pending = await postTransaction({ challenge: ch.challenge });
+      if (taskId && pending.transaction_authorization_id) {
+        txnHandles.set(taskId, pending.transaction_authorization_id);
+      }
       return c.json({
         ...r,
-        txn: pending.txn,
+        txn,
         taskId,
-        task_state: pending.status,
-        access_challenge: { txn_endpoint: ch.txn_endpoint, challenge: decodeClaims(ch.challenge) },
+        transaction_authorization_id: pending.transaction_authorization_id,
+        task_state: "authorization_pending",
+        access_challenge: { txn_endpoint: ch.txn_endpoint, challenge: challengeClaims },
       });
     }
     return c.json(r);
   });
-  // Agent retries a JIT-gated call after approval: re-POST the SAME challenge to
-  // the AS transaction endpoint for the txn-token, then re-present it to the RS.
-  // The approval is carried by the AS-issued token, never as a tool input.
+  // Agent retries a JIT-gated call after approval: poll the AS transaction
+  // endpoint by the continuation handle for the txn-token, then re-present it to
+  // the RS. The approval is carried by the AS-issued token, never a tool input.
   app.post("/agent/retry", async (c) => {
     const body = await readJson(c);
     const taskId = String(body.taskId);
     const tool = String(body.tool);
     const args = (body.args as Record<string, unknown>) ?? {};
-    const challenge = challenges.get(taskId);
+    const handle = txnHandles.get(taskId);
     const task = stack.ars.getTask(taskId);
-    if (!challenge || !task || task.state !== "approved") {
+    if (!handle || !task || task.state !== "approved") {
       return c.json({ ok: false, pending: true, state: task?.state ?? "unknown" });
     }
-    const issuedTxn = await postTransaction(challenge);
+    const issuedTxn = await postTransaction({ transaction_authorization_id: handle });
     const txnToken = issuedTxn.access_token;
     if (!txnToken) return c.json({ ok: false, pending: true, state: task.state });
     const r = await stack.server.callTransactionTool(tool, args, facts, undefined, txnToken);
     await publishNew();
-    challenges.delete(taskId);
+    txnHandles.delete(taskId);
     return c.json(r);
   });
 
