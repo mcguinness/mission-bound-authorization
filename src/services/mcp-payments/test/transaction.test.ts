@@ -210,47 +210,6 @@ d("M5 transaction-assurance tier", () => {
     expect(evidence.forMission("msn_m5").some((e) => e.kind === "execution")).toBe(true);
   });
 
-  it("M6 JIT/ARAP: an in-authority action gated on an action-bound approval denies, then permits on retry with the approval", async () => {
-    const { generateKeyPair, exportJWK, createLocalJWKSet, jwtVerify } = await import("jose");
-    const keys = await generateKeyPair("ES256", { extractable: true });
-    const { server } = build({ jit: { sign: keys.privateKey, kid: "pdp-denial", endpoint: "https://ars.test/access-requests" } });
-
-    // First attempt (no approval): requestable action_approval_required denial.
-    const denied = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN);
-    expect(denied.ok).toBe(false);
-    expect(denied.denial_reason).toBe("action_approval_required");
-    expect(denied.access_request?.endpoint).toBe("https://ars.test/access-requests");
-    expect(denied.access_request?.binding_token).toBeTruthy();
-
-    // The binding_token is a real PDP-signed denial binding over these params.
-    const pub = { ...(await exportJWK(keys.publicKey)), kid: "pdp-denial", alg: "ES256" };
-    const { payload } = await jwtVerify(
-      denied.access_request?.binding_token as string,
-      createLocalJWKSet({ keys: [pub] } as never),
-      { typ: "pdp-denial-binding+jwt" },
-    );
-    expect(payload.action).toBe("payments:remittance.send");
-    const digest = payload.parameter_digest as string;
-
-    // A mismatched approval digest is still refused (approval is parameter-bound).
-    const wrong = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, {
-      id: "apr_wrong",
-      approved_at: new Date().toISOString(),
-      parameter_digest: "sha-256:not-the-digest",
-    });
-    expect(wrong.ok).toBe(false);
-    expect(wrong.denial_reason).toBe("action_approval_required");
-
-    // Retry carrying the matching action-bound approval: permit + commit.
-    const granted = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, {
-      id: "apr_ok",
-      approved_at: new Date().toISOString(),
-      parameter_digest: digest,
-    });
-    expect(granted.ok, JSON.stringify(granted)).toBe(true);
-    expect(granted.result).toMatchObject({ executed: true, invoice_id: "inv-1" });
-  });
-
   it("AROP: a gated action with challengeSigner and no txn-token yields a signed txn-challenge", async () => {
     const { generateKeyPair, exportJWK, createLocalJWKSet, jwtVerify } = await import("jose");
     const rsTxn = await generateKeyPair("ES256", { extractable: true });
@@ -298,7 +257,7 @@ d("M5 transaction-assurance tier", () => {
     });
 
     // No agent-supplied actionApproval; the approval is derived from the token.
-    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, undefined, txnToken);
+    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, txnToken);
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect(res.result).toMatchObject({ executed: true, invoice_id: "inv-1" });
   });
@@ -317,7 +276,7 @@ d("M5 transaction-assurance tier", () => {
       approval: { id: "apr_unit", approved_at: new Date().toISOString(), approved_until: approvedUntil, parameter_digest: digestFor(payments) },
     });
 
-    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, undefined, txnToken);
+    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, txnToken);
     expect(res.ok).toBe(false);
     expect(res.refusal_reason).toBe("txn_cnf_mismatch");
   });
@@ -336,10 +295,10 @@ d("M5 transaction-assurance tier", () => {
       approval: { id: "apr_unit", approved_at: new Date().toISOString(), approved_until: approvedUntil, parameter_digest: digestFor(payments) },
     });
 
-    const first = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, undefined, txnToken);
+    const first = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, txnToken);
     expect(first.ok, JSON.stringify(first)).toBe(true);
     // Replay is refused before enforce/redeem/commit, so nothing executes twice.
-    const second = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, undefined, txnToken);
+    const second = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, txnToken);
     expect(second.ok).toBe(false);
     expect(second.refusal_reason).toBe("txn_replayed");
     expect(evidence.forMission("msn_m5").filter((e) => e.kind === "execution")).toHaveLength(1);

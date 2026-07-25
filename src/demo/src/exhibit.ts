@@ -245,56 +245,100 @@ async function main() {
     invoice_id: "inv-1",
   });
 
-  // ---- 7. JIT access via ARAP --------------------------------------------
-  step(7, "JIT access: an in-mission action, gated behind a per-action approval (ARAP)");
-  note("send_remittance_email is WITHIN the mission's authority, but deployment policy requires an action-bound approval, resolved just-in-time.");
+  // ---- 7. JIT access via AROP Transaction Challenge ----------------------
+  step(7, "JIT access: an in-mission action, gated behind a per-action approval (AROP)");
+  note("send_remittance_email is WITHIN the mission's authority, but deployment policy requires an action-bound approval, resolved just-in-time over real HTTP.");
 
-  // Attempt 1: no approval → the PDP denies action_approval_required and
-  // marks the denial requestable (a signed binding + the ARS intake endpoint).
-  block("MCP tools/call — send_remittance_email (first attempt, no approval)", {
+  // 7.1 Base token, no txn-token: the RS gates the action and returns an
+  // access_challenge (an rs-txn-signed txn-challenge + the AS endpoint for it).
+  block("MCP tools/call — send_remittance_email (base token, no txn-token)", {
     tool: "send_remittance_email",
     arguments: { invoice_id: "inv-1" },
     authorization: "DPoP <real mission-bound access token>",
   });
-  const attempt = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
-  if (captured) {
-    block("PDP request (AuthZEN envelope)", captured.envelope);
-    block("PDP decision (requestable: approval required)", captured.decision);
-  }
-  verdict(attempt.ok, `send_remittance_email(inv-1) → ${attempt.denial_reason ?? attempt.refusal_reason}`);
-  const denial = attempt.access_request;
-  const digest = captured?.decision.context.parameter_digest as string;
-  if (!denial) throw new Error("expected a requestable denial with an access_request");
-  block("requestable denial → access_request (ARAP intake)", denial);
+  const challengeAttempt = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
+  verdict(challengeAttempt.ok, `send_remittance_email(inv-1) → ${challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason}`);
+  const accessChallenge = challengeAttempt.access_challenge;
+  if (!accessChallenge) throw new Error("expected an access_challenge (RS challengeSigner wired)");
+  note(`RS emitted a txn-challenge to present to ${accessChallenge.txn_endpoint}`);
+  block("access_challenge — protected header", decodeHeader(accessChallenge.challenge));
+  block("access_challenge — decoded txn-challenge", decodeClaims(accessChallenge.challenge));
 
-  // The agent submits an access request to the ARS: a distinct trusted-base
-  // component (not the PDP) that verifies the PDP-signed denial binding.
-  note("Agent submits an access request to the ARS; the ARS verifies the PDP-signed denial binding before it opens a task.");
-  const submitted = await stack.ars.submit({
-    binding_token: denial.binding_token,
-    requested: { action: "payments:remittance.send", mission_id: missionId, parameter_digest: digest, subject: "alice" },
+  // 7.2 Agent POSTs the challenge to the AS transaction endpoint over HTTP,
+  // authenticating with its base mission token (DPoP). First call → pending.
+  const txnBody = JSON.stringify({ challenge: accessChallenge.challenge });
+  // Present the base mission token (DPoP) + the challenge; a fresh DPoP proof
+  // per call binds htu=/transaction, htm=POST to the base token's cnf.jkt.
+  const postTxn = async () =>
+    fetch(accessChallenge.txn_endpoint, {
+      method: "POST",
+      headers: {
+        authorization: `DPoP ${issued.accessToken}`,
+        dpop: await dpopProofFor(issued.dpopKeys, accessChallenge.txn_endpoint, "POST"),
+        "content-type": "application/json",
+      },
+      body: txnBody,
+    });
+  block(`POST ${accessChallenge.txn_endpoint} (base token DPoP + challenge)`, {
+    authorization: "DPoP <real mission-bound access token>",
+    dpop: "<DPoP proof: htu=/transaction, htm=POST>",
+    body: { challenge: `${accessChallenge.challenge.slice(0, 40)}... (the txn-challenge above)` },
   });
-  note(`ARS task ${submitted.taskId} → ${submitted.state}`);
-  block("ARS approver queue", stack.ars.pending());
+  const pendingRes = await postTxn();
+  const pendingBody = (await pendingRes.json()) as { status?: string; txn?: string };
+  block(`transaction response (${pendingRes.status})`, pendingBody);
+  if (pendingBody.status !== "authorization_pending") {
+    throw new Error(`expected authorization_pending, got ${JSON.stringify(pendingBody)}`);
+  }
 
-  // Bob adjudicates (distinct from the acting subject alice). On approval the
-  // ARS mints an action-bound approval object, scoped to this parameter_digest.
-  const approval = await stack.ars.adjudicate(submitted.taskId, "approve", "bob");
+  // 7.3 Approver (Bob) adjudicates the AS-vouched task on the SAME ARS the AS
+  // opened it on (distinct from the acting subject alice).
+  block("ARS approver queue (task opened by the AS transaction endpoint)", stack.ars.pending());
+  const pendingTask = stack.ars.pending()[0];
+  if (!pendingTask) throw new Error("expected a pending AROP task on the shared ARS");
+  const approval = await stack.ars.adjudicate(pendingTask.id, "approve", "bob");
   if (!approval) throw new Error("expected an approval object");
-  block("action-bound approval (ARAP reevaluate: input context, NOT a bearer grant)", approval);
+  block("action-bound approval (ARS mints it, scoped to the parameter_digest)", approval);
 
-  // Attempt 2: retry the SAME tool call, now carrying the approval as
-  // context.action_approval. The PDP re-evaluates; no new token is issued.
-  const approvalCtx = { id: approval.id, approved_at: approval.approved_at, parameter_digest: approval.parameter_digest };
-  block("MCP tools/call — send_remittance_email (retry with approval context)", {
+  // 7.4 Agent re-POSTs the SAME challenge (fresh DPoP proof). Now the AS issues
+  // the txn-token: ACTIVE mission unchanged (D42), carrying the verified
+  // approval + cnf(base jkt), single-use.
+  const tokenRes = await postTxn();
+  const tokenBody = (await tokenRes.json()) as { access_token?: string; token_type?: string; txn?: string };
+  block(`transaction response (${tokenRes.status})`, {
+    ...tokenBody,
+    ...(tokenBody.access_token ? { access_token: truncTok(tokenBody.access_token) } : {}),
+  });
+  const txnToken = tokenBody.access_token;
+  if (!txnToken) throw new Error("expected a txn-token from the transaction endpoint");
+  const txnClaims = decodeClaims(txnToken);
+  block("txn-token — protected header", decodeHeader(txnToken));
+  block("txn-token — decoded claims", {
+    txn: txnClaims.txn,
+    mission: txnClaims.mission,
+    authorization_details: txnClaims.authorization_details,
+    approval: txnClaims.approval,
+    cnf: txnClaims.cnf,
+    single_use: txnClaims.single_use,
+  });
+  note(
+    `mission.id == active mission ${missionId} (unchanged, D42); approval.parameter_digest carries the gated operation; ` +
+      `cnf.jkt ${(txnClaims.cnf as { jkt: string }).jkt === issued.dpopJkt ? "==" : "!="} base token jkt; single_use=${txnClaims.single_use}.`,
+  );
+
+  // 7.5 Agent re-calls the RS tool WITH the txn-token (5th arg, no approval
+  // object anywhere). The RS validates it and derives the approval; the
+  // UNCHANGED PDP step 8 permits and the operation commits.
+  block("MCP tools/call — send_remittance_email (re-present, carrying the txn-token)", {
     tool: "send_remittance_email",
     arguments: { invoice_id: "inv-1" },
-    context: { action_approval: approvalCtx },
+    authorization: "DPoP <real mission-bound access token>",
+    txn_token: truncTok(txnToken),
   });
-  const granted = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts, undefined, approvalCtx);
-  if (captured) block("PDP decision (permit: approval matched parameter_digest, within max age)", captured.decision);
+  const granted = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts, undefined, txnToken);
+  if (captured) block("PDP decision (permit: token-derived approval matched parameter_digest)", captured.decision);
   verdict(granted.ok, `send_remittance_email(inv-1) → ${granted.ok ? JSON.stringify(granted.result) : (granted.denial_reason ?? granted.refusal_reason)}`);
-  note("The mission was never widened. The JIT approval satisfied a per-action gate that already sat inside the mission's authority.");
+  note("The approval was carried by the AS-issued txn-token, never as a tool input. The mission was never widened; the gate sat inside the mission's authority.");
 
   // ---- 8. Cross-domain: the ID-JAG leg into the SaaS estate ---------------
   step(8, "Cross-domain: an ID-JAG grant crosses into the LedgerCloud (SaaS) estate");

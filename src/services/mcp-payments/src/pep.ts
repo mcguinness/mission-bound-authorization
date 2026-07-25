@@ -266,9 +266,13 @@ export class Pep {
         view
       ) {
         const signer = this.deps.challengeSigner;
-        const requested = view.authority_set.filter(
-          (e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action),
-        );
+        // Narrow to the specific gated action (keeping the entry's constraints):
+        // a proper subset of the active Mission entry, so the AROP grant and the
+        // approver task are scoped to the operation actually being approved, not
+        // the whole Mission entry. Still passes the AS subset-gate (D42).
+        const requested = view.authority_set
+          .filter((e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action))
+          .map((e) => ({ ...e, actions: [mapping.action] }));
         const challenge = await signChallenge(
           {
             txn: randomUUID(),

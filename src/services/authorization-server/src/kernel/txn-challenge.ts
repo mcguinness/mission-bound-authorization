@@ -8,6 +8,11 @@
  * it against the resource's txn_challenge_jwks_uri keys, obtains approval, and
  * issues a txn-bound, audience-restricted, single-use token the client
  * re-presents to the resource.
+ *
+ * NOTE: the RS-side leaf helpers (signChallenge/TxnReplayCache/typ constants)
+ * are COPIED into `@mission/mcp-payments` (src/txn-challenge.ts) to avoid a
+ * dependency cycle. The two are format-coupled: if the challenge/token wire
+ * shape changes here, update that copy too.
  */
 
 import { createLocalJWKSet, jwtVerify, SignJWT, type CryptoKey, type JWK } from "jose";

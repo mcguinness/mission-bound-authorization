@@ -97,6 +97,28 @@ export async function composeStack(opts: {
   const fga = conn.fga;
   const modelId = conn.modelId;
 
+  // The Access Request Service adjudicates JIT approvals. Created BEFORE the
+  // authorization server so the SAME instance is shared: the AS transaction
+  // endpoint opens AROP tasks on it (openForTxn) while the console-bff and demo
+  // adjudicate them (D37). The AS-vouched txn path carries no PDP denial-binding
+  // to verify, so pdpJwks is empty.
+  const { AccessRequestService } = await import("@mission/access-request");
+  const arsKeys = await generateKeyPair("ES256", { extractable: true });
+  const ars = new AccessRequestService({
+    pdpJwks: { keys: [] },
+    approvalKey: arsKeys.privateKey,
+    approvalKid: "ars",
+    approvalTtlSeconds: TOPOLOGY.ttls.approvalSeconds,
+  });
+
+  // AROP Transaction Challenge wiring, set only on the auth-server path (where a
+  // real /transaction endpoint exists): the RS-side challenge signer (rs-txn),
+  // and the AS txn public JWKS + issuer the RS validates a presented txn-token
+  // against.
+  let challengeSigner: { sign: import("jose").CryptoKey; kid: string; txnEndpoint: string; asIssuer: string } | undefined;
+  let txnTokenJwks: { keys: Record<string, unknown>[] } | undefined;
+  let rsAsIssuer: string | undefined;
+
   // Kernel + token-issuer + the RS's token-verification JWKS differ by mode:
   // with the auth server, the real provider owns the kernel and signs tokens;
   // without it, an in-process kernel backs the TokenFacts-driven surfaces.
@@ -108,12 +130,27 @@ export async function composeStack(opts: {
   if (opts.withAuthServer) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
     const asUrl = `http://localhost:${asPort}`;
-    const as = await buildAuthorizationServer({ issuer: asUrl, allowHeadlessAdjudication: true });
+    // The RS's txn-challenge signing key (rs-txn); the AS is configured with its
+    // public half so POST /transaction validates challenges from this RS, and
+    // opens the AROP task on the SAME ars this stack adjudicates against.
+    const rsTxnKey = TOPOLOGY.keys.rsTxn;
+    const rsTxnKeys = await generateKeyPair(rsTxnKey.alg, { extractable: true });
+    const rsTxnPub = { ...(await exportJWK(rsTxnKeys.publicKey)), kid: rsTxnKey.kid, alg: rsTxnKey.alg };
+    const as = await buildAuthorizationServer({
+      issuer: asUrl,
+      allowHeadlessAdjudication: true,
+      resourceTxnJwks: { keys: [rsTxnPub as never] },
+      ars,
+    });
     const asServer = as.provider.listen(asPort);
     kernel = as.kernel;
     issuer = asUrl;
-    // The RS verifies real tokens against the AS's published public JWKS.
+    // The RS verifies real tokens against the AS's published public JWKS (the
+    // as-txn public key is published there too; createLocalJWKSet resolves by kid).
     serverJwks = (await (await fetch(`${asUrl}/jwks`)).json()) as { keys: Record<string, unknown>[] };
+    challengeSigner = { sign: rsTxnKeys.privateKey, kid: rsTxnKey.kid, txnEndpoint: `${asUrl}/transaction`, asIssuer: asUrl };
+    txnTokenJwks = serverJwks;
+    rsAsIssuer = asUrl;
 
     // Cross-domain (M9): a dedicated ES256 grant key the RAS trusts under the AS
     // issuer (the AS's own token key is RS256 and not exposed; this mirrors the
@@ -191,12 +228,6 @@ export async function composeStack(opts: {
     };
   };
 
-  // PDP denial-binding key: the PEP's requestable signer and the ARS trust the
-  // same key so a real binding_token round-trips (M6 JIT/ARAP flow).
-  const pdpDenialKey = TOPOLOGY.keys.pdpDenial;
-  const pdpDenialKeys = await generateKeyPair(pdpDenialKey.alg, { extractable: true });
-  const pdpDenialPub = { ...(await exportJWK(pdpDenialKeys.publicKey)), kid: pdpDenialKey.kid, alg: pdpDenialKey.alg };
-
   let observer: PepDeps["observe"];
   const pep = new Pep({
     payments,
@@ -209,10 +240,13 @@ export async function composeStack(opts: {
     revokedInstances,
     observe: (e) => observer?.(e),
     // JIT gate: sending a remittance email is in the mission's authority but
-    // requires an action-bound approval, resolved just-in-time via ARAP (M6).
+    // requires an action-bound approval, resolved just-in-time. On the auth
+    // server path the denial carries an RS-signed txn-challenge (AROP); the
+    // client presents it to the AS transaction endpoint, which vouches the
+    // approval and issues a txn-token. The approval is never an agent input.
     requiresActionApproval: (action) => action === "payments:remittance.send",
     maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
-    requestable: { sign: pdpDenialKeys.privateKey, kid: pdpDenialKey.kid, endpoint: TOPOLOGY.endpoints.arsIntake },
+    ...(challengeSigner ? { challengeSigner } : {}),
   });
 
   const { TransactionEngine } = await import("@mission/mcp-payments");
@@ -224,6 +258,10 @@ export async function composeStack(opts: {
     issuer,
     serverCard: { name: "payments" },
     transaction: { engine: new TransactionEngine("demo-epoch"), connectors, evidence },
+    // AROP (RS side): validate a presented txn-token against the AS txn public
+    // JWKS (published on /jwks under the as-txn kid) and issuer.
+    ...(txnTokenJwks ? { txnTokenJwks } : {}),
+    ...(rsAsIssuer ? { asIssuer: rsAsIssuer } : {}),
   });
 
   // Transparency + producers.
@@ -243,17 +281,6 @@ export async function composeStack(opts: {
     receipts.set(stmt.jws, await transparency.register(stmt));
     retainedEvidence.set(stmt.digest, ev);
   };
-
-  // ARS trusts the same PDP denial-binding key the PEP signs requestable
-  // denials with, so a JIT access request verifies (M6).
-  const { AccessRequestService } = await import("@mission/access-request");
-  const arsKeys = await generateKeyPair("ES256", { extractable: true });
-  const ars = new AccessRequestService({
-    pdpJwks: { keys: [pdpDenialPub as never] },
-    approvalKey: arsKeys.privateKey,
-    approvalKid: "ars",
-    approvalTtlSeconds: TOPOLOGY.ttls.approvalSeconds,
-  });
 
   const bff = new ConsoleBff({
     kernel,

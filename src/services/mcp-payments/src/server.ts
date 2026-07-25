@@ -164,7 +164,6 @@ export class McpPaymentsServer {
     args: Record<string, unknown>,
     token: TokenFacts,
     beforeCommit?: () => void,
-    actionApproval?: ActionApprovalInput,
     txnToken?: string,
   ): Promise<{
     ok: boolean;
@@ -181,9 +180,10 @@ export class McpPaymentsServer {
     // Hybrid AROP path: an AS-signed txn-token carries the verified approval.
     // Validate it (signature/iss/aud/typ, cnf chaining, single-use) and derive
     // the action-bound approval, which the UNCHANGED PDP step 8 then checks.
-    // The approval's source is now the AS signature; the carrier is the trusted
-    // RS, not an agent input.
-    let derivedApproval = actionApproval;
+    // The approval's source is the AS signature; the carrier is the trusted RS.
+    // There is no agent-supplied approval entry point: the only way an approval
+    // reaches the PDP is via a validated txn-token.
+    let derivedApproval: ActionApprovalInput | undefined;
     if (txnToken !== undefined) {
       const derived = await this.deriveApprovalFromTxnToken(txnToken, token);
       if (!derived.ok) return { ok: false, refusal_reason: derived.refusal_reason };
