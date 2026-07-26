@@ -128,6 +128,7 @@ Decisions confirmed with Karl on 2026-07-20:
 | D43 | Explicit freshness table (refines D29/O-8) | Published per-class bounds: `consequential_read` = signed Status cached, 60 s; `consequential_write` = signed Status cached, 15 s; `irreversible_action` = introspection or signed Status on every action, 5 s, single-use permit with an execution lease <= 5 s. Max clock skew 1 s, never extending a bound; missing/expired/unverifiable/unrefreshable state fails closed. Action classes are named `consequential_read` / `consequential_write` / `irreversible_action` (external communication is an `irreversible_action` with an external-communication predicate) |
 | D44 | Conformance + trust-boundary rigor (folds Karl's revision) | Adopt as first-class: a living conformance matrix from M0 (every normative requirement in a claimed role -> component + test + evidence artifact), all service-to-service traffic HTTPS with mutual TLS on PEP<->PDP, ES256-signed JCS-canonical Decision/Execution/Refusal evidence with an audit verifier (signature, typ, emitter/scope binding, per-Mission sequence continuity, decision/execution joins, parameter-digest continuity), and the Enforcement Scope Statement as a separate structured artifact (the runtime profile defines no metadata member for it) |
 | D45 | Materialization stays contextual (D26 wins over the revision) | Karl's plan revision described a signed, versioned "trusted-compiler" materialization artifact; this session's debate #1 (D26) chose contextual tuples derived per check, and that stands. Ported from the revision: the precise `policy_view_id` commitment (content hash over a canonical `mission-policy-view` envelope of mission version + authority_hash + policy_version + FGA model id). The stored-artifact vs contextual-tuple divergence from the spec's materialization language remains logged as S-5 |
+| D46 | AROP completion via Transaction Challenge, hybrid (settles S-3) | JIT approval completes by AROP **token issuance** over the Transaction Challenge binding, never as an agent-supplied tool input. The RS signs a `transaction_challenge` (binds the operation + `parameter_digest`); the **client** presents it once to the AS `transaction_authorization_endpoint`, which mints a `transaction_authorization_id` continuation handle bound to the validated challenge + client `cnf` and polled by the client (client-driven; polling is native to the txn binding, not a DTR handoff, which is a separate alternative binding). On approval the AS issues a single-use DPoP-bound `txn-token` carrying the **active Mission unchanged** (D42) plus the approval; the RS validates that AS-signed token and derives `context.approval`, and the **unchanged PDP step 8** validates it (parameter_digest + age). Hybrid: the approval's source is the AS signature and its carrier the trusted RS, so the reevaluate primitive is preserved and nothing rides the client wire. Changes M6's completion mechanism from ARAP reevaluate-with-agent-context to AROP token issuance; the ARAP `requestable`/`access_request` path is retained as a dormant capability. Resolves S-3; realigns the txn path to D42 (scenario 7 carries the active Mission, no Expansion) |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -1036,9 +1037,10 @@ themselves, distinct from the implementation issues in § 7.
 Entry format: `S-n (status)` — category, affected spec + section, one-line
 finding, disposition. Categories: **defect**, **ambiguity**,
 **hard-to-implement**, **simplification-candidate**, **interop**. Statuses:
-`open` → `filed` (upstream issue opened), `fixed-in-spec`, or `accepted`
-(complexity acknowledged and kept, with the rationale recorded). Entries are
-never deleted.
+`open` → `filed` (upstream issue opened), `fixed-in-spec`, `accepted`
+(complexity acknowledged and kept, with the rationale recorded), or `resolved`
+(settled by an implementation decision, cross-referenced to the Decision Log).
+Entries are never deleted.
 
 Routing: findings against the **published core** are filed as GitHub issues
 on the mission repo (the core is never edited directly). Findings against
@@ -1059,11 +1061,15 @@ their repositories or working groups.
   A normative transform example or test vector in the companion would
   prevent divergent orderings; per D31 the shared package's golden vectors
   are the candidate contribution. Candidate: direct companion edit.
-- **S-3 (open).** Ambiguity — mission-authzen x AROP: the companion says an
+- **S-3 (resolved).** Ambiguity — mission-authzen x AROP: the companion says an
   ARAP approval is input context, never a bearer grant, while AROP completes
   by token issuance; the composition only closes through Expansion (our D6),
-  and neither document names it. Candidate: companion note plus upstream
-  AROP feedback once the implementation confirms the shape.
+  and neither document names it. Resolved by D46: the implementation completes
+  JIT approval via AROP token issuance (Transaction Challenge binding,
+  `transaction_authorization_id` handle), using the ARAP `approval` only as an
+  internal AS<->PDP `context.approval`; AROP never expands (D42), so the old
+  "closes through Expansion" framing is dropped. Remaining candidate: upstream
+  AROP feedback confirming the shape.
 - **S-4 (open).** Interop — MCP EMA: the extension is young and the exact
   authorization-metadata member for the server-side declaration is not yet
   pinned (cross-ref O-20). Track the extension revision implemented against;
