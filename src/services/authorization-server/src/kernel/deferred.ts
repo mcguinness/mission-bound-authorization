@@ -116,21 +116,25 @@ export class DeferralStore {
   }
 
   /**
-   * Poll/redeem the deferred grant. While pending -> authorization_pending. On
-   * approval, gate a derivation on the active Mission and issue a token whose
-   * authority is the requested subset, carrying the active Mission's claim
-   * unchanged (D42). The handle is single-use.
+   * Poll/redeem the deferred grant. While pending -> authorization_pending; an
+   * approver denial -> access_denied. On approval, gate a derivation on the
+   * active Mission and issue a token whose authority is the requested subset,
+   * carrying the active Mission's claim unchanged (D42). The handle is
+   * single-use: an unknown or already-redeemed deferral_code is a malformed
+   * grant, so it returns invalid_grant (draft §5.6), distinct from a denial.
    */
-  redeem(deferralCode: string): DeferralPending | { error: "access_denied" } | DeferredToken {
+  redeem(
+    deferralCode: string,
+  ): DeferralPending | { error: "access_denied" } | { error: "invalid_grant" } | DeferredToken {
     const row = this.db.prepare("SELECT * FROM deferrals WHERE deferral_code = ?").get(deferralCode) as
       | Record<string, unknown>
       | undefined;
-    if (!row) return { error: "access_denied" };
+    if (!row) return { error: "invalid_grant" }; // unknown deferral_code
     if (row.state === "authorization_pending") {
       return { error: "authorization_pending", deferral_code: deferralCode, expires_in: 600, interval: 5 };
     }
     if (row.state === "access_denied") return { error: "access_denied" };
-    if (row.redeemed === 1) return { error: "access_denied" }; // single redemption
+    if (row.redeemed === 1) return { error: "invalid_grant" }; // already redeemed
 
     const parsed = JSON.parse(row.requested_json as string) as { m: string; r: AuthorityEntry[] };
     // Derivation gate: refuses if the Mission is no longer active (revocation

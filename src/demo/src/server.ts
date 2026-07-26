@@ -109,13 +109,16 @@ async function main() {
       },
       body: JSON.stringify(payload),
     });
-    return (await res.json()) as {
+    const body = (await res.json()) as {
       transaction_authorization_id?: string;
       expires_in?: number;
       interval?: number;
       access_token?: string;
       token_type?: string;
+      // §5.3 poll errors: authorization_pending (400), access_denied/expired_token (terminal).
+      error?: string;
     };
+    return { status: res.status, body };
   };
   // taskId -> transaction_authorization_id, so /agent/retry polls the AS by the
   // continuation handle (the challenge is presented only once, at act time).
@@ -166,17 +169,17 @@ async function main() {
       // (openForTxn keys the task arq_txn_<txn>), so the approver queue + retry
       // correlate on it while the client polls the AS by the handle.
       const challengeClaims = decodeClaims(ch.challenge);
-      const txn = challengeClaims.sub as string | undefined;
+      const txn = challengeClaims.txn as string | undefined;
       const taskId = txn ? `arq_txn_${txn}` : undefined;
       const pending = await postTransaction({ challenge: ch.challenge });
-      if (taskId && pending.transaction_authorization_id) {
-        txnHandles.set(taskId, pending.transaction_authorization_id);
+      if (taskId && pending.body.transaction_authorization_id) {
+        txnHandles.set(taskId, pending.body.transaction_authorization_id);
       }
       return c.json({
         ...r,
         txn,
         taskId,
-        transaction_authorization_id: pending.transaction_authorization_id,
+        transaction_authorization_id: pending.body.transaction_authorization_id,
         task_state: "authorization_pending",
         access_challenge: { txn_endpoint: ch.txn_endpoint, challenge: challengeClaims },
       });
@@ -193,12 +196,21 @@ async function main() {
     const args = (body.args as Record<string, unknown>) ?? {};
     const handle = txnHandles.get(taskId);
     const task = stack.ars.getTask(taskId);
-    if (!handle || !task || task.state !== "approved") {
+    if (!handle || !task || task.state === "pending") {
       return c.json({ ok: false, pending: true, state: task?.state ?? "unknown" });
     }
     const issuedTxn = await postTransaction({ transaction_authorization_id: handle });
-    const txnToken = issuedTxn.access_token;
-    if (!txnToken) return c.json({ ok: false, pending: true, state: task.state });
+    const txnToken = issuedTxn.body.access_token;
+    // §5.3 poll shape: 400 authorization_pending -> still pending; a terminal
+    // access_denied/expired_token reaps the handle and surfaces the denial.
+    if (issuedTxn.status !== 200 || !txnToken) {
+      const err = issuedTxn.body.error;
+      if (err === "access_denied" || err === "expired_token") {
+        txnHandles.delete(taskId);
+        return c.json({ ok: false, refusal_reason: err });
+      }
+      return c.json({ ok: false, pending: true, state: task.state });
+    }
     const r = await stack.server.callTransactionTool(tool, args, facts, undefined, txnToken);
     await publishNew();
     txnHandles.delete(taskId);

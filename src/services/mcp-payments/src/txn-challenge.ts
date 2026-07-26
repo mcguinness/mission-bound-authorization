@@ -13,7 +13,7 @@
 
 import { SignJWT, type CryptoKey } from "jose";
 
-export const TXN_CHALLENGE_TYP = "txn-challenge+jwt";
+export const TXN_CHALLENGE_TYP = "txn-authz-challenge+jwt";
 export const TXN_TOKEN_TYP = "txn-token+jwt";
 
 export interface TxnChallengeClaims {
@@ -26,9 +26,14 @@ export interface TxnChallengeClaims {
   parameter_digest?: string;
 }
 
-/** RS side: sign a challenge with the rs-txn key (txn_challenge_jwks_uri). */
+/**
+ * RS side: sign a challenge with the rs-txn key (txn_challenge_jwks_uri). The
+ * transaction id travels as a `txn` claim in the signed body (draft §4.2.1);
+ * a REQUIRED `jti` (§4.2.2) makes each challenge uniquely identifiable.
+ */
 export async function signChallenge(claims: TxnChallengeClaims, key: CryptoKey, kid: string): Promise<string> {
   const body: Record<string, unknown> = {
+    txn: claims.txn,
     authorization_details: claims.authorization_details,
     reason: claims.reason,
   };
@@ -37,7 +42,7 @@ export async function signChallenge(claims: TxnChallengeClaims, key: CryptoKey, 
     .setProtectedHeader({ alg: "ES256", kid, typ: TXN_CHALLENGE_TYP })
     .setIssuer(claims.iss)
     .setAudience(claims.aud)
-    .setSubject(claims.txn)
+    .setJti(crypto.randomUUID())
     .setIssuedAt()
     .setExpirationTime("5m")
     .sign(key);

@@ -276,6 +276,15 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
       "rs-txn",
     );
 
+    // §4.2: the challenge is typ txn-authz-challenge+jwt, carries the txn as a
+    // body claim (not sub), and a jti is REQUIRED.
+    const chHeader = JSON.parse(Buffer.from(challenge.split(".")[0] as string, "base64url").toString());
+    const chBody = JSON.parse(Buffer.from(challenge.split(".")[1] as string, "base64url").toString());
+    expect(chHeader.typ).toBe("txn-authz-challenge+jwt");
+    expect(chBody.txn).toBe(txn);
+    expect(typeof chBody.jti).toBe("string");
+    expect(chBody.sub).toBeUndefined();
+
     // Initiation: the client presents the challenge ONCE -> a continuation
     // handle, expires_in, interval; and NO access_token yet.
     const initRes = await postTransaction({ challenge });
@@ -293,11 +302,13 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
     expect(initBody.access_token).toBeUndefined();
     const txaId = initBody.transaction_authorization_id as string;
 
-    // Poll WITH the handle before approval -> still pending, no token.
+    // Poll WITH the handle before approval -> 400 authorization_pending (§5.3,
+    // RFC 8628-shaped), no token. The client already has interval/expires_in
+    // from initiation, so the pending body stays minimal.
     const pollPending = await postTransaction({ transaction_authorization_id: txaId });
-    const pendingBody = (await pollPending.json()) as { transaction_authorization_id?: string; access_token?: string };
-    expect(pollPending.status).toBe(200);
-    expect(pendingBody.transaction_authorization_id).toBe(txaId);
+    const pendingBody = (await pollPending.json()) as { error?: string; access_token?: string };
+    expect(pollPending.status).toBe(400);
+    expect(pendingBody.error).toBe("authorization_pending");
     expect(pendingBody.access_token).toBeUndefined();
 
     // Bob approves via the AS's ARS (endpoint ARS == injected ARS).
@@ -403,5 +414,38 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
     const body = (await res.json()) as { error?: string };
     expect(res.status, JSON.stringify(body)).toBe(403);
     expect(body.error).toBe("invalid_token");
+  });
+
+  it("polls a DENIED task -> 400 access_denied (§5.3), so the client stops rather than polling forever", async () => {
+    const record = as.kernel.get(missionId);
+    const requested = (record as { authority_set: AuthorityEntry[] }).authority_set.filter((e) =>
+      e.actions.includes("payments:remittance.send"),
+    );
+    const txn = "txn_http_denied";
+    const challenge = await signChallenge(
+      {
+        txn,
+        authorization_details: requested,
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "deny-path test",
+        parameter_digest: "sha-256:dddddddddddddddd",
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const initBody = (await (await postTransaction({ challenge })).json()) as { transaction_authorization_id: string };
+    expect(initBody.transaction_authorization_id).toMatch(/^txa_/);
+
+    // Bob denies the AS-vouched task (openForTxn keys it arq_txn_<txn>).
+    const denied = await ars.adjudicate(`arq_txn_${txn}`, "deny", "bob");
+    expect(denied).toBeNull();
+
+    // Poll -> 400 access_denied, terminal.
+    const res = await postTransaction({ transaction_authorization_id: initBody.transaction_authorization_id });
+    const body = (await res.json()) as { error?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("access_denied");
+    expect(body.access_token).toBeUndefined();
   });
 });

@@ -118,7 +118,26 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
     expect(issued.authorization_details[0]?.actions).toEqual(["payments:payment.execute"]);
     expect(issued.approved_until).toBe("2026-12-31T00:00:00Z");
 
-    // Single redemption.
+    // Single redemption: a second redeem of an already-redeemed handle is a
+    // malformed grant, not a denial -> invalid_grant (draft §5.6).
+    expect((deferrals.redeem(pending.deferral_code) as { error: string }).error).toBe("invalid_grant");
+    // An unknown deferral_code is likewise invalid_grant, distinct from a denial.
+    expect((deferrals.redeem("dfr_does-not-exist") as { error: string }).error).toBe("invalid_grant");
+  });
+
+  it("an approver denial redeems as access_denied (distinct from an invalid_grant)", () => {
+    const mission = approveMission(8, ["acme"]);
+    const deferrals = new DeferralStore(kernel);
+    const requested: AuthorityEntry[] = [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:payment.execute"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ];
+    const pending = deferrals.open({ missionId: mission.id, requested, clientId: "ap-agent" });
+    deferrals.deny(pending.deferral_code);
     expect((deferrals.redeem(pending.deferral_code) as { error: string }).error).toBe("access_denied");
   });
 
@@ -176,8 +195,9 @@ describe("M7 scenario 7: AROP over Transaction Challenge (D42 -- carries the act
     const clientKeys = await generateKeyPair("ES256", { extractable: true });
     const cnfJkt = await calculateJwkThumbprint(await exportJWK(clientKeys.publicKey));
 
-    // RS returns a 401 challenge for a gated action. The requested authority is
-    // a subset of the active Mission's Authority Set (the RS read the mission).
+    // RS emits an in-process access_challenge for a gated action (the 401 +
+    // WWW-Authenticate transport is an accepted O-33 simplification). The
+    // requested authority is a subset of the active Mission's Authority Set.
     const txn = "txn_abc123";
     const parameter_digest = "sha-256:deadbeefcafefeed";
     const requested = mission.authority_set.filter((e) => e.actions.includes("payments:payment.execute"));
