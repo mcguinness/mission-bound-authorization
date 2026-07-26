@@ -534,10 +534,12 @@ async function handleTransaction(
 
 /**
  * Poll the transaction endpoint with a continuation handle. Unknown handle ->
- * 404; a handle bound to a different client (cnf.jkt mismatch) -> 403; still
- * pending -> a pending response carrying the handle; approved -> the txn-bound
- * single-use token issued from the STORED challenge state (D42: ACTIVE Mission
- * unchanged) plus the verified approval.
+ * 404; a handle bound to a different client (cnf.jkt mismatch) -> 403. Then, per
+ * §5.3 (RFC 8628-shaped): an expired handle -> 400 expired_token (and the handle
+ * is reaped); a denied task -> 400 access_denied; still pending -> 400
+ * authorization_pending; approved -> 200 with the txn-bound single-use token
+ * issued from the STORED challenge state (D42: ACTIVE Mission unchanged) plus
+ * the verified approval.
  */
 async function pollTransaction(
   opts: AdapterOptions,
@@ -560,18 +562,25 @@ async function pollTransaction(
     return;
   }
 
-  const pending = () => {
-    ctx.status = 200;
-    ctx.body = {
-      transaction_authorization_id: transactionAuthorizationId,
-      expires_in: Math.max(1, handle.expiresAt - Math.floor(Date.now() / 1000)),
-      interval: TXN_POLL_INTERVAL,
-    };
-  };
-
+  // §5.3 (RFC 8628-shaped) poll semantics. The handle expiring is terminal:
+  // reap it and report expired_token. Otherwise map the ARS task state -- a
+  // denied task is terminal (access_denied, handle kept so the denial is
+  // idempotent); anything not yet approved is still authorization_pending.
+  if (Math.floor(Date.now() / 1000) >= handle.expiresAt) {
+    txnTasks.delete(transactionAuthorizationId);
+    ctx.status = 400;
+    ctx.body = { error: "expired_token" };
+    return;
+  }
   const task = opts.ars?.getTask(handle.taskId);
+  if (task?.state === "denied") {
+    ctx.status = 400;
+    ctx.body = { error: "access_denied" };
+    return;
+  }
   if (!task || task.state !== "approved" || !task.approval) {
-    pending();
+    ctx.status = 400;
+    ctx.body = { error: "authorization_pending" };
     return;
   }
 

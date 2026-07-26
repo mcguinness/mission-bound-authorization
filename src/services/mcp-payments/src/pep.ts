@@ -115,9 +115,10 @@ export interface EnforceResult {
   /**
    * Present when `challengeSigner` is configured and the action needs a
    * per-action approval: an RS-signed AROP txn-challenge plus the AS endpoint to
-   * present it to.
+   * present it to. `txn` is the transaction id the RS minted for this challenge;
+   * the RS records it so the later txn-token's `txn` can be checked (draft §6.2).
    */
-  access_challenge?: { challenge: string; txn_endpoint: string };
+  access_challenge?: { challenge: string; txn_endpoint: string; txn: string };
 }
 
 export class Pep {
@@ -273,9 +274,10 @@ export class Pep {
         const requested = view.authority_set
           .filter((e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action))
           .map((e) => ({ ...e, actions: [mapping.action] }));
+        const txn = randomUUID();
         const challenge = await signChallenge(
           {
-            txn: randomUUID(),
+            txn,
             authorization_details: requested,
             parameter_digest: parameterDigest(effective),
             iss: CANONICAL_RESOURCE,
@@ -285,7 +287,7 @@ export class Pep {
           signer.sign,
           signer.kid,
         );
-        result.access_challenge = { challenge, txn_endpoint: signer.txnEndpoint };
+        result.access_challenge = { challenge, txn_endpoint: signer.txnEndpoint, txn };
       }
       return result;
     }

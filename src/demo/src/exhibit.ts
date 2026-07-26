@@ -441,13 +441,25 @@ async function main() {
     body: { transaction_authorization_id: txaId },
   });
   const tokenRes = await postTxn({ transaction_authorization_id: txaId });
-  const tokenBody = (await tokenRes.json()) as { access_token?: string; token_type?: string; txn?: string };
+  // §5.3 poll shape: 200 carries the txn-token; a 400 carries authorization_pending
+  // / access_denied / expired_token. This exhibit approves before polling, so it
+  // sees 200 -- but surface the error reason if the shape ever changes underfoot.
+  const tokenBody = (await tokenRes.json()) as {
+    access_token?: string;
+    token_type?: string;
+    txn?: string;
+    error?: string;
+  };
   httpRes(tokenRes.status, {
     ...tokenBody,
     ...(tokenBody.access_token ? { access_token: truncTok(tokenBody.access_token) } : {}),
   });
   const txnToken = tokenBody.access_token;
-  if (!txnToken) throw new Error("expected a txn-token from the transaction endpoint");
+  if (!txnToken) {
+    throw new Error(
+      `expected a txn-token from the transaction endpoint (${tokenRes.status} ${tokenBody.error ?? "no error"})`,
+    );
+  }
   const txnClaims = decodeClaims(txnToken);
   block("txn-token — protected header", decodeHeader(txnToken));
   block("txn-token — decoded claims", {

@@ -229,10 +229,14 @@ d("M5 transaction-assurance tier", () => {
     expect(challenge).toBeTruthy();
     const { payload, protectedHeader } = await jwtVerify(challenge, createLocalJWKSet({ keys: [rsTxnPub] } as never), {
       audience: AS_ISSUER,
-      typ: "txn-challenge+jwt",
+      typ: "txn-authz-challenge+jwt",
     });
-    expect(protectedHeader.typ).toBe("txn-challenge+jwt");
+    expect(protectedHeader.typ).toBe("txn-authz-challenge+jwt");
     expect(payload.iss).toBe(CANONICAL_RESOURCE);
+    // §4.2: the txn id travels as a body claim (not sub) and a jti is REQUIRED.
+    expect(payload.txn).toBe(res.access_challenge?.txn);
+    expect(typeof payload.jti).toBe("string");
+    expect(payload.sub).toBeUndefined();
     expect(payload.parameter_digest).toBe(digestFor(payments));
     // The challenge carries the active Mission's authority_set entry for this
     // resource+action (what the AS subset-gate consumes) -- not an empty set.
@@ -244,14 +248,27 @@ d("M5 transaction-assurance tier", () => {
 
   it("AROP: a valid presented txn-token derives the approval and commits (hybrid)", async () => {
     const { generateKeyPair, exportJWK } = await import("jose");
+    const rsTxn = await generateKeyPair("ES256", { extractable: true });
     const asTxn = await generateKeyPair("ES256", { extractable: true });
     const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
-    const { server, payments } = build({ gateRemittance: true, txnTokenJwks: { keys: [asTxnPub] }, asIssuer: AS_ISSUER });
+    // Wire both the challenge signer AND the txn-token validator so the §6.2
+    // token-vs-challenge binding is exercised, not bypassed.
+    const { server, payments } = build({
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", txnEndpoint: TXN_ENDPOINT, asIssuer: AS_ISSUER },
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+    });
+
+    // First call (no txn-token) -> the RS emits a challenge and records its txn.
+    const challengeRes = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN);
+    expect(challengeRes.ok).toBe(false);
+    const txn = challengeRes.access_challenge?.txn as string;
+    expect(txn).toBeTruthy();
 
     const approvedUntil = new Date(Date.now() + 300_000).toISOString();
     const txnToken = await signTxnToken({
       key: asTxn.privateKey,
-      txn: "txn_unit_ok",
+      txn,
       cnfJkt: TOKEN.cnfJkt,
       approval: { id: "apr_unit", approved_at: new Date().toISOString(), approved_until: approvedUntil, parameter_digest: digestFor(payments) },
     });
@@ -260,6 +277,32 @@ d("M5 transaction-assurance tier", () => {
     const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, txnToken);
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect(res.result).toMatchObject({ executed: true, invoice_id: "inv-1" });
+  });
+
+  it("AROP: a txn-token whose txn was never challenged is refused (txn_unknown, §6.2)", async () => {
+    const { generateKeyPair, exportJWK } = await import("jose");
+    const rsTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    const { server, payments } = build({
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", txnEndpoint: TXN_ENDPOINT, asIssuer: AS_ISSUER },
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+    });
+
+    // A well-formed, correctly-cnf-bound token, but its txn was never issued as
+    // a challenge by this RS -> the §6.2 binding refuses it.
+    const approvedUntil = new Date(Date.now() + 300_000).toISOString();
+    const txnToken = await signTxnToken({
+      key: asTxn.privateKey,
+      txn: "txn_never_challenged",
+      cnfJkt: TOKEN.cnfJkt,
+      approval: { id: "apr_unit", approved_at: new Date().toISOString(), approved_until: approvedUntil, parameter_digest: digestFor(payments) },
+    });
+
+    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, txnToken);
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("txn_unknown");
   });
 
   it("AROP: a txn-token bound to a different key is rejected (cnf mismatch)", async () => {
@@ -283,14 +326,24 @@ d("M5 transaction-assurance tier", () => {
 
   it("AROP: replaying the same txn is rejected (txn_replayed) and does not double-execute", async () => {
     const { generateKeyPair, exportJWK } = await import("jose");
+    const rsTxn = await generateKeyPair("ES256", { extractable: true });
     const asTxn = await generateKeyPair("ES256", { extractable: true });
     const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
-    const { server, evidence, payments } = build({ gateRemittance: true, txnTokenJwks: { keys: [asTxnPub] }, asIssuer: AS_ISSUER });
+    const { server, evidence, payments } = build({
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", txnEndpoint: TXN_ENDPOINT, asIssuer: AS_ISSUER },
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+    });
+
+    // Register the txn via a real challenge, then sign a token that quotes it.
+    const challengeRes = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN);
+    const txn = challengeRes.access_challenge?.txn as string;
+    expect(txn).toBeTruthy();
 
     const approvedUntil = new Date(Date.now() + 300_000).toISOString();
     const txnToken = await signTxnToken({
       key: asTxn.privateKey,
-      txn: "txn_unit_replay",
+      txn,
       cnfJkt: TOKEN.cnfJkt,
       approval: { id: "apr_unit", approved_at: new Date().toISOString(), approved_until: approvedUntil, parameter_digest: digestFor(payments) },
     });

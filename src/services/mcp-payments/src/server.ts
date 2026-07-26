@@ -52,6 +52,12 @@ export class McpPaymentsServer {
   private readonly resolveKey;
   private readonly resolveTxnKey?: ReturnType<typeof createLocalJWKSet>;
   private readonly txnReplay = new TxnReplayCache();
+  /**
+   * §6.2 token-vs-challenge binding: the set of `txn` values this RS has issued
+   * a txn-challenge for. Populated when a challenge is emitted (below); a
+   * presented txn-token whose `txn` is not in this set is refused (txn_unknown).
+   */
+  private readonly issuedChallengeTxns = new Set<string>();
   constructor(private readonly deps: McpServerDeps) {
     this.resolveKey = createLocalJWKSet(deps.jwks as never);
     if (deps.txnTokenJwks) this.resolveTxnKey = createLocalJWKSet(deps.txnTokenJwks as never);
@@ -191,6 +197,9 @@ export class McpPaymentsServer {
     }
 
     const res = await this.deps.pep.enforce(tool, args, token, derivedApproval);
+    // §6.2: remember the txn we just issued a challenge for, so the later
+    // txn-token that quotes it can be bound back to a real challenge.
+    if (res.access_challenge) this.issuedChallengeTxns.add(res.access_challenge.txn);
     if (!res.permitted || !res.effective || !res.decision) {
       return {
         ok: false,
@@ -290,10 +299,13 @@ export class McpPaymentsServer {
     // The txn-token must be bound to the same key as the base mission token.
     const cnf = payload.cnf as { jkt?: string } | undefined;
     if (cnf?.jkt !== token.cnfJkt) return { ok: false, refusal_reason: "txn_cnf_mismatch" };
-    // Single-use across presentations (checked after cnf so a bad-cnf token
-    // never burns a replay slot).
+    // §6.2 token-vs-challenge binding: the token's txn must be one this RS
+    // actually issued a challenge for (checked after cnf, before the replay
+    // consume, so a foreign or bad-cnf token never burns a replay slot).
     const txn = payload.txn as string | undefined;
-    if (!txn || !this.txnReplay.accept(txn)) return { ok: false, refusal_reason: "txn_replayed" };
+    if (!txn || !this.issuedChallengeTxns.has(txn)) return { ok: false, refusal_reason: "txn_unknown" };
+    // Single-use across presentations.
+    if (!this.txnReplay.accept(txn)) return { ok: false, refusal_reason: "txn_replayed" };
     const approval = payload.approval as { id: string; approved_at: string; parameter_digest: string } | undefined;
     if (!approval) return { ok: false, refusal_reason: "txn_missing_approval" };
     return {
