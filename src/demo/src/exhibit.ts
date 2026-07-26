@@ -71,6 +71,82 @@ function verdict(ok: boolean, text: string) {
   console.log(`  ${ok ? C.green + "✓ PERMIT" : C.red + "✗ DENY"}${C.reset} ${text}`);
 }
 
+/** HTTP status reason phrases for the request/response renderer. */
+const REASON: Record<number, string> = {
+  200: "OK",
+  201: "Created",
+  302: "Found",
+  400: "Bad Request",
+  401: "Unauthorized",
+};
+
+/**
+ * A protocol hop: WHO → WHO, over WHICH endpoint, and whether it is on the wire.
+ * Printed at the start of each step's action so the whole exhibit reads as an
+ * annotated sequence of exchanges. `mode` is the bracketed annotation, e.g.
+ * "HTTP", "in-process MCP · O-33", "in-process · D28".
+ */
+function hop(from: string, to: string, endpoint: string, mode: string) {
+  console.log(
+    `\n  ${C.magenta}${C.bold}${from}${C.reset}${C.magenta} → ${C.bold}${to}${C.reset}` +
+      `  ${C.magenta}${endpoint}${C.reset}  ${C.dim}[${mode}]${C.reset}`,
+  );
+}
+
+/** Render a real HTTP request as a wire exchange (method, URL, key headers, body). */
+function httpReq(method: string, url: string, opts: { headers?: Record<string, string>; body?: unknown } = {}) {
+  console.log(`  ${C.cyan}→ ${C.bold}${method}${C.reset}${C.cyan} ${url}${C.reset}`);
+  if (opts.headers && Object.keys(opts.headers).length > 0) {
+    console.log(`    ${C.dim}headers:${C.reset} ${Object.entries(opts.headers).map(([k, v]) => `${k}: ${v}`).join("; ")}`);
+  }
+  if (opts.body !== undefined) {
+    console.log(`    ${C.dim}body:${C.reset}`);
+    console.log(
+      highlightJson(opts.body)
+        .split("\n")
+        .map((l) => `    ${l}`)
+        .join("\n"),
+    );
+  }
+}
+
+/**
+ * Render a real HTTP response: status + reason, an optional headers block (used
+ * for 3xx legs, which carry a Location header and no body), and a JSON body.
+ */
+function httpRes(status: number, body?: unknown, opts: { headers?: Record<string, string> } = {}) {
+  console.log(`  ${C.cyan}← ${C.bold}${status}${REASON[status] ? ` ${REASON[status]}` : ""}${C.reset}`);
+  if (opts.headers && Object.keys(opts.headers).length > 0) {
+    console.log(`    ${C.dim}headers:${C.reset} ${Object.entries(opts.headers).map(([k, v]) => `${k}: ${v}`).join("; ")}`);
+  }
+  if (body !== undefined) {
+    console.log(
+      highlightJson(body)
+        .split("\n")
+        .map((l) => `    ${l}`)
+        .join("\n"),
+    );
+  }
+}
+
+/** The cast of actors + which hops are on the wire vs in-process in this demo. */
+function legend(asUrl: string) {
+  const row = (role: string, endpoint: string, mode: string) =>
+    console.log(`  ${C.bold}${C.cyan}${role.padEnd(19)}${C.reset}${C.dim}${endpoint.padEnd(38)}${C.reset}${C.dim}${mode}${C.reset}`);
+  console.log(`\n${C.bold}Cast & wire${C.reset} ${C.dim}— [HTTP] hops are on the wire; [in-process] hops run inside this demo process.${C.reset}`);
+  row("Agent", "ap-agent OAuth client", "drives issuance + tool calls");
+  row("AS", asUrl, "[HTTP]");
+  row("Payments RS", "mcp://payments → localhost:4403/mcp", "[in-process · MCP transport = prod swap, O-33]");
+  row("PDP", "pure decision function", "[in-process · D28]");
+  row("OpenFGA", "https://localhost:8080", "[HTTP · the PDP's authority store]");
+  row("ARS", "Access Request Service", "[in-process · opens/adjudicates AROP tasks]");
+  row("RAS", "https://ras.ledgercloud.test", "[in-process · redeems the ID-JAG grant]");
+  row("SaaS RS", "http://localhost:4406/mcp", "[in-process · token-only PEP, no PDP]");
+  row("Transparency", "tamper-evident evidence log", "[in-process]");
+  row("Approver (Bob)", "human — adjudicates per-action approvals", "");
+  row("Operator (Olivia)", "human — drives lifecycle + reads evidence", "");
+}
+
 /** Decode a compact JWS payload (base64url) without verifying. */
 function decodeClaims(jwt: string): Record<string, unknown> {
   return JSON.parse(Buffer.from(jwt.split(".")[1] as string, "base64url").toString());
@@ -105,15 +181,18 @@ async function main() {
 
   console.log(`${C.bold}Mission-Bound Authorization — protocol exhibit${C.reset}`);
   console.log(`${C.dim}Real OAuth issuance against a live AS at ${asUrl}. Every artifact below is the real value on the wire.${C.reset}`);
+  legend(asUrl);
 
   // ---- 0. Discovery -------------------------------------------------------
   step(0, "Discovery: the agent asks what it can reach");
-  note(`GET ${asUrl}/service-catalog?type=mcp   (access token audience = catalog)`);
+  hop("Agent", "AS", "GET /service-catalog?type=mcp", `in-process; represents GET ${asUrl}/service-catalog`);
+  note("access token audience = catalog");
   block("catalog response (before any mission)", stack.catalog.catalog("alice", { type: "mcp" }));
   note("payments is consent_required: reachable, but no mission covers it yet.");
 
   // ---- 1. Intent shaping (untrusted, two-estate proposal) -----------------
   step(1, "Intent shaping: a two-estate proposal (untrusted)");
+  hop("Agent", "Agent (self)", "compose mission_intent", "in-process; submitted via PAR in step 2");
   const missionIntent = JSON.stringify({
     goal: "Pay approved Acme invoices for Q3 and post the corresponding ledger entries",
     resources: [CANONICAL_RESOURCE, SAAS_RESOURCE],
@@ -141,19 +220,42 @@ async function main() {
   step(2, "Real issuance: the live OAuth dance mints a real token pair");
   const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, scope: "openid profile email payments" });
 
-  block("PAR request (POST /request, form-encoded, private_key_jwt)", {
-    ...issued.artifacts.par.request,
-    mission_intent: `${missionIntent.slice(0, 60)}... (full proposal in step 1)`,
+  // PAR (Agent → AS, real HTTP): push the request carrying the mission_intent.
+  hop("Agent", "AS", "POST /request", "HTTP");
+  httpReq("POST", `${asUrl}/request`, {
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: {
+      ...issued.artifacts.par.request,
+      mission_intent: `${missionIntent.slice(0, 60)}... (full proposal in step 1)`,
+      client_assertion: "<private_key_jwt>",
+    },
   });
-  block("PAR response (201 Created)", issued.artifacts.par.response);
+  httpRes(201, issued.artifacts.par.response);
 
-  note("GET /auth redirects to /interaction/{uid}; Bob approves alice at the headless consent.");
-  block("interaction/decide request (POST /interaction/{uid}/decide)", issued.artifacts.decide.request);
+  // Authorize (Agent → AS, real HTTP): 302 to the headless interaction.
+  hop("Agent", "AS", "GET /auth", "HTTP");
+  httpReq("GET", `${asUrl}/auth?client_id=ap-agent&request_uri=${issued.artifacts.par.response.request_uri}`);
+  httpRes(302, undefined, { headers: { location: "/interaction/{uid}  (headless consent)" } });
+
+  // Decide (Approver Bob → AS, real HTTP): Bob approves alice; 302 carries the code.
+  hop("Approver (Bob)", "AS", "POST /interaction/{uid}/decide", "HTTP");
+  httpReq("POST", `${asUrl}/interaction/{uid}/decide`, {
+    headers: { "content-type": "application/json", cookie: "<interaction session>" },
+    body: issued.artifacts.decide.request,
+  });
+  httpRes(302, undefined, {
+    headers: { location: `${issued.artifacts.par.request.redirect_uri}?code=${issued.artifacts.decide.code.slice(0, 14)}...` },
+  });
   note(`authorization code issued: ${issued.artifacts.decide.code.slice(0, 14)}...`);
 
-  block("token request (POST /token, DPoP-bound + private_key_jwt)", issued.artifacts.token.request);
+  // Token (Agent → AS, real HTTP): DPoP-bound + private_key_jwt exchange.
+  hop("Agent", "AS", "POST /token", "HTTP");
   const tokRes = issued.artifacts.token.response;
-  block("token response (200)", {
+  httpReq("POST", `${asUrl}/token`, {
+    headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof: htu=/token, htm=POST>" },
+    body: { ...issued.artifacts.token.request, client_assertion: "<private_key_jwt>" },
+  });
+  httpRes(200, {
     ...tokRes,
     access_token: truncTok(tokRes.access_token as string),
     ...(tokRes.id_token ? { id_token: truncTok(tokRes.id_token as string) } : {}),
@@ -210,6 +312,7 @@ async function main() {
 
   // ---- 3. Validate the real token at the resource server ------------------
   step(3, "Validate the real token at the resource server");
+  hop("Payments RS", "AS", "verify AS-signed token — GET /jwks", "in-process; fetches the AS jwks");
   note(`RS-side DPoP proof: same DPoP key as the token, htu=${CANONICAL_RESOURCE}, htm=POST.`);
   const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST");
   let facts: TokenFacts = await stack.server.validateToken(issued.accessToken, rsProof, CANONICAL_RESOURCE, "POST");
@@ -220,6 +323,7 @@ async function main() {
 
   // ---- 4. Discovery again -------------------------------------------------
   step(4, "Discovery again: the catalog now reflects the active mission");
+  hop("Agent", "AS", "GET /service-catalog?type=mcp", `in-process; represents GET ${asUrl}/service-catalog`);
   block(
     "catalog payments connection",
     stack.catalog.catalog("alice", { type: "mcp" }).services.find((s) => s.id === "payments")?.connections,
@@ -228,9 +332,12 @@ async function main() {
   // ---- Tool-call tracer (real token) --------------------------------------
   const traceCall = async (n: number, label: string, kind: "read" | "wire", tool: string, args: Record<string, unknown>) => {
     step(n, label);
+    hop("Agent", "Payments RS", `tools/call ${tool}`, "in-process MCP · O-33");
     block(`MCP tools/call — ${tool}`, { tool, arguments: args, authorization: "DPoP <real mission-bound access token>" });
     const res =
       kind === "read" ? await stack.server.callReadTool(tool, args, facts) : await stack.server.callTransactionTool(tool, args, facts);
+    hop("Payments RS (PEP)", "PDP", "evaluate", "in-process · D28");
+    hop("PDP", "OpenFGA", "check", "HTTP https://localhost:8080");
     if (captured) {
       note("PEP builds the AuthZEN decision request (effective params from authoritative store state):");
       if (captured.effective) block("  effective parameters", captured.effective);
@@ -254,6 +361,7 @@ async function main() {
 
   // 7.1 Base token, no txn-token: the RS gates the action and returns an
   // access_challenge (an rs-txn-signed txn-challenge + the AS endpoint for it).
+  hop("Agent", "Payments RS", "tools/call send_remittance_email (base token, no txn-token)", "in-process MCP · O-33");
   block("MCP tools/call — send_remittance_email (base token, no txn-token)", {
     tool: "send_remittance_email",
     arguments: { invoice_id: "inv-1" },
@@ -263,6 +371,7 @@ async function main() {
   verdict(challengeAttempt.ok, `send_remittance_email(inv-1) → ${challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason}`);
   const accessChallenge = challengeAttempt.access_challenge;
   if (!accessChallenge) throw new Error("expected an access_challenge (RS challengeSigner wired)");
+  hop("Payments RS", "Agent", "401-style txn-challenge (RS-signed)", "in-process");
   note(`RS emitted a txn-challenge to present to ${accessChallenge.txn_endpoint}`);
   block("access_challenge — protected header", decodeHeader(accessChallenge.challenge));
   block("access_challenge — decoded txn-challenge", decodeClaims(accessChallenge.challenge));
@@ -283,9 +392,13 @@ async function main() {
       },
       body: JSON.stringify(payload),
     });
-  block(`POST ${accessChallenge.txn_endpoint} (initiation: base token DPoP + challenge, presented ONCE)`, {
-    authorization: "DPoP <real mission-bound access token>",
-    dpop: "<DPoP proof: htu=/transaction, htm=POST>",
+  hop("Agent", "AS", "POST /transaction (initiation — challenge presented once)", "HTTP");
+  httpReq("POST", accessChallenge.txn_endpoint, {
+    headers: {
+      authorization: "DPoP <base token>",
+      dpop: "<DPoP proof: htu=/transaction, htm=POST>",
+      "content-type": "application/json",
+    },
     body: { challenge: `${accessChallenge.challenge.slice(0, 40)}... (the txn-challenge above)` },
   });
   const pendingRes = await postTxn({ challenge: accessChallenge.challenge });
@@ -294,7 +407,7 @@ async function main() {
     expires_in?: number;
     interval?: number;
   };
-  block(`transaction response (${pendingRes.status}) — pending`, pendingBody);
+  httpRes(pendingRes.status, pendingBody);
   const txaId = pendingBody.transaction_authorization_id;
   if (!txaId) {
     throw new Error(`expected a transaction_authorization_id, got ${JSON.stringify(pendingBody)}`);
@@ -306,6 +419,7 @@ async function main() {
 
   // 7.3 Approver (Bob) adjudicates the AS-vouched task on the SAME ARS the AS
   // opened it on (distinct from the acting subject alice).
+  hop("Approver (Bob)", "ARS", "adjudicate AROP task (approve)", "in-process");
   block("ARS approver queue (task opened by the AS transaction endpoint)", stack.ars.pending());
   const pendingTask = stack.ars.pending()[0];
   if (!pendingTask) throw new Error("expected a pending AROP task on the shared ARS");
@@ -317,14 +431,18 @@ async function main() {
   // never re-presenting the challenge. Now the AS issues the txn-token: ACTIVE
   // mission unchanged (D42), carrying the verified approval + cnf(base jkt),
   // single-use.
-  block(`POST ${accessChallenge.txn_endpoint} (poll: base token DPoP + transaction_authorization_id)`, {
-    authorization: "DPoP <real mission-bound access token>",
-    dpop: "<DPoP proof: htu=/transaction, htm=POST>",
+  hop("Agent", "AS", "POST /transaction (poll — with transaction_authorization_id)", "HTTP");
+  httpReq("POST", accessChallenge.txn_endpoint, {
+    headers: {
+      authorization: "DPoP <base token>",
+      dpop: "<DPoP proof: htu=/transaction, htm=POST>",
+      "content-type": "application/json",
+    },
     body: { transaction_authorization_id: txaId },
   });
   const tokenRes = await postTxn({ transaction_authorization_id: txaId });
   const tokenBody = (await tokenRes.json()) as { access_token?: string; token_type?: string; txn?: string };
-  block(`transaction response (${tokenRes.status})`, {
+  httpRes(tokenRes.status, {
     ...tokenBody,
     ...(tokenBody.access_token ? { access_token: truncTok(tokenBody.access_token) } : {}),
   });
@@ -348,6 +466,7 @@ async function main() {
   // 7.5 Agent re-calls the RS tool WITH the txn-token (5th arg, no approval
   // object anywhere). The RS validates it and derives the approval; the
   // UNCHANGED PDP step 8 permits and the operation commits.
+  hop("Agent", "Payments RS", "tools/call send_remittance_email (re-present txn-token)", "in-process MCP · O-33");
   block("MCP tools/call — send_remittance_email (re-present, carrying the txn-token)", {
     tool: "send_remittance_email",
     arguments: { invoice_id: "inv-1" },
@@ -361,16 +480,19 @@ async function main() {
 
   // ---- 8. Cross-domain: the ID-JAG leg into the SaaS estate ---------------
   step(8, "Cross-domain: an ID-JAG grant crosses into the LedgerCloud (SaaS) estate");
+  hop("AS", "Agent", "ID-JAG grant issued", "in-process");
   const grant = await as.issueCrossDomainGrant(missionId, issued.dpopJkt);
   block("ID-JAG grant — protected header", decodeHeader(grant.grant));
   block("ID-JAG grant — decoded payload", decodeClaims(grant.grant));
   note(`audience-scoped: authorization_details carries ONLY the SaaS estate; aud = the RAS issuer (${as.rasIssuer}); cnf.jkt binds the same DPoP key.`);
 
+  hop("Agent", "RAS", "redeem ID-JAG grant — POST /token", `in-process; represents POST ${as.rasIssuer}/token`);
   const redeemed = await as.ras.redeem(grant.grant, issued.dpopJkt);
   block("RAS local token — decoded claims", decodeClaims(redeemed.access_token));
   note(`the RAS minted a LOCAL token (iss = ${as.rasIssuer}, aud = ${as.saasResource}); the SaaS PEP enforces from this token alone (token-only, no PDP).`);
 
   const saasDpop = await dpopProofFor(issued.dpopKeys, as.saasResource, "POST");
+  hop("Agent", "SaaS RS", "tools/call post_journal_entry", `in-process; represents ${as.saasResource}`);
   block("MCP tools/call — post_journal_entry (SaaS estate)", {
     tool: "post_journal_entry",
     arguments: { vendor_id: "acme", amount: "125.00" },
@@ -394,10 +516,16 @@ async function main() {
 
   // ---- 9. Denials ---------------------------------------------------------
   step(9, "Denials: valid token, but out of bounds / authority");
+  hop("Agent", "Payments RS", "tools/call execute_wire_transfer (inv-2, over-cap)", "in-process MCP · O-33");
   const over = await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-2" }, facts);
+  hop("Payments RS (PEP)", "PDP", "evaluate", "in-process · D28");
+  hop("PDP", "OpenFGA", "check", "HTTP https://localhost:8080");
   if (captured) block("PDP decision (over-cap $900)", captured.decision);
   verdict(over.ok, `execute_wire_transfer(inv-2, $900) → ${over.denial_reason ?? over.refusal_reason}`);
+  hop("Agent", "Payments RS", "tools/call execute_wire_transfer (inv-3, globex)", "in-process MCP · O-33");
   const globex = await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-3" }, facts);
+  hop("Payments RS (PEP)", "PDP", "evaluate", "in-process · D28");
+  hop("PDP", "OpenFGA", "check", "HTTP https://localhost:8080");
   if (captured) block("PDP decision (globex vendor)", captured.decision);
   verdict(globex.ok, `execute_wire_transfer(inv-3, globex) → ${globex.denial_reason ?? globex.refusal_reason}`);
 
@@ -405,25 +533,37 @@ async function main() {
   // MUST run AFTER the cross-domain leg and all tool calls: these transitions
   // drive the mission non-active / superseded and deny everything downstream.
   step(10, "Lifecycle: transitions that gate everything downstream");
-  const lifecycle = async (operation: string, id: string): Promise<unknown> => {
+  const lifecycle = async (operation: string, id: string): Promise<{ status: number; body: unknown }> => {
     const res = await fetch(`${asUrl}/missions/${id}/lifecycle`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
       body: JSON.stringify({ operation }),
     });
-    return res.json();
+    return { status: res.status, body: await res.json() };
   };
 
   // 10a. suspend -> the next action is denied (mission not active).
-  block("lifecycle request — suspend (POST /missions/{id}/lifecycle)", { operation: "suspend", mission: missionId });
-  block("lifecycle response", await lifecycle("suspend", missionId));
+  hop("Operator", "AS", "POST /missions/{id}/lifecycle (suspend)", "HTTP");
+  httpReq("POST", `${asUrl}/missions/${missionId}/lifecycle`, {
+    headers: { "content-type": "application/json", "x-service-token": "<service token>" },
+    body: { operation: "suspend" },
+  });
+  const suspendRes = await lifecycle("suspend", missionId);
+  httpRes(suspendRes.status, suspendRes.body);
+  hop("Agent", "Payments RS", "tools/call get_invoice (while suspended)", "in-process MCP · O-33");
   const whileSuspended = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
   if (captured) block("PDP decision (suspended)", captured.decision);
   verdict(whileSuspended.ok, `get_invoice(inv-1) while suspended → ${whileSuspended.denial_reason ?? whileSuspended.refusal_reason}`);
 
   // 10b. resume -> the action is permitted again.
-  block("lifecycle request — resume", { operation: "resume", mission: missionId });
-  block("lifecycle response", await lifecycle("resume", missionId));
+  hop("Operator", "AS", "POST /missions/{id}/lifecycle (resume)", "HTTP");
+  httpReq("POST", `${asUrl}/missions/${missionId}/lifecycle`, {
+    headers: { "content-type": "application/json", "x-service-token": "<service token>" },
+    body: { operation: "resume" },
+  });
+  const resumeRes = await lifecycle("resume", missionId);
+  httpRes(resumeRes.status, resumeRes.body);
+  hop("Agent", "Payments RS", "tools/call get_invoice (after resume)", "in-process MCP · O-33");
   const afterResume = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
   if (captured) block("PDP decision (resumed)", captured.decision);
   verdict(afterResume.ok, `get_invoice(inv-1) after resume → ${afterResume.ok ? JSON.stringify(afterResume.result) : (afterResume.denial_reason ?? afterResume.refusal_reason)}`);
@@ -453,6 +593,7 @@ async function main() {
       ],
     }),
   );
+  hop("Operator", "AS", "expand mission — successor from a fresh approval (kernel op)", "in-process");
   const expansion = createExpansion(stack.kernel, {
     predecessorId: missionId,
     intent: successorIntent,
@@ -477,19 +618,27 @@ async function main() {
   );
 
   // Supersession: on the successor's first redemption the predecessor is superseded atomically.
+  hop("Operator", "AS", "supersede predecessor on the successor's first redemption (kernel op)", "in-process");
   stack.kernel.supersedeOnRedemption(expansion.successor.id);
   note(`predecessor ${missionId} state → ${stack.kernel.get(missionId)?.state}`);
+  hop("Agent", "Payments RS", "tools/call get_invoice (original token, predecessor superseded)", "in-process MCP · O-33");
   const afterSupersede = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
   if (captured) block("PDP decision (predecessor superseded)", captured.decision);
   verdict(afterSupersede.ok, `get_invoice(inv-1) with the original token → ${afterSupersede.denial_reason ?? afterSupersede.refusal_reason}`);
   note("the original credential no longer authorizes; the successor is the active mission going forward.");
 
   // 10d. revoke the successor over the wire.
-  block("lifecycle request — revoke (successor)", { operation: "revoke", mission: expansion.successor.id });
-  block("lifecycle response", await lifecycle("revoke", expansion.successor.id));
+  hop("Operator", "AS", "POST /missions/{id}/lifecycle (revoke successor)", "HTTP");
+  httpReq("POST", `${asUrl}/missions/${expansion.successor.id}/lifecycle`, {
+    headers: { "content-type": "application/json", "x-service-token": "<service token>" },
+    body: { operation: "revoke" },
+  });
+  const revokeRes = await lifecycle("revoke", expansion.successor.id);
+  httpRes(revokeRes.status, revokeRes.body);
 
   // ---- 11. Evidence -------------------------------------------------------
   step(11, "Evidence: the tamper-evident feed, verified");
+  hop("Operator (Olivia)", "Transparency", "read verified timeline", "in-process");
   for (const ev of stack.evidence.forMission(missionId)) {
     const t = ev.kind === "decision" ? "decision-evidence" : ev.kind === "execution" ? "execution-evidence" : "refusal-record";
     await stack.publishEvidence(missionId, t, ev as unknown as Record<string, unknown>);
