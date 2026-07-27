@@ -2152,21 +2152,31 @@ deployment's maximum approval age
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.9-2.7">
-<code>parameter_digest</code>:</dt>
+<code>approved_until</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.9-2.8">
-            <p id="section-5.9-2.8.1"><span class="bcp14">REQUIRED</span> when <code>action_approval</code> is present. A string. The
+            <p id="section-5.9-2.8.1"><span class="bcp14">REQUIRED</span> when <code>action_approval</code> is present. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>
+timestamp, ARAP's approval expiry <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span> (ARAP's <code>approval.approved_until</code>).
+The PDP <span class="bcp14">MUST NOT</span> accept the approval for re-evaluation after it,
+independent of the deployment's maximum approval age.<a href="#section-5.9-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.9-2.9">
+<code>parameter_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.9-2.10">
+            <p id="section-5.9-2.10.1"><span class="bcp14">REQUIRED</span> when <code>action_approval</code> is present. A string. The
 <code>parameter_digest</code> the approval is bound to. The PDP <span class="bcp14">MUST</span> match it
 against the request's <code>parameter_digest</code>; a mismatch means the
-approval does not cover these parameters.<a href="#section-5.9-2.8.1" class="pilcrow">¶</a></p>
+approval does not cover these parameters.<a href="#section-5.9-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
 <p id="section-5.9-3">When deployment or Resource policy requires an action-bound approval and
 <code>context.action_approval</code> is absent, is older than the deployment's
-maximum approval age (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), or is
-bound to a different <code>parameter_digest</code>, the PDP <span class="bcp14">MUST</span> deny with
-<code>action_approval_required</code> (<a href="#runtime-denial-classification" class="auto internal xref">Section 6.4</a>). The PDP
-<span class="bcp14">MUST</span> record the presented approval <code>id</code> in Decision Evidence.<a href="#section-5.9-3" class="pilcrow">¶</a></p>
+maximum approval age (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), is past
+its <code>approved_until</code>, or is bound to a different <code>parameter_digest</code>, the
+PDP <span class="bcp14">MUST</span> deny with <code>action_approval_required</code>
+(<a href="#runtime-denial-classification" class="auto internal xref">Section 6.4</a>). The PDP <span class="bcp14">MUST</span> record the presented
+approval <code>id</code> in Decision Evidence.<a href="#section-5.9-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="context-history">
@@ -2744,10 +2754,12 @@ authentication context Resource policy requires to lift the denial.<a href="#sec
           <dd style="margin-left: 1.5em" id="section-6.1-2.20">
             <p id="section-6.1-2.20.1"><span class="bcp14">OPTIONAL</span>. An object. Present on an <code>out_of_authority</code> or
 <code>action_approval_required</code> denial when the deployment exposes it as
-requestable under <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>. It is the ARAP requestable-denial context,
-carrying the submission endpoint and the denial binding that ties a
-later access request to this evaluation. Its presence does not change
-the <code>decision: false</code> result and does not grant access.<a href="#section-6.1-2.20.1" class="pilcrow">¶</a></p>
+requestable under <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>. It is the ARAP requestable-denial context:
+the submission <code>endpoint</code>, the ARAP-required <code>expires_at</code>, and the
+denial binding that ties a later access request to this evaluation
+(<code>denial_binding</code>, this profile's name for ARAP's <code>evaluation_id</code>, with
+the PDP-signed <code>binding_token</code>). Its presence does not change the
+<code>decision: false</code> result and does not grant access.<a href="#section-6.1-2.20.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -3036,16 +3048,27 @@ present, and the PDP marks the denial requestable under <span>[<a href="#ARAP" c
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
     "access_request": {
       "endpoint": "https://requests.example.com/access-requests",
-      "denial_binding": "dec_7YbK4nQ9tR2xV6mL1sP8eJ3wZc"
+      "expires_at": "2026-11-02T09:14:00Z",
+      "denial_binding": "dec_7YbK4nQ9tR2xV6mL1sP8eJ3wZc",
+      "binding_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6InBkcC1kZW5pYWwtYmluZGluZytqd3QifQ.eyJk..."
     }
   }
 }
 </pre><a href="#section-6.5-5" class="pilcrow">¶</a>
 </div>
-<p id="section-6.5-6">The <code>access_request</code> members are the ARAP requestable-denial context
-<span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>; this profile does not define their shape. Its presence does
-not change the <code>decision: false</code> result: the PEP refuses the action,
-submits the access request, and re-evaluates only after approval.<a href="#section-6.5-6" class="pilcrow">¶</a></p>
+<p id="section-6.5-6">The <code>access_request</code> members compose the ARAP requestable-denial context
+<span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>: <code>expires_at</code> and the PDP-signed <code>binding_token</code> are ARAP's, and
+<code>denial_binding</code> is this profile's name for ARAP's evaluation reference.
+Its presence does not change the <code>decision: false</code> result: the PEP refuses
+the action, submits the access request, and re-evaluates only after
+approval.<a href="#section-6.5-6" class="pilcrow">¶</a></p>
+<p id="section-6.5-7">Mapping to <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>: this profile carries ARAP's context under mission
+names. <code>context.action_approval</code> (<a href="#context-approval" class="auto internal xref">Section 5.9</a>) is ARAP's
+<code>context.approval</code>; <code>access_request.denial_binding</code> is ARAP's
+<code>evaluation_id</code> and <code>access_request.binding_token</code> is ARAP's <code>binding_token</code>;
+the <code>action_approval_required</code> reason (<a href="#runtime-denial-classification" class="auto internal xref">Section 6.4</a>)
+is ARAP's <code>context.reason</code> value <code>approval_required</code>. An ARAP implementer
+maps these names to drive an unmodified ARAP request and approval exchange.<a href="#section-6.5-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="failure-condition-coverage">

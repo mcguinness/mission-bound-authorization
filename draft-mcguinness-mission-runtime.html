@@ -2246,8 +2246,12 @@ fresh approval bound to the action's parameters is not present.<a href="#section
 </li>
           <li id="section-4.4-4.2">
             <p id="section-4.4-4.2.1">An action-bound approval <span class="bcp14">MUST</span> carry a maximum age, bounded by a
-value the deployment set publishes. Past that age the approval is
-not fresh and the PEP <span class="bcp14">MUST</span> refuse.<a href="#section-4.4-4.2.1" class="pilcrow">¶</a></p>
+value the deployment set publishes, and <span class="bcp14">MAY</span> additionally carry an
+absolute <code>approved_until</code> expiry (the AuthZEN binding surfaces ARAP's
+approval expiry there, <a href="#authzen" class="auto internal xref">Section 15</a>). The approval is fresh only before
+the earlier of <code>approved_at</code> plus the maximum age and any
+<code>approved_until</code>; past that bound the approval is not fresh and the PEP
+<span class="bcp14">MUST</span> refuse.<a href="#section-4.4-4.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.4-4.3">
             <p id="section-4.4-4.3.1">A deployment <span class="bcp14">SHOULD</span> require an action-bound approval for the
