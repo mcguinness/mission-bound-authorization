@@ -767,11 +767,22 @@ resolution and date; never delete them.
 - **O-3. DTR draft fidelity.** Fetch `draft-gerber-oauth-deferred-token-response`
   and pin parameter names, error codes (`authorization_pending`, `slow_down`,
   `expired_token`), and the deferred grant URN before M7.
+  Disposition (2026-07-26): pinned to `-00` (PR #350) — parameter names, the
+  deferred grant URN, and the error vocabulary verified/aligned (`invalid_grant`
+  routing for unknown/already-redeemed fixed). Stays open for residual
+  `slow_down`/`expired_token` backoff and wiring the deferred grant onto the real
+  `/token` endpoint (currently kernel-level only).
 - **O-4. Transaction challenge draft fidelity.** Fetch
   `draft-rosomakho-oauth-txn-challenge` and pin the challenge JWS claims
   (`txn`, `authorization_details`, `iss`, `aud`, `reason`), the
   `Accept-Txn-Challenge` header, endpoint request/response shapes, and
   `txn_challenge_jwks_uri` metadata before M7.
+  Disposition (2026-07-26): resolved against `-00` (PR #350) — challenge JWS
+  typ (`txn-authz-challenge+jwt`)/`jti`/`txn` claims, endpoint request/response,
+  §6.2 token-vs-challenge binding, and poll error codes aligned. The
+  `parameter_digest` gap is logged as S-10; the in-process/transport
+  simplifications (401→`access_challenge`, `Accept-Txn-Challenge`, form-vs-JSON,
+  `txn_challenge_jwks_uri` served) as S-11.
 - **O-5. Expansion lifecycle detail.** Read the expansion draft closely: successor
   mission state transitions, predecessor disposition, and how the AROP-issued
   token's `mission` claim references the successor. Needed for M7.
@@ -1113,6 +1124,23 @@ their repositories or working groups.
   access token, not an id_token, is the authority carrier. Candidate: a
   one-sentence core clarification, filed as a mission core issue (the core is
   never edited directly).
+- **S-10 (open).** Gap — draft-rosomakho-oauth-txn-challenge § 4.2.2: the
+  challenge claim set has no member binding the *effective operation
+  parameters* to the challenge, so an approval cannot be scoped to the exact
+  parameters the RS gated on. This reference adds a `parameter_digest` claim and
+  the AS requires it (`provider.ts` rejects a challenge without one), so a
+  spec-conformant third-party challenge lacking it is refused (inbound-interop
+  deviation). Candidate: file upstream proposing a parameter-binding claim;
+  until then it is a documented local extension. (Found in the O-4 fidelity pass.)
+- **S-11 (accepted).** Deviation — draft-rosomakho-oauth-txn-challenge (txn
+  binding) x this demo: the MCP RS is in-process (O-33), so the signed challenge
+  is surfaced as an `access_challenge` result field rather than a `401` +
+  `WWW-Authenticate` response; the `Accept-Txn-Challenge` capability gate is not
+  implemented; the transaction endpoint takes JSON `{challenge}` rather than
+  form-encoded `transaction_challenge`; and `txn_challenge_jwks_uri` is
+  config-injected rather than served. The wire-format + liveness bugs (typ, jti,
+  txn-vs-sub, poll error codes) were fixed (PR #350); these transport
+  simplifications are acknowledged and kept for the in-process demo.
 
 ## 9. Runbook (target state)
 
