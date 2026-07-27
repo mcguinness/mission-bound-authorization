@@ -788,8 +788,12 @@ Four rules govern the approval's enforcement:
    Resource policy requires an action-bound approval and a valid
    fresh approval bound to the action's parameters is not present.
 2. An action-bound approval MUST carry a maximum age, bounded by a
-   value the deployment set publishes. Past that age the approval is
-   not fresh and the PEP MUST refuse.
+   value the deployment set publishes, and MAY additionally carry an
+   absolute `approved_until` expiry (the AuthZEN binding surfaces ARAP's
+   approval expiry there, {{authzen}}). The approval is fresh only before
+   the earlier of `approved_at` plus the maximum age and any
+   `approved_until`; past that bound the approval is not fresh and the PEP
+   MUST refuse.
 3. A deployment SHOULD require an action-bound approval for the
    high-consequence classes, where a token-lifetime-wide standing
    authority is least appropriate.
