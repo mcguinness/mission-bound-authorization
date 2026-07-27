@@ -671,6 +671,12 @@ carriage. Its members:
   deployment's maximum approval age
   ({{I-D.draft-mcguinness-mission-runtime}}).
 
+`approved_until`:
+: REQUIRED when `action_approval` is present. An RFC 3339 {{RFC3339}}
+  timestamp, ARAP's approval expiry {{ARAP}} (ARAP's `approval.approved_until`).
+  The PDP MUST NOT accept the approval for re-evaluation after it,
+  independent of the deployment's maximum approval age.
+
 `parameter_digest`:
 : REQUIRED when `action_approval` is present. A string. The
   `parameter_digest` the approval is bound to. The PDP MUST match it
@@ -679,10 +685,11 @@ carriage. Its members:
 
 When deployment or Resource policy requires an action-bound approval and
 `context.action_approval` is absent, is older than the deployment's
-maximum approval age ({{I-D.draft-mcguinness-mission-runtime}}), or is
-bound to a different `parameter_digest`, the PDP MUST deny with
-`action_approval_required` ({{runtime-denial-classification}}). The PDP
-MUST record the presented approval `id` in Decision Evidence.
+maximum approval age ({{I-D.draft-mcguinness-mission-runtime}}), is past
+its `approved_until`, or is bound to a different `parameter_digest`, the
+PDP MUST deny with `action_approval_required`
+({{runtime-denial-classification}}). The PDP MUST record the presented
+approval `id` in Decision Evidence.
 
 ## History Context {#context-history}
 
@@ -1154,10 +1161,12 @@ This profile defines the following AuthZEN response `context` members:
 `access_request`:
 : OPTIONAL. An object. Present on an `out_of_authority` or
   `action_approval_required` denial when the deployment exposes it as
-  requestable under {{ARAP}}. It is the ARAP requestable-denial context,
-  carrying the submission endpoint and the denial binding that ties a
-  later access request to this evaluation. Its presence does not change
-  the `decision: false` result and does not grant access.
+  requestable under {{ARAP}}. It is the ARAP requestable-denial context:
+  the submission `endpoint`, the ARAP-required `expires_at`, and the
+  denial binding that ties a later access request to this evaluation
+  (`denial_binding`, this profile's name for ARAP's `evaluation_id`, with
+  the PDP-signed `binding_token`). Its presence does not change the
+  `decision: false` result and does not grant access.
 
 No mode leaves the permit window unbounded on the wire.
 `permit_expires_at` MUST NOT be later than the freshness time or lease
@@ -1397,16 +1406,28 @@ present, and the PDP marks the denial requestable under {{ARAP}}:
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
     "access_request": {
       "endpoint": "https://requests.example.com/access-requests",
-      "denial_binding": "dec_7YbK4nQ9tR2xV6mL1sP8eJ3wZc"
+      "expires_at": "2026-11-02T09:14:00Z",
+      "denial_binding": "dec_7YbK4nQ9tR2xV6mL1sP8eJ3wZc",
+      "binding_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6InBkcC1kZW5pYWwtYmluZGluZytqd3QifQ.eyJk..."
     }
   }
 }
 ~~~
 
-The `access_request` members are the ARAP requestable-denial context
-{{ARAP}}; this profile does not define their shape. Its presence does
-not change the `decision: false` result: the PEP refuses the action,
-submits the access request, and re-evaluates only after approval.
+The `access_request` members compose the ARAP requestable-denial context
+{{ARAP}}: `expires_at` and the PDP-signed `binding_token` are ARAP's, and
+`denial_binding` is this profile's name for ARAP's evaluation reference.
+Its presence does not change the `decision: false` result: the PEP refuses
+the action, submits the access request, and re-evaluates only after
+approval.
+
+Mapping to {{ARAP}}: this profile carries ARAP's context under mission
+names. `context.action_approval` ({{context-approval}}) is ARAP's
+`context.approval`; `access_request.denial_binding` is ARAP's
+`evaluation_id` and `access_request.binding_token` is ARAP's `binding_token`;
+the `action_approval_required` reason ({{runtime-denial-classification}})
+is ARAP's `context.reason` value `approval_required`. An ARAP implementer
+maps these names to drive an unmodified ARAP request and approval exchange.
 
 ## Failure-condition coverage {#failure-condition-coverage}
 
