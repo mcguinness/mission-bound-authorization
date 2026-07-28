@@ -33,6 +33,11 @@ export function audienceScopedAuthority(
 export interface IssueGrantInput {
   missionId: string;
   targetAs: string;
+  /**
+   * @spec cross-domain / ID-JAG §3.1: the client at the requesting AS that acts
+   * for the subject. Emitted as the grant's `client_id` claim.
+   */
+  clientId: string;
   /** Presenting client's DPoP key thumbprint (sender-constraint, cnf.jkt). */
   cnfJkt: string;
   resourceToAs: (resource: string) => string;
@@ -69,6 +74,8 @@ export async function issueCrossDomainGrant(
     authorization_details: scoped,
     cnf: { jkt: input.cnfJkt },
     sub: record.subject.sub,
+    // @spec ID-JAG §3.1: the acting client at the requesting AS.
+    client_id: input.clientId,
   })
     .setProtectedHeader({ alg: "ES256", kid, typ: ID_JAG_TYP })
     .setIssuer(record.issuer)

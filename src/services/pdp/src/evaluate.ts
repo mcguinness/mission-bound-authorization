@@ -18,6 +18,8 @@ import { type AuthorityEntry, deriveContextualTuples, type MissionView, policyVi
 export interface ActionApproval {
   id: string;
   approved_at: string;
+  /** ARAP: the approval's validity bound; the PDP refuses once now > this. */
+  approved_until?: string;
   parameter_digest: string;
   state?: string;
 }
@@ -185,13 +187,17 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     const valid =
       appr !== undefined &&
       appr.parameter_digest === req.context.parameter_digest &&
-      now().getTime() - Date.parse(appr.approved_at) <= maxAge;
+      now().getTime() - Date.parse(appr.approved_at) <= maxAge &&
+      // ARAP: honor the approval's validity bound when present.
+      (appr.approved_until === undefined || now().getTime() <= Date.parse(appr.approved_until));
     if (!valid) {
       const ctx: Record<string, unknown> = base({
         denial_reason: "action_approval_required",
         ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
       });
       if (opts.requestable && req.context.parameter_digest) {
+        // ARAP: the access request is valid only while the denial binding is.
+        const requestableExp = Math.floor(now().getTime() / 1000) + 300;
         const binding = await new SignJWT({
           decision_id: decisionId,
           mission_id: view.id,
@@ -200,11 +206,13 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
         })
           .setProtectedHeader({ alg: "ES256", kid: opts.requestable.kid, typ: "pdp-denial-binding+jwt" })
           .setIssuedAt()
+          .setExpirationTime(requestableExp)
           .sign(opts.requestable.sign);
         ctx.access_request = {
           endpoint: opts.requestable.endpoint,
           denial_binding: decisionId,
           binding_token: binding,
+          expires_at: new Date(requestableExp * 1000).toISOString(),
         };
       }
       return { decision: false, context: ctx };

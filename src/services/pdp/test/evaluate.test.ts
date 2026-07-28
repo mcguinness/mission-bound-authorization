@@ -4,6 +4,7 @@
  * deny within bound. Skipped automatically when OpenFGA is unreachable.
  */
 
+import { generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { Fga } from "../src/fga.js";
 import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
@@ -174,5 +175,84 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     );
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("out_of_authority");
+  });
+
+  // --- ARAP: requestable-denial expires_at + approved_until honoring ---
+
+  it("requestable action_approval_required denial carries access_request.expires_at (ARAP)", async () => {
+    const pdpKey = (await generateKeyPair("ES256", { extractable: true })).privateKey;
+    const dec = await evaluate(
+      req({
+        action: { name: "payments:payment.execute" },
+        context: {
+          audience: RESOURCE,
+          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          amount: { amount: "125.00", currency: "USD" },
+          action_class: "irreversible_action",
+          parameter_digest: "sha-256:pd",
+        },
+      }),
+      {
+        ...opts(view()),
+        requiresActionApproval: () => true,
+        maxApprovalAgeSeconds: 300,
+        requestable: { sign: pdpKey, kid: "pdp-denial", endpoint: "https://ars.test/access-requests" },
+      },
+    );
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("action_approval_required");
+    const ar = dec.context.access_request as { binding_token: string; expires_at: string };
+    expect(ar.binding_token).toBeDefined();
+    // RFC 3339 timestamp, bounded to the denial binding's validity (now + 300s).
+    expect(ar.expires_at).toBeDefined();
+    expect(Number.isNaN(Date.parse(ar.expires_at))).toBe(false);
+    expect(Date.parse(ar.expires_at)).toBe(NOW.getTime() + 300_000);
+  });
+
+  it("an approval past approved_until -> deny action_approval_required (ARAP)", async () => {
+    const dec = await evaluate(
+      req({
+        action: { name: "payments:payment.execute" },
+        context: {
+          audience: RESOURCE,
+          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          amount: { amount: "125.00", currency: "USD" },
+          action_class: "irreversible_action",
+          parameter_digest: "sha-256:pd",
+          action_approval: {
+            id: "apr_expired",
+            approved_at: NOW.toISOString(), // fresh (within max age)
+            approved_until: new Date(NOW.getTime() - 1000).toISOString(), // already past
+            parameter_digest: "sha-256:pd",
+          },
+        },
+      }),
+      { ...opts(view()), requiresActionApproval: () => true, maxApprovalAgeSeconds: 300 },
+    );
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("action_approval_required");
+  });
+
+  it("an approval within approved_until -> permit (ARAP positive control)", async () => {
+    const dec = await evaluate(
+      req({
+        action: { name: "payments:payment.execute" },
+        context: {
+          audience: RESOURCE,
+          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          amount: { amount: "125.00", currency: "USD" },
+          action_class: "irreversible_action",
+          parameter_digest: "sha-256:pd",
+          action_approval: {
+            id: "apr_ok",
+            approved_at: NOW.toISOString(),
+            approved_until: new Date(NOW.getTime() + 60_000).toISOString(),
+            parameter_digest: "sha-256:pd",
+          },
+        },
+      }),
+      { ...opts(view()), requiresActionApproval: () => true, maxApprovalAgeSeconds: 300 },
+    );
+    expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
   });
 });

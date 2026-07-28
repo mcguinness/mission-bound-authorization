@@ -56,6 +56,10 @@ export class AccessRequestService {
       pdpJwks: { keys: JWK[] };
       approvalKey: CryptoKey;
       approvalKid: string;
+      /** ARAP: issuer of the signed approval state (this ARS's identity). */
+      issuer: string;
+      /** ARAP: intended recipient of the approval state (the AS/PDP that re-evaluates). */
+      approvalAudience: string;
       approvalTtlSeconds?: number;
       now?: () => Date;
     },
@@ -141,8 +145,11 @@ export class AccessRequestService {
       parameter_digest: task.parameter_digest as string,
     };
     // Signed approval state (ARAP approval.state), carried by value if needed.
+    // ARAP: the state JWS MUST carry iss (this ARS) and aud (the re-evaluator).
     const signed = await new SignJWT({ ...approval, approver })
       .setProtectedHeader({ alg: "ES256", kid: this.opts.approvalKid, typ: "arap-approval+jwt" })
+      .setIssuer(this.opts.issuer)
+      .setAudience(this.opts.approvalAudience)
       .setIssuedAt()
       .sign(this.opts.approvalKey);
     this.db

@@ -9,7 +9,7 @@
  * In-process, live OpenFGA, auto-skip when down.
  */
 
-import { generateKeyPair, exportJWK } from "jose";
+import { createLocalJWKSet, exportJWK, generateKeyPair, jwtVerify } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
@@ -63,9 +63,14 @@ const TOKEN: TokenFacts = {
 let fga: Fga;
 let modelId: string;
 
+// ARAP: the ARS's identity as approval-state issuer, audienced to the PDP.
+const ARS_ISS = "https://ars.test";
+const APPROVAL_AUD = "https://pdp.test";
+
 d("M6 ARAP reevaluate (scenario 5)", () => {
   let pep: Pep;
   let ars: AccessRequestService;
+  let arsApprovalPubJwk: Record<string, unknown>;
 
   beforeAll(async () => {
     const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
@@ -93,10 +98,14 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
       maxApprovalAgeSeconds: 300,
       requestable: { sign: pdpKeys.privateKey, kid: "pdp-evidence", endpoint: "https://ars.test/access-requests" },
     });
+    const arsApprovalKeys = await generateKeyPair("ES256", { extractable: true });
+    arsApprovalPubJwk = { ...(await exportJWK(arsApprovalKeys.publicKey)), kid: "ars-approval", alg: "ES256" };
     ars = new AccessRequestService({
       pdpJwks: { keys: [pdpPubJwk as never] },
-      approvalKey: (await generateKeyPair("ES256", { extractable: true })).privateKey,
+      approvalKey: arsApprovalKeys.privateKey,
       approvalKid: "ars-approval",
+      issuer: ARS_ISS,
+      approvalAudience: APPROVAL_AUD,
     });
   });
 
@@ -120,10 +129,22 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
     const approval = await ars.adjudicate(taskId, "approve", "bob");
     expect(approval?.parameter_digest).toBe(digest);
 
-    // 4. PEP re-evaluates with context.action_approval -> permit.
+    // ARAP: the signed approval state carries iss (the ARS) and aud (the PDP).
+    const stateJws = ars.getTask(taskId)?.approval?.state as string;
+    expect(stateJws).toBeDefined();
+    const { payload: stateClaims } = await jwtVerify(
+      stateJws,
+      createLocalJWKSet({ keys: [arsApprovalPubJwk] } as never),
+      { issuer: ARS_ISS, audience: APPROVAL_AUD, typ: "arap-approval+jwt" },
+    );
+    expect(stateClaims.iss).toBe(ARS_ISS);
+    expect(stateClaims.aud).toBe(APPROVAL_AUD);
+
+    // 4. PEP re-evaluates with context.action_approval (approved_until carried) -> permit.
     const permitted = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN, {
       id: approval?.id as string,
       approved_at: approval?.approved_at as string,
+      approved_until: approval?.approved_until as string,
       parameter_digest: approval?.parameter_digest as string,
     });
     expect(permitted.permitted, JSON.stringify(permitted)).toBe(true);

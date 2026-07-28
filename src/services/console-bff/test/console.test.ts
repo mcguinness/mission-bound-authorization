@@ -52,6 +52,8 @@ beforeAll(async () => {
     pdpJwks: { keys: [{ ...(await exportJWK(pdpDenialKeys.publicKey)), kid: "pdp", alg: "ES256" } as never] },
     approvalKey: arsKeys.privateKey,
     approvalKid: "ars",
+    issuer: "https://ars.test",
+    approvalAudience: "https://pdp.test",
   });
 
   const svc = await generateKeyPair("ES256", { extractable: true });
@@ -103,6 +105,8 @@ describe("M11 approver console: queue + adjudication", () => {
       pdpJwks: { keys: [{ ...(await exportJWK(pdpDenialKeys.publicKey)), kid: "pdp", alg: "ES256" } as never] },
       approvalKey: (await generateKeyPair("ES256", { extractable: true })).privateKey,
       approvalKid: "ars",
+      issuer: "https://ars.test",
+      approvalAudience: "https://pdp.test",
     });
     const localBff = new ConsoleBff({
       kernel, ars: localArs, transparency,
