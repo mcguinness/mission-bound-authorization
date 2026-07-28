@@ -921,6 +921,13 @@ resolution and date; never delete them.
   `extraTokenClaims` be the single authoritative gate — a kernel-contract change
   asserted against by `arop.test.ts`, out of scope for PR #353 (which wired DTR
   onto `/token`). Surfaced 2026-07-28.
+  Resolved (2026-07-28, PR #354): `redeem()` now does a read-only active check
+  (`kernel.get` + `applyExpiry`, the pattern `open()` uses) and refuses a
+  non-active Mission with `access_denied`; `extraTokenClaims` is the single
+  authoritative gate + increment at mint. `dtr-endpoint.test.ts` case 10 asserts
+  exactly one increment per redemption (verified failing `expected 2 to be 1`
+  against the pre-fix code); no `arop.test.ts` assertion depended on the removed
+  gate.
 
 ### Resolved
 
