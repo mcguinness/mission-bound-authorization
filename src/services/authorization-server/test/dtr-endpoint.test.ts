@@ -314,4 +314,18 @@ describe("AS deferred grant on /token (AROP Deferred Token Response, DTR -00, D4
     expect(res.status).toBe(400);
     expect(body.error).toBe("expired_token");
   });
+
+  it("10. increments derivation_count exactly ONCE per redemption (O-36: no double-gate)", async () => {
+    const count = () => (as.kernel.get(missionId) as { derivation_count: number }).derivation_count;
+    const before = count();
+    const initBody = (await (await initiate(subset(["payments:invoice.read"]))).json()) as { deferral_code: string };
+    // open() is read-only; it must not have moved the counter.
+    expect(count()).toBe(before);
+    as.deferrals.approve(initBody.deferral_code, new Date((Math.floor(Date.now() / 1000) + 120) * 1000).toISOString());
+    const ok = await poll(initBody.deferral_code);
+    expect(ok.status, JSON.stringify(await ok.clone().json())).toBe(200);
+    // The authoritative gate runs once (extraTokenClaims at mint); redeem() no
+    // longer gates. Before O-36 this delta was 2.
+    expect(count() - before).toBe(1);
+  });
 });

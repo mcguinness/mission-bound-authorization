@@ -16,7 +16,7 @@ import { randomBytes } from "node:crypto";
 import { openStore, type Database } from "@mission/store";
 import { isSubsetSet } from "./derive.js";
 import type { MissionKernel } from "./kernel.js";
-import type { AuthorityEntry, MissionClaim, MissionRecord } from "./types.js";
+import type { AuthorityEntry, MissionClaim } from "./types.js";
 
 export const DEFERRED_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:deferred";
 
@@ -181,9 +181,15 @@ export class DeferralStore {
     if (row.redeemed === 1) return { error: "invalid_grant" }; // already redeemed
 
     const parsed = JSON.parse(row.requested_json as string) as { m: string; r: AuthorityEntry[] };
-    // Derivation gate: refuses if the Mission is no longer active (revocation
-    // reaches AROP issuance too). Throws GateError.
-    const mission: MissionRecord = this.kernel.gateDerivation(row.mission_id as string);
+    // Read-only active check: revocation between approval and redemption reaches
+    // AROP issuance, so a non-active Mission is refused here. The AUTHORITATIVE
+    // derivation gate (active/cap check + derivation_count increment) runs once
+    // at mint time via extraTokenClaims (keyed on grant_id). redeem() must NOT
+    // gate here as well: gating in both places double-counts derivations (O-36).
+    const mission = this.kernel.get(row.mission_id as string);
+    if (!mission || this.kernel.applyExpiry(mission).state !== "active") {
+      return { error: "access_denied" };
+    }
     // Re-verify subset at redemption (the Mission may have changed).
     if (!isSubsetSet(parsed.r, mission.authority_set)) {
       this.db.prepare("UPDATE deferrals SET state = 'access_denied' WHERE deferral_code = ?").run(deferralCode);
