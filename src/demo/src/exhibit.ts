@@ -9,13 +9,13 @@
  * request and response below is the real value on the wire. `pnpm exhibit`.
  */
 
-import { createExpansion, successorWidensOnly, validateMissionIntent } from "@mission/authorization-server";
+import { createExpansion, DEFERRED_GRANT_TYPE, successorWidensOnly, validateMissionIntent } from "@mission/authorization-server";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import { SAAS_RESOURCE } from "@mission/mcp-saas";
 import type { TokenFacts } from "@mission/mcp-payments";
 import type { Decision, EvaluationRequest } from "@mission/pdp";
 import { composeStack } from "./stack.js";
-import { dpopProofFor, issueMissionToken } from "./oauth-client.js";
+import { dpopProofFor, issueMissionToken, tokenGrantRequest } from "./oauth-client.js";
 
 const C = {
   dim: "\x1b[2m",
@@ -490,8 +490,86 @@ async function main() {
   verdict(granted.ok, `send_remittance_email(inv-1) → ${granted.ok ? JSON.stringify(granted.result) : (granted.denial_reason ?? granted.refusal_reason)}`);
   note("The approval was carried by the AS-issued txn-token, never as a tool input. The mission was never widened; the gate sat inside the mission's authority.");
 
-  // ---- 8. Cross-domain: the ID-JAG leg into the SaaS estate ---------------
-  step(8, "Cross-domain: an ID-JAG grant crosses into the LedgerCloud (SaaS) estate");
+  // ---- 8. AROP over DTR: deferred token response on the real /token endpoint --
+  step(8, "AROP over DTR: a deferred token response, approved just-in-time (real /token)");
+  note("Sibling AROP binding to step 7: instead of an RS-signed challenge, the client asks the /token endpoint itself for a mission-subset credential; when it cannot be issued yet, the AS returns a deferral_code the client polls (DTR draft-00).");
+
+  // 8.1 Initiation: the agent POSTs the deferred grant with the mission subset it
+  // wants; the AS opens a deferral and returns authorization_pending + a code.
+  const deferredSubset = record.authority_set.filter((e) => e.resource === CANONICAL_RESOURCE);
+  hop("Agent", "AS", "POST /token (deferred grant — initiation)", "HTTP");
+  httpReq("POST", `${asUrl}/token`, {
+    headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof: htu=/token, htm=POST>" },
+    body: {
+      grant_type: DEFERRED_GRANT_TYPE,
+      deferred_authorization: JSON.stringify({ mission_id: missionId, requested: deferredSubset }),
+      client_assertion: "<private_key_jwt>",
+    },
+  });
+  const dtrInit = await tokenGrantRequest(asUrl, as.agentClientJwk, issued.dpopKeys, {
+    grant_type: DEFERRED_GRANT_TYPE,
+    deferred_authorization: JSON.stringify({ mission_id: missionId, requested: deferredSubset }),
+  });
+  httpRes(dtrInit.status, dtrInit.body);
+  const deferralCode = dtrInit.body.deferral_code as string;
+  if (!deferralCode) throw new Error(`expected a deferral_code, got ${JSON.stringify(dtrInit.body)}`);
+  note(
+    `the deferral_code is the client's continuation handle; it polls the SAME grant with it ` +
+      `(expires_in=${dtrInit.body.expires_in}s, interval=${dtrInit.body.interval}s, RFC 8628-shaped).`,
+  );
+
+  // 8.2 Poll before approval -> still authorization_pending (no token yet).
+  hop("Agent", "AS", "POST /token (deferred grant — poll)", "HTTP");
+  const dtrPending = await tokenGrantRequest(asUrl, as.agentClientJwk, issued.dpopKeys, {
+    grant_type: DEFERRED_GRANT_TYPE,
+    deferral_code: deferralCode,
+  });
+  httpRes(dtrPending.status, dtrPending.body);
+
+  // 8.3 Approver (Bob) approves the deferral (headless) with an expiry that bounds
+  // the credential; distinct from the acting subject alice.
+  hop("Approver (Bob)", "AS", "approve deferral (headless adjudication)", "in-process");
+  const dtrApprovedUntil = new Date(Date.now() + 120_000).toISOString();
+  as.deferrals.approve(deferralCode, dtrApprovedUntil);
+  note(`approved_until=${dtrApprovedUntil} — the issued credential's exp never outlives this.`);
+
+  // 8.4 Redeem: poll again -> 200 with a REAL resource-bound mission token, the
+  // ACTIVE Mission unchanged (D42), DPoP-bound to the same key.
+  hop("Agent", "AS", "POST /token (deferred grant — redeem)", "HTTP");
+  const dtrToken = await tokenGrantRequest(asUrl, as.agentClientJwk, issued.dpopKeys, {
+    grant_type: DEFERRED_GRANT_TYPE,
+    deferral_code: deferralCode,
+  });
+  const dtrAccessToken = dtrToken.body.access_token as string | undefined;
+  httpRes(dtrToken.status, {
+    ...dtrToken.body,
+    ...(dtrAccessToken ? { access_token: truncTok(dtrAccessToken) } : {}),
+  });
+  if (!dtrAccessToken) {
+    throw new Error(`expected a deferred mission token, got ${dtrToken.status} ${JSON.stringify(dtrToken.body)}`);
+  }
+  const dtrClaims = decodeClaims(dtrAccessToken);
+  block("deferred mission token — decoded claims", {
+    iss: dtrClaims.iss,
+    sub: dtrClaims.sub,
+    aud: dtrClaims.aud,
+    mission: dtrClaims.mission,
+    authorization_details: dtrClaims.authorization_details,
+    cnf: dtrClaims.cnf,
+    exp: dtrClaims.exp,
+  });
+  const dtrOk =
+    (dtrClaims.mission as { id: string }).id === missionId &&
+    (dtrClaims.cnf as { jkt: string }).jkt === issued.dpopJkt &&
+    dtrClaims.aud === CANONICAL_RESOURCE;
+  verdict(dtrOk, `deferred grant → REAL mission token (aud=${dtrClaims.aud as string}, single-use handle consumed)`);
+  note(
+    `mission.id == active mission ${missionId} (unchanged, D42); cnf.jkt ${(dtrClaims.cnf as { jkt: string }).jkt === issued.dpopJkt ? "==" : "!="} base token jkt; ` +
+      `NOT opaque (3-segment JWT, aud-bound); exp <= approved_until.`,
+  );
+
+  // ---- 9. Cross-domain: the ID-JAG leg into the SaaS estate ---------------
+  step(9, "Cross-domain: an ID-JAG grant crosses into the LedgerCloud (SaaS) estate");
   hop("AS", "Agent", "ID-JAG grant issued", "in-process");
   const grant = await as.issueCrossDomainGrant(missionId, issued.dpopJkt);
   block("ID-JAG grant — protected header", decodeHeader(grant.grant));
@@ -526,8 +604,8 @@ async function main() {
   }
   if (!replayFailed) throw new Error("expected the ID-JAG replay to fail invalid_grant");
 
-  // ---- 9. Denials ---------------------------------------------------------
-  step(9, "Denials: valid token, but out of bounds / authority");
+  // ---- 10. Denials --------------------------------------------------------
+  step(10, "Denials: valid token, but out of bounds / authority");
   hop("Agent", "Payments RS", "tools/call execute_wire_transfer (inv-2, over-cap)", "in-process MCP · O-33");
   const over = await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-2" }, facts);
   hop("Payments RS (PEP)", "PDP", "evaluate", "in-process · D28");
@@ -544,7 +622,7 @@ async function main() {
   // ---- 10. Lifecycle ------------------------------------------------------
   // MUST run AFTER the cross-domain leg and all tool calls: these transitions
   // drive the mission non-active / superseded and deny everything downstream.
-  step(10, "Lifecycle: transitions that gate everything downstream");
+  step(11, "Lifecycle: transitions that gate everything downstream");
   const lifecycle = async (operation: string, id: string): Promise<{ status: number; body: unknown }> => {
     const res = await fetch(`${asUrl}/missions/${id}/lifecycle`, {
       method: "POST",
@@ -649,7 +727,7 @@ async function main() {
   httpRes(revokeRes.status, revokeRes.body);
 
   // ---- 11. Evidence -------------------------------------------------------
-  step(11, "Evidence: the tamper-evident feed, verified");
+  step(12, "Evidence: the tamper-evident feed, verified");
   hop("Operator (Olivia)", "Transparency", "read verified timeline", "in-process");
   for (const ev of stack.evidence.forMission(missionId)) {
     const t = ev.kind === "decision" ? "decision-evidence" : ev.kind === "execution" ? "execution-evidence" : "refusal-record";

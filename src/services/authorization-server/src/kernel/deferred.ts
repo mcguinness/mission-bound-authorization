@@ -29,14 +29,33 @@ CREATE TABLE deferrals (
   client_id TEXT NOT NULL,
   approved_until TEXT,
   redeemed INTEGER NOT NULL DEFAULT 0,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  last_polled_at INTEGER
 ) STRICT;
 `;
 
-export type DeferralState = "authorization_pending" | "approved" | "access_denied";
+/** Deferral lifetime (seconds): the advertised expires_in; a poll after this is expired_token. */
+const DEFERRAL_EXPIRES_IN = 600;
+/** Advertised poll cadence (seconds); RFC 8628: a poll faster than this is slow_down. */
+const DEFERRAL_INTERVAL = 5;
+
+export type DeferralState =
+  | "authorization_pending"
+  | "approved"
+  | "access_denied"
+  | "expired_token"
+  | "slow_down";
 
 export interface DeferralPending {
   error: "authorization_pending";
+  deferral_code: string;
+  expires_in: number;
+  interval: number;
+}
+
+/** RFC 8628 slow_down: the client polled faster than `interval`; back off by +5s. */
+export interface DeferralSlowDown {
+  error: "slow_down";
   deferral_code: string;
   expires_in: number;
   interval: number;
@@ -101,7 +120,7 @@ export class DeferralStore {
         )
         .run(code, input.missionId, key, input.clientId, this.now().getTime());
     }
-    return { error: "authorization_pending", deferral_code: code, expires_in: 600, interval: 5 };
+    return { error: "authorization_pending", deferral_code: code, expires_in: DEFERRAL_EXPIRES_IN, interval: DEFERRAL_INTERVAL };
   }
 
   /** Approver adjudication: approve records the approval expiry that bounds the credential. */
@@ -116,22 +135,47 @@ export class DeferralStore {
   }
 
   /**
-   * Poll/redeem the deferred grant. While pending -> authorization_pending; an
-   * approver denial -> access_denied. On approval, gate a derivation on the
-   * active Mission and issue a token whose authority is the requested subset,
-   * carrying the active Mission's claim unchanged (D42). The handle is
-   * single-use: an unknown or already-redeemed deferral_code is a malformed
-   * grant, so it returns invalid_grant (draft §5.6), distinct from a denial.
+   * Poll/redeem the deferred grant. A poll after the advertised lifetime ->
+   * expired_token; a poll faster than the advertised interval -> slow_down
+   * (RFC 8628). While pending -> authorization_pending; an approver denial ->
+   * access_denied. On approval, gate a derivation on the active Mission and
+   * issue a token whose authority is the requested subset, carrying the active
+   * Mission's claim unchanged (D42). The handle is single-use: an unknown or
+   * already-redeemed deferral_code is a malformed grant, so it returns
+   * invalid_grant (draft §5.6), distinct from a denial.
    */
   redeem(
     deferralCode: string,
-  ): DeferralPending | { error: "access_denied" } | { error: "invalid_grant" } | DeferredToken {
+  ):
+    | DeferralPending
+    | DeferralSlowDown
+    | { error: "expired_token" }
+    | { error: "access_denied" }
+    | { error: "invalid_grant" }
+    | DeferredToken {
     const row = this.db.prepare("SELECT * FROM deferrals WHERE deferral_code = ?").get(deferralCode) as
       | Record<string, unknown>
       | undefined;
     if (!row) return { error: "invalid_grant" }; // unknown deferral_code
+    const now = this.now().getTime();
+    // The deferral_code outlived its advertised expires_in: expired_token.
+    if (now > (row.created_at as number) + DEFERRAL_EXPIRES_IN * 1000) {
+      return { error: "expired_token" };
+    }
     if (row.state === "authorization_pending") {
-      return { error: "authorization_pending", deferral_code: deferralCode, expires_in: 600, interval: 5 };
+      // RFC 8628: a poll faster than the advertised interval -> slow_down; the
+      // client MUST back off by +5s. Otherwise record this poll's timestamp.
+      const lastPolled = row.last_polled_at as number | null;
+      if (lastPolled != null && now - lastPolled < DEFERRAL_INTERVAL * 1000) {
+        return {
+          error: "slow_down",
+          deferral_code: deferralCode,
+          expires_in: DEFERRAL_EXPIRES_IN,
+          interval: DEFERRAL_INTERVAL + 5,
+        };
+      }
+      this.db.prepare("UPDATE deferrals SET last_polled_at = ? WHERE deferral_code = ?").run(now, deferralCode);
+      return { error: "authorization_pending", deferral_code: deferralCode, expires_in: DEFERRAL_EXPIRES_IN, interval: DEFERRAL_INTERVAL };
     }
     if (row.state === "access_denied") return { error: "access_denied" };
     if (row.redeemed === 1) return { error: "invalid_grant" }; // already redeemed

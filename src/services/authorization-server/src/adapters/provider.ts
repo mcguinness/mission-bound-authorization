@@ -15,13 +15,19 @@ import {
   type CryptoKey,
   type JWK,
 } from "jose";
-import Provider, { errors, type Configuration } from "oidc-provider";
+import Provider, { errors, type Configuration, type KoaContextWithOIDC, type ResourceServer } from "oidc-provider";
 
 // @types/oidc-provider (9.5) predates InvalidAuthorizationDetails, present at
 // runtime in 9.10 (spec traceability: SPEC_VERSIONS O-2 note). Typed alias.
 const InvalidAuthorizationDetails = (errors as unknown as {
   InvalidAuthorizationDetails: new (message?: string) => Error;
 }).InvalidAuthorizationDetails;
+import {
+  DEFERRED_GRANT_TYPE,
+  DeferralError,
+  type DeferralStore,
+  type DeferredToken,
+} from "../kernel/deferred.js";
 import { isSubsetSet } from "../kernel/derive.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError, LifecycleConflictError, type MissionKernel } from "../kernel/kernel.js";
@@ -55,6 +61,12 @@ export interface AdapterOptions {
    * approval). Injected so the AS package takes no dependency on the ARS.
    */
   ars?: TxnArs;
+  /**
+   * AROP Deferred Token Response store. When set, the deferred grant type is
+   * wired onto the real /token endpoint (initiation + poll/redeem). Injected so
+   * tests/exhibit can drive open/approve/deny headlessly.
+   */
+  deferrals?: DeferralStore;
 }
 
 /**
@@ -170,12 +182,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
       resourceIndicators: {
         enabled: true,
         defaultResource: () => opts.issuer,
-        getResourceServerInfo: (_ctx, resourceIndicator) => ({
-          scope: "payments",
-          audience: resourceIndicator,
-          accessTokenFormat: "jwt",
-          accessTokenTTL: opts.accessTokenTTL ?? 300,
-        }),
+        getResourceServerInfo: (_ctx, resourceIndicator) =>
+          resourceServerInfoFor(resourceIndicator, opts.accessTokenTTL ?? 300),
         useGrantedResource: () => true,
       },
     },
@@ -218,8 +226,209 @@ export function buildProvider(opts: AdapterOptions): Provider {
   };
 
   const provider = new Provider(opts.issuer, configuration);
+
+  // @spec DTR (draft-gerber-oauth-deferred-token-response-00): the AROP deferred
+  // grant on the REAL /token endpoint. Registered AFTER construction so the URN
+  // is in configuration.grantTypes before any client is validated (clients are
+  // validated lazily on first Client.find, i.e. at request time). `deferral_code`
+  // (poll) and `deferred_authorization` (initiation) are declared so the token
+  // endpoint does not strip them from ctx.oidc.params.
+  if (opts.deferrals) {
+    const deferrals = opts.deferrals;
+    provider.registerGrantType(
+      DEFERRED_GRANT_TYPE,
+      (ctx) => handleDeferredGrant(opts, deferrals, provider, ctx),
+      new Set(["deferral_code", "deferred_authorization"]),
+    );
+  }
+
   provider.use(makeRoutes(provider, opts));
   return provider;
+}
+
+/**
+ * The resource-server info the AS attaches to every mission-bound JWT access
+ * token: audience = the resource, JWT format, `payments` scope, TTL. Shared by
+ * the resourceIndicators config and the deferred-grant mint so both project an
+ * identical, resource-bound (not opaque) token.
+ */
+function resourceServerInfoFor(resource: string, accessTokenTTL: number) {
+  return {
+    scope: "payments",
+    audience: resource,
+    accessTokenFormat: "jwt" as const,
+    accessTokenTTL,
+  };
+}
+
+/**
+ * Construct the runtime ResourceServer (oidc-provider 9.10 exposes it on the
+ * provider instance; @types 9.5 declares ResourceServer as an interface only, so
+ * this narrow cast bridges the gap — matrix SPEC_VERSIONS Notes).
+ */
+function newResourceServer(
+  provider: Provider,
+  resource: string,
+  info: ReturnType<typeof resourceServerInfoFor>,
+): ResourceServer {
+  const Ctor = (provider as unknown as {
+    ResourceServer: new (identifier: string, data: unknown) => ResourceServer;
+  }).ResourceServer;
+  return new Ctor(resource, info);
+}
+
+/**
+ * The AROP Deferred Token Response grant handler, on the real /token endpoint.
+ * Runs AFTER client authentication, so `ctx.oidc.client` is set. Two branches:
+ *
+ *  - Initiation: `deferred_authorization` (JSON `{mission_id, requested}`) and no
+ *    `deferral_code` -> open a deferral and return the DTR initiation body
+ *    (HTTP 400 authorization_pending + deferral_code/expires_in/interval,
+ *    Cache-Control: no-store). This is set directly on ctx because the OAuth
+ *    error renderer (err_out) drops any member other than error/error_description.
+ *  - Poll/redeem: `deferral_code` present -> `deferrals.redeem(code)`. Error
+ *    states map to the RFC 8628-shaped OAuth errors (all HTTP 400); a
+ *    DeferredToken mints a REAL resource-bound mission JWT (see mintDeferredToken).
+ */
+async function handleDeferredGrant(
+  opts: AdapterOptions,
+  deferrals: DeferralStore,
+  provider: Provider,
+  ctx: KoaContextWithOIDC,
+): Promise<void> {
+  const params = ctx.oidc.params as Record<string, unknown>;
+
+  // --- Poll/redeem: the client presents the deferral_code. ---
+  if (typeof params.deferral_code === "string" && params.deferral_code) {
+    const r = deferrals.redeem(params.deferral_code);
+    if ("error" in r) {
+      switch (r.error) {
+        case "authorization_pending":
+          throw new errors.AuthorizationPending();
+        case "slow_down":
+          throw new errors.SlowDown();
+        case "expired_token":
+          throw new errors.ExpiredToken();
+        case "access_denied":
+          throw new errors.AccessDenied();
+        default:
+          throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
+      }
+    }
+    await mintDeferredToken(opts, provider, ctx, r);
+    return;
+  }
+
+  // --- Initiation: the client submits the mission subset it wants deferred. ---
+  const raw = params.deferred_authorization;
+  if (typeof raw === "string" && raw) {
+    let intent: { mission_id?: unknown; requested?: unknown };
+    try {
+      intent = JSON.parse(raw) as { mission_id?: unknown; requested?: unknown };
+    } catch {
+      throw new errors.InvalidRequest("deferred_authorization must be a JSON object");
+    }
+    if (typeof intent.mission_id !== "string" || !Array.isArray(intent.requested)) {
+      throw new errors.InvalidRequest("deferred_authorization requires mission_id and requested[]");
+    }
+    let pending;
+    try {
+      pending = deferrals.open({
+        missionId: intent.mission_id,
+        requested: intent.requested as AuthorityEntry[],
+        clientId: ctx.oidc.client?.clientId as string,
+      });
+    } catch (e) {
+      // Requested authority exceeds the active Mission (or it is not active):
+      // AROP never widens -> not a deferrable request.
+      if (e instanceof DeferralError) throw new errors.InvalidRequest(e.message);
+      throw e;
+    }
+    // DTR initiation body (HTTP 400). Set on ctx directly: the OAuth error
+    // renderer would strip deferral_code/expires_in/interval. Status BEFORE body
+    // (Koa forces 200 if body is set first).
+    ctx.status = 400;
+    ctx.body = {
+      error: pending.error,
+      deferral_code: pending.deferral_code,
+      expires_in: pending.expires_in,
+      interval: pending.interval,
+    };
+    ctx.set("cache-control", "no-store");
+    return;
+  }
+
+  throw new errors.InvalidRequest("deferral_code (poll) or deferred_authorization (initiation) required");
+}
+
+/**
+ * Mint the REAL mission token on redemption. The token MUST be resource-bound
+ * (JWT, aud = the resource), not opaque, or the RS rejects it: that requires a
+ * ResourceServer. Setting grantId lets the existing extraTokenClaims hook attach
+ * the `mission` claim (D42: the ACTIVE Mission, unchanged) and re-gate on active
+ * state — the claim is never hand-set here. The credential never outlives the
+ * recorded approval expiry (approved_until bounds the TTL).
+ */
+async function mintDeferredToken(
+  opts: AdapterOptions,
+  provider: Provider,
+  ctx: KoaContextWithOIDC,
+  deferred: DeferredToken,
+): Promise<void> {
+  const record = opts.kernel.get(deferred.mission.id);
+  if (!record || !record.grant_id) {
+    throw new errors.InvalidGrant("mission grant not found for deferral");
+  }
+
+  // DPoP-bind the minted token: derive the jkt from the request's DPoP proof
+  // (the token endpoint does not pre-validate DPoP for custom grants), exactly
+  // like the /transaction handler. Nonce handling is not required here.
+  const proofJws = ctx.get("DPoP");
+  if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
+  let jkt: string;
+  try {
+    const header = decodeProtectedHeader(proofJws);
+    jkt = await calculateJwkThumbprint(header.jwk as JWK);
+    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
+    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
+      throw new Error("DPoP htu/htm mismatch");
+    }
+  } catch {
+    throw new errors.InvalidRequest("invalid DPoP proof");
+  }
+
+  const resource =
+    deferred.authorization_details[0]?.resource ?? record.authority_set[0]?.resource ?? opts.issuer;
+  const info = resourceServerInfoFor(resource, opts.accessTokenTTL ?? 300);
+  // TTL MUST NOT outlive approved_until (D42: the credential is bounded by the
+  // recorded approval expiry).
+  info.accessTokenTTL = Math.min(
+    info.accessTokenTTL,
+    Math.max(1, Math.floor((Date.parse(deferred.approved_until) - Date.now()) / 1000)),
+  );
+
+  const at = new provider.AccessToken({
+    accountId: record.subject.sub,
+    client: ctx.oidc.client as NonNullable<typeof ctx.oidc.client>,
+    grantId: record.grant_id,
+    gty: DEFERRED_GRANT_TYPE,
+    rar: deferred.authorization_details,
+    scope: "payments",
+  });
+  at.resourceServer = newResourceServer(provider, resource, info);
+  at.jkt = jkt; // sender-constrain to the DPoP key (tokenType -> DPoP)
+  ctx.oidc.entity("AccessToken", at);
+  const jwt = await at.save();
+
+  ctx.status = 200;
+  ctx.body = {
+    access_token: jwt,
+    token_type: "DPoP",
+    expires_in: at.expiration,
+    scope: "payments",
+    authorization_details: deferred.authorization_details,
+  };
+  ctx.set("cache-control", "no-store");
 }
 
 function makeRoutes(provider: Provider, opts: AdapterOptions) {

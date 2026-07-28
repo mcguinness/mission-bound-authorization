@@ -48,7 +48,7 @@ this matrix and the `@spec` tags to the affected code and tests.
 | AuthZEN ARAP (external, OpenID) | openid/authzen PR #508 merged, blob `670f5831f6e786c70944887dec6ab14de26986f8` | `services/access-request` | access request submission, task lifecycle, adjudication, action-bound approval object (reevaluate mode; `approved_until` honored end-to-end, requestable `access_request.expires_at`, approval-state `iss`+`aud`) | `services/access-request/test/reevaluate.test.ts` |
 | `draft-mcguinness-oauth-mission-expansion` | `dc7a897` | `services/authorization-server/src/kernel/expansion.ts` | successor Mission, `predecessor` member, supersede-on-redemption, approved_until bounding | `services/authorization-server/test/arop.test.ts` |
 | AuthZEN AROP (openid/authzen#531) | PR #531 @ 2026-07-20 | `services/authorization-server/src/kernel` (deferred, txn-challenge) | DTR deferred grant + Transaction Challenge, token-issuance completion; subset-of-Mission with the active Mission carried unchanged (Expansion is a separate flow — D42/D46) | `services/authorization-server/test/arop.test.ts` |
-| DTR (`draft-gerber-oauth-deferred-token-response`) | [`-00`](https://datatracker.ietf.org/doc/draft-gerber-oauth-deferred-token-response/00/) | `services/authorization-server/src/kernel/deferred.ts` | `completion_mode=deferred`, `deferral_code`, `authorization_pending`, deferred grant, idempotent submission, redeem error codes (`invalid_grant`/`access_denied`, §5.6) | `services/authorization-server/test/arop.test.ts` |
+| DTR (`draft-gerber-oauth-deferred-token-response`) | [`-00`](https://datatracker.ietf.org/doc/draft-gerber-oauth-deferred-token-response/00/) | `services/authorization-server/src/kernel/deferred.ts`, `services/authorization-server/src/adapters/provider.ts` (deferred grant on the real `/token`) | deferred grant (`urn:ietf:params:oauth:grant-type:deferred`) on the real `/token` endpoint: initiation (folded — see Notes) + poll/redeem, `deferral_code`, `authorization_pending`/`slow_down`/`expired_token` (RFC 8628 backoff), idempotent submission, redeem error codes (`invalid_grant`/`access_denied`, §5.6); redemption mints a resource-bound JWT mission token carrying the active Mission unchanged (D42) | `services/authorization-server/test/dtr-endpoint.test.ts` (real HTTP), `services/authorization-server/test/arop.test.ts` (kernel) |
 | Txn Challenge (`draft-rosomakho-oauth-txn-challenge`) | [`-00`](https://datatracker.ietf.org/doc/draft-rosomakho-oauth-txn-challenge/00/) | `services/authorization-server/src/kernel/txn-challenge.ts` | signed challenge (`txn-authz-challenge+jwt`, txn/jti/authorization_details/iss/aud/reason, §4.2), txn-bound single-use audience-restricted token, §6.2 token-vs-challenge binding | `services/authorization-server/test/arop.test.ts` |
 | `draft-mcguinness-svc-connectivity-disco` | repo main @ 2026-07-20 | `services/authorization-server/src/kernel/catalog.ts` | per-user catalog, filtering, mission-derived status (D9), request-access link (D10), service_catalog_endpoint metadata | `services/authorization-server/test/catalog.test.ts` |
 | `draft-mcguinness-oauth-mission-cross-domain` | `dc7a897` | `services/authorization-server/src/kernel/cross-domain.ts`, `services/ras` | ID-JAG grant issuance (audience-scoped, PoP, one-time, mission-preserving), RAS validation | `services/mcp-saas/test/cross-domain.test.ts` |
@@ -75,6 +75,14 @@ this matrix and the `@spec` tags to the affected code and tests.
 
 ## Notes
 
+- DTR (`-00`) initiation is folded into the deferred grant type rather than
+  carried as `completion_mode=deferred` on the originating grant:
+  node-oidc-provider offers no pre-issuance defer hook for built-in grants. A
+  deferred-grant request with `deferred_authorization` (and no `deferral_code`)
+  opens the deferral and returns the DTR initiation body; a request with
+  `deferral_code` polls/redeems it. Responses remain DTR-shaped
+  (`authorization_pending` + `deferral_code`/`expires_in`/`interval`; RFC
+  8628-shaped poll errors `slow_down`/`expired_token`/`access_denied`).
 - `oidc-provider@9.10.0` ships no first-party TypeScript types; the build
   depends on `@types/oidc-provider@9.5.0` (behind the runtime). Gaps handled
   with narrow local aliases (e.g. `InvalidAuthorizationDetails`, present at

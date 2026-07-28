@@ -4,6 +4,7 @@ import { CANONICAL_RESOURCE, DERIVATION_POLICY, seedAgentClient, TOPOLOGY, USERS
 import { exportJWK, generateKeyPair, type JWK } from "jose";
 import type Provider from "oidc-provider";
 import { buildProvider, type TxnArs } from "./adapters/provider.js";
+import { DeferralStore } from "./kernel/deferred.js";
 import { MissionKernel } from "./kernel/kernel.js";
 
 export { MissionKernel, GateError, LifecycleConflictError } from "./kernel/kernel.js";
@@ -49,6 +50,7 @@ export {
   DeferralError,
   DEFERRED_GRANT_TYPE,
   type DeferralPending,
+  type DeferralSlowDown,
   type DeferredToken,
 } from "./kernel/deferred.js";
 export {
@@ -64,6 +66,8 @@ export {
 export interface BuiltAs {
   provider: Provider;
   kernel: MissionKernel;
+  /** AROP Deferred Token Response store (drive open/approve/deny headlessly). */
+  deferrals: DeferralStore;
   issuer: string;
   agentClientJwk: Record<string, unknown>;
   canonicalResource: string;
@@ -98,10 +102,13 @@ export async function buildAuthorizationServer(opts: {
     statusKey: statusKeys.privateKey,
     statusKid: asStatus.kid,
   });
+  // AROP DTR store, wired onto the real /token deferred grant (D42).
+  const deferrals = new DeferralStore(kernel);
 
   const provider = buildProvider({
     issuer: opts.issuer,
     kernel,
+    deferrals,
     clients: [agent.metadata],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv] },
     publicJwks: { keys: [tokenJwkPub, statusJwkPub, txnJwkPub] },
@@ -117,6 +124,7 @@ export async function buildAuthorizationServer(opts: {
   return {
     provider,
     kernel,
+    deferrals,
     issuer: opts.issuer,
     agentClientJwk: agent.privateJwk,
     canonicalResource: CANONICAL_RESOURCE,

@@ -199,6 +199,53 @@ export async function issueMissionToken(
 }
 
 /**
+ * POST an arbitrary grant to the AS /token endpoint with private_key_jwt client
+ * authentication + a DPoP proof (same DPoP key, so a minted token's cnf.jkt
+ * matches), including the mandatory dpop-nonce retry. Used to drive custom grants
+ * (e.g. the AROP deferred grant) over real HTTP. Returns status + parsed body.
+ */
+export async function tokenGrantRequest(
+  asUrl: string,
+  agentClientJwk: Record<string, unknown>,
+  dpopKeys: DpopKeys,
+  params: Record<string, string>,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const htu = `${asUrl}/token`;
+  const clientKey = (await importJWK(agentClientJwk as JWK, "ES256")) as CryptoKey;
+  const dpopPubJwk = await exportJWK(dpopKeys.publicKey);
+  const clientAssertion = (): Promise<string> =>
+    new SignJWT({})
+      .setProtectedHeader({ alg: "ES256", kid: "ap-agent-auth" })
+      .setIssuer("ap-agent")
+      .setSubject("ap-agent")
+      .setAudience(asUrl)
+      .setIssuedAt()
+      .setExpirationTime("2m")
+      .setJti(crypto.randomUUID())
+      .sign(clientKey);
+  const dpopProof = (extra: Record<string, unknown> = {}): Promise<string> =>
+    new SignJWT({ htu, htm: "POST", ...extra })
+      .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: dpopPubJwk })
+      .setIssuedAt()
+      .setJti(crypto.randomUUID())
+      .sign(dpopKeys.privateKey);
+  const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
+    fetch(htu, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(extra) },
+      body: new URLSearchParams({
+        ...params,
+        client_assertion: await clientAssertion(),
+        client_assertion_type: CLIENT_ASSERTION_TYPE,
+      }).toString(),
+    });
+  let res = await send();
+  const nonce = res.headers.get("dpop-nonce");
+  if (res.status === 400 && nonce) res = await send({ nonce });
+  return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+}
+
+/**
  * Build a resource-side DPoP proof with the SAME DPoP key the token is bound to
  * (so the proof's jwk thumbprint matches the token's cnf.jkt). The resource
  * server verifies htu/htm against this proof.
