@@ -769,9 +769,15 @@ resolution and date; never delete them.
   `expired_token`), and the deferred grant URN before M7.
   Disposition (2026-07-26): pinned to `-00` (PR #350) — parameter names, the
   deferred grant URN, and the error vocabulary verified/aligned (`invalid_grant`
-  routing for unknown/already-redeemed fixed). Stays open for residual
-  `slow_down`/`expired_token` backoff and wiring the deferred grant onto the real
-  `/token` endpoint (currently kernel-level only).
+  routing for unknown/already-redeemed fixed).
+  Resolved (2026-07-28, PR #353): the residual is closed — `slow_down` /
+  `expired_token` backoff added to `deferred.ts` (RFC 8628: advertises
+  `interval+5`, 600s lifetime), and the deferred grant is wired onto the real
+  `/token` endpoint via `registerGrantType`. Redemption mints a resource-bound
+  JWT mission token (not opaque), DPoP-bound (`cnf.jkt` from the request proof),
+  TTL clamped by `approved_until`, carrying the active Mission unchanged (D42).
+  Initiation is folded into the grant type (deviation S-14). SPEC_VERSIONS row
+  51 updated; real-HTTP coverage in `dtr-endpoint.test.ts`.
 - **O-4. Transaction challenge draft fidelity.** Fetch
   `draft-rosomakho-oauth-txn-challenge` and pin the challenge JWS claims
   (`txn`, `authorization_details`, `iss`, `aud`, `reason`), the
@@ -903,6 +909,18 @@ resolution and date; never delete them.
   projection (status draft § introspection-projection): the `mission`
   member's contents, how the PDP authenticates as a caller, and how the
   observation is recorded in Decision Evidence. Before M3.
+- **O-36. AROP DTR derivation double-count.** On a deferred-grant redemption the
+  kernel gates twice — `DeferralStore.redeem()` calls `gateDerivation` (to
+  refuse a mission revoked between approval and redemption) and the token
+  formatter's `extraTokenClaims` gates again via `grantId` — so
+  `derivation_count` increments twice per issuance. Latent: no `max_derivations`
+  is configured in `config/`/`demo/`/`evals/`, so nothing observes it today; a
+  capped mission would spend two derivations per AROP redemption and could hit
+  `derivation_cap_exhausted` a redemption early. Fix (deferred): have `redeem()`
+  read the mission via `kernel.get()` for the subset re-check and let
+  `extraTokenClaims` be the single authoritative gate — a kernel-contract change
+  asserted against by `arop.test.ts`, out of scope for PR #353 (which wired DTR
+  onto `/token`). Surfaced 2026-07-28.
 
 ### Resolved
 
@@ -1168,6 +1186,17 @@ their repositories or working groups.
   backstop of its own. Our RAS is conformant to the governing companion; a
   draft-only client that re-submits after expiry gets `invalid_grant`. Kept as
   the intended layering.
+- **S-14 (accepted).** Deviation — draft-gerber-oauth-deferred-token-response-00
+  § 5 x node-oidc-provider: DTR initiates by sending `completion_mode=deferred`
+  on the ORIGINATING grant's token request, leaving the AS discretion to defer.
+  node-oidc-provider exposes no pre-issuance defer hook for its built-in grants
+  (a middleware short-circuit of `/token` would bypass client-auth + DPoP), so
+  initiation is folded into the deferred grant type itself: a request carrying
+  `deferred_authorization` (no `deferral_code`) opens the deferral and returns
+  the DTR 400 initiation body; a request with `deferral_code` polls/redeems.
+  Wire responses stay DTR-shaped. Kept for the in-process demo (PR #353); a
+  faithful `completion_mode` interception needs a grant-handler override the
+  library does not offer.
 
 ## 9. Runbook (target state)
 
