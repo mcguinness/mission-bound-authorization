@@ -800,6 +800,13 @@ resolution and date; never delete them.
 - **O-10. ARAP draft fidelity.** Fetch the ARAP profile itself (access request
   submission shape, task states, `approval` object, `approved_until`,
   `binding_token` verification rules) before M6.
+  Resolved (2026-07-27) against ARAP (openid/authzen PR #508, blob
+  `670f5831`). The fidelity pass confirmed the submission / task / approval
+  shapes; the companion was reconciled (`approved_until`, `access_request`
+  `expires_at` + `binding_token`, an ARAP mapping note; PR #351) and the impl
+  aligned (PDP emits `access_request.expires_at` + honors `approved_until`,
+  ARS approval-state JWS carries `iss`+`aud`; PR #352). SPEC_VERSIONS row 48
+  pinned. Watch PR #532 (`evaluation_id` denial binding).
 - **O-11. Consent Evidence scope.** The approver app renders intent at approval;
   decide whether to include `consent_rendering_hash` + signed Consent Evidence
   (companion draft) in M11 or defer.
@@ -836,6 +843,12 @@ resolution and date; never delete them.
   exchange request parameters, the grant JWT claims, and how the
   cross-domain companion's proof-of-possession and single-use floors attach
   to it. Before M9.
+  Resolved (2026-07-27) against draft-04. Redemption is RFC 7523 JWT-bearer
+  (confirmed conformant; RFC 8693 token-exchange is only the IdP mint step);
+  the `oauth-id-jag+jwt` typ and `urn:ietf:params:oauth:token-type:id-jag`
+  URN match; the grant now carries the REQUIRED `client_id` (§3.1, PR #352).
+  Single-use is conformant-to-companion (S-13); the RAS client-match gap is
+  logged as an accepted deviation (S-12). SPEC_VERSIONS row 55 pinned `-04`.
 - **O-20. EMA metadata surface.** Pin exactly how the SaaS MCP server
   "declares the extension in its authorization metadata" (member name and
   shape); the extension is young, so track the MCP spec revision we
@@ -1141,6 +1154,20 @@ their repositories or working groups.
   config-injected rather than served. The wire-format + liveness bugs (typ, jti,
   txn-vs-sub, poll error codes) were fixed (PR #350); these transport
   simplifications are acknowledged and kept for the in-process demo.
+- **S-12 (accepted).** Deviation — draft-ietf-oauth-identity-assertion-authz-grant-04
+  § 3.1 / § 4.4.1 x this demo: ID-JAG mandates a `client_id` claim and the
+  Resource AS MUST match it against the redeeming client's authentication. The
+  grant now carries `client_id` (PR #352), but the demo RAS has no
+  registered-client model, so it does not enforce the match; the DPoP `cnf.jkt`
+  presenter check binds the client instead. Acknowledged for the in-process
+  demo; a full fix needs a client-registration model at the RAS.
+- **S-13 (accepted).** Layering — draft-ietf-oauth-identity-assertion-authz-grant-04
+  § 4.4.3 permits a client to re-submit the grant after access-token expiry
+  (`MAY`); the cross-domain companion deliberately tightens this to one-time use
+  (a `jti` the RAS `MUST reject` on replay), noting ID-JAG has no replay
+  backstop of its own. Our RAS is conformant to the governing companion; a
+  draft-only client that re-submits after expiry gets `invalid_grant`. Kept as
+  the intended layering.
 
 ## 9. Runbook (target state)
 
