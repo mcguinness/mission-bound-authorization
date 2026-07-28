@@ -108,6 +108,10 @@ export async function composeStack(opts: {
     pdpJwks: { keys: [] },
     approvalKey: arsKeys.privateKey,
     approvalKid: "ars",
+    // ARAP: the ARS's own identity as approval-state issuer (stable across both
+    // modes), audienced to the PDP that re-evaluates the approval.
+    issuer: new URL(TOPOLOGY.endpoints.arsIntake).origin,
+    approvalAudience: TOPOLOGY.issuers.pdp,
     approvalTtlSeconds: TOPOLOGY.ttls.approvalSeconds,
   });
 
@@ -185,7 +189,13 @@ export async function composeStack(opts: {
       rasIssuer: RAS_ISS,
       saasResource,
       issueCrossDomainGrant: (missionId, cnfJkt) =>
-        issueCrossDomainGrant(kernel, xdKeys.privateKey, crossDomainKey.kid, { missionId, targetAs: RAS_ISS, cnfJkt, resourceToAs }),
+        issueCrossDomainGrant(kernel, xdKeys.privateKey, crossDomainKey.kid, {
+          missionId,
+          targetAs: RAS_ISS,
+          clientId: "ap-agent",
+          cnfJkt,
+          resourceToAs,
+        }),
       closeAuthServer: () => asServer.close(),
     };
   } else {

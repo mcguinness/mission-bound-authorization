@@ -100,6 +100,8 @@ export interface PepDeps {
 export interface ActionApprovalInput {
   id: string;
   approved_at: string;
+  /** ARAP: the approval's validity bound; carried to the PDP for the now-check. */
+  approved_until?: string;
   parameter_digest: string;
   state?: string;
 }
@@ -111,7 +113,7 @@ export interface EnforceResult {
   refusal_reason?: string;
   effective?: EffectiveParams;
   /** Present on a requestable denial: the ARAP access-request context. */
-  access_request?: { endpoint: string; denial_binding: string; binding_token: string };
+  access_request?: { endpoint: string; denial_binding: string; binding_token: string; expires_at: string };
   /**
    * Present when `challengeSigner` is configured and the action needs a
    * per-action approval: an RS-signed AROP txn-challenge plus the AS endpoint to

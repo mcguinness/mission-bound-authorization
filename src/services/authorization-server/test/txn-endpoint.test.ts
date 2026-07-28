@@ -222,6 +222,8 @@ beforeAll(async () => {
     pdpJwks: { keys: [] },
     approvalKey: arsKeys.privateKey,
     approvalKid: "ars",
+    issuer: "https://ars.test",
+    approvalAudience: "https://pdp.test",
     approvalTtlSeconds: 300,
   });
 

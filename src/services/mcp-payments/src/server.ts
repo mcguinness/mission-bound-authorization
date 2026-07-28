@@ -306,11 +306,19 @@ export class McpPaymentsServer {
     if (!txn || !this.issuedChallengeTxns.has(txn)) return { ok: false, refusal_reason: "txn_unknown" };
     // Single-use across presentations.
     if (!this.txnReplay.accept(txn)) return { ok: false, refusal_reason: "txn_replayed" };
-    const approval = payload.approval as { id: string; approved_at: string; parameter_digest: string } | undefined;
+    const approval = payload.approval as
+      | { id: string; approved_at: string; approved_until?: string; parameter_digest: string }
+      | undefined;
     if (!approval) return { ok: false, refusal_reason: "txn_missing_approval" };
     return {
       ok: true,
-      approval: { id: approval.id, approved_at: approval.approved_at, parameter_digest: approval.parameter_digest },
+      // Carry approved_until through so the UNCHANGED PDP step 8 can honor it.
+      approval: {
+        id: approval.id,
+        approved_at: approval.approved_at,
+        parameter_digest: approval.parameter_digest,
+        ...(approval.approved_until !== undefined ? { approved_until: approval.approved_until } : {}),
+      },
     };
   }
 
