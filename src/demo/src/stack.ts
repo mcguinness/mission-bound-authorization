@@ -10,6 +10,7 @@ import {
   type AuthorityEntry,
   buildAuthorizationServer,
   CatalogProvider,
+  type DeferralStore,
   issueCrossDomainGrant,
   MissionKernel,
   validateMissionIntent,
@@ -42,6 +43,8 @@ export interface AuthServerExtras {
   asUrl: string;
   /** The agent confidential client's private JWK (private_key_jwt signer). */
   agentClientJwk: Record<string, unknown>;
+  /** AROP Deferred Token Response store (drive open/approve/deny headlessly). */
+  deferrals: DeferralStore;
   ras: ResourceAuthorizationServer;
   saas: SaasMcpServer;
   rasIssuer: string;
@@ -184,6 +187,7 @@ export async function composeStack(opts: {
     authServer = {
       asUrl,
       agentClientJwk: as.agentClientJwk,
+      deferrals: as.deferrals,
       ras,
       saas,
       rasIssuer: RAS_ISS,
