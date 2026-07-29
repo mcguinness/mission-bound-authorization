@@ -14,6 +14,7 @@
     "demo:span": "tsx scripts/demo-span.mts",
     "demo": "node scripts/demo.mjs",
     "evals": "node scripts/evals.mjs",
+    "evals:redteam": "node scripts/evals-redteam.mjs",
     "demo:vendor-test": "node scripts/vendor-test.mjs",
     "exhibit": "node scripts/exhibit.mjs",
     "demo:trace": "node scripts/trace.mjs",

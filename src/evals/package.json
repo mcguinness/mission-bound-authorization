@@ -6,8 +6,9 @@
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
     "@mission/mcp-payments": "workspace:*",
     "@mission/pdp": "workspace:*"
   },
-  "scripts": { "typecheck": "tsc --build", "evals": "tsx src/run.ts" }
+  "scripts": { "typecheck": "tsc --build", "evals": "tsx src/run.ts", "redteam": "tsx src/redteam-run.ts" }
 }

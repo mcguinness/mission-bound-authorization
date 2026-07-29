@@ -3,3 +3,4 @@ dist/
 certs/
 .env
 *.tsbuildinfo
+evals/fixtures/redteam-latest.json
