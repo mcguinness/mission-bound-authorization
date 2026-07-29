@@ -887,10 +887,21 @@ resolution and date; never delete them.
   (drawing on the handbook's Testing chapter framings, including the lethal
   trifecta), the over-blocking threshold for the legitimate suite, and
   which scorecard metrics gate CI vs merely report. Decide in M13.
-- **O-31. Red-team eval methodology. (deferred: deterministic suite ships in M13; LLM red-team mode is a documented follow-on.)** How the LLM adversary is prompted
+- **O-31. Red-team eval methodology. (resolved: deterministic suite shipped in M13; LLM red-team mode shipped PR #355.)** How the LLM adversary is prompted
   and seeded, how nondeterministic runs stay comparable (persisted
   transcripts as replayable fixtures), and how red-team findings feed new
   deterministic cases. Decide in M13.
+  Resolved (2026-07-28, PR #355): opt-in LLM red-team mode added to `evals/`
+  (`pnpm evals:redteam`). An attacker generates `{tool,args}` attacks against a
+  fixed in-bounds token; each runs through the existing `runCase` and is graded
+  by a PDP-independent bounds oracle (`redteam.ts`), scored on a separate
+  scorecard whose bar is zero breaches (oracle-deny attack that caused a side
+  effect). Comparability = persisted transcripts replayed from a committed seed
+  fixture (key-free); findings distil into new deterministic `suites.ts` cases.
+  Per D24 the mode is opt-in and does NOT gate CI — the deterministic `pnpm
+  evals` suite stays the gate (untouched). Two documented, benign limitations
+  (ledger-only breach detection; an uncounted oracle-deny+permit+no-side-effect
+  bucket) can't occur under the current authority.
 - **O-32. Management companion subset.** Pin which of the management
   draft's surfaces the operator app consumes (fleet enumeration,
   per-mission lifecycle operations; bulk operations if needed) and how the
