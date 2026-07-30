@@ -15,6 +15,7 @@
     "demo": "node scripts/demo.mjs",
     "evals": "node scripts/evals.mjs",
     "evals:redteam": "node scripts/evals-redteam.mjs",
+    "agent": "node scripts/agent.mjs",
     "demo:vendor-test": "node scripts/vendor-test.mjs",
     "exhibit": "node scripts/exhibit.mjs",
     "demo:trace": "node scripts/trace.mjs",
