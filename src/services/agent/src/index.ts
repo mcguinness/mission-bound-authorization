@@ -14,6 +14,11 @@ export {
   type HarnessToolResult,
   resumeGuard,
 } from "./mediated-harness.js";
+export {
+  runAgentLoop,
+  type RunAgentLoopOptions,
+  type AgentLoopResult,
+} from "./agent-loop.js";
 
 export const EMA_CAPABILITY = "io.modelcontextprotocol/enterprise-managed-authorization";
 
