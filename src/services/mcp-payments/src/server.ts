@@ -104,6 +104,41 @@ export class McpPaymentsServer {
   }
 
   /**
+   * Increment-1 mediated-channel credential validation: a documented
+   * simplification of {@link validateToken}. Over the in-process MCP transport
+   * there is no HTTP request to bind a DPoP proof to (no htu/htm), so this
+   * validates the mission access token's signature (jwks), issuer, audience and
+   * mission claim and carries the token's `cnf.jkt` into TokenFacts. Live DPoP
+   * proof-of-possession over MCP is out of scope for increment 1. The credential
+   * still crosses IN the MCP request (in `_meta`) and TokenFacts is derived from
+   * a validated token here, never passed through untouched.
+   * @spec draft-mcguinness-mission-harness (mediated execution environment)
+   */
+  async validateMissionToken(accessToken: string): Promise<TokenFacts> {
+    const { payload } = await jwtVerify(accessToken, this.resolveKey, {
+      issuer: this.deps.issuer,
+      audience: CANONICAL_RESOURCE,
+    });
+    const cnf = payload.cnf as { jkt?: string } | undefined;
+    if (!cnf?.jkt) throw new Error("token missing cnf.jkt");
+    const mission = payload.mission as { id: string; authority_hash: string } | undefined;
+    if (!mission?.id) throw new Error("token missing mission claim");
+    return {
+      sub: payload.sub as string,
+      clientId: payload.client_id as string,
+      ...(payload.client_instance_id ? { clientInstanceId: payload.client_instance_id as string } : {}),
+      ...(payload.act ? { act: payload.act as ActObject } : {}),
+      mission: { id: mission.id, authority_hash: mission.authority_hash },
+      cnfJkt: cnf.jkt,
+    };
+  }
+
+  /** Whether the transaction-assurance tier (M5) is configured on this server. */
+  hasTransactionTier(): boolean {
+    return this.deps.transaction !== undefined;
+  }
+
+  /**
    * Mission-scoped tools/list (@spec least exposure, D22/E): only tools whose
    * action is within the mission's authority are shown.
    */

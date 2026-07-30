@@ -7,6 +7,13 @@
  */
 
 export { checkOnResume, type ResumeDecision, type MissionState } from "./harness.js";
+export {
+  createMediatedHarness,
+  MediatedHarness,
+  type MediatedToolChannel,
+  type HarnessToolResult,
+  resumeGuard,
+} from "./mediated-harness.js";
 
 export const EMA_CAPABILITY = "io.modelcontextprotocol/enterprise-managed-authorization";
 

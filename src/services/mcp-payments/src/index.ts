@@ -12,6 +12,13 @@ export {
   sourceDigestOf,
 } from "./pep.js";
 export { McpPaymentsServer, TOOLS, type ToolDef, type McpServerDeps } from "./server.js";
+export {
+  createMcpChannel,
+  createMediatedClient,
+  MediatedClient,
+  type MediatedToolResult,
+  MISSION_TOKEN_META_KEY,
+} from "./mcp-transport.js";
 export { Connectors, type WireCommit, type EmailCommit, type CommitResult } from "./connectors.js";
 export { TransactionEngine, operationKey, type OpState } from "./transaction.js";
 export { reconcile, type ReconciliationReport } from "./reconcile.js";

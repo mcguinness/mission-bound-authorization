@@ -57,7 +57,8 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-mission-audit` (SCITT profile) | `dc7a897` | `services/transparency` | append-only Merkle log, hash-committed Signed Statements, Receipts + signed tree heads, per-mission feeds, five-step offline verification | `services/transparency/test/transparency.test.ts` |
 | RFC 9162 (Merkle tree) | RFC 9162 | `services/transparency/src/merkle.ts` | leaf/node domain separation, inclusion proofs | `services/transparency/test/transparency.test.ts` |
 | `draft-mcguinness-oauth-mission-management` (partial) | `dc7a897` | `services/console-bff`, `authorization-server` (allMissions) | fleet enumeration + operator lifecycle surfaces | `services/console-bff/test/console.test.ts` |
-| `draft-mcguinness-mission-harness` (partial) | `dc7a897` | `services/agent/src/harness.ts` | stop-on-non-active at resume (minimal duty only) | `services/agent/test/harness.test.ts` |
+| `draft-mcguinness-mission-harness` (partial) | `dc7a897` | `services/agent/src/{harness,mediated-harness}.ts`, `services/mcp-payments/src/mcp-transport.ts` | duty 1 fail-closed resume + duty 2 mediated execution environment (real MCP channel, no PEP bypass) | `services/agent/test/{harness,mediated-harness}.test.ts`, `services/mcp-payments/test/mcp-channel.test.ts` |
+| `@modelcontextprotocol/sdk` | 1.29.0 | `services/mcp-payments/src/mcp-transport.ts` (real MCP transport) | `tools/list`/`tools/call` over the SDK in-memory transport delegating to the PEP; mission credential carried in `_meta`; advances/closes O-33 transport swap | `services/mcp-payments/test/mcp-channel.test.ts` |
 | `draft-mcguinness-mission-shaping` | `dc7a897` | `services/agent/src/index.ts` (shapeIntent) | untrusted intent proposal; derivation still bounds | `services/agent/test/harness.test.ts` |
 | (eval harness, goal 2) | n/a | `evals` | adversarial + legitimate suites, containment scorecard, CI gate (D24) | `evals/test/evals.test.ts` |
 | (vendor test, handbook) | n/a | `evals/src/vendor-test.ts` | four-axis valid-token-but-denied demonstration | `evals/test/vendor-test.test.ts` |
@@ -70,7 +71,6 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-oauth-mission-status` (Status List, introspection projection) | `89ba0b4` | M3 freshness |
 | `draft-mcguinness-mission-audit` + SCITT (RFC 9943) | in-repo current | M10 |
 | MCP authorization profile | 2025-11-25 (stable) | M4/M8/M9 |
-| `@modelcontextprotocol/sdk` | 1.29.0 | M4 |
 | OpenFGA | `v1.18.1@sha256:efde89d2...6688` | M0 compose (done) |
 
 ## Notes

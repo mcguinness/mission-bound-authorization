@@ -2,5 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist" },
   "include": ["src"],
-  "references": [{ "path": "../authorization-server" }, { "path": "../../packages/demo-data" }]
+  "references": [
+    { "path": "../authorization-server" },
+    { "path": "../../packages/demo-data" },
+    { "path": "../mcp-payments" }
+  ]
 }
