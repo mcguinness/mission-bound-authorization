@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@mission/authorization-server": "workspace:*",
+    "@mission/mcp-payments": "workspace:*",
     "jose": "^6.1.3",
     "@mission/demo-data": "workspace:*"
   },
