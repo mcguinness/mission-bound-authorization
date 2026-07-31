@@ -142,7 +142,8 @@
         <label class="field"><span>Cap (max_amount, USD)</span>
           <input class="inp" id="f_cap" value="900.00" /></label>
         <label class="field"><span>Proposed actions (comma-separated)</span>
-          <input class="inp" id="f_actions" value="payments:invoice.read, payments:payment.execute, payments:remittance.send" /></label>
+          <input class="inp" id="f_actions" value="payments:invoice.read, payments:payment.execute, payments:remittance.send" oninput="renderActionsHelp()" />
+          <span class="muted" id="actionsHelp" style="display:block;margin-top:.28rem;font-size:.78rem"></span></label>
         <label class="field"><span>Vendors (comma-separated)</span>
           <input class="inp" id="f_vendors" value="acme, globex" /></label>
       </div>
@@ -235,8 +236,40 @@
   const post = (p, body, extra) => api(p, { method: "POST", headers: { "content-type": "application/json", ...(extra || {}) }, body: JSON.stringify(body) });
   const logLine = (t) => { $("log").textContent = `${new Date().toLocaleTimeString()}  ${t}\n` + $("log").textContent; };
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  // Attribute-safe: esc() covers text nodes (& < >); quotes must also be escaped
+  // for values placed inside a double-quoted attribute (e.g. title=).
+  const escAttr = (s) => esc(s).replace(/"/g, "&quot;");
   const shortRes = (r) => String(r).replace(/^https?:\/\//, "");
   const csv = (id) => $(id).value.split(",").map((s) => s.trim()).filter(Boolean);
+
+  // ---- display-only labels (fetched once from /labels; single source of truth) ----
+  let LABELS = { tools: {}, actions: {}, reasons: {} };
+  // Human name for a machine id, or the raw id when unmapped. Reason codes may
+  // arrive `:<state>`-suffixed (mission_not_active:suspended); strip + append.
+  function label(kind, id) {
+    if (id === undefined || id === null || id === "") return id;
+    if (kind === "reason") {
+      const s = String(id), base = s.split(":")[0], state = s.slice(base.length + 1);
+      const human = LABELS.reasons[base];
+      return human ? (state ? `${human} (${state})` : human) : id;
+    }
+    const map = kind === "tool" ? LABELS.tools : LABELS.actions;
+    return map[id] || id;
+  }
+  // Reason gloss for log lines: human name with the raw code in parens (compact),
+  // or just the raw code when unmapped (never "code (code)").
+  const reasonGloss = (code) => {
+    if (!code) return "";
+    const h = label("reason", code);
+    return h === code ? code : `${h} (${code})`;
+  };
+  // Caption under the actions input: the human meaning of the ids the user edits.
+  function renderActionsHelp() {
+    const el = $("actionsHelp");
+    if (!el) return;
+    const ids = csv("f_actions");
+    el.textContent = ids.length ? "Means: " + ids.map((a) => label("action", a)).join(", ") : "";
+  }
 
   // ---- nav ----
   $("tabs").addEventListener("click", (e) => {
@@ -249,12 +282,16 @@
   }
 
   // ---- authority rendering ----
-  function chip(label, cls) { return `<span class="chip ${cls || ""}">${esc(label)}</span>`; }
+  function chip(text, cls, title) {
+    const t = title !== undefined && title !== null ? ` title="${escAttr(title)}"` : "";
+    return `<span class="chip ${cls || ""}"${t}>${esc(text)}</span>`;
+  }
   function authEntryHtml(entry, drops) {
     const cons = entry.constraints || {};
     const dActions = new Set((drops && drops.actions) || []);
     const dVendors = new Set((drops && drops.vendors) || []);
-    const acts = (entry.actions || []).map((a) => chip(a, dActions.has(a) ? "drop" : "")).join("") || '<span class="muted">&mdash;</span>';
+    // Action chips: lead with the human name, keep the raw action id in title=.
+    const acts = (entry.actions || []).map((a) => chip(label("action", a), dActions.has(a) ? "drop" : "", a)).join("") || '<span class="muted">&mdash;</span>';
     const vends = (cons.vendors || []).map((v) => chip(v, dVendors.has(v) ? "drop" : "")).join("") || '<span class="muted">&mdash;</span>';
     let capHtml = '<span class="muted">&mdash;</span>';
     if (cons.max_amount) {
@@ -277,7 +314,7 @@
     const parts = [];
     for (const d of diff || []) {
       if ((d.vendors_dropped || []).length) parts.push(`dropped vendor${d.vendors_dropped.length > 1 ? "s" : ""} ${d.vendors_dropped.join(", ")}`);
-      if ((d.actions_dropped || []).length) parts.push(`dropped action${d.actions_dropped.length > 1 ? "s" : ""} ${d.actions_dropped.join(", ")}`);
+      if ((d.actions_dropped || []).length) parts.push(`dropped action${d.actions_dropped.length > 1 ? "s" : ""} ${d.actions_dropped.map((a) => label("action", a)).join(", ")}`);
       for (const t of d.constraints_tightened || []) parts.push(`tightened ${t.name} ${t.proposed} &rarr; ${t.granted}`);
     }
     return parts.length ? parts.join("; ") : "nothing to narrow &mdash; the proposal was already within the ceiling";
@@ -375,7 +412,7 @@
     const queue = await api("/bff/approver/queue");
     $("queue").innerHTML = (queue || []).length
       ? queue.map((t) =>
-          `<div class="row"><code>${esc(t.id)}</code><span class="muted">${esc(t.action)} · subj ${esc(t.subject)}</span>
+          `<div class="row"><code>${esc(t.id)}</code><span class="muted" title="${escAttr(t.action)}">${esc(label("action", t.action))} · subj ${esc(t.subject)}</span>
            <span class="grow"></span>
            <button class="btn primary" onclick="adjudicate('${t.id}','approve')">approve</button>
            <button class="btn" onclick="adjudicate('${t.id}','deny')">deny</button></div>`).join("")
@@ -385,7 +422,7 @@
   // ---- agent actions (unchanged enforcement path) ----
   async function act(tool, args) {
     const r = await post("/agent/act", { tool, args });
-    logLine(`${tool}(${JSON.stringify(args)}) → ${r.ok ? "PERMIT" : "DENY: " + (r.denial_reason || r.refusal_reason)}`);
+    logLine(`${label("tool", tool)}(${JSON.stringify(args)}) → ${r.ok ? "PERMIT" : "DENY: " + reasonGloss(r.denial_reason || r.refusal_reason)}`);
     refresh();
   }
 
@@ -395,17 +432,17 @@
     const r = await post("/agent/act", { tool, args });
     if (r.taskId) {
       PENDING = { taskId: r.taskId, tool, args };
-      logLine(`${tool}(inv-1) → DENY: ${r.denial_reason} — opened ARS task ${r.taskId}, awaiting approval`);
+      logLine(`${label("tool", tool)}(inv-1) → DENY: ${reasonGloss(r.denial_reason)} — opened ARS task ${r.taskId}, awaiting approval`);
     } else {
-      logLine(`${tool}(inv-1) → ${r.ok ? "PERMIT (email sent)" : "DENY: " + (r.denial_reason || r.refusal_reason)}`);
+      logLine(`${label("tool", tool)}(inv-1) → ${r.ok ? "PERMIT (email sent)" : "DENY: " + reasonGloss(r.denial_reason || r.refusal_reason)}`);
     }
     refresh();
   }
   async function retryJit() {
     if (!PENDING) return;
     const r = await post("/agent/retry", PENDING);
-    if (r.pending) { logLine(`retry ${PENDING.tool} → still ${r.state}; approve the request first`); return; }
-    logLine(`retry ${PENDING.tool}(inv-1) → ${r.ok ? "PERMIT (email sent, JIT approval matched)" : "DENY: " + (r.denial_reason || r.refusal_reason)}`);
+    if (r.pending) { logLine(`retry ${label("tool", PENDING.tool)} → still ${r.state}; approve the request first`); return; }
+    logLine(`retry ${label("tool", PENDING.tool)}(inv-1) → ${r.ok ? "PERMIT (email sent, JIT approval matched)" : "DENY: " + reasonGloss(r.denial_reason || r.refusal_reason)}`);
     PENDING = null; $("retryBtn").disabled = true;
     refresh();
   }
@@ -423,6 +460,12 @@
 
   // ---- boot ----
   (async () => {
+    // Display-only; keep the empty-map default (raw ids everywhere) unless the
+    // response is well-shaped. A 404 resolves with an {error} body, so a shape
+    // check — not just .catch — is what guarantees the raw-id fallback.
+    const lbls = await api("/labels").catch(() => null);
+    if (lbls && lbls.tools && lbls.actions && lbls.reasons) LABELS = lbls;
+    renderActionsHelp();
     const s = await api("/bff/session");
     CSRF = s.csrf; MISSION = s.missionId;
     $("sess").dataset.who = `${esc(s.sub)} [${esc(s.roles.join(", "))}]`;

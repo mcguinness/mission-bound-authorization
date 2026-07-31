@@ -15,6 +15,7 @@ import { SAAS_RESOURCE } from "@mission/mcp-saas";
 import type { TokenFacts } from "@mission/mcp-payments";
 import type { Decision, EvaluationRequest } from "@mission/pdp";
 import { composeStack } from "./stack.js";
+import { label as humanName } from "./labels.js";
 import { dpopProofFor, issueMissionToken, tokenGrantRequest } from "./oauth-client.js";
 
 const C = {
@@ -69,6 +70,17 @@ function note(text: string) {
 }
 function verdict(ok: boolean, text: string) {
   console.log(`  ${ok ? C.green + "✓ PERMIT" : C.red + "✗ DENY"}${C.reset} ${text}`);
+}
+
+/**
+ * Append a dim human gloss beside a machine id (tool name, action id, or reason
+ * code), e.g. `execute_wire_transfer (Execute wire transfer)`. Display only:
+ * the technical id stays verbatim so the exhibit still shows the real wire
+ * value; an unmapped id is returned unchanged. Never used inside `block(...)`.
+ */
+function gloss(kind: "tool" | "action" | "reason", id: string): string {
+  const human = humanName(kind, id);
+  return human === id ? id : `${id} ${C.dim}(${human})${C.reset}`;
 }
 
 /** HTTP status reason phrases for the request/response renderer. */
@@ -302,7 +314,7 @@ async function main() {
   });
   block("derived Authority Set (bounded by the policy ceiling)", record.authority_set);
   console.log(
-    `${C.yellow}  narrowing:${C.reset} proposed payments:vendor.delete ${C.red}dropped${C.reset}; ` +
+    `${C.yellow}  narrowing:${C.reset} proposed ${gloss("action", "payments:vendor.delete")} ${C.red}dropped${C.reset}; ` +
       `vendors acme,globex,evilcorp ${C.green}→ acme${C.reset}; cap 999999.00 ${C.green}→ 500.00${C.reset} (SaaS estate preserved)`,
   );
   note("subject alice != approver bob (write-bearing missions need a distinct approver).");
@@ -332,7 +344,7 @@ async function main() {
   // ---- Tool-call tracer (real token) --------------------------------------
   const traceCall = async (n: number, label: string, kind: "read" | "wire", tool: string, args: Record<string, unknown>) => {
     step(n, label);
-    hop("Agent", "Payments RS", `tools/call ${tool}`, "in-process MCP · O-33");
+    hop("Agent", "Payments RS", `tools/call ${gloss("tool", tool)}`, "in-process MCP · O-33");
     block(`MCP tools/call — ${tool}`, { tool, arguments: args, authorization: "DPoP <real mission-bound access token>" });
     const res =
       kind === "read" ? await stack.server.callReadTool(tool, args, facts) : await stack.server.callTransactionTool(tool, args, facts);
@@ -344,7 +356,10 @@ async function main() {
       block("PDP request (AuthZEN envelope)", captured.envelope);
       block("PDP decision", captured.decision);
     }
-    verdict(res.ok, `${tool} → ${res.ok ? JSON.stringify(res.result) : (res.denial_reason ?? res.refusal_reason)}`);
+    verdict(
+      res.ok,
+      `${gloss("tool", tool)} → ${res.ok ? JSON.stringify(res.result) : gloss("reason", res.denial_reason ?? res.refusal_reason ?? "")}`,
+    );
     return res;
   };
 
@@ -368,7 +383,10 @@ async function main() {
     authorization: "DPoP <real mission-bound access token>",
   });
   const challengeAttempt = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
-  verdict(challengeAttempt.ok, `send_remittance_email(inv-1) → ${challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason}`);
+  verdict(
+    challengeAttempt.ok,
+    `${gloss("tool", "send_remittance_email")}(inv-1) → ${gloss("reason", challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason ?? "")}`,
+  );
   const accessChallenge = challengeAttempt.access_challenge;
   if (!accessChallenge) throw new Error("expected an access_challenge (RS challengeSigner wired)");
   hop("Payments RS", "Agent", "401-style txn-challenge (RS-signed)", "in-process");
@@ -487,7 +505,10 @@ async function main() {
   });
   const granted = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts, undefined, txnToken);
   if (captured) block("PDP decision (permit: token-derived approval matched parameter_digest)", captured.decision);
-  verdict(granted.ok, `send_remittance_email(inv-1) → ${granted.ok ? JSON.stringify(granted.result) : (granted.denial_reason ?? granted.refusal_reason)}`);
+  verdict(
+    granted.ok,
+    `${gloss("tool", "send_remittance_email")}(inv-1) → ${granted.ok ? JSON.stringify(granted.result) : gloss("reason", granted.denial_reason ?? granted.refusal_reason ?? "")}`,
+  );
   note("The approval was carried by the AS-issued txn-token, never as a tool input. The mission was never widened; the gate sat inside the mission's authority.");
 
   // ---- 8. AROP over DTR: deferred token response on the real /token endpoint --
@@ -611,13 +632,13 @@ async function main() {
   hop("Payments RS (PEP)", "PDP", "evaluate", "in-process · D28");
   hop("PDP", "OpenFGA", "check", "HTTP https://localhost:8080");
   if (captured) block("PDP decision (over-cap $900)", captured.decision);
-  verdict(over.ok, `execute_wire_transfer(inv-2, $900) → ${over.denial_reason ?? over.refusal_reason}`);
+  verdict(over.ok, `${gloss("tool", "execute_wire_transfer")}(inv-2, $900) → ${gloss("reason", over.denial_reason ?? over.refusal_reason ?? "")}`);
   hop("Agent", "Payments RS", "tools/call execute_wire_transfer (inv-3, globex)", "in-process MCP · O-33");
   const globex = await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-3" }, facts);
   hop("Payments RS (PEP)", "PDP", "evaluate", "in-process · D28");
   hop("PDP", "OpenFGA", "check", "HTTP https://localhost:8080");
   if (captured) block("PDP decision (globex vendor)", captured.decision);
-  verdict(globex.ok, `execute_wire_transfer(inv-3, globex) → ${globex.denial_reason ?? globex.refusal_reason}`);
+  verdict(globex.ok, `${gloss("tool", "execute_wire_transfer")}(inv-3, globex) → ${gloss("reason", globex.denial_reason ?? globex.refusal_reason ?? "")}`);
 
   // ---- 10. Lifecycle ------------------------------------------------------
   // MUST run AFTER the cross-domain leg and all tool calls: these transitions
@@ -643,7 +664,7 @@ async function main() {
   hop("Agent", "Payments RS", "tools/call get_invoice (while suspended)", "in-process MCP · O-33");
   const whileSuspended = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
   if (captured) block("PDP decision (suspended)", captured.decision);
-  verdict(whileSuspended.ok, `get_invoice(inv-1) while suspended → ${whileSuspended.denial_reason ?? whileSuspended.refusal_reason}`);
+  verdict(whileSuspended.ok, `${gloss("tool", "get_invoice")}(inv-1) while suspended → ${gloss("reason", whileSuspended.denial_reason ?? whileSuspended.refusal_reason ?? "")}`);
 
   // 10b. resume -> the action is permitted again.
   hop("Operator", "AS", "POST /missions/{id}/lifecycle (resume)", "HTTP");
@@ -656,7 +677,7 @@ async function main() {
   hop("Agent", "Payments RS", "tools/call get_invoice (after resume)", "in-process MCP · O-33");
   const afterResume = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
   if (captured) block("PDP decision (resumed)", captured.decision);
-  verdict(afterResume.ok, `get_invoice(inv-1) after resume → ${afterResume.ok ? JSON.stringify(afterResume.result) : (afterResume.denial_reason ?? afterResume.refusal_reason)}`);
+  verdict(afterResume.ok, `${gloss("tool", "get_invoice")}(inv-1) after resume → ${afterResume.ok ? JSON.stringify(afterResume.result) : gloss("reason", afterResume.denial_reason ?? afterResume.refusal_reason ?? "")}`);
 
   // 10c. Expansion: a successor mission from a fresh approval that widens authority.
   // The cap is already at the policy ceiling (500), so the widening is on ACTIONS:
@@ -714,7 +735,7 @@ async function main() {
   hop("Agent", "Payments RS", "tools/call get_invoice (original token, predecessor superseded)", "in-process MCP · O-33");
   const afterSupersede = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
   if (captured) block("PDP decision (predecessor superseded)", captured.decision);
-  verdict(afterSupersede.ok, `get_invoice(inv-1) with the original token → ${afterSupersede.denial_reason ?? afterSupersede.refusal_reason}`);
+  verdict(afterSupersede.ok, `${gloss("tool", "get_invoice")}(inv-1) with the original token → ${gloss("reason", afterSupersede.denial_reason ?? afterSupersede.refusal_reason ?? "")}`);
   note("the original credential no longer authorizes; the successor is the active mission going forward.");
 
   // 10d. revoke the successor over the wire.
