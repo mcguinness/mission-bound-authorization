@@ -20,6 +20,7 @@ import type { TokenFacts } from "@mission/mcp-payments";
 import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { shapeIntent } from "@mission/agent";
 import { composeStack } from "./stack.js";
+import { ACTION_LABELS, REASON_LABELS, TOOL_LABELS } from "./labels.js";
 import { dpopProofFor, issueMissionToken } from "./oauth-client.js";
 
 const TX_TOOLS = new Set(["execute_wire_transfer", "send_remittance_email"]);
@@ -159,6 +160,11 @@ async function main() {
   const index = (c: Context) => c.html(readFileSync(INDEX, "utf8"));
   app.get("/", index);
   app.get("/index.html", index);
+
+  // Display-only label maps (single source of truth: demo/src/labels.ts). The
+  // dashboard fetches these once to gloss machine ids with human names; no wire
+  // value is derived from them.
+  app.get("/labels", (c) => c.json({ tools: TOOL_LABELS, actions: ACTION_LABELS, reasons: REASON_LABELS }));
 
   // Console BFF (operator + approver personas).
   app.get("/bff/session", (c) => c.json({ sub: session.sub, roles: session.roles, csrf: session.csrf, missionId: active.missionId }));
