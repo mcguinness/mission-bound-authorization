@@ -3,148 +3,433 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Mission-Bound Authorization — Demo Console</title>
+<title>Mission-Bound Authorization — Demo Consoles</title>
 <style>
-  :root { color-scheme: light dark; --line: #8884; --ok: #1a7f37; --no: #cf222e; }
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f6f8; --panel: #ffffff; --panel-2: #fafbfc; --ink: #1b1f24; --muted: #5b6470;
+    --line: #d9dee5; --brand: #3b5bdb; --brand-ink: #ffffff;
+    --ok: #1a7f37; --no: #cf222e; --warn: #9a6700;
+    --chip: #eef1f5; --chip-line: #d9dee5;
+    --drop-bg: #ffe4e4; --drop-ink: #b42318;
+    --tight-bg: #fff2d1; --tight-ink: #8a5a00;
+    --grant-bg: #e4f4ea; --grant-ink: #1a7f37;
+    --untrust: #8a5a00; --untrust-bg: #fff7e6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --panel: #161b22; --panel-2: #11151b; --ink: #e6edf3; --muted: #9aa4b0;
+      --line: #2a313a; --brand: #6b8afd; --brand-ink: #0d1117;
+      --ok: #3fb950; --no: #f85149; --warn: #d29922;
+      --chip: #21262d; --chip-line: #2a313a;
+      --drop-bg: #3a1c1e; --drop-ink: #ff9d97;
+      --tight-bg: #38300f; --tight-ink: #e3b341;
+      --grant-bg: #12331f; --grant-ink: #56d364;
+      --untrust: #d29922; --untrust-bg: #2a2412;
+    }
+  }
   * { box-sizing: border-box; }
-  body { font: 14px/1.5 ui-sans-serif, system-ui, sans-serif; margin: 0; padding: 2rem; max-width: 900px; margin-inline: auto; }
-  h1 { font-size: 1.4rem; } h2 { font-size: 1.05rem; margin-top: 1.6rem; }
-  .panel { border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; margin: 1rem 0; }
-  .row { display: flex; align-items: center; gap: .6rem; padding: .35rem 0; border-bottom: 1px solid var(--line); }
-  .row:last-child { border-bottom: 0; }
-  button { font: inherit; padding: .3rem .7rem; border: 1px solid var(--line); border-radius: 7px; background: #8881; cursor: pointer; }
-  button:hover { background: #8883; }
-  code { font-family: ui-monospace, monospace; font-size: .85em; }
+  body { font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif; margin: 0; color: var(--ink); background: var(--bg); }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85em; }
+  .muted { color: var(--muted); }
   .ok { color: var(--ok); font-weight: 600; } .no { color: var(--no); font-weight: 600; }
-  .muted { opacity: .65; } .pill { border: 1px solid var(--line); border-radius: 999px; padding: 0 .5rem; font-size: .8em; }
-  #log { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .82em; background: #8881; border-radius: 8px; padding: .8rem; max-height: 220px; overflow: auto; }
+
+  /* top bar + nav */
+  header.topbar {
+    position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 1rem;
+    padding: .55rem 1.1rem; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  .brand { font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
+  .brand .env { font-weight: 600; font-size: .7rem; text-transform: uppercase; color: var(--brand);
+    border: 1px solid var(--brand); border-radius: 6px; padding: 0 .35rem; margin-left: .4rem; vertical-align: 1px; }
+  nav.tabs { display: flex; gap: .25rem; flex: 1; }
+  nav.tabs button {
+    font: inherit; font-weight: 600; color: var(--muted); background: transparent; border: 0;
+    border-radius: 8px; padding: .4rem .7rem; cursor: pointer;
+  }
+  nav.tabs button:hover { background: var(--chip); color: var(--ink); }
+  nav.tabs button.active { background: var(--brand); color: var(--brand-ink); }
+  .sess { font-size: .8rem; white-space: nowrap; }
+
+  main { max-width: 1040px; margin-inline: auto; padding: 1.2rem 1.1rem 7rem; }
+  .view[hidden] { display: none; }
+  h2.vtitle { font-size: 1.15rem; margin: .2rem 0 .1rem; }
+  p.lead { color: var(--muted); margin: 0 0 1rem; max-width: 70ch; }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.15rem; margin: .9rem 0; }
+  .card h3 { font-size: 1rem; margin: 0 0 .6rem; }
+  .steptag { display: inline-block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--brand); border: 1px solid var(--brand); border-radius: 999px; padding: .05rem .55rem; margin-bottom: .7rem; }
+
+  .row { display: flex; align-items: center; gap: .6rem; padding: .4rem 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .grow { flex: 1; }
+  .pill { border: 1px solid var(--chip-line); border-radius: 999px; padding: .02rem .55rem; font-size: .78em; background: var(--chip); }
+  .pill.active { color: var(--ok); border-color: var(--ok); }
+  .pill.suspended { color: var(--warn); border-color: var(--warn); }
+  .pill.revoked, .pill.expired { color: var(--no); border-color: var(--no); }
+
+  button.btn { font: inherit; padding: .38rem .8rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); color: var(--ink); cursor: pointer; }
+  button.btn:hover { border-color: var(--brand); }
+  button.btn.primary { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); font-weight: 600; }
+  button.btn.primary:hover { filter: brightness(1.05); }
+  button.btn:disabled { opacity: .45; cursor: not-allowed; border-color: var(--line); }
+  .btnrow { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .3rem; }
+
+  label.field { display: block; margin: .55rem 0; }
+  label.field span { display: block; font-size: .78rem; font-weight: 600; color: var(--muted); margin-bottom: .2rem; }
+  input.inp { width: 100%; font: inherit; padding: .4rem .55rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); color: var(--ink); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+
+  pre.json { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: .7rem .8rem;
+    overflow-x: auto; font-family: ui-monospace, monospace; font-size: .8em; margin: .5rem 0 0; max-height: 320px; }
+  .untrusted { border-left: 3px solid var(--untrust); }
+  .taglabel { display: inline-block; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+    padding: .05rem .5rem; border-radius: 6px; }
+  .taglabel.untrust { color: var(--untrust); background: var(--untrust-bg); border: 1px solid var(--untrust); }
+  .taglabel.grant { color: var(--grant-ink); background: var(--grant-bg); border: 1px solid var(--grant-ink); }
+
+  .authentry { border: 1px solid var(--line); border-radius: 10px; padding: .55rem .7rem; margin-top: .5rem; background: var(--panel-2); }
+  .authentry .ael { margin-bottom: .35rem; }
+  .arow { display: flex; gap: .5rem; align-items: baseline; padding: .12rem 0; }
+  .alabel { min-width: 3.8rem; font-size: .74rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+  .chip { border: 1px solid var(--chip-line); border-radius: 999px; padding: .02rem .5rem; font-size: .78em; background: var(--chip); font-family: ui-monospace, monospace; }
+  .chip.drop { background: var(--drop-bg); color: var(--drop-ink); border-color: var(--drop-ink); text-decoration: line-through; }
+  .chip.tight { background: var(--tight-bg); color: var(--tight-ink); border-color: var(--tight-ink); }
+  .chip.grant { background: var(--grant-bg); color: var(--grant-ink); border-color: var(--grant-ink); }
+  .colhead { font-weight: 700; font-size: .82rem; margin-bottom: .2rem; display: flex; align-items: center; gap: .5rem; }
+  .summary { margin-top: .8rem; padding: .6rem .75rem; border-radius: 8px; background: var(--tight-bg); color: var(--tight-ink); border: 1px solid var(--tight-ink); font-size: .9em; }
+  .caption { margin-top: .6rem; color: var(--muted); font-size: .88em; font-style: italic; }
+  .legend { margin-top: .5rem; font-size: .78rem; color: var(--muted); display: flex; gap: 1rem; flex-wrap: wrap; }
+  .dot { display: inline-block; width: .7rem; height: .7rem; border-radius: 3px; vertical-align: -1px; margin-right: .25rem; }
+  .issued { padding: .6rem .75rem; border-radius: 8px; background: var(--grant-bg); color: var(--grant-ink); border: 1px solid var(--grant-ink); font-weight: 600; }
+
+  /* activity log dock */
+  aside.logbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 4; background: var(--panel);
+    border-top: 1px solid var(--line); max-height: 30vh; }
+  .logbar .loghead { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+    padding: .35rem 1.1rem; border-bottom: 1px solid var(--line); }
+  #log { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .8em; padding: .5rem 1.1rem; max-height: 22vh; overflow: auto; margin: 0; }
 </style>
 </head>
 <body>
-<h1>Mission-Bound Authorization — Demo Console</h1>
-<p class="muted">Every action below runs through the real PEP → PDP → OpenFGA path. One seeded mission (subject <b>alice</b>, approver <b>bob</b>).</p>
+<header class="topbar">
+  <div class="brand">Mission-Bound Authorization<span class="env">demo</span></div>
+  <nav class="tabs" id="tabs">
+    <button data-view="mission" class="active">Mission</button>
+    <button data-view="agent">Agent</button>
+    <button data-view="approver">Approver</button>
+    <button data-view="operator">Operator</button>
+  </nav>
+  <div class="sess muted" id="sess"></div>
+</header>
 
-<div class="panel">
-  <h2>Agent — reachable services & actions</h2>
-  <div id="catalog"></div>
-  <div style="margin-top:.8rem">
-    <button onclick="act('get_invoice',{invoice_id:'inv-1'})">read inv-1 (in-authority)</button>
-    <button onclick="act('execute_wire_transfer',{invoice_id:'inv-1'})">wire inv-1 ($125, ok)</button>
-    <button onclick="act('execute_wire_transfer',{invoice_id:'inv-2'})">wire inv-2 ($900, over cap)</button>
-    <button onclick="act('execute_wire_transfer',{invoice_id:'inv-3'})">wire inv-3 (globex, out of authority)</button>
-  </div>
-  <div style="margin-top:.8rem">
-    <button onclick="jit()">send remittance inv-1 (in-authority, needs JIT approval)</button>
-    <button id="retryBtn" onclick="retryJit()" disabled>retry after approval</button>
-  </div>
-</div>
+<main>
+  <!-- ============================ MISSION ============================ -->
+  <section class="view" data-view="mission">
+    <h2 class="vtitle">Shaper &rarr; Mission Proposal &rarr; Issue</h2>
+    <p class="lead">A natural-language goal is shaped into an untrusted Mission Intent. The authorization server derives a
+      bounded Authority Set from it (the proposal, narrowed to the policy ceiling), and the narrowed mission is issued into
+      the fleet. The form below deliberately over-asks so the narrowing is visible.</p>
 
-<div class="panel">
-  <h2>Approver — JIT access requests (ARAP)</h2>
-  <p class="muted">In-mission actions gated behind a per-action approval. Approving is input context, not a new grant.</p>
-  <div id="queue"></div>
-</div>
+    <div class="card">
+      <span class="steptag">1 &middot; Shape</span>
+      <div class="grid2">
+        <label class="field"><span>Goal (natural language)</span>
+          <input class="inp" id="f_goal" value="Pay Acme and Globex invoices, up to $900" /></label>
+        <label class="field"><span>Cap (max_amount, USD)</span>
+          <input class="inp" id="f_cap" value="900.00" /></label>
+        <label class="field"><span>Proposed actions (comma-separated)</span>
+          <input class="inp" id="f_actions" value="payments:invoice.read, payments:payment.execute, payments:remittance.send" /></label>
+        <label class="field"><span>Vendors (comma-separated)</span>
+          <input class="inp" id="f_vendors" value="acme, globex" /></label>
+      </div>
+      <div class="btnrow"><button class="btn primary" onclick="shape()">Shape intent</button></div>
+      <div id="intentOut"></div>
+    </div>
 
-<div class="panel">
-  <h2>Operator — mission fleet</h2>
-  <div id="fleet"></div>
-</div>
+    <div class="card">
+      <span class="steptag">2 &middot; Propose (derive)</span>
+      <p class="muted" style="margin:.1rem 0 .3rem">The AS mechanically intersects the proposal with the derivation ceiling.</p>
+      <div class="btnrow"><button class="btn primary" id="proposeBtn" onclick="propose()" disabled>Derive Authority Set</button></div>
+      <div id="proposeOut"></div>
+    </div>
 
-<div class="panel">
-  <h2>Operator — evidence timeline (verified feed)</h2>
-  <div id="timeline"></div>
-</div>
+    <div class="card">
+      <span class="steptag">3 &middot; Issue</span>
+      <p class="muted" style="margin:.1rem 0 .3rem">Real issuance: PAR &rarr; headless approval (bob approves alice) &rarr; DPoP-bound token.</p>
+      <div class="btnrow"><button class="btn primary" id="issueBtn" onclick="issue()" disabled>Issue mission</button></div>
+      <div id="issueOut"></div>
+    </div>
+  </section>
 
-<div class="panel">
-  <h2>Activity log</h2>
-  <div id="log"></div>
-</div>
+  <!-- ============================ AGENT ============================ -->
+  <section class="view" data-view="agent" hidden>
+    <h2 class="vtitle">Agent</h2>
+    <p class="lead">Every action runs through the real PEP &rarr; PDP &rarr; OpenFGA path, bounded by the mission the agent is
+      currently acting under.</p>
+
+    <div class="card">
+      <span class="steptag">Bound mission</span>
+      <div id="agentMission"><span class="muted">loading&hellip;</span></div>
+    </div>
+
+    <div class="card">
+      <h3>Reachable services &amp; actions</h3>
+      <div id="catalog"></div>
+    </div>
+
+    <div class="card">
+      <h3>Actions</h3>
+      <div class="btnrow">
+        <button class="btn" onclick="act('get_invoice',{invoice_id:'inv-1'})">read inv-1 (in-authority)</button>
+        <button class="btn" onclick="act('execute_wire_transfer',{invoice_id:'inv-1'})">wire inv-1 ($125, ok)</button>
+        <button class="btn" onclick="act('execute_wire_transfer',{invoice_id:'inv-2'})">wire inv-2 ($900, over cap)</button>
+        <button class="btn" onclick="act('execute_wire_transfer',{invoice_id:'inv-3'})">wire inv-3 (globex, out of authority)</button>
+      </div>
+      <div class="btnrow" style="margin-top:.6rem">
+        <button class="btn" onclick="jit()">send remittance inv-1 (needs JIT approval)</button>
+        <button class="btn" id="retryBtn" onclick="retryJit()" disabled>retry after approval</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ APPROVER ============================ -->
+  <section class="view" data-view="approver" hidden>
+    <h2 class="vtitle">Approver</h2>
+    <p class="lead">In-mission actions gated behind a per-action approval (ARAP). Approving is input context for the pending
+      transaction, not a new grant.</p>
+    <div class="card">
+      <h3>JIT access requests</h3>
+      <div id="queue"></div>
+    </div>
+  </section>
+
+  <!-- ============================ OPERATOR ============================ -->
+  <section class="view" data-view="operator" hidden>
+    <h2 class="vtitle">Operator</h2>
+    <p class="lead">Fleet management and the verified evidence feed. Lifecycle operations transition mission state; the
+      timeline reflects each mission's transparency log.</p>
+    <div class="card">
+      <h3>Mission fleet</h3>
+      <div id="fleet"></div>
+    </div>
+    <div class="card">
+      <h3>Evidence timeline <span class="muted" id="tlMission"></span></h3>
+      <div id="timeline"></div>
+    </div>
+  </section>
+</main>
+
+<aside class="logbar">
+  <div class="loghead">Activity log</div>
+  <pre id="log"></pre>
+</aside>
 
 <script>
-let CSRF = "", MISSION = "";
-const $ = (id) => document.getElementById(id);
-const api = (p, init) => fetch(p, { credentials: "include", ...init }).then((r) => r.json());
-const logLine = (t) => { $("log").textContent = `${new Date().toLocaleTimeString()}  ${t}\n` + $("log").textContent; };
+  let CSRF = "", MISSION = "", SHAPED = null;
+  const $ = (id) => document.getElementById(id);
+  const api = (p, init) => fetch(p, { credentials: "include", ...init }).then((r) => r.json());
+  const post = (p, body, extra) => api(p, { method: "POST", headers: { "content-type": "application/json", ...(extra || {}) }, body: JSON.stringify(body) });
+  const logLine = (t) => { $("log").textContent = `${new Date().toLocaleTimeString()}  ${t}\n` + $("log").textContent; };
+  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  const shortRes = (r) => String(r).replace(/^https?:\/\//, "");
+  const csv = (id) => $(id).value.split(",").map((s) => s.trim()).filter(Boolean);
 
-async function refresh() {
-  const cat = await api("/agent/catalog");
-  $("catalog").innerHTML = (cat.services || []).map((s) =>
-    `<div class="row"><span>${s.display_name}</span><span class="pill">${s.connections[0]?.status}</span></div>`).join("");
-
-  const fleet = await api("/bff/operator/fleet");
-  $("fleet").innerHTML = fleet.map((m) => `
-    <div class="row">
-      <code>${m.id}</code>
-      <span class="pill">${m.state}</span>
-      <span class="muted">subj ${m.subject} · appr ${m.approver}</span>
-      <span style="flex:1"></span>
-      ${m.state === "active" ? `<button onclick="lifecycle('${m.id}','suspend')">suspend</button>
-      <button onclick="lifecycle('${m.id}','revoke')">revoke</button>` : ""}
-      ${m.state === "suspended" ? `<button onclick="lifecycle('${m.id}','resume')">resume</button>` : ""}
-    </div>`).join("");
-
-  const tl = await api(`/bff/operator/missions/${MISSION}/timeline`);
-  $("timeline").innerHTML = tl.map((r) =>
-    `<div class="row"><span class="${r.verified ? "ok" : "no"}">${r.verified ? "VERIFIED" : "FAILED"}</span>
-     <code>${r.evidence_type}</code><span class="muted">${r.producer}</span>${r.detail ? `<span class="no">${r.detail}</span>` : ""}</div>`).join("");
-
-  const queue = await api("/bff/approver/queue");
-  $("queue").innerHTML = (queue || []).length
-    ? queue.map((t) =>
-        `<div class="row"><code>${t.id}</code><span class="muted">${t.action} · subj ${t.subject}</span>
-         <span style="flex:1"></span>
-         <button onclick="adjudicate('${t.id}','approve')">approve</button>
-         <button onclick="adjudicate('${t.id}','deny')">deny</button></div>`).join("")
-    : `<span class="muted">no pending requests</span>`;
-}
-
-async function act(tool, args) {
-  const r = await api("/agent/act", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tool, args }) });
-  logLine(`${tool}(${JSON.stringify(args)}) → ${r.ok ? "PERMIT" : "DENY: " + (r.denial_reason || r.refusal_reason)}`);
-  refresh();
-}
-
-let PENDING = null; // { taskId, tool, args } for the in-flight JIT request.
-
-async function jit() {
-  const tool = "send_remittance_email", args = { invoice_id: "inv-1" };
-  const r = await api("/agent/act", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tool, args }) });
-  if (r.taskId) {
-    PENDING = { taskId: r.taskId, tool, args };
-    logLine(`${tool}(inv-1) → DENY: ${r.denial_reason} — opened ARS task ${r.taskId}, awaiting approval`);
-  } else {
-    logLine(`${tool}(inv-1) → ${r.ok ? "PERMIT (email sent)" : "DENY: " + (r.denial_reason || r.refusal_reason)}`);
+  // ---- nav ----
+  $("tabs").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-view]");
+    if (btn) showView(btn.dataset.view);
+  });
+  function showView(v) {
+    for (const b of document.querySelectorAll("#tabs button")) b.classList.toggle("active", b.dataset.view === v);
+    for (const s of document.querySelectorAll(".view")) s.hidden = s.dataset.view !== v;
   }
-  refresh();
-}
 
-async function retryJit() {
-  if (!PENDING) return;
-  const r = await api("/agent/retry", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(PENDING) });
-  if (r.pending) { logLine(`retry ${PENDING.tool} → still ${r.state}; approve the request first`); return; }
-  logLine(`retry ${PENDING.tool}(inv-1) → ${r.ok ? "PERMIT (email sent, JIT approval matched)" : "DENY: " + (r.denial_reason || r.refusal_reason)}`);
-  PENDING = null; $("retryBtn").disabled = true;
-  refresh();
-}
+  // ---- authority rendering ----
+  function chip(label, cls) { return `<span class="chip ${cls || ""}">${esc(label)}</span>`; }
+  function authEntryHtml(entry, drops) {
+    const cons = entry.constraints || {};
+    const dActions = new Set((drops && drops.actions) || []);
+    const dVendors = new Set((drops && drops.vendors) || []);
+    const acts = (entry.actions || []).map((a) => chip(a, dActions.has(a) ? "drop" : "")).join("") || '<span class="muted">&mdash;</span>';
+    const vends = (cons.vendors || []).map((v) => chip(v, dVendors.has(v) ? "drop" : "")).join("") || '<span class="muted">&mdash;</span>';
+    let capHtml = '<span class="muted">&mdash;</span>';
+    if (cons.max_amount) {
+      const cls = drops && drops.capTight ? "tight" : (drops ? "" : "grant");
+      capHtml = chip(`${cons.max_amount.amount} ${cons.max_amount.currency}`, cls);
+    }
+    return `<div class="authentry">
+      <div class="ael"><code>${esc(shortRes(entry.resource))}</code></div>
+      <div class="arow"><span class="alabel">actions</span><span class="chips">${acts}</span></div>
+      <div class="arow"><span class="alabel">vendors</span><span class="chips">${vends}</span></div>
+      <div class="arow"><span class="alabel">max</span><span class="chips">${capHtml}</span></div>
+    </div>`;
+  }
+  function dropsFor(entry, diff) {
+    const d = (diff || []).find((x) => x.resource === entry.resource);
+    if (!d) return null;
+    return { actions: d.actions_dropped || [], vendors: d.vendors_dropped || [], capTight: (d.constraints_tightened || []).length > 0 };
+  }
+  function narrowingSummary(diff) {
+    const parts = [];
+    for (const d of diff || []) {
+      if ((d.vendors_dropped || []).length) parts.push(`dropped vendor${d.vendors_dropped.length > 1 ? "s" : ""} ${d.vendors_dropped.join(", ")}`);
+      if ((d.actions_dropped || []).length) parts.push(`dropped action${d.actions_dropped.length > 1 ? "s" : ""} ${d.actions_dropped.join(", ")}`);
+      for (const t of d.constraints_tightened || []) parts.push(`tightened ${t.name} ${t.proposed} &rarr; ${t.granted}`);
+    }
+    return parts.length ? parts.join("; ") : "nothing to narrow &mdash; the proposal was already within the ceiling";
+  }
 
-async function adjudicate(taskId, decision) {
-  const r = await api("/bff/approver/adjudicate", { method: "POST", headers: { "content-type": "application/json", "x-csrf": CSRF }, body: JSON.stringify({ taskId, decision }) });
-  logLine(`approver ${decision}(${taskId}) → ${r.approved ? "approved" : "denied"}`);
-  if (r.approved && PENDING && PENDING.taskId === taskId) $("retryBtn").disabled = false;
-  refresh();
-}
-async function lifecycle(id, op) {
-  const r = await api(`/bff/operator/missions/${id}/lifecycle`, { method: "POST", headers: { "content-type": "application/json", "x-csrf": CSRF }, body: JSON.stringify({ operation: op }) });
-  logLine(`lifecycle ${op}(${id}) → ${r.state || r.error}`);
-  refresh();
-}
+  // ---- step 1: shape ----
+  async function shape() {
+    const body = { goal: $("f_goal").value, actions: csv("f_actions"), vendors: csv("f_vendors"), cap: $("f_cap").value.trim() };
+    const r = await post("/agent/shape", body);
+    SHAPED = r.intent;
+    $("intentOut").innerHTML =
+      `<div style="margin:.7rem 0 .3rem"><span class="taglabel untrust">untrusted &middot; client proposal</span></div>
+       <pre class="json untrusted">${esc(JSON.stringify(r.intent, null, 2))}</pre>`;
+    $("proposeBtn").disabled = false;
+    $("issueBtn").disabled = true;
+    $("proposeOut").innerHTML = "";
+    $("issueOut").innerHTML = "";
+    logLine(`shape → proposed Mission Intent (untrusted): ${csv("f_vendors").join("+")} / cap ${$("f_cap").value}`);
+  }
 
-(async () => {
-  const s = await api("/bff/session");
-  CSRF = s.csrf; MISSION = s.missionId;
-  logLine(`session as ${s.sub} [${s.roles.join(", ")}], mission ${s.missionId}`);
-  refresh();
-})();
+  // ---- step 2: propose (derive) ----
+  async function propose() {
+    if (!SHAPED) return;
+    const r = await post("/agent/propose", { intent: SHAPED });
+    if (r.error) { $("proposeOut").innerHTML = `<p class="no">derivation error: ${esc(r.error)}</p>`; return; }
+    const proposedHtml = (r.proposed || []).map((e) => authEntryHtml(e, dropsFor(e, r.diff))).join("");
+    const grantedHtml = (r.derived || []).map((e) => authEntryHtml(e, null)).join("");
+    $("proposeOut").innerHTML = `
+      <div class="grid2" style="margin-top:.7rem">
+        <div><div class="colhead"><span class="taglabel untrust">proposed</span> client asked for</div>${proposedHtml}</div>
+        <div><div class="colhead"><span class="taglabel grant">granted</span> AS derived</div>${grantedHtml}</div>
+      </div>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--drop-bg);border:1px solid var(--drop-ink)"></span>struck / red = dropped by derivation</span>
+        <span><span class="dot" style="background:var(--tight-bg);border:1px solid var(--tight-ink)"></span>amber = tightened to ceiling</span>
+      </div>
+      <div class="summary"><b>Narrowed:</b> ${narrowingSummary(r.diff)}</div>
+      <div class="caption">Derivation bounds the proposal — a compromised shaper can propose more but never widen.</div>`;
+    $("issueBtn").disabled = false;
+    logLine(`propose → derived Authority Set; narrowing: ${narrowingSummary(r.diff).replace(/&rarr;/g, "->").replace(/&mdash;/g, "-")}`);
+  }
+
+  // ---- step 3: issue ----
+  async function issue() {
+    if (!SHAPED) return;
+    $("issueBtn").disabled = true;
+    const r = await post("/agent/issue", { intent: SHAPED });
+    if (r.error) { $("issueOut").innerHTML = `<p class="no">issue error: ${esc(r.error)}</p>`; $("issueBtn").disabled = false; return; }
+    const grantHtml = (r.authority || []).map((e) => authEntryHtml(e, null)).join("");
+    $("issueOut").innerHTML =
+      `<div class="issued" style="margin-top:.6rem">Issued mission <code>${esc(r.missionId)}</code> — now the agent's active mission.</div>${grantHtml}`;
+    MISSION = r.missionId;
+    PENDING = null; $("retryBtn").disabled = true; // a swapped mission voids any armed JIT retry
+    logLine(`issue → new mission ${r.missionId} issued and set active`);
+    await refreshMission();
+    await refresh();
+    showView("operator");
+  }
+
+  // ---- agent binding ----
+  async function refreshMission() {
+    const m = await api("/agent/mission");
+    const auth = (m.authority || []).map((e) => authEntryHtml(e, null)).join("") || '<span class="muted">no authority</span>';
+    $("agentMission").innerHTML = `<div class="arow"><span class="alabel">mission</span><code>${esc(m.missionId)}</code></div>${auth}`;
+    $("sess").innerHTML = $("sess").dataset.who ? `${$("sess").dataset.who} · <code>${esc(m.missionId)}</code>` : `<code>${esc(m.missionId)}</code>`;
+  }
+
+  // ---- shared refresh (catalog / fleet / timeline / queue) ----
+  async function refresh() {
+    const cat = await api("/agent/catalog");
+    $("catalog").innerHTML = (cat.services || []).map((s) =>
+      `<div class="row"><span>${esc(s.display_name)}</span><span class="grow"></span><span class="pill">${esc(s.connections[0]?.status)}</span></div>`).join("");
+
+    const fleet = await api("/bff/operator/fleet");
+    $("fleet").innerHTML = fleet.map((m) => `
+      <div class="row">
+        <code>${esc(m.id)}</code>
+        <span class="pill ${esc(m.state)}">${esc(m.state)}</span>
+        <span class="muted">subj ${esc(m.subject)} · appr ${esc(m.approver)}</span>
+        ${m.id === MISSION ? '<span class="pill active">active agent</span>' : ""}
+        <span class="grow"></span>
+        ${m.state === "active" ? `<button class="btn" onclick="lifecycle('${m.id}','suspend')">suspend</button>
+        <button class="btn" onclick="lifecycle('${m.id}','revoke')">revoke</button>` : ""}
+        ${m.state === "suspended" ? `<button class="btn" onclick="lifecycle('${m.id}','resume')">resume</button>` : ""}
+      </div>`).join("");
+
+    $("tlMission").innerHTML = MISSION ? `for <code>${esc(MISSION)}</code>` : "";
+    const tl = await api(`/bff/operator/missions/${MISSION}/timeline`);
+    $("timeline").innerHTML = (tl || []).length
+      ? tl.map((r) =>
+          `<div class="row"><span class="${r.verified ? "ok" : "no"}">${r.verified ? "VERIFIED" : "FAILED"}</span>
+           <code>${esc(r.evidence_type)}</code><span class="muted">${esc(r.producer)}</span>${r.detail ? `<span class="no">${esc(r.detail)}</span>` : ""}</div>`).join("")
+      : '<div class="muted" style="padding:.4rem 0">no evidence yet — run an agent action under this mission</div>';
+
+    const queue = await api("/bff/approver/queue");
+    $("queue").innerHTML = (queue || []).length
+      ? queue.map((t) =>
+          `<div class="row"><code>${esc(t.id)}</code><span class="muted">${esc(t.action)} · subj ${esc(t.subject)}</span>
+           <span class="grow"></span>
+           <button class="btn primary" onclick="adjudicate('${t.id}','approve')">approve</button>
+           <button class="btn" onclick="adjudicate('${t.id}','deny')">deny</button></div>`).join("")
+      : '<span class="muted">no pending requests</span>';
+  }
+
+  // ---- agent actions (unchanged enforcement path) ----
+  async function act(tool, args) {
+    const r = await post("/agent/act", { tool, args });
+    logLine(`${tool}(${JSON.stringify(args)}) → ${r.ok ? "PERMIT" : "DENY: " + (r.denial_reason || r.refusal_reason)}`);
+    refresh();
+  }
+
+  let PENDING = null;
+  async function jit() {
+    const tool = "send_remittance_email", args = { invoice_id: "inv-1" };
+    const r = await post("/agent/act", { tool, args });
+    if (r.taskId) {
+      PENDING = { taskId: r.taskId, tool, args };
+      logLine(`${tool}(inv-1) → DENY: ${r.denial_reason} — opened ARS task ${r.taskId}, awaiting approval`);
+    } else {
+      logLine(`${tool}(inv-1) → ${r.ok ? "PERMIT (email sent)" : "DENY: " + (r.denial_reason || r.refusal_reason)}`);
+    }
+    refresh();
+  }
+  async function retryJit() {
+    if (!PENDING) return;
+    const r = await post("/agent/retry", PENDING);
+    if (r.pending) { logLine(`retry ${PENDING.tool} → still ${r.state}; approve the request first`); return; }
+    logLine(`retry ${PENDING.tool}(inv-1) → ${r.ok ? "PERMIT (email sent, JIT approval matched)" : "DENY: " + (r.denial_reason || r.refusal_reason)}`);
+    PENDING = null; $("retryBtn").disabled = true;
+    refresh();
+  }
+  async function adjudicate(taskId, decision) {
+    const r = await post("/bff/approver/adjudicate", { taskId, decision }, { "x-csrf": CSRF });
+    logLine(`approver ${decision}(${taskId}) → ${r.approved ? "approved" : "denied"}`);
+    if (r.approved && PENDING && PENDING.taskId === taskId) $("retryBtn").disabled = false;
+    refresh();
+  }
+  async function lifecycle(id, op) {
+    const r = await post(`/bff/operator/missions/${id}/lifecycle`, { operation: op }, { "x-csrf": CSRF });
+    logLine(`lifecycle ${op}(${id}) → ${r.state || r.error}`);
+    refresh();
+  }
+
+  // ---- boot ----
+  (async () => {
+    const s = await api("/bff/session");
+    CSRF = s.csrf; MISSION = s.missionId;
+    $("sess").dataset.who = `${esc(s.sub)} [${esc(s.roles.join(", "))}]`;
+    logLine(`session as ${s.sub} [${s.roles.join(", ")}], mission ${s.missionId}`);
+    await refreshMission();
+    await refresh();
+  })();
 </script>
 </body>
 </html>
