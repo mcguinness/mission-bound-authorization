@@ -18,10 +18,27 @@ import { serve } from "@hono/node-server";
 import { Hono, type Context } from "hono";
 import type { TokenFacts } from "@mission/mcp-payments";
 import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
+import { shapeIntent } from "@mission/agent";
 import { composeStack } from "./stack.js";
 import { dpopProofFor, issueMissionToken } from "./oauth-client.js";
 
 const TX_TOOLS = new Set(["execute_wire_transfer", "send_remittance_email"]);
+
+/** Minimal read-side shapes for the proposal/narrowing diff (display only). */
+interface Amount {
+  amount: string;
+  currency: string;
+}
+interface AuthEntry {
+  type: string;
+  resource: string;
+  actions: string[];
+  constraints?: { max_amount?: Amount; vendors?: string[] };
+}
+interface IntentShape {
+  proposed_authority?: AuthEntry[];
+  [k: string]: unknown;
+}
 
 const PORT = Number(process.env.CONSOLE_BFF_PORT ?? TOPOLOGY.ports.console);
 const INDEX = fileURLToPath(new URL("../public/index.html", import.meta.url));
@@ -45,6 +62,7 @@ async function main() {
   });
   if (!stack.authServer) throw new Error("expected authServer extras (composeStack withAuthServer)");
   const asUrl = stack.authServer.asUrl;
+  const agentClientJwk = stack.authServer.agentClientJwk;
 
   // Real issuance: PAR -> authorize -> Bob approves alice -> DPoP-bound token.
   // The mission covers reading, wire execution, and remittance (the JIT-gated
@@ -71,6 +89,11 @@ async function main() {
   };
   const missionId = facts.mission.id;
 
+  // The agent's ACTIVE mission: the credential material it currently acts under.
+  // Held mutably so /agent/issue can swap the whole set (facts + the DPoP-bound
+  // token used for resource calls and the AROP transaction endpoint) atomically.
+  let active = { facts, missionId, issued };
+
   // Seed evidence: one wire on inv-seed (keeps inv-1's single-use permit fresh
   // for the dashboard button), then publish it to the transparency log.
   await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
@@ -85,14 +108,18 @@ async function main() {
 
   // Publish any evidence produced since the last call to the transparency log
   // so the operator timeline reflects the newest agent activity.
-  let published = stack.evidence.forMission(missionId).length;
-  const publishNew = async () => {
-    const all = stack.evidence.forMission(missionId);
-    for (const ev of all.slice(published)) {
+  // Per-mission high-water mark: the active mission changes across /agent/issue,
+  // so track how much of each mission's evidence has been published and flush
+  // only the tail for whichever mission the caller names (default: active).
+  const publishedCounts = new Map<string, number>([[missionId, stack.evidence.forMission(missionId).length]]);
+  const publishNew = async (mid: string = active.missionId) => {
+    const all = stack.evidence.forMission(mid);
+    const already = publishedCounts.get(mid) ?? 0;
+    for (const ev of all.slice(already)) {
       const t = ev.kind === "decision" ? "decision-evidence" : ev.kind === "execution" ? "execution-evidence" : "refusal-record";
-      await stack.publishEvidence(missionId, t, ev as unknown as Record<string, unknown>);
+      await stack.publishEvidence(mid, t, ev as unknown as Record<string, unknown>);
     }
-    published = all.length;
+    publishedCounts.set(mid, all.length);
   };
 
   // POST to the AS transaction endpoint, presenting the base mission token
@@ -103,8 +130,8 @@ async function main() {
     const res = await fetch(`${asUrl}/transaction`, {
       method: "POST",
       headers: {
-        authorization: `DPoP ${issued.accessToken}`,
-        dpop: await dpopProofFor(issued.dpopKeys, `${asUrl}/transaction`, "POST"),
+        authorization: `DPoP ${active.issued.accessToken}`,
+        dpop: await dpopProofFor(active.issued.dpopKeys, `${asUrl}/transaction`, "POST"),
         "content-type": "application/json",
       },
       body: JSON.stringify(payload),
@@ -134,7 +161,7 @@ async function main() {
   app.get("/index.html", index);
 
   // Console BFF (operator + approver personas).
-  app.get("/bff/session", (c) => c.json({ sub: session.sub, roles: session.roles, csrf: session.csrf, missionId }));
+  app.get("/bff/session", (c) => c.json({ sub: session.sub, roles: session.roles, csrf: session.csrf, missionId: active.missionId }));
   app.get("/bff/operator/fleet", (c) => c.json(stack.bff.fleet(session)));
   app.get("/bff/operator/missions/:id/timeline", async (c) => c.json(await stack.bff.timeline(session, c.req.param("id"))));
   app.post("/bff/operator/missions/:id/lifecycle", async (c) => {
@@ -150,6 +177,103 @@ async function main() {
 
   // Agent surface.
   app.get("/agent/catalog", (c) => c.json(stack.catalog.catalog("alice", { type: "mcp" })));
+
+  // Which mission the agent currently acts under (Agent console binding).
+  app.get("/agent/mission", (c) =>
+    c.json({ missionId: active.missionId, authority: stack.kernel.get(active.missionId)?.authority_set ?? [] }));
+
+  // ---- Shaper -> Mission Proposal -> Issue ----------------------------------
+  // The shaper is UNTRUSTED client input: it only PROPOSES a Mission Intent from
+  // a goal. The AS derives and bounds authority regardless of what is proposed,
+  // so a compromised shaper can propose more but never widen past the ceiling.
+
+  // Shape a goal into a proposed Mission Intent. The shaper carries no cap, so
+  // the demo injects the proposed max_amount here (services/agent untouched) to
+  // surface an over-ask the derivation will visibly narrow.
+  app.post("/agent/shape", async (c) => {
+    const b = await readJson(c);
+    const resources = (b.resources as string[]) ?? [CANONICAL_RESOURCE];
+    const raw = shapeIntent({
+      goal: String(b.goal ?? ""),
+      resources,
+      expiresAt: (b.expiresAt as string) ?? "2027-01-01T00:00:00Z",
+      ...(Array.isArray(b.actions) ? { proposedActions: b.actions as string[] } : {}),
+      ...(Array.isArray(b.vendors) ? { vendors: b.vendors as string[] } : {}),
+    });
+    const intent = JSON.parse(raw) as Record<string, unknown>;
+    const cap = (b.cap ?? b.max_amount) as string | undefined;
+    const entries = intent.proposed_authority as Array<Record<string, unknown>> | undefined;
+    if (cap && entries?.[0]) {
+      const e = entries[0];
+      const constraints = (e.constraints as Record<string, unknown> | undefined) ?? {};
+      constraints.max_amount = { amount: String(cap), currency: "USD" };
+      e.constraints = constraints;
+    }
+    return c.json({ intent });
+  });
+
+  // Derive the bounded Authority Set from the (untrusted) Intent and compute the
+  // narrowing server-side: per resource entry, which vendors/actions were
+  // DROPPED and which constraints were TIGHTENED (e.g. max_amount 900 -> 500).
+  // The UI renders this diff; it never diffs two authority blobs itself.
+  app.post("/agent/propose", async (c) => {
+    const b = await readJson(c);
+    const raw = typeof b.intent === "string" ? b.intent : JSON.stringify(b.intent ?? {});
+    let proposed: AuthEntry[];
+    let derived: AuthEntry[];
+    try {
+      const parsed = stack.kernel.validateIntent(raw);
+      derived = stack.kernel.derive(parsed) as unknown as AuthEntry[];
+      proposed = (parsed as unknown as IntentShape).proposed_authority ?? [];
+    } catch (e) {
+      return c.json({ error: (e as Error).message }, 400);
+    }
+    const amt = (m?: Amount) => (m ? `${m.amount} ${m.currency}` : "unbounded");
+    const diff = proposed.map((p) => {
+      const g = derived.find((d) => d.resource === p.resource);
+      const gActions = g?.actions ?? [];
+      const gVendors = g?.constraints?.vendors ?? [];
+      const pVendors = p.constraints?.vendors ?? [];
+      const gCap = g?.constraints?.max_amount;
+      const pCap = p.constraints?.max_amount;
+      const tightened =
+        gCap && (!pCap || pCap.amount !== gCap.amount || pCap.currency !== gCap.currency)
+          ? [{ name: "max_amount", proposed: amt(pCap), granted: amt(gCap) }]
+          : [];
+      return {
+        resource: p.resource,
+        actions_dropped: p.actions.filter((a) => !gActions.includes(a)),
+        vendors_dropped: pVendors.filter((v) => !gVendors.includes(v)),
+        constraints_tightened: tightened,
+      };
+    });
+    return c.json({ proposed, derived, diff });
+  });
+
+  // Issue the (narrowed) mission for real: PAR -> headless approve -> DPoP token.
+  // The AS derives the granted authority; we rebuild TokenFacts and swap the
+  // agent's ACTIVE credential set so subsequent /agent/act calls run under it.
+  // The new mission is a real kernel record, so it appears in the operator fleet.
+  app.post("/agent/issue", async (c) => {
+    const b = await readJson(c);
+    const missionIntent = typeof b.intent === "string" ? b.intent : JSON.stringify(b.intent ?? {});
+    let issuedMission: Awaited<ReturnType<typeof issueMissionToken>>;
+    try {
+      issuedMission = await issueMissionToken(asUrl, agentClientJwk, { missionIntent, scope: "payments" });
+    } catch (e) {
+      return c.json({ error: (e as Error).message }, 400);
+    }
+    const proof = await dpopProofFor(issuedMission.dpopKeys, CANONICAL_RESOURCE, "POST");
+    const newFacts: TokenFacts = {
+      ...(await stack.server.validateToken(issuedMission.accessToken, proof, CANONICAL_RESOURCE, "POST")),
+      clientInstanceId: "inst-1",
+    };
+    const newId = newFacts.mission.id;
+    active = { facts: newFacts, missionId: newId, issued: issuedMission };
+    publishedCounts.set(newId, stack.evidence.forMission(newId).length);
+    await publishNew();
+    return c.json({ missionId: newId, authority: stack.kernel.get(newId)?.authority_set ?? [] });
+  });
   // Agent action: attempt a tool call and report the enforcement outcome. When
   // a gated action yields an access_challenge (AROP), the server presents it to
   // the AS transaction endpoint on the agent's behalf, opening an AROP task on
@@ -159,8 +283,8 @@ async function main() {
     const tool = String(body.tool);
     const args = (body.args as Record<string, unknown>) ?? {};
     const r = TX_TOOLS.has(tool)
-      ? await stack.server.callTransactionTool(tool, args, facts)
-      : await stack.server.callReadTool(tool, args, facts);
+      ? await stack.server.callTransactionTool(tool, args, active.facts)
+      : await stack.server.callReadTool(tool, args, active.facts);
     await publishNew();
     const ch = (r as { access_challenge?: { challenge: string; txn_endpoint: string } }).access_challenge;
     if (!r.ok && ch) {
@@ -211,7 +335,7 @@ async function main() {
       }
       return c.json({ ok: false, pending: true, state: task.state });
     }
-    const r = await stack.server.callTransactionTool(tool, args, facts, undefined, txnToken);
+    const r = await stack.server.callTransactionTool(tool, args, active.facts, undefined, txnToken);
     await publishNew();
     txnHandles.delete(taskId);
     return c.json(r);
