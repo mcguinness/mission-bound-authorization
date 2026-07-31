@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mission-Bound Authorization — Demo Console</title>
+<style>
+  :root { color-scheme: light dark; --line: #8884; --ok: #1a7f37; --no: #cf222e; }
+  * { box-sizing: border-box; }
+  body { font: 14px/1.5 ui-sans-serif, system-ui, sans-serif; margin: 0; padding: 2rem; max-width: 900px; margin-inline: auto; }
+  h1 { font-size: 1.4rem; } h2 { font-size: 1.05rem; margin-top: 1.6rem; }
+  .panel { border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; margin: 1rem 0; }
+  .row { display: flex; align-items: center; gap: .6rem; padding: .35rem 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  button { font: inherit; padding: .3rem .7rem; border: 1px solid var(--line); border-radius: 7px; background: #8881; cursor: pointer; }
+  button:hover { background: #8883; }
+  code { font-family: ui-monospace, monospace; font-size: .85em; }
+  .ok { color: var(--ok); font-weight: 600; } .no { color: var(--no); font-weight: 600; }
+  .muted { opacity: .65; } .pill { border: 1px solid var(--line); border-radius: 999px; padding: 0 .5rem; font-size: .8em; }
+  #log { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .82em; background: #8881; border-radius: 8px; padding: .8rem; max-height: 220px; overflow: auto; }
+</style>
+</head>
+<body>
+<h1>Mission-Bound Authorization — Demo Console</h1>
+<p class="muted">Every action below runs through the real PEP → PDP → OpenFGA path. One seeded mission (subject <b>alice</b>, approver <b>bob</b>).</p>
+
+<div class="panel">
+  <h2>Agent — reachable services & actions</h2>
+  <div id="catalog"></div>
+  <div style="margin-top:.8rem">
+    <button onclick="act('get_invoice',{invoice_id:'inv-1'})">read inv-1 (in-authority)</button>
+    <button onclick="act('execute_wire_transfer',{invoice_id:'inv-1'})">wire inv-1 ($125, ok)</button>
+    <button onclick="act('execute_wire_transfer',{invoice_id:'inv-2'})">wire inv-2 ($900, over cap)</button>
+    <button onclick="act('execute_wire_transfer',{invoice_id:'inv-3'})">wire inv-3 (globex, out of authority)</button>
+  </div>
+  <div style="margin-top:.8rem">
+    <button onclick="jit()">send remittance inv-1 (in-authority, needs JIT approval)</button>
+    <button id="retryBtn" onclick="retryJit()" disabled>retry after approval</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Approver — JIT access requests (ARAP)</h2>
+  <p class="muted">In-mission actions gated behind a per-action approval. Approving is input context, not a new grant.</p>
+  <div id="queue"></div>
+</div>
+
+<div class="panel">
+  <h2>Operator — mission fleet</h2>
+  <div id="fleet"></div>
+</div>
+
+<div class="panel">
+  <h2>Operator — evidence timeline (verified feed)</h2>
+  <div id="timeline"></div>
+</div>
+
+<div class="panel">
+  <h2>Activity log</h2>
+  <div id="log"></div>
+</div>
+
+<script>
+let CSRF = "", MISSION = "";
+const $ = (id) => document.getElementById(id);
+const api = (p, init) => fetch(p, { credentials: "include", ...init }).then((r) => r.json());
+const logLine = (t) => { $("log").textContent = `${new Date().toLocaleTimeString()}  ${t}\n` + $("log").textContent; };
+
+async function refresh() {
+  const cat = await api("/agent/catalog");
+  $("catalog").innerHTML = (cat.services || []).map((s) =>
+    `<div class="row"><span>${s.display_name}</span><span class="pill">${s.connections[0]?.status}</span></div>`).join("");
+
+  const fleet = await api("/bff/operator/fleet");
+  $("fleet").innerHTML = fleet.map((m) => `
+    <div class="row">
+      <code>${m.id}</code>
+      <span class="pill">${m.state}</span>
+      <span class="muted">subj ${m.subject} · appr ${m.approver}</span>
+      <span style="flex:1"></span>
+      ${m.state === "active" ? `<button onclick="lifecycle('${m.id}','suspend')">suspend</button>
+      <button onclick="lifecycle('${m.id}','revoke')">revoke</button>` : ""}
+      ${m.state === "suspended" ? `<button onclick="lifecycle('${m.id}','resume')">resume</button>` : ""}
+    </div>`).join("");
+
+  const tl = await api(`/bff/operator/missions/${MISSION}/timeline`);
+  $("timeline").innerHTML = tl.map((r) =>
+    `<div class="row"><span class="${r.verified ? "ok" : "no"}">${r.verified ? "VERIFIED" : "FAILED"}</span>
+     <code>${r.evidence_type}</code><span class="muted">${r.producer}</span>${r.detail ? `<span class="no">${r.detail}</span>` : ""}</div>`).join("");
+
+  const queue = await api("/bff/approver/queue");
+  $("queue").innerHTML = (queue || []).length
+    ? queue.map((t) =>
+        `<div class="row"><code>${t.id}</code><span class="muted">${t.action} · subj ${t.subject}</span>
+         <span style="flex:1"></span>
+         <button onclick="adjudicate('${t.id}','approve')">approve</button>
+         <button onclick="adjudicate('${t.id}','deny')">deny</button></div>`).join("")
+    : `<span class="muted">no pending requests</span>`;
+}
+
+async function act(tool, args) {
+  const r = await api("/agent/act", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tool, args }) });
+  logLine(`${tool}(${JSON.stringify(args)}) → ${r.ok ? "PERMIT" : "DENY: " + (r.denial_reason || r.refusal_reason)}`);
+  refresh();
+}
+
+let PENDING = null; // { taskId, tool, args } for the in-flight JIT request.
+
+async function jit() {
+  const tool = "send_remittance_email", args = { invoice_id: "inv-1" };
+  const r = await api("/agent/act", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tool, args }) });
+  if (r.taskId) {
+    PENDING = { taskId: r.taskId, tool, args };
+    logLine(`${tool}(inv-1) → DENY: ${r.denial_reason} — opened ARS task ${r.taskId}, awaiting approval`);
+  } else {
+    logLine(`${tool}(inv-1) → ${r.ok ? "PERMIT (email sent)" : "DENY: " + (r.denial_reason || r.refusal_reason)}`);
+  }
+  refresh();
+}
+
+async function retryJit() {
+  if (!PENDING) return;
+  const r = await api("/agent/retry", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(PENDING) });
+  if (r.pending) { logLine(`retry ${PENDING.tool} → still ${r.state}; approve the request first`); return; }
+  logLine(`retry ${PENDING.tool}(inv-1) → ${r.ok ? "PERMIT (email sent, JIT approval matched)" : "DENY: " + (r.denial_reason || r.refusal_reason)}`);
+  PENDING = null; $("retryBtn").disabled = true;
+  refresh();
+}
+
+async function adjudicate(taskId, decision) {
+  const r = await api("/bff/approver/adjudicate", { method: "POST", headers: { "content-type": "application/json", "x-csrf": CSRF }, body: JSON.stringify({ taskId, decision }) });
+  logLine(`approver ${decision}(${taskId}) → ${r.approved ? "approved" : "denied"}`);
+  if (r.approved && PENDING && PENDING.taskId === taskId) $("retryBtn").disabled = false;
+  refresh();
+}
+async function lifecycle(id, op) {
+  const r = await api(`/bff/operator/missions/${id}/lifecycle`, { method: "POST", headers: { "content-type": "application/json", "x-csrf": CSRF }, body: JSON.stringify({ operation: op }) });
+  logLine(`lifecycle ${op}(${id}) → ${r.state || r.error}`);
+  refresh();
+}
+
+(async () => {
+  const s = await api("/bff/session");
+  CSRF = s.csrf; MISSION = s.missionId;
+  logLine(`session as ${s.sub} [${s.roles.join(", ")}], mission ${s.missionId}`);
+  refresh();
+})();
+</script>
+</body>
+</html>

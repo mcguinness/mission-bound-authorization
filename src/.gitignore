@@ -4,3 +4,7 @@ certs/
 .env
 *.tsbuildinfo
 evals/fixtures/redteam-latest.json
+
+# The demo dashboard is hand-authored (the runnable UI, served by demo:serve),
+# not generated. The repo-root *.html rule (for built draft HTML) must not swallow it.
+!demo/public/index.html
