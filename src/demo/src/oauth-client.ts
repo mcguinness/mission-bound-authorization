@@ -44,6 +44,219 @@ export interface IssuedMission {
 }
 
 /**
+ * The interaction session's cookie jar. The AS resolves an in-flight interaction
+ * from its cookie alone, so submit -> complete/deny MUST carry the same jar; a
+ * per-approval jar keeps concurrent submits from resolving each other's session.
+ */
+export type CookieJar = Map<string, string>;
+
+/** The half-completed approval submit hands to complete/deny (jar + uid + PAR). */
+export interface SubmittedApproval {
+  /** The interaction uid the approver decides against. */
+  uid: string;
+  /** The per-approval cookie jar (interaction session). */
+  jar: CookieJar;
+  /** PAR artifacts, carried forward so complete can assemble IssuedMission.artifacts. */
+  par: { request: Record<string, string>; response: { request_uri: string } };
+}
+
+/** PKCE verifier reused across submit/complete: PKCE binds verifier<->challenge
+ * per code, not uniqueness across requests, so a constant is safe for concurrency. */
+const PKCE_VERIFIER = "exhibit-verifier-0123456789-0123456789-0123456789";
+const pkceChallenge = async (): Promise<string> =>
+  Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(PKCE_VERIFIER))).toString("base64url");
+
+/** Cookie-jar accessors over a caller-owned Map (so the jar round-trips by reference). */
+function jarClosures(cookies: CookieJar): { cookieHeader: () => string; storeCookies: (res: Response) => void } {
+  const cookieHeader = (): string => [...cookies.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+  const storeCookies = (res: Response): void => {
+    for (const line of res.headers.getSetCookie()) {
+      const [pair] = line.split(";");
+      const eq = (pair as string).indexOf("=");
+      cookies.set((pair as string).slice(0, eq), (pair as string).slice(eq + 1));
+    }
+  };
+  return { cookieHeader, storeCookies };
+}
+
+/** private_key_jwt client-assertion signer for the agent confidential client. */
+async function clientAssertionSigner(asUrl: string, agentClientJwk: Record<string, unknown>): Promise<() => Promise<string>> {
+  const clientKey = (await importJWK(agentClientJwk as JWK, "ES256")) as CryptoKey;
+  return () =>
+    new SignJWT({})
+      .setProtectedHeader({ alg: "ES256", kid: "ap-agent-auth" })
+      .setIssuer("ap-agent")
+      .setSubject("ap-agent")
+      .setAudience(asUrl)
+      .setIssuedAt()
+      .setExpirationTime("2m")
+      .setJti(crypto.randomUUID())
+      .sign(clientKey);
+}
+
+/**
+ * PAR -> authorize, stopping at the interaction (NO decide). Returns the uid +
+ * the per-approval cookie jar + the PAR artifacts, so the approval can be parked
+ * and completed (or denied) later by an out-of-band approver decision.
+ */
+export async function submitMissionApproval(
+  asUrl: string,
+  agentClientJwk: Record<string, unknown>,
+  opts: IssueOpts,
+): Promise<SubmittedApproval> {
+  const cookies: CookieJar = new Map();
+  const { storeCookies } = jarClosures(cookies);
+  const clientAssertion = await clientAssertionSigner(asUrl, agentClientJwk);
+  const challenge = await pkceChallenge();
+
+  const parParams: Record<string, string> = {
+    client_id: "ap-agent",
+    response_type: "code",
+    redirect_uri: REDIRECT_URI,
+    scope: opts.scope,
+    resource: CANONICAL_RESOURCE,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    mission_intent: opts.missionIntent,
+  };
+  const parRes = await fetch(`${asUrl}/request`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      ...parParams,
+      client_assertion: await clientAssertion(),
+      client_assertion_type: CLIENT_ASSERTION_TYPE,
+    }).toString(),
+  });
+  const parBody = (await parRes.json()) as { request_uri?: string; error?: string };
+  if (parRes.status !== 201 || !parBody.request_uri) {
+    throw new Error(`PAR failed: ${parRes.status} ${JSON.stringify(parBody)}`);
+  }
+  const requestUri = parBody.request_uri;
+
+  const authUrl = `${asUrl}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri: requestUri })}`;
+  const res = await fetch(authUrl, { redirect: "manual" });
+  storeCookies(res);
+  const location = res.headers.get("location") as string;
+  if (!location?.includes("/interaction/")) {
+    throw new Error(`authorize did not redirect to an interaction: ${location}`);
+  }
+  const uid = location.split("/interaction/")[1] as string;
+  return { uid, jar: cookies, par: { request: parParams, response: { request_uri: requestUri } } };
+}
+
+/**
+ * Complete a parked approval: decide(approve, bob/alice) -> follow the redirect
+ * chain to the code -> DPoP-bound token exchange (with the dpop-nonce retry).
+ * DPoP is introduced only at /token, so the keypair is generated here. Returns
+ * the same IssuedMission shape issueMissionToken returns.
+ */
+export async function completeMissionApproval(
+  asUrl: string,
+  agentClientJwk: Record<string, unknown>,
+  opts: { uid: string; jar: CookieJar; par?: SubmittedApproval["par"] },
+): Promise<IssuedMission> {
+  const { uid, jar } = opts;
+  const { cookieHeader, storeCookies } = jarClosures(jar);
+  const clientAssertion = await clientAssertionSigner(asUrl, agentClientJwk);
+
+  const dpopKeys = await generateKeyPair("ES256", { extractable: true });
+  const dpopPubJwk = await exportJWK(dpopKeys.publicKey);
+  const dpopJkt = await calculateJwkThumbprint(dpopPubJwk);
+  const dpopProof = (htu: string, htm: string, extra: Record<string, unknown> = {}): Promise<string> =>
+    new SignJWT({ htu, htm, ...extra })
+      .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: dpopPubJwk })
+      .setIssuedAt()
+      .setJti(crypto.randomUUID())
+      .sign(dpopKeys.privateKey);
+
+  // decide: Bob approves alice; follow the redirect chain to the code.
+  const decideBody = { decision: "approve", approver: "bob", subject: "alice" };
+  let res = await fetch(`${asUrl}/interaction/${uid}/decide`, {
+    method: "POST",
+    redirect: "manual",
+    headers: { "content-type": "application/json", cookie: cookieHeader() },
+    body: JSON.stringify(decideBody),
+  });
+  storeCookies(res);
+  let location = res.headers.get("location") as string;
+  while (location?.startsWith(asUrl)) {
+    res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader() } });
+    storeCookies(res);
+    location = res.headers.get("location") as string;
+  }
+  if (!location?.includes(`${REDIRECT_URI}?`)) {
+    throw new Error(`interaction did not redirect back with a code: ${location}`);
+  }
+  const code = new URL(location).searchParams.get("code");
+  if (!code) throw new Error("no authorization code on the redirect");
+
+  const tokenParams: Record<string, string> = {
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: REDIRECT_URI,
+    code_verifier: PKCE_VERIFIER,
+    resource: CANONICAL_RESOURCE,
+  };
+  const tokenReq = async (extra: Record<string, unknown> = {}): Promise<Response> =>
+    fetch(`${asUrl}/token`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        dpop: await dpopProof(`${asUrl}/token`, "POST", extra),
+      },
+      body: new URLSearchParams({
+        ...tokenParams,
+        client_assertion: await clientAssertion(),
+        client_assertion_type: CLIENT_ASSERTION_TYPE,
+      }).toString(),
+    });
+  let tokenRes = await tokenReq();
+  const nonce = tokenRes.headers.get("dpop-nonce");
+  if (tokenRes.status === 400 && nonce) tokenRes = await tokenReq({ nonce });
+  const tokenBody = (await tokenRes.json()) as Record<string, unknown>;
+  if (tokenRes.status !== 200) {
+    throw new Error(`token exchange failed: ${tokenRes.status} ${JSON.stringify(tokenBody)}`);
+  }
+  const accessToken = tokenBody.access_token as string;
+  const idToken = tokenBody.id_token as string | undefined;
+  return {
+    accessToken,
+    ...(idToken ? { idToken } : {}),
+    dpopKeys,
+    dpopJkt,
+    artifacts: {
+      par: opts.par ?? { request: {}, response: { request_uri: "" } },
+      decide: { request: decideBody, code },
+      token: { request: tokenParams, response: tokenBody },
+    },
+  };
+}
+
+/**
+ * Deny a parked approval: decide(deny) with the interaction jar so the AS
+ * finishes the interaction (access_denied) instead of leaving it dangling.
+ * Follows the terminal redirect chain (~access_denied) to fully settle it.
+ */
+export async function denyMissionApproval(asUrl: string, opts: { uid: string; jar: CookieJar }): Promise<void> {
+  const { uid, jar } = opts;
+  const { cookieHeader, storeCookies } = jarClosures(jar);
+  let res = await fetch(`${asUrl}/interaction/${uid}/decide`, {
+    method: "POST",
+    redirect: "manual",
+    headers: { "content-type": "application/json", cookie: cookieHeader() },
+    body: JSON.stringify({ decision: "deny", approver: "bob", subject: "alice" }),
+  });
+  storeCookies(res);
+  let location = res.headers.get("location") as string;
+  while (location?.startsWith(asUrl)) {
+    res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader() } });
+    storeCookies(res);
+    location = res.headers.get("location") as string;
+  }
+}
+
+/**
  * Drive the full authorization-code + DPoP dance and return the issued tokens.
  * Bob approves alice's mission at the headless interaction (write-bearing
  * missions need a distinct approver).
