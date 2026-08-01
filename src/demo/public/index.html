@@ -184,6 +184,10 @@
 
     <div class="card">
       <h3>Actions</h3>
+      <div class="btnrow" style="margin-bottom:.7rem">
+        <button class="btn primary" onclick="run()">Run mission</button>
+        <span class="muted" style="align-self:center">autonomous, deterministic — works the whole mission, pausing at the JIT gate</span>
+      </div>
       <div class="btnrow">
         <button class="btn" onclick="act('get_invoice',{invoice_id:'inv-1'})">read inv-1 (in-authority)</button>
         <button class="btn" onclick="act('execute_wire_transfer',{invoice_id:'inv-1'})">wire inv-1 ($125, ok)</button>
@@ -263,6 +267,27 @@
     const h = label("reason", code);
     return h === code ? code : `${h} (${code})`;
   };
+
+  // ---- one renderer for every agent step (single actions AND run steps) ----
+  // Consumes the server's structured StepDetail: human tool name, target
+  // invoice·vendor·amount, verdict, short mission id, and the evidence outcome.
+  const shortMission = (id) => { const s = String(id || ""); return s.length > 11 ? s.slice(0, 10) + "…" : s; };
+  const money = (t) => (t && t.amount != null ? (t.currency === "USD" ? `$${t.amount}` : `${t.amount} ${t.currency}`) : "");
+  function renderStep(d) {
+    if (!d || !d.tool) return;
+    const t = d.target;
+    const target = t ? [t.invoice_id, t.vendor, money(t)].filter(Boolean).join(" ") : "";
+    let verdict;
+    if (d.ok) verdict = "PERMIT";
+    else if (d.outcome === "paused") verdict = "PAUSED" + (d.reason ? ": " + reasonGloss(d.reason) : "");
+    else verdict = "DENY" + (d.reason ? ": " + reasonGloss(d.reason) : "");
+    let line = [label("tool", d.tool), target].filter(Boolean).join(" · ") + ` → ${verdict}`;
+    if (d.missionId) line += ` · mission ${shortMission(d.missionId)}`;
+    // The verdict already states a denial; only PERMIT/PAUSED/READ add an outcome.
+    if (d.evidence && d.outcome !== "denied") line += ` · ${d.evidence}`;
+    if (d.deduped) line += " (deduped)";
+    logLine(line);
+  }
   // Caption under the actions input: the human meaning of the ids the user edits.
   function renderActionsHelp() {
     const el = $("actionsHelp");
@@ -422,7 +447,7 @@
   // ---- agent actions (unchanged enforcement path) ----
   async function act(tool, args) {
     const r = await post("/agent/act", { tool, args });
-    logLine(`${label("tool", tool)}(${JSON.stringify(args)}) → ${r.ok ? "PERMIT" : "DENY: " + reasonGloss(r.denial_reason || r.refusal_reason)}`);
+    renderStep(r);
     refresh();
   }
 
@@ -430,11 +455,27 @@
   async function jit() {
     const tool = "send_remittance_email", args = { invoice_id: "inv-1" };
     const r = await post("/agent/act", { tool, args });
+    renderStep(r);
     if (r.taskId) {
       PENDING = { taskId: r.taskId, tool, args };
-      logLine(`${label("tool", tool)}(inv-1) → DENY: ${reasonGloss(r.denial_reason)} — opened ARS task ${r.taskId}, awaiting approval`);
-    } else {
-      logLine(`${label("tool", tool)}(inv-1) → ${r.ok ? "PERMIT (email sent)" : "DENY: " + reasonGloss(r.denial_reason || r.refusal_reason)}`);
+      logLine(`  ↳ opened ARS task ${r.taskId} — approve it in the Approver console, then Retry`);
+    }
+    refresh();
+  }
+
+  // Deterministic one-click run: attempt each payable invoice, then the JIT step.
+  // The server returns an array of the SAME step shape, so renderStep() logs each;
+  // the final paused step arms the existing PENDING/retry machinery.
+  async function run() {
+    logLine("▶ Running mission — attempting each payable invoice, then the JIT-gated remittance…");
+    const r = await post("/agent/run", {});
+    for (const step of (r.steps || [])) {
+      renderStep(step);
+      if (step.outcome === "paused" && step.taskId) {
+        PENDING = { taskId: step.taskId, tool: step.tool, args: step.args };
+        $("retryBtn").disabled = false;
+        logLine(`  ↳ paused — approve it in the Approver console, then Retry`);
+      }
     }
     refresh();
   }
