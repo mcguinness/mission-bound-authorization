@@ -159,9 +159,10 @@
     </div>
 
     <div class="card">
-      <span class="steptag">3 &middot; Issue</span>
-      <p class="muted" style="margin:.1rem 0 .3rem">Real issuance: PAR &rarr; headless approval (bob approves alice) &rarr; DPoP-bound token.</p>
-      <div class="btnrow"><button class="btn primary" id="issueBtn" onclick="issue()" disabled>Issue mission</button></div>
+      <span class="steptag">3 &middot; Submit for approval</span>
+      <p class="muted" style="margin:.1rem 0 .3rem">Submit routes to approval: PAR &rarr; authorize (no auto-approve). An approver
+        adjudicates it in the Approver tab; only then is the DPoP-bound token issued and the mission set active.</p>
+      <div class="btnrow"><button class="btn primary" id="issueBtn" onclick="submitApproval()" disabled>Submit for approval</button></div>
       <div id="issueOut"></div>
     </div>
   </section>
@@ -204,10 +205,10 @@
   <!-- ============================ APPROVER ============================ -->
   <section class="view" data-view="approver" hidden>
     <h2 class="vtitle">Approver</h2>
-    <p class="lead">In-mission actions gated behind a per-action approval (ARAP). Approving is input context for the pending
-      transaction, not a new grant.</p>
+    <p class="lead">Two kinds of approval land here: mission approvals (a submitted mission awaiting a grant decision) and
+      in-mission JIT actions gated behind a per-action approval (ARAP). Each entry shows enough context to decide.</p>
     <div class="card">
-      <h3>JIT access requests</h3>
+      <h3>Pending approvals</h3>
       <div id="queue"></div>
     </div>
   </section>
@@ -235,6 +236,9 @@
 
 <script>
   let CSRF = "", MISSION = "", SHAPED = null;
+  // Interval handles for the two auto-pollers (mission approval + JIT retry).
+  // Every poller has a bounded stop condition and clears its own handle.
+  let missionPoll = null, jitPoll = null;
   const $ = (id) => document.getElementById(id);
   const api = (p, init) => fetch(p, { credentials: "include", ...init }).then((r) => r.json());
   const post = (p, body, extra) => api(p, { method: "POST", headers: { "content-type": "application/json", ...(extra || {}) }, body: JSON.stringify(body) });
@@ -382,21 +386,59 @@
     logLine(`propose → derived Authority Set; narrowing: ${narrowingSummary(r.diff).replace(/&rarr;/g, "->").replace(/&mdash;/g, "-")}`);
   }
 
-  // ---- step 3: issue ----
-  async function issue() {
+  // ---- step 3: submit for approval ----
+  // Submit routes to approval (no auto-approve). Park the approval, switch to the
+  // Approver tab, and poll approval-status until it goes active/denied or times out.
+  async function submitApproval() {
     if (!SHAPED) return;
     $("issueBtn").disabled = true;
-    const r = await post("/agent/issue", { intent: SHAPED });
-    if (r.error) { $("issueOut").innerHTML = `<p class="no">issue error: ${esc(r.error)}</p>`; $("issueBtn").disabled = false; return; }
-    const grantHtml = (r.authority || []).map((e) => authEntryHtml(e, null)).join("");
+    const r = await post("/agent/submit", { intent: SHAPED });
+    if (r.error) { $("issueOut").innerHTML = `<p class="no">submit error: ${esc(r.error)}</p>`; $("issueBtn").disabled = false; return; }
+    const grantHtml = (r.derived || []).map((e) => authEntryHtml(e, null)).join("");
     $("issueOut").innerHTML =
-      `<div class="issued" style="margin-top:.6rem">Issued mission <code>${esc(r.missionId)}</code> — now the agent's active mission.</div>${grantHtml}`;
-    MISSION = r.missionId;
-    PENDING = null; $("retryBtn").disabled = true; // a swapped mission voids any armed JIT retry
-    logLine(`issue → new mission ${r.missionId} issued and set active`);
-    await refreshMission();
+      `<div class="summary" style="margin-top:.6rem">Submitted — awaiting approval in the Approver tab.</div>${grantHtml}`;
+    logLine(`submit → mission approval ${r.approvalId} pending; approve it in the Approver tab`);
+    $("issueBtn").disabled = false; // allow another submit (concurrent approvals are isolated)
+    showView("approver");
     await refresh();
-    showView("operator");
+    pollApprovalStatus(r.approvalId);
+  }
+
+  // Poll a parked mission approval. Stop on: active (adopt the mission + refresh),
+  // denied (log), unknown (untracked — terminal), or a bounded 30s timeout
+  // (visible still-pending). Clears its interval on every stop path. A NEW submit
+  // replaces this handle; the demo tracks one mission poll at a time.
+  function pollApprovalStatus(approvalId) {
+    if (missionPoll) { clearInterval(missionPoll); missionPoll = null; }
+    const deadline = Date.now() + 30000;
+    const stop = () => { clearInterval(missionPoll); missionPoll = null; };
+    const tick = async () => {
+      let s;
+      try { s = await api(`/agent/approval-status?id=${encodeURIComponent(approvalId)}`); } catch { return; }
+      if (s.state === "active") {
+        stop();
+        MISSION = s.missionId;
+        // Active-mission swap: void any armed JIT retry/poll for the OLD mission.
+        PENDING = null; $("retryBtn").disabled = true;
+        if (jitPoll) { clearInterval(jitPoll); jitPoll = null; }
+        logLine(`approval ${approvalId} → APPROVED; mission ${s.missionId} now active`);
+        await refreshMission();
+        await refresh();
+      } else if (s.state === "denied") {
+        stop();
+        logLine(`approval ${approvalId} → DENIED by the approver`);
+        $("issueOut").innerHTML = `<div class="summary">Mission approval was denied.</div>`;
+      } else if (s.state === "unknown") {
+        stop();
+        logLine(`approval ${approvalId} → no longer tracked`);
+      } else if (Date.now() > deadline) {
+        stop();
+        logLine(`approval ${approvalId} → still pending after 30s; approve it in the Approver tab`);
+        $("issueOut").innerHTML = `<div class="summary">Still pending — approve it in the Approver tab.</div>`;
+      }
+    };
+    missionPoll = setInterval(tick, 1500);
+    tick();
   }
 
   // ---- agent binding ----
@@ -436,12 +478,38 @@
 
     const queue = await api("/bff/approver/queue");
     $("queue").innerHTML = (queue || []).length
-      ? queue.map((t) =>
-          `<div class="row"><code>${esc(t.id)}</code><span class="muted" title="${escAttr(t.action)}">${esc(label("action", t.action))} · subj ${esc(t.subject)}</span>
-           <span class="grow"></span>
-           <button class="btn primary" onclick="adjudicate('${t.id}','approve')">approve</button>
-           <button class="btn" onclick="adjudicate('${t.id}','deny')">deny</button></div>`).join("")
+      ? queue.map(queueEntryHtml).join("")
       : '<span class="muted">no pending requests</span>';
+  }
+
+  // Render one enriched queue entry (mission OR jit) with full decision context.
+  function queueEntryHtml(t) {
+    const c = t.context || {};
+    const buttons =
+      `<span class="grow"></span>
+       <button class="btn primary" onclick="adjudicate('${esc(t.id)}','approve')">approve</button>
+       <button class="btn" onclick="adjudicate('${esc(t.id)}','deny')">deny</button>`;
+    if (t.type === "mission") {
+      const auth = (c.derived || []).map((e) => authEntryHtml(e, null)).join("");
+      return `<div class="authentry" style="margin:.55rem 0">
+        <div class="row"><span class="taglabel grant">mission approval</span>
+          <span class="muted">subj ${esc(t.subject)}</span>${buttons}</div>
+        <div class="arow"><span class="alabel">goal</span><span>${esc(c.goal || "—")}</span></div>
+        <div class="arow"><span class="alabel">grants</span><span class="chips">${auth || '<span class="muted">&mdash;</span>'}</span></div>
+      </div>`;
+    }
+    const amount = c.amount != null ? (c.currency === "USD" ? `$${c.amount}` : `${esc(c.amount)} ${esc(c.currency || "")}`) : "";
+    const inv = [c.invoice_id, c.vendor, amount].filter((x) => x != null && x !== "").map(esc).join(" · ");
+    const digest = c.parameter_digest ? esc(String(c.parameter_digest).slice(0, 12)) + "…" : "—";
+    return `<div class="authentry" style="margin:.55rem 0">
+      <div class="row"><span class="taglabel untrust">JIT action approval</span>
+        <span class="muted">subj ${esc(t.subject)}</span>${buttons}</div>
+      <div class="arow"><span class="alabel">action</span><span title="${escAttr(c.action || "")}">${esc(label("action", c.action))}</span></div>
+      <div class="arow"><span class="alabel">tool</span><span>${esc(label("tool", c.tool))}</span></div>
+      <div class="arow"><span class="alabel">invoice</span><span>${inv || "—"}</span></div>
+      <div class="arow"><span class="alabel">mission</span><code>${esc(shortMission(c.mission_id))}</code></div>
+      <div class="arow"><span class="alabel">digest</span><code>${digest}</code></div>
+    </div>`;
   }
 
   // ---- agent actions (unchanged enforcement path) ----
@@ -458,9 +526,45 @@
     renderStep(r);
     if (r.taskId) {
       PENDING = { taskId: r.taskId, tool, args };
-      logLine(`  ↳ opened ARS task ${r.taskId} — approve it in the Approver console, then Retry`);
+      $("retryBtn").disabled = false;
+      logLine(`  ↳ opened ARS task ${r.taskId} — approve it in the Approver tab (auto-retrying every 1.5s)`);
+      startJitPoll();
     }
     refresh();
+  }
+
+  // Auto-retry the armed JIT after approval. Stop on: executed (log), denied
+  // (log), or a bounded 30s timeout (visible still-pending; manual Retry stays).
+  // Captures the mission id at arm time and aborts if the ACTIVE mission swapped
+  // (a JIT poll for the OLD mission must never resolve against a new one). Clears
+  // its own interval on every stop path. Polling replaces the NEED to click Retry,
+  // not the ability.
+  function startJitPoll() {
+    if (jitPoll) { clearInterval(jitPoll); jitPoll = null; }
+    if (!PENDING) return;
+    const pollMission = MISSION;      // the mission this JIT belongs to
+    const armed = PENDING;            // the payload captured at arm time
+    const deadline = Date.now() + 30000;
+    const stop = () => { clearInterval(jitPoll); jitPoll = null; };
+    const tick = async () => {
+      // Abort if the active mission swapped, or the armed JIT changed/cleared.
+      if (MISSION !== pollMission || !PENDING || PENDING.taskId !== armed.taskId) { stop(); return; }
+      let r;
+      try { r = await post("/agent/retry", armed); } catch { return; }
+      if (r.pending) {
+        if (Date.now() > deadline) {
+          stop();
+          logLine(`retry ${label("tool", armed.tool)} → still ${r.state} after 30s — approve it in the Approver tab, or click Retry`);
+        }
+        return;
+      }
+      stop();
+      logLine(`retry ${label("tool", armed.tool)}(inv-1) → ${r.ok ? "PERMIT (email sent, JIT approval matched)" : "DENY: " + reasonGloss(r.denial_reason || r.refusal_reason)}`);
+      PENDING = null; $("retryBtn").disabled = true;
+      refresh();
+    };
+    jitPoll = setInterval(tick, 1500);
+    tick();
   }
 
   // Deterministic one-click run: attempt each payable invoice, then the JIT step.
@@ -474,23 +578,39 @@
       if (step.outcome === "paused" && step.taskId) {
         PENDING = { taskId: step.taskId, tool: step.tool, args: step.args };
         $("retryBtn").disabled = false;
-        logLine(`  ↳ paused — approve it in the Approver console, then Retry`);
+        logLine(`  ↳ paused — approve it in the Approver tab (auto-retrying every 1.5s)`);
+        startJitPoll();
       }
     }
     refresh();
   }
+  // Manual Retry: still fully functional. Cancels the auto-poll, tries once, and
+  // (if still pending) re-arms the poll so either path resolves the JIT.
   async function retryJit() {
     if (!PENDING) return;
+    if (jitPoll) { clearInterval(jitPoll); jitPoll = null; }
     const r = await post("/agent/retry", PENDING);
-    if (r.pending) { logLine(`retry ${label("tool", PENDING.tool)} → still ${r.state}; approve the request first`); return; }
+    if (r.pending) { logLine(`retry ${label("tool", PENDING.tool)} → still ${r.state}; approve the request first`); startJitPoll(); return; }
     logLine(`retry ${label("tool", PENDING.tool)}(inv-1) → ${r.ok ? "PERMIT (email sent, JIT approval matched)" : "DENY: " + reasonGloss(r.denial_reason || r.refusal_reason)}`);
     PENDING = null; $("retryBtn").disabled = true;
     refresh();
   }
+  // Adjudicate a queue entry: mission approvals return a missionId (adopt it as
+  // active here too, so approving straight from the queue swaps the mission and
+  // voids any armed JIT for the old one); jit approvals just re-enable Retry.
   async function adjudicate(taskId, decision) {
     const r = await post("/bff/approver/adjudicate", { taskId, decision }, { "x-csrf": CSRF });
-    logLine(`approver ${decision}(${taskId}) → ${r.approved ? "approved" : "denied"}`);
-    if (r.approved && PENDING && PENDING.taskId === taskId) $("retryBtn").disabled = false;
+    if (r.approved && r.missionId) {
+      logLine(`approver approve(${taskId}) → approved · mission ${r.missionId} now active`);
+      MISSION = r.missionId;
+      PENDING = null; $("retryBtn").disabled = true;
+      if (jitPoll) { clearInterval(jitPoll); jitPoll = null; }
+      if (missionPoll) { clearInterval(missionPoll); missionPoll = null; }
+      await refreshMission();
+    } else {
+      logLine(`approver ${decision}(${taskId}) → ${r.approved ? "approved" : "denied"}`);
+      if (r.approved && PENDING && PENDING.taskId === taskId) $("retryBtn").disabled = false;
+    }
     refresh();
   }
   async function lifecycle(id, op) {
