@@ -51,6 +51,36 @@ export const TERMINAL_STATES: ReadonlySet<MissionState> = new Set([
   "cascaded",
 ]);
 
+/**
+ * @spec child-delegation#cascade — the cascade mode recorded on a Child
+ * Mission. Only `immediate` is implemented (the profile's MUST-implement,
+ * issuer-committed mode). The consumer-verified modes `bounded_staleness` and
+ * `status_required` are experimental and deferred.
+ */
+export type CascadeMode = "immediate";
+
+/**
+ * @spec child-delegation#parent-member — the Parent Mission reference carried on
+ * a Child Mission record (and in the `mission` claim of child-derived tokens).
+ * Lineage and audit data only: it grants no authority. Immutable after creation.
+ */
+export interface ParentRef {
+  /** The Parent Mission identifier. */
+  id: string;
+  /** The Parent Mission Issuer; the child's own `issuer` MUST equal this. */
+  issuer: string;
+  /** The parent authority commitment the child was derived under. */
+  authority_hash: string;
+  /** Child-generation depth: 1 for a child of a root Mission, +1 per generation. */
+  depth: number;
+  /** The cascade mode from @spec child-delegation#cascade. */
+  cascade_mode: CascadeMode;
+  /** Mission-Issuer-defined identifier for the child delegation event. */
+  delegation_id?: string;
+  /** Creation time of the Child Mission. */
+  created_at?: string;
+}
+
 /** @spec mission#mission-record */
 export interface MissionRecord {
   id: string;
@@ -79,6 +109,8 @@ export interface MissionRecord {
   status_list_idx: number | null;
   /** @spec expansion#predecessor-member: set on a successor Mission only. */
   predecessor?: string;
+  /** @spec child-delegation#parent-member: set on a Child Mission only. */
+  parent?: ParentRef;
 }
 
 /**

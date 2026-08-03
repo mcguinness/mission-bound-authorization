@@ -58,6 +58,16 @@ export {
   type ExpansionResult,
 } from "./kernel/expansion.js";
 export {
+  createChildMission,
+  childMissionClaim,
+  ChildDelegationError,
+  MAX_CHILD_DEPTH,
+  type ChildActor,
+  type ChildDenialReason,
+  type CreateChildInput,
+  type ChildResult,
+} from "./kernel/child-delegation.js";
+export {
   DeferralStore,
   DeferralError,
   DEFERRED_GRANT_TYPE,
