@@ -130,6 +130,7 @@ Decisions confirmed with Karl on 2026-07-20:
 | D45 | Materialization stays contextual (D26 wins over the revision) | Karl's plan revision described a signed, versioned "trusted-compiler" materialization artifact; this session's debate #1 (D26) chose contextual tuples derived per check, and that stands. Ported from the revision: the precise `policy_view_id` commitment (content hash over a canonical `mission-policy-view` envelope of mission version + authority_hash + policy_version + FGA model id). The stored-artifact vs contextual-tuple divergence from the spec's materialization language remains logged as S-5 |
 | D46 | AROP completion via Transaction Challenge, hybrid (settles S-3) | JIT approval completes by AROP **token issuance** over the Transaction Challenge binding, never as an agent-supplied tool input. The RS signs a `transaction_challenge` (binds the operation + `parameter_digest`); the **client** presents it once to the AS `transaction_authorization_endpoint`, which mints a `transaction_authorization_id` continuation handle bound to the validated challenge + client `cnf` and polled by the client (client-driven; polling is native to the txn binding, not a DTR handoff, which is a separate alternative binding). On approval the AS issues a single-use DPoP-bound `txn-token` carrying the **active Mission unchanged** (D42) plus the approval; the RS validates that AS-signed token and derives `context.approval`, and the **unchanged PDP step 8** validates it (parameter_digest + age). Hybrid: the approval's source is the AS signature and its carrier the trusted RS, so the reevaluate primitive is preserved and nothing rides the client wire. Changes M6's completion mechanism from ARAP reevaluate-with-agent-context to AROP token issuance; the ARAP `requestable`/`access_request` path is retained as a dormant capability. Resolves S-3; realigns the txn path to D42 (scenario 7 carries the active Mission, no Expansion) |
 | D47 | Mission harness: the mediated MCP channel is the product (increment 1) | The harness realizes the mission-harness profile's two duties as consume-and-gate checks at boundaries the execution engine already has (the draft's two-ledger separation: never copy Mission state into engine state). Increment 1 (PR #357): duty 2 is a real `@modelcontextprotocol/sdk` channel (in-memory transport) whose `tools/list`/`tools/call` delegate to the **unchanged** PEP, with the mission access token crossing IN the request under a namespaced `_meta` key and validated server-side into `TokenFacts` (a bare `TokenFacts` is never accepted over the wire); duty 1 is `resumeGuard` composing the existing `checkOnResume` (fail-closed). A no-bypass test proves the mediated path enforces IDENTICALLY to the direct PEP (parity + zero side effects) and that a credential-less client gets an empty `tools/list` + `invalid_credential`. Because the PEP is now a real MCP server, the agent framework is a swappable MCP client: increment 2 (PR #358) shipped the **Vercel AI SDK** loop as the reference binding (in-process, widest reach, only the LLM call needs a key): the planner's tools delegate to `MediatedHarness.callTool` (the only tool path), a key-free `MockLanguageModelV3` test proves it cannot escape the channel (adversarial denied + ledger unchanged, in-authority permit, fail-closed resume, mission-scoped toolset), and the live loop is opt-in via `pnpm agent`; `ai@7.0.41` / `@ai-sdk/anthropic@4.0.23` pinned, with the **Claude Agent SDK** noted as the MCP/EMA-native alternative (its loop runs in a spawned `claude` CLI subprocess, which fights this repo's in-process/deterministic-CI composition). LangGraph rejected: its checkpointer persists execution state, but resume is a consume-and-gate check, not persistence, so adopting it would copy Mission state into engine state (draft-forbidden). Carry-forward (resolved): increment 1's `validateMissionToken` skips live DPoP proof-of-possession (no HTTP request over the in-process transport); the full `validateToken` (with PoP) now applies at the real HTTP transport, shipped in **harness increment 3** (PR #364: a StreamableHTTP transport + a DPoP-auth middleware enforcing PoP per request; a token with no/mismatched proof is rejected before the PEP). The in-memory channel keeps the no-PoP path by design |
+| D48 | Companion suite: five drafts implemented in parallel | Research-first then parallel worktree-isolated builds, one verified PR each. **Status List** (PR #366): `statuslist+jwt`, 2-bit `lst` (ZLIB), anti-oracle random index allocation, `GET /statuslist/:id`; it introduced the shared kernel `onLifecycleCommit(commit)` hook (synchronous, built from the re-read post-UPDATE row) and fixed two latent bugs (`allMissions` skipping `applyExpiry`; `supersedeOnRedemption` bypassing `setState`). **Signals** (PR #368): `secevent+jwt` lifecycle SET — the push complement to the list's pull — with a version-idempotent/anti-revive receiver, composed onto the SAME hook at the AS construction site (no funnel re-hook). **Harness completion** (PR #365): execution-environment scope statement + channel-class enumeration (completeness required only under an agent-compromise-resistant claim) + status-continuity fail-closed past `status_expires_at`; landed the shared `@mission/core` `StateSource`/`MissionStatusLease`/`MissionBinding` that Signals + Orchestration reuse; fully additive. **Attenuation** (PR #367): holder-side offline AAT JWS chain (macaroon-caveat narrowing) — root ⊆ Authority via `isSubsetSet`, child ⊆ parent via a `tools`-map comparator in `@mission/core`, leaf enforcement reusing `out_of_authority`; `derive.ts`/`actor-chain` untouched. **Orchestration** (PR #369) is the saga/**unwinding+compensation** profile (NOT parent→child): reversibility floor, unwind-plan integrity hash (reproduces the draft's published vector under `computeAnchor`), the 5-step state-change with the staleness asymmetry, compensation-authority basis (never the terminated Mission's authority). Final combined gate: 230 tests / 0 skipped, evals 100%. Reframe: `mission-orchestration` ≠ parent→child sub-agents (that is the separate, unimplemented `oauth-mission-child-delegation`, O-38). Deferrals logged: S-15, O-37, O-39 |
 
 Defaults adopted (not separately asked; flag if wrong):
 
@@ -956,6 +957,26 @@ resolution and date; never delete them.
   exactly one increment per redemption (verified failing `expected 2 to be 1`
   against the pre-fix code); no `arop.test.ts` assertion depended on the removed
   gate.
+- **O-37. Orchestration `privileged_administration` action class.** The
+  orchestration reversibility floor (PR #369) maps runtime action classes to a
+  minimum reversibility, but `privileged_administration` has no corresponding
+  runtime class in `services/pdp/src/policy.ts` (only `irreversible_action` /
+  `external_commitment` exist). Mapped in the package with a documented gap; a
+  real runtime class is deferred. Surfaced 2026-08-02.
+- **O-38. Child-delegation (parent→child sub-missions) not implemented.** The
+  `draft-mcguinness-mission-orchestration` shipped in PR #369 is the
+  saga/unwinding+compensation profile. Parent→child sub-agent delegation — a
+  child Mission with its own `mission_id`/lifecycle/approval, authority ⊆ parent,
+  cascade termination via the existing `cascaded` state, a separate child actor
+  hop — is a DISTINCT draft (`oauth-mission-child-delegation`), still
+  unimplemented, and is what "orchestrator agent" colloquially means (D20 /
+  scenario 13). A future AS-kernel increment. Surfaced 2026-08-02.
+- **O-39. Attenuation leaf-constraint enforcement is action-level.** The PEP leaf
+  guard (PR #367) denies an in-Mission action outside the leaf's tool set
+  (`out_of_authority`), but a leaf that TIGHTENS a constraint (e.g. lowers the
+  amount cap below the Mission's) is enforced only by the chain verifier's
+  constraint-monotonicity check, not yet by the PEP amount gate. Deferred.
+  Surfaced 2026-08-02.
 
 ### Resolved
 
@@ -1232,6 +1253,15 @@ their repositories or working groups.
   Wire responses stay DTR-shaped. Kept for the in-process demo (PR #353); a
   faithful `completion_mode` interception needs a grant-handler override the
   library does not offer.
+- **S-15 (open).** Gap — draft-mcguinness-oauth-mission-attenuation § root-mapping
+  x the substrate: the draft derives a root's `del_max_depth` from a per-entry
+  `delegation` policy, but the core `AuthorityEntry` (`types.ts`) has no
+  `delegation` member, so it cannot be derived. Attenuation (PR #367) takes
+  `del_max_depth` as an explicit input to `deriveAttenuationRoot` and leaves
+  `types.ts`/`derive.ts` untouched. Closing it needs an additive optional
+  `delegation?: { max_depth }` on `AuthorityEntry` plus a derivation rule — not a
+  one-line change, because the shared `intersect()` in `derive.ts` builds fresh
+  entries and would drop the member. Surfaced 2026-08-02.
 
 ## 9. Runbook (target state)
 
