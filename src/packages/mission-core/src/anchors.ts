@@ -10,6 +10,14 @@ import { canonicalize, type JsonValue } from "./canonicalize.js";
 
 export const INTENT_TYP = "mission-intent";
 export const AUTHORITY_SET_TYP = "mission-authority-set";
+/**
+ * @spec orchestration#unwind-plan-integrity
+ * The integrity-anchor `typ` for a Mission unwind plan. The orchestration
+ * profile hashes the unwind plan under this domain separator via
+ * {@link computeAnchor}; the worked plan's published hash reproduces exactly
+ * under the existing envelope (no change to `computeAnchor` is needed).
+ */
+export const UNWIND_PLAN_TYP = "mission-unwind-plan";
 
 export function computeAnchor(typ: string, iss: string, value: JsonValue): string {
   const envelope: JsonValue = { typ, iss, value };
