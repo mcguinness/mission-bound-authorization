@@ -69,6 +69,7 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     max_derivations: predecessor.max_derivations,
     derivation_count: 0,
     grant_id: null,
+    status_list_idx: null,
     predecessor: input.predecessorId,
   };
   kernel.insertRecord(record);

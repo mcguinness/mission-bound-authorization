@@ -4,7 +4,7 @@
  * oidc-provider types cross this boundary.
  */
 
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 import { authorityHash, intentHash } from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { SignJWT, type CryptoKey } from "jose";
@@ -12,8 +12,16 @@ import type { DerivationPolicy } from "./derive.js";
 import { deriveAuthoritySet } from "./derive.js";
 import { validateMissionIntent } from "./intent.js";
 import {
+  signStatusListToken,
+  STATUS_LIST_SIZE,
+  type StatusEntry,
+  stateToBit,
+  statusListUri,
+} from "./status-list.js";
+import {
   type AuthorityEntry,
   LEGAL_TRANSITIONS,
+  type LifecycleCommit,
   type LifecycleOperation,
   type MissionClaim,
   type MissionIntent,
@@ -21,6 +29,9 @@ import {
   type MissionState,
   TERMINAL_STATES,
 } from "./types.js";
+
+/** Retry budget for random Status List index allocation on UNIQUE collision. */
+const STATUS_INDEX_MAX_ATTEMPTS = 16;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS missions (
@@ -44,6 +55,7 @@ CREATE TABLE IF NOT EXISTS missions (
   max_derivations INTEGER,
   derivation_count INTEGER NOT NULL DEFAULT 0,
   grant_id TEXT,
+  status_list_idx INTEGER UNIQUE,
   predecessor TEXT,
   successor TEXT
 ) STRICT;
@@ -73,15 +85,30 @@ export interface KernelOptions {
   statusKey: CryptoKey;
   statusKid: string;
   now?: () => Date;
+  /**
+   * @spec status#mission-status-anti-oracle — Status List index allocator.
+   * Injected so tests are deterministic; production draws a random index into a
+   * list sized well above the population. The index MUST NOT be sequential and
+   * MUST NOT be derivable from the Mission Identifier.
+   */
+  allocateStatusIndex?: () => number;
+  /**
+   * @spec status#status-list — the shared lifecycle-commit hook. Fired once per
+   * committed transition from the three real commit funnels. The Status List
+   * republisher subscribes today; Mission Signals subscribes next.
+   */
+  onLifecycleCommit?: (commit: LifecycleCommit) => void;
 }
 
 export class MissionKernel {
   readonly db: Database;
   private readonly now: () => Date;
+  private readonly allocateStatusIndex: () => number;
 
   constructor(private readonly opts: KernelOptions) {
     this.db = openStore(SCHEMA);
     this.now = opts.now ?? (() => new Date());
+    this.allocateStatusIndex = opts.allocateStatusIndex ?? (() => randomInt(STATUS_LIST_SIZE));
   }
 
   validateIntent(raw: string): MissionIntent {
@@ -119,6 +146,7 @@ export class MissionKernel {
       max_derivations: input.intent.controls?.max_derivations ?? null,
       derivation_count: 0,
       grant_id: null,
+      status_list_idx: null,
     };
     try {
       this.insertRecord(record);
@@ -168,6 +196,10 @@ export class MissionKernel {
           record.predecessor ?? null,
         );
     });
+    // The activating event: version 1, no prior_state. Shared by approve() and
+    // expansion; the commit is built from the persisted row.
+    const inserted = this.get(record.id);
+    if (inserted) this.emitCommit(inserted);
   }
 
   nowDate(): Date {
@@ -182,14 +214,23 @@ export class MissionKernel {
   supersedeOnRedemption(successorId: string): boolean {
     const successor = this.get(successorId);
     if (!successor?.predecessor) return false;
-    return withTransaction(this.db, () => {
+    // This raw UPDATE bypasses setState (the only funnel that skips it), so the
+    // lifecycle-commit hook is fired here explicitly, from the persisted row.
+    let predId: string | undefined;
+    const superseded = withTransaction(this.db, () => {
       const pred = this.get(successor.predecessor as string);
       if (!pred || pred.state !== "active") return false;
+      predId = pred.id;
       this.db
         .prepare("UPDATE missions SET state = 'superseded', successor = ?, version = version + 1 WHERE id = ? AND state = 'active'")
         .run(successorId, pred.id);
       return true;
     });
+    if (superseded && predId) {
+      const fresh = this.get(predId);
+      if (fresh) this.emitCommit(fresh, "active", successorId);
+    }
+    return superseded;
   }
 
   get(id: string): MissionRecord | undefined {
@@ -215,6 +256,75 @@ export class MissionKernel {
 
   bindGrant(missionId: string, grantId: string): void {
     this.db.prepare("UPDATE missions SET grant_id = ? WHERE id = ?").run(grantId, missionId);
+  }
+
+  /**
+   * @spec status#status-list — opt a Mission into the Status List by assigning
+   * it an index. @spec status#mission-status-anti-oracle: the index is random
+   * (never sequential, never derivable from `id`), allocated into a list sized
+   * well above the population and persisted UNIQUE; a collision retries.
+   * Idempotent: returns the existing index if already assigned.
+   *
+   * Enrollment is restricted to `active` Missions. A fresh participant's bit is
+   * VALID (0x00), which equals the default for unallocated indices, so a cached
+   * list published before enrollment still reads that index correctly until the
+   * Mission's next committed transition marks the list dirty. Enrolling a
+   * non-active Mission would instead publish VALID for it until an unrelated
+   * transition republished the list: a fail-open. (Enrollment persists through
+   * later transitions; a re-call on an already-enrolled Mission is idempotent.)
+   */
+  participateInStatusList(id: string): number {
+    const existing = this.mustGet(id);
+    if (existing.status_list_idx !== null) return existing.status_list_idx;
+    const record = this.applyExpiry(existing);
+    if (record.state !== "active") {
+      throw new LifecycleConflictError(
+        `mission ${id} must be active to join the status list (is ${record.state})`,
+      );
+    }
+    for (let attempt = 0; attempt < STATUS_INDEX_MAX_ATTEMPTS; attempt++) {
+      const idx = this.allocateStatusIndex();
+      try {
+        withTransaction(this.db, () => {
+          this.db.prepare("UPDATE missions SET status_list_idx = ? WHERE id = ?").run(idx, id);
+        });
+        return idx;
+      } catch (e) {
+        if (e instanceof UniqueViolationError) continue; // index taken, redraw
+        throw e;
+      }
+    }
+    throw new Error(`could not allocate a unique status list index for ${id}`);
+  }
+
+  /**
+   * @spec status#status-list — the participating set as packed entries, expiry
+   * applied. Latent-bug fix: enumerating raw rows would publish VALID for a
+   * Mission already past its `expires_at`; applyExpiry commits the `expired`
+   * transition first (and fires the commit hook), so the list reflects true
+   * state. supersedeOnRedemption transitions are likewise reflected because the
+   * rows are re-read here.
+   */
+  statusListEntries(): StatusEntry[] {
+    const rows = this.db
+      .prepare("SELECT * FROM missions WHERE status_list_idx IS NOT NULL")
+      .all() as Array<Record<string, unknown>>;
+    return rows.map(rowToRecord).map((r) => {
+      const fresh = this.applyExpiry(r);
+      return { idx: fresh.status_list_idx as number, bit: stateToBit(fresh.state) };
+    });
+  }
+
+  /** @spec status#status-list — sign the current Status List Token. */
+  publishStatusList(): Promise<string> {
+    return signStatusListToken({
+      issuer: this.opts.issuer,
+      uri: statusListUri(this.opts.issuer),
+      kid: this.opts.statusKid,
+      key: this.opts.statusKey,
+      now: this.now(),
+      entries: this.statusListEntries(),
+    });
   }
 
   /** @spec mission-management: enumerate the full fleet for the operator. */
@@ -297,7 +407,18 @@ export class MissionKernel {
       ...this.missionClaim(fresh),
       state: fresh.state,
       version: fresh.version,
+      ...this.statusListRef(fresh),
     };
+  }
+
+  /**
+   * @spec status#status-list — the referenced-token status object (`idx`,
+   * `uri`) for a participating Mission; empty for a non-participant so the
+   * member is absent.
+   */
+  private statusListRef(record: MissionRecord): Record<string, unknown> {
+    if (record.status_list_idx === null) return {};
+    return { status_list: { idx: record.status_list_idx, uri: statusListUri(this.opts.issuer) } };
   }
 
   /**
@@ -323,6 +444,7 @@ export class MissionKernel {
         version: record.version,
         expires_at: record.expires_at,
         fresh_until: new Date((nowS + freshness) * 1000).toISOString(),
+        ...this.statusListRef(record),
       },
     };
     if (opts.nonce) payload.nonce = opts.nonce;
@@ -343,7 +465,31 @@ export class MissionKernel {
     this.db
       .prepare("UPDATE missions SET state = ?, version = version + 1 WHERE id = ?")
       .run(to, record.id);
+    // Commit from the persisted row, not the in-memory spread: transition()
+    // discards applyExpiry()'s return, so the spread `version` can be off by one.
+    const fresh = this.get(record.id);
+    if (fresh) this.emitCommit(fresh, record.state);
     return { ...record, state: to, version: record.version + 1 };
+  }
+
+  /**
+   * @spec status#status-list — fan the committed transition out to the
+   * lifecycle-commit subscriber (no-op when none is wired). `record` MUST be the
+   * post-commit persisted row so `state`/`version` are authoritative.
+   */
+  private emitCommit(record: MissionRecord, prior?: MissionState, successor?: string): void {
+    const onCommit = this.opts.onLifecycleCommit;
+    if (!onCommit) return;
+    onCommit({
+      id: record.id,
+      issuer: record.issuer,
+      state: record.state,
+      version: record.version,
+      committed_at: this.now().toISOString(),
+      expires_at: record.expires_at,
+      ...(prior ? { prior_state: prior } : {}),
+      ...(successor ? { successor } : {}),
+    });
   }
 
   private mustGet(id: string): MissionRecord {
@@ -373,6 +519,7 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     max_derivations: (row.max_derivations as number | null) ?? null,
     derivation_count: row.derivation_count as number,
     grant_id: (row.grant_id as string | null) ?? null,
+    status_list_idx: (row.status_list_idx as number | null) ?? null,
     ...(row.predecessor ? { predecessor: row.predecessor as string } : {}),
   };
 }
