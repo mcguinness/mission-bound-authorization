@@ -971,6 +971,19 @@ resolution and date; never delete them.
   hop — is a DISTINCT draft (`oauth-mission-child-delegation`), still
   unimplemented, and is what "orchestrator agent" colloquially means (D20 /
   scenario 13). A future AS-kernel increment. Surfaced 2026-08-02.
+  Resolved (2026-08-03, PR #370): implemented as `kernel/child-delegation.ts`
+  (`createChildMission`): a child Mission with its own `mission_id`/actor/`act`
+  chain, `parent` lineage (`ParentRef` + `depth` cap), authority proven ⊆ parent
+  (derive-then-`isSubsetSet`, refusing over-broad with `not_strict_subset` per
+  §strict-subset — NOT silent narrowing), `expires_at` clamped ≤ parent, the
+  delegation event as the child's approval. Parent TERMINAL transitions cascade
+  active descendants to `cascaded` via `cascadeChildren` fired on the `setState`
+  terminal path (+ `supersedeOnRedemption`), so the Status List + Signals
+  propagate for free. Suspend is deliberately NOT cascaded (§cascade makes it the
+  one reversible trigger — suspend-projection/restore deferred). Deferred: PAR
+  wire params + child grant issuance, fan-out accounting + the
+  `AuthorityEntry.delegation` core extension (S-15), child evidence, discovery
+  metadata, cross-issuer. 240 tests green.
 - **O-39. Attenuation leaf-constraint enforcement is action-level.** The PEP leaf
   guard (PR #367) denies an in-Mission action outside the leaf's tool set
   (`out_of_authority`), but a leaf that TIGHTENS a constraint (e.g. lowers the
