@@ -56,6 +56,7 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-oauth-mission-cross-domain` | `dc7a897` | `services/authorization-server/src/kernel/cross-domain.ts`, `services/ras` | ID-JAG grant issuance (audience-scoped, PoP, one-time, mission-preserving), RAS validation | `services/mcp-saas/test/cross-domain.test.ts` |
 | ID-JAG (`draft-ietf-oauth-identity-assertion-authz-grant`) | [`-04`](https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-assertion-authz-grant/04/) (2026-05-21) | `services/authorization-server`, `services/ras` | `oauth-id-jag+jwt` grant (incl. `client_id` claim, §3.1), RFC 7523 JWT-bearer redemption | `services/mcp-saas/test/cross-domain.test.ts` |
 | MCP EMA | 2025-11-25 track | `services/ras`, `services/mcp-saas` | enterprise-managed-authorization declaration; token-only SaaS enforcement | `services/mcp-saas/test/cross-domain.test.ts` |
+| `draft-mcguinness-oauth-mission-attenuation` | `eb568f5` (2026-07-15) | `services/authorization-server/src/kernel/attenuation.ts` + `packages/mission-core` + `services/mcp-payments` | `attenuation#root-mapping`, `attenuation#attenuation`, `attenuation#mission-binding-check`, `attenuation#kill-switch` | `packages/mission-core/test/attenuation-chain.test.ts`, `services/mcp-payments/test/attenuation.test.ts` |
 | `draft-mcguinness-mission-audit` (SCITT profile) | `dc7a897` | `services/transparency` | append-only Merkle log, hash-committed Signed Statements, Receipts + signed tree heads, per-mission feeds, five-step offline verification | `services/transparency/test/transparency.test.ts` |
 | RFC 9162 (Merkle tree) | RFC 9162 | `services/transparency/src/merkle.ts` | leaf/node domain separation, inclusion proofs | `services/transparency/test/transparency.test.ts` |
 | `draft-mcguinness-oauth-mission-management` (partial) | `dc7a897` | `services/console-bff`, `authorization-server` (allMissions) | fleet enumeration + operator lifecycle surfaces | `services/console-bff/test/console.test.ts` |
@@ -74,6 +75,7 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-mission-audit` + SCITT (RFC 9943) | in-repo current | M10 |
 | MCP authorization profile | 2025-11-25 (stable) | M4/M8/M9 |
 | OpenFGA | `v1.18.1@sha256:efde89d2...6688` | M0 compose (done) |
+| `draft-niyikiza-oauth-attenuating-agent-tokens` (AAT substrate) | I-D in progress (no published revision) | attenuation substrate profiled by `services/authorization-server/src/kernel/attenuation.ts` + `packages/mission-core/src/attenuation-chain.ts` (JWS chain, `par_hash` linkage, capability monotonicity, `del_depth`/`del_max_depth`) |
 
 ## Notes
 

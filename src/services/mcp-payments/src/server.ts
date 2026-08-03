@@ -5,7 +5,8 @@
  * enforcement tier (M4) requires. RFC 9728 PRM is published.
  */
 
-import { calculateJwkThumbprint, createLocalJWKSet, decodeProtectedHeader, jwtVerify } from "jose";
+import { parseAatToolId, toolsOf, verifyAttenuationChain } from "@mission/core";
+import { calculateJwkThumbprint, createLocalJWKSet, decodeProtectedHeader, type JWK, jwtVerify } from "jose";
 import type { ActObject } from "@mission/actor-chain";
 import type { MissionView } from "@mission/pdp";
 import { type ActionApprovalInput, CANONICAL_RESOURCE, type EnforceResult, type Pep, type TokenFacts, TOOL_ACTIONS } from "./pep.js";
@@ -130,6 +131,96 @@ export class McpPaymentsServer {
       ...(payload.act ? { act: payload.act as ActObject } : {}),
       mission: { id: mission.id, authority_hash: mission.authority_hash },
       cnfJkt: cnf.jkt,
+    };
+  }
+
+  /**
+   * @spec draft-mcguinness-oauth-mission-attenuation#mission-binding-check
+   *
+   * Validate a presented Mission-bound Attenuating Agent Token chain (root
+   * first) and derive TokenFacts whose effective authority is the LEAF's
+   * narrowed tools. Keyed verification, layered on the pure keyless verifier
+   * from @mission/core:
+   *  - the root is verified under the AS JWKS, audience-scoped, and its `iss`
+   *    MUST equal its `mission.issuer` (only the Mission Issuer mints a root);
+   *  - each child is verified under the key its parent's `cnf` commits to: the
+   *    child's JWS header `jwk` (rejected if it carries private material) MUST
+   *    thumbprint to the parent's `cnf.jkt`, and the child MUST verify under it;
+   *  - proof-of-possession is verified under the LEAF's `cnf` key.
+   *
+   * The kill switch (Mission `active` on every presentation) is NOT checked
+   * here: it is the existing PEP->PDP state gate on the per-action enforce()
+   * path (the returned TokenFacts drives that path), which fails closed on
+   * non-active or unestablished Mission state.
+   */
+  async validateAttenuationChain(
+    chain: string[],
+    dpopProof: string,
+    htu: string,
+    htm: string,
+  ): Promise<TokenFacts> {
+    if (chain.length === 0) throw new Error("empty attenuation chain");
+
+    // Root: under the AS JWKS, audience-scoped, iss == mission.issuer.
+    const { payload: rootPayload } = await jwtVerify(chain[0] as string, this.resolveKey, {
+      issuer: this.deps.issuer,
+      audience: CANONICAL_RESOURCE,
+      algorithms: ["ES256"],
+    });
+    const rootMission = rootPayload.mission as { id: string; issuer: string; authority_hash: string } | undefined;
+    if (!rootMission?.id) throw new Error("attenuation root missing mission claim");
+    if (rootPayload.iss !== rootMission.issuer) throw new Error("attenuation root iss != mission.issuer");
+    let parentCnfJkt = (rootPayload.cnf as { jkt?: string } | undefined)?.jkt;
+    if (!parentCnfJkt) throw new Error("attenuation root missing cnf.jkt");
+
+    // Each child: signed by the exact key the parent's cnf commits to.
+    let leafPayload = rootPayload;
+    for (let i = 1; i < chain.length; i++) {
+      const header = decodeProtectedHeader(chain[i] as string);
+      const jwk = header.jwk as (JWK & { d?: string }) | undefined;
+      if (!jwk) throw new Error("attenuation child missing header jwk");
+      if (jwk.d !== undefined) throw new Error("attenuation child header jwk carries private key material");
+      if ((await calculateJwkThumbprint(jwk as never)) !== parentCnfJkt) {
+        throw new Error("attenuation child not signed by the parent cnf key");
+      }
+      const { payload } = await jwtVerify(chain[i] as string, jwk as never, { algorithms: ["ES256"] });
+      parentCnfJkt = (payload.cnf as { jkt?: string } | undefined)?.jkt;
+      if (!parentCnfJkt) throw new Error("attenuation child missing cnf.jkt");
+      leafPayload = payload;
+    }
+
+    // Keyless structural checks: monotonicity, mission invariance, aud/exp
+    // nesting, depth cap, and par_hash linkage over the exact wire bytes.
+    const verified = verifyAttenuationChain(chain);
+    if (!verified.ok) throw new Error(`attenuation chain invalid: ${verified.reason}`);
+
+    // Proof-of-possession under the LEAF's cnf key.
+    const leafCnf = (leafPayload.cnf as { jkt?: string } | undefined)?.jkt;
+    if (!leafCnf) throw new Error("attenuation leaf missing cnf.jkt");
+    const proofHeader = decodeProtectedHeader(dpopProof);
+    if ((await calculateJwkThumbprint(proofHeader.jwk as never)) !== leafCnf) {
+      throw new Error("DPoP key does not match leaf cnf.jkt");
+    }
+    const { payload: proof } = await jwtVerify(dpopProof, proofHeader.jwk as never, {
+      typ: "dpop+jwt",
+      algorithms: ["ES256"],
+    });
+    if (proof.htu !== htu || proof.htm !== htm) throw new Error("DPoP htu/htm mismatch");
+
+    // Effective authority = the leaf's narrowed tools, as {resource, actions}.
+    const byResource = new Map<string, Set<string>>();
+    for (const toolId of Object.keys(toolsOf(verified.leaf))) {
+      const { resource, action } = parseAatToolId(toolId);
+      (byResource.get(resource) ?? byResource.set(resource, new Set()).get(resource))?.add(action);
+    }
+    const leafAuthority = [...byResource].map(([resource, actions]) => ({ resource, actions: [...actions] }));
+
+    return {
+      sub: (leafPayload.sub ?? rootPayload.sub) as string,
+      clientId: rootPayload.client_id as string,
+      mission: { id: rootMission.id, authority_hash: rootMission.authority_hash },
+      cnfJkt: leafCnf,
+      leafAuthority,
     };
   }
 
