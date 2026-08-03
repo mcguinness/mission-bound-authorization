@@ -6,6 +6,7 @@ import type Provider from "oidc-provider";
 import { buildProvider, type TxnArs } from "./adapters/provider.js";
 import { DeferralStore } from "./kernel/deferred.js";
 import { MissionKernel } from "./kernel/kernel.js";
+import { StatusListPublisher } from "./kernel/status-list.js";
 
 export { MissionKernel, GateError, LifecycleConflictError } from "./kernel/kernel.js";
 export { validateMissionIntent, IntentError } from "./kernel/intent.js";
@@ -62,6 +63,29 @@ export {
   TXN_TOKEN_TYP,
   type TxnChallengeClaims,
 } from "./kernel/txn-challenge.js";
+export {
+  StatusListPublisher,
+  signStatusListToken,
+  verifyStatusListToken,
+  readStatus,
+  readStatusBit,
+  stateToBit,
+  statusListUri,
+  STATUS_LIST_ID,
+  STATUS_LIST_TYP,
+  STATUS_LIST_MEDIA_TYPE,
+  STATUS_LIST_BITS,
+  STATUS_LIST_SIZE,
+  STATUS_LIST_TTL_SECONDS,
+  STATUS_VALID,
+  STATUS_INVALID,
+  STATUS_SUSPENDED,
+  type StatusListPayload,
+  type StatusListClaim,
+  type StatusEntry,
+  type SignStatusListOptions,
+  type VerifyStatusListOptions,
+} from "./kernel/status-list.js";
 
 export interface BuiltAs {
   provider: Provider;
@@ -96,12 +120,19 @@ export async function buildAuthorizationServer(opts: {
   const txnJwkPub = { ...(await exportJWK(txnKeys.publicKey)), kid: asTxn.kid, alg: asTxn.alg, use: "sig" };
 
   const agent = await seedAgentClient();
+  // The Status List republisher subscribes to the kernel's lifecycle-commit
+  // hook. It is created after the kernel closes over it, but onLifecycleCommit
+  // only fires at runtime (post-construction), so the forward reference is safe;
+  // the publisher takes a build thunk, never the kernel, to avoid an import cycle.
+  let statusListPublisher: StatusListPublisher | undefined;
   const kernel = new MissionKernel({
     issuer: opts.issuer,
     policy: DERIVATION_POLICY as never,
     statusKey: statusKeys.privateKey,
     statusKid: asStatus.kid,
+    onLifecycleCommit: () => statusListPublisher?.markDirty(),
   });
+  statusListPublisher = new StatusListPublisher(() => kernel.publishStatusList());
   // AROP DTR store, wired onto the real /token deferred grant (D42).
   const deferrals = new DeferralStore(kernel);
 
@@ -109,6 +140,7 @@ export async function buildAuthorizationServer(opts: {
     issuer: opts.issuer,
     kernel,
     deferrals,
+    statusListPublisher,
     clients: [agent.metadata],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv] },
     publicJwks: { keys: [tokenJwkPub, statusJwkPub, txnJwkPub] },

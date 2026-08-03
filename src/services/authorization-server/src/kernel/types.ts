@@ -71,8 +71,32 @@ export interface MissionRecord {
   max_derivations: number | null;
   derivation_count: number;
   grant_id: string | null;
+  /**
+   * @spec status#status-list: the opaque Status List index, assigned only when
+   * a Mission participates (opt-in). Random, never derivable from `id`
+   * (@spec status#mission-status-anti-oracle). Null for non-participants.
+   */
+  status_list_idx: number | null;
   /** @spec expansion#predecessor-member: set on a successor Mission only. */
   predecessor?: string;
+}
+
+/**
+ * @spec status#status-list — the shared lifecycle-commit event. The kernel
+ * fires it from its three real commit funnels (`setState`,
+ * `supersedeOnRedemption`, `insertRecord`) so subscribers observe every
+ * committed transition exactly once: the Status List republisher today, Mission
+ * Signals next. The activating insert carries `version: 1` and no `prior_state`.
+ */
+export interface LifecycleCommit {
+  id: string;
+  issuer: string;
+  prior_state?: MissionState;
+  state: MissionState;
+  version: number;
+  committed_at: string;
+  expires_at: string;
+  successor?: string;
 }
 
 /** @spec mission#the-mission-claim — the token projection of the record. */

@@ -31,6 +31,11 @@ import {
 import { isSubsetSet } from "../kernel/derive.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError, LifecycleConflictError, type MissionKernel } from "../kernel/kernel.js";
+import {
+  STATUS_LIST_ID,
+  STATUS_LIST_MEDIA_TYPE,
+  type StatusListPublisher,
+} from "../kernel/status-list.js";
 import { issueTxnToken, validateChallenge } from "../kernel/txn-challenge.js";
 import type { AuthorityEntry, LifecycleOperation, MissionIntent } from "../kernel/types.js";
 
@@ -67,6 +72,11 @@ export interface AdapterOptions {
    * tests/exhibit can drive open/approve/deny headlessly.
    */
   deferrals?: DeferralStore;
+  /**
+   * Mission Status List republisher. When set, GET /statuslist/{id} serves the
+   * current whole-list token (@spec status#status-list).
+   */
+  statusListPublisher?: StatusListPublisher;
 }
 
 /**
@@ -487,6 +497,24 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.status = 404;
         ctx.body = { error: "unknown_mission" };
       }
+      return;
+    }
+
+    // --- Mission Status List whole-list fetch (@spec status#status-list) ---
+    // Deliberately unauthenticated (NOT behind requireServiceToken): the fetch
+    // covers every opaque index at once and reveals no per-mission interest, so
+    // it is anti-oracle-safe by design (@spec status#mission-status-anti-oracle).
+    // The per-mission status_list.uri and the token's `sub` both equal this URL.
+    const statusListMatch = ctx.path.match(/^\/statuslist\/([^/]+)$/);
+    if (statusListMatch && ctx.method === "GET") {
+      if (statusListMatch[1] !== STATUS_LIST_ID || !opts.statusListPublisher) {
+        ctx.status = 404;
+        ctx.body = { error: "not_found" };
+        return;
+      }
+      ctx.status = 200;
+      ctx.set("content-type", STATUS_LIST_MEDIA_TYPE);
+      ctx.body = await opts.statusListPublisher.current();
       return;
     }
 
