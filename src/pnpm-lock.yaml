@@ -146,6 +146,22 @@ importers:
 
   packages/mission-core: {}
 
+  packages/mission-signals:
+    dependencies:
+      '@mission/authorization-server':
+        specifier: workspace:*
+        version: link:../../services/authorization-server
+      '@mission/core':
+        specifier: workspace:*
+        version: link:../mission-core
+      jose:
+        specifier: ^6.1.3
+        version: 6.2.3
+    devDependencies:
+      '@mission/pdp':
+        specifier: workspace:*
+        version: link:../../services/pdp
+
   packages/store:
     dependencies:
       better-sqlite3:
