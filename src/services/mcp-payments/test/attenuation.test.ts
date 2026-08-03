@@ -16,7 +16,7 @@
  * is fail-closed on an unknown tool-argument name.
  */
 
-import { aatToolId } from "@mission/core";
+import { aatToolId, type AATTools } from "@mission/core";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -79,13 +79,19 @@ let kernel: MissionKernel;
 let view: MissionView;
 let chain: string[];
 let facts: TokenFacts;
+let server: McpPaymentsServer;
+let root: string;
+let leafTools: AATTools;
 
-async function dpopProof(htu: string): Promise<string> {
+async function dpopProof(
+  htu: string,
+  keys: { privateKey: CryptoKey; publicKey: CryptoKey } = delegateKeys,
+): Promise<string> {
   return new SignJWT({ htu, htm: "POST" })
-    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(delegateKeys.publicKey) })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(keys.publicKey) })
     .setIssuedAt()
     .setJti(crypto.randomUUID())
-    .sign(delegateKeys.privateKey);
+    .sign(keys.privateKey);
 }
 
 beforeAll(async () => {
@@ -128,19 +134,19 @@ beforeAll(async () => {
 
   // Root over both tools; child narrows to invoice.read only (keeping the
   // read tool's constraints so it stays capability-monotone).
-  const { root, tools: rootTools } = await deriveAttenuationRoot(kernel, asKeys.privateKey, "as-token", {
+  const derived = await deriveAttenuationRoot(kernel, asKeys.privateKey, "as-token", {
     missionId: mission.id,
     aud: CANONICAL_RESOURCE,
     clientId: "ap-agent",
     cnfJkt: holderJkt,
     delMaxDepth: 2,
   });
-  const child = await mintChildOffline(root, holderKeys.privateKey, { [READ_TOOL_ID]: rootTools[READ_TOOL_ID] }, {
-    cnfJkt: delegateJkt,
-  });
+  root = derived.root;
+  leafTools = { [READ_TOOL_ID]: derived.tools[READ_TOOL_ID] };
+  const child = await mintChildOffline(root, holderKeys.privateKey, leafTools, { cnfJkt: delegateJkt });
   chain = [root, child];
 
-  const server = new McpPaymentsServer({
+  server = new McpPaymentsServer({
     pep: new Pep({
       payments: new PaymentsStore(),
       evidence: new EvidenceStore(),
@@ -199,6 +205,27 @@ describe("attenuation chain: verify + leaf enforcement", () => {
     const res = await pep.enforce("schedule_payment", { invoice_id: "inv-1" }, facts);
     expect(res.permitted).toBe(false);
     expect(res.denial_reason).toBe("out_of_authority");
+  });
+});
+
+describe("attenuation chain: keyed verification (negatives)", () => {
+  it("rejects a child not signed by the key its parent's cnf commits to", async () => {
+    // Signed with the delegate key, so header jwk thumbprint != root cnf.jkt.
+    const forged = await mintChildOffline(root, delegateKeys.privateKey, leafTools, { cnfJkt: delegateJkt });
+    await expect(
+      server.validateAttenuationChain([root, forged], await dpopProof(CANONICAL_RESOURCE), CANONICAL_RESOURCE, "POST"),
+    ).rejects.toThrow(/cnf/);
+  });
+
+  it("rejects proof-of-possession under a key that is not the leaf cnf", async () => {
+    await expect(
+      server.validateAttenuationChain(
+        chain,
+        await dpopProof(CANONICAL_RESOURCE, holderKeys),
+        CANONICAL_RESOURCE,
+        "POST",
+      ),
+    ).rejects.toThrow(/cnf/);
   });
 });
 
