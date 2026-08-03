@@ -64,6 +64,7 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-mission-shaping` | `dc7a897` | `services/agent/src/index.ts` (shapeIntent) | untrusted intent proposal; derivation still bounds | `services/agent/test/harness.test.ts` |
 | (eval harness, goal 2) | n/a | `evals` | adversarial + legitimate suites, containment scorecard, CI gate (D24) | `evals/test/evals.test.ts` |
 | (vendor test, handbook) | n/a | `evals/src/vendor-test.ts` | four-axis valid-token-but-denied demonstration | `evals/test/vendor-test.test.ts` |
+| `draft-mcguinness-mission-orchestration` | `3ce193c` (2026-07-15) | `packages/orchestration` + `packages/mission-core` (anchors `UNWIND_PLAN_TYP`) | `orchestration#reversibility`, `orchestration#unwind-plan`, `orchestration#unwind-plan-integrity`, `orchestration#state-change-behavior`, `orchestration#compensation`, `orchestration#orchestration-evidence` | `packages/orchestration/test/orchestration.test.ts` |
 
 ## Adopted for planning, not yet implemented (pins from the pre-flight spike)
 

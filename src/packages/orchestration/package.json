@@ -1,0 +1,20 @@
+{
+  "name": "@mission/orchestration",
+  "version": "0.0.1",
+  "private": true,
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@mission/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@mission/agent": "workspace:*",
+    "@mission/mcp-payments": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --build"
+  }
+}

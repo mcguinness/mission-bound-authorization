@@ -162,6 +162,19 @@ importers:
         specifier: workspace:*
         version: link:../../services/pdp
 
+  packages/orchestration:
+    dependencies:
+      '@mission/core':
+        specifier: workspace:*
+        version: link:../mission-core
+    devDependencies:
+      '@mission/agent':
+        specifier: workspace:*
+        version: link:../../services/agent
+      '@mission/mcp-payments':
+        specifier: workspace:*
+        version: link:../../services/mcp-payments
+
   packages/store:
     dependencies:
       better-sqlite3:
