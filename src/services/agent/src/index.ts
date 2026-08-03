@@ -6,10 +6,26 @@
  * loop are the demo entrypoint (scripts/demo).
  */
 
-export { checkOnResume, type ResumeDecision, type MissionState } from "./harness.js";
+export { checkOnResume, checkStatusContinuity, type ResumeDecision, type MissionState } from "./harness.js";
+export {
+  buildScopeStatement,
+  CHANNEL_CLASSES,
+  type ChannelClass,
+  type ChannelClassStatement,
+  type ChannelDisposition,
+  type ContainmentClaim,
+  type ExecutionEnvironmentScopeStatement,
+  SCOPE_STATEMENT_TYP,
+  type ScopeStatementConfig,
+  type ScopeStatementSigner,
+  signScopeStatement,
+  verifyScopeStatement,
+} from "./harness-scope.js";
 export {
   createMediatedHarness,
+  createStatusMediatedHarness,
   MediatedHarness,
+  type MediatedHarnessOptions,
   type MediatedToolChannel,
   type HarnessToolResult,
   resumeGuard,

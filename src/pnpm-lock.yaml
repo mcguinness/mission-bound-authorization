@@ -194,6 +194,9 @@ importers:
       '@mission/authorization-server':
         specifier: workspace:*
         version: link:../authorization-server
+      '@mission/core':
+        specifier: workspace:*
+        version: link:../../packages/mission-core
       '@mission/demo-data':
         specifier: workspace:*
         version: link:../../packages/demo-data
