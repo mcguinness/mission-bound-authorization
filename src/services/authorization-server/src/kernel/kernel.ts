@@ -27,6 +27,7 @@ import {
   type MissionIntent,
   type MissionRecord,
   type MissionState,
+  type ParentRef,
   TERMINAL_STATES,
 } from "./types.js";
 
@@ -57,7 +58,9 @@ CREATE TABLE IF NOT EXISTS missions (
   grant_id TEXT,
   status_list_idx INTEGER UNIQUE,
   predecessor TEXT,
-  successor TEXT
+  successor TEXT,
+  parent_id TEXT,
+  parent_json TEXT
 ) STRICT;
 `;
 
@@ -169,8 +172,8 @@ export class MissionKernel {
           `INSERT INTO missions (id, issuer, state, intent_json, authority_set_json, intent_hash,
            authority_hash, subject_iss, subject_sub, approver_iss, approver_sub, client_id,
            policy_version, approval_event_id, created_at, expires_at, version, max_derivations,
-           derivation_count, grant_id, predecessor)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           derivation_count, grant_id, predecessor, parent_id, parent_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -194,6 +197,10 @@ export class MissionKernel {
           record.derivation_count,
           record.grant_id,
           record.predecessor ?? null,
+          // @spec child-delegation#parent-member: `parent` is immutable after
+          // creation (like `predecessor`), so it is written only here.
+          record.parent?.id ?? null,
+          record.parent ? JSON.stringify(record.parent) : null,
         );
     });
     // The activating event: version 1, no prior_state. Shared by approve() and
@@ -229,6 +236,13 @@ export class MissionKernel {
     if (superseded && predId) {
       const fresh = this.get(predId);
       if (fresh) this.emitCommit(fresh, "active", successorId);
+      // @spec child-delegation#cascade — `superseded` is a TERMINAL cascade
+      // trigger; the successor does NOT inherit the predecessor's children (their
+      // strict-subset proof was against the predecessor's Authority Set). This
+      // funnel bypasses setState, so the cascade is invoked explicitly here,
+      // outside the withTransaction block above (cascadeChildren -> setState uses
+      // a bare UPDATE, so there is no nested transaction).
+      this.cascadeChildren(predId);
     }
     return superseded;
   }
@@ -256,6 +270,48 @@ export class MissionKernel {
 
   bindGrant(missionId: string, grantId: string): void {
     this.db.prepare("UPDATE missions SET grant_id = ? WHERE id = ?").run(grantId, missionId);
+  }
+
+  /** @spec child-delegation#parent-member — the immediate Child Missions of a parent. */
+  findChildren(parentId: string): MissionRecord[] {
+    const rows = this.db
+      .prepare("SELECT * FROM missions WHERE parent_id = ?")
+      .all(parentId) as Array<Record<string, unknown>>;
+    return rows.map(rowToRecord);
+  }
+
+  /**
+   * @spec child-delegation#cascade — cascade a TERMINAL parent transition to its
+   * transitive descendants: each dependent Child Mission enters the terminal
+   * `cascaded` state. Invoked from the terminal-commit path (the gate at the end
+   * of {@link setState}, which covers `transition(revoke/complete)` and
+   * `applyExpiry`) and from {@link supersedeOnRedemption} (which bypasses
+   * setState). Because each child transition flows through `setState -> emitCommit`,
+   * the Status List republisher and Mission Signals propagate the `cascaded`
+   * commit for free (`stateToBit` already maps `cascaded` -> INVALID).
+   *
+   * Transitivity is carried by setState's own terminal gate: setting a child to
+   * the terminal `cascaded` state re-enters this method for its children, in
+   * generation order (@spec child-delegation#cascade: "in generation order").
+   * This method therefore does NOT self-recurse.
+   *
+   * A descendant NOT in `active`/`suspended` is skipped: `setState` throws
+   * {@link LifecycleConflictError} on an already-terminal source, so an
+   * already-terminal descendant would otherwise abort the whole cascade. Skipping
+   * it also makes a repeated cascade over the same subtree a safe no-op (e.g. an
+   * expired-then-revoked parent whose stale in-memory record re-runs the cascade).
+   *
+   * `suspend` is deliberately NOT a cascade trigger: per @spec
+   * child-delegation#cascade `suspended` is the one reversible trigger (children
+   * are held non-active and restored on parent resume, NOT driven terminal). That
+   * projection/restore is deferred; only terminal triggers cascade here.
+   */
+  cascadeChildren(parentId: string): void {
+    for (const child of this.findChildren(parentId)) {
+      if (child.state === "active" || child.state === "suspended") {
+        this.setState(child, "cascaded");
+      }
+    }
   }
 
   /**
@@ -469,6 +525,12 @@ export class MissionKernel {
     // discards applyExpiry()'s return, so the spread `version` can be off by one.
     const fresh = this.get(record.id);
     if (fresh) this.emitCommit(fresh, record.state);
+    // @spec child-delegation#cascade — a terminal transition cascades to
+    // dependent Child Missions. Gating here (after the commit) covers every
+    // terminal funnel that flows through setState: transition(revoke/complete)
+    // and applyExpiry(-> expired). It also carries cascade transitivity: setting
+    // a child to `cascaded` re-enters this gate for the grandchildren.
+    if (TERMINAL_STATES.has(to)) this.cascadeChildren(record.id);
     return { ...record, state: to, version: record.version + 1 };
   }
 
@@ -521,5 +583,6 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     grant_id: (row.grant_id as string | null) ?? null,
     status_list_idx: (row.status_list_idx as number | null) ?? null,
     ...(row.predecessor ? { predecessor: row.predecessor as string } : {}),
+    ...(row.parent_json ? { parent: JSON.parse(row.parent_json as string) as ParentRef } : {}),
   };
 }
