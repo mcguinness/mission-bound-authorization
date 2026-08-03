@@ -12,6 +12,18 @@ export interface MissionIntent {
   controls?: { acr?: string; max_derivations?: number; [k: string]: JsonValue | undefined };
 }
 
+/**
+ * @spec attenuation#root-mapping, child-delegation#fanout — a delegate matcher:
+ * the actor (or actor class) a delegation right may be conferred on. Matched by
+ * `sub` (exact) or `sub_profile` (class membership). Shared shape between the
+ * core's `allowed_delegates` and the child-delegation companion's
+ * `allowed_child_actors`.
+ */
+export interface DelegateMatcher {
+  sub?: string;
+  sub_profile?: string;
+}
+
 /** @spec mission#authorization-derivation (type mission_resource_access) */
 export interface AuthorityEntry {
   type: "mission_resource_access";
@@ -20,6 +32,25 @@ export interface AuthorityEntry {
   constraints?: {
     max_amount?: { amount: string; currency: string };
     vendors?: string[];
+  };
+  /**
+   * @spec attenuation#delegation, child-delegation#fanout — per-entry delegation
+   * policy (the S-15 core extension). A GRANT, not a restriction: an entry with
+   * no `delegation` is non-delegable, and derivation NEVER lets an untrusted
+   * proposal introduce it (the compromised-shaper property, see derive.ts). The
+   * open index carries companion members (the child-delegation `children` object)
+   * unchanged; a later profile narrows them strongly. `max_depth` bounds offline
+   * attenuation-chain / delegation depth; `allowed_delegates` restricts who may
+   * receive the right (a restriction, narrowed like `constraints.vendors`).
+   */
+  delegation?: {
+    max_depth: number;
+    allowed_delegates?: DelegateMatcher[];
+  } & {
+    // Open index so companion members (the child-delegation `children` object)
+    // ride unchanged. Expressed as an intersection so the named members above
+    // keep their precise types under `exactOptionalPropertyTypes`.
+    [k: string]: JsonValue | undefined;
   };
 }
 

@@ -120,11 +120,14 @@ export interface DeriveRootInput {
   /** The holder's confirmation-key thumbprint (cnf.jkt). */
   cnfJkt: string;
   /**
-   * @spec attenuation#root-mapping (delegation gap): `AuthorityEntry` has no
-   * `delegation` member, so the non-delegable-by-default rule that would derive
-   * this cannot be computed; the caller supplies it explicitly for this profile.
+   * @spec attenuation#root-mapping (S-15, closed): OPTIONAL override for
+   * `del_max_depth`. When omitted, {@link deriveAttenuationRoot} DERIVES it from
+   * the Authority Set's `delegation` policy (the non-delegable-by-default rule):
+   * the minimum `max_depth` across the delegable entries, or 0 when none is
+   * delegable. Kept as an override for back-compat with callers that set it
+   * explicitly.
    */
-  delMaxDepth: number;
+  delMaxDepth?: number;
   /**
    * Optional client-requested narrowing, as an AAT `tools` map (the RFC 9396
    * `attenuating_agent_token` detail). When present it MUST be within the mapped
@@ -132,6 +135,18 @@ export interface DeriveRootInput {
    */
   requestedTools?: AATTools;
   lifetimeSeconds?: number;
+}
+
+/**
+ * @spec attenuation#root-mapping (S-15) — derive `del_max_depth` from the
+ * Authority Set's `delegation` policy. A root's `del_max_depth` MUST NOT exceed
+ * the minimum `max_depth` across the delegable entries (those carrying a
+ * `delegation` member); entries carrying NO `delegation` are non-delegable by
+ * default. When no entry is delegable the root is non-delegating (0).
+ */
+function deriveDelMaxDepth(entries: readonly AuthorityEntry[]): number {
+  const depths = entries.flatMap((e) => (e.delegation ? [e.delegation.max_depth] : []));
+  return depths.length === 0 ? 0 : Math.min(...depths);
 }
 
 /**
@@ -147,10 +162,22 @@ export async function deriveAttenuationRoot(
   kid: string,
   input: DeriveRootInput,
 ): Promise<{ root: string; jti: string; tools: AATTools }> {
-  if (input.delMaxDepth < 0) throw new Error("attenuation: del_max_depth MUST be >= 0");
+  if (input.delMaxDepth !== undefined && input.delMaxDepth < 0) {
+    throw new Error("attenuation: del_max_depth MUST be >= 0");
+  }
 
   // Derivation gate (D26 lifecycle): throws GateError when non-active/expired.
   const record: MissionRecord = kernel.gateDerivation(input.missionId);
+
+  // @spec attenuation#root-mapping (S-15, closed): derive del_max_depth from the
+  // Authority Set's delegation policy unless the caller supplies an override. A
+  // client-requested narrowing (requestedTools) is minted NON-delegating
+  // (del_max_depth 0): deriving a depth over such a root would need the entries
+  // the requested tools actually justify, which is fan-out accounting (deferred
+  // to the kernel fan-out PR); a non-delegating root is fail-closed and can
+  // never let a non-delegable requested tool ride a root whose depth exceeds 0.
+  const delMaxDepth =
+    input.delMaxDepth ?? (input.requestedTools ? 0 : deriveDelMaxDepth(record.authority_set));
 
   let tools: AATTools;
   if (input.requestedTools) {
@@ -162,7 +189,16 @@ export async function deriveAttenuationRoot(
     }
     tools = input.requestedTools;
   } else {
-    tools = mapAuthorityToTools(record.authority_set);
+    // Non-delegable entries MUST NOT ride a root whose del_max_depth exceeds 0.
+    // On the DERIVED path, drop them so only delegable entries map (at depth 0
+    // every entry may ride, so nothing is dropped). An explicit override never
+    // drops: this profile's existing caller supplies a depth over a
+    // delegation-free Authority Set and expects the full mapped tool set.
+    const mappable =
+      input.delMaxDepth === undefined && delMaxDepth > 0
+        ? record.authority_set.filter((e) => e.delegation)
+        : record.authority_set;
+    tools = mapAuthorityToTools(mappable);
   }
 
   const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
@@ -176,7 +212,7 @@ export async function deriveAttenuationRoot(
     sub: record.subject.sub,
     client_id: input.clientId,
     del_depth: 0,
-    del_max_depth: input.delMaxDepth,
+    del_max_depth: delMaxDepth,
     authorization_details: [{ type: AAT_DETAIL_TYPE, tools }],
   })
     .setProtectedHeader({ alg: "ES256", kid, typ: AAT_TYP })
