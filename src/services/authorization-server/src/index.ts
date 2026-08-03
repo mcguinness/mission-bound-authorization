@@ -7,6 +7,7 @@ import { buildProvider, type TxnArs } from "./adapters/provider.js";
 import { DeferralStore } from "./kernel/deferred.js";
 import { MissionKernel } from "./kernel/kernel.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
+import type { LifecycleCommit } from "./kernel/types.js";
 
 export { MissionKernel, GateError, LifecycleConflictError } from "./kernel/kernel.js";
 export { validateMissionIntent, IntentError } from "./kernel/intent.js";
@@ -104,6 +105,16 @@ export async function buildAuthorizationServer(opts: {
   resourceTxnJwks?: { keys: JWK[] };
   /** AROP transaction task store (AS vouches; owns the txn pending id, D37). */
   ars?: TxnArs;
+  /**
+   * @spec signals#lifecycle-event — an additional lifecycle-commit subscriber,
+   * composed with the Status List republisher so BOTH run on every committed
+   * transition. Mission Signals injects its emitter's `onCommit` here to emit a
+   * `mission.lifecycle-change` SET per consumer. The AS deliberately does NOT
+   * import `@mission/signals`: `@mission/signals` imports `LifecycleCommit` from
+   * this package, so an import back would form a package reference cycle; the
+   * subscriber is injected instead.
+   */
+  onLifecycleCommit?: (commit: LifecycleCommit) => void;
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
@@ -130,7 +141,12 @@ export async function buildAuthorizationServer(opts: {
     policy: DERIVATION_POLICY as never,
     statusKey: statusKeys.privateKey,
     statusKid: asStatus.kid,
-    onLifecycleCommit: () => statusListPublisher?.markDirty(),
+    // Fan the committed transition out to BOTH the Status List republisher (PULL)
+    // and any injected subscriber, e.g. the Mission Signals emitter (PUSH).
+    onLifecycleCommit: (commit) => {
+      statusListPublisher?.markDirty();
+      opts.onLifecycleCommit?.(commit);
+    },
   });
   statusListPublisher = new StatusListPublisher(() => kernel.publishStatusList());
   // AROP DTR store, wired onto the real /token deferred grant (D42).

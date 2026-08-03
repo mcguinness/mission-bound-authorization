@@ -1,0 +1,21 @@
+{
+  "name": "@mission/signals",
+  "version": "0.0.1",
+  "private": true,
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@mission/authorization-server": "workspace:*",
+    "@mission/core": "workspace:*",
+    "jose": "^6.1.3"
+  },
+  "devDependencies": {
+    "@mission/pdp": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --build"
+  }
+}
