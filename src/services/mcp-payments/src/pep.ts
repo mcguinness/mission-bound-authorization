@@ -37,6 +37,14 @@ export interface TokenFacts {
   act?: ActObject;
   mission: { id: string; authority_hash: string };
   cnfJkt: string;
+  /**
+   * @spec attenuation#mission-binding-check: present when the credential was a
+   * Mission-bound Attenuating Agent Token chain. The effective authority is the
+   * leaf's narrowed tools, expressed as {resource, actions}; an action within
+   * the Mission but outside this leaf is denied `out_of_authority` (below).
+   * Absent for an ordinary Mission-bound token (no leaf narrowing).
+   */
+  leafAuthority?: ReadonlyArray<{ resource: string; actions: readonly string[] }>;
 }
 
 export interface ActionMapping {
@@ -170,6 +178,22 @@ export class Pep {
 
     const view = this.deps.loadView(token.mission.id);
     if (!view) return this.refuse(token, "unknown_mission", mapping.action);
+
+    // @spec attenuation#mission-binding-check: when the credential is an
+    // Attenuating Agent Token chain, the effective authority is the leaf's
+    // narrowed tools. An action within the Mission but OUTSIDE the leaf is
+    // denied here, reusing the existing out_of_authority DenialReason, before
+    // the Mission-level PDP check (which still enforces the Mission and, via
+    // view.state, the kill switch). Absent leafAuthority, this is a no-op.
+    if (
+      token.leafAuthority &&
+      !token.leafAuthority.some(
+        (e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action),
+      )
+    ) {
+      this.recordRefusal(token, "out_of_authority", mapping.action, view);
+      return { permitted: false, denial_reason: "out_of_authority" };
+    }
 
     // Per-instance revocation (M12): refuse if any actor in the chain is
     // revoked, keyed on (act.iss, act.sub). Kills one instance, not the chain.

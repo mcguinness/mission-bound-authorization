@@ -20,6 +20,16 @@ export {
   ID_JAG_TOKEN_TYPE,
 } from "./kernel/cross-domain.js";
 export {
+  deriveAttenuationRoot,
+  mintChildOffline,
+  mapAuthorityToTools,
+  mapToolsToAuthority,
+  AAT_TYP,
+  MAX_ROOT_LIFETIME_S,
+  type DeriveRootInput,
+  type MintChildOptions,
+} from "./kernel/attenuation.js";
+export {
   CatalogProvider,
   type ServiceSeed,
   type CatalogService,
