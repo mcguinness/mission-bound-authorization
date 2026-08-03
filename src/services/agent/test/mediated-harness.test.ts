@@ -10,6 +10,7 @@
  * checkOnResume, which mcp-payments cannot import without a dependency cycle.
  */
 
+import type { MissionStatusLease } from "@mission/core";
 import { describe, expect, it } from "vitest";
 import type { MissionState } from "../src/harness.js";
 import { MediatedHarness, type MediatedToolChannel, resumeGuard } from "../src/mediated-harness.js";
@@ -64,5 +65,61 @@ describe("harness duty 1: fail-closed resume guard", () => {
     const res = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1" }, "jwt");
     expect(res.ok).toBe(true);
     expect(calls).toEqual(["callTool:execute_wire_transfer"]);
+  });
+});
+
+/**
+ * Additive: the status-lease path (@spec harness#resume-algorithm, step 5).
+ * Reuses the same spy channel. Freshness is re-checked at each submission: a
+ * lease that has expired fails closed even when the last-observed state is
+ * `active`, and a within-window active lease proceeds. The duty-1 describe
+ * above is unmodified -- that it stays green is the proof this path is additive.
+ */
+describe("harness status-continuity: fresh-at-submission fail-closed", () => {
+  const activeLease = (expires: string): MissionStatusLease => ({
+    state: "active",
+    status_checked_at: "2026-01-01T22:00:00Z",
+    status_expires_at: expires,
+    state_source: "status",
+  });
+  const readStatus = (lease?: MissionStatusLease) => async () => lease;
+  const at = (iso: string) => () => new Date(iso);
+  const unusedReadState = async (): Promise<MissionState | undefined> => undefined;
+
+  it("refuses the channel when the lease is stale, even though last state is active", async () => {
+    const { channel, calls } = spyChannel();
+    // Checked 22:00, expires 22:05; the agent wakes at 02:00 -> the lease is stale.
+    const harness = new MediatedHarness(channel, "msn", unusedReadState, {
+      readStatus: readStatus(activeLease("2026-01-01T22:05:00Z")),
+      now: at("2026-01-02T02:00:00Z"),
+    });
+    const res = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1" }, "jwt");
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("mission_status_stale:active");
+    expect(res.resume?.stale).toBe(true);
+    expect(res.resume?.state).toBe("active"); // last-observed state WAS active
+    // Fail closed: the channel was never reached despite the recorded active state.
+    expect(calls).toEqual([]);
+  });
+
+  it("proceeds to the channel when the lease is within its window and active", async () => {
+    const { channel, calls } = spyChannel();
+    const harness = new MediatedHarness(channel, "msn", unusedReadState, {
+      readStatus: readStatus(activeLease("2026-01-02T03:00:00Z")),
+      now: at("2026-01-02T02:00:00Z"), // before expiry
+    });
+    const res = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1" }, "jwt");
+    expect(res.ok).toBe(true);
+    expect(calls).toEqual(["callTool:execute_wire_transfer"]);
+  });
+
+  it("suppresses listTools when no status lease is available (fail closed)", async () => {
+    const { channel, calls } = spyChannel();
+    const harness = new MediatedHarness(channel, "msn", unusedReadState, {
+      readStatus: readStatus(undefined),
+      now: at("2026-01-02T02:00:00Z"),
+    });
+    expect(await harness.listTools("jwt")).toEqual([]);
+    expect(calls).toEqual([]);
   });
 });

@@ -4,6 +4,7 @@
   "include": ["src"],
   "references": [
     { "path": "../authorization-server" },
+    { "path": "../../packages/mission-core" },
     { "path": "../../packages/demo-data" },
     { "path": "../mcp-payments" }
   ]

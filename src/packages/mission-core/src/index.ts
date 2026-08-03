@@ -6,5 +6,11 @@ export {
   intentHash,
   verifyAnchor,
 } from "./anchors.js";
+export type {
+  MissionBinding,
+  MissionStatusLease,
+  StateSource,
+  StopPolicy,
+} from "./binding.js";
 export { canonicalize, type JsonValue } from "./canonicalize.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";
