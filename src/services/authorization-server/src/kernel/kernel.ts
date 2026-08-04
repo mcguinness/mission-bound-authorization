@@ -60,7 +60,8 @@ CREATE TABLE IF NOT EXISTS missions (
   predecessor TEXT,
   successor TEXT,
   parent_id TEXT,
-  parent_json TEXT
+  parent_json TEXT,
+  projected_from TEXT
 ) STRICT;
 `;
 
@@ -172,8 +173,8 @@ export class MissionKernel {
           `INSERT INTO missions (id, issuer, state, intent_json, authority_set_json, intent_hash,
            authority_hash, subject_iss, subject_sub, approver_iss, approver_sub, client_id,
            policy_version, approval_event_id, created_at, expires_at, version, max_derivations,
-           derivation_count, grant_id, predecessor, parent_id, parent_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           derivation_count, grant_id, predecessor, parent_id, parent_json, projected_from)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -201,6 +202,9 @@ export class MissionKernel {
           // creation (like `predecessor`), so it is written only here.
           record.parent?.id ?? null,
           record.parent ? JSON.stringify(record.parent) : null,
+          // @spec child-delegation#child-state: a fresh Mission is never a
+          // projected-suspended hold; the marker is written later by setState.
+          record.projected_from ?? null,
         );
     });
     // The activating event: version 1, no prior_state. Shared by approve() and
@@ -304,13 +308,67 @@ export class MissionKernel {
    * `suspend` is deliberately NOT a cascade trigger: per @spec
    * child-delegation#cascade `suspended` is the one reversible trigger (children
    * are held non-active and restored on parent resume, NOT driven terminal). That
-   * projection/restore is deferred; only terminal triggers cascade here.
+   * reversible projection/restore is handled separately by
+   * {@link projectSuspendedChildren} / {@link restoreProjectedChildren}, gated off
+   * the non-terminal `suspended`/`active` commits in {@link setState}; only
+   * terminal triggers cascade here.
    */
   cascadeChildren(parentId: string): void {
     for (const child of this.findChildren(parentId)) {
       if (child.state === "active" || child.state === "suspended") {
         this.setState(child, "cascaded");
       }
+    }
+  }
+
+  /**
+   * @spec child-delegation#cascade (reversible trigger), #child-state — project a
+   * parent SUSPEND onto its transitive descendants. Each currently-`active` child
+   * is set to the reversible `suspended` hold and stamped `projected_from =
+   * "active"`, recording the state to restore on parent resume. A descendant that
+   * is NOT `active` (e.g. one suspended INDEPENDENTLY before the parent) is
+   * skipped and gets NO marker, so it is never restored later.
+   *
+   * Each transition flows through `setState -> emitCommit`, so the Status List
+   * republisher and Mission Signals propagate the `suspended` commit (version
+   * increments; `stateToBit` maps `suspended` -> SUSPENDED). Transitivity and
+   * generation order ride setState's own re-entry (see there): projecting a child
+   * to `suspended` re-enters this method for ITS active children. This method
+   * therefore does NOT self-recurse. It is the reversible counterpart to
+   * {@link cascadeChildren}, invoked only from the non-terminal `suspended` gate.
+   */
+  private projectSuspendedChildren(parentId: string): void {
+    for (const child of this.findChildren(parentId)) {
+      if (child.state === "active") {
+        this.setState(child, "suspended", "active");
+      }
+    }
+  }
+
+  /**
+   * @spec child-delegation#cascade (reversible trigger), #child-state — restore,
+   * on parent RESUME, the descendants a suspend projected. A child is restored
+   * ONLY if it is still in the `suspended` hold AND carries a `projected_from`
+   * marker: an independently-suspended child (no marker) and a child driven
+   * terminal while suspended (no longer `suspended`) are both skipped, so neither
+   * is revived. Restoring a child to `active` re-enters {@link setState}'s active
+   * gate for that child's own projected children (transitive, generation order).
+   *
+   * @spec child-delegation#child-state (expiry precedence) — the expiry clock is
+   * applied FIRST: a child whose `expires_at` passed during the suspension ends
+   * `expired` (a terminal commit that itself cascades) and is NOT restored to
+   * `active`. Only a still-held child is set back to its stored `projected_from`;
+   * setState's `to === "active"` rule then clears the marker.
+   */
+  private restoreProjectedChildren(parentId: string): void {
+    for (const found of this.findChildren(parentId)) {
+      const held = this.get(found.id);
+      if (!held || held.state !== "suspended" || held.projected_from === undefined) continue;
+      const priorState = held.projected_from; // narrowed to MissionState by the guard
+      // Expiry precedence: an expired-during-suspension child ends `expired`.
+      const child = this.applyExpiry(held);
+      if (child.state !== "suspended") continue; // expired (now terminal) -> not restored
+      this.setState(child, priorState);
     }
   }
 
@@ -437,6 +495,23 @@ export class MissionKernel {
     if (record.state !== "active") {
       throw new GateError("mission_not_active", `mission ${id} is ${record.state}`);
     }
+    // @spec child-delegation#child-state — the ancestor-active gate: derivation
+    // under a Child Mission is refused while ANY ancestor is non-active. This is
+    // belt-and-suspenders with suspend-projection (which already holds the child),
+    // but the profile requires the explicit lineage check: walk `parent` upward,
+    // applying the expiry clock to each ancestor, and refuse if one is not active.
+    for (let ancestor = record.parent; ancestor?.id; ) {
+      const parent = this.get(ancestor.id);
+      if (!parent) break;
+      const fresh = this.applyExpiry(parent);
+      if (fresh.state !== "active") {
+        throw new GateError(
+          "mission_not_active",
+          `mission ${id} has a non-active ancestor ${fresh.id} (${fresh.state})`,
+        );
+      }
+      ancestor = fresh.parent;
+    }
     if (record.max_derivations !== null && record.derivation_count >= record.max_derivations) {
       throw new GateError("derivation_cap_exhausted", `mission ${id} derivation cap exhausted`);
     }
@@ -514,13 +589,24 @@ export class MissionKernel {
       .sign(this.opts.statusKey);
   }
 
-  private setState(record: MissionRecord, to: MissionState): MissionRecord {
+  private setState(record: MissionRecord, to: MissionState, projectedFrom?: MissionState): MissionRecord {
     if (TERMINAL_STATES.has(record.state)) {
       throw new LifecycleConflictError(`mission ${record.id} is terminal (${record.state})`);
     }
-    this.db
-      .prepare("UPDATE missions SET state = ?, version = version + 1 WHERE id = ?")
-      .run(to, record.id);
+    // @spec child-delegation#child-state — the `projected_from` marker records a
+    // child's pre-suspension state while it is held under a suspended parent. It
+    // is SET when a suspend projection passes `projectedFrom` (always the held-from
+    // `active`), and CLEARED (`NULL`) whenever a Mission returns to `active` (a
+    // resume or a restore), so it is present only for the duration of the hold.
+    if (projectedFrom !== undefined || to === "active") {
+      this.db
+        .prepare("UPDATE missions SET state = ?, version = version + 1, projected_from = ? WHERE id = ?")
+        .run(to, projectedFrom ?? null, record.id);
+    } else {
+      this.db
+        .prepare("UPDATE missions SET state = ?, version = version + 1 WHERE id = ?")
+        .run(to, record.id);
+    }
     // Commit from the persisted row, not the in-memory spread: transition()
     // discards applyExpiry()'s return, so the spread `version` can be off by one.
     const fresh = this.get(record.id);
@@ -530,7 +616,19 @@ export class MissionKernel {
     // terminal funnel that flows through setState: transition(revoke/complete)
     // and applyExpiry(-> expired). It also carries cascade transitivity: setting
     // a child to `cascaded` re-enters this gate for the grandchildren.
-    if (TERMINAL_STATES.has(to)) this.cascadeChildren(record.id);
+    if (TERMINAL_STATES.has(to)) {
+      this.cascadeChildren(record.id);
+    } else if (to === "suspended") {
+      // @spec child-delegation#cascade (reversible trigger) — a SUSPEND projects
+      // active descendants to a reversible `suspended` hold. Transitivity rides
+      // the same re-entry as the terminal cascade, in generation order.
+      this.projectSuspendedChildren(record.id);
+    } else if (to === "active") {
+      // @spec child-delegation#cascade (reversible trigger) — a RESUME restores
+      // the descendants this parent's suspend projected; re-entry carries the
+      // restore down the tree.
+      this.restoreProjectedChildren(record.id);
+    }
     return { ...record, state: to, version: record.version + 1 };
   }
 
@@ -584,5 +682,6 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     status_list_idx: (row.status_list_idx as number | null) ?? null,
     ...(row.predecessor ? { predecessor: row.predecessor as string } : {}),
     ...(row.parent_json ? { parent: JSON.parse(row.parent_json as string) as ParentRef } : {}),
+    ...(row.projected_from ? { projected_from: row.projected_from as MissionState } : {}),
   };
 }

@@ -188,6 +188,15 @@ export interface MissionRecord {
   predecessor?: string;
   /** @spec child-delegation#parent-member: set on a Child Mission only. */
   parent?: ParentRef;
+  /**
+   * @spec child-delegation#child-state: a Child Mission's pre-suspension state,
+   * recorded when a parent SUSPEND projects it to the reversible `suspended` hold
+   * (always `active`, the only projectable source). Present ONLY while so held;
+   * cleared on restore at parent resume. Absent on a Mission that was never
+   * projected (e.g. one suspended independently), which is exactly why an
+   * independently-suspended descendant is NOT restored on parent resume.
+   */
+  projected_from?: MissionState;
 }
 
 /**

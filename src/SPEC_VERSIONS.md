@@ -142,3 +142,25 @@ this matrix and the `@spec` tags to the affected code and tests.
   and kernel.ts unchanged); kernel lifecycle / suspend and the PAR wire remain
   deferred.
   (`services/authorization-server/test/child-delegation.test.ts`.)
+- Mission Child-Delegation suspend-projection and restore-on-resume are realized
+  in `services/authorization-server/src/kernel/kernel.ts`: a parent SUSPEND
+  projects its transitive `active` descendants to the REVERSIBLE `suspended` hold
+  (the counterpart to the terminal `cascaded` cascade), and a parent RESUME
+  restores them. Projection (`projectSuspendedChildren`) and restore
+  (`restoreProjectedChildren`) are gated off the non-terminal `suspended`/`active`
+  commits in `setState`, so transitivity and generation order ride the same
+  re-entry as `cascadeChildren` (no self-recursion) and every commit flows through
+  `setState -> emitCommit` (Status List + Signals fan-out; version increments). A
+  nullable `projected_from` column records a child's pre-suspension state: it is
+  set only when a projection changes an `active` child, so an independently
+  `suspended` descendant carries NO marker and is NOT restored on parent resume.
+  Restore applies the expiry clock FIRST (`applyExpiry`), so a child whose
+  `expires_at` passed during suspension ends `expired`, not `active`; a parent
+  driven terminal while suspended still cascades descendants to `cascaded`
+  (terminal wins). `gateDerivation` additionally refuses (`mission_not_active`)
+  while ANY ancestor is non-active (the explicit `parent`-lineage walk, expiry
+  applied per hop). The Mission Signals anti-revive guard accepts the
+  `suspended` -> `active` restore lift because acceptance is version-based (strict
+  forward progress), not state-based.
+  (`services/authorization-server/test/suspend-projection.test.ts`,
+  `packages/mission-signals/test/suspend-lift.test.ts`.)
