@@ -120,3 +120,25 @@ this matrix and the `@spec` tags to the affected code and tests.
   (`packages/mission-core/src/attenuation-chain.ts`, a separate `del_max_depth`
   surface) are unchanged.
   (`services/authorization-server/test/derivation-delegation.test.ts`.)
+- Mission Child-Delegation fan-out accounting and Child Evidence are realized in
+  `services/authorization-server/src/kernel/child-delegation.ts`:
+  `createChildMission` derives the delegation decision from the parent Authority
+  Set's per-entry `delegation.children` (PR1's S-15 on-switch) instead of an
+  explicit `delegationAllowed` flag. Each child entry is attributed to the FIRST
+  parent entry (Authority Set order) it is a subset of (`isSubsetEntry`), and
+  that justifying entry is the accounting basis: absence of `children` refuses
+  `delegation_not_permitted` (kept distinct from `policy_denied`);
+  `allowed_child_actors` gates the child actor (`child_actor_not_allowed`);
+  `max_child_depth` (default 1) is a per-entry, decrementing child-generation
+  ceiling and `max_children` a per-entry non-terminal fan-out cap (counted over
+  `kernel.findChildren` filtered by `TERMINAL_STATES`), both refusing
+  `fanout_exceeded`; the count-then-insert is atomic on the single-threaded,
+  synchronous kernel. A Child Evidence record
+  (`application/mission-child-evidence+json`, JCS canonical bytes, `decision`
+  `created` / `denied`, note the draft's field values, not permit/deny) is
+  returned on permit and attached to the thrown `ChildDelegationError` on
+  refusal. `children` is read through a typed `ChildFanoutControls` reader so the
+  `delegation` open index derivation relies on stays byte-identical (derive.ts
+  and kernel.ts unchanged); kernel lifecycle / suspend and the PAR wire remain
+  deferred.
+  (`services/authorization-server/test/child-delegation.test.ts`.)

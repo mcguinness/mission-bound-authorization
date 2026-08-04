@@ -24,6 +24,27 @@ export interface DelegateMatcher {
   sub_profile?: string;
 }
 
+/**
+ * @spec child-delegation#fanout — the fan-out controls carried in a delegable
+ * Authority Set entry's `delegation.children` object. This strongly-types the
+ * companion object WITHOUT re-typing the `delegation` member itself: `delegation`
+ * keeps its open `JsonValue`-shaped index (below) so the generic carry/narrow in
+ * `derive.ts` is untouched; child-delegation.ts reads `children` through a small
+ * local reader that casts to this type. Expressed as an intersection (mirroring
+ * `delegation`) so the named members keep precise types under the open index.
+ * `max_child_depth` is a positive integer defaulting to 1 when absent.
+ */
+export type ChildFanoutControls = {
+  /** Max concurrently non-terminal Child Missions drawing on this entry, per parent. */
+  max_children?: number;
+  /** Max child-generation depth at which this entry may be included (default 1). */
+  max_child_depth?: number;
+  /** Which actors / actor classes may receive a Child Mission from this entry. */
+  allowed_child_actors?: DelegateMatcher[];
+} & {
+  [k: string]: JsonValue | undefined;
+};
+
 /** @spec mission#authorization-derivation (type mission_resource_access) */
 export interface AuthorityEntry {
   type: "mission_resource_access";
@@ -110,6 +131,31 @@ export interface ParentRef {
   delegation_id?: string;
   /** Creation time of the Child Mission. */
   created_at?: string;
+}
+
+/**
+ * @spec child-delegation#child-evidence — the Child Evidence record: audit
+ * material recording one child-creation decision. It grants no authority. Its
+ * canonical bytes are its JCS (RFC 8785) canonicalization; its media type is
+ * `application/mission-child-evidence+json`. `decision` is `created` or `denied`
+ * per §child-evidence-object (the field the task calls the permit/deny outcome).
+ * `child_actor`, `attenuation.result`, and `denial_reason` are typed structurally
+ * here so types.ts stays free of a back-import from child-delegation.ts.
+ */
+export interface ChildEvidence {
+  evidence_id: string;
+  parent: { id: string; issuer: string; authority_hash: string };
+  child: { id: string; issuer: string; authority_hash: string };
+  child_actor: { sub: string; iss?: string; sub_profile?: string };
+  /** Subset checks and their result (e.g. `strict_subset`, `not_strict_subset`). */
+  attenuation: { result: string };
+  /** Fan-out counters, present when fan-out controls apply to the justifying entry. */
+  fanout?: { active_children: number; max_children?: number };
+  cascade_mode: CascadeMode;
+  decision: "created" | "denied";
+  /** Present (and REQUIRED) when `decision` is `denied`. */
+  denial_reason?: string;
+  created_at: string;
 }
 
 /** @spec mission#mission-record */
