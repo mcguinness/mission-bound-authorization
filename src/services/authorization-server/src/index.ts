@@ -46,6 +46,24 @@ export {
   type ValidatedInstance,
 } from "./kernel/instance-assertion.js";
 export {
+  validateContinuationAssertion,
+  ContinuationAssertionError,
+  IDENTITY_CONTINUATION_JWT_TYP,
+  IDENTITY_CONTINUATION_TOKEN_TYPE,
+  MAX_CONTINUATION_LIFETIME_S,
+  type ContinuationIssuer,
+  type ContinuationActor,
+  type ValidatedContinuation,
+} from "./kernel/continuation-assertion.js";
+export {
+  ContinuationStore,
+  type AnchorType,
+  type ContinuationState,
+  type AuthEnvelope,
+  type ResolvedAnchor,
+  type ResolvedContinuation,
+} from "./kernel/continuation-store.js";
+export {
   constructDelegatedIssuance,
   delegatedContextActor,
   type DelegatedIssuance,

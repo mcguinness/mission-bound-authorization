@@ -3,7 +3,9 @@ import {
   type ActObject,
   ActorChainError,
   buildContextActor,
+  DEFAULT_MAX_DEPTH,
   extendChain,
+  extendChainCollapsing,
   flattenActChain,
   validateActChain,
   validateContextActor,
@@ -138,5 +140,60 @@ describe("extendChain (@spec actor-profile delegation construction)", () => {
     const extended = extendChain({ iss: "https://as", sub: "agent" }, undefined);
     expect(extended.act).toBeUndefined();
     expect(flattenActChain(extended)).toHaveLength(1);
+  });
+});
+
+describe("extendChainCollapsing (consecutive-identical-actor collapse)", () => {
+  it("collapses an identical (iss, sub): the chain is returned unchanged, depth unchanged", () => {
+    const inbound: ActObject = { iss: "https://as", sub: "agent", sub_profile: "ai_agent" };
+    const before = flattenActChain(inbound).length;
+    const extended = extendChainCollapsing({ iss: "https://as", sub: "agent" }, inbound);
+    expect(extended).toBe(inbound); // same reference, no new outermost entry
+    expect(flattenActChain(extended)).toHaveLength(before);
+  });
+
+  it("does NOT collapse a differing sub (depth +1)", () => {
+    const inbound: ActObject = { iss: "https://as", sub: "agent" };
+    const extended = extendChainCollapsing({ iss: "https://as", sub: "other" }, inbound);
+    expect(extended.sub).toBe("other");
+    expect(extended.act).toEqual(inbound);
+    expect(flattenActChain(extended)).toHaveLength(2);
+  });
+
+  it("does NOT collapse a differing iss (depth +1)", () => {
+    const inbound: ActObject = { iss: "https://as", sub: "agent" };
+    const extended = extendChainCollapsing({ iss: "https://other-as", sub: "agent" }, inbound);
+    expect(flattenActChain(extended)).toHaveLength(2);
+  });
+
+  it("is case-sensitive: a sub differing only in case does NOT collapse", () => {
+    const inbound: ActObject = { iss: "https://as", sub: "Agent" };
+    const extended = extendChainCollapsing({ iss: "https://as", sub: "agent" }, inbound);
+    expect(flattenActChain(extended)).toHaveLength(2);
+  });
+
+  it("with no inbound chain, cannot collapse: the new actor is a depth-1 chain", () => {
+    const extended = extendChainCollapsing({ iss: "https://as", sub: "agent" }, undefined);
+    expect(extended.act).toBeUndefined();
+    expect(flattenActChain(extended)).toHaveLength(1);
+  });
+
+  it("collapse keeps a single-actor multi-hop chain legal below DEFAULT_MAX_DEPTH", () => {
+    const actor = { iss: "https://as", sub: "solo" };
+    // Many intra-domain hops by the SAME actor: collapsing keeps depth 1.
+    let collapsed: ActObject = { ...actor };
+    for (let i = 0; i < DEFAULT_MAX_DEPTH + 3; i++) {
+      collapsed = extendChainCollapsing(actor, collapsed);
+    }
+    expect(flattenActChain(collapsed)).toHaveLength(1);
+    expect(() => validateActChain(collapsed)).not.toThrow();
+
+    // Contrast: the non-collapsing prepend would exceed the cap and be rejected.
+    let naive: ActObject = { ...actor };
+    for (let i = 0; i < DEFAULT_MAX_DEPTH + 3; i++) {
+      naive = extendChain(actor, naive);
+    }
+    expect(flattenActChain(naive).length).toBeGreaterThan(DEFAULT_MAX_DEPTH);
+    expect(() => validateActChain(naive)).toThrow(/exceeds local maximum/);
   });
 });

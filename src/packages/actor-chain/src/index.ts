@@ -155,3 +155,31 @@ export function extendChain(
 ): ActObject {
   return { ...newActor, ...(inbound ? { act: inbound } : {}) };
 }
+
+/**
+ * Like `extendChain`, but collapses a consecutive-identical current actor.
+ * When `newActor` names the SAME actor as the inbound chain's outermost hop
+ * (raw case-sensitive `iss`/`sub` equality, no canonicalization), the lineage
+ * does not gain a duplicate entry: the inbound chain is returned unchanged. A
+ * single actor taking several intra-domain hops therefore keeps a depth-1
+ * `act` lineage instead of one entry per hop.
+ *
+ * The collapse is applied HERE, before any downstream `DEFAULT_MAX_DEPTH`
+ * check (e.g. `validateActChain`), so a legitimate single-actor multi-hop
+ * continuation never trips the depth cap.
+ *
+ * Note: on a collapse the returned chain is `inbound` verbatim, so any
+ * non-identity members of `newActor` (including a rebound `cnf`) are discarded
+ * on that hop. This is intentional (the hop record persists elsewhere; this
+ * only governs the `act` lineage), but a consumer relying on `act.cnf`
+ * mirroring the top-level `cnf` (D21) should read the top-level `cnf`.
+ */
+export function extendChainCollapsing(
+  newActor: FlatActEntry & { sub: string; iss: string },
+  inbound: ActObject | undefined,
+): ActObject {
+  if (inbound && newActor.iss === inbound.iss && newActor.sub === inbound.sub) {
+    return inbound;
+  }
+  return extendChain(newActor, inbound);
+}
