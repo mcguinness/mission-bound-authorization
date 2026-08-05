@@ -70,6 +70,13 @@ export {
   type ChildResult,
 } from "./kernel/child-delegation.js";
 export {
+  mintChildGrant,
+  CHILD_GRANT_TYP,
+  CHILD_JWT_BEARER_GRANT_TYPE,
+  MAX_CHILD_GRANT_LIFETIME_S,
+  type MintChildGrantInput,
+} from "./adapters/child-grant.js";
+export {
   DeferralStore,
   DeferralError,
   DEFERRED_GRANT_TYPE,
@@ -187,6 +194,11 @@ export async function buildAuthorizationServer(opts: {
     accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
     txnKey: txnKeys.privateKey,
     txnKid: asTxn.kid,
+    // @spec child-delegation#child-client-identity — sign the child-bound RFC 7523
+    // authorization grant with the AS token key (verifies on the jwks_uri).
+    childGrantKey: tokenKeys.privateKey,
+    childGrantKid: asToken.kid,
+    childGrantAlg: asToken.alg,
     ...(opts.resourceTxnJwks ? { resourceTxnJwks: opts.resourceTxnJwks } : {}),
     ...(opts.ars ? { ars: opts.ars } : {}),
   });

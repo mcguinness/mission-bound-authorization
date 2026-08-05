@@ -49,7 +49,7 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-mission-authzen` (requestable denials, action approval) | `02d53dd` | `services/pdp`, `services/mcp-payments` | `authzen#requestable-denials`, `authzen#context-approval` (action_approval validation, PDP-signed binding_token) | `services/access-request/test/reevaluate.test.ts` |
 | AuthZEN ARAP (external, OpenID) | openid/authzen PR #508 merged, blob `670f5831f6e786c70944887dec6ab14de26986f8` | `services/access-request` | access request submission, task lifecycle, adjudication, action-bound approval object (reevaluate mode; `approved_until` honored end-to-end, requestable `access_request.expires_at`, approval-state `iss`+`aud`) | `services/access-request/test/reevaluate.test.ts` |
 | `draft-mcguinness-oauth-mission-expansion` | `dc7a897` | `services/authorization-server/src/kernel/expansion.ts` | successor Mission, `predecessor` member, supersede-on-redemption, approved_until bounding | `services/authorization-server/test/arop.test.ts` |
-| `draft-mcguinness-oauth-mission-child-delegation` | `8427e9b` (2026-07-15) | `services/authorization-server/src/kernel/child-delegation.ts` (+ kernel `cascadeChildren`/`findChildren`, `parent`/`ParentRef`) | `child-delegation#child-creation`, `#parent-member`, `#strict-subset`, `#cascade` (kernel flow + terminal cascade; PAR wire params, suspend-projection, fan-out accounting, `AuthorityEntry.delegation`, child grant issuance deferred) | `services/authorization-server/test/child-delegation.test.ts` |
+| `draft-mcguinness-oauth-mission-child-delegation` | `8427e9b` (kernel, 2026-07-15) + AS wire (branch `feat/child-delegation-wire`, 2026-08-05) | `services/authorization-server/src/kernel/child-delegation.ts` (+ kernel `cascadeChildren`/`findChildren`/suspend-projection, `parent`/`ParentRef`); AS wire in `services/authorization-server/src/adapters/provider.ts` (`extraParams` `parent`/`parent_token`/`child_actor`, back-channel `POST /child-missions`, discovery flag) and `services/authorization-server/src/adapters/child-grant.ts` (child-bound grant) | `child-delegation#child-creation`, `#child-client-identity`, `#request-processing`, `#parent-member`, `#strict-subset`, `#cascade`, `#discovery` (kernel flow, terminal cascade, suspend-projection, fan-out accounting; PAR wire params, parent resolve-only, child-bound RFC 7523 grant issuance, discovery metadata all realized; child redeeming AS ITSELF at `/token` deferred to PR4b) | `services/authorization-server/test/child-delegation.test.ts`, `services/authorization-server/test/child-delegation-endpoint.test.ts` |
 | AuthZEN AROP (openid/authzen#531) | PR #531 @ 2026-07-20 | `services/authorization-server/src/kernel` (deferred, txn-challenge) | DTR deferred grant + Transaction Challenge, token-issuance completion; subset-of-Mission with the active Mission carried unchanged (Expansion is a separate flow — D42/D46) | `services/authorization-server/test/arop.test.ts` |
 | DTR (`draft-gerber-oauth-deferred-token-response`) | [`-00`](https://datatracker.ietf.org/doc/draft-gerber-oauth-deferred-token-response/00/) | `services/authorization-server/src/kernel/deferred.ts`, `services/authorization-server/src/adapters/provider.ts` (deferred grant on the real `/token`) | deferred grant (`urn:ietf:params:oauth:grant-type:deferred`) on the real `/token` endpoint: initiation (folded — see Notes) + poll/redeem, `deferral_code`, `authorization_pending`/`slow_down`/`expired_token` (RFC 8628 backoff), idempotent submission, redeem error codes (`invalid_grant`/`access_denied`, §5.6); redemption mints a resource-bound JWT mission token carrying the active Mission unchanged (D42) | `services/authorization-server/test/dtr-endpoint.test.ts` (real HTTP), `services/authorization-server/test/arop.test.ts` (kernel) |
 | Txn Challenge (`draft-rosomakho-oauth-txn-challenge`) | [`-00`](https://datatracker.ietf.org/doc/draft-rosomakho-oauth-txn-challenge/00/) | `services/authorization-server/src/kernel/txn-challenge.ts` | signed challenge (`txn-authz-challenge+jwt`, txn/jti/authorization_details/iss/aud/reason, §4.2), txn-bound single-use audience-restricted token, §6.2 token-vs-challenge binding | `services/authorization-server/test/arop.test.ts` |
@@ -164,3 +164,26 @@ this matrix and the `@spec` tags to the affected code and tests.
   forward progress), not state-based.
   (`services/authorization-server/test/suspend-projection.test.ts`,
   `packages/mission-signals/test/suspend-lift.test.ts`.)
+- Mission Child-Delegation PAR wire, parent resolution, child-grant issuance, and
+  discovery are realized in `services/authorization-server/src/adapters/provider.ts`
+  and `services/authorization-server/src/adapters/child-grant.ts`. The parent pushes
+  the child-creation params (`mission_intent` + `parent` + `parent_token` +
+  `child_actor`) via PAR (registered `extraParams`, mirroring `mission_intent`); the
+  back-channel `POST /child-missions` route reads the pushed request (bound to the
+  PAR-authenticated client), resolves the Parent Mission from `parent_token`
+  RESOLVE-ONLY (`RefreshToken.find`: non-consuming, `ignoreSessionBinding`, so no
+  rotation and no replay registration), cross-checks the `parent` param
+  (`parent_mismatch` under `invalid_grant`), and runs `createChildMission` end-to-end.
+  Denial reasons map to layered OAuth errors carried in `mission_denial_reason`, set
+  on `ctx` directly so `err_out` does not strip the member. A front-channel
+  presentation of `parent_token` (route `authorization`, e.g. a `request_uri` resolved
+  at `/auth`) is refused `invalid_request`. On success the AS mints the child-bound
+  RFC 7523 JWT authorization grant (`adapters/child-grant.ts`, ID-JAG-shaped: `aud` is
+  the token endpoint, `sub` the Mission subject, `client_id` the child actor, and the
+  `mission` claim carries the `parent` lineage and the CHILD `authority_hash`) as the
+  grant reference the parent conveys; the pushed request is destroyed after read so
+  `parent_token` never sits at rest. `mission_child_delegation_supported` is advertised
+  in AS metadata. Deferred to PR4b: the child redeeming that assertion AS ITSELF at
+  `/token` (RFC 7523 JWT-bearer), which needs the child actor registered as an OAuth
+  client (a `config/clients.json` + demo-data change outside this PR's surface).
+  (`services/authorization-server/test/child-delegation-endpoint.test.ts`.)
