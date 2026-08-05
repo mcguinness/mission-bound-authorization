@@ -46,6 +46,19 @@ import { issueTxnToken, validateChallenge } from "../kernel/txn-challenge.js";
 import type { AuthorityEntry, LifecycleOperation, MissionIntent, MissionRecord } from "../kernel/types.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE, mintChildGrant } from "./child-grant.js";
 
+/**
+ * IMPL-LOCAL grant type for Child Mission CREATION on the real /token endpoint.
+ * The child-delegation draft does NOT register a creation grant type (its IANA
+ * section registers only the PAR params `parent`/`parent_token`/`child_actor`,
+ * the discovery flag, and the denial reasons); the draft models creation as PAR +
+ * adjudication. Relocating creation onto /token is the house rule "no new
+ * endpoints when an existing surface carries it" applied on top of the draft, so
+ * this URN is an implementation choice, mirroring DEFERRED_GRANT_TYPE's shape for
+ * in-repo consistency. It is DISTINCT from CHILD_JWT_BEARER_GRANT_TYPE (the grant
+ * the child redeems AS ITSELF).
+ */
+export const CHILD_CREATION_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-child-creation";
+
 export interface AdapterOptions {
   issuer: string;
   kernel: MissionKernel;
@@ -332,6 +345,19 @@ export function buildProvider(opts: AdapterOptions): Provider {
     new Set(["assertion"]),
   );
 
+  // @spec child-delegation#child-creation, #request-processing, #protocol-flow —
+  // Child Mission CREATION on the real /token endpoint (impl-local grant, see
+  // CHILD_CREATION_GRANT_TYPE). Client authentication (private_key_jwt) runs BEFORE
+  // this handler, so ctx.oidc.client is the AUTHENTICATED parent — the real
+  // authentication that satisfies #request-processing step 1 and replaces the
+  // dev-grade x-service-token stand-in the retired POST /child-missions route used.
+  // `request_uri` MUST be in the params set or stripGrantIrrelevantParams removes it.
+  provider.registerGrantType(
+    CHILD_CREATION_GRANT_TYPE,
+    (ctx) => handleChildCreationGrant(provider, opts, ctx),
+    new Set(["request_uri"]),
+  );
+
   provider.use(makeRoutes(provider, opts));
   return provider;
 }
@@ -575,7 +601,7 @@ async function handleChildJwtBearerGrant(
   //    renderer replaces any thrown error_description with the generic "grant
   //    request is invalid", but this gate MUST be distinguishable from the several
   //    other invalid_grant returns, so the DISTINCT error_description is emitted
-  //    directly (same technique handleChildCreation uses for mission_denial_reason).
+  //    directly (same technique handleChildCreationGrant uses for mission_denial_reason).
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   if (typeof assertedClientId !== "string" || assertedClientId !== client.clientId) {
     ctx.status = 400;
@@ -819,24 +845,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       return;
     }
 
-    // --- Child Mission creation (@spec child-delegation#child-creation,
-    // #request-processing) --- The parent pushes the child-creation params via
-    // PAR (mission_intent + parent + parent_token + child_actor) and presents the
-    // request_uri here on the back channel; the AS runs the ~11-step order,
-    // creates the Child Mission, and returns the child-bound grant reference.
-    if (ctx.path === "/child-missions" && ctx.method === "POST") {
-      // @spec #request-processing step 1 / #conformance — child creation is an
-      // explicit AUTHENTICATED request. The dev-grade service-token guard (the
-      // same one /missions/:id/lifecycle and /introspect use) stands in for the
-      // console/harness caller; the parent itself is bound from the PAR record
-      // (pushed.iss, PAR client-authenticated). Creation stays on this back-channel
-      // route deliberately; the child then redeems the minted assertion on /token
-      // via the registerGrantType handler (handleChildJwtBearerGrant), where it
-      // authenticates AS ITSELF with private_key_jwt.
-      if (!requireServiceToken(ctx)) return;
-      await handleChildCreation(provider, opts, ctx);
-      return;
-    }
+    // @spec child-delegation#child-creation, #request-processing — Child Mission
+    // CREATION now lives on the real /token endpoint as the CHILD_CREATION_GRANT_TYPE
+    // grant (registered above), authenticated by the parent's private_key_jwt. The
+    // bespoke back-channel POST /child-missions route was retired in favour of that
+    // existing OAuth surface; see handleChildCreationGrant.
 
     await next();
 
@@ -1134,28 +1147,33 @@ function childErrorCode(reason: ChildDenialReason): string {
 }
 
 /**
- * @spec child-delegation#child-creation, #request-processing — the back-channel
- * child-creation handler. The parent has already pushed the child-creation
- * params via PAR and now presents the request_uri here. Runs the ~11-step order
- * end-to-end: authenticate (bound to the PAR-authenticated client), resolve the
- * Parent Mission from parent_token (RESOLVE-ONLY: find() does not consume or
- * rotate and the refresh_token grant is never invoked, so replay detection does
- * not fire), cross-check the `parent` param, then createChildMission (steps
- * 4-11), and mint the child-bound RFC 7523 JWT authorization grant the child
- * redeems AS ITSELF (redemption handled by handleChildJwtBearerGrant). Child credentials never
- * transit the parent: the returned assertion is redeemable only by the named
- * child actor. Denials set ctx.status/body DIRECTLY (status before body) so the
- * `mission_denial_reason` carrier survives -- oidc-provider's err_out renderer
- * would strip any member other than error/error_description.
+ * @spec child-delegation#child-creation, #request-processing, #protocol-flow — the
+ * child-creation handler, now on the real /token endpoint as the impl-local
+ * CHILD_CREATION_GRANT_TYPE grant. The parent has already pushed the child-creation
+ * params via PAR and presents the request_uri here, authenticating with
+ * private_key_jwt; oidc-provider's client-auth middleware runs BEFORE this handler,
+ * so ctx.oidc.client is the AUTHENTICATED parent (#request-processing step 1). Runs
+ * the ~11-step order end-to-end: bind the authenticated client, resolve the Parent
+ * Mission from parent_token (RESOLVE-ONLY: find() does not consume or rotate and the
+ * refresh_token grant is never invoked, so replay detection does not fire),
+ * cross-check the `parent` param, then createChildMission (steps 4-11), and mint the
+ * child-bound RFC 7523 JWT authorization grant the child redeems AS ITSELF
+ * (redemption handled by handleChildJwtBearerGrant). Child credentials never transit
+ * the parent: the returned assertion is redeemable only by the named child actor.
+ * Denials set ctx.status/body DIRECTLY (status before body) so the
+ * `mission_denial_reason` carrier survives -- oidc-provider's err_out renderer would
+ * strip any member other than error/error_description.
  */
-async function handleChildCreation(provider: Provider, opts: AdapterOptions, ctx: KoaCtx) {
+async function handleChildCreationGrant(provider: Provider, opts: AdapterOptions, ctx: KoaContextWithOIDC) {
   const { kernel } = opts;
   const PUSHED_REQUEST_URN = "urn:ietf:params:oauth:request_uri:";
-  const body = await readJsonBody(ctx.req);
+  const params = ctx.oidc.params as Record<string, unknown>;
 
-  // Step 1: resolve the PAR the parent pushed. The request_uri is the capability
-  // the PAR (already client-authenticated) minted; the handler binds to that client.
-  const requestUri = typeof body.request_uri === "string" ? body.request_uri : "";
+  // Step 1: bind the AUTHENTICATED client (private_key_jwt ran before this handler)
+  // and resolve the PAR the parent pushed. The request_uri is the capability the
+  // PAR (also client-authenticated) minted.
+  const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+  const requestUri = typeof params.request_uri === "string" ? params.request_uri : "";
   if (!requestUri.startsWith(PUSHED_REQUEST_URN)) {
     ctx.status = 400;
     ctx.body = { error: "invalid_request", error_description: "request_uri (PAR) required" };
@@ -1173,19 +1191,21 @@ async function handleChildCreation(provider: Provider, opts: AdapterOptions, ctx
     ctx.body = { error: "invalid_request", error_description: "unknown or expired request_uri" };
     return;
   }
-  // The pushed params live in an UnsecuredJWT whose iss is the authenticated
-  // parent client_id: the PAR endpoint client-authenticated it, so this binds
-  // the acting client (@spec #request-processing step 1). Any client_id in the
-  // body is a defence-in-depth cross-check against that binding.
+  // The pushed params live in an UnsecuredJWT whose iss is the client that
+  // pushed the PAR. It MUST equal the client authenticated at /token: this is the
+  // real authentication that replaces the retired x-service-token guard
+  // (@spec #request-processing step 1). A request_uri pushed by another client is
+  // not redeemable here.
   const pushed = decodeJwt(parEntity.request) as Record<string, unknown>;
   const parClientId = pushed.iss;
   // @spec "Parent Grant at Rest in PAR" — delete the pushed request (which
   // carries parent_token) once read; parent_token is never logged or echoed.
   await parEntity.destroy();
 
-  if (typeof body.client_id === "string" && body.client_id !== parClientId) {
+  if (parClientId !== client.clientId) {
     ctx.status = 403;
-    ctx.body = { error: "invalid_client", error_description: "client_id does not match the PAR client" };
+    ctx.body = { error: "invalid_client", error_description: "request_uri was not pushed by the authenticated client" };
+    ctx.set("cache-control", "no-store");
     return;
   }
 
@@ -1281,8 +1301,10 @@ async function handleChildCreation(provider: Provider, opts: AdapterOptions, ctx
 
   // @spec #child-client-identity — the grant reference: an RFC 7523 JWT-bearer
   // authorization grant redeemable only by the named child actor AS ITSELF,
-  // never a child token. The parent conveys it; it cannot redeem it.
-  ctx.status = 201;
+  // never a child token. The parent conveys it; it cannot redeem it. `grant_type`
+  // names the grant the CHILD redeems under, not this creation grant. 200 (not the
+  // retired route's 201): this is the /token endpoint's success response.
+  ctx.status = 200;
   ctx.set("cache-control", "no-store");
   ctx.body = {
     mission_id: child.id,
