@@ -1,6 +1,6 @@
 /** Assembly: kernel + adapters + keys. Used by server.ts and tests. */
 
-import { CANONICAL_RESOURCE, DERIVATION_POLICY, seedAgentClient, TOPOLOGY, USERS } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, DERIVATION_POLICY, seedAgentClient, seedChildClient, TOPOLOGY, USERS } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, type JWK } from "jose";
 import type Provider from "oidc-provider";
 import { buildProvider, type TxnArs } from "./adapters/provider.js";
@@ -124,6 +124,12 @@ export interface BuiltAs {
   deferrals: DeferralStore;
   issuer: string;
   agentClientJwk: Record<string, unknown>;
+  /**
+   * @spec child-delegation#child-client-identity — the child-actor client's
+   * private JWK, so a test can authenticate the child at /token and redeem the
+   * child-bound RFC 7523 grant AS ITSELF.
+   */
+  childClientJwk: Record<string, unknown>;
   canonicalResource: string;
 }
 
@@ -160,6 +166,7 @@ export async function buildAuthorizationServer(opts: {
   const txnJwkPub = { ...(await exportJWK(txnKeys.publicKey)), kid: asTxn.kid, alg: asTxn.alg, use: "sig" };
 
   const agent = await seedAgentClient();
+  const child = await seedChildClient();
   // The Status List republisher subscribes to the kernel's lifecycle-commit
   // hook. It is created after the kernel closes over it, but onLifecycleCommit
   // only fires at runtime (post-construction), so the forward reference is safe;
@@ -186,7 +193,7 @@ export async function buildAuthorizationServer(opts: {
     kernel,
     deferrals,
     statusListPublisher,
-    clients: [agent.metadata],
+    clients: [agent.metadata, child.metadata],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv] },
     publicJwks: { keys: [tokenJwkPub, statusJwkPub, txnJwkPub] },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
@@ -209,6 +216,7 @@ export async function buildAuthorizationServer(opts: {
     deferrals,
     issuer: opts.issuer,
     agentClientJwk: agent.privateJwk,
+    childClientJwk: child.privateJwk,
     canonicalResource: CANONICAL_RESOURCE,
   };
 }

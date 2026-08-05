@@ -439,9 +439,8 @@ function loadClients(): [ClientSeed, ...ClientSeed[]] {
 
 const CLIENTS = loadClients();
 
-/** The agent's confidential client: private_key_jwt + separate DPoP key (D38). */
-export async function seedAgentClient(): Promise<SeededClient> {
-  const client = CLIENTS[0];
+/** Build a confidential client (private_key_jwt) from a seed: fresh key per boot (D25). */
+async function buildSeededClient(client: ClientSeed): Promise<SeededClient> {
   const { publicKey, privateKey } = await generateKeyPair(client.key.alg, { extractable: true });
   const pub = await exportJWK(publicKey);
   const priv = await exportJWK(privateKey);
@@ -463,6 +462,25 @@ export async function seedAgentClient(): Promise<SeededClient> {
     },
     privateJwk: priv as Record<string, unknown>,
   };
+}
+
+/** The agent's confidential client: private_key_jwt + separate DPoP key (D38). */
+export async function seedAgentClient(): Promise<SeededClient> {
+  return buildSeededClient(CLIENTS[0]);
+}
+
+/**
+ * @spec child-delegation#child-client-identity — the child-actor OAuth client that
+ * redeems the child-bound RFC 7523 JWT authorization grant AS ITSELF at /token.
+ * Resolved by client_id (never by positional index) so appending it to
+ * clients.json is order-independent.
+ */
+export async function seedChildClient(): Promise<SeededClient> {
+  const seed = CLIENTS.find((c) => c.client_id === "subagent-invoice-extractor");
+  if (!seed) {
+    throw new ConfigError("clients.json", "child client 'subagent-invoice-extractor' not found");
+  }
+  return buildSeededClient(seed);
 }
 
 /** Dev-only service token for control-plane edges (channel matrix). */

@@ -13,14 +13,24 @@
  *   - parent != the Mission resolved from parent_token -> parent_mismatch;
  *   - front-channel presentation of parent_token -> invalid_request;
  *   - parent_token is neither rotated nor replay-flagged by child creation;
- *   - discovery advertises mission_child_delegation_supported.
- * The child redeeming the assertion AS ITSELF at /token (which needs the child
- * to be a registered OAuth client) is deferred to PR4b -- see the skipped test.
+ *   - discovery advertises mission_child_delegation_supported;
+ *   - PR4b: the child actor (a registered OAuth client) redeems the child-bound
+ *     assertion AS ITSELF at /token for a DPoP-bound child access token, with the
+ *     client_id security gate, lazy Grant binding, and single-derivation gating.
  */
 
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
-import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
+import {
+  calculateJwkThumbprint,
+  createRemoteJWKSet,
+  decodeJwt,
+  exportJWK,
+  generateKeyPair,
+  importJWK,
+  jwtVerify,
+  SignJWT,
+} from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 
@@ -32,10 +42,15 @@ const PARENT_EXP = "2027-01-01T00:00:00Z";
 
 type DpopKeys = { privateKey: CryptoKey; publicKey: CryptoKey };
 
+const CHILD_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+
 let as: BuiltAs;
 let asServer: Server;
 let clientKey: CryptoKey;
 let dpopKeys: DpopKeys;
+/** The child actor's confidential-client key + its OWN DPoP key (distinct from the parent's). */
+let childClientKey: CryptoKey;
+let childDpopKeys: DpopKeys;
 
 async function clientAssertion(): Promise<string> {
   return new SignJWT({})
@@ -67,6 +82,46 @@ async function tokenRequest(params: Record<string, string>): Promise<Response> {
       body: new URLSearchParams({
         ...params,
         client_assertion: await clientAssertion(),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+  let res = await send();
+  const nonce = res.headers.get("dpop-nonce");
+  if (res.status === 400 && nonce) res = await send({ nonce });
+  return res;
+}
+
+/** private_key_jwt for the child actor client (@spec #child-client-identity). */
+async function childClientAssertion(): Promise<string> {
+  return new SignJWT({})
+    .setProtectedHeader({ alg: "ES256", kid: "subagent-invoice-extractor-auth" })
+    .setIssuer("subagent-invoice-extractor")
+    .setSubject("subagent-invoice-extractor")
+    .setAudience(ISSUER)
+    .setIssuedAt()
+    .setExpirationTime("2m")
+    .setJti(crypto.randomUUID())
+    .sign(childClientKey);
+}
+
+async function childDpopProof(htu: string, htm: string, extra: Record<string, unknown> = {}): Promise<string> {
+  return new SignJWT({ htu, htm, ...extra })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(childDpopKeys.publicKey) })
+    .setIssuedAt()
+    .setJti(crypto.randomUUID())
+    .sign(childDpopKeys.privateKey);
+}
+
+/** POST /token as the child actor (private_key_jwt + child DPoP), with the dpop-nonce retry. */
+async function childTokenRequest(params: Record<string, string>): Promise<Response> {
+  const htu = `${ISSUER}/token`;
+  const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
+    fetch(htu, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await childDpopProof(htu, "POST", extra) },
+      body: new URLSearchParams({
+        ...params,
+        client_assertion: await childClientAssertion(),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
     });
@@ -229,6 +284,8 @@ beforeAll(async () => {
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   dpopKeys = await generateKeyPair("ES256", { extractable: true });
+  childClientKey = (await importJWK(as.childClientJwk as never, "ES256")) as CryptoKey;
+  childDpopKeys = await generateKeyPair("ES256", { extractable: true });
   parent = await issueParentMission();
 });
 
@@ -362,11 +419,173 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     expect(meta.mission_attenuation_supported).toBe(true);
   });
 
-  // PR4b: the child redeeming the child-bound assertion AS ITSELF at /token
-  // (RFC 7523 JWT-bearer) requires the child actor to be a registered OAuth
-  // client so it can authenticate at the token endpoint -- no path to that stays
-  // within this PR's allowed surface (it needs config/clients.json + demo-data).
-  // PR4 lands PAR resolution + createChildMission wiring + assertion minting +
-  // discovery; PR4b lands only this redemption leg.
-  it.skip("PR4b: child redeems the child-bound grant AS ITSELF for a DPoP-bound child token", () => {});
+});
+
+/**
+ * @spec child-delegation#child-client-identity, #worked-example — PR4b: the child
+ * actor is now a registered OAuth client (subagent-invoice-extractor) and redeems
+ * the child-bound RFC 7523 JWT authorization grant AS ITSELF at /token, receiving
+ * a DPoP-bound child access token. A dedicated parent isolates these children
+ * from the creation-suite's fan-out accounting.
+ */
+describe("PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #child-client-identity)", () => {
+  let p: { missionId: string; refreshToken: string };
+  const remoteJwks = createRemoteJWKSet(new URL(`${ISSUER}/jwks`));
+
+  /** Create a Child Mission under `p` and return its id + the child-bound assertion. */
+  async function makeChild(actor: Record<string, unknown>): Promise<{ missionId: string; assertion: string }> {
+    const requestUri = await pushChildPar({
+      parent: p.missionId,
+      parentToken: p.refreshToken,
+      childActor: actor,
+    });
+    const res = await createChild(requestUri);
+    const body = (await res.json()) as { mission_id?: string; assertion?: string };
+    expect(res.status, JSON.stringify(body)).toBe(201);
+    return { missionId: body.mission_id as string, assertion: body.assertion as string };
+  }
+
+  beforeAll(async () => {
+    p = await issueParentMission();
+  });
+
+  it("happy path: child redeems its assertion -> 200 DPoP-bound child token carrying the child mission", async () => {
+    const { missionId, assertion } = await makeChild({ sub: "subagent-invoice-extractor", sub_profile: "ai_agent" });
+
+    // ADVISOR CHECK 1 (single-gate): derivation_count is 0 pre-redemption.
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(0);
+    expect(as.kernel.get(missionId)?.grant_id).toBeNull();
+
+    const res = await childTokenRequest({ grant_type: CHILD_GRANT_TYPE, assertion });
+    const body = (await res.json()) as {
+      access_token?: string;
+      token_type?: string;
+      scope?: string;
+      expires_in?: number;
+      authorization_details?: unknown;
+      error?: string;
+      error_description?: string;
+    };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.token_type).toBe("DPoP");
+    expect(body.scope).toBe("payments");
+    expect(res.headers.get("cache-control")).toContain("no-store");
+
+    // The token is a real, resource-bound JWT (verifies on the AS jwks_uri).
+    const jwt = body.access_token as string;
+    const { payload } = await jwtVerify(jwt, remoteJwks, { issuer: ISSUER, audience: RESOURCE });
+    expect(payload.aud).toBe(RESOURCE);
+    expect(payload.sub).toBe("alice"); // Mission subject, inherited from the parent
+    expect(payload.client_id).toBe("subagent-invoice-extractor"); // the child actor, AS ITSELF
+
+    // cnf.jkt is the CHILD's OWN DPoP key (independently derived, not the parent's).
+    const childJkt = await calculateJwkThumbprint(await exportJWK(childDpopKeys.publicKey));
+    expect((payload.cnf as { jkt?: string })?.jkt).toBe(childJkt);
+
+    // authorization_details deep-equals the CHILD Authority Set (the record is authoritative).
+    const child = as.kernel.get(missionId);
+    expect(body.authorization_details).toEqual(child?.authority_set);
+    expect(payload.authorization_details).toEqual(child?.authority_set);
+
+    // ADVISOR CHECK 1 (mission-claim presence): the claim MUST be present. It is
+    // absent (silently) if the Grant->findByGrant binding is keyed wrong, so this
+    // is asserted BEFORE drilling into its members.
+    const mission = payload.mission as
+      | { id?: string; authority_hash?: string; parent?: { id?: string; depth?: number } }
+      | undefined;
+    expect(mission, "child mission claim must be present on the token").toBeDefined();
+    expect(mission?.id).toBe(missionId);
+    // The child hash commits the CHILD set; it differs from the parent's.
+    expect(mission?.authority_hash).toBe(child?.authority_hash);
+    expect(mission?.authority_hash).not.toBe(as.kernel.get(p.missionId)?.authority_hash);
+    // The child mission claim carries the parent lineage member.
+    expect(mission?.parent?.id).toBe(p.missionId);
+    expect(mission?.parent?.depth).toBe(1);
+
+    // ADVISOR CHECK 1 (binding + single gate): findByGrant resolves to THIS child at
+    // the moment extraTokenClaims fired (proven by the mission claim above), and the
+    // derivation_count incremented EXACTLY ONCE (0 -> 1; no double-gate).
+    const boundGrant = as.kernel.get(missionId)?.grant_id as string;
+    expect(boundGrant).toBeTruthy();
+    expect(as.kernel.findByGrant(boundGrant)?.id).toBe(missionId);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(1);
+  });
+
+  it("ADVISOR CHECK 2 (reuse branch): the same assertion redeems again via grant reuse (no duplicate Grant)", async () => {
+    const { missionId, assertion } = await makeChild({ sub: "subagent-invoice-extractor", sub_profile: "ai_agent" });
+
+    const first = await childTokenRequest({ grant_type: CHILD_GRANT_TYPE, assertion });
+    const firstBody = (await first.json()) as { access_token?: string };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+    const grantAfterFirst = as.kernel.get(missionId)?.grant_id as string;
+    expect(grantAfterFirst).toBeTruthy();
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(1);
+
+    // Redeem the SAME assertion a second time within its lifetime.
+    const second = await childTokenRequest({ grant_type: CHILD_GRANT_TYPE, assertion });
+    const secondBody = (await second.json()) as { access_token?: string };
+    expect(second.status, JSON.stringify(secondBody)).toBe(200);
+
+    // Same mission on both tokens; the second went through the record.grant_id REUSE
+    // branch (grant_id unchanged -> no duplicate Grant was created).
+    const m1 = decodeJwt(firstBody.access_token as string) as { mission: { id: string } };
+    const m2 = decodeJwt(secondBody.access_token as string) as { mission: { id: string } };
+    expect(m2.mission.id).toBe(m1.mission.id);
+    expect(as.kernel.get(missionId)?.grant_id).toBe(grantAfterFirst);
+    // Exactly one derivation increment per redemption (no unexpected extra jump).
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(2);
+  });
+
+  it("ADVISOR CHECK 3 (security gate): a non-named redeemer fails at the client_id-mismatch gate", async () => {
+    // A child whose actor is NOT the authenticating client. Creation succeeds
+    // (policy's allowed_child_actors matches sub_profile: ai_agent), so the
+    // assertion names client_id = "subagent-other".
+    const other = await makeChild({ sub: "subagent-other", sub_profile: "ai_agent" });
+
+    // subagent-invoice-extractor (jwt-bearer-allowed -> reaches the handler)
+    // presents subagent-other's assertion. This is the load-bearing gate: the
+    // authenticated client != the assertion's client_id.
+    const res = await childTokenRequest({ grant_type: CHILD_GRANT_TYPE, assertion: other.assertion });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    // Assert THIS gate specifically (several gates return invalid_grant).
+    expect(body.error_description).toContain("does not match the authenticated client");
+  });
+
+  it("ADVISOR CHECK 3 (parent cannot redeem): the parent client is not even allowed the grant type", async () => {
+    // The parent (ap-agent) conveys the child assertion but cannot redeem it. It
+    // does not reach the client_id gate: oidc-provider rejects at the client
+    // grant_types allowlist first (ap-agent has no jwt-bearer grant type). This is
+    // the STRONGER real boundary, and it is why the parent can safely convey the
+    // assertion (@spec #child-client-identity).
+    const { assertion } = await makeChild({ sub: "subagent-invoice-extractor", sub_profile: "ai_agent" });
+    const res = await tokenRequest({ grant_type: CHILD_GRANT_TYPE, assertion });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("not allowed for this client");
+  });
+
+  it("ancestor gate: a revoked parent cascades the child, so redemption fails invalid_grant", async () => {
+    // Dedicated parent: revoke cascades to ITS children only (@spec #cascade).
+    const dedicated = await issueParentMission();
+    const requestUri = await pushChildPar({
+      parent: dedicated.missionId,
+      parentToken: dedicated.refreshToken,
+      childActor: { sub: "subagent-invoice-extractor", sub_profile: "ai_agent" },
+    });
+    const created = await createChild(requestUri);
+    const { assertion } = (await created.json()) as { assertion: string };
+    expect(created.status).toBe(201);
+
+    // Revoke the parent BEFORE redemption: the child is cascaded terminal and the
+    // ancestor-active gate refuses the derivation.
+    as.kernel.transition(dedicated.missionId, "revoke");
+
+    const res = await childTokenRequest({ grant_type: CHILD_GRANT_TYPE, assertion });
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+  });
 });
