@@ -10,5 +10,17 @@
     "scope": "openid profile email payments",
     "authorization_details_types": ["mission_resource_access"],
     "key": { "kid": "ap-agent-auth", "alg": "ES256" }
+  },
+  {
+    "client_id": "subagent-invoice-extractor",
+    "client_name": "Invoice Extraction Sub-Agent",
+    "grant_types": ["urn:ietf:params:oauth:grant-type:jwt-bearer"],
+    "response_types": [],
+    "redirect_uris": [],
+    "token_endpoint_auth_method": "private_key_jwt",
+    "token_endpoint_auth_signing_alg": "ES256",
+    "scope": "payments",
+    "authorization_details_types": ["mission_resource_access"],
+    "key": { "kid": "subagent-invoice-extractor-auth", "alg": "ES256" }
   }
 ]

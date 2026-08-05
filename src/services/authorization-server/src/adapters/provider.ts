@@ -31,6 +31,7 @@ import {
 import {
   ChildDelegationError,
   type ChildDenialReason,
+  childMissionClaim,
   createChildMission,
 } from "../kernel/child-delegation.js";
 import { isSubsetSet } from "../kernel/derive.js";
@@ -43,7 +44,7 @@ import {
 } from "../kernel/status-list.js";
 import { issueTxnToken, validateChallenge } from "../kernel/txn-challenge.js";
 import type { AuthorityEntry, LifecycleOperation, MissionIntent, MissionRecord } from "../kernel/types.js";
-import { CHILD_JWT_BEARER_GRANT_TYPE, mintChildGrant } from "./child-grant.js";
+import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE, mintChildGrant } from "./child-grant.js";
 
 export interface AdapterOptions {
   issuer: string;
@@ -287,7 +288,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
       if (!record) return {};
       try {
         const gated = kernel.gateDerivation(record.id);
-        return { mission: kernel.missionClaim(gated) };
+        // @spec child-delegation#parent-member — a Child Mission projects the
+        // `parent` lineage member; a root Mission (no parent) projects the base
+        // claim. gateDerivation already ran the child active-state + ancestor-active
+        // gate and incremented derivation_count EXACTLY ONCE (the child-redemption
+        // handler deliberately does not gate, so there is no double-increment).
+        const claim = gated.parent ? childMissionClaim(kernel, gated) : kernel.missionClaim(gated);
+        return { mission: claim };
       } catch (e) {
         if (e instanceof GateError) throw new errors.InvalidGrant(e.message);
         throw e;
@@ -311,6 +318,19 @@ export function buildProvider(opts: AdapterOptions): Provider {
       new Set(["deferral_code", "deferred_authorization"]),
     );
   }
+
+  // @spec child-delegation#child-client-identity — the RFC 7523 JWT-bearer
+  // authorization grant a Child Mission's actor redeems AS ITSELF. Registered
+  // UNCONDITIONALLY (not behind an option) so the URN is in configuration.grantTypes
+  // before the child client is validated (clients validate lazily at Client.find),
+  // and so a child client that lists this grant type is not rejected as
+  // invalid_client_metadata. `assertion` is declared in the params set or the
+  // token endpoint strips it; client_assertion/_type are auth params and survive.
+  provider.registerGrantType(
+    CHILD_JWT_BEARER_GRANT_TYPE,
+    (ctx) => handleChildJwtBearerGrant(opts, provider, ctx),
+    new Set(["assertion"]),
+  );
 
   provider.use(makeRoutes(provider, opts));
   return provider;
@@ -501,6 +521,159 @@ async function mintDeferredToken(
   ctx.set("cache-control", "no-store");
 }
 
+/**
+ * @spec child-delegation#child-client-identity — the RFC 7523 JWT-bearer
+ * authorization-grant handler on the real /token endpoint. Client authentication
+ * (private_key_jwt) runs BEFORE this handler, so `ctx.oidc.client` is the
+ * AUTHENTICATED child actor. The child presents the child-bound assertion the AS
+ * handed its parent on child creation (mintChildGrant) and redeems it AS ITSELF
+ * for a DPoP-bound child access token. Mirrors mintDeferredToken for the DPoP
+ * binding, the resource-server mint, and the mission re-gating (via
+ * extraTokenClaims, which runs the child active-state + ancestor-active gate and
+ * increments derivation_count exactly once — this handler deliberately does not
+ * gate). The load-bearing control is step 3: the assertion's `client_id` MUST
+ * equal the authenticated client, which is what makes conveying the assertion
+ * through the parent safe (the parent, a different client, cannot redeem it).
+ */
+async function handleChildJwtBearerGrant(
+  opts: AdapterOptions,
+  provider: Provider,
+  ctx: KoaContextWithOIDC,
+): Promise<void> {
+  const { kernel } = opts;
+
+  // 1. The assertion is the child-bound grant. The client is already authenticated.
+  const params = ctx.oidc.params as Record<string, unknown>;
+  const assertion = params.assertion;
+  if (typeof assertion !== "string" || !assertion) {
+    throw new errors.InvalidRequest("assertion (the child-bound JWT authorization grant) required");
+  }
+
+  // 2. Verify the assertion. It is signed by the AS token key, so it verifies on
+  //    the same public JWKS as tokens; iss = the AS, aud = the token endpoint,
+  //    typ = the child-grant typ.
+  let claims: Record<string, unknown>;
+  try {
+    const verified = await jwtVerify(assertion, createLocalJWKSet(opts.publicJwks as never), {
+      issuer: opts.issuer,
+      audience: `${opts.issuer}/token`,
+      typ: CHILD_GRANT_TYP,
+    });
+    claims = verified.payload as Record<string, unknown>;
+  } catch {
+    throw new errors.InvalidGrant("invalid child-bound grant assertion");
+  }
+  const assertedClientId = claims.client_id;
+  const missionRef = claims.mission as { id?: unknown; authority_hash?: unknown } | undefined;
+  const missionId = missionRef?.id;
+  const assertedHash = missionRef?.authority_hash;
+
+  // 3. SECURITY GATE — the assertion names its only authorized redeemer in
+  //    `client_id`; it MUST equal the authenticated client. This is the load-bearing
+  //    control (it is what makes conveying the assertion through the parent safe).
+  //    Set on ctx DIRECTLY (status before body): oidc-provider's invalid_grant
+  //    renderer replaces any thrown error_description with the generic "grant
+  //    request is invalid", but this gate MUST be distinguishable from the several
+  //    other invalid_grant returns, so the DISTINCT error_description is emitted
+  //    directly (same technique handleChildCreation uses for mission_denial_reason).
+  const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+  if (typeof assertedClientId !== "string" || assertedClientId !== client.clientId) {
+    ctx.status = 400;
+    ctx.body = {
+      error: "invalid_grant",
+      error_description: "child grant redeemer does not match the authenticated client",
+    };
+    ctx.set("cache-control", "no-store");
+    return;
+  }
+
+  // 4. Resolve the Child Mission; the record is authoritative. Cross-check its
+  //    client_id and authority_hash against the assertion (defence in depth against
+  //    a stale or tampered assertion).
+  if (typeof missionId !== "string") {
+    throw new errors.InvalidGrant("child grant assertion missing mission.id");
+  }
+  const record = kernel.get(missionId);
+  if (!record) {
+    throw new errors.InvalidGrant("child mission not found");
+  }
+  if (record.client_id !== assertedClientId || record.authority_hash !== assertedHash) {
+    throw new errors.InvalidGrant("child grant assertion does not match the mission record");
+  }
+
+  // 5. DPoP-bind — mirror mintDeferredToken EXACTLY. This proof is the CHILD's own
+  //    key; its thumbprint becomes the token's cnf.jkt.
+  const proofJws = ctx.get("DPoP");
+  if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
+  let jkt: string;
+  try {
+    const header = decodeProtectedHeader(proofJws);
+    jkt = await calculateJwkThumbprint(header.jwk as JWK);
+    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
+    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
+      throw new Error("DPoP htu/htm mismatch");
+    }
+  } catch {
+    throw new errors.InvalidRequest("invalid DPoP proof");
+  }
+
+  // 6. Bind an oidc Grant to the child LAZILY (mirror the `decide` path). Do NOT
+  //    call gateDerivation here: extraTokenClaims runs it during save() and a
+  //    second call would double-increment derivation_count. Binding the grant is
+  //    what makes findByGrant(grantId) resolve to the child inside that hook, so
+  //    the child `mission` claim is attached (never hand-set). The Grant and the
+  //    AccessToken name the SAME client (record.client_id == the authenticated
+  //    client, guaranteed by steps 3-4), which oidc-provider requires.
+  const resource = record.authority_set[0]?.resource ?? opts.issuer;
+  let grantId: string;
+  if (record.grant_id) {
+    grantId = record.grant_id;
+  } else {
+    const grant = new provider.Grant({ accountId: record.subject.sub, clientId: record.client_id });
+    grant.addOIDCScope("payments");
+    grant.addResourceScope(resource, "payments");
+    for (const entry of record.authority_set) {
+      (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
+    }
+    grantId = await grant.save();
+    kernel.bindGrant(record.id, grantId);
+  }
+
+  // 7. Resource + TTL — mirror mintDeferredToken; clamp the TTL to the child's
+  //    expires_at so the child token never outlives the Child Mission.
+  const info = resourceServerInfoFor(resource, opts.accessTokenTTL ?? 300);
+  info.accessTokenTTL = Math.min(
+    info.accessTokenTTL,
+    Math.max(1, Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000)),
+  );
+
+  // 8. Mint — mirror mintDeferredToken. save() fires extraTokenClaims, which gates
+  //    the derivation and attaches the child `mission` claim exactly once.
+  const at = new provider.AccessToken({
+    accountId: record.subject.sub,
+    client,
+    grantId,
+    gty: CHILD_JWT_BEARER_GRANT_TYPE,
+    rar: record.authority_set,
+    scope: "payments",
+  });
+  at.resourceServer = newResourceServer(provider, resource, info);
+  at.jkt = jkt; // sender-constrain to the child DPoP key (tokenType -> DPoP)
+  ctx.oidc.entity("AccessToken", at);
+  const jwt = await at.save();
+
+  // 9. Response — mirror mintDeferredToken.
+  ctx.status = 200;
+  ctx.body = {
+    access_token: jwt,
+    token_type: "DPoP",
+    expires_in: at.expiration,
+    scope: "payments",
+    authorization_details: record.authority_set,
+  };
+  ctx.set("cache-control", "no-store");
+}
+
 function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const { kernel } = opts;
   const jwksResolver = createLocalJWKSet(opts.publicJwks as never);
@@ -656,9 +829,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // explicit AUTHENTICATED request. The dev-grade service-token guard (the
       // same one /missions/:id/lifecycle and /introspect use) stands in for the
       // console/harness caller; the parent itself is bound from the PAR record
-      // (pushed.iss, PAR client-authenticated). A production AS would instead run
-      // this on /token via registerGrantType (real private_key_jwt); that needs a
-      // config/clients.json + demo-data change outside this PR's surface.
+      // (pushed.iss, PAR client-authenticated). Creation stays on this back-channel
+      // route deliberately; the child then redeems the minted assertion on /token
+      // via the registerGrantType handler (handleChildJwtBearerGrant), where it
+      // authenticates AS ITSELF with private_key_jwt.
       if (!requireServiceToken(ctx)) return;
       await handleChildCreation(provider, opts, ctx);
       return;
@@ -968,7 +1142,7 @@ function childErrorCode(reason: ChildDenialReason): string {
  * rotate and the refresh_token grant is never invoked, so replay detection does
  * not fire), cross-check the `parent` param, then createChildMission (steps
  * 4-11), and mint the child-bound RFC 7523 JWT authorization grant the child
- * redeems AS ITSELF (redemption deferred to PR4b). Child credentials never
+ * redeems AS ITSELF (redemption handled by handleChildJwtBearerGrant). Child credentials never
  * transit the parent: the returned assertion is redeemable only by the named
  * child actor. Denials set ctx.status/body DIRECTLY (status before body) so the
  * `mission_denial_reason` carrier survives -- oidc-provider's err_out renderer
