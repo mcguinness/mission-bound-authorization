@@ -4,12 +4,15 @@
  *
  * Child Mission creation wired onto the real OAuth surface. The parent pushes
  * the child-creation params (mission_intent + parent + parent_token +
- * child_actor) via PAR and presents the request_uri to the back-channel
- * /child-missions route; the AS resolves the Parent Mission from parent_token
- * (RESOLVE-ONLY: no rotation, no replay), runs createChildMission, and returns
- * the child-bound RFC 7523 JWT authorization grant. Covered here:
+ * child_actor) via PAR and presents the request_uri at the /token endpoint under
+ * the impl-local CHILD_CREATION_GRANT_TYPE grant, authenticating with
+ * private_key_jwt (PR4c: the bespoke POST /child-missions route was retired); the
+ * AS resolves the Parent Mission from parent_token (RESOLVE-ONLY: no rotation, no
+ * replay), runs createChildMission, and returns the child-bound RFC 7523 JWT
+ * authorization grant. Covered here:
  *   - happy path: a Child Mission is created; the assertion carries the
  *     `mission.parent` lineage and an `authority_hash` over the CHILD set;
+ *   - an UNauthenticated creation request is rejected by client auth;
  *   - parent != the Mission resolved from parent_token -> parent_mismatch;
  *   - front-channel presentation of parent_token -> invalid_request;
  *   - parent_token is neither rotated nor replay-flagged by child creation;
@@ -20,7 +23,7 @@
  */
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
@@ -32,6 +35,7 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { CHILD_CREATION_GRANT_TYPE } from "../src/adapters/provider.js";
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 
 const PORT = 14470;
@@ -268,12 +272,21 @@ async function pushChildPar(fields: {
   return body.request_uri as string;
 }
 
-/** Redeem a pushed child request on the (service-token-authenticated) back channel. */
+/**
+ * Redeem a pushed child request at the /token endpoint under the impl-local
+ * creation grant, authenticating AS THE PARENT (ap-agent) via private_key_jwt. No
+ * DPoP: creation returns a grant reference, not a token (@spec #child-creation).
+ */
 async function createChild(requestUri: string): Promise<Response> {
-  return fetch(`${ISSUER}/child-missions`, {
+  return fetch(`${ISSUER}/token`, {
     method: "POST",
-    headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
-    body: JSON.stringify({ request_uri: requestUri, client_id: "ap-agent" }),
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: CHILD_CREATION_GRANT_TYPE,
+      request_uri: requestUri,
+      client_assertion: await clientAssertion(),
+      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    }).toString(),
   });
 }
 
@@ -294,7 +307,7 @@ afterAll(() => {
 });
 
 describe("child Mission creation on the AS surface (@spec child-delegation#child-creation)", () => {
-  it("PAR + back-channel redemption creates a Child Mission and returns a child-bound grant", async () => {
+  it("PAR + /token creation-grant redemption creates a Child Mission and returns a child-bound grant", async () => {
     const requestUri = await pushChildPar({
       parent: parent.missionId,
       parentToken: parent.refreshToken,
@@ -307,7 +320,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
       grant_type?: string;
       assertion?: string;
     };
-    expect(res.status, JSON.stringify(body)).toBe(201);
+    expect(res.status, JSON.stringify(body)).toBe(200);
     expect(body.grant_type).toBe("urn:ietf:params:oauth:grant-type:jwt-bearer");
     expect(body.parent?.id).toBe(parent.missionId);
 
@@ -339,19 +352,24 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     expect(a.mission.authority_hash).not.toBe(parentRecord?.authority_hash);
   });
 
-  it("rejects an unauthenticated /child-missions request (@spec #request-processing step 1)", async () => {
-    const requestUri = await pushChildPar({
-      parent: parent.missionId,
-      parentToken: parent.refreshToken,
-      childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
-    });
-    // No x-service-token: the back-channel creation route must not proceed.
-    const res = await fetch(`${ISSUER}/child-missions`, {
+  it("rejects an unauthenticated creation request at /token (client auth replaces x-service-token; @spec #request-processing step 1)", async () => {
+    // No client_assertion: oidc-provider's client-auth middleware rejects BEFORE
+    // the creation grant handler runs (client auth precedes the grant-type check),
+    // so a real request_uri is not even needed. This IS the authentication that
+    // replaces the retired x-service-token guard.
+    const res = await fetch(`${ISSUER}/token`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ request_uri: requestUri }),
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: CHILD_CREATION_GRANT_TYPE,
+        request_uri: "urn:ietf:params:oauth:request_uri:unauthenticated",
+      }).toString(),
     });
-    expect(res.status).toBe(401);
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    // With no client_id and no client_assertion, oidc-provider's client-auth layer
+    // rejects before the grant handler: no authentication mechanism was provided.
+    expect(body.error).toBe("invalid_request");
   });
 
   it("parent != the Mission resolved from parent_token -> parent_mismatch (invalid_grant)", async () => {
@@ -399,7 +417,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
         childActor: { sub, sub_profile: "ai_agent" },
       });
       const res = await createChild(requestUri);
-      expect(res.status, await res.clone().text()).toBe(201);
+      expect(res.status, await res.clone().text()).toBe(200);
     }
 
     // The SAME token still redeems as a normal refresh -> proves child creation
@@ -441,7 +459,7 @@ describe("PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #
     });
     const res = await createChild(requestUri);
     const body = (await res.json()) as { mission_id?: string; assertion?: string };
-    expect(res.status, JSON.stringify(body)).toBe(201);
+    expect(res.status, JSON.stringify(body)).toBe(200);
     return { missionId: body.mission_id as string, assertion: body.assertion as string };
   }
 
@@ -577,7 +595,7 @@ describe("PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #
     });
     const created = await createChild(requestUri);
     const { assertion } = (await created.json()) as { assertion: string };
-    expect(created.status).toBe(201);
+    expect(created.status).toBe(200);
 
     // Revoke the parent BEFORE redemption: the child is cascaded terminal and the
     // ancestor-active gate refuses the derivation.

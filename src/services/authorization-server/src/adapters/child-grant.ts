@@ -14,7 +14,8 @@
  * redeemable only by the child actor it names, so conveying it through the
  * parent gives the parent no ability to redeem it (@spec #child-client-identity).
  * The redemption of this assertion into a DPoP-bound child access token (the
- * child authenticating AS ITSELF at /token) is deferred to PR4b.
+ * child authenticating AS ITSELF at /token) shipped in PR4b
+ * (handleChildJwtBearerGrant); creation was relocated onto /token in PR4c.
  */
 
 import { randomBytes } from "node:crypto";
