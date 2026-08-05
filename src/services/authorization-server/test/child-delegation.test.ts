@@ -1,20 +1,27 @@
+import { canonicalize, type JsonValue } from "@mission/core";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   type AuthorityEntry,
+  CHILD_EVIDENCE_MEDIA_TYPE,
   ChildDelegationError,
+  type ChildEvidence,
+  childEvidenceBytes,
   childMissionClaim,
   createChildMission,
   GateError,
   isSubsetSet,
   type LifecycleCommit,
   MissionKernel,
+  type MissionRecord,
   validateMissionIntent,
 } from "../src/index.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
+// The ledger ceiling entry carries NO delegation (used by the on-switch test).
+const LEDGER = DERIVATION_POLICY.ceiling[1].resource;
 const now = () => new Date("2026-07-01T00:00:00Z");
 const PARENT_EXP = "2027-01-01T00:00:00Z";
 
@@ -28,6 +35,14 @@ const proposed = (actions: string[]): AuthorityEntry[] => [
     constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
   },
 ];
+
+/** A proposed entry on the (delegation-free) ledger resource, restating its vendors. */
+const ledgerProposed = (actions: string[]): AuthorityEntry => ({
+  type: "mission_resource_access",
+  resource: LEDGER,
+  actions,
+  constraints: { vendors: ["acme"] },
+});
 
 let key: CryptoKey;
 let kernel: MissionKernel;
@@ -84,7 +99,6 @@ const createChild = (parentId: string, actions: string[], over: Record<string, u
     parentId,
     intent: childIntent(actions, over.intentOver as Record<string, unknown>),
     childActor: { sub: "subagent-extractor", sub_profile: "ai_agent", ...(over.childActor ?? {}) },
-    delegationAllowed: over.delegationAllowed === undefined ? true : (over.delegationAllowed as boolean),
     ...(over.cascadeMode ? { cascadeMode: over.cascadeMode as "immediate" } : {}),
     ...(over.delegationId ? { delegationId: over.delegationId as string } : {}),
   });
@@ -151,6 +165,10 @@ describe("child mission creation (@spec child-delegation#child-creation, #parent
     } catch (e) {
       expect(e).toBeInstanceOf(ChildDelegationError);
       expect((e as ChildDelegationError).reason).toBe("not_strict_subset");
+      // The one evidence path where attenuation.result is NOT strict_subset.
+      const ev = (e as ChildDelegationError).evidence;
+      expect(ev?.decision).toBe("denied");
+      expect(ev?.attenuation.result).toBe("not_strict_subset");
     }
   });
 
@@ -202,7 +220,6 @@ describe("cascade revocation (@spec child-delegation#cascade)", () => {
       parentId: child.id,
       intent: childIntent(["payments:invoice.read"]),
       childActor: { sub: "grandchild-agent", sub_profile: "ai_agent" },
-      delegationAllowed: true,
     });
     expect(grandchild.parent?.depth).toBe(2);
 
@@ -220,7 +237,6 @@ describe("cascade revocation (@spec child-delegation#cascade)", () => {
       parentId: child.id,
       intent: childIntent(["payments:invoice.read"]),
       childActor: { sub: "grandchild-agent", sub_profile: "ai_agent" },
-      delegationAllowed: true,
     });
     // Terminate the grandchild directly first.
     kernel.transition(grandchild.id, "revoke");
@@ -247,13 +263,46 @@ describe("child creation guards (@spec child-delegation#denial-reasons)", () => 
     }
   });
 
-  it("rejects creation when the parent does not permit delegation (policy_denied)", () => {
-    const parent = approveParent();
+  it("(a) refuses when the justifying parent entry carries no children (delegation_not_permitted)", () => {
+    // The ledger ceiling entry (ceiling[1]) carries NO delegation at all, so its
+    // justifying entry lacks a `children` on-switch. The child restates the
+    // ledger vendors so the strict-subset check passes FIRST.
+    const parent = kernel.approve({
+      intent: validateMissionIntent(
+        JSON.stringify({
+          goal: "Reconcile the ledger",
+          resources: [LEDGER],
+          expires_at: PARENT_EXP,
+          proposed_authority: [ledgerProposed(["ledger:vendor.read"])],
+        }),
+      ),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "parent-agent",
+      approvalEventId: `apev-${seq++}`,
+    });
     try {
-      createChild(parent.id, ["payments:invoice.read"], { delegationAllowed: false });
+      createChildMission(kernel, {
+        parentId: parent.id,
+        intent: validateMissionIntent(
+          JSON.stringify({
+            goal: "Read ledger vendors",
+            resources: [LEDGER],
+            expires_at: PARENT_EXP,
+            proposed_authority: [ledgerProposed(["ledger:vendor.read"])],
+          }),
+        ),
+        childActor: { sub: "subagent-ledger", sub_profile: "ai_agent" },
+      });
       expect.unreachable();
     } catch (e) {
-      expect((e as ChildDelegationError).reason).toBe("policy_denied");
+      expect(e).toBeInstanceOf(ChildDelegationError);
+      expect((e as ChildDelegationError).reason).toBe("delegation_not_permitted");
+      const ev = (e as ChildDelegationError).evidence;
+      expect(ev?.decision).toBe("denied");
+      expect(ev?.denial_reason).toBe("delegation_not_permitted");
+      // The subset proof passed, so the recorded attenuation result is strict_subset.
+      expect(ev?.attenuation.result).toBe("strict_subset");
     }
   });
 
@@ -266,7 +315,6 @@ describe("child creation guards (@spec child-delegation#denial-reasons)", () => 
       parentId: child.id,
       intent: childIntent(["payments:invoice.read"]),
       childActor: { sub: "grandchild-agent", sub_profile: "ai_agent" },
-      delegationAllowed: true,
     });
     // A great-grandchild would be depth 3 > MAX_CHILD_DEPTH (2).
     try {
@@ -274,11 +322,242 @@ describe("child creation guards (@spec child-delegation#denial-reasons)", () => 
         parentId: grandchild.id,
         intent: childIntent(["payments:invoice.read"]),
         childActor: { sub: "ggc-agent", sub_profile: "ai_agent" },
-        delegationAllowed: true,
       });
       expect.unreachable();
     } catch (e) {
       expect((e as ChildDelegationError).reason).toBe("fanout_exceeded");
     }
+  });
+});
+
+describe("fan-out accounting and child evidence (@spec child-delegation#fanout, #child-evidence)", () => {
+  it("(b) refuses a child actor not matching allowed_child_actors (child_actor_not_allowed)", () => {
+    const parent = approveParent();
+    try {
+      // The demo payments entry's allowed_child_actors is [{ sub_profile: ai_agent }];
+      // a human actor matches no matcher.
+      createChild(parent.id, ["payments:invoice.read"], {
+        childActor: { sub: "human-user", sub_profile: "human" },
+      });
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(ChildDelegationError);
+      expect((e as ChildDelegationError).reason).toBe("child_actor_not_allowed");
+      expect((e as ChildDelegationError).evidence?.decision).toBe("denied");
+      expect((e as ChildDelegationError).evidence?.denial_reason).toBe("child_actor_not_allowed");
+    }
+  });
+
+  it("(c) refuses the (max_children+1)th concurrent child; a slot frees on termination (fanout_exceeded)", () => {
+    const parent = approveParent(); // demo payments entry: max_children 5
+    const kids: MissionRecord[] = [];
+    for (let i = 0; i < 5; i++) {
+      const { child } = createChild(parent.id, ["payments:invoice.read"], {
+        childActor: { sub: `subagent-${i}`, sub_profile: "ai_agent" },
+      });
+      kids.push(child);
+    }
+    // The 6th concurrent child would exceed the cap of 5.
+    try {
+      createChild(parent.id, ["payments:invoice.read"], {
+        childActor: { sub: "subagent-6", sub_profile: "ai_agent" },
+      });
+      expect.unreachable();
+    } catch (e) {
+      expect((e as ChildDelegationError).reason).toBe("fanout_exceeded");
+      expect((e as ChildDelegationError).evidence?.fanout).toEqual({
+        active_children: 5,
+        max_children: 5,
+      });
+    }
+    // Terminate one child: a slot frees and a fresh creation SUCCEEDS. Witness
+    // the termination so the re-create below can only pass because the bucket
+    // dropped to 4 (not because the cap silently failed to enforce).
+    kernel.transition(kids[0]!.id, "revoke");
+    expect(kernel.get(kids[0]!.id)?.state).toBe("revoked");
+    const { child, evidence } = createChild(parent.id, ["payments:invoice.read"], {
+      childActor: { sub: "subagent-7", sub_profile: "ai_agent" },
+    });
+    expect(child.state).toBe("active");
+    expect(evidence.decision).toBe("created");
+    expect(evidence.fanout).toEqual({ active_children: 5, max_children: 5 });
+  });
+
+  it("(d) counts a child subset of two parent entries against the FIRST-in-order entry only", () => {
+    const R = "https://d.example/mcp";
+    // children.max_children = 1 on the policy ceiling so the child's INHERITED cap
+    // subsets entry A (also 1); entry B allows 5. Both parent entries share R.
+    const childrenCtl = (maxChildren: number) => ({
+      max_children: maxChildren,
+      max_child_depth: 2,
+      allowed_child_actors: [{ sub_profile: "ai_agent" }],
+    });
+    const dPolicy = {
+      policy_version: "d-policy",
+      ceiling: [
+        {
+          type: "mission_resource_access",
+          resource: R,
+          actions: ["res.read"],
+          constraints: { max_amount: { amount: "100.00", currency: "USD" } },
+          delegation: { max_depth: 2, children: childrenCtl(1) },
+        },
+      ],
+    };
+    const dKernel = new MissionKernel({
+      issuer: ISS,
+      policy: dPolicy as never,
+      statusKey: key,
+      statusKid: "as-status",
+      now,
+    });
+    // Hand-built parent whose Authority Set is TWO same-resource entries:
+    // A (index 0, cap 1) then B (index 1, cap 5). The child subsets both.
+    const entryOf = (maxAmount: string, maxChildren: number): AuthorityEntry => ({
+      type: "mission_resource_access",
+      resource: R,
+      actions: ["res.read"],
+      constraints: { max_amount: { amount: maxAmount, currency: "USD" } },
+      delegation: { max_depth: 2, children: childrenCtl(maxChildren) },
+    });
+    const parentRecord: MissionRecord = {
+      id: `msn_dparent_${seq++}`,
+      issuer: ISS,
+      state: "active",
+      intent: { goal: "root", resources: [R], expires_at: PARENT_EXP },
+      authority_set: [entryOf("100.00", 1), entryOf("500.00", 5)],
+      intent_hash: "sha-256:d-intent",
+      authority_hash: "sha-256:d-authority",
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      client_id: "parent-agent",
+      policy_version: "d-policy",
+      approval_event_id: `apev-d-${seq++}`,
+      created_at: now().toISOString(),
+      expires_at: PARENT_EXP,
+      version: 1,
+      max_derivations: null,
+      derivation_count: 0,
+      grant_id: null,
+      status_list_idx: null,
+    };
+    dKernel.insertRecord(parentRecord);
+
+    const dChildIntent = () =>
+      validateMissionIntent(
+        JSON.stringify({
+          goal: "read",
+          resources: [R],
+          expires_at: PARENT_EXP,
+          proposed_authority: [
+            {
+              type: "mission_resource_access",
+              resource: R,
+              actions: ["res.read"],
+              constraints: { max_amount: { amount: "100.00", currency: "USD" } },
+            },
+          ],
+        }),
+      );
+
+    // First child: bucket for entry A (index 0) goes 0 -> 1 (== its cap).
+    const first = createChildMission(dKernel, {
+      parentId: parentRecord.id,
+      intent: dChildIntent(),
+      childActor: { sub: "d-agent-0", sub_profile: "ai_agent" },
+    });
+    expect(first.child.state).toBe("active");
+    // Attributed to entry A (cap 1), NOT entry B (cap 5).
+    expect(first.evidence.fanout).toEqual({ active_children: 1, max_children: 1 });
+
+    // Second child: entry A is full (1/1) so it MUST refuse, even though entry B
+    // (cap 5) has room — this is what proves first-in-order attribution.
+    try {
+      createChildMission(dKernel, {
+        parentId: parentRecord.id,
+        intent: dChildIntent(),
+        childActor: { sub: "d-agent-1", sub_profile: "ai_agent" },
+      });
+      expect.unreachable();
+    } catch (e) {
+      expect((e as ChildDelegationError).reason).toBe("fanout_exceeded");
+      expect((e as ChildDelegationError).evidence?.fanout).toEqual({
+        active_children: 1,
+        max_children: 1,
+      });
+    }
+  });
+
+  it("(e) emits a Child Evidence record with stable JCS bytes (permit and deny)", () => {
+    const parent = approveParent();
+    const { child, evidence } = createChild(parent.id, ["payments:invoice.read"]);
+
+    // Shape (@spec child-delegation#child-evidence-object).
+    expect(evidence.evidence_id).toMatch(/^chd_/);
+    expect(evidence.parent).toEqual({
+      id: parent.id,
+      issuer: parent.issuer,
+      authority_hash: parent.authority_hash,
+    });
+    expect(evidence.child).toEqual({
+      id: child.id,
+      issuer: child.issuer,
+      authority_hash: child.authority_hash,
+    });
+    expect(evidence.child_actor).toEqual({ sub: "subagent-extractor", sub_profile: "ai_agent" });
+    expect(evidence.attenuation).toEqual({ result: "strict_subset" });
+    expect(evidence.fanout).toEqual({ active_children: 1, max_children: 5 });
+    expect(evidence.cascade_mode).toBe("immediate");
+    expect(evidence.decision).toBe("created");
+    expect(evidence.created_at).toBe(now().toISOString());
+    expect(CHILD_EVIDENCE_MEDIA_TYPE).toBe("application/mission-child-evidence+json");
+
+    // Stable JCS bytes: equal to canonicalize of an object rebuilt from the
+    // (random) evidence_id and the deterministic members. JCS sorts members
+    // lexicographically, so this also pins member ordering and rejects extras.
+    const permitExpected = {
+      evidence_id: evidence.evidence_id,
+      parent: { id: parent.id, issuer: parent.issuer, authority_hash: parent.authority_hash },
+      child: { id: child.id, issuer: child.issuer, authority_hash: child.authority_hash },
+      child_actor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+      attenuation: { result: "strict_subset" },
+      fanout: { active_children: 1, max_children: 5 },
+      cascade_mode: "immediate",
+      decision: "created",
+      created_at: now().toISOString(),
+    };
+    expect(childEvidenceBytes(evidence)).toBe(canonicalize(permitExpected as unknown as JsonValue));
+    expect(
+      childEvidenceBytes(evidence).startsWith(
+        '{"attenuation":{"result":"strict_subset"},"cascade_mode":"immediate"',
+      ),
+    ).toBe(true);
+
+    // Deny evidence: a real (prospective) child member and denial_reason, canonical.
+    let denyEvidence: ChildEvidence | undefined;
+    try {
+      createChild(parent.id, ["payments:invoice.read"], {
+        childActor: { sub: "human-user", sub_profile: "human" },
+      });
+      expect.unreachable();
+    } catch (e) {
+      denyEvidence = (e as ChildDelegationError).evidence;
+    }
+    const dev = denyEvidence as ChildEvidence;
+    expect(dev.decision).toBe("denied");
+    expect(dev.denial_reason).toBe("child_actor_not_allowed");
+    expect(dev.child.id).toMatch(/^msn_/); // a real prospective child id even on refusal
+    const denyExpected = {
+      evidence_id: dev.evidence_id,
+      parent: { id: parent.id, issuer: parent.issuer, authority_hash: parent.authority_hash },
+      child: { id: dev.child.id, issuer: parent.issuer, authority_hash: dev.child.authority_hash },
+      child_actor: { sub: "human-user", sub_profile: "human" },
+      attenuation: { result: "strict_subset" },
+      cascade_mode: "immediate",
+      decision: "denied",
+      denial_reason: "child_actor_not_allowed",
+      created_at: now().toISOString(),
+    };
+    expect(childEvidenceBytes(dev)).toBe(canonicalize(denyExpected as unknown as JsonValue));
   });
 });

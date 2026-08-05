@@ -67,6 +67,14 @@ export const REASON_LABELS: Record<string, string> = {
   txn_replayed: "Transaction approval token already used",
   txn_unknown: "Unknown transaction",
   txn_not_configured: "Transaction assurance not configured",
+  // Child-delegation refusal reasons (@spec child-delegation#denial-reasons).
+  parent_not_active: "Parent mission is not active",
+  parent_mismatch: "Child does not match its declared parent mission",
+  not_strict_subset: "Child authority is not within the parent's authority",
+  delegation_not_permitted: "Parent authority does not permit child delegation",
+  child_actor_not_allowed: "Child actor is not allowed to receive this delegation",
+  fanout_exceeded: "Parent's child-delegation limit reached (depth or count)",
+  policy_denied: "Child delegation refused by policy",
 };
 
 export type LabelKind = "tool" | "action" | "reason";

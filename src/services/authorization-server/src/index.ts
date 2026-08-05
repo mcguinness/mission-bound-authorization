@@ -60,7 +60,9 @@ export {
 export {
   createChildMission,
   childMissionClaim,
+  childEvidenceBytes,
   ChildDelegationError,
+  CHILD_EVIDENCE_MEDIA_TYPE,
   MAX_CHILD_DEPTH,
   type ChildActor,
   type ChildDenialReason,
