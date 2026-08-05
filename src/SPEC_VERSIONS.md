@@ -105,3 +105,18 @@ this matrix and the `@spec` tags to the affected code and tests.
   propagation; the harness execution-state machine. Only the `suppress` stop
   policy is realized (the harness's no-dispatch behavior); `pause`/`terminate`/
   `handoff` are declared in `StopPolicy` but unimplemented.
+- The `AuthorityEntry.delegation` core extension (the S-15 gap) is realized in
+  `services/authorization-server/src/kernel/types.ts`: `intersect` carries and
+  narrows it as an inherit-by-default GRANT (ceiling-absent means non-delegable,
+  the deliberate opposite of the `constraints` ceiling-absent branch), and
+  `isSubsetEntry` treats it as a narrowing dimension (a candidate omitting
+  delegation the grantor has PASSES; introducing it FAILS). Consequently
+  `deriveAttenuationRoot` DERIVES `del_max_depth` (min `max_depth` across the
+  delegable entries; non-delegable entries drop from a root with
+  `del_max_depth > 0`) instead of requiring the caller to supply it. The
+  child-delegation companion `children` object rides under the delegation open
+  index, gated as a grant one level down; kernel fan-out, PAR wire params, and
+  the offline holder-side chain verifier
+  (`packages/mission-core/src/attenuation-chain.ts`, a separate `del_max_depth`
+  surface) are unchanged.
+  (`services/authorization-server/test/derivation-delegation.test.ts`.)

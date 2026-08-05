@@ -295,11 +295,25 @@ export interface CeilingConstraints {
   vendors?: string[];
 }
 
+/** Minimal JSON value; mirrors @mission/core's JsonValue (demo-data has no dep on it). */
+type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
+
 export interface CeilingEntry {
   type: string;
   resource: string;
   actions: string[];
   constraints?: CeilingConstraints;
+  /**
+   * @spec attenuation#delegation, child-delegation#fanout — per-entry delegation
+   * policy (the S-15 core extension). Structurally identical to
+   * AuthorityEntry.delegation; carried through from policy.json unchanged and
+   * narrowed by the kernel's derivation. An entry with no `delegation` is
+   * non-delegable.
+   */
+  delegation?: {
+    max_depth: number;
+    allowed_delegates?: { sub?: string; sub_profile?: string }[];
+  } & { [k: string]: JsonValue | undefined };
 }
 
 /** Non-empty tuple keeps `ceiling[0]` defined under noUncheckedIndexedAccess. */
@@ -330,6 +344,16 @@ function loadPolicy(): LoadedPolicy {
         e.constraints,
         `policy.ceiling[${i}].constraints`,
       ) as CeilingConstraints;
+    }
+    // @spec attenuation#delegation (S-15): carry the optional per-entry
+    // delegation policy through unchanged (validated as an object; its members
+    // are narrowed strongly by a later profile, not here).
+    if (e.delegation !== undefined) {
+      entry.delegation = asObject(
+        file,
+        e.delegation,
+        `policy.ceiling[${i}].delegation`,
+      ) as NonNullable<CeilingEntry["delegation"]>;
     }
     return entry;
   });
