@@ -28,6 +28,11 @@ import {
   type DeferralStore,
   type DeferredToken,
 } from "../kernel/deferred.js";
+import {
+  ChildDelegationError,
+  type ChildDenialReason,
+  createChildMission,
+} from "../kernel/child-delegation.js";
 import { isSubsetSet } from "../kernel/derive.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError, LifecycleConflictError, type MissionKernel } from "../kernel/kernel.js";
@@ -37,7 +42,8 @@ import {
   type StatusListPublisher,
 } from "../kernel/status-list.js";
 import { issueTxnToken, validateChallenge } from "../kernel/txn-challenge.js";
-import type { AuthorityEntry, LifecycleOperation, MissionIntent } from "../kernel/types.js";
+import type { AuthorityEntry, LifecycleOperation, MissionIntent, MissionRecord } from "../kernel/types.js";
+import { CHILD_JWT_BEARER_GRANT_TYPE, mintChildGrant } from "./child-grant.js";
 
 export interface AdapterOptions {
   issuer: string;
@@ -77,6 +83,16 @@ export interface AdapterOptions {
    * current whole-list token (@spec status#status-list).
    */
   statusListPublisher?: StatusListPublisher;
+  /**
+   * @spec child-delegation#child-client-identity — child-grant signing key + kid.
+   * Signs the child-bound RFC 7523 JWT authorization grant the AS hands back on
+   * child creation. Wired to the AS token key so the assertion verifies on the
+   * jwks_uri under the token kid. When unset, the child-creation route replies
+   * 501 (the child leg cannot be minted).
+   */
+  childGrantKey?: CryptoKey;
+  childGrantKid?: string;
+  childGrantAlg?: string;
 }
 
 /**
@@ -214,6 +230,50 @@ export function buildProvider(opts: AdapterOptions): Provider {
               : new InvalidAuthorizationDetails(e.message);
           }
           throw e;
+        }
+      },
+      // @spec child-delegation#child-creation — the Parent Mission id. Cross-check
+      // and audit value only; the authoritative parent is resolved from
+      // parent_token in the back-channel handler. Registered (null validator) so
+      // oidc-provider carries it through PAR rather than stripping it.
+      parent: null,
+      // @spec child-delegation#child-creation — the parent grant. It is a
+      // BACK-CHANNEL credential: it MUST be pushed via PAR and MUST NOT appear on
+      // a front-channel authorization request. On any route other than PAR
+      // (notably a request_uri resolved at /auth, which rehydrates the pushed
+      // params before this validator re-runs) reject with invalid_request.
+      // @spec child-delegation#denial-reasons.
+      async parent_token(ctx, value) {
+        if (value === undefined) return;
+        const oidc = (ctx as { oidc: { route?: string; params: Record<string, unknown> } }).oidc;
+        if (oidc.route !== "pushed_authorization_request") {
+          throw new errors.InvalidRequest("parent_token is a back-channel credential; submit it via PAR");
+        }
+        // Child creation carries mission_intent + parent + parent_token + child_actor.
+        const p = oidc.params;
+        if (p.mission_intent === undefined || p.parent === undefined || p.child_actor === undefined) {
+          throw new errors.InvalidRequest(
+            "child creation requires mission_intent, parent, parent_token, and child_actor",
+          );
+        }
+      },
+      // @spec child-delegation#child-creation — the child actor object. Shape only
+      // here (the fan-out actor gating runs in the kernel); carried through PAR.
+      async child_actor(ctx, value) {
+        if (value === undefined) return;
+        let obj: unknown;
+        try {
+          obj = JSON.parse(String(value));
+        } catch {
+          throw new errors.InvalidRequest("child_actor must be a JSON object");
+        }
+        if (
+          obj === null ||
+          typeof obj !== "object" ||
+          Array.isArray(obj) ||
+          typeof (obj as { sub?: unknown }).sub !== "string"
+        ) {
+          throw new errors.InvalidRequest("child_actor requires a string sub");
         }
       },
     },
@@ -586,6 +646,24 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       return;
     }
 
+    // --- Child Mission creation (@spec child-delegation#child-creation,
+    // #request-processing) --- The parent pushes the child-creation params via
+    // PAR (mission_intent + parent + parent_token + child_actor) and presents the
+    // request_uri here on the back channel; the AS runs the ~11-step order,
+    // creates the Child Mission, and returns the child-bound grant reference.
+    if (ctx.path === "/child-missions" && ctx.method === "POST") {
+      // @spec #request-processing step 1 / #conformance — child creation is an
+      // explicit AUTHENTICATED request. The dev-grade service-token guard (the
+      // same one /missions/:id/lifecycle and /introspect use) stands in for the
+      // console/harness caller; the parent itself is bound from the PAR record
+      // (pushed.iss, PAR client-authenticated). A production AS would instead run
+      // this on /token via registerGrantType (real private_key_jwt); that needs a
+      // config/clients.json + demo-data change outside this PR's surface.
+      if (!requireServiceToken(ctx)) return;
+      await handleChildCreation(provider, opts, ctx);
+      return;
+    }
+
     await next();
 
     // --- AS metadata flags (@spec mission#as-metadata) ---
@@ -595,6 +673,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec attenuation#request-discovery: this AS issues Mission-bound
       // attenuation roots and derives their authority from the Authority Set.
       meta.mission_attenuation_supported = true;
+      // @spec child-delegation#discovery: this AS accepts the child-creation
+      // request and enforces the child-delegation controls of that profile.
+      meta.mission_child_delegation_supported = true;
       meta.service_catalog_endpoint = `${opts.issuer}/service-catalog`;
       meta.introspection_endpoint = `${opts.issuer}/introspect`;
       meta.transaction_authorization_endpoint = `${opts.issuer}/transaction`;
@@ -857,6 +938,184 @@ async function pollTransaction(
   });
   ctx.status = 200;
   ctx.body = { access_token: token, token_type: "DPoP", txn: handle.txn };
+}
+
+/**
+ * @spec child-delegation#denial-reasons — map a symbolic child denial reason to
+ * its layered OAuth error code: `parent_not_active`/`parent_mismatch` ride
+ * `invalid_grant`; `delegation_not_permitted`/`child_actor_not_allowed`/
+ * `not_strict_subset`/`fanout_exceeded` ride `invalid_request`; `policy_denied`
+ * rides `access_denied`.
+ */
+function childErrorCode(reason: ChildDenialReason): string {
+  switch (reason) {
+    case "parent_not_active":
+    case "parent_mismatch":
+      return "invalid_grant";
+    case "policy_denied":
+      return "access_denied";
+    default:
+      return "invalid_request";
+  }
+}
+
+/**
+ * @spec child-delegation#child-creation, #request-processing — the back-channel
+ * child-creation handler. The parent has already pushed the child-creation
+ * params via PAR and now presents the request_uri here. Runs the ~11-step order
+ * end-to-end: authenticate (bound to the PAR-authenticated client), resolve the
+ * Parent Mission from parent_token (RESOLVE-ONLY: find() does not consume or
+ * rotate and the refresh_token grant is never invoked, so replay detection does
+ * not fire), cross-check the `parent` param, then createChildMission (steps
+ * 4-11), and mint the child-bound RFC 7523 JWT authorization grant the child
+ * redeems AS ITSELF (redemption deferred to PR4b). Child credentials never
+ * transit the parent: the returned assertion is redeemable only by the named
+ * child actor. Denials set ctx.status/body DIRECTLY (status before body) so the
+ * `mission_denial_reason` carrier survives -- oidc-provider's err_out renderer
+ * would strip any member other than error/error_description.
+ */
+async function handleChildCreation(provider: Provider, opts: AdapterOptions, ctx: KoaCtx) {
+  const { kernel } = opts;
+  const PUSHED_REQUEST_URN = "urn:ietf:params:oauth:request_uri:";
+  const body = await readJsonBody(ctx.req);
+
+  // Step 1: resolve the PAR the parent pushed. The request_uri is the capability
+  // the PAR (already client-authenticated) minted; the handler binds to that client.
+  const requestUri = typeof body.request_uri === "string" ? body.request_uri : "";
+  if (!requestUri.startsWith(PUSHED_REQUEST_URN)) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: "request_uri (PAR) required" };
+    return;
+  }
+  const parId = requestUri.slice(PUSHED_REQUEST_URN.length);
+  const PAR = (provider as unknown as {
+    PushedAuthorizationRequest: {
+      find(id: string, o?: unknown): Promise<{ request: string; isValid: boolean; destroy(): Promise<void> } | undefined>;
+    };
+  }).PushedAuthorizationRequest;
+  const parEntity = await PAR.find(parId, { ignoreExpiration: true });
+  if (!parEntity || !parEntity.isValid) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: "unknown or expired request_uri" };
+    return;
+  }
+  // The pushed params live in an UnsecuredJWT whose iss is the authenticated
+  // parent client_id: the PAR endpoint client-authenticated it, so this binds
+  // the acting client (@spec #request-processing step 1). Any client_id in the
+  // body is a defence-in-depth cross-check against that binding.
+  const pushed = decodeJwt(parEntity.request) as Record<string, unknown>;
+  const parClientId = pushed.iss;
+  // @spec "Parent Grant at Rest in PAR" — delete the pushed request (which
+  // carries parent_token) once read; parent_token is never logged or echoed.
+  await parEntity.destroy();
+
+  if (typeof body.client_id === "string" && body.client_id !== parClientId) {
+    ctx.status = 403;
+    ctx.body = { error: "invalid_client", error_description: "client_id does not match the PAR client" };
+    return;
+  }
+
+  const missionIntent = pushed.mission_intent;
+  const parentParam = pushed.parent;
+  const parentToken = pushed.parent_token;
+  const childActorRaw = pushed.child_actor;
+  if (
+    typeof missionIntent !== "string" ||
+    typeof parentParam !== "string" ||
+    typeof parentToken !== "string" ||
+    typeof childActorRaw !== "string"
+  ) {
+    ctx.status = 400;
+    ctx.body = {
+      error: "invalid_request",
+      error_description: "child creation requires mission_intent, parent, parent_token, and child_actor",
+    };
+    return;
+  }
+
+  // Step 2: resolve the Parent Mission from parent_token. RESOLVE-ONLY -- find()
+  // is non-consuming and ignoreSessionBinding keeps it a pure lookup; the
+  // refresh_token grant is never invoked, so no rotation and no replay
+  // registration (@spec #child-creation).
+  const RT = (provider as unknown as {
+    RefreshToken: { find(v: string, o?: unknown): Promise<{ grantId?: string } | undefined> };
+  }).RefreshToken;
+  const rt = await RT.find(parentToken, { ignoreExpiration: true, ignoreSessionBinding: true });
+  const grantId = rt?.grantId;
+  const parentRecord = grantId ? kernel.findByGrant(grantId) : undefined;
+  if (!parentRecord) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_grant", error_description: "parent_token did not resolve to a Mission" };
+    return;
+  }
+
+  // Step 3: cross-check the resolved Mission against the caller-supplied `parent`.
+  if (parentRecord.id !== parentParam) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_grant", mission_denial_reason: "parent_mismatch" };
+    return;
+  }
+
+  // Re-validated here: the pushed request is untrusted input on read (the AS must
+  // not trust the PAR store as already-validated), so both parses are re-guarded.
+  let intent: MissionIntent;
+  try {
+    intent = kernel.validateIntent(missionIntent);
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = {
+      error: "invalid_request",
+      error_description: e instanceof Error ? e.message : "invalid mission_intent",
+    };
+    return;
+  }
+  let childActor: { sub: string; iss?: string; sub_profile?: string };
+  try {
+    childActor = JSON.parse(childActorRaw) as { sub: string; iss?: string; sub_profile?: string };
+  } catch {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: "child_actor must be a JSON object" };
+    return;
+  }
+
+  // Steps 4-11: createChildMission runs active-check, strict-subset, fan-out, and
+  // commits the Child Mission atomically. Map ChildDelegationError.reason to the
+  // layered OAuth error + mission_denial_reason (set on ctx directly).
+  let child: MissionRecord;
+  try {
+    ({ child } = createChildMission(kernel, { parentId: parentRecord.id, intent, childActor }));
+  } catch (e) {
+    if (e instanceof ChildDelegationError) {
+      const code = childErrorCode(e.reason);
+      ctx.status = code === "access_denied" ? 403 : 400;
+      ctx.body = { error: code, mission_denial_reason: e.reason };
+      return;
+    }
+    throw e;
+  }
+
+  if (!opts.childGrantKey || !opts.childGrantKid || !opts.childGrantAlg) {
+    ctx.status = 501;
+    ctx.body = { error: "child_delegation_unsupported" };
+    return;
+  }
+  const { assertion } = await mintChildGrant(
+    kernel,
+    { key: opts.childGrantKey, kid: opts.childGrantKid, alg: opts.childGrantAlg },
+    { child, tokenEndpoint: `${opts.issuer}/token` },
+  );
+
+  // @spec #child-client-identity — the grant reference: an RFC 7523 JWT-bearer
+  // authorization grant redeemable only by the named child actor AS ITSELF,
+  // never a child token. The parent conveys it; it cannot redeem it.
+  ctx.status = 201;
+  ctx.set("cache-control", "no-store");
+  ctx.body = {
+    mission_id: child.id,
+    parent: child.parent,
+    grant_type: CHILD_JWT_BEARER_GRANT_TYPE,
+    assertion,
+  };
 }
 
 async function decide(
