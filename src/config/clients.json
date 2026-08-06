@@ -2,7 +2,7 @@
   {
     "client_id": "ap-agent",
     "client_name": "AP Agent",
-    "grant_types": ["authorization_code", "refresh_token", "urn:ietf:params:oauth:grant-type:deferred", "urn:ietf:params:oauth:grant-type:mission-child-creation"],
+    "grant_types": ["authorization_code", "refresh_token", "urn:ietf:params:oauth:grant-type:deferred", "urn:ietf:params:oauth:grant-type:mission-child-creation", "urn:ietf:params:oauth:grant-type:token-exchange"],
     "response_types": ["code"],
     "redirect_uris": ["http://localhost:9999/cb"],
     "token_endpoint_auth_method": "private_key_jwt",
