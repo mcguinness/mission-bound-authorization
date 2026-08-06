@@ -30,6 +30,7 @@ import { ResourceAuthorizationServer } from "@mission/ras";
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
+  decodeJwt,
   exportJWK,
   generateKeyPair,
   importJWK,
@@ -101,6 +102,43 @@ function newLineage(eventId: string, envelope: { authTime?: number; acr?: string
     cnfJkt: agentJkt,
   });
   return { missionId: mission.id, handle };
+}
+
+/**
+ * Approve a Mission WITHOUT manually rooting a continuation: the AS assembly roots
+ * the durable grant anchor + INITIAL handle at approval (see index.ts
+ * rootMissionContinuation). Returns the mission id and that AUTO-rooted handle, so
+ * the lifecycle tests prove approval-time rooting rather than test-only rooting.
+ */
+function approveLineage(eventId: string, opts: { acr?: string } = {}): {
+  missionId: string;
+  handle: string;
+} {
+  const intent = validateMissionIntent(
+    JSON.stringify({
+      goal: "Continue a Mission across an intra-domain hop",
+      resources: [RESOURCE],
+      expires_at: MISSION_EXP,
+      ...(opts.acr !== undefined ? { controls: { acr: opts.acr } } : {}),
+      proposed_authority: [
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.read"],
+          constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+        },
+      ],
+    }),
+  );
+  const mission = as.kernel.approve({
+    intent,
+    subject: { iss: ISSUER, sub: "alice" },
+    approver: { iss: ISSUER, sub: "bob" },
+    clientId: "ap-agent",
+    approvalEventId: eventId,
+  });
+  const handles = as.continuationStore.handlesForMission(mission.id);
+  return { missionId: mission.id, handle: handles[0] as string };
 }
 
 interface IcaOpts {
@@ -440,5 +478,144 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(body.error).toBe("invalid_continuation");
     // The STORE path (proves the fan-out wiring), distinct from the gate path.
     expect(body.error_description).toMatch(/unknown or terminal/);
+  });
+});
+
+/**
+ * @spec id-continuation-assertion — end-to-end LIFECYCLE invariants over the
+ * approval-time-rooted continuation root. These prove the durable grant-anchored
+ * root is real (rooted when a Mission is approved, not test-only), that revocation
+ * blocks NEW continuations without shortening ALREADY-ISSUED tokens, and that a
+ * session-anchored root terminates on session end while a grant anchor survives.
+ */
+describe("continuation lifecycle invariants (@spec id-continuation-assertion)", () => {
+  it("approval-time rooting: an approved Mission's AUTO-rooted initial handle mints a continuation ID-JAG, carrying the approval envelope", async () => {
+    // A value UNIQUE to this test, so the assertion proves it travelled
+    // intent.controls.acr -> rootGrantAnchor envelope -> resolve -> ID-JAG (not a
+    // constant that also appears on a manually-rooted anchor elsewhere).
+    const acr = "urn:mace:acr:approval-rooted";
+    const approxNow = Math.floor(Date.now() / 1000);
+    const { missionId, handle } = approveLineage("apev-life-root", { acr });
+
+    // The assembly rooted exactly one grant anchor + initial handle at approval;
+    // no manual rootGrantAnchor/mint ran. The envelope is the approval event.
+    expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(1);
+    const resolved = as.continuationStore.resolve(handle);
+    expect(resolved?.missionId).toBe(missionId);
+    expect(resolved?.anchor.anchorType).toBe("grant");
+    expect(resolved?.authEnvelope.acr).toBe(acr);
+    expect(resolved?.authEnvelope.authTime).toBeGreaterThanOrEqual(approxNow - 5);
+    expect(resolved?.authEnvelope.authTime).toBeLessThanOrEqual(approxNow + 5);
+
+    // The auto-rooted handle drives a full /token continuation hop end to end.
+    const res = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
+    const body = (await res.json()) as { access_token?: string; error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const { payload } = await jwtVerify(body.access_token as string, remoteJwks, {
+      issuer: ISSUER,
+      audience: RAS_AUD,
+    });
+    expect((payload.mission as { id?: string }).id).toBe(missionId);
+    // The approval-time envelope reaches the issued ID-JAG.
+    expect(payload.acr).toBe(acr);
+    expect(payload.auth_time as number).toBeGreaterThanOrEqual(approxNow - 5);
+  });
+
+  it("revocation blocks NEW continuations: revoke the Mission -> the auto-rooted handle at /token -> invalid_continuation", async () => {
+    const { missionId, handle } = approveLineage("apev-life-revoke");
+    const ica = await mintICA(handle);
+    // The lifecycle transition; the onLifecycleCommit fan-out marks the anchor +
+    // handle terminal (the same wiring PR-C tested at the store level).
+    as.kernel.transition(missionId, "revoke");
+    const res = await tokenExchange({ subjectToken: ica, actorToken: await mintActorToken() });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_continuation");
+    expect(body.error_description).toMatch(/unknown or terminal/);
+  });
+
+  it("already-issued keeps its exp: an ID-JAG minted BEFORE revoke still verifies + redeems with its ORIGINAL exp; only NEW continuations are refused after", async () => {
+    const { missionId, handle } = approveLineage("apev-life-keepexp");
+
+    // Issue a continuation ID-JAG while the Mission is active.
+    const res1 = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
+    const body1 = (await res1.json()) as { access_token?: string; error?: string };
+    expect(res1.status, JSON.stringify(body1)).toBe(200);
+    const idJag = body1.access_token as string;
+    const issuedExp = decodeJwt(idJag).exp as number;
+    expect(issuedExp).toBeGreaterThan(Math.floor(Date.now() / 1000));
+
+    // Revoke the Mission.
+    as.kernel.transition(missionId, "revoke");
+
+    // (1) The already-issued ID-JAG STILL verifies against the AS jwks and carries
+    //     its ORIGINAL exp — revocation did not retroactively shorten it.
+    const { payload } = await jwtVerify(idJag, remoteJwks, { issuer: ISSUER, audience: RAS_AUD });
+    expect(payload.exp).toBe(issuedExp);
+
+    // (1b) It still REDEEMS at a RAS (which consults the AS signing key, not the
+    //      continuation store) — the strongest form of "the issued token is
+    //      untouched by revocation". This ID-JAG has never been redeemed, so the
+    //      RAS one-time-jti check is satisfied.
+    const serverJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: Record<string, unknown>[] };
+    const asContinuationPub = serverJwks.keys.find((k) => k.kid === "as-continuation");
+    const rasKeys = await generateKeyPair("ES256", { extractable: true });
+    const ras = new ResourceAuthorizationServer({
+      issuer: RAS_AUD,
+      trustedIssuers: { [ISSUER]: { keys: [asContinuationPub as never] } },
+      signKey: rasKeys.privateKey,
+      signKid: "ras-token",
+    });
+    const { expires_in } = await ras.redeem(idJag, agentJkt);
+    expect(expires_in).toBeGreaterThan(0);
+
+    // (2) A NEW continuation over the same lineage IS refused after revoke —
+    //     revocation is live; it only blocks fresh issuance.
+    const res2 = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
+    const body2 = (await res2.json()) as { error?: string; error_description?: string };
+    expect(res2.status, JSON.stringify(body2)).toBe(400);
+    expect(body2.error).toBe("invalid_continuation");
+  });
+
+  it("session anchoring: terminateSession stops a session-anchored handle; the Mission's grant anchor is unaffected", () => {
+    const { missionId } = approveLineage("apev-life-session");
+
+    // The auto-rooted GRANT handle, captured BEFORE minting the session handle (a
+    // bare SELECT does not guarantee ordering once a second handle exists).
+    const grantHandle = as.continuationStore.handlesForMission(missionId)[0] as string;
+    expect(as.continuationStore.resolve(grantHandle)?.anchor.anchorType).toBe("grant");
+
+    // A session-anchored root + handle for the SAME Mission (the repo has no real
+    // OIDC session, so this represents one: a terminable anchor).
+    const sessionId = "sess-life-1";
+    const sessionAnchor = as.continuationStore.rootSessionAnchor({
+      missionId,
+      sessionId,
+      authEnvelope: {},
+    });
+    const sessionHandle = as.continuationStore.mint({
+      anchorId: sessionAnchor,
+      missionId,
+      actor: { iss: ISSUER, sub: "ap-agent" },
+      cnfJkt: agentJkt,
+    });
+    expect(as.continuationStore.resolve(sessionHandle)?.anchor.anchorType).toBe("session");
+
+    // Ending the session terminates the session-anchored handle; the grant handle
+    // (durable root) keeps resolving.
+    as.continuationStore.terminateSession(sessionId);
+    expect(as.continuationStore.resolve(sessionHandle)).toBeUndefined();
+    expect(as.continuationStore.resolve(grantHandle)?.missionId).toBe(missionId);
+  });
+
+  it("idempotent approval does not double-root: the same approval_event_id yields exactly one anchor/handle", () => {
+    const first = approveLineage("apev-life-idem");
+    // Re-approving with the SAME event id is idempotent in the kernel (a duplicate
+    // approval_event_id throws before emitCommit), so no second commit fires and
+    // no second anchor/handle is rooted. The guard in rootMissionContinuation is
+    // belt-and-suspenders for this.
+    const second = approveLineage("apev-life-idem");
+    expect(second.missionId).toBe(first.missionId);
+    expect(as.continuationStore.handlesForMission(first.missionId)).toHaveLength(1);
   });
 });
