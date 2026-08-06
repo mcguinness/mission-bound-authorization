@@ -59,6 +59,14 @@ informative:
   I-D.draft-mcguinness-oauth-id-assertion-framework:
   I-D.draft-mcguinness-oauth-domain-authorized-issuer:
   I-D.draft-mcguinness-oauth-actor-receipts:
+  I-D.draft-mcguinness-oauth-id-continuation-assertion:
+    title: "Identity Continuation Assertion for OAuth 2.0 Token Exchange"
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
@@ -339,6 +347,27 @@ the call chain. The `mission` claim object is the natural anchor to
 carry there, inert as evidence exactly as in the chaining profile
 above, so call-chain intent context stays joined to the committed
 record instead of growing an unanchored twin of it.
+
+# Relationship to Identity Continuation {#id-continuation}
+
+This section is informative. Identity Continuation
+({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}) is a
+sibling of this document: the same identity-chaining framework, the
+same exchange-then-redeem shape, both minting an ID-JAG. The boundary
+differs, and so does what crosses. This document projects a Mission
+ACROSS a trust boundary the origin does not control, where the
+verifier holds no session with the issuer; a partner Resource AS
+honors the projected authority and resolves an audience-local
+subject. Identity Continuation carries a Mission's delegation across
+hops WITHIN one trust domain, when the original user credential is not
+present: its assertion carries no subject and never changes it, so
+continuation preserves the Mission's subject and authority rather than
+projecting them to a new audience. The two are distinguished on the
+wire by the subject-token type of the {{RFC8693}} exchange and by the
+assertion `typ`. Neither widens: like this document's grant, a
+continuation carries a subset of the Mission's authority, never more,
+and a Mission's projection remains single-hop ({{what-crosses}})
+regardless of how many intra-domain hops continue it on either side.
 
 # Pre-Established Trust {#pre-established-trust}
 

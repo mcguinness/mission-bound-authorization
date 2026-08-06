@@ -136,6 +136,9 @@ it.
  project      Cross-Domain Projection (one Mission honored in
               another trust domain via the cross-domain grant)
 
+ continue     Identity Continuation (a Mission's delegation
+              continued across intra-domain hops, no subject change)
+
  prove        Consent Evidence (what the Approver was shown)
               Mandate (portable, verifiable statement of a Mission)
               Audit (SCITT transparency for all Mission evidence)
@@ -330,9 +333,9 @@ facts are the next subsection.
    state-gated tokens), **substrate** (for authors of new bindings).
 5. **Advanced, when the use case arrives**: **approval** (asynchronous
    approvals), **expansion**, **child-delegation**,
-   **cross-domain**, **management**, **mandate**, **audit**,
-   **shaping**, **signals** (push latency optimization over correctly
-   sized status polling).
+   **cross-domain**, **id-continuation**, **management**,
+   **mandate**, **audit**, **shaping**, **signals** (push latency
+   optimization over correctly sized status polling).
 6. **Experimental, adopt for evaluation only**:
    **approval-revision**, **progressive**, **metering**,
    **attenuation**, **orchestration**, **discovery** (open-world
