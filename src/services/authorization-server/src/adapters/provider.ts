@@ -53,6 +53,7 @@ import {
 } from "./continuation-grant.js";
 import type { ContinuationIssuer } from "../kernel/continuation-assertion.js";
 import type { ContinuationStore } from "../kernel/continuation-store.js";
+import type { DelegationFamilyStore } from "../kernel/delegation-family-store.js";
 
 /**
  * IMPL-LOCAL grant type for Child Mission CREATION on the real /token endpoint.
@@ -121,6 +122,15 @@ export interface AdapterOptions {
    * (registered unconditionally) refuses with invalid_request.
    */
   continuationStore?: ContinuationStore;
+  /**
+   * @spec async-delegation — the per-delegation FAMILY store (grant_id ->
+   * mission_id). Recorded when the async-delegation continuation transport issues a
+   * per-delegation grant; consulted by extraTokenClaims (family fallback), by
+   * rotateRefreshToken (mandatory family rotation), and by ttl.RefreshToken
+   * (absolute-lifetime clamp to Mission expiry). When unset every family branch is
+   * a no-op, so no existing refresh/token path changes.
+   */
+  familyStore?: DelegationFamilyStore;
   /** Trusted Chain Authority issuers of ICAs (iss + jwks). */
   chainAuthorityIssuers?: ContinuationIssuer[];
   /** Shared (iss, jti) ICA replay cache (from newReplayCache()). */
@@ -328,7 +338,28 @@ export function buildProvider(opts: AdapterOptions): Provider {
       const grantId = (token as { grantId?: string }).grantId;
       if (!grantId) return {};
       const record = kernel.findByGrant(grantId);
-      if (!record) return {};
+      if (!record) {
+        // @spec async-delegation — per-delegation family fallback. The grant is NOT
+        // a Mission approval grant (findByGrant missed), so it may be a
+        // per-delegation family grant. resolve() returns undefined for an unknown OR
+        // a terminal family; on a hit, re-gate ACTIVE state WITHOUT consuming a
+        // derivation (gateActive, not gateDerivation) — the SINGLE family count was
+        // spent once at issuance (handleAsyncDelegationExchange step 4). A terminal
+        // family never reaches here in practice: its grant is destroyed on the
+        // terminal lifecycle commit, so refresh fails structurally first. The
+        // gateActive map (GateError -> InvalidGrant) is identical to the branch below.
+        const fam = opts.familyStore?.resolve(grantId);
+        if (!fam) return {};
+        const famRecord = kernel.get(fam.missionId);
+        if (!famRecord) return {};
+        try {
+          kernel.gateActive(famRecord.id);
+          return { mission: kernel.missionClaim(famRecord) };
+        } catch (e) {
+          if (e instanceof GateError) throw new errors.InvalidGrant(e.message);
+          throw e;
+        }
+      }
       try {
         const gated = kernel.gateDerivation(record.id);
         // @spec child-delegation#parent-member — a Child Mission projects the
@@ -342,6 +373,50 @@ export function buildProvider(opts: AdapterOptions): Provider {
         if (e instanceof GateError) throw new errors.InvalidGrant(e.message);
         throw e;
       }
+    },
+    // @spec async-delegation — MANDATORY family rotation. A per-delegation family
+    // refresh token is rotated on EVERY refresh so a consumed-RT replay trips
+    // oidc-provider's reuse detection, whose revoke is scoped to the RT's grantId —
+    // it wipes ONLY this per-delegation grant, never the Mission approval grant. For
+    // any other grant this defers to the oidc-provider default behaviour (inlined
+    // below, because supplying this option replaces the default entirely).
+    rotateRefreshToken(ctx) {
+      const rt = (ctx.oidc.entities as {
+        RefreshToken?: {
+          grantId?: string;
+          totalLifetime(): number;
+          isSenderConstrained(): boolean;
+          ttlPercentagePassed(): number;
+        };
+      }).RefreshToken;
+      if (rt?.grantId && opts.familyStore?.resolve(rt.grantId)) return true;
+      // Default: lib/helpers/defaults.js rotateRefreshToken (oidc-provider 9.10.0,
+      // L528-546) — cap rotation at 1 year, rotate non-sender-constrained public
+      // clients, else rotate once past 70% of lifetime.
+      if (!rt) return false;
+      const client = (ctx.oidc.entities as { Client?: { clientAuthMethod?: string } }).Client;
+      if (rt.totalLifetime() >= 365.25 * 24 * 60 * 60) return false;
+      if (client?.clientAuthMethod === "none" && !rt.isSenderConstrained()) return true;
+      return rt.ttlPercentagePassed() >= 70;
+    },
+    ttl: {
+      // @spec async-delegation — absolute-lifetime clamp. A per-delegation family
+      // refresh token never outlives its Mission: its lifetime is bounded by the
+      // Mission's expires_at. Any other refresh token keeps the oidc-provider
+      // default (lib/helpers/defaults.js RefreshTokenTTL, 9.10.0 L397: 14 days). A
+      // partial ttl override deep-merges with the defaults, so AccessToken et al.
+      // are unaffected. A regular function (not arrow) satisfies checkTTL.
+      RefreshToken: function RefreshTokenTTL(_ctx, token) {
+        const grantId = (token as { grantId?: string }).grantId;
+        const fam = grantId ? opts.familyStore?.resolve(grantId) : undefined;
+        if (fam) {
+          const record = kernel.get(fam.missionId);
+          if (record) {
+            return Math.max(1, Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000));
+          }
+        }
+        return 14 * 24 * 60 * 60;
+      },
     },
   };
 
@@ -410,6 +485,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
       "resource",
       "requested_token_type",
       "authorization_details",
+      // @spec async-delegation — the async-delegation discriminator. Declared here
+      // or the token endpoint strips it (the file documents `resource` was
+      // empirically stripped for this custom grant); a test asserts its survival.
+      "request_refresh_token",
     ]),
   );
 
@@ -922,6 +1001,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // token-exchange continuation grant (ICA subject token -> continuation
       // ID-JAG), signed by the dedicated as-continuation key on the jwks_uri.
       meta.identity_continuation_supported = true;
+      // @spec async-delegation#discovery: this AS runs the async-delegation
+      // continuation transport (RFC 8693 token exchange with request_refresh_token
+      // -> a per-delegation grant with a rotated, sender-constrained refresh token).
+      meta.delegated_refresh_token_profile_supported = true;
       meta.service_catalog_endpoint = `${opts.issuer}/service-catalog`;
       meta.introspection_endpoint = `${opts.issuer}/introspect`;
       meta.transaction_authorization_endpoint = `${opts.issuer}/transaction`;
