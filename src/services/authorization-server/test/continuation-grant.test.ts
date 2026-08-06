@@ -13,10 +13,12 @@
  *   3. ICA `act`    — minted by the Chain Authority against (AS, client_id).
  *   4. DPoP proof   — the presenter key.
  *
- * The ID-JAG is signed with the ES256 as-txn key (published on jwks_uri) because
- * issueCrossDomainGrant hardcodes an ES256 header and the AS token key is RS256;
- * the test verifies it against the AS jwks_uri. gateDerivation runs exactly once
- * (inside issueCrossDomainGrant, via a direct SignJWT — never provider.AccessToken).
+ * The ID-JAG is signed with the dedicated ES256 as-continuation key (published on
+ * jwks_uri and trusted by the RAS) because issueCrossDomainGrant hardcodes an
+ * ES256 header and the AS token key is RS256; the test verifies it against the AS
+ * jwks_uri (asserting the as-continuation kid) AND redeems it end-to-end at a RAS.
+ * gateDerivation runs exactly once (inside issueCrossDomainGrant, via a direct
+ * SignJWT — never provider.AccessToken).
  *
  * Setup drives the store directly (rootGrantAnchor + mint) and mints ICAs with a
  * dedicated Chain Authority key injected via chainAuthorityIssuers.
@@ -24,6 +26,7 @@
 
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
+import { ResourceAuthorizationServer } from "@mission/ras";
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
@@ -241,11 +244,14 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(body.expires_in).toBeGreaterThan(0);
     expect(res.headers.get("cache-control")).toContain("no-store");
 
-    // The ID-JAG verifies on the AS jwks_uri (signed with the ES256 as-txn key).
-    const { payload } = await jwtVerify(body.access_token as string, remoteJwks, {
+    // The ID-JAG verifies on the AS jwks_uri, signed with the DEDICATED ES256
+    // as-continuation key (remoteJwks resolves by kid, so the kid assertion is
+    // what proves the rewire off the as-txn placeholder actually happened).
+    const { payload, protectedHeader } = await jwtVerify(body.access_token as string, remoteJwks, {
       issuer: ISSUER,
       audience: RAS_AUD,
     });
+    expect(protectedHeader.kid).toBe("as-continuation");
     expect(payload.aud).toBe(RAS_AUD);
     expect((payload.cnf as { jkt?: string }).jkt).toBe(agentJkt); // sender-constrained to the DPoP key
     expect((payload.mission as { id?: string }).id).toBe(missionId);
@@ -283,6 +289,70 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       audience: RAS_AUD,
     });
     expect(p2.sub).toBe(localSub);
+  });
+
+  it("end-to-end: the continuation ID-JAG redeems at the RAS (trusted as-continuation key) into a local token", async () => {
+    const { missionId, handle } = newLineage("apev-ras");
+    const res = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
+    const body = (await res.json()) as { access_token?: string; error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const idJag = body.access_token as string;
+    const localSub = (await jwtVerify(idJag, remoteJwks, { issuer: ISSUER, audience: RAS_AUD })).payload.sub as string;
+
+    // The RAS trusts the AS issuer's PUBLIC as-continuation key (from the
+    // jwks_uri) — the same wiring the demo stack performs. aud = the RAS issuer,
+    // which is the ID-JAG audience (RAS_AUD).
+    const serverJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: Record<string, unknown>[] };
+    const asContinuationPub = serverJwks.keys.find((k) => k.kid === "as-continuation");
+    expect(asContinuationPub, "as-continuation key must be published on jwks_uri").toBeDefined();
+
+    const rasKeys = await generateKeyPair("ES256", { extractable: true });
+    const ras = new ResourceAuthorizationServer({
+      issuer: RAS_AUD,
+      trustedIssuers: { [ISSUER]: { keys: [asContinuationPub as never] } },
+      signKey: rasKeys.privateKey,
+      signKid: "ras-token",
+    });
+
+    // Redeem the continuation ID-JAG (JWT-bearer grant), sender-constrained to
+    // the SAME DPoP presenter key the ID-JAG's cnf.jkt names.
+    const { access_token, expires_in } = await ras.redeem(idJag, agentJkt);
+    expect(expires_in).toBeGreaterThan(0);
+
+    // The local token surfaces the continuation identity: audience-local sub,
+    // authorization_details, cnf, and the preserved mission anchors.
+    const local = JSON.parse(Buffer.from(access_token.split(".")[1] as string, "base64url").toString());
+    expect(local.iss).toBe(RAS_AUD); // minted by the RAS
+    expect(local.sub).toBe(localSub); // the audience-local sub, unchanged
+    expect(local.sub).not.toBe("alice"); // never the global subject
+    expect(local.cnf.jkt).toBe(agentJkt); // sender-constraint preserved
+    expect(Array.isArray(local.authorization_details)).toBe(true);
+    expect(local.mission.id).toBe(missionId); // mission anchors preserved
+    expect(local.mission.issuer).toBe(ISSUER); // originating AS unchanged
+
+    // A replay of the same ID-JAG is refused at the RAS (one-time jti).
+    await expect(ras.redeem(idJag, agentJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("advertises the feature: AS discovery flag + RAS grant-profile metadata", async () => {
+    // (4) AS .well-known advertises identity_continuation_supported.
+    const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Record<
+      string,
+      unknown
+    >;
+    expect(meta.identity_continuation_supported).toBe(true);
+
+    // (5) RAS metadata advertises both id-jag grant profiles.
+    const rasKeys = await generateKeyPair("ES256", { extractable: true });
+    const ras = new ResourceAuthorizationServer({
+      issuer: RAS_AUD,
+      trustedIssuers: {},
+      signKey: rasKeys.privateKey,
+      signKid: "ras-token",
+    });
+    const profiles = ras.metadata().authorization_grant_profiles_supported as string[];
+    expect(profiles).toContain("urn:ietf:params:oauth:grant-profile:id-jag");
+    expect(profiles).toContain("urn:ietf:params:oauth:grant-profile:id-jag-continuation");
   });
 
   it("(a) ICA lifetime exp-iat > 300s -> invalid_request", async () => {

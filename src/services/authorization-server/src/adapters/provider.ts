@@ -131,8 +131,9 @@ export interface AdapterOptions {
   subjectResolver?: SubjectResolver;
   /**
    * ES256 signing key + kid for the continuation ID-JAG, published on the AS
-   * jwks_uri. issueCrossDomainGrant hardcodes an ES256 header, so the RS256 AS
-   * token key cannot sign it; index.ts wires the ES256 as-txn key here.
+   * jwks_uri and trusted by the RAS. issueCrossDomainGrant hardcodes an ES256
+   * header, so the RS256 AS token key cannot sign it; index.ts wires the
+   * dedicated ES256 as-continuation key here (D39 per-purpose).
    */
   continuationGrantKey?: CryptoKey;
   continuationGrantKid?: string;
@@ -917,6 +918,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec child-delegation#discovery: this AS accepts the child-creation
       // request and enforces the child-delegation controls of that profile.
       meta.mission_child_delegation_supported = true;
+      // @spec id-continuation-assertion#discovery: this AS runs the RFC 8693
+      // token-exchange continuation grant (ICA subject token -> continuation
+      // ID-JAG), signed by the dedicated as-continuation key on the jwks_uri.
+      meta.identity_continuation_supported = true;
       meta.service_catalog_endpoint = `${opts.issuer}/service-catalog`;
       meta.introspection_endpoint = `${opts.issuer}/introspect`;
       meta.transaction_authorization_endpoint = `${opts.issuer}/transaction`;

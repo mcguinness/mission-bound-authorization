@@ -142,6 +142,7 @@ export interface Topology {
     transparency: TopologyKey;
     rasToken: TopologyKey;
     crossDomain: TopologyKey;
+    asContinuation: TopologyKey;
   };
   openfga: { url: string; presharedKey: string };
 }
@@ -200,6 +201,7 @@ function loadTopology(): Topology {
       transparency: reqKey(file, keys, "transparency", "keys"),
       rasToken: reqKey(file, keys, "rasToken", "keys"),
       crossDomain: reqKey(file, keys, "crossDomain", "keys"),
+      asContinuation: reqKey(file, keys, "asContinuation", "keys"),
     },
     openfga: {
       url: reqString(file, openfga, "url", "openfga"),

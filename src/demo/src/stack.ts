@@ -170,9 +170,18 @@ export async function composeStack(opts: {
     const xdPub = { ...(await exportJWK(xdKeys.publicKey)), kid: crossDomainKey.kid, alg: crossDomainKey.alg };
     const rasKeys = await generateKeyPair(rasTokenKey.alg, { extractable: true });
     const rasPub = { ...(await exportJWK(rasKeys.publicKey)), kid: rasTokenKey.kid, alg: rasTokenKey.alg };
+    // @spec id-continuation-assertion — the continuation ID-JAG is signed by the
+    // dedicated as-continuation key the AS generates per boot and publishes on
+    // its jwks_uri (fetched above). The RAS trusts it under the AS issuer too, so
+    // a continuation ID-JAG redeems into a local token (D39 per-purpose keys).
+    const asContinuationKey = TOPOLOGY.keys.asContinuation;
+    const asContinuationPub = serverJwks.keys.find((k) => k.kid === asContinuationKey.kid);
+    if (!asContinuationPub) {
+      throw new Error(`AS jwks_uri is missing the ${asContinuationKey.kid} continuation key`);
+    }
     const ras = new ResourceAuthorizationServer({
       issuer: RAS_ISS,
-      trustedIssuers: { [asUrl]: { keys: [xdPub as never] } },
+      trustedIssuers: { [asUrl]: { keys: [xdPub as never, asContinuationPub as never] } },
       signKey: rasKeys.privateKey,
       signKid: rasTokenKey.kid,
       localTokenTtlSeconds: TOPOLOGY.ttls.rasLocalTokenSeconds,
