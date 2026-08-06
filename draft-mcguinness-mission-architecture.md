@@ -38,11 +38,20 @@ informative:
   RFC9126:
   RFC9396:
   RFC9943:
+  RFC8693:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-id-continuation-assertion:
+    title: "Identity Continuation Assertion for OAuth 2.0 Token Exchange"
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/
     author:
       -
         ins: K. McGuinness
@@ -1436,6 +1445,10 @@ spine by the question each answers.
  project      Cross-Domain Projection (a Mission honored
               in another trust domain)
 
+ continue     Identity Continuation (a Mission's delegation
+              carried across intra-domain hops without the
+              original credential)
+
  prove        Consent Evidence, Mandate, Audit
 
  analyze      Security Model (the trusted base)
@@ -1547,6 +1560,28 @@ Resource AS mints a local token bounded by the projected authority
 preserves authority across the boundary rather than narrowing it to a
 sub-actor, which is why it is a distinct verb from Delegate;
 downstream revocation latency is the local token lifetime.
+
+## Continue
+
+The question: how is a Mission's delegation carried across
+intra-domain hops when the original user credential is not present?
+The boundary: between workloads inside one trust domain, where each
+hop authenticates as itself and none holds the user's credential.
+Owner: Identity Continuation
+({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}), a
+short-lived, sender-constrained assertion presented as an {{RFC8693}}
+token-exchange subject token: a Chain Authority mints it against an
+accepted hop, and a workload redeems it at the token endpoint for a
+fresh grant. The Mission is the durable, grant-anchored root the
+continuation chains from. The assertion carries no subject, so
+continuation preserves the Mission's subject and authority across the
+hop rather than narrowing to a sub-actor (Delegate) or crossing a
+trust boundary (Project); the actor is rebound per hop against a
+confirmed key, and a terminal Mission ends every continuation rooted
+in it without shortening an already-issued token. Because it mints a
+fresh grant, continuation carries authority forward, distinct from the
+harness's session continuity that is never authority
+({{I-D.draft-mcguinness-mission-harness}}).
 
 ## Prove
 
@@ -2318,6 +2353,11 @@ operator plane) as its satellites.
 `oauth-mission-cross-domain`:
 : Single-hop projection of a Mission to another trust domain via the
   cross-domain grant.
+
+`oauth-id-continuation-assertion`:
+: Continuing a Mission's delegation across intra-domain hops via a
+  token-exchange subject token; the Mission is the durable root and
+  the subject is unchanged.
 
 **Runtime enforcement:**
 
