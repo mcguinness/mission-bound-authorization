@@ -481,11 +481,12 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
   });
 
   it(
-    "absolute-lifetime: after the Mission expires the refresh token has expired too, so refresh fails invalid_grant",
+    "absolute-lifetime: the refresh token cannot outlive the Mission (ttl.RefreshToken clamp)",
     async () => {
       const expiresAt = new Date(Date.now() + 4_000).toISOString();
-      const { baseAccessToken } = await issueBaseMission(expiresAt);
+      const { missionId, baseAccessToken } = await issueBaseMission(expiresAt);
       const { refresh_token } = (await (await asyncDelegate(baseAccessToken)).json()) as { refresh_token: string };
+      const grantId = as.delegationFamilyStore.familiesForMission(missionId)[0] as string;
 
       // Wait until just past the Mission expires_at (computed relative to expiresAt so
       // setup time cannot cause a false failure). The refresh token TTL was clamped to
@@ -497,6 +498,14 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
       expect(res.status, JSON.stringify(body)).toBe(400);
       expect(body.error).toBe("invalid_grant");
       expect(body.access_token).toBeUndefined();
+
+      // DISCRIMINATOR for the ttl.RefreshToken clamp: oidc-provider rejected on
+      // refresh-token EXPIRY, before any mission gate ran, so the lazy mission-expiry
+      // commit never landed and the family is STILL active. Absent the clamp the
+      // refresh token would still be valid, the refresh would reach extraTokenClaims
+      // -> gateActive -> applyExpiry, and THAT commit would have marked the family
+      // terminal (resolve -> undefined). So "still active" proves the clamp fired.
+      expect(as.delegationFamilyStore.resolve(grantId)?.state).toBe("active");
     },
     15_000,
   );
