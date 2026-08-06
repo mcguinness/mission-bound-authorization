@@ -475,7 +475,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // survive independently.
   provider.registerGrantType(
     TOKEN_EXCHANGE_GRANT_TYPE,
-    (ctx) => handleTokenExchangeGrant(opts, ctx),
+    (ctx) => handleTokenExchangeGrant(opts, provider, ctx),
     new Set([
       "subject_token",
       "subject_token_type",
@@ -502,7 +502,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
  * the resourceIndicators config and the deferred-grant mint so both project an
  * identical, resource-bound (not opaque) token.
  */
-function resourceServerInfoFor(resource: string, accessTokenTTL: number) {
+export function resourceServerInfoFor(resource: string, accessTokenTTL: number) {
   return {
     scope: "payments",
     audience: resource,
@@ -516,7 +516,7 @@ function resourceServerInfoFor(resource: string, accessTokenTTL: number) {
  * provider instance; @types 9.5 declares ResourceServer as an interface only, so
  * this narrow cast bridges the gap — matrix SPEC_VERSIONS Notes).
  */
-function newResourceServer(
+export function newResourceServer(
   provider: Provider,
   resource: string,
   info: ReturnType<typeof resourceServerInfoFor>,
