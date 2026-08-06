@@ -7,10 +7,12 @@ import { buildProvider, type TxnArs } from "./adapters/provider.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
 import { ContinuationStore } from "./kernel/continuation-store.js";
+import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
 import { DeferralStore } from "./kernel/deferred.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
+import { TERMINAL_STATES } from "./kernel/types.js";
 import type { LifecycleCommit, MissionRecord } from "./kernel/types.js";
 
 export { MissionKernel, GateError, LifecycleConflictError } from "./kernel/kernel.js";
@@ -198,6 +200,12 @@ export interface BuiltAs {
    * test/exhibit can seed anchors and handles and observe terminal propagation.
    */
   continuationStore: ContinuationStore;
+  /**
+   * @spec async-delegation — the per-delegation FAMILY store (grant_id ->
+   * mission_id), exposed so a test can observe terminal propagation (resolve
+   * returns undefined once the Mission reaches a terminal lifecycle state).
+   */
+  delegationFamilyStore: DelegationFamilyStore;
 }
 
 export async function buildAuthorizationServer(opts: {
@@ -259,6 +267,16 @@ export async function buildAuthorizationServer(opts: {
   // lifecycle-commit fan-out below (a terminal Mission terminates every
   // continuation anchor/handle rooted in it, so its lineages stop resolving).
   const continuationStore = new ContinuationStore();
+  // @spec async-delegation — the per-delegation FAMILY store. Holds no kernel
+  // reference; constructed before the kernel so it can join the lifecycle-commit
+  // fan-out below (a terminal Mission terminates every delegation family rooted in
+  // it, and the provider-capturing terminal subscriber revokes each family's grant).
+  const delegationFamilyStore = new DelegationFamilyStore();
+  // @spec async-delegation — forward reference to the provider (assigned after
+  // buildProvider, like statusListPublisher). Captured by the terminal subscriber in
+  // the fan-out so it can revoke per-delegation family grants; undefined until
+  // construction completes, and no lifecycle commit fires before then.
+  let terminalProvider: Provider | undefined;
   const kernel = new MissionKernel({
     issuer: opts.issuer,
     policy: DERIVATION_POLICY as never,
@@ -270,6 +288,29 @@ export async function buildAuthorizationServer(opts: {
     onLifecycleCommit: (commit) => {
       statusListPublisher?.markDirty();
       continuationStore.onLifecycleCommit(commit);
+      // @spec async-delegation — terminal propagation for delegation families. A
+      // terminal Mission marks all of its family rows terminal (so resolve stops).
+      delegationFamilyStore.onLifecycleCommit(commit);
+      // @spec async-delegation — provider-capturing terminal subscriber. On ANY
+      // terminal commit (revoke/complete AND expiry/cascade/supersede all funnel
+      // through here) revoke + destroy the oidc grant of every per-delegation family
+      // rooted in this Mission, so a subsequent refresh fails STRUCTURALLY rather
+      // than merely by the family resolving terminal. The hook carries no Koa ctx,
+      // so the request-scoped revoke helper is unavailable; revoke via the STATIC
+      // RefreshToken.revokeByGrantId + Grant.destroy. Fire-and-forget with a swallowed
+      // rejection (the hook is synchronous): the in-process microtask chain settles
+      // before the next request macrotask, and a missing grant is a no-op. Cascade
+      // re-enters this hook per descendant commit, so a child's own family is covered.
+      if (terminalProvider && TERMINAL_STATES.has(commit.state)) {
+        const p = terminalProvider;
+        for (const gid of delegationFamilyStore.familiesForMission(commit.id)) {
+          void (async () => {
+            await p.RefreshToken.revokeByGrantId(gid);
+            const grant = await p.Grant.find(gid);
+            await grant?.destroy();
+          })().catch(() => {});
+        }
+      }
       // @spec id-continuation-assertion — approval-time grant-anchor rooting. The
       // ACTIVATING commit (version 1, no prior_state, active) of a newly-approved
       // Mission roots the durable grant-anchored continuation root + an INITIAL
@@ -328,6 +369,10 @@ export async function buildAuthorizationServer(opts: {
     // the RAS (so it redeems). ES256 matches the header issueCrossDomainGrant
     // hardcodes; the RS256 AS token key could not have signed it.
     continuationStore,
+    // @spec async-delegation — the per-delegation family store used by
+    // extraTokenClaims (family fallback), rotateRefreshToken (mandatory family
+    // rotation), and ttl.RefreshToken (absolute-lifetime clamp).
+    familyStore: delegationFamilyStore,
     chainAuthorityIssuers,
     continuationReplay: newReplayCache(),
     resourceToAs,
@@ -337,6 +382,9 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.resourceTxnJwks ? { resourceTxnJwks: opts.resourceTxnJwks } : {}),
     ...(opts.ars ? { ars: opts.ars } : {}),
   });
+  // @spec async-delegation — publish the provider to the terminal subscriber now
+  // that construction is complete (no lifecycle commit could have fired earlier).
+  terminalProvider = provider;
 
   return {
     provider,
@@ -347,5 +395,6 @@ export async function buildAuthorizationServer(opts: {
     childClientJwk: child.privateJwk,
     canonicalResource: CANONICAL_RESOURCE,
     continuationStore,
+    delegationFamilyStore,
   };
 }
