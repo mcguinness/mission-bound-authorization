@@ -419,6 +419,77 @@ describe("async-delegation disconnected refresh (@spec async-delegation)", () =>
   });
 });
 
+describe("containment refresh-path conformance (derivation MUST NOT carry a contained capability)", () => {
+  const containRemittance = (missionId: string, eventId: string): void => {
+    as.kernel.contain(missionId, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: new Date().toISOString(),
+        event_id: eventId,
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:remittance.send"] }],
+    });
+  };
+
+  /** The Mission's derived set with remittance.send stripped (the expected effective projection). */
+  const withoutRemittance = (missionId: string): unknown =>
+    (as.kernel.get(missionId)?.authority_set ?? []).map((e) => ({
+      ...e,
+      actions: e.actions.filter((a) => a !== "payments:remittance.send"),
+    }));
+
+  it("contain, then refresh the async-delegation family: the refreshed access token EXCLUDES the contained capability", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken)).json()) as {
+      refresh_token: string;
+      authorization_details?: unknown;
+    };
+    // Pre-containment the family grant carries the FULL derived set (the rar
+    // copied at issuance): this is exactly the copy that must not be echoed.
+    expect(first.authorization_details).toEqual(as.kernel.get(missionId)?.authority_set);
+
+    containRemittance(missionId, "ce-async-1");
+
+    const res = await refreshFamily(first.refresh_token);
+    const body = (await res.json()) as { access_token?: string; authorization_details?: unknown; error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    // The stored grant still holds the issuance-time copy, but the token
+    // response re-projects it through the effective set: remittance.send is gone.
+    expect(body.authorization_details).toEqual(withoutRemittance(missionId));
+    const { payload } = await jwtVerify(body.access_token as string, remoteJwks, { issuer: ISSUER, audience: RESOURCE });
+    expect(payload.authorization_details).toEqual(withoutRemittance(missionId));
+  });
+
+  it("contain, then refresh the CODE-FLOW mission grant: same conformance on the approval grant's copied rar", async () => {
+    const { missionId, missionRefreshToken } = await issueBaseMission();
+    containRemittance(missionId, "ce-code-1");
+    const res = await refreshFamily(missionRefreshToken, codeDpop); // the mission grant's own RT
+    const body = (await res.json()) as { access_token?: string; authorization_details?: unknown; error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.authorization_details).toEqual(withoutRemittance(missionId));
+    const payload = decodeJwt(body.access_token as string);
+    expect(payload.authorization_details).toEqual(withoutRemittance(missionId));
+  });
+
+  it("regression: a no-containment mission's refresh is byte-identical to issuance (fast path)", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const first = (await (await asyncDelegate(baseAccessToken)).json()) as {
+      refresh_token: string;
+      access_token: string;
+      authorization_details?: unknown;
+    };
+    const res = await refreshFamily(first.refresh_token);
+    const body = (await res.json()) as { access_token?: string; authorization_details?: unknown; error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    // Byte-identical authorization_details across issuance and refresh.
+    expect(JSON.stringify(body.authorization_details)).toBe(JSON.stringify(first.authorization_details));
+    expect(JSON.stringify(decodeJwt(body.access_token as string).authorization_details)).toBe(
+      JSON.stringify(decodeJwt(first.access_token).authorization_details),
+    );
+  });
+});
+
 describe("async-delegation single count (@spec async-delegation)", () => {
   it("derivation_count rises by exactly 1 across issuance + N refreshes", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();

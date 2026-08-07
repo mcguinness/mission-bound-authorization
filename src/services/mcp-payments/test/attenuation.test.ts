@@ -130,6 +130,16 @@ beforeAll(async () => {
     version: 1,
     authority_hash: mission.authority_hash,
     authority_set: mission.authority_set,
+    // Containment delta, mapped from the kernel record (absent on a freshly
+    // approved Mission, so this is the no-containment fast path).
+    ...(mission.containment
+      ? {
+          containment: {
+            version: mission.containment.containment_version,
+            contained: mission.containment.contained,
+          },
+        }
+      : {}),
   };
 
   // Root over both tools; child narrows to invoice.read only (keeping the

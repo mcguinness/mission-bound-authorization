@@ -9,7 +9,7 @@ import { generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { Fga } from "../src/fga.js";
 import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
-import type { MissionView } from "../src/policy-view.js";
+import { type MissionView, policyViewId } from "../src/policy-view.js";
 import { relationForAction, stalenessBoundSeconds } from "../src/policy.js";
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
@@ -119,6 +119,76 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     const dec = await evaluate(req({ action: { name: "payments:remittance.send" } }), opts(view()));
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("out_of_authority");
+  });
+
+  it("contained action -> deny authority_contained; never-granted action stays out_of_authority", async () => {
+    // Same resource: payment.execute was approved then contained (delta), while
+    // remittance.send was never approved. The PDP must tell them apart.
+    const v = view({
+      version: 2,
+      containment: { version: 1, contained: [{ resource: RESOURCE, actions: ["payments:payment.execute"] }] },
+    });
+    const contained = await evaluate(
+      req({
+        action: { name: "payments:payment.execute" },
+        context: {
+          audience: RESOURCE,
+          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          amount: { amount: "125.00", currency: "USD" },
+        },
+      }),
+      opts(v),
+    );
+    expect(contained.decision).toBe(false);
+    expect(contained.context.denial_reason).toBe("authority_contained");
+    expect(contained.context.containment_version).toBe(1);
+
+    const neverGranted = await evaluate(req({ action: { name: "payments:remittance.send" } }), opts(v));
+    expect(neverGranted.decision).toBe(false);
+    expect(neverGranted.context.denial_reason).toBe("out_of_authority");
+  });
+
+  it("entry-level containment (no actions member) denies ALL the entry's actions", async () => {
+    const v = view({ version: 2, containment: { version: 1, contained: [{ resource: RESOURCE }] } });
+    for (const name of ["payments:invoice.read", "payments:payment.execute"]) {
+      const dec = await evaluate(req({ action: { name } }), opts(v));
+      expect(dec.decision, name).toBe(false);
+      expect(dec.context.denial_reason, name).toBe("authority_contained");
+    }
+  });
+
+  it("a permit on an uncontained action still carries entry_digest", async () => {
+    const v = view({
+      version: 2,
+      containment: { version: 1, contained: [{ resource: RESOURCE, actions: ["payments:payment.execute"] }] },
+    });
+    const dec = await evaluate(req(), opts(v)); // invoice.read is uncontained
+    expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+    expect(dec.context.entry_digest).toBe(
+      computeAnchor(AUTHORITY_ENTRY_TYP, v.issuer, v.authority_set[0] as never),
+    );
+  });
+
+  it("a request pinning a pre-containment policy_view_id denies view_inconsistent after contain", async () => {
+    // policyViewId commits mission_version, which contain() bumps: prove it moves.
+    const before = view();
+    const after = view({
+      version: 2,
+      containment: { version: 1, contained: [{ resource: RESOURCE, actions: ["payments:payment.execute"] }] },
+    });
+    const stalePvid = policyViewId(before, modelId);
+    expect(policyViewId(after, modelId)).not.toBe(stalePvid);
+    const dec = await evaluate(
+      req({
+        context: {
+          audience: RESOURCE,
+          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash", policy_view_id: stalePvid },
+        },
+      }),
+      opts(after),
+    );
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("view_inconsistent");
   });
 
   it("vendor outside the constraint -> deny out_of_authority (contextual tuple withheld)", async () => {

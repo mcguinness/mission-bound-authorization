@@ -207,6 +207,43 @@ interface KoaCtx {
 export function buildProvider(opts: AdapterOptions): Provider {
   const { kernel } = opts;
 
+  // Containment refresh-path conformance: a stored oidc grant copies its rar
+  // at issuance, so a refresh (or a late code redemption) could echo a
+  // capability contained AFTER issuance ("derivation MUST NOT carry a
+  // contained capability"). Token-response rar resolution therefore
+  // re-projects the grant's rar through the Mission's EFFECTIVE authority set
+  // (approved minus contained). The Mission resolves from the grant like the
+  // async path does: a Mission approval grant via kernel.findByGrant, else a
+  // per-delegation family grant via the family store. A grant belonging to no
+  // Mission, or to a Mission with no containment, passes through UNCHANGED
+  // (the same object: byte-identical fast path).
+  const rarThroughContainment = (grant?: { jti?: string; rar?: unknown }): unknown => {
+    const rar = grant?.rar;
+    if (!Array.isArray(rar) || !grant?.jti) return rar;
+    let record = kernel.findByGrant(grant.jti);
+    if (!record) {
+      const fam = opts.familyStore?.resolve(grant.jti);
+      record = fam ? kernel.get(fam.missionId) : undefined;
+    }
+    if (!record?.containment) return rar;
+    const effective = kernel.effectiveAuthoritySet(record);
+    const filtered: unknown[] = [];
+    for (const detail of rar as Array<{ resource?: string; actions?: string[] }>) {
+      const eff = effective.find((e) => e.resource === detail.resource);
+      if (!eff) continue; // the whole entry is contained
+      if (Array.isArray(detail.actions)) {
+        const actions = detail.actions.filter((a) => eff.actions.includes(a));
+        if (actions.length === 0) continue; // every action contained
+        if (actions.length !== detail.actions.length) {
+          filtered.push({ ...detail, actions });
+          continue;
+        }
+      }
+      filtered.push(detail);
+    }
+    return filtered;
+  };
+
   const configuration: Configuration = {
     clients: opts.clients as never,
     jwks: opts.jwks as never,
@@ -238,12 +275,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
         ack: "experimental-01",
         // Issuer-derived RAR (@spec mission#authorization-derivation): the
         // grant's rar IS the Mission's Authority Set; every surface projects it.
+        // Token responses re-project through the effective set (containment).
         rarForAuthorizationCode: (ctx: { oidc: { grant?: { rar?: unknown } } }) =>
           ctx.oidc.grant?.rar as never,
-        rarForCodeResponse: (ctx: { oidc: { grant?: { rar?: unknown } } }) =>
-          ctx.oidc.grant?.rar as never,
-        rarForRefreshTokenResponse: (ctx: { oidc: { grant?: { rar?: unknown } } }) =>
-          ctx.oidc.grant?.rar as never,
+        rarForCodeResponse: (ctx: { oidc: { grant?: { jti?: string; rar?: unknown } } }) =>
+          rarThroughContainment(ctx.oidc.grant) as never,
+        rarForRefreshTokenResponse: (ctx: { oidc: { grant?: { jti?: string; rar?: unknown } } }) =>
+          rarThroughContainment(ctx.oidc.grant) as never,
         types: {
           mission_resource_access: {
             validate: () => {
