@@ -328,6 +328,7 @@ interface LoadedPolicy {
   policy_version: string;
   ceiling: CeilingEntry[];
   write_actions: string[];
+  dispatch_prohibited_actions: string[];
 }
 
 function loadPolicy(): LoadedPolicy {
@@ -364,6 +365,12 @@ function loadPolicy(): LoadedPolicy {
     policy_version: reqString(file, root, "policy_version", "policy"),
     ceiling,
     write_actions: reqStringArray(file, root, "write_actions", "policy"),
+    dispatch_prohibited_actions: reqStringArray(
+      file,
+      root,
+      "dispatch_prohibited_actions",
+      "policy",
+    ),
   };
 }
 
@@ -371,6 +378,14 @@ const POLICY = loadPolicy();
 
 /** Actions whose presence makes a mission write-bearing (D37 governance). */
 export const WRITE_ACTIONS = new Set(POLICY.write_actions);
+
+/**
+ * @spec mission-template#prohibited-class — high-consequence actions that no
+ * Mission Template dispatch may confer, even within both ceilings. The demo
+ * prohibits the irreversible `payments:payment.execute`. The wire PR and the
+ * dispatch kernel pass this into `dispatchFromTemplate`.
+ */
+export const DISPATCH_PROHIBITED_ACTIONS: string[] = POLICY.dispatch_prohibited_actions;
 
 /**
  * Derivation policy ceiling (@spec mission#authorization-derivation): the
@@ -385,6 +400,67 @@ export const DERIVATION_POLICY: DerivationPolicy = {
     e.resource === DEFAULT_PAYMENTS_RESOURCE ? { ...e, resource: CANONICAL_RESOURCE } : e,
   ) as [CeilingEntry, ...CeilingEntry[]],
 };
+
+/**
+ * @spec mission-template — a demo Mission Template descriptor (the wire PR and
+ * the demo seed one instance of it). Shaped as `createTemplate`'s input; the AS
+ * assembly supplies the runtime `issuer` and calls `createTemplate`.
+ */
+export interface DemoTemplateInput {
+  template_version: string;
+  issuer: string;
+  approver: { iss: string; sub: string };
+  ceiling: CeilingEntry[];
+  dispatch_policy: string;
+  dispatchers: string[];
+  recipients: string[];
+  per_instance_lifetime_s: number;
+  max_active: number;
+  rate_per_min: number;
+  approval_event_id: string;
+  expires_at: string;
+}
+
+/**
+ * @spec mission-template — the demo READ-ONLY reconciliation template: read
+ * invoices / ledger, NO execute. Its ceiling is built from DERIVATION_POLICY by
+ * keeping only the read/list actions and the ceiling constraints verbatim while
+ * DROPPING delegation, so every template entry is entry-wise within the policy
+ * ceiling (a dispatched instance cannot widen past either). Issuer-parameterized
+ * because the AS issuer is a runtime value (exported like the demo clients).
+ */
+export function demoReconciliationTemplate(issuer: string): DemoTemplateInput {
+  const isReadOnly = (a: string) => a.endsWith(".read") || a.endsWith(".list");
+  const ceiling: CeilingEntry[] = DERIVATION_POLICY.ceiling
+    .map((e) => {
+      const entry: CeilingEntry = {
+        type: e.type,
+        resource: e.resource,
+        actions: e.actions.filter(isReadOnly),
+      };
+      if (e.constraints) entry.constraints = e.constraints;
+      // delegation deliberately dropped: a read-only reconciliation template
+      // never re-delegates, and dropping it keeps the entry within policy.
+      return entry;
+    })
+    .filter((e) => e.actions.length > 0);
+  return {
+    template_version: "demo-reconciliation-1",
+    issuer,
+    // The consenting human of record (an approver-role user).
+    approver: { iss: issuer, sub: "bob" },
+    ceiling,
+    dispatch_policy: "read-only-reconciliation",
+    // The orchestrator dispatches; the invoice sub-agent receives.
+    dispatchers: ["ap-agent"],
+    recipients: ["subagent-invoice-extractor"],
+    per_instance_lifetime_s: 900,
+    max_active: 5,
+    rate_per_min: 30,
+    approval_event_id: "tmpl-approval-demo-reconciliation",
+    expires_at: "2099-01-01T00:00:00Z",
+  };
+}
 
 export interface SeededClient {
   metadata: Record<string, unknown>;
