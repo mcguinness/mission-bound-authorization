@@ -11,7 +11,7 @@ import { DeferralStore } from "./kernel/deferred.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
-import type { LifecycleCommit } from "./kernel/types.js";
+import type { LifecycleCommit, MissionRecord } from "./kernel/types.js";
 
 export { MissionKernel, GateError, LifecycleConflictError } from "./kernel/kernel.js";
 export { validateMissionIntent, IntentError } from "./kernel/intent.js";
@@ -139,6 +139,41 @@ export {
   type VerifyStatusListOptions,
 } from "./kernel/status-list.js";
 
+/**
+ * @spec id-continuation-assertion — root a durable grant anchor and mint the
+ * INITIAL continuation handle for a newly-activated Mission. Invoked from the
+ * lifecycle-commit fan-out on the activating commit. Idempotency guard: a Mission
+ * that already carries a handle is left untouched, so the anchor is never
+ * duplicated (belt-and-suspenders with the kernel already not emitting a commit on
+ * idempotent re-approval).
+ *
+ * Auth envelope: this is the DEMO's ROOTING-EVENT envelope. `auth_time` is the
+ * approval timestamp (from `created_at`) and `acr` is `intent.controls.acr` when
+ * present; `amr` is omitted. A real deployment supplies the root AUTHENTICATION
+ * event's envelope instead of synthesising it from the approval.
+ *
+ * The initial handle binds the Mission's actor: the agent CLIENT
+ * (iss = AS issuer, sub = client_id), matching the /token four-signal contract's
+ * `currentActor`. No cnf is bound (no DPoP key exists at approval); the four-signal
+ * check validates the PRESENTED key at /token, never this stored handle's cnf.
+ */
+function rootMissionContinuation(store: ContinuationStore, record: MissionRecord): void {
+  if (store.handlesForMission(record.id).length > 0) return; // never double-root
+  const acr = record.intent.controls?.acr;
+  const anchorId = store.rootGrantAnchor({
+    missionId: record.id,
+    authEnvelope: {
+      authTime: Math.floor(Date.parse(record.created_at) / 1000),
+      ...(acr !== undefined ? { acr } : {}),
+    },
+  });
+  store.mint({
+    anchorId,
+    missionId: record.id,
+    actor: { iss: record.issuer, sub: record.client_id },
+  });
+}
+
 export interface BuiltAs {
   provider: Provider;
   kernel: MissionKernel;
@@ -230,6 +265,20 @@ export async function buildAuthorizationServer(opts: {
     onLifecycleCommit: (commit) => {
       statusListPublisher?.markDirty();
       continuationStore.onLifecycleCommit(commit);
+      // @spec id-continuation-assertion — approval-time grant-anchor rooting. The
+      // ACTIVATING commit (version 1, no prior_state, active) of a newly-approved
+      // Mission roots the durable grant-anchored continuation root + an INITIAL
+      // handle, so a continuation chain can actually begin from an approved
+      // Mission. This is the single funnel that fires for kernel.approve() as well
+      // as expansion successors and Child Missions (all reach insertRecord ->
+      // emitCommit); every activated Mission is thus a durable root. Purely
+      // additive: a Mission that never continues is unaffected (the anchor/handle
+      // sit inert). Not fired on idempotent re-approval: a duplicate
+      // approval_event_id throws before emitCommit, so no commit is emitted.
+      if (commit.version === 1 && commit.prior_state === undefined && commit.state === "active") {
+        const record = kernel.get(commit.id);
+        if (record) rootMissionContinuation(continuationStore, record);
+      }
       opts.onLifecycleCommit?.(commit);
     },
   });

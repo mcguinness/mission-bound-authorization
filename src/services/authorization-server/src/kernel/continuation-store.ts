@@ -159,7 +159,16 @@ export class ContinuationStore {
     anchorId: string;
     missionId: string;
     actor: { iss: string; sub: string };
-    cnfJkt: string;
+    /**
+     * The confirmed-key thumbprint bound to this handle. OPTIONAL because the
+     * INITIAL handle rooted at Mission approval has no DPoP key yet (a real
+     * deployment supplies the root auth event's cnf; the demo omits it). This is
+     * a type widening, not a behaviour change: every chained-hop caller still
+     * passes a string and gets an identical row, and the four-signal check at
+     * /token validates the PRESENTED key, never this stored value (`resolve`
+     * already returns `cnfJkt` as optional).
+     */
+    cnfJkt?: string;
     priorHandle?: string;
   }): string {
     const handle = `ich_${randomBytes(18).toString("base64url")}`;
@@ -175,7 +184,7 @@ export class ContinuationStore {
         input.missionId,
         input.actor.iss,
         input.actor.sub,
-        input.cnfJkt,
+        input.cnfJkt ?? null,
         input.priorHandle ?? null,
         this.now().getTime(),
       );
@@ -221,6 +230,21 @@ export class ContinuationStore {
       authEnvelope,
       ...(h.cnf_jkt != null ? { cnfJkt: h.cnf_jkt } : {}),
     };
+  }
+
+  /**
+   * Read accessor: the handles minted for a Mission, ordered by mint time (ties
+   * within the same millisecond are unordered). Additive and read-only (no state
+   * change). Used by the AS assembly to (a) idempotency-guard approval-time
+   * rooting (skip when a handle already exists for the Mission) and (b) let a
+   * test/exhibit obtain the INITIAL handle an approval rooted (a Mission's first
+   * handle, before any hop mints another, is unambiguous).
+   */
+  handlesForMission(missionId: string): string[] {
+    const rows = this.db
+      .prepare("SELECT handle FROM continuation_handles WHERE mission_id = ? ORDER BY created_at")
+      .all(missionId) as Array<{ handle: string }>;
+    return rows.map((r) => r.handle);
   }
 
   /**
