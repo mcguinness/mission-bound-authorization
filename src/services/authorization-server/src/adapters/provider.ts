@@ -45,6 +45,14 @@ import {
 import { issueTxnToken, validateChallenge } from "../kernel/txn-challenge.js";
 import type { AuthorityEntry, LifecycleOperation, MissionIntent, MissionRecord } from "../kernel/types.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE, mintChildGrant } from "./child-grant.js";
+import {
+  type ContinuationReplay,
+  handleTokenExchangeGrant,
+  type SubjectResolver,
+  TOKEN_EXCHANGE_GRANT_TYPE,
+} from "./continuation-grant.js";
+import type { ContinuationIssuer } from "../kernel/continuation-assertion.js";
+import type { ContinuationStore } from "../kernel/continuation-store.js";
 
 /**
  * IMPL-LOCAL grant type for Child Mission CREATION on the real /token endpoint.
@@ -107,6 +115,27 @@ export interface AdapterOptions {
   childGrantKey?: CryptoKey;
   childGrantKid?: string;
   childGrantAlg?: string;
+  /**
+   * @spec id-continuation-assertion — the RFC 8693 token-exchange continuation
+   * grant wiring. All are composed in src/index.ts; when any is unset the grant
+   * (registered unconditionally) refuses with invalid_request.
+   */
+  continuationStore?: ContinuationStore;
+  /** Trusted Chain Authority issuers of ICAs (iss + jwks). */
+  chainAuthorityIssuers?: ContinuationIssuer[];
+  /** Shared (iss, jti) ICA replay cache (from newReplayCache()). */
+  continuationReplay?: ContinuationReplay;
+  /** Resource -> authoritative AS map (reused from the demo cross-domain wiring). */
+  resourceToAs?: (resource: string) => string;
+  /** Deterministic audience-local subject resolver. */
+  subjectResolver?: SubjectResolver;
+  /**
+   * ES256 signing key + kid for the continuation ID-JAG, published on the AS
+   * jwks_uri. issueCrossDomainGrant hardcodes an ES256 header, so the RS256 AS
+   * token key cannot sign it; index.ts wires the ES256 as-txn key here.
+   */
+  continuationGrantKey?: CryptoKey;
+  continuationGrantKid?: string;
 }
 
 /**
@@ -356,6 +385,31 @@ export function buildProvider(opts: AdapterOptions): Provider {
     CHILD_CREATION_GRANT_TYPE,
     (ctx) => handleChildCreationGrant(provider, opts, ctx),
     new Set(["request_uri"]),
+  );
+
+  // @spec id-continuation-assertion — the RFC 8693 token-exchange grant: an ICA
+  // subject token in, a Mission-rooted continuation ID-JAG out. Registered
+  // UNCONDITIONALLY (mirrors CHILD_JWT_BEARER_GRANT_TYPE) so a client listing the
+  // URN is not rejected as invalid_client_metadata; the handler validates the
+  // wiring lazily. Every param the handler reads MUST be in this set or the token
+  // endpoint strips it. PINNED empirically by the integration test: `resource` IS
+  // stripped for this custom grant unless declared here (the resourceIndicators
+  // machinery does NOT retain it), so it is declared. `scope` is not read by the
+  // handler and so is not declared. client_assertion/_type are auth params and
+  // survive independently.
+  provider.registerGrantType(
+    TOKEN_EXCHANGE_GRANT_TYPE,
+    (ctx) => handleTokenExchangeGrant(opts, ctx),
+    new Set([
+      "subject_token",
+      "subject_token_type",
+      "actor_token",
+      "actor_token_type",
+      "audience",
+      "resource",
+      "requested_token_type",
+      "authorization_details",
+    ]),
   );
 
   provider.use(makeRoutes(provider, opts));

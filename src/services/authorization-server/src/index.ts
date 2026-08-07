@@ -4,7 +4,11 @@ import { CANONICAL_RESOURCE, DERIVATION_POLICY, seedAgentClient, seedChildClient
 import { exportJWK, generateKeyPair, type JWK } from "jose";
 import type Provider from "oidc-provider";
 import { buildProvider, type TxnArs } from "./adapters/provider.js";
+import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
+import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
+import { ContinuationStore } from "./kernel/continuation-store.js";
 import { DeferralStore } from "./kernel/deferred.js";
+import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
 import type { LifecycleCommit } from "./kernel/types.js";
@@ -149,6 +153,11 @@ export interface BuiltAs {
    */
   childClientJwk: Record<string, unknown>;
   canonicalResource: string;
+  /**
+   * @spec id-continuation-assertion — the continuation handle store, exposed so a
+   * test/exhibit can seed anchors and handles and observe terminal propagation.
+   */
+  continuationStore: ContinuationStore;
 }
 
 export async function buildAuthorizationServer(opts: {
@@ -168,6 +177,16 @@ export async function buildAuthorizationServer(opts: {
    * subscriber is injected instead.
    */
   onLifecycleCommit?: (commit: LifecycleCommit) => void;
+  /**
+   * @spec id-continuation-assertion — override the trusted Chain Authority
+   * issuers of ICAs. Defaults to the AS acting as its own Chain Authority (its
+   * jwks_uri keys). Tests inject a dedicated Chain Authority key.
+   */
+  chainAuthorityIssuers?: ContinuationIssuer[];
+  /** Resource -> authoritative AS map. Defaults to the demo cross-domain map. */
+  resourceToAs?: (resource: string) => string;
+  /** Deterministic audience-local subject resolver. Defaults to a stable digest. */
+  subjectResolver?: SubjectResolver;
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
@@ -190,21 +209,40 @@ export async function buildAuthorizationServer(opts: {
   // only fires at runtime (post-construction), so the forward reference is safe;
   // the publisher takes a build thunk, never the kernel, to avoid an import cycle.
   let statusListPublisher: StatusListPublisher | undefined;
+  // @spec id-continuation-assertion — the continuation handle store. Holds no
+  // kernel reference; constructed before the kernel so it can join the
+  // lifecycle-commit fan-out below (a terminal Mission terminates every
+  // continuation anchor/handle rooted in it, so its lineages stop resolving).
+  const continuationStore = new ContinuationStore();
   const kernel = new MissionKernel({
     issuer: opts.issuer,
     policy: DERIVATION_POLICY as never,
     statusKey: statusKeys.privateKey,
     statusKid: asStatus.kid,
-    // Fan the committed transition out to BOTH the Status List republisher (PULL)
-    // and any injected subscriber, e.g. the Mission Signals emitter (PUSH).
+    // Fan the committed transition out to the Status List republisher (PULL), the
+    // continuation store (terminal propagation), and any injected subscriber, e.g.
+    // the Mission Signals emitter (PUSH).
     onLifecycleCommit: (commit) => {
       statusListPublisher?.markDirty();
+      continuationStore.onLifecycleCommit(commit);
       opts.onLifecycleCommit?.(commit);
     },
   });
   statusListPublisher = new StatusListPublisher(() => kernel.publishStatusList());
   // AROP DTR store, wired onto the real /token deferred grant (D42).
   const deferrals = new DeferralStore(kernel);
+
+  // @spec id-continuation-assertion — continuation-grant defaults. The AS is its
+  // OWN Chain Authority in the demo (ICAs trusted when signed by a key on its
+  // jwks_uri). The resource->AS map mirrors the demo cross-domain wiring
+  // (stack.ts). The subject resolver is deterministic over a constant salt.
+  const publicJwks = { keys: [tokenJwkPub, statusJwkPub, txnJwkPub] };
+  const chainAuthorityIssuers: ContinuationIssuer[] =
+    opts.chainAuthorityIssuers ?? [{ iss: opts.issuer, jwks: publicJwks as never }];
+  const resourceToAs =
+    opts.resourceToAs ??
+    ((r: string) => (r === TOPOLOGY.resources.saas ? TOPOLOGY.issuers.ras : opts.issuer));
+  const subjectResolver = opts.subjectResolver ?? defaultSubjectResolver(opts.issuer);
 
   const provider = buildProvider({
     issuer: opts.issuer,
@@ -213,7 +251,7 @@ export async function buildAuthorizationServer(opts: {
     statusListPublisher,
     clients: [agent.metadata, child.metadata],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv] },
-    publicJwks: { keys: [tokenJwkPub, statusJwkPub, txnJwkPub] },
+    publicJwks,
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     approverRoleSubs: new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub)),
     accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
@@ -224,6 +262,17 @@ export async function buildAuthorizationServer(opts: {
     childGrantKey: tokenKeys.privateKey,
     childGrantKid: asToken.kid,
     childGrantAlg: asToken.alg,
+    // @spec id-continuation-assertion — the RFC 8693 token-exchange continuation
+    // grant. The ID-JAG is signed with the ES256 as-txn key (already on the
+    // jwks_uri): issueCrossDomainGrant hardcodes an ES256 header, so the RS256 AS
+    // token key cannot sign it, and the goal is only that it verifies on jwks_uri.
+    continuationStore,
+    chainAuthorityIssuers,
+    continuationReplay: newReplayCache(),
+    resourceToAs,
+    subjectResolver,
+    continuationGrantKey: txnKeys.privateKey,
+    continuationGrantKid: asTxn.kid,
     ...(opts.resourceTxnJwks ? { resourceTxnJwks: opts.resourceTxnJwks } : {}),
     ...(opts.ars ? { ars: opts.ars } : {}),
   });
@@ -236,5 +285,6 @@ export async function buildAuthorizationServer(opts: {
     agentClientJwk: agent.privateJwk,
     childClientJwk: child.privateJwk,
     canonicalResource: CANONICAL_RESOURCE,
+    continuationStore,
   };
 }
