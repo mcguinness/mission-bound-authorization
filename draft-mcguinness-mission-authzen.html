@@ -3572,7 +3572,10 @@ than expecting one ordering across emitters.<a href="#section-7.1-1.38.1" class=
             <p id="section-7.1-1.40.1"><span class="bcp14">REQUIRED</span>. An object. The identity of the component that emitted and
 signed this record, with members <code>id</code> (<span class="bcp14">REQUIRED</span>, a string identifying
 the emitting component) and <code>role</code> (<span class="bcp14">REQUIRED</span>, one of <code>pdp</code>, <code>pep</code>, or
-<code>executor</code>). For Decision Evidence <code>role</code> is <code>pdp</code>. A verifier <span class="bcp14">MUST</span>
+<code>executor</code>). For Decision Evidence <code>role</code> is <code>pdp</code>. A companion
+profile <span class="bcp14">MAY</span> register coordinated additional roles (<code>harness</code>,
+<code>egress</code>) for records emitted under these conventions at other
+enforcement points. A verifier <span class="bcp14">MUST</span>
 bind the emitter's signing key to the enforcement scope and audience
 the record serves (<a href="#decision-evidence-integrity" class="auto internal xref">Section 7.3</a>).<a href="#section-7.1-1.40.1" class="pilcrow">¶</a></p>
 </dd>

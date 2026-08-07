@@ -113,8 +113,9 @@ Table of Contents
      14.5.  Run and Wind Down
      14.6.  Delegate
      14.7.  Project
-     14.8.  Prove
-     14.9.  Analyze
+     14.8.  Continue
+     14.9.  Prove
+     14.10. Analyze
    15. Mission Deployment Patterns
      15.1.  Binding Security Architectures
      15.2.  Entry Ramps by Estate
@@ -1147,6 +1148,19 @@ Table of Contents
    and reproducible, which is the closest the family comes to portable
    derivation.
 
+   The ceiling the derivation narrows against is itself a composition,
+   not a single object.  The derived Authority Set sits inside every
+   authority source that bounds the task: the issuer's derivation
+   policy, the Approver's own authority (an approval grants nothing the
+   Approver could not grant), and, at enforcement time, the resource
+   owner's and deployment's live policy at the decision point.  The
+   derivation step intersects the first two and commits the result; the
+   runtime contract re-checks the rest on every action, which is why a
+   permit is never implied by the Authority Set alone.  A deployment
+   adding further sources (a tenant boundary, an environment-specific
+   floor) adds them as derivation-policy inputs or as decision-point
+   policy, never as agent-negotiated widening.
+
    The derivation modes rank by how portable their result is:
 
       +==========================+=================================+
@@ -1318,6 +1332,10 @@ Table of Contents
     project      Cross-Domain Projection (a Mission honored
                  in another trust domain)
 
+    continue     Mission Continuation (authorization continuity
+                 over ICA, async delegation, and cross-domain
+                 transports)
+
     prove        Consent Evidence, Mandate, Audit
 
     analyze      Security Model (the trusted base)
@@ -1372,7 +1390,9 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-status]); Signals, the push
    complement ([I-D.draft-mcguinness-oauth-mission-signals]); Expansion,
    widening only via an approved successor
-   ([I-D.draft-mcguinness-oauth-mission-expansion]); Management, fleet
+   ([I-D.draft-mcguinness-oauth-mission-expansion]); Containment, event-
+   triggered monotonic narrowing of a live Mission's effective authority
+   ([I-D.draft-mcguinness-oauth-mission-containment]); Management, fleet
    enumeration and bulk lifecycle for operators
    ([I-D.draft-mcguinness-oauth-mission-management]); and Discovery,
    experimental, binding encountered resources within a pre-consented
@@ -1428,7 +1448,40 @@ Table of Contents
    sub-actor, which is why it is a distinct verb from Delegate;
    downstream revocation latency is the local token lifetime.
 
-14.8.  Prove
+14.8.  Continue
+
+   The question: how does a Mission's authorization continue, under the
+   same approval and constraints, when the acting identity must be re-
+   established at each hop or after the original credential is gone?
+   The boundary: the seam between authorization continuity, which the
+   Mission owns, and identity continuity, which a transport carries.
+   Owner: Mission Continuation
+   ([I-D.draft-mcguinness-oauth-mission-continuation]), the
+   authorization-continuity profile, which keeps three easily conflated
+   things apart.  Identity continuity, who is acting and how that
+   identity legitimately continues, rides a transport rather than this
+   profile: Identity Continuation
+   ([I-D.draft-mcguinness-oauth-id-continuation-assertion]) for a short-
+   lived, sender-constrained hop within a domain; async delegation
+   ([I-D.draft-zhu-oauth-async-delegation]) for a long-running,
+   disconnected task; and the cross-domain grant
+   ([I-D.draft-mcguinness-oauth-mission-cross-domain]) across a trust
+   boundary.  Authorization continuity, what work remains authorized
+   under which constraints on whose approval, is the Mission's: every
+   continued grant derives a subset of the Mission's Authority Set, is
+   state-gated at issuance, is bounded by the Mission's expiry, and ends
+   when the Mission goes terminal.  Execution-time evidence records,
+   against the Mission, what was done at each continued hop.  The load-
+   bearing invariant is that a continuation handle grants nothing: it
+   names an accepted hop, and every continued grant re-passes the
+   Mission's active gate, so continuity is never authority, the rule the
+   harness already applies to session continuity
+   ([I-D.draft-mcguinness-mission-harness]).  Continue is therefore
+   distinct from Delegate, which narrows authority to a sub-actor, and
+   it uses the Project verb's cross-domain grant as one transport rather
+   than replacing it.
+
+14.9.  Prove
 
    The question: what can a party outside the deployment verify about
    what was approved and done?  The boundary: across trust domains and
@@ -1440,7 +1493,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime]); Audit Transparency, the
    append-only evidence log ([I-D.draft-mcguinness-mission-audit]).
 
-14.9.  Analyze
+14.10.  Analyze
 
    The question: which components must be trusted, and what does each
    one's compromise cost?  The boundary: the whole system.  Owner: the
@@ -2094,6 +2147,14 @@ Table of Contents
    +==========+=============+=======================================================+
    |Control   |Stops        |Home                                                   |
    +==========+=============+=======================================================+
+   |Capability|one          |the issuer-held containment overlay                    |
+   |kill      |capability   |([I-D.draft-mcguinness-oauth-mission-containment])     |
+   |          |within one   |                                                       |
+   |          |Mission, with|                                                       |
+   |          |the body of  |                                                       |
+   |          |work still   |                                                       |
+   |          |running      |                                                       |
+   +----------+-------------+-------------------------------------------------------+
    |Mission   |one body of  |the core's revocation; cascades to Child Missions      |
    |kill      |work, across |([I-D.draft-mcguinness-oauth-mission-child-delegation])|
    |          |every        |                                                       |
@@ -2327,6 +2388,10 @@ Table of Contents
    oauth-mission-expansion:  Widening through an approved successor
       Mission.
 
+   oauth-mission-containment:  Event-triggered, monotonic narrowing of a
+      live Mission's effective authority, with restoration only through
+      an approved successor.
+
    oauth-mission-progressive:  Experimental: policy-adjudicated
       expansion within a pre-consented ceiling.
 
@@ -2340,6 +2405,17 @@ Table of Contents
 
    oauth-mission-cross-domain:  Single-hop projection of a Mission to
       another trust domain via the cross-domain grant.
+
+   oauth-mission-continuation:  The authorization-continuity profile: a
+      Mission continues its authorization over identity-continuity
+      transports (Identity Continuation, async delegation, cross-
+      domain), state-gated, with the invariant that a continuation
+      handle grants nothing.
+
+   oauth-id-continuation-assertion:  A continuation transport: a short-
+      lived token-exchange subject token yielding an ID-JAG for an
+      intra-domain hop, bound to a Mission's authorization by mission-
+      continuation.
 
    *Runtime enforcement:*
 
@@ -2494,6 +2570,12 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-client-instance-assertion-01>.
 
+   [I-D.draft-mcguinness-oauth-id-continuation-assertion]
+              McGuinness, K., "Identity Continuation Assertion for OAuth
+              2.0 Token Exchange", 2026,
+              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
+              id-continuation-assertion/>.
+
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -2522,6 +2604,17 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-consent-
               evidence.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-containment]
+              McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-containment.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-continuation]
+              McGuinness, K., "Mission Continuation: Authorization
+              Continuity for Mission-Bound Authorization", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-continuation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth
@@ -2569,9 +2662,21 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-
               rar-metadata-05>.
 
+   [I-D.draft-zhu-oauth-async-delegation]
+              Zhu, L. and Z. Berg, "Delegated Refresh Tokens for OAuth
+              2.0 Token Exchange", Work in Progress, Internet-Draft,
+              draft-zhu-oauth-async-delegation-05, 3 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-zhu-oauth-
+              async-delegation-05>.
+
    [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
               RFC 6749, DOI 10.17487/RFC6749, October 2012,
               <https://www.rfc-editor.org/rfc/rfc6749>.
+
+   [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
+              and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
+              DOI 10.17487/RFC8693, January 2020,
+              <https://www.rfc-editor.org/rfc/rfc8693>.
 
    [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
               and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",

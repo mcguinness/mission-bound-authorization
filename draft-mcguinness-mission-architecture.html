@@ -1288,10 +1288,13 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
                 <p id="section-toc.1-1.14.2.7.1"><a href="#section-14.7" class="auto internal xref">14.7</a>.  <a href="#name-project" class="internal xref">Project</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.8">
-                <p id="section-toc.1-1.14.2.8.1"><a href="#section-14.8" class="auto internal xref">14.8</a>.  <a href="#name-prove" class="internal xref">Prove</a></p>
+                <p id="section-toc.1-1.14.2.8.1"><a href="#section-14.8" class="auto internal xref">14.8</a>.  <a href="#name-continue" class="internal xref">Continue</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.9">
-                <p id="section-toc.1-1.14.2.9.1"><a href="#section-14.9" class="auto internal xref">14.9</a>.  <a href="#name-analyze" class="internal xref">Analyze</a></p>
+                <p id="section-toc.1-1.14.2.9.1"><a href="#section-14.9" class="auto internal xref">14.9</a>.  <a href="#name-prove" class="internal xref">Prove</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.10">
+                <p id="section-toc.1-1.14.2.10.1"><a href="#section-14.10" class="auto internal xref">14.10</a>. <a href="#name-analyze" class="internal xref">Analyze</a></p>
 </li>
             </ul>
 </li>
@@ -2646,7 +2649,19 @@ mode (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D
 where the client supplies candidate authority, derivation is a subset
 of it and reproducible, which is the closest the family comes to
 portable derivation.<a href="#section-12-1" class="pilcrow">¶</a></p>
-<p id="section-12-2">The derivation modes rank by how portable their result is:<a href="#section-12-2" class="pilcrow">¶</a></p>
+<p id="section-12-2">The ceiling the derivation narrows against is itself a composition,
+not a single object. The derived Authority Set sits inside every
+authority source that bounds the task: the issuer's derivation
+policy, the Approver's own authority (an approval grants nothing the
+Approver could not grant), and, at enforcement time, the resource
+owner's and deployment's live policy at the decision point. The
+derivation step intersects the first two and commits the result;
+the runtime contract re-checks the rest on every action, which is
+why a permit is never implied by the Authority Set alone. A
+deployment adding further sources (a tenant boundary, an
+environment-specific floor) adds them as derivation-policy inputs or
+as decision-point policy, never as agent-negotiated widening.<a href="#section-12-2" class="pilcrow">¶</a></p>
+<p id="section-12-3">The derivation modes rank by how portable their result is:<a href="#section-12-3" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
         <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -2674,10 +2689,10 @@ portable derivation.<a href="#section-12-1" class="pilcrow">¶</a></p>
           </tr>
         </tbody>
       </table>
-<p id="section-12-4">A deployment seeking interoperable authority uses the first;
+<p id="section-12-5">A deployment seeking interoperable authority uses the first;
 free-text and model-assisted derivation are local policy unless a
 profile pins them with a published policy identifier, version, and
-test fixtures.<a href="#section-12-4" class="pilcrow">¶</a></p>
+test fixtures.<a href="#section-12-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="ontology-contract">
@@ -2845,6 +2860,10 @@ spine by the question each answers.<a href="#section-14-1" class="pilcrow">¶</a
  project      Cross-Domain Projection (a Mission honored
               in another trust domain)
 
+ continue     Mission Continuation (authorization continuity
+              over ICA, async delegation, and cross-domain
+              transports)
+
  prove        Consent Evidence, Mandate, Audit
 
  analyze      Security Model (the trusted base)
@@ -2910,7 +2929,10 @@ surface with a lifecycle endpoint and per-entry completion discharge
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>); Signals, the push
 complement (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>);
 Expansion, widening only via an approved successor
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>); Management,
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>); Containment,
+event-triggered monotonic narrowing of a live Mission's effective
+authority (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>);
+Management,
 fleet enumeration and bulk lifecycle for operators
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>); and Discovery,
 experimental, binding encountered resources within a pre-consented
@@ -2984,12 +3006,49 @@ sub-actor, which is why it is a distinct verb from Delegate;
 downstream revocation latency is the local token lifetime.<a href="#section-14.7-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="prove">
+<div id="continue">
 <section id="section-14.8">
-        <h3 id="name-prove">
-<a href="#section-14.8" class="section-number selfRef">14.8. </a><a href="#name-prove" class="section-name selfRef">Prove</a>
+        <h3 id="name-continue">
+<a href="#section-14.8" class="section-number selfRef">14.8. </a><a href="#name-continue" class="section-name selfRef">Continue</a>
         </h3>
-<p id="section-14.8-1">The question: what can a party outside the deployment verify about
+<p id="section-14.8-1">The question: how does a Mission's authorization continue, under the
+same approval and constraints, when the acting identity must be
+re-established at each hop or after the original credential is gone?
+The boundary: the seam between authorization continuity, which the
+Mission owns, and identity continuity, which a transport carries.
+Owner: Mission Continuation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>), the
+authorization-continuity profile, which keeps three easily conflated
+things apart. Identity continuity, who is acting and how that identity
+legitimately continues, rides a transport rather than this profile:
+Identity Continuation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>) for a
+short-lived, sender-constrained hop within a domain; async delegation
+(<span>[<a href="#I-D.draft-zhu-oauth-async-delegation" class="cite xref">I-D.draft-zhu-oauth-async-delegation</a>]</span>) for a long-running,
+disconnected task; and the cross-domain grant
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) across a trust
+boundary. Authorization continuity, what work remains authorized under
+which constraints on whose approval, is the Mission's: every continued
+grant derives a subset of the Mission's Authority Set, is state-gated
+at issuance, is bounded by the Mission's expiry, and ends when the
+Mission goes terminal. Execution-time evidence records, against the
+Mission, what was done at each continued hop. The load-bearing
+invariant is that a continuation handle grants nothing: it names an
+accepted hop, and every continued grant re-passes the Mission's
+<code>active</code> gate, so continuity is never authority, the rule the harness
+already applies to session continuity
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>). Continue is therefore
+distinct from Delegate, which narrows authority to a sub-actor, and it
+uses the Project verb's cross-domain grant as one transport rather
+than replacing it.<a href="#section-14.8-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="prove">
+<section id="section-14.9">
+        <h3 id="name-prove">
+<a href="#section-14.9" class="section-number selfRef">14.9. </a><a href="#name-prove" class="section-name selfRef">Prove</a>
+        </h3>
+<p id="section-14.9-1">The question: what can a party outside the deployment verify about
 what was approved and done? The boundary: across trust domains and
 time; the verifier holds no session with the issuer. Owners: Consent
 Evidence (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>);
@@ -2997,18 +3056,18 @@ the Mandate, a signed, portable statement that authorizes nothing
 (<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>); the Mission Receipt,
 portable evidence of an action taken under a Mission
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); Audit Transparency, the
-append-only evidence log (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-14.8-1" class="pilcrow">¶</a></p>
+append-only evidence log (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-14.9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="analyze">
-<section id="section-14.9">
+<section id="section-14.10">
         <h3 id="name-analyze">
-<a href="#section-14.9" class="section-number selfRef">14.9. </a><a href="#name-analyze" class="section-name selfRef">Analyze</a>
+<a href="#section-14.10" class="section-number selfRef">14.10. </a><a href="#name-analyze" class="section-name selfRef">Analyze</a>
         </h3>
-<p id="section-14.9-1">The question: which components must be trusted, and what does each
+<p id="section-14.10-1">The question: which components must be trusted, and what does each
 one's compromise cost? The boundary: the whole system. Owner: the
 Mission Security Model
-(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-14.9-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-14.10-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3728,6 +3787,11 @@ needs the whole matrix:<a href="#section-18.1-1" class="pilcrow">¶</a></p>
           </thead>
           <tbody>
             <tr>
+              <td class="text-left" rowspan="1" colspan="1">Capability kill</td>
+              <td class="text-left" rowspan="1" colspan="1">one capability within one Mission, with the body of work still running</td>
+              <td class="text-left" rowspan="1" colspan="1">the issuer-held containment overlay (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>)</td>
+            </tr>
+            <tr>
               <td class="text-left" rowspan="1" colspan="1">Mission kill</td>
               <td class="text-left" rowspan="1" colspan="1">one body of work, across every resource and derived credential</td>
               <td class="text-left" rowspan="1" colspan="1">the core's revocation; cascades to Child Missions (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)</td>
@@ -4070,32 +4134,56 @@ operator plane) as its satellites.<a href="#section-20-8" class="pilcrow">¶</a>
 </dd>
         <dd class="break"></dd>
 <dt id="section-20-9.7">
-<code>oauth-mission-progressive</code>:</dt>
+<code>oauth-mission-containment</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-20-9.8">
-          <p id="section-20-9.8.1">Experimental: policy-adjudicated expansion within a pre-consented
-ceiling.<a href="#section-20-9.8.1" class="pilcrow">¶</a></p>
+          <p id="section-20-9.8.1">Event-triggered, monotonic narrowing of a live Mission's effective
+authority, with restoration only through an approved successor.<a href="#section-20-9.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-20-9.9">
-<code>mission-discovery</code>:</dt>
+<code>oauth-mission-progressive</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-20-9.10">
-          <p id="section-20-9.10.1">Experimental: the open-world encounter as a governed operation:
-identity pinning, ceiling adjudication with the lying-resource and
-tainted-session floors, Discovery Evidence.<a href="#section-20-9.10.1" class="pilcrow">¶</a></p>
+          <p id="section-20-9.10.1">Experimental: policy-adjudicated expansion within a pre-consented
+ceiling.<a href="#section-20-9.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-20-9.11">
-<code>oauth-mission-management</code>:</dt>
+<code>mission-discovery</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-20-9.12">
-          <p id="section-20-9.12.1">Fleet enumeration and bulk lifecycle operations for operators and
-incident response; dry-run-first, per-Mission semantics.<a href="#section-20-9.12.1" class="pilcrow">¶</a></p>
+          <p id="section-20-9.12.1">Experimental: the open-world encounter as a governed operation:
+identity pinning, ceiling adjudication with the lying-resource and
+tainted-session floors, Discovery Evidence.<a href="#section-20-9.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-20-9.13">
-<code>oauth-mission-cross-domain</code>:</dt>
+<code>oauth-mission-management</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-20-9.14">
-          <p id="section-20-9.14.1">Single-hop projection of a Mission to another trust domain via the
-cross-domain grant.<a href="#section-20-9.14.1" class="pilcrow">¶</a></p>
+          <p id="section-20-9.14.1">Fleet enumeration and bulk lifecycle operations for operators and
+incident response; dry-run-first, per-Mission semantics.<a href="#section-20-9.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-20-9.15">
+<code>oauth-mission-cross-domain</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-20-9.16">
+          <p id="section-20-9.16.1">Single-hop projection of a Mission to another trust domain via the
+cross-domain grant.<a href="#section-20-9.16.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-20-9.17">
+<code>oauth-mission-continuation</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-20-9.18">
+          <p id="section-20-9.18.1">The authorization-continuity profile: a Mission continues its
+authorization over identity-continuity transports (Identity
+Continuation, async delegation, cross-domain), state-gated, with the
+invariant that a continuation handle grants nothing.<a href="#section-20-9.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-20-9.19">
+<code>oauth-id-continuation-assertion</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-20-9.20">
+          <p id="section-20-9.20.1">A continuation transport: a short-lived token-exchange subject token
+yielding an ID-JAG for an intra-domain hop, bound to a Mission's
+authorization by mission-continuation.<a href="#section-20-9.20.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -4293,6 +4381,10 @@ anti-oracle property bounds what its status surfaces disclose
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertion"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-01</span>, <time datetime="2026-06-24" class="refDate">24 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-id-continuation-assertion">[I-D.draft-mcguinness-oauth-id-continuation-assertion]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Identity Continuation Assertion for OAuth 2.0 Token Exchange"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
@@ -4312,6 +4404,14 @@ anti-oracle property bounds what its status surfaces disclose
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-continuation">[I-D.draft-mcguinness-oauth-mission-continuation]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Continuation: Authorization Continuity for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
       <dd>
@@ -4345,9 +4445,17 @@ anti-oracle property bounds what its status surfaces disclose
       <dd>
 <span class="refAuthor">Zehavi, Y.</span>, <span class="refTitle">"OAuth 2.0 RAR Metadata and Error Remediation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-zehavi-oauth-rar-metadata-05</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-rar-metadata-05">https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-rar-metadata-05</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-zhu-oauth-async-delegation">[I-D.draft-zhu-oauth-async-delegation]</dt>
+      <dd>
+<span class="refAuthor">Zhu, L.</span> and <span class="refAuthor">Z. Berg</span>, <span class="refTitle">"Delegated Refresh Tokens for OAuth 2.0 Token Exchange"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-zhu-oauth-async-delegation-05</span>, <time datetime="2026-08-03" class="refDate">3 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05">https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC6749">[RFC6749]</dt>
       <dd>
 <span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+      <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9126">[RFC9126]</dt>
       <dd>

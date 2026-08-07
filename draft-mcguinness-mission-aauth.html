@@ -2265,6 +2265,21 @@ layer between the PS and the Access Server rather than projecting a
 Mission into a foreign issuer
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-9-4.6.1" class="pilcrow">¶</a></p>
 </li>
+        <li class="normal" id="section-9-4.7">
+          <p id="section-9-4.7.1">Authorization continuity
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>) is native for
+the over-time case and needs no new transport: the <code>(approver,
+s256)</code> reference is a handle that grants nothing, and the PS's
+state-gated, one-hour auth-token issuance and federation is the
+continuation point, with revocation latency bounded by the token
+lifetime. That profile's cross-workload transports are OAuth-bound
+(Identity Continuation and async delegation over token exchange),
+for which AAuth has no substrate, and AAuth declines cross-hop
+authority carry-forward by design (<a href="#subset" class="auto internal xref">Section 8.2</a>): a chained hop is a
+fresh decision at its own decision point. AAuth-native cross-workload
+continuation is therefore deferred work, alongside Child Mission
+creation.<a href="#section-9-4.7.1" class="pilcrow">¶</a></p>
+</li>
       </ul>
 </section>
 </div>
@@ -2734,6 +2749,10 @@ members this document defines would be registered there.<a href="#section-16-1" 
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-continuation">[I-D.draft-mcguinness-oauth-mission-continuation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Continuation: Authorization Continuity for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>
