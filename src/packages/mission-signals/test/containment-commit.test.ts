@@ -99,6 +99,11 @@ describe("contain commit propagated by Mission Signals (metadata-only)", () => {
       approvalEventId: "apev-contain-signal-1",
     });
     const idx = kernel.participateInStatusList(mission.id);
+    // Drain the activating commit's SET before containing: onCommit dispatches
+    // an async sign-then-deliver per commit with no cross-commit ordering
+    // guarantee, so two in-flight SETs can arrive inverted under load (the
+    // suspend-lift test drains between transitions for the same reason).
+    await emitter.drain();
 
     // The contain transition: version 2, state unchanged (metadata-only).
     kernel.contain(mission.id, {
