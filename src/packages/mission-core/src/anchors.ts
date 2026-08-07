@@ -11,6 +11,13 @@ import { canonicalize, type JsonValue } from "./canonicalize.js";
 export const INTENT_TYP = "mission-intent";
 export const AUTHORITY_SET_TYP = "mission-authority-set";
 /**
+ * @spec authzen#decision-evidence-object (`entry_digest`)
+ * The integrity-anchor `typ` for a single Authority Set entry, so a decision
+ * record can cite the entry it was evaluated against by digest via
+ * {@link computeAnchor} (no change to `computeAnchor` is needed).
+ */
+export const AUTHORITY_ENTRY_TYP = "mission-authority-entry";
+/**
  * @spec orchestration#unwind-plan-integrity
  * The integrity-anchor `typ` for a Mission unwind plan. The orchestration
  * profile hashes the unwind plan under this domain separator via

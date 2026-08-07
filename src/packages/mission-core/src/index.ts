@@ -1,4 +1,5 @@
 export {
+  AUTHORITY_ENTRY_TYP,
   AUTHORITY_SET_TYP,
   authorityHash,
   computeAnchor,

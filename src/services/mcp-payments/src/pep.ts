@@ -276,11 +276,15 @@ export class Pep {
       decision_id: decision.context.decision_id as string,
       policy_view_id: decision.context.policy_view_id as string,
       ...(decision.context.denial_reason ? { denial_reason: decision.context.denial_reason as string } : {}),
+      // @spec authzen `entry_digest`: the PDP's resolved-scope anchor, copied
+      // from the decision context so the retained record cites the entry.
+      ...(decision.context.entry_digest ? { entry_digest: decision.context.entry_digest as string } : {}),
       mission_id: view.id,
       authority_hash: view.authority_hash,
       action: mapping.action,
       ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
       instance_epoch: this.deps.instanceEpoch,
+      emitter: { id: CANONICAL_RESOURCE, role: "pep" },
     });
 
     if (!decision.decision) {
@@ -364,6 +368,7 @@ export class Pep {
       authority_hash: view?.authority_hash ?? token.mission.authority_hash,
       action,
       instance_epoch: this.deps.instanceEpoch,
+      emitter: { id: CANONICAL_RESOURCE, role: "pep" },
     });
   }
 }
