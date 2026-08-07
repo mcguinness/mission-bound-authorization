@@ -9,6 +9,7 @@
  */
 
 import { type ContextActor, validateContextActor } from "@mission/actor-chain";
+import { AUTHORITY_ENTRY_TYP, computeAnchor } from "@mission/core";
 import { getTracer } from "@mission/telemetry";
 import { SignJWT, type CryptoKey } from "jose";
 import type { Fga } from "./fga.js";
@@ -220,6 +221,9 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   }
 
   // Permit (@spec authzen permit shape). Properties declared; PEP redeems.
+  // The PDP's evidence contribution stays in the decision context (D28/D32):
+  // entry_digest anchors the Authority Set entry the permit was evaluated
+  // against (@spec authzen#decision-evidence-object, resolved-scope anchor).
   const permitTtl = actionClass === "irreversible_action" ? 120 : 300;
   const nowIso = new Date(now().getTime() + permitTtl * 1000).toISOString();
   return {
@@ -227,6 +231,7 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     context: base({
       permit_expires_at: nowIso,
       single_use: actionClass === "irreversible_action",
+      entry_digest: computeAnchor(AUTHORITY_ENTRY_TYP, view.issuer, entry as never),
       ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
     }),
   };

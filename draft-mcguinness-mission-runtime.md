@@ -1791,7 +1791,8 @@ and trusted for the refusal or decision path:
   of that entry when recording the full entry would disclose excess
   authority or sensitive policy;
 - the decision identifier, when the PDP produced one;
-- the PDP's policy-view version; and
+- the PDP's policy-view version;
+- the identity and role of the emitting enforcement component; and
 - OPTIONAL, a `compensates_decision_id` member linking a compensating
   action's decision to the original decision identifier it reverses, so
   a compensation can be reconciled against the action it undoes.

@@ -399,6 +399,9 @@ export class McpPaymentsServer {
       action: res.effective.action,
       parameter_digest: digest,
       instance_epoch: tx.engine.instanceEpoch,
+      // @spec authzen `emitter`: the executing PEP identifies itself on the
+      // record it retains, same base as its decision/refusal records.
+      emitter: { id: CANONICAL_RESOURCE, role: "pep" },
       // @spec continuation: attribute the execution to the specific hop that
       // authorized it. Guarded on jti so non-JWT/older tokens are unaffected.
       ...(token.jti

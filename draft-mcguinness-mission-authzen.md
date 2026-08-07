@@ -1678,7 +1678,10 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
 : REQUIRED. An object. The identity of the component that emitted and
   signed this record, with members `id` (REQUIRED, a string identifying
   the emitting component) and `role` (REQUIRED, one of `pdp`, `pep`, or
-  `executor`). For Decision Evidence `role` is `pdp`. A verifier MUST
+  `executor`). For Decision Evidence `role` is `pdp`. A companion
+  profile MAY register coordinated additional roles (`harness`,
+  `egress`) for records emitted under these conventions at other
+  enforcement points. A verifier MUST
   bind the emitter's signing key to the enforcement scope and audience
   the record serves ({{decision-evidence-integrity}}).
 
