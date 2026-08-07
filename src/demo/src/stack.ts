@@ -12,6 +12,7 @@ import {
   CatalogProvider,
   type DeferralStore,
   issueCrossDomainGrant,
+  type IssuerEvidenceStore,
   MissionKernel,
   validateMissionIntent,
 } from "@mission/authorization-server";
@@ -64,6 +65,12 @@ export interface DemoStack {
   modelId: string;
   payments: PaymentsStore;
   evidence: EvidenceStore;
+  /** The egress gate's OWN evidence store (D32); the agent run's gate writes here
+   * so its records join the Activity Log without relocating the store. */
+  egressEvidence: EvidenceStore;
+  /** Issuer-side evidence (ingestion + Containment Evidence); set only on the
+   * auth-server path (the in-process kernel path retains none). */
+  issuerEvidence?: IssuerEvidenceStore;
   connectors: Connectors;
   pep: Pep;
   server: McpPaymentsServer;
@@ -133,6 +140,10 @@ export async function composeStack(opts: {
   let issuer: string;
   let serverJwks: { keys: Record<string, unknown>[] };
   let authServer: AuthServerExtras | undefined;
+  // Issuer-side evidence store; present only on the auth-server path (the real
+  // provider retains ingestion + Containment Evidence there). Exposed so the
+  // Activity Log join can read it (BuiltAs.issuerEvidence).
+  let issuerEvidenceStore: IssuerEvidenceStore | undefined;
 
   if (opts.withAuthServer) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
@@ -152,6 +163,7 @@ export async function composeStack(opts: {
     const asServer = as.provider.listen(asPort);
     kernel = as.kernel;
     issuer = asUrl;
+    issuerEvidenceStore = as.issuerEvidence;
     // The RS verifies real tokens against the AS's published public JWKS (the
     // as-txn public key is published there too; createLocalJWKSet resolves by kid).
     serverJwks = (await (await fetch(`${asUrl}/jwks`)).json()) as { keys: Record<string, unknown>[] };
@@ -233,6 +245,8 @@ export async function composeStack(opts: {
   );
 
   const evidence = new EvidenceStore();
+  // The egress gate's OWN store (D32); the agent run's EgressGate writes here.
+  const egressEvidence = new EvidenceStore();
   const connectors = new Connectors();
   const revokedInstances = new Set<string>();
 
@@ -324,6 +338,13 @@ export async function composeStack(opts: {
     producerJwks: { keys: [producerPub as never] },
     serviceJwks: { keys: [tPub as never] },
     receiptFor: (s: SignedStatement) => receipts.get(s.jws),
+    // @spec activity-log — the joined read-view reads the producer-retained
+    // stores in place (D32): the PEP/transaction store, the egress gate store,
+    // and (auth-server path only) the issuer store. No store is relocated.
+    activity: {
+      evidence: [evidence, egressEvidence],
+      ...(issuerEvidenceStore ? { issuerEvidence: issuerEvidenceStore } : {}),
+    },
   });
 
   const catalog = new CatalogProvider(kernel, CATALOG_SERVICES, { arsIntakeUrl: TOPOLOGY.endpoints.arsIntake, issuer });
@@ -334,6 +355,8 @@ export async function composeStack(opts: {
     modelId,
     payments,
     evidence,
+    egressEvidence,
+    ...(issuerEvidenceStore ? { issuerEvidence: issuerEvidenceStore } : {}),
     connectors,
     pep,
     server,
