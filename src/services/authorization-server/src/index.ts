@@ -421,6 +421,7 @@ export async function buildAuthorizationServer(opts: {
     subjectResolver,
     continuationGrantKey: continuationKeys.privateKey,
     continuationGrantKid: asContinuation.kid,
+    templateStore,
     ...(opts.resourceTxnJwks ? { resourceTxnJwks: opts.resourceTxnJwks } : {}),
     ...(opts.ars ? { ars: opts.ars } : {}),
   });

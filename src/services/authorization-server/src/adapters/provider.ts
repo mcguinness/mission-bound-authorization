@@ -5,7 +5,13 @@
  */
 
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { DEV_SERVICE_TOKEN, USERS, WRITE_ACTIONS } from "@mission/demo-data";
+import {
+  DERIVATION_POLICY,
+  DEV_SERVICE_TOKEN,
+  DISPATCH_PROHIBITED_ACTIONS,
+  USERS,
+  WRITE_ACTIONS,
+} from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createLocalJWKSet,
@@ -54,6 +60,15 @@ import {
 import type { ContinuationIssuer } from "../kernel/continuation-assertion.js";
 import type { ContinuationStore } from "../kernel/continuation-store.js";
 import type { DelegationFamilyStore } from "../kernel/delegation-family-store.js";
+import {
+  createTemplate,
+  dispatchFromTemplate,
+  DispatchError,
+  TemplateError,
+  type CreateTemplateInput,
+  type DispatchReason,
+} from "../kernel/template.js";
+import type { TemplateStore } from "../kernel/template-store.js";
 
 /**
  * IMPL-LOCAL grant type for Child Mission CREATION on the real /token endpoint.
@@ -67,6 +82,15 @@ import type { DelegationFamilyStore } from "../kernel/delegation-family-store.js
  * the child redeems AS ITSELF).
  */
 export const CHILD_CREATION_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-child-creation";
+
+/**
+ * @spec mission-template#dispatch — the impl-local grant type a dispatcher
+ * redeems at /token to instantiate an ordinary Mission from a Mission
+ * Template (dispatchFromTemplate). Mirrors CHILD_CREATION_GRANT_TYPE's shape
+ * (an implementation choice on top of "no new endpoints when /token carries
+ * it"); distinct from both child-creation and child-redemption grant types.
+ */
+export const MISSION_DISPATCH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-dispatch";
 
 export interface AdapterOptions {
   issuer: string;
@@ -147,6 +171,8 @@ export interface AdapterOptions {
    */
   continuationGrantKey?: CryptoKey;
   continuationGrantKid?: string;
+  /** Template store backing mission-dispatch + the /templates admin routes. */
+  templateStore?: TemplateStore;
 }
 
 /**
@@ -499,6 +525,16 @@ export function buildProvider(opts: AdapterOptions): Provider {
     CHILD_CREATION_GRANT_TYPE,
     (ctx) => handleChildCreationGrant(provider, opts, ctx),
     new Set(["request_uri"]),
+  );
+
+  // @spec mission-template#dispatch — instantiate an ordinary Mission from a
+  // Mission Template at /token. Every param the handler reads MUST be
+  // declared here or stripGrantIrrelevantParams removes it from
+  // ctx.oidc.params (pinned empirically on the other custom grants).
+  provider.registerGrantType(
+    MISSION_DISPATCH_GRANT_TYPE,
+    (ctx) => handleMissionDispatchGrant(provider, opts, ctx),
+    new Set(["template_id", "mission_intent", "dispatch_event_id"]),
   );
 
   // @spec id-continuation-assertion — the RFC 8693 token-exchange grant: an ICA
@@ -1073,6 +1109,64 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     // bespoke back-channel POST /child-missions route was retired in favour of that
     // existing OAuth surface; see handleChildCreationGrant.
 
+    // --- Mission Template admin plane (@spec mission-template) ---
+    // POST /templates -- create a Mission Template (service-token admin plane).
+    // Demo/test stand-in: a real deployment runs template consent through the full
+    // approval + consent-evidence surface.
+    if (ctx.path === "/templates" && ctx.method === "POST") {
+      if (!requireServiceToken(ctx)) return;
+      if (!opts.templateStore) {
+        ctx.status = 501;
+        ctx.body = { error: "temporarily_unavailable" };
+        return;
+      }
+      const body = await readJsonBody(ctx.req);
+      try {
+        const template = createTemplate(opts.templateStore, body as unknown as CreateTemplateInput);
+        ctx.status = 201;
+        ctx.body = {
+          template_id: template.id,
+          template_version: template.template_version,
+          template_hash: template.template_hash,
+        };
+      } catch (e) {
+        if (e instanceof TemplateError) {
+          ctx.status = 400;
+          ctx.body = { error: "invalid_request", error_description: e.message };
+        } else {
+          throw e;
+        }
+      }
+      return;
+    }
+    // POST /templates/:id/lifecycle -- revoke. (No expire() accessor exists; expiry is
+    // evaluated from expires_at at dispatch time. No conflict state exists yet either.)
+    const templateLifecycleMatch = ctx.path.match(/^\/templates\/([^/]+)\/lifecycle$/);
+    if (templateLifecycleMatch && ctx.method === "POST") {
+      if (!requireServiceToken(ctx)) return;
+      if (!opts.templateStore) {
+        ctx.status = 501;
+        ctx.body = { error: "temporarily_unavailable" };
+        return;
+      }
+      const id = templateLifecycleMatch[1] as string;
+      const body = await readJsonBody(ctx.req);
+      if (!opts.templateStore.get(id)) {
+        ctx.status = 404;
+        ctx.body = { error: "unknown_template" };
+        return;
+      }
+      if (body.operation === "revoke") {
+        opts.templateStore.revoke(id);
+        ctx.status = 200;
+        ctx.body = { template_id: id, state: opts.templateStore.get(id)?.state };
+        return;
+      }
+      ctx.status = 400;
+      ctx.body = { error: "unsupported_operation", error_description: "only revoke is supported; expiry is time-based via expires_at" };
+      return;
+    }
+
     await next();
 
     // --- AS metadata flags (@spec mission#as-metadata) ---
@@ -1379,6 +1473,24 @@ function childErrorCode(reason: ChildDenialReason): string {
 }
 
 /**
+ * @spec mission-template#dispatch-refusals — map a symbolic dispatch denial
+ * reason to its layered OAuth error code: `dispatcher_not_allowed`/
+ * `recipient_not_allowed`/`template_not_active` ride `access_denied`;
+ * `out_of_template_ceiling`/`dispatch_prohibited_class`/`max_active_exceeded`/
+ * `rate_exceeded` ride `invalid_request`.
+ */
+function dispatchErrorCode(reason: DispatchReason): "invalid_request" | "access_denied" {
+  switch (reason) {
+    case "dispatcher_not_allowed":
+    case "recipient_not_allowed":
+    case "template_not_active":
+      return "access_denied";
+    default: // out_of_template_ceiling, dispatch_prohibited_class, max_active_exceeded, rate_exceeded
+      return "invalid_request";
+  }
+}
+
+/**
  * @spec child-delegation#child-creation, #request-processing, #protocol-flow — the
  * child-creation handler, now on the real /token endpoint as the impl-local
  * CHILD_CREATION_GRANT_TYPE grant. The parent has already pushed the child-creation
@@ -1544,6 +1656,179 @@ async function handleChildCreationGrant(provider: Provider, opts: AdapterOptions
     grant_type: CHILD_JWT_BEARER_GRANT_TYPE,
     assertion,
   };
+}
+
+/**
+ * @spec mission-template#dispatch — instantiate an ordinary Mission from a
+ * Mission Template and mint a DPoP-bound mission-bound access token for it,
+ * in ONE /token round trip (unlike child-creation + child-redemption, which
+ * are two separate grants). The dispatcher (ap-agent) is the AUTHENTICATED
+ * client (private_key_jwt ran before this handler); the recipient named on
+ * the template becomes the instance's client_id, but the Grant/AccessToken
+ * are owned by the DISPATCHER (the entity actually redeeming here) so
+ * oidc-provider's same-client invariant holds. Denials set ctx.status/body
+ * DIRECTLY (status before body) so `mission_denial_reason` survives —
+ * oidc-provider's err_out renderer would otherwise strip any member other
+ * than error/error_description (same technique as handleChildCreationGrant).
+ */
+async function handleMissionDispatchGrant(
+  provider: Provider,
+  opts: AdapterOptions,
+  ctx: KoaContextWithOIDC,
+): Promise<void> {
+  const { kernel } = opts;
+  const store = opts.templateStore;
+  if (!store) {
+    ctx.status = 501;
+    ctx.body = { error: "temporarily_unavailable", error_description: "template store not configured" };
+    return;
+  }
+  const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+  const params = ctx.oidc.params as Record<string, unknown>;
+
+  const templateId = typeof params.template_id === "string" ? params.template_id : "";
+  const missionIntentRaw = typeof params.mission_intent === "string" ? params.mission_intent : "";
+  if (!templateId) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: "template_id required" };
+    return;
+  }
+  if (!missionIntentRaw) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: "mission_intent required" };
+    return;
+  }
+  const dispatchEventId =
+    typeof params.dispatch_event_id === "string" && params.dispatch_event_id
+      ? params.dispatch_event_id
+      : crypto.randomUUID();
+
+  // Resolve the template FIRST: we need its approver (to establish the subject)
+  // and its recipient BEFORE dispatch, and to control the unknown-template reply
+  // (dispatchFromTemplate throws a plain Error for unknown ids).
+  const template = store.get(templateId);
+  if (!template) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: "unknown template" };
+    return;
+  }
+  const recipient = template.recipients[0];
+  if (!recipient) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: "template names no recipient" };
+    return;
+  }
+
+  let intent: MissionIntent;
+  try {
+    intent = kernel.validateIntent(missionIntentRaw);
+  } catch (e) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: e instanceof Error ? e.message : "invalid mission_intent" };
+    return;
+  }
+
+  // Core-consistency: the Dispatcher does NOT name the Subject; the Issuer
+  // establishes it. The template carries the consenting human (approver); the
+  // subject is established from it (decide() defaults subject to approver, and
+  // read-only missions may self-approve, D37). Recipient comes from the template.
+  let record: MissionRecord;
+  try {
+    ({ mission: record } = dispatchFromTemplate(kernel, store, {
+      templateId,
+      dispatchEventId,
+      dispatcher: client.clientId,
+      recipient,
+      intent,
+      subject: { iss: template.issuer, sub: template.approver.sub },
+      policyVersion: DERIVATION_POLICY.policy_version,
+      dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,
+    }));
+  } catch (e) {
+    if (e instanceof DispatchError) {
+      const code = dispatchErrorCode(e.reason);
+      ctx.status = code === "access_denied" ? 403 : 400;
+      // Set status/body DIRECTLY (status before body) so mission_denial_reason
+      // survives oidc-provider's err_out renderer (same pattern as child creation).
+      ctx.body = { error: code, mission_denial_reason: e.reason };
+      ctx.set("cache-control", "no-store");
+      return;
+    }
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: e instanceof Error ? e.message : "dispatch failed" };
+    return;
+  }
+
+  // ---- mint mission-bound access token: INLINE COPY of handleChildJwtBearerGrant
+  // (~806-879). DPoP-bind from the request proof (unchanged). The Grant and the
+  // AccessToken are owned by `client` (the DISPATCHER, the authenticated entity
+  // here) rather than by `record.client_id` (the recipient, who is not present
+  // in this exchange) — the one substitution the child-bearer code does not need,
+  // because there record.client_id IS the authenticated client.
+  const proofJws = ctx.get("DPoP");
+  if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
+  let jkt: string;
+  try {
+    const header = decodeProtectedHeader(proofJws);
+    jkt = await calculateJwkThumbprint(header.jwk as JWK);
+    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
+    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
+      throw new Error("DPoP htu/htm mismatch");
+    }
+  } catch {
+    throw new errors.InvalidRequest("invalid DPoP proof");
+  }
+
+  // Containment: every copy of the instance's authority into rar/authorization_
+  // details projects the EFFECTIVE set (approved minus containment overlay).
+  const effective = kernel.effectiveAuthoritySet(record);
+  const resource = effective[0]?.resource ?? opts.issuer;
+  let grantId: string;
+  if (record.grant_id) {
+    grantId = record.grant_id;
+  } else {
+    const grant = new provider.Grant({ accountId: record.subject.sub, clientId: client.clientId });
+    grant.addOIDCScope("payments");
+    grant.addResourceScope(resource, "payments");
+    for (const entry of effective) {
+      (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
+    }
+    grantId = await grant.save();
+    kernel.bindGrant(record.id, grantId);
+  }
+
+  // Resource + TTL — mirror mintDeferredToken; clamp the TTL to the instance's
+  // expires_at so the mission-bound token never outlives the dispatched instance.
+  const info = resourceServerInfoFor(resource, opts.accessTokenTTL ?? 300);
+  info.accessTokenTTL = Math.min(
+    info.accessTokenTTL,
+    Math.max(1, Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000)),
+  );
+
+  // Mint — mirror mintDeferredToken. save() fires extraTokenClaims, which gates
+  // the derivation and attaches the mission `mission` claim exactly once.
+  const at = new provider.AccessToken({
+    accountId: record.subject.sub,
+    client,
+    grantId,
+    gty: MISSION_DISPATCH_GRANT_TYPE,
+    rar: effective,
+    scope: "payments",
+  });
+  at.resourceServer = newResourceServer(provider, resource, info);
+  at.jkt = jkt; // sender-constrain to the dispatcher's DPoP key (tokenType -> DPoP)
+  ctx.oidc.entity("AccessToken", at);
+  const jwt = await at.save();
+
+  ctx.status = 200;
+  ctx.body = {
+    access_token: jwt,
+    token_type: "DPoP",
+    expires_in: at.expiration,
+    mission_id: record.id,
+    authorization_details: effective,
+  };
+  ctx.set("cache-control", "no-store");
 }
 
 async function decide(
