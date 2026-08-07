@@ -10,7 +10,7 @@
  * break-glass path. OpenFGA-free: the PDP join lives in containment-pdp-e2e.
  */
 
-import { type Server } from "node:http";
+import type { Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, type SeededTrustedSource } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -153,6 +153,21 @@ describe("protected-event ingestion: JWS source verification -> deterministic co
     expect(rec).toHaveLength(1);
     expect(rec[0]).toMatchObject({ outcome: "rejected", rejection_reason: "unknown_event_type", advisory: true });
     expect(as.issuerEvidence.forMission(m.id).containment).toHaveLength(0);
+  });
+
+  it("unknown event_type from a NON-advisory source -> 422, rejected record with advisory absent", async () => {
+    const m = approve();
+    const before = as.kernel.get(m.id)?.version;
+    // svc:soc is trusted for content.integrity_alert (a class it reports) but NO
+    // rule maps it -> 422, proving the 422 path is independent of advisory.
+    const jws = await sign(soc, eventPayload(m.id, "content.integrity_alert", "svc:soc", "ev-422-nonadv-1"));
+    const { status, body } = await post(m.id, jws);
+    expect(status, JSON.stringify(body)).toBe(422);
+    expect(body.rejection_reason).toBe("unknown_event_type");
+    expect(as.kernel.get(m.id)?.version).toBe(before);
+    const rec = as.issuerEvidence.forMission(m.id).ingestion[0];
+    expect(rec?.outcome).toBe("rejected");
+    expect(rec?.advisory).toBeUndefined(); // non-advisory source -> no advisory stamp
   });
 
   it("bad signature -> 403 + rejected record", async () => {

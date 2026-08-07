@@ -17,7 +17,6 @@ import {
   createLocalJWKSet,
   decodeJwt,
   decodeProtectedHeader,
-  importJWK,
   jwtVerify,
   type CryptoKey,
   type JWK,

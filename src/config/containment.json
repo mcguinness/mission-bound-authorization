@@ -15,7 +15,7 @@
   "sources": [
     {
       "source": "svc:soc",
-      "event_types": ["content.tainted_read"],
+      "event_types": ["content.tainted_read", "content.integrity_alert"],
       "key": { "kid": "soc-source-es256", "alg": "ES256" }
     },
     {
