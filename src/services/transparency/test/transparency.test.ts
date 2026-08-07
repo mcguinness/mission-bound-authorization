@@ -127,6 +127,44 @@ describe("M10 scenario 11: transparent audit + tamper demo", () => {
     expect(res).toEqual({ ok: false, step: 3, reason: expect.stringContaining("inclusion") });
   });
 
+  it("the continuation hop_reference is committed by the receipt digest (drop fails at step 5)", async () => {
+    // Execution Evidence taken under a continued credential (@spec continuation):
+    // the hop_reference is an ordinary evidence field, so it enters the digest.
+    const withHop = {
+      kind: "execution",
+      op_key: "op:hop",
+      outcome: "committed",
+      mission_id: MISSION,
+      hop_reference: { jti: "jag_hopref", mission_id: MISSION, continuation_handle: "ich_0123456789abcdefABCD" },
+    };
+    const stmt = await signStatement(pep, { missionId: MISSION, evidenceType: "execution-evidence", evidence: withHop });
+    const rcpt = await service.register(stmt);
+
+    // A genuine record verifies end to end.
+    const genuine = await verifyTransparentStatement({
+      statement: stmt,
+      receipt: rcpt,
+      evidence: withHop,
+      producerJwks,
+      serviceJwks,
+      expectedMissionId: MISSION,
+    });
+    expect(genuine).toEqual({ ok: true });
+
+    // Dropping hop_reference re-hashes to a different digest: the receipt commits
+    // to the field, so the five-step check fails at step 5.
+    const withoutHop = { kind: "execution", op_key: "op:hop", outcome: "committed", mission_id: MISSION };
+    const tampered = await verifyTransparentStatement({
+      statement: stmt,
+      receipt: rcpt,
+      evidence: withoutHop,
+      producerJwks,
+      serviceJwks,
+      expectedMissionId: MISSION,
+    });
+    expect(tampered).toEqual({ ok: false, step: 5, reason: expect.stringContaining("digest") });
+  });
+
   it("wrong mission subject fails at step 4", async () => {
     const res = await verifyTransparentStatement({
       statement: stmtE,

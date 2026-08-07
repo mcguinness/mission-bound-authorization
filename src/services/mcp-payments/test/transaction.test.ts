@@ -177,6 +177,43 @@ d("M5 transaction-assurance tier", () => {
     expect(report.evidenceWithoutLedger).toEqual([]);
   });
 
+  it("execution under a continued credential records the hop_reference", async () => {
+    // A Mission credential carrying a jti and an identity-continuation handle.
+    const HANDLE = "ich_0123456789abcdefABCD";
+    const JTI = "jag_hopref_unit";
+    const continued: TokenFacts = { ...TOKEN, jti: JTI, identityContinuationHandle: HANDLE };
+    const { server, evidence } = build();
+
+    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, continued);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+
+    const exec = evidence.forMission("msn_m5").find((e) => e.kind === "execution");
+    expect(exec?.hop_reference).toEqual({ jti: JTI, mission_id: "msn_m5", continuation_handle: HANDLE });
+  });
+
+  it("execution under a jti-bearing credential with no continuation handle omits continuation_handle", async () => {
+    const JTI = "jag_hopref_no_handle";
+    const continued: TokenFacts = { ...TOKEN, jti: JTI };
+    const { server, evidence } = build();
+
+    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, continued);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+
+    const exec = evidence.forMission("msn_m5").find((e) => e.kind === "execution");
+    expect(exec?.hop_reference).toEqual({ jti: JTI, mission_id: "msn_m5" });
+  });
+
+  it("execution under a non-JWT credential (no jti) omits hop_reference entirely", async () => {
+    // The existing TOKEN carries no jti: the field is guarded, so unaffected.
+    const { server, evidence } = build();
+
+    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+
+    const exec = evidence.forMission("msn_m5").find((e) => e.kind === "execution");
+    expect(exec?.hop_reference).toBeUndefined();
+  });
+
   it("replayed permit is refused as permit_consumed and does not double-execute", async () => {
     const { server, connectors } = build();
     const first = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);

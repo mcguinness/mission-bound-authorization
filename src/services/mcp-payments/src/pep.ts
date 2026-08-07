@@ -38,6 +38,17 @@ export interface TokenFacts {
   mission: { id: string; authority_hash: string };
   cnfJkt: string;
   /**
+   * @spec continuation: the access token's `jti`, carried so an action taken
+   * under a continued credential attributes to the specific hop (below).
+   * Absent for non-JWT or older tokens.
+   */
+  jti?: string;
+  /**
+   * @spec continuation: the token's top-level `identity_continuation_handle`
+   * when present (the new-hop continuation handle from the ID-JAG lineage).
+   */
+  identityContinuationHandle?: string;
+  /**
    * @spec attenuation#mission-binding-check: present when the credential was a
    * Mission-bound Attenuating Agent Token chain. The effective authority is the
    * leaf's narrowed tools, expressed as {resource, actions}; an action within
