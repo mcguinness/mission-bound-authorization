@@ -44,6 +44,7 @@ export interface EvaluationRequest {
 
 export type DenialReason =
   | "out_of_authority"
+  | "authority_contained"
   | "stale_state"
   | "view_inconsistent"
   | "mission_inactive"
@@ -144,6 +145,25 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     (e) => e.resource === req.context.audience && e.actions.includes(req.action.name),
   );
   if (!entry) return deny("out_of_authority");
+
+  // 5a. Containment overlay: the entry WAS approved (step 5 matched), but the
+  //     containment delta covers this (resource, action) pair, so the issuer
+  //     narrowed the effective authority after approval. Ordering is
+  //     load-bearing: `out_of_authority` (step 5) stays "never approved";
+  //     `authority_contained` means "approved, trust lost". A contained entry
+  //     with no `actions` contains all the entry's actions.
+  const containment = view.containment;
+  if (containment) {
+    const contained = containment.contained.some(
+      (c) => c.resource === entry.resource && (c.actions === undefined || c.actions.includes(req.action.name)),
+    );
+    if (contained) {
+      return {
+        decision: false,
+        context: base({ denial_reason: "authority_contained", containment_version: containment.version }),
+      };
+    }
+  }
 
   const mapping = opts.relationForAction(req.action.name);
   if (!mapping) return deny("out_of_authority");

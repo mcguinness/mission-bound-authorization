@@ -25,6 +25,15 @@ export interface MissionView {
   version: number;
   authority_hash: string;
   authority_set: AuthorityEntry[];
+  /**
+   * The containment DELTA (what was removed), not a filtered authority set:
+   * carrying the delta lets the PDP distinguish never-approved
+   * (`out_of_authority`) from approved-then-contained (`authority_contained`).
+   * A contained entry with no `actions` covers ALL the entry's actions.
+   * `policyViewId` needs no containment input: it already commits
+   * `mission_version`, which every contain transition bumps.
+   */
+  containment?: { version: number; contained: Array<{ resource: string; actions?: string[] }> };
 }
 
 export function policyViewId(view: MissionView, modelId: string): string {
