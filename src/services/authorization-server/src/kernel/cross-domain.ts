@@ -10,7 +10,8 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { SignJWT, type CryptoKey } from "jose";
+import type { ActObject } from "@mission/actor-chain";
+import { SignJWT, type CryptoKey, type JWTPayload } from "jose";
 import type { MissionKernel } from "./kernel.js";
 import type { AuthorityEntry, MissionRecord } from "./types.js";
 
@@ -41,6 +42,32 @@ export interface IssueGrantInput {
   /** Presenting client's DPoP key thumbprint (sender-constraint, cnf.jkt). */
   cnfJkt: string;
   resourceToAs: (resource: string) => string;
+  /**
+   * @spec id-continuation-assertion: optional, opt-in continuation extensions.
+   * When every field below is omitted the emitted ID-JAG is byte-identical to
+   * the legacy grant (this is the same code path, not a sibling emitter).
+   */
+  /**
+   * Audience-local subject. When present it REPLACES `record.subject.sub` as
+   * the ID-JAG's `sub`. The deterministic resolver that computes it lives in
+   * the caller (a later PR); here the value is consumed verbatim.
+   */
+  sub?: string;
+  /**
+   * Fresh new-hop continuation handle, minted by the caller. Emitted as the
+   * top-level `identity_continuation_handle` claim; never generated here.
+   */
+  identityContinuationHandle?: string;
+  /**
+   * Pre-built, already-collapsed `act` lineage (the caller builds/collapses it
+   * with `extendChainCollapsing`). Emitted verbatim as the `act` claim.
+   */
+  act?: ActObject;
+  /**
+   * Root auth envelope, carried not refreshed. Present sub-fields are emitted
+   * as top-level `auth_time`/`acr`/`amr`; absent sub-fields are omitted.
+   */
+  authEnvelope?: { auth_time?: number; acr?: string; amr?: string[] };
 }
 
 /**
@@ -65,7 +92,11 @@ export async function issueCrossDomainGrant(
   const exp = Math.min(nowS + MAX_GRANT_LIFETIME_S, missionExp);
   const jti = `jag_${randomBytes(12).toString("base64url")}`;
 
-  const grant = await new SignJWT({
+  // The five legacy claims, in their legacy insertion order. `sub` defaults to
+  // the GLOBAL subject; an audience-local `sub` (when passed) replaces it. Any
+  // continuation claims below are appended AFTER these, so a legacy call (all
+  // continuation fields omitted) serializes byte-identically to before.
+  const payload: JWTPayload = {
     mission: {
       id: record.id,
       issuer: record.issuer,
@@ -73,10 +104,25 @@ export async function issueCrossDomainGrant(
     },
     authorization_details: scoped,
     cnf: { jkt: input.cnfJkt },
-    sub: record.subject.sub,
+    sub: input.sub !== undefined ? input.sub : record.subject.sub,
     // @spec ID-JAG §3.1: the acting client at the requesting AS.
     client_id: input.clientId,
-  })
+  };
+  // @spec id-continuation-assertion: opt-in continuation claims.
+  if (input.identityContinuationHandle !== undefined) {
+    payload.identity_continuation_handle = input.identityContinuationHandle;
+  }
+  if (input.act !== undefined) {
+    payload.act = input.act;
+  }
+  if (input.authEnvelope !== undefined) {
+    // Root envelope carried unchanged; omit any absent sub-field.
+    if (input.authEnvelope.auth_time !== undefined) payload.auth_time = input.authEnvelope.auth_time;
+    if (input.authEnvelope.acr !== undefined) payload.acr = input.authEnvelope.acr;
+    if (input.authEnvelope.amr !== undefined) payload.amr = input.authEnvelope.amr;
+  }
+
+  const grant = await new SignJWT(payload)
     .setProtectedHeader({ alg: "ES256", kid, typ: ID_JAG_TYP })
     .setIssuer(record.issuer)
     .setAudience(input.targetAs)
