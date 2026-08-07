@@ -482,6 +482,161 @@ export class MissionKernel {
     return this.setState(record, rule.to);
   }
 
+  /**
+   * Mission Containment: apply an issuer-committed, MONOTONIC narrowing of the
+   * Mission's effective authority. The approved `authority_set`/`authority_hash`
+   * are untouched; the new contained set is the UNION of the prior contained set
+   * and `remove` (removal-only; there is no removal API, restore is the
+   * Expansion successor path). Legal from `active` and `suspended`; refused from
+   * a terminal state. IDEMPOTENT by `event.event_id` (mirrors approve()'s
+   * approval_event_id): a repeat returns the current record with no version bump
+   * and no extra event row.
+   *
+   * The commit is metadata-only: `containment_json` and `version = version + 1`
+   * are updated atomically, then the lifecycle-commit hook fires from the
+   * persisted row with `prior_state` EQUAL to `state` (the fourth commit
+   * funnel), so the Status List and Mission Signals propagate the narrowing
+   * with no new channels.
+   */
+  contain(
+    id: string,
+    input: {
+      event: { type: string; source: string; observed_at: string; event_id: string };
+      remove: Array<{ resource: string; actions?: string[] }>;
+    },
+  ): { record: MissionRecord; evidence: ContainmentEvidence } {
+    const record = this.applyExpiry(this.mustGet(id));
+    if (TERMINAL_STATES.has(record.state)) {
+      throw new LifecycleConflictError(`contain is not legal from ${record.state}`);
+    }
+    if (!Array.isArray(input.remove) || input.remove.length === 0) {
+      throw new Error("contain requires a non-empty remove list");
+    }
+    const prior = record.containment;
+    const nowIso = this.now().toISOString();
+    const evidenceBase = {
+      mission: { id: record.id, issuer: record.issuer, authority_hash: record.authority_hash },
+      event: input.event,
+      policy: record.policy_version,
+      created_at: nowIso,
+    };
+
+    // Idempotency by event_id: a repeat returns the current record unchanged
+    // (no version bump, no extra event row) with a no-op evidence record
+    // (prior_* == new_*), mirroring approve()'s idempotent re-approval.
+    const applied = prior?.events.find((e) => e.event_id === input.event.event_id);
+    if (applied && prior) {
+      return {
+        record,
+        evidence: buildContainmentEvidence({
+          ...evidenceBase,
+          prior_version: record.version,
+          new_version: record.version,
+          prior_containment_version: prior.containment_version,
+          new_containment_version: prior.containment_version,
+          removed: applied.removed,
+        }),
+      };
+    }
+
+    // New contained set = UNION with the prior (monotonic). Merged by resource:
+    // an entry with no `actions` contains the whole resource and absorbs any
+    // per-action containment for it.
+    const merged = new Map<string, Set<string> | undefined>();
+    for (const e of prior?.contained ?? []) {
+      merged.set(e.resource, e.actions ? new Set(e.actions) : undefined);
+    }
+    for (const r of input.remove) {
+      if (!merged.has(r.resource)) {
+        merged.set(r.resource, r.actions ? new Set(r.actions) : undefined);
+        continue;
+      }
+      const cur = merged.get(r.resource);
+      if (cur === undefined) continue; // whole resource already contained
+      if (!r.actions) {
+        merged.set(r.resource, undefined);
+      } else {
+        for (const a of r.actions) cur.add(a);
+      }
+    }
+    const contained = [...merged.entries()].map(([resource, actions]) =>
+      actions ? { resource, actions: [...actions] } : { resource },
+    );
+    const eventRecord: ContainmentEventRecord = {
+      type: input.event.type,
+      source: input.event.source,
+      observed_at: input.event.observed_at,
+      event_id: input.event.event_id,
+      removed: input.remove.map((r) => ({
+        resource: r.resource,
+        ...(r.actions ? { actions: [...r.actions] } : {}),
+      })),
+    };
+    const next: MissionContainment = {
+      containment_version: (prior?.containment_version ?? 0) + 1,
+      contained,
+      events: [...(prior?.events ?? []), eventRecord],
+    };
+
+    // Belt-and-suspenders: the union construction above makes narrowing
+    // structural, but assert it anyway — the new effective set MUST be a subset
+    // of the prior effective set (containment only ever narrows).
+    const priorEffective = this.effectiveAuthoritySet(record);
+    const newEffective = this.effectiveAuthoritySet({ ...record, containment: next });
+    if (!isSubsetSet(newEffective, priorEffective)) {
+      throw new Error(`containment for ${id} would widen the effective set (monotonicity violated)`);
+    }
+
+    withTransaction(this.db, () => {
+      this.db
+        .prepare("UPDATE missions SET containment_json = ?, version = version + 1 WHERE id = ?")
+        .run(JSON.stringify(next), record.id);
+    });
+    // Commit from the persisted row; prior == current state marks the commit
+    // metadata-only (state unchanged, version incremented).
+    const fresh = this.get(record.id);
+    if (!fresh) throw new Error(`unknown mission: ${id}`);
+    this.emitCommit(fresh, fresh.state);
+    return {
+      record: fresh,
+      evidence: buildContainmentEvidence({
+        ...evidenceBase,
+        prior_version: record.version,
+        new_version: fresh.version,
+        prior_containment_version: prior?.containment_version ?? 0,
+        new_containment_version: next.containment_version,
+        removed: eventRecord.removed,
+      }),
+    };
+  }
+
+  /**
+   * The Mission's EFFECTIVE Authority Set: the approved set minus the
+   * containment overlay. An entry whose actions are all contained (or whose
+   * resource is contained with no `actions` member) is dropped; otherwise the
+   * contained actions are filtered out. FAST PATH: a Mission with no
+   * containment returns the approved set as-is (byte-identical behavior).
+   * `authority_hash` always commits the approved set; containment is evaluated
+   * state, never a new hash.
+   */
+  effectiveAuthoritySet(record: MissionRecord): AuthorityEntry[] {
+    const containment = record.containment;
+    if (!containment) return record.authority_set;
+    const out: AuthorityEntry[] = [];
+    for (const entry of record.authority_set) {
+      const contained = containment.contained.find((c) => c.resource === entry.resource);
+      if (!contained) {
+        out.push(entry);
+        continue;
+      }
+      if (!contained.actions) continue; // whole resource contained -> entry dropped
+      const actions = entry.actions.filter((a) => !(contained.actions as string[]).includes(a));
+      if (actions.length === 0) continue; // every action contained -> entry dropped
+      out.push({ ...entry, actions });
+    }
+    return out;
+  }
+
   /** @spec status#state-machine — expiry clock: active/suspended -> expired. */
   applyExpiry(record: MissionRecord): MissionRecord {
     if (
@@ -534,6 +689,11 @@ export class MissionKernel {
    */
   gateDerivation(id: string): MissionRecord {
     const record = this.gateActiveLineage(id);
+    // Containment gate: token derivation draws on the EFFECTIVE set; a fully
+    // contained Mission (empty effective set) has nothing left to derive.
+    if (record.containment && this.effectiveAuthoritySet(record).length === 0) {
+      throw new GateError("authority_contained", `mission ${id} effective authority is fully contained`);
+    }
     if (record.max_derivations !== null && record.derivation_count >= record.max_derivations) {
       throw new GateError("derivation_cap_exhausted", `mission ${id} derivation cap exhausted`);
     }
@@ -572,6 +732,8 @@ export class MissionKernel {
       ...this.missionClaim(fresh),
       state: fresh.state,
       version: fresh.version,
+      // Absent means no containment was ever applied (absent-means-none).
+      ...(fresh.containment ? { containment_version: fresh.containment.containment_version } : {}),
       ...this.statusListRef(fresh),
     };
   }
@@ -598,8 +760,10 @@ export class MissionKernel {
     const record = this.applyExpiry(this.mustGet(id));
     const nowS = Math.floor(this.now().getTime() / 1000);
     const freshness = opts.freshnessSeconds ?? 60;
+    // Audience-scoped entries project the EFFECTIVE set (approved minus
+    // containment); a contained entry never appears on the Status surface.
     const scoped = opts.audience
-      ? record.authority_set.filter((e) => e.resource === opts.audience)
+      ? this.effectiveAuthoritySet(record).filter((e) => e.resource === opts.audience)
       : undefined;
     const payload: Record<string, unknown> = {
       sub: record.client_id,
@@ -609,6 +773,9 @@ export class MissionKernel {
         version: record.version,
         expires_at: record.expires_at,
         fresh_until: new Date((nowS + freshness) * 1000).toISOString(),
+        ...(record.containment
+          ? { containment_version: record.containment.containment_version }
+          : {}),
         ...this.statusListRef(record),
       },
     };

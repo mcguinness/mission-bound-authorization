@@ -16,6 +16,12 @@ import { TERMINAL_STATES } from "./kernel/types.js";
 import type { LifecycleCommit, MissionRecord } from "./kernel/types.js";
 
 export { MissionKernel, GateError, LifecycleConflictError } from "./kernel/kernel.js";
+export {
+  buildContainmentEvidence,
+  containmentEvidenceBytes,
+  CONTAINMENT_EVIDENCE_MEDIA_TYPE,
+  type ContainmentEvidence,
+} from "./kernel/containment.js";
 export { validateMissionIntent, IntentError } from "./kernel/intent.js";
 export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
 export * from "./kernel/types.js";
