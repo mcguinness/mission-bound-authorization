@@ -1,5 +1,5 @@
 import { authorityHash } from "@mission/core";
-import { DERIVATION_POLICY } from "@mission/demo-data";
+import { demoReconciliationTemplate, DERIVATION_POLICY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -336,5 +336,40 @@ describe("instance ordinariness (@spec mission-template#dispatch)", () => {
     });
     expect(exp.successor.state).toBe("active");
     expect(exp.predecessor).toBe(mission.id);
+  });
+
+  it("persists the template lineage: kernel.get round-trips MissionRecord.template", () => {
+    const t = mkTemplate();
+    const { mission } = dispatch(t.id);
+    // Reads through rowToRecord (the schema's template_json column), not the
+    // in-memory record dispatch returned.
+    const persisted = kernel.get(mission.id);
+    expect(persisted?.template).toEqual(mission.template);
+    expect(persisted?.template?.id).toBe(t.id);
+  });
+});
+
+describe("seeded demo reconciliation template (@spec mission-template)", () => {
+  it("createTemplate accepts the demo descriptor and it dispatches a read-only instance", () => {
+    // The artifact the wire PR + demo consume: prove it both constructs AND
+    // dispatches, against the same DERIVATION_POLICY the demo AS uses.
+    const t = createTemplate(store, demoReconciliationTemplate(ISS) as never);
+    const { mission } = dispatchFromTemplate(kernel, store, {
+      templateId: t.id,
+      dispatchEventId: "demo-dsp-1",
+      dispatcher: "ap-agent",
+      recipient: "subagent-invoice-extractor",
+      intent: intentOf(["payments:invoice.read", "payments:vendor.read"]),
+      subject: { iss: ISS, sub: "alice" },
+      policyVersion: POLICY_VERSION,
+    });
+    expect(mission.state).toBe("active");
+    expect(mission.client_id).toBe("subagent-invoice-extractor");
+    expect(mission.approver).toEqual({ iss: ISS, sub: "bob" });
+    // Read-only: no write/execute action survives the template ceiling.
+    const actions = mission.authority_set.flatMap((e) => e.actions);
+    expect(actions).toContain("payments:invoice.read");
+    expect(actions).not.toContain("payments:payment.execute");
+    expect(actions).not.toContain("payments:payment.schedule");
   });
 });

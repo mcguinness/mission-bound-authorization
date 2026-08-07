@@ -200,9 +200,19 @@ export function dispatchFromTemplate(
 
   // a. Idempotency: a caller-supplied dispatch id makes retries idempotent.
   // Checked BEFORE the gates so a retry after the template was revoked/expired
-  // still returns the instance the first dispatch created.
+  // still returns the instance the first dispatch created. `approval_event_id`
+  // is globally unique, so guard the pathological case of the SAME dispatch id
+  // reused against a DIFFERENT template (which would otherwise silently return a
+  // mismatched {mission, template} pair).
   const existing = kernel.findByApprovalEvent(approvalEventId);
-  if (existing) return { mission: existing, template };
+  if (existing) {
+    if (existing.template?.id !== template.id) {
+      throw new Error(
+        `dispatch event ${input.dispatchEventId} is already bound to template ${existing.template?.id}`,
+      );
+    }
+    return { mission: existing, template };
+  }
 
   const nowMs = kernel.nowDate().getTime();
 

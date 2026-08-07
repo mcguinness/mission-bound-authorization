@@ -150,6 +150,13 @@ function rowToTemplate(row: TemplateRow): MissionTemplate {
 
 export class TemplateStore {
   readonly db: Database;
+  /**
+   * `now` MUST agree with the kernel's clock: `dispatchFromTemplate` computes
+   * the rate window from `kernel.nowDate()` and compares it against
+   * `dispatch_events.created_at` stamped here. In production both default to
+   * `new Date()`; a caller that injects a clock should inject the SAME one into
+   * both, or the rate / max-active bounds evaluate against a skewed window.
+   */
   constructor(private readonly now: () => Date = () => new Date()) {
     this.db = openStore(SCHEMA);
   }
