@@ -165,6 +165,47 @@ describe("M10 scenario 11: transparent audit + tamper demo", () => {
     expect(tampered).toEqual({ ok: false, step: 5, reason: expect.stringContaining("digest") });
   });
 
+  it("emitter and entry_digest are committed by the receipt digest (drop fails at step 5)", async () => {
+    // Decision Evidence on the unified base (@spec authzen decision-evidence
+    // object): emitter and entry_digest are ordinary evidence fields, so they
+    // enter the digest with no transparency-service code change.
+    const withEmitter = {
+      kind: "decision",
+      decision: true,
+      action: "payments:payment.execute",
+      parameter_digest: "sha-256:pd",
+      mission_id: MISSION,
+      emitter: { id: "https://pep.test/mcp", role: "pep" },
+      entry_digest: "sha-256:entrydigest",
+    };
+    const stmt = await signStatement(pdp, { missionId: MISSION, evidenceType: "decision-evidence", evidence: withEmitter });
+    const rcpt = await service.register(stmt);
+
+    // A genuine record verifies end to end.
+    const genuine = await verifyTransparentStatement({
+      statement: stmt,
+      receipt: rcpt,
+      evidence: withEmitter,
+      producerJwks,
+      serviceJwks,
+      expectedMissionId: MISSION,
+    });
+    expect(genuine).toEqual({ ok: true });
+
+    // Dropping emitter re-hashes to a different digest: the receipt commits
+    // to the field, so the five-step check fails at step 5.
+    const { emitter: _dropped, ...withoutEmitter } = withEmitter;
+    const tampered = await verifyTransparentStatement({
+      statement: stmt,
+      receipt: rcpt,
+      evidence: withoutEmitter,
+      producerJwks,
+      serviceJwks,
+      expectedMissionId: MISSION,
+    });
+    expect(tampered).toEqual({ ok: false, step: 5, reason: expect.stringContaining("digest") });
+  });
+
   it("wrong mission subject fails at step 4", async () => {
     const res = await verifyTransparentStatement({
       statement: stmtE,

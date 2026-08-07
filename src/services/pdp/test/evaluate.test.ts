@@ -4,6 +4,7 @@
  * deny within bound. Skipped automatically when OpenFGA is unreachable.
  */
 
+import { AUTHORITY_ENTRY_TYP, computeAnchor } from "@mission/core";
 import { generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { Fga } from "../src/fga.js";
@@ -83,6 +84,16 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
     expect(dec.context.policy_view_id).toMatch(/^sha-256:/);
     expect(dec.context.decision_id).toBeDefined();
+  });
+
+  it("a permit's context carries the entry_digest resolved-scope anchor", async () => {
+    const v = view();
+    const dec = await evaluate(req(), opts(v));
+    expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+    // Recomputes over the Authority Set entry the PDP matched, issuer-bound.
+    expect(dec.context.entry_digest).toBe(
+      computeAnchor(AUTHORITY_ENTRY_TYP, v.issuer, v.authority_set[0] as never),
+    );
   });
 
   it("in-authority execute under the cap -> permit with single_use for irreversible", async () => {
