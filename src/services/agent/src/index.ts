@@ -22,7 +22,12 @@ export {
   signScopeStatement,
   verifyScopeStatement,
 } from "./harness-scope.js";
-export { EgressGate, type EgressDecision, type EgressGateConfig } from "./egress-gate.js";
+export {
+  EgressGate,
+  type EgressDecision,
+  type EgressGateConfig,
+  type EgressRefusal,
+} from "./egress-gate.js";
 export {
   createMediatedHarness,
   createStatusMediatedHarness,

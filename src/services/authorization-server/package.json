@@ -10,6 +10,7 @@
   "dependencies": {
     "@mission/core": "workspace:*",
     "@mission/demo-data": "workspace:*",
+    "@mission/mcp-payments": "workspace:*",
     "@mission/store": "workspace:*",
     "@mission/telemetry": "workspace:*",
     "jose": "^6.1.3",

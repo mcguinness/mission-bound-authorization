@@ -11,5 +11,18 @@
         }
       ]
     }
+  ],
+  "sources": [
+    {
+      "source": "svc:soc",
+      "event_types": ["content.tainted_read"],
+      "key": { "kid": "soc-source-es256", "alg": "ES256" }
+    },
+    {
+      "source": "svc:harness-egress",
+      "event_types": ["egress.destination_unlisted", "egress.undeclared"],
+      "key": { "kid": "harness-egress-es256", "alg": "ES256" },
+      "advisory": true
+    }
   ]
 }

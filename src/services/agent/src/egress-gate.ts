@@ -36,6 +36,25 @@ import {
 } from "./harness-scope.js";
 import { resumeGuard } from "./mediated-harness.js";
 
+/**
+ * @spec containment#containment-plane (low-trust advisory class) — the refusal a
+ * harness may FORWARD as a harness-sourced protected event. The in-process
+ * egress gate does NOT sign or POST anything itself (its scope statement
+ * declares `containment_claim: "none"`); it only surfaces the refusal through
+ * this callback so a harness can forward it as an ADVISORY, low-trust report.
+ * Carries the two channel/destination refusal classes only, never the
+ * mission-state guard's refusals.
+ */
+export interface EgressRefusal {
+  channel_class: string;
+  destination: string;
+  /** `egress_undeclared:*` or `egress_destination_unlisted:*`. */
+  refusal_reason: string;
+  mission_id: string;
+  /** The published scope statement's digest, joining the refusal to the claim. */
+  scope_statement_digest: string;
+}
+
 /** The gate's verdict for one egress request. */
 export interface EgressDecision {
   permitted: boolean;
@@ -69,6 +88,15 @@ export interface EgressGateConfig {
   instanceEpoch: string;
   /** The Mission's Authority Set commitment, when known ("unknown" otherwise). */
   authorityHash?: string;
+  /**
+   * @spec containment#containment-plane — OPTIONAL harness reporter seam. Fires
+   * ONLY on the two channel/destination refusals (`egress_undeclared` /
+   * `egress_destination_unlisted`), never on the mission-state guard's
+   * refusals, so a harness can forward the refusal as an ADVISORY (low-trust)
+   * protected event. The gate never signs or POSTs; forwarding is the harness's
+   * job. A throw here is swallowed (this is a fail-closed security component).
+   */
+  onRefusal?: (refusal: EgressRefusal) => void;
 }
 
 /** The origin of a destination URL, or undefined when it does not parse. */
@@ -136,14 +164,42 @@ export class EgressGate {
     }
     const allowed = this.mediated.get(channel_class);
     if (allowed === undefined) {
-      return this.refuse(channel_class, destination, `egress_undeclared:${channel_class}`);
+      const reason = `egress_undeclared:${channel_class}`;
+      const decision = this.refuse(channel_class, destination, reason);
+      this.reportRefusal(channel_class, destination, reason);
+      return decision;
     }
     const origin = originOf(destination);
     if (origin === undefined || !allowed.has(origin)) {
-      return this.refuse(channel_class, destination, `egress_destination_unlisted:${origin ?? destination}`);
+      const reason = `egress_destination_unlisted:${origin ?? destination}`;
+      const decision = this.refuse(channel_class, destination, reason);
+      this.reportRefusal(channel_class, destination, reason);
+      return decision;
     }
     this.record(channel_class, destination, "permitted");
     return { permitted: true };
+  }
+
+  /**
+   * Forward one channel/destination refusal to the OPTIONAL harness reporter
+   * seam (never the mission-state guard's refusals; those never call here). The
+   * gate does not sign or POST; a throw from the forwarder is swallowed so a
+   * broken reporter cannot break this fail-closed component.
+   */
+  private reportRefusal(channel_class: string, destination: string, refusal_reason: string): void {
+    const onRefusal = this.config.onRefusal;
+    if (!onRefusal) return;
+    try {
+      onRefusal({
+        channel_class,
+        destination,
+        refusal_reason,
+        mission_id: this.config.missionId,
+        scope_statement_digest: this.statementDigest,
+      });
+    } catch {
+      // A broken forwarder must not affect the (already recorded) refusal.
+    }
   }
 
   /**

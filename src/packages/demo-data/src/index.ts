@@ -472,6 +472,95 @@ export const CONTAINMENT_POLICY: ContainmentPolicy = {
 };
 
 /**
+ * @spec containment#protected-events, status signed event-source profile — a
+ * trusted protected-event source, as seeded in config. `source` is the source
+ * IDENTITY a report's payload claims; `event_types` is the set of protected-event
+ * types this source is trusted to report; `key` is its static signing-key
+ * descriptor. Following the config-driven-stack convention (D25: kids static in
+ * config, KEYS GENERATED PER BOOT), only the kid+alg live in config; the ES256
+ * keypair is generated at boot by {@link seedTrustedSources}. `advisory` marks a
+ * LOW-TRUST source (a harness-forwarded egress reporter): its reports are
+ * advisory, and the PEP/PDP remain the backstop.
+ */
+export interface TrustedSourceSeed {
+  source: string;
+  event_types: string[];
+  key: { kid: string; alg: string };
+  advisory: boolean;
+}
+
+/** A trusted source with a per-boot keypair (public verify half + private sign half). */
+export interface SeededTrustedSource {
+  source: string;
+  event_types: string[];
+  kid: string;
+  alg: string;
+  advisory: boolean;
+  /** Public JWK the issuer verifies incoming reports against. */
+  publicJwk: Record<string, unknown>;
+  /** Private JWK the demo/test sender signs a protected-event report with. */
+  privateJwk: Record<string, unknown>;
+}
+
+function loadTrustedSources(): TrustedSourceSeed[] {
+  const file = "containment.json";
+  const root = asObject(file, readJson(file), "containment");
+  // Absent-means-none: a policy with no `sources` seeds an empty registry, so a
+  // deployment that does not ingest protected events is unaffected.
+  if (root.sources === undefined) return [];
+  return asArray(file, root.sources, "containment.sources").map((raw, i) => {
+    const s = asObject(file, raw, `containment.sources[${i}]`);
+    const key = asObject(file, s.key, `containment.sources[${i}].key`);
+    const advisory = s.advisory;
+    if (advisory !== undefined && typeof advisory !== "boolean") {
+      throw new ConfigError(file, `containment.sources[${i}].advisory must be a boolean`);
+    }
+    return {
+      source: reqString(file, s, "source", `containment.sources[${i}]`),
+      event_types: reqStringArray(file, s, "event_types", `containment.sources[${i}]`),
+      key: {
+        kid: reqString(file, key, "kid", `containment.sources[${i}].key`),
+        alg: reqString(file, key, "alg", `containment.sources[${i}].key`),
+      },
+      advisory: advisory ?? false,
+    };
+  });
+}
+
+const TRUSTED_SOURCE_SEEDS = loadTrustedSources();
+
+/**
+ * @spec containment#protected-events — the trusted-source registry with a
+ * FRESH keypair per source per boot (D25: nothing deterministic across
+ * restarts). Mirrors {@link buildSeededClient}: config carries only kid+alg, the
+ * ES256 keypair is generated here, and both halves are returned (the issuer
+ * trusts the public half; the demo/test sender signs with the private half).
+ */
+export async function seedTrustedSources(): Promise<SeededTrustedSource[]> {
+  return Promise.all(
+    TRUSTED_SOURCE_SEEDS.map(async (seed) => {
+      const { publicKey, privateKey } = await generateKeyPair(seed.key.alg, { extractable: true });
+      const pub = await exportJWK(publicKey);
+      const priv = await exportJWK(privateKey);
+      pub.kid = seed.key.kid;
+      priv.kid = seed.key.kid;
+      pub.alg = seed.key.alg;
+      priv.alg = seed.key.alg;
+      pub.use = "sig";
+      return {
+        source: seed.source,
+        event_types: seed.event_types,
+        kid: seed.key.kid,
+        alg: seed.key.alg,
+        advisory: seed.advisory,
+        publicJwk: pub as Record<string, unknown>,
+        privateJwk: priv as Record<string, unknown>,
+      };
+    }),
+  );
+}
+
+/**
  * @spec mission-template — a demo Mission Template descriptor (the wire PR and
  * the demo seed one instance of it). Shaped as `createTemplate`'s input; the AS
  * assembly supplies the runtime `issuer` and calls `createTemplate`.

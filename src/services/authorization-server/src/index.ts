@@ -7,12 +7,15 @@ import {
   DERIVATION_POLICY,
   seedAgentClient,
   seedChildClient,
+  seedTrustedSources,
+  type SeededTrustedSource,
   TOPOLOGY,
   USERS,
 } from "@mission/demo-data";
-import { exportJWK, generateKeyPair, type JWK } from "jose";
+import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import type Provider from "oidc-provider";
-import { buildProvider, type TxnArs } from "./adapters/provider.js";
+import { buildProvider, type ProtectedEventSource, type TxnArs } from "./adapters/provider.js";
+import { IssuerEvidenceStore } from "./kernel/issuer-evidence.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
 import { ContinuationStore } from "./kernel/continuation-store.js";
@@ -35,6 +38,11 @@ export {
   type ContainmentPolicy,
   UnknownProtectedEventError,
 } from "./kernel/containment.js";
+export {
+  IssuerEvidenceStore,
+  type IngestionEvidenceInput,
+} from "./kernel/issuer-evidence.js";
+export type { ProtectedEventSource } from "./adapters/provider.js";
 export { validateMissionIntent, IntentError } from "./kernel/intent.js";
 export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
 export * from "./kernel/types.js";
@@ -246,6 +254,19 @@ export interface BuiltAs {
    * and dispatch events. Holds no kernel reference (dispatch is a pure function).
    */
   templateStore: TemplateStore;
+  /**
+   * @spec containment#containment-plane — the issuer-side evidence store holding
+   * the protected-event `ingestion` records (accepted AND rejected) and the
+   * retained Containment Evidence. Exposed so the later activity-log PR can join
+   * these records, and so a test can assert the fail-closed retention.
+   */
+  issuerEvidence: IssuerEvidenceStore;
+  /**
+   * @spec containment#protected-events — the config-seeded trusted sources with
+   * their PER-BOOT keypairs (D25). Exposed so a test/demo sender can sign a
+   * protected-event report with a source's private key.
+   */
+  protectedEventSources: SeededTrustedSource[];
 }
 
 export async function buildAuthorizationServer(opts: {
@@ -297,6 +318,24 @@ export async function buildAuthorizationServer(opts: {
 
   const agent = await seedAgentClient();
   const child = await seedChildClient();
+  // @spec containment#protected-events — the trusted protected-event source
+  // registry: config seeds kid+alg per source (D25), the ES256 keypair is
+  // generated per boot. The registry resolves the report's payload `source`
+  // IDENTITY to its public verify key + trusted event types; the seeded array is
+  // exposed on BuiltAs so a demo/test sender can sign with the private half.
+  const seededSources = await seedTrustedSources();
+  const protectedEventSources = new Map<string, ProtectedEventSource>();
+  for (const s of seededSources) {
+    protectedEventSources.set(s.source, {
+      key: (await importJWK(s.publicJwk as JWK, s.alg)) as CryptoKey,
+      eventTypes: new Set(s.event_types),
+      advisory: s.advisory,
+    });
+  }
+  // @spec containment#containment-plane — the issuer-side evidence store: holds
+  // the ingestion records (accepted AND rejected) and the retained Containment
+  // Evidence (previously discarded at the lifecycle contain handler).
+  const issuerEvidence = new IssuerEvidenceStore();
   // The Status List republisher subscribes to the kernel's lifecycle-commit
   // hook. It is created after the kernel closes over it, but onLifecycleCommit
   // only fires at runtime (post-construction), so the forward reference is safe;
@@ -428,6 +467,8 @@ export async function buildAuthorizationServer(opts: {
     continuationGrantKey: continuationKeys.privateKey,
     continuationGrantKid: asContinuation.kid,
     templateStore,
+    protectedEventSources,
+    issuerEvidence,
     ...(opts.resourceTxnJwks ? { resourceTxnJwks: opts.resourceTxnJwks } : {}),
     ...(opts.ars ? { ars: opts.ars } : {}),
   });
@@ -446,5 +487,7 @@ export async function buildAuthorizationServer(opts: {
     continuationStore,
     delegationFamilyStore,
     templateStore,
+    issuerEvidence,
+    protectedEventSources: seededSources,
   };
 }
