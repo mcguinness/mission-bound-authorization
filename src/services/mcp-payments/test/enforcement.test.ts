@@ -6,6 +6,7 @@
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
+import { AUTHORITY_ENTRY_TYP, computeAnchor } from "@mission/core";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
@@ -114,6 +115,18 @@ d("M4 core enforcement tier", () => {
     expect(ev.some((e) => e.kind === "decision" && e.decision === true && e.action === "payments:invoice.read")).toBe(true);
   });
 
+  it("Decision Evidence carries the PEP emitter and the recomputable entry_digest", async () => {
+    build();
+    const res = await server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    const dec = evidence.forMission("msn_m4").find((e) => e.kind === "decision");
+    expect(dec?.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
+    // The resolved-scope anchor recomputes over the matched Authority Set entry.
+    expect(dec?.kind === "decision" && dec.entry_digest).toBe(
+      computeAnchor(AUTHORITY_ENTRY_TYP, VIEW.issuer, VIEW.authority_set[0] as never),
+    );
+  });
+
   it("scenario 2: schedule under the cap permitted and reconciles digest at execute", async () => {
     build();
     const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, TOKEN);
@@ -133,6 +146,9 @@ d("M4 core enforcement tier", () => {
     expect(res.refusal_reason).toBe("parameter_mismatch");
     const ev = evidence.forMission("msn_m4");
     expect(ev.some((e) => e.kind === "refusal" && e.refusal_reason === "parameter_mismatch")).toBe(true);
+    // The Refusal Record identifies its emitting enforcement point too.
+    const refusal = ev.find((e) => e.kind === "refusal");
+    expect(refusal?.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
   });
 
   it("out-of-authority tool (over-cap invoice) denied out_of_authority... constraint path", async () => {

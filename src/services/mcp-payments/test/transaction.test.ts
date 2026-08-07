@@ -169,6 +169,12 @@ d("M5 transaction-assurance tier", () => {
     expect(ev.some((e) => e.kind === "execution" && e.outcome === "committed")).toBe(true);
     expect(connectors.ledgerEntries("msn_m5")).toHaveLength(1);
 
+    // Every record on the shared base identifies its emitting PEP.
+    const exec = ev.find((e) => e.kind === "execution");
+    expect(exec?.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
+    const dec = ev.find((e) => e.kind === "decision");
+    expect(dec?.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
+
     // Reconciliation joins evidence to the ledger with no anomalies.
     const report = reconcile("msn_m5", evidence, connectors);
     expect(report.ok).toBe(true);

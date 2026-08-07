@@ -205,3 +205,16 @@ this matrix and the `@spec` tags to the affected code and tests.
   The whole `child-delegation-endpoint.test.ts` suite now exercises the full lifecycle
   end-to-end on the OAuth surface with no bespoke route.
   (`services/authorization-server/test/child-delegation-endpoint.test.ts`.)
+- Unified cross-enforcement evidence base (`authzen#decision-evidence-object`):
+  `EvidenceBase` gains the optional `emitter` (`id` + `role`, roles `pdp`/`pep`/
+  `executor` plus the coordinated companion roles `harness`/`egress`) and a
+  `scope_statement_digest` slot; Decision Evidence gains the `entry_digest`
+  resolved-scope anchor (PDP computes it over the matched Authority Set entry
+  under the new `AUTHORITY_ENTRY_TYP` domain separator and carries it in the
+  decision context; the PEP copies it onto the retained record), and an
+  `EgressEvidence` kind joins the union for the egress enforcement point. All
+  fields additive and optional, so existing records stay valid. The evidence
+  base deliberately stays in `@mission/mcp-payments`; lifting it to
+  `@mission/core` is a named deferral.
+  (`services/mcp-payments/test/{enforcement,transaction}.test.ts`,
+  `services/pdp/test/evaluate.test.ts`, `services/transparency/test/transparency.test.ts`.)
