@@ -10,7 +10,8 @@
  */
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, type SeededTrustedSource } from "@mission/demo-data";
+import { type CryptoKey, importJWK, SignJWT } from "jose";
 import {
   evaluate,
   Fga,
@@ -182,5 +183,50 @@ d("containment end-to-end: taint -> contain -> authority_contained -> expansion 
     const superseded = await evalAction(mission.id, "payments:invoice.read");
     expect(superseded.decision).toBe(false);
     expect(superseded.context.denial_reason).toBe("mission_inactive");
+  });
+
+  it("a SIGNED protected event (JWS source-verified) drives the same PDP denial", async () => {
+    const mission = as.kernel.approve({
+      intent: intent("Pay Acme invoices via a signed protected-event path"),
+      subject: { iss: ISSUER, sub: "alice" },
+      approver: { iss: ISSUER, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-cnt-e2e-signed",
+    });
+    // Pre-containment: the approved action permits.
+    expect((await evalAction(mission.id, "payments:remittance.send")).decision).toBe(true);
+
+    // Report a protected event as the trusted svc:soc source, over real HTTP, as
+    // a compact JWS (verified against the config-seeded source key, not the
+    // transport origin). Containment applies DETERMINISTICALLY via the policy.
+    const soc = as.protectedEventSources.find((s) => s.source === "svc:soc") as SeededTrustedSource;
+    const key = (await importJWK(soc.privateJwk, soc.alg)) as CryptoKey;
+    const jws = await new SignJWT({
+      type: "content.tainted_read",
+      source: "svc:soc",
+      observed_at: new Date().toISOString(),
+      event_id: "taint-e2e-signed-1",
+      mission_id: mission.id,
+    })
+      .setProtectedHeader({ alg: soc.alg, kid: soc.kid })
+      .setIssuedAt()
+      .sign(key);
+    const res = await fetch(`${ISSUER}/missions/${mission.id}/protected-events`, {
+      method: "POST",
+      headers: { "content-type": "application/protected-event+jwt" },
+      body: jws,
+    });
+    const body = (await res.json()) as { containment_version?: number };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.containment_version).toBe(1);
+
+    // The PDP now denies the removed action authority_contained.
+    const contained = await evalAction(mission.id, "payments:remittance.send");
+    expect(contained.decision).toBe(false);
+    expect(contained.context.denial_reason).toBe("authority_contained");
+    // The issuer retained an `applied` ingestion record + the Containment Evidence.
+    const joined = as.issuerEvidence.forMission(mission.id);
+    expect(joined.ingestion.some((r) => r.outcome === "applied" && r.rule_id)).toBe(true);
+    expect(joined.containment).toHaveLength(1);
   });
 });
