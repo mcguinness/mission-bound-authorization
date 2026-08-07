@@ -1,7 +1,7 @@
 ---
 title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
 abbrev: "Mission Continuation"
-docname: draft-mcguinness-oauth-mission-continuation-00
+docname: draft-mcguinness-oauth-mission-continuation-latest
 category: std
 submissiontype: IETF
 consensus: true
