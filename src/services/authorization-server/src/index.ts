@@ -68,6 +68,11 @@ export {
   type ResolvedContinuation,
 } from "./kernel/continuation-store.js";
 export {
+  DelegationFamilyStore,
+  type DelegationFamilyState,
+  type ResolvedFamily,
+} from "./kernel/delegation-family-store.js";
+export {
   constructDelegatedIssuance,
   delegatedContextActor,
   type DelegatedIssuance,

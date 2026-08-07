@@ -485,17 +485,20 @@ export class MissionKernel {
   }
 
   /**
-   * @spec mission#lifecycle — state-gated derivation: only `active` derives,
-   * bounded by expires_at and max_derivations. Increments the derivation
-   * count on success.
+   * @spec mission#lifecycle, child-delegation#child-state — the shared active
+   * gate for BOTH {@link gateDerivation} and {@link gateActive}: apply the expiry
+   * clock, require the Mission itself `active`, and walk `parent` upward refusing
+   * if ANY ancestor is non-active. Returns the expiry-fresh record. It does NOT
+   * touch `derivation_count` nor the `max_derivations` cap; consuming a derivation
+   * is {@link gateDerivation}'s alone, layered on top of this.
    */
-  gateDerivation(id: string): MissionRecord {
+  private gateActiveLineage(id: string): MissionRecord {
     const record = this.applyExpiry(this.mustGet(id));
     if (record.state === "expired") throw new GateError("mission_expired", `mission ${id} is expired`);
     if (record.state !== "active") {
       throw new GateError("mission_not_active", `mission ${id} is ${record.state}`);
     }
-    // @spec child-delegation#child-state — the ancestor-active gate: derivation
+    // @spec child-delegation#child-state — the ancestor-active gate: action
     // under a Child Mission is refused while ANY ancestor is non-active. This is
     // belt-and-suspenders with suspend-projection (which already holds the child),
     // but the profile requires the explicit lineage check: walk `parent` upward,
@@ -512,6 +515,16 @@ export class MissionKernel {
       }
       ancestor = fresh.parent;
     }
+    return record;
+  }
+
+  /**
+   * @spec mission#lifecycle — state-gated derivation: only `active` derives,
+   * bounded by expires_at and max_derivations. Increments the derivation
+   * count on success.
+   */
+  gateDerivation(id: string): MissionRecord {
+    const record = this.gateActiveLineage(id);
     if (record.max_derivations !== null && record.derivation_count >= record.max_derivations) {
       throw new GateError("derivation_cap_exhausted", `mission ${id} derivation cap exhausted`);
     }
@@ -519,6 +532,18 @@ export class MissionKernel {
       .prepare("UPDATE missions SET derivation_count = derivation_count + 1 WHERE id = ?")
       .run(id);
     return { ...record, derivation_count: record.derivation_count + 1 };
+  }
+
+  /**
+   * @spec mission#lifecycle — the SAME active gate as {@link gateDerivation}
+   * (expiry clock, `active`-state requirement, and ancestor-active lineage walk)
+   * WITHOUT consuming a derivation: no `max_derivations` cap check and no
+   * `derivation_count` increment. For an async-delegation continuation path that
+   * requires the Mission (and its lineage) live but is not itself a derivation.
+   * Throws {@link GateError} on refusal, with the same reasons as gateDerivation.
+   */
+  gateActive(id: string): MissionRecord {
+    return this.gateActiveLineage(id);
   }
 
   /** @spec mission#the-mission-claim */
