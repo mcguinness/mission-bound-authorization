@@ -322,6 +322,20 @@ otherwise. It covers at minimum:
 For each of these the statement states whether it is mediated,
 excluded by the isolation mechanism, or outside the claim.
 
+A harness MAY realize secondary-channel mediation as a
+harness-composed egress gate whose authoritative input is the
+published scope statement. For a channel class the statement marks
+mediated, the statement MAY name the destination set the channel may
+reach, so the published claim and the enforced allowlist are the same
+object. An egress on a channel the statement does not mark mediated,
+or to a destination outside a named set, MUST be refused and recorded
+({{harness-evidence}}). The gate applies the same fail-closed Mission
+state rule as the resume checks ({{resume-checks}}): work whose
+Mission is not active does not egress. An in-process gate mediates the
+agent's egress interface and supports no containment claim. The gate
+is not the session-taint rule: the taint duties of {{session-taint}}
+apply independently of the channel and destination check.
+
 The enumeration is not static where open-world discovery is deployed:
 a channel created by a discovery binding enters it at binding,
 recorded in Harness Evidence, and an egress channel that entered
@@ -1049,9 +1063,9 @@ A Harness Evidence object is a JSON object {{RFC8259}} with:
 : REQUIRED. One of `resume_allowed`, `resume_suppressed`,
   `queue_suppressed`, `cache_disabled`, `subagent_stopped`,
   `subagent_continued`, `human_review_completed`, `egress_downgraded`,
-  `mission_superseded`, or `mission_state_stale`. `event_type`
-  categorizes the work item the record is about; the `decision` member
-  records the outcome, so the two are orthogonal.
+  `egress_refused`, `mission_superseded`, or `mission_state_stale`.
+  `event_type` categorizes the work item the record is about; the
+  `decision` member records the outcome, so the two are orthogonal.
 
 `mission`:
 : REQUIRED. Object containing `id`, `issuer`, and, when known,
@@ -1106,6 +1120,12 @@ A Harness Evidence object is a JSON object {{RFC8259}} with:
   source class, the provenance basis (`parameter` or `session`), and
   the applied action (a fresh action-bound approval required, or the
   action suppressed) ({{session-taint}}).
+
+`egress`:
+: OPTIONAL. An object for an `egress_refused` event: the
+  `channel_class` and `destination` of the refused egress and the
+  `disposition` the statement declares for that channel
+  ({{mediated-egress}}). REQUIRED for an `egress_refused` event.
 
 `occurred_at`:
 : REQUIRED. RFC 3339 {{RFC3339}} timestamp.

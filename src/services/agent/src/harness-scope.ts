@@ -74,7 +74,15 @@ export type ContainmentClaim = "none" | "trifecta" | "agent_compromise_resistant
 export interface ChannelClassStatement {
   channel_class: ChannelClass;
   disposition: ChannelDisposition;
-  note?: string;
+  /**
+   * @spec harness#mediated-egress: for a `mediated` channel, the destination
+   * set (origins) the channel may reach. The published claim and the egress
+   * gate's enforced allowlist are the SAME object ({@link EgressGate} consumes
+   * the statement), so the statement cannot understate what the gate permits.
+   * Meaningful only on a `mediated` channel; {@link buildScopeStatement}
+   * rejects it elsewhere.
+   */
+  destinations?: string[];
 }
 
 /** Input to {@link buildScopeStatement}. */
@@ -154,6 +162,14 @@ export function buildScopeStatement(
 
   const provided = new Map<ChannelClass, ChannelClassStatement>();
   for (const entry of config.channel_classes ?? []) {
+    // Honesty check: a destination set is the allowlist an egress gate enforces
+    // for a MEDIATED channel. On an excluded / outside-claim channel it would
+    // claim an enforcement that does not exist, so it is rejected.
+    if (entry.destinations !== undefined && entry.disposition !== "mediated") {
+      throw new Error(
+        `scope statement names destinations for channel class ${entry.channel_class}, which is ${entry.disposition}, not mediated`,
+      );
+    }
     provided.set(entry.channel_class, entry);
   }
 
@@ -205,8 +221,13 @@ export interface ScopeStatementSigner {
   iss: string;
 }
 
-/** SHA-256 over the JCS-canonical statement bytes (mirrors the evidence digest). */
-function scopeDigest(statement: ExecutionEnvironmentScopeStatement): string {
+/**
+ * SHA-256 over the JCS-canonical statement bytes (mirrors the evidence digest).
+ * Exported so an enforcement point keyed to the statement (the egress gate) can
+ * stamp `scope_statement_digest` on the evidence it retains, joining each
+ * record to the published claim it enforced under.
+ */
+export function scopeDigest(statement: ExecutionEnvironmentScopeStatement): string {
   const bytes = canonicalize(statement as unknown as JsonValue);
   return `sha-256:${createHash("sha256").update(bytes, "utf8").digest("base64url")}`;
 }

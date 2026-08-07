@@ -11,9 +11,10 @@
  * deterministic CI gate is never affected. `pnpm agent`.
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { createMediatedHarness, type MissionState, runAgentLoop } from "@mission/agent";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { buildScopeStatement, createMediatedHarness, EgressGate, type MissionState, runAgentLoop } from "@mission/agent";
 import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
+import { EvidenceStore } from "@mission/mcp-payments";
 import { composeStack } from "./stack.js";
 import { issueMissionToken } from "./oauth-client.js";
 
@@ -61,12 +62,41 @@ async function main(): Promise<void> {
     ],
   });
   const issued = await issueMissionToken(as.asUrl, as.agentClientJwk, { missionIntent, scope: "payments" });
-  const missionId = (decodeClaims(issued.accessToken).mission as { id: string }).id;
+  const missionClaim = decodeClaims(issued.accessToken).mission as { id: string; authority_hash: string };
+  const missionId = missionClaim.id;
 
   // Duty-1 input: read the mission's authoritative state (fail-closed if unknown).
   const readState = async (id: string): Promise<MissionState | undefined> =>
     stack.viewFor(id)?.state as MissionState | undefined;
   const harness = await createMediatedHarness(stack.server, missionId, readState);
+
+  // The second mediation boundary (@spec harness#mediated-egress): the agent's
+  // OTHER declared channel, the inference API, egresses only through a
+  // default-deny gate keyed to the published scope statement -- the demo agent
+  // has no unmediated egress path. The statement is the honest single-process
+  // form (in_memory -> containment_claim "none": no containment claim); the
+  // remaining channel classes stay outside the claim, and the process's own
+  // direct network access is the named unmediated exclusion.
+  const scopeStatement = buildScopeStatement({
+    isolation_mechanism: "in-memory demo process (mediated harness + egress gate; no isolation boundary)",
+    transport: "in_memory",
+    mediated_action_classes: ["payments"],
+    excluded_unmediated_paths: ["direct process network access outside the gated inference fetch"],
+    channel_classes: [
+      { channel_class: "inference_api", disposition: "mediated", destinations: ["https://api.anthropic.com"] },
+    ],
+  });
+  const egressEvidence = new EvidenceStore(); // the gate retains its own records (D32)
+  const gate = new EgressGate({
+    statement: scopeStatement,
+    missionId,
+    readState,
+    evidence: egressEvidence,
+    emitterId: "demo-agent-egress-gate",
+    instanceEpoch: "demo-epoch",
+    authorityHash: missionClaim.authority_hash,
+  });
+  const anthropic = createAnthropic({ fetch: gate.guardedFetch() });
 
   console.log(`${C.bold}Mission-Bound Authorization -- live agent loop${C.reset}`);
   console.log(`${C.dim}model=${modelId}  mission=${missionId}  goal="${goal}"${C.reset}`);
@@ -99,7 +129,14 @@ async function main(): Promise<void> {
   });
 
   console.log(`\n${C.bold}Planner's final answer:${C.reset} ${text}`);
-  console.log(`\n${C.green}${C.bold}Agent loop complete.${C.reset} ${C.dim}Every tool call crossed the mediated harness (channel + PEP + resume guard).${C.reset}`);
+
+  // The gate recorded EVERY inference egress (permitted and refused alike).
+  const egressRecords = egressEvidence.forMission(missionId);
+  const permitted = egressRecords.filter((r) => r.kind === "egress" && r.outcome === "permitted").length;
+  console.log(
+    `${C.dim}egress gate: ${egressRecords.length} inference egress(es) mediated (${permitted} permitted, ${egressRecords.length - permitted} refused) -> https://api.anthropic.com only${C.reset}`,
+  );
+  console.log(`\n${C.green}${C.bold}Agent loop complete.${C.reset} ${C.dim}Every tool call crossed the mediated harness (channel + PEP + resume guard); every inference call crossed the egress gate.${C.reset}`);
   as.closeAuthServer();
   process.exit(0);
 }

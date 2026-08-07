@@ -61,7 +61,7 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-mission-audit` (SCITT profile) | `dc7a897` | `services/transparency` | append-only Merkle log, hash-committed Signed Statements, Receipts + signed tree heads, per-mission feeds, five-step offline verification | `services/transparency/test/transparency.test.ts` |
 | RFC 9162 (Merkle tree) | RFC 9162 | `services/transparency/src/merkle.ts` | leaf/node domain separation, inclusion proofs | `services/transparency/test/transparency.test.ts` |
 | `draft-mcguinness-oauth-mission-management` (partial) | `dc7a897` | `services/console-bff`, `authorization-server` (allMissions) | fleet enumeration + operator lifecycle surfaces | `services/console-bff/test/console.test.ts` |
-| `draft-mcguinness-mission-harness` (partial) | `dc7a897` | `packages/mission-core/src/binding.ts`, `services/agent/src/{harness,mediated-harness,harness-scope}.ts`, `services/mcp-payments/src/mcp-transport.ts` | duty 1 fail-closed resume + duty 2 mediated execution environment (real MCP channel, no PEP bypass); `harness#mission-binding` (shared `state_source`/`MissionStatusLease`/`MissionBinding`/`StopPolicy` types, `suppress` realized); `harness#mediated-egress` (execution-environment scope statement, claim-gated channel-class enumeration, sign/verify); `harness#resume-algorithm` (status-continuity: fail closed once `now > status_expires_at`, freshness re-checked at each submission) | `services/agent/test/{harness,mediated-harness,harness-scope}.test.ts`, `services/mcp-payments/test/mcp-channel.test.ts` |
+| `draft-mcguinness-mission-harness` (partial) | `dc7a897` | `packages/mission-core/src/binding.ts`, `services/agent/src/{harness,mediated-harness,harness-scope,egress-gate}.ts`, `services/mcp-payments/src/mcp-transport.ts` | duty 1 fail-closed resume + duty 2 mediated execution environment (real MCP channel, no PEP bypass); `harness#mission-binding` (shared `state_source`/`MissionStatusLease`/`MissionBinding`/`StopPolicy` types, `suppress` realized); `harness#mediated-egress` (execution-environment scope statement, claim-gated channel-class enumeration, sign/verify; default-deny egress gate keyed to the published statement: per-mediated-channel destination sets, state guard first, every request recorded as `EgressEvidence` with emitter role `egress`); `harness#resume-algorithm` (status-continuity: fail closed once `now > status_expires_at`, freshness re-checked at each submission) | `services/agent/test/{harness,mediated-harness,harness-scope,egress-gate}.test.ts`, `services/mcp-payments/test/mcp-channel.test.ts` |
 | `@modelcontextprotocol/sdk` | 1.29.0 | `services/mcp-payments/src/mcp-transport.ts` (in-memory transport), `services/mcp-payments/src/mcp-http-transport.ts` (StreamableHTTP transport) | `tools/list`/`tools/call` delegating to the same PEP over two transports. In-memory: mission credential in `_meta` (advances/closes the O-33 transport swap). Real StreamableHTTP (server+client): a DPoP-auth middleware enforces proof-of-possession over HTTP via `validateToken` (canonical `htu`/`htm`; `cnf.jkt` equals the proof thumbprint) before dispatch, with the credential carried in the `Authorization: DPoP`/`DPoP` headers instead of `_meta` | `services/mcp-payments/test/mcp-channel.test.ts`, `services/mcp-payments/test/mcp-http-channel.test.ts` |
 | `draft-mcguinness-mission-shaping` | `dc7a897` | `services/agent/src/index.ts` (shapeIntent) | untrusted intent proposal; derivation still bounds | `services/agent/test/harness.test.ts` |
 | (eval harness, goal 2) | n/a | `evals` | adversarial + legitimate suites, containment scorecard, CI gate (D24) | `evals/test/evals.test.ts` |
@@ -99,9 +99,20 @@ this matrix and the `@spec` tags to the affected code and tests.
   `signScopeStatement`/`verifyScopeStatement` add an ES256 JWS over the JCS
   digest (mirroring the `@mission/transparency` evidence convention) so a
   relying party can *verify* a published statement; this is a beyond-the-draft
-  assurance, not a conformance requirement. Deferred (named, not built): signed
+  assurance, not a conformance requirement. The draft's second mediation
+  boundary is realized as `services/agent/src/egress-gate.ts`: a default-deny
+  egress gate whose authoritative input is the published statement (a
+  `mediated` channel MAY name its destination set; the claim and the enforced
+  allowlist are the same object), applying the fail-closed Mission-state rule
+  before any allowlist check and recording every request (permitted and
+  refused) as producer-retained `EgressEvidence`. The demo agent's inference
+  API egresses only through `gate.guardedFetch()` (`createAnthropic` custom
+  fetch), so the live agent has no unmediated egress path; an in-process gate
+  supports no containment claim (the `in_memory` -> `"none"` downgrade encodes
+  this). Deferred (named, not built): signed
   Harness Evidence + transparency registration + harness key publication;
-  session-taint / egress-downgrade (the taint policy is an opaque pass-through);
+  session-taint / egress-downgrade (the taint policy is an opaque pass-through;
+  the gate is a channel/destination check, not the taint rule);
   discovery-bound channels entering the enumeration at binding; multi-entry
   per-mediated-action-class statements; queue-item/expiry; sub-agent stop
   propagation; the harness execution-state machine. Only the `suppress` stop
