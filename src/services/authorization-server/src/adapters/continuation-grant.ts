@@ -458,10 +458,13 @@ export async function handleAsyncDelegationExchange(
   }
   // Confine the requested authorization_details to a subset of the ACTIVE Authority
   // Set. Absent -> the full active set (the Mission's authority is the ceiling).
+  // Containment: the ceiling (and the absent-case default) is the EFFECTIVE set,
+  // so a contained capability cannot ride an async-delegation family.
+  const effective = kernel.effectiveAuthoritySet(active);
   let confinedSubset: AuthorityEntry[];
   const requestedRaw = params.authorization_details;
   if (requestedRaw === undefined) {
-    confinedSubset = active.authority_set;
+    confinedSubset = effective;
   } else {
     let requested: unknown = requestedRaw;
     if (typeof requestedRaw === "string") {
@@ -474,7 +477,7 @@ export async function handleAsyncDelegationExchange(
     if (!Array.isArray(requested)) {
       throw new errors.InvalidRequest("authorization_details must be a JSON array");
     }
-    if (!isSubsetSet(requested as AuthorityEntry[], active.authority_set)) {
+    if (!isSubsetSet(requested as AuthorityEntry[], effective)) {
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority");
       return;
     }

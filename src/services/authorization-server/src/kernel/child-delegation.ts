@@ -291,7 +291,12 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     created_at: nowIso,
   });
 
-  if (!isSubsetSet(childAuthority, parent.authority_set)) {
+  // Containment: the parent ceiling is its EFFECTIVE set (approved minus the
+  // containment overlay), so a contained capability cannot be re-derived into a
+  // child. The justifying-index attribution below still runs over the approved
+  // set: a subset of an effective entry is a subset of its approved entry, so
+  // every index resolves, and fan-out controls live on the approved entries.
+  if (!isSubsetSet(childAuthority, kernel.effectiveAuthoritySet(parent))) {
     throw new ChildDelegationError(
       "not_strict_subset",
       "child Authority Set is not a strict subset of the parent",

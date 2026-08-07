@@ -84,7 +84,13 @@ export async function issueCrossDomainGrant(
   // Derivation gate: throws GateError when non-active/expired/cap-exhausted.
   const record: MissionRecord = kernel.gateDerivation(input.missionId);
 
-  const scoped = audienceScopedAuthority(record.authority_set, input.resourceToAs, input.targetAs);
+  // Containment: the audience-scoped projection draws on the EFFECTIVE set, so
+  // a contained capability never crosses the domain boundary.
+  const scoped = audienceScopedAuthority(
+    kernel.effectiveAuthoritySet(record),
+    input.resourceToAs,
+    input.targetAs,
+  );
   if (scoped.length === 0) throw new Error("no audience-scoped authority for the target Resource AS");
 
   const nowS = Math.floor(kernel.nowDate().getTime() / 1000);

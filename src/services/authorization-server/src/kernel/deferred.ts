@@ -102,7 +102,9 @@ export class DeferralStore {
       throw new DeferralError("out_of_authority", "mission is not active");
     }
     // @spec D42: AROP grant is a subset of the active Mission; widening -> Expansion.
-    if (!isSubsetSet(input.requested, mission.authority_set)) {
+    // Containment: the ceiling is the EFFECTIVE set, so a contained capability
+    // is not deferrable.
+    if (!isSubsetSet(input.requested, this.kernel.effectiveAuthoritySet(mission))) {
       throw new DeferralError(
         "out_of_authority",
         "requested authority exceeds the active Mission; use Expansion to widen",
@@ -190,8 +192,9 @@ export class DeferralStore {
     if (!mission || this.kernel.applyExpiry(mission).state !== "active") {
       return { error: "access_denied" };
     }
-    // Re-verify subset at redemption (the Mission may have changed).
-    if (!isSubsetSet(parsed.r, mission.authority_set)) {
+    // Re-verify subset at redemption (the Mission may have changed) against the
+    // EFFECTIVE set: containment applied between approval and redemption refuses.
+    if (!isSubsetSet(parsed.r, this.kernel.effectiveAuthoritySet(mission))) {
       this.db.prepare("UPDATE deferrals SET state = 'access_denied' WHERE deferral_code = ?").run(deferralCode);
       return { error: "access_denied" };
     }

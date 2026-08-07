@@ -158,6 +158,36 @@ export interface ChildEvidence {
   created_at: string;
 }
 
+/**
+ * Mission Containment: an issuer-held, versioned, MONOTONIC narrowing overlay
+ * on an active Mission's effective authority. The approved `authority_set` and
+ * `authority_hash` are immutable; containment is evaluated state layered on
+ * top. Removal-only in v1 (entries/actions; no constraint deltas): each contain
+ * transition UNIONS into `contained`, so the effective set only ever narrows.
+ * Restore exists only via the Expansion successor path.
+ */
+export interface MissionContainment {
+  /** Increments once per applied contain transition (1-based). */
+  containment_version: number;
+  /**
+   * The contained capabilities, merged by resource. An entry with no `actions`
+   * member contains the whole resource (its Authority Set entry is dropped from
+   * the effective set); with `actions`, only those actions are contained.
+   */
+  contained: Array<{ resource: string; actions?: string[] }>;
+  /** The applied containment events, in order. `event_id` is the idempotency key. */
+  events: ContainmentEventRecord[];
+}
+
+/** One applied containment event: the triggering signal plus what it removed. */
+export interface ContainmentEventRecord {
+  type: string;
+  source: string;
+  observed_at: string;
+  event_id: string;
+  removed: Array<{ resource: string; actions?: string[] }>;
+}
+
 /** @spec mission#mission-record */
 export interface MissionRecord {
   id: string;
@@ -197,14 +227,23 @@ export interface MissionRecord {
    * independently-suspended descendant is NOT restored on parent resume.
    */
   projected_from?: MissionState;
+  /**
+   * The containment overlay (see {@link MissionContainment}). Absent means no
+   * containment has ever been applied: the effective authority IS the approved
+   * `authority_set`, byte-identical behavior. Written only by `contain()`.
+   */
+  containment?: MissionContainment;
 }
 
 /**
  * @spec status#status-list — the shared lifecycle-commit event. The kernel
- * fires it from its three real commit funnels (`setState`,
- * `supersedeOnRedemption`, `insertRecord`) so subscribers observe every
- * committed transition exactly once: the Status List republisher today, Mission
- * Signals next. The activating insert carries `version: 1` and no `prior_state`.
+ * fires it from its four real commit funnels (`setState`,
+ * `supersedeOnRedemption`, `insertRecord`, `contain`) so subscribers observe
+ * every committed transition exactly once: the Status List republisher today,
+ * Mission Signals next. The activating insert carries `version: 1` and no
+ * `prior_state`. A contain commit is metadata-only: `prior_state` EQUALS
+ * `state` (the version still increments), so the fan-out propagates the
+ * narrowed authority with no new channels.
  */
 export interface LifecycleCommit {
   id: string;

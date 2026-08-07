@@ -169,6 +169,10 @@ export async function deriveAttenuationRoot(
   // Derivation gate (D26 lifecycle): throws GateError when non-active/expired.
   const record: MissionRecord = kernel.gateDerivation(input.missionId);
 
+  // Containment: the root maps from the EFFECTIVE set (approved minus the
+  // containment overlay); a contained capability never becomes an AAT tool.
+  const effective = kernel.effectiveAuthoritySet(record);
+
   // @spec attenuation#root-mapping (S-15, closed): derive del_max_depth from the
   // Authority Set's delegation policy unless the caller supplies an override. A
   // client-requested narrowing (requestedTools) is minted NON-delegating
@@ -177,14 +181,14 @@ export async function deriveAttenuationRoot(
   // to the kernel fan-out PR); a non-delegating root is fail-closed and can
   // never let a non-delegable requested tool ride a root whose depth exceeds 0.
   const delMaxDepth =
-    input.delMaxDepth ?? (input.requestedTools ? 0 : deriveDelMaxDepth(record.authority_set));
+    input.delMaxDepth ?? (input.requestedTools ? 0 : deriveDelMaxDepth(effective));
 
   let tools: AATTools;
   if (input.requestedTools) {
     // Validate the requested narrowing is within the Mission Authority Set by
     // reverse-mapping to entries and reusing the issuance-profile subset rule.
     const requestedEntries = mapToolsToAuthority(input.requestedTools);
-    if (!isSubsetSet(requestedEntries, record.authority_set)) {
+    if (!isSubsetSet(requestedEntries, effective)) {
       throw new Error("attenuation: requested root exceeds the Mission Authority Set");
     }
     tools = input.requestedTools;
@@ -196,8 +200,8 @@ export async function deriveAttenuationRoot(
     // delegation-free Authority Set and expects the full mapped tool set.
     const mappable =
       input.delMaxDepth === undefined && delMaxDepth > 0
-        ? record.authority_set.filter((e) => e.delegation)
-        : record.authority_set;
+        ? effective.filter((e) => e.delegation)
+        : effective;
     tools = mapAuthorityToTools(mappable);
   }
 
