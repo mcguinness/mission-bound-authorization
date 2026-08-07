@@ -45,3 +45,6 @@ draft-mcguinness-mission-security-model.xml
 package-lock.json
 report.xml
 !requirements.txt
+
+# environment-only TLS material (copied per worktree for the OpenFGA gate)
+/certs/
