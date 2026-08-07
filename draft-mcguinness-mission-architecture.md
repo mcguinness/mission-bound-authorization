@@ -1296,6 +1296,19 @@ where the client supplies candidate authority, derivation is a subset
 of it and reproducible, which is the closest the family comes to
 portable derivation.
 
+The ceiling the derivation narrows against is itself a composition,
+not a single object. The derived Authority Set sits inside every
+authority source that bounds the task: the issuer's derivation
+policy, the Approver's own authority (an approval grants nothing the
+Approver could not grant), and, at enforcement time, the resource
+owner's and deployment's live policy at the decision point. The
+derivation step intersects the first two and commits the result;
+the runtime contract re-checks the rest on every action, which is
+why a permit is never implied by the Authority Set alone. A
+deployment adding further sources (a tenant boundary, an
+environment-specific floor) adds them as derivation-policy inputs or
+as decision-point policy, never as agent-negotiated widening.
+
 The derivation modes rank by how portable their result is:
 
 | Derivation mode | Portability status |
