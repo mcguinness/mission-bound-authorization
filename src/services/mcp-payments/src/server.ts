@@ -101,6 +101,10 @@ export class McpPaymentsServer {
       ...(payload.act ? { act: payload.act as ActObject } : {}),
       mission: { id: mission.id, authority_hash: mission.authority_hash },
       cnfJkt: cnf.jkt,
+      ...(payload.jti ? { jti: payload.jti as string } : {}),
+      ...(payload.identity_continuation_handle
+        ? { identityContinuationHandle: payload.identity_continuation_handle as string }
+        : {}),
     };
   }
 
@@ -131,6 +135,10 @@ export class McpPaymentsServer {
       ...(payload.act ? { act: payload.act as ActObject } : {}),
       mission: { id: mission.id, authority_hash: mission.authority_hash },
       cnfJkt: cnf.jkt,
+      ...(payload.jti ? { jti: payload.jti as string } : {}),
+      ...(payload.identity_continuation_handle
+        ? { identityContinuationHandle: payload.identity_continuation_handle as string }
+        : {}),
     };
   }
 
@@ -391,6 +399,19 @@ export class McpPaymentsServer {
       action: res.effective.action,
       parameter_digest: digest,
       instance_epoch: tx.engine.instanceEpoch,
+      // @spec continuation: attribute the execution to the specific hop that
+      // authorized it. Guarded on jti so non-JWT/older tokens are unaffected.
+      ...(token.jti
+        ? {
+            hop_reference: {
+              jti: token.jti,
+              mission_id: token.mission.id,
+              ...(token.identityContinuationHandle
+                ? { continuation_handle: token.identityContinuationHandle }
+                : {}),
+            },
+          }
+        : {}),
     });
     tx.engine.advance(opKey, "evidence_emitted");
     tx.engine.advance(opKey, "reconciled");

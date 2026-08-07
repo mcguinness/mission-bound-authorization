@@ -18,6 +18,14 @@ export interface EvidenceBase {
   instance_epoch: string;
   trace_id?: string;
   at: string;
+  /**
+   * @spec continuation (hop attribution): when the action was taken under a
+   * continued credential, the specific continuation hop that authorized it.
+   * `jti` is the authorizing token's identifier and `mission_id` the Mission it
+   * belongs to; `continuation_handle` is the hop's identity-continuation handle
+   * when present. Absent for a non-continued (or non-JWT) credential.
+   */
+  hop_reference?: { jti: string; mission_id: string; continuation_handle?: string };
 }
 
 export interface DecisionEvidence extends EvidenceBase {
