@@ -265,10 +265,14 @@ Table of Contents
       permitted to dispatch from this template.  A Dispatch request from
       a principal not in this set is refused (Section 7).
 
-   allowed_recipients:  REQUIRED.  An array constraining the Subject and
-      Agent a dispatched instance may name.  A Dispatch whose instance
-      would fall outside this set is refused, so a template cannot mint
-      a Mission for a party the human did not consent to.
+   allowed_recipients:  REQUIRED.  An array bounding which Subjects and
+      Agents a Mission dispatched from this template may be created for.
+      The Mission Issuer establishes the instance's Subject as the
+      issuance profile requires, never from Dispatcher input
+      ([I-D.draft-mcguinness-oauth-mission]), and refuses a Dispatch
+      whose established Subject or Agent falls outside this set, so a
+      template cannot mint a Mission for a party the human did not
+      consent to.
 
    instance_lifetime:  REQUIRED.  A duration.  The per-instance lifetime
       clamp: a dispatched Mission's expires_at is clamped to no more
@@ -428,8 +432,9 @@ Table of Contents
        dispatch_prohibited_class (Section 9).
 
    6.  *Enforce the bounds.* Refuse the Dispatch if it would exceed
-       max_active or dispatch_rate, or if the instance would name a
-       Subject or Agent outside allowed_recipients (Section 5).
+       max_active or dispatch_rate, or if the instance's Mission-Issuer-
+       established Subject or its Agent falls outside allowed_recipients
+       (Section 5).
 
    7.  *Commit the instance.* Commit an ordinary Mission whose Authority
        Set is the surviving set and whose:
@@ -437,6 +442,10 @@ Table of Contents
        *  approver is the template's human approver, the accountable
           principal ([I-D.draft-mcguinness-oauth-mission]).  The
           Dispatcher is not the approver;
+
+       *  subject is established as the issuance profile requires, never
+          taken from Dispatcher input, and is within allowed_recipients
+          ([I-D.draft-mcguinness-oauth-mission]);
 
        *  intent_hash and authority_hash are computed over the
           instance's own Intent and final Authority Set, never over the

@@ -1471,10 +1471,13 @@ set is refused (<a href="#dispatch" class="auto internal xref">Section 7</a>).<a
 <dt id="section-5-2.13">
 <code>allowed_recipients</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-2.14">
-          <p id="section-5-2.14.1"><span class="bcp14">REQUIRED</span>. An array constraining the Subject and Agent a dispatched
-instance may name. A Dispatch whose instance would fall outside this
-set is refused, so a template cannot mint a Mission for a party the
-human did not consent to.<a href="#section-5-2.14.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.14.1"><span class="bcp14">REQUIRED</span>. An array bounding which Subjects and Agents a Mission
+dispatched from this template may be created for. The Mission Issuer
+establishes the instance's Subject as the issuance profile requires,
+never from Dispatcher input
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), and refuses a Dispatch whose
+established Subject or Agent falls outside this set, so a template
+cannot mint a Mission for a party the human did not consent to.<a href="#section-5-2.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.15">
@@ -1681,9 +1684,9 @@ it would grant a high-consequence class, refuse the Dispatch with
 </li>
         <li id="section-7-4.6">
           <p id="section-7-4.6.1"><strong>Enforce the bounds.</strong> Refuse the Dispatch if it would exceed
-<code>max_active</code> or <code>dispatch_rate</code>, or if the instance would name a
-Subject or Agent outside <code>allowed_recipients</code>
-(<a href="#the-mission-template" class="auto internal xref">Section 5</a>).<a href="#section-7-4.6.1" class="pilcrow">¶</a></p>
+<code>max_active</code> or <code>dispatch_rate</code>, or if the instance's
+Mission-Issuer-established Subject or its Agent falls outside
+<code>allowed_recipients</code> (<a href="#the-mission-template" class="auto internal xref">Section 5</a>).<a href="#section-7-4.6.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-7-4.7">
           <p id="section-7-4.7.1"><strong>Commit the instance.</strong> Commit an ordinary Mission whose Authority
@@ -1695,18 +1698,23 @@ principal (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref
 is not the approver;<a href="#section-7-4.7.2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-7-4.7.2.2">
-              <p id="section-7-4.7.2.2.1"><code>intent_hash</code> and <code>authority_hash</code> are computed over the instance's
-own Intent and final Authority Set, never over the template; the
-template commits the ceiling under <code>template_hash</code>
-(<a href="#template-hash" class="auto internal xref">Section 5.1</a>);<a href="#section-7-4.7.2.2.1" class="pilcrow">¶</a></p>
+              <p id="section-7-4.7.2.2.1"><code>subject</code> is established as the issuance profile requires, never
+taken from Dispatcher input, and is within <code>allowed_recipients</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-7-4.7.2.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-7-4.7.2.3">
-              <p id="section-7-4.7.2.3.1"><code>expires_at</code> is clamped to the minimum of the dispatch intent's
-requested expiry, the template's <code>instance_lifetime</code> from creation,
-and the template's <code>expires_at</code>; and<a href="#section-7-4.7.2.3.1" class="pilcrow">¶</a></p>
+              <p id="section-7-4.7.2.3.1"><code>intent_hash</code> and <code>authority_hash</code> are computed over the instance's
+own Intent and final Authority Set, never over the template; the
+template commits the ceiling under <code>template_hash</code>
+(<a href="#template-hash" class="auto internal xref">Section 5.1</a>);<a href="#section-7-4.7.2.3.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-7-4.7.2.4">
-              <p id="section-7-4.7.2.4.1"><code>template</code> lineage member is set (<a href="#template-member" class="auto internal xref">Section 7.1</a>).<a href="#section-7-4.7.2.4.1" class="pilcrow">¶</a></p>
+              <p id="section-7-4.7.2.4.1"><code>expires_at</code> is clamped to the minimum of the dispatch intent's
+requested expiry, the template's <code>instance_lifetime</code> from creation,
+and the template's <code>expires_at</code>; and<a href="#section-7-4.7.2.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-4.7.2.5">
+              <p id="section-7-4.7.2.5.1"><code>template</code> lineage member is set (<a href="#template-member" class="auto internal xref">Section 7.1</a>).<a href="#section-7-4.7.2.5.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </li>
