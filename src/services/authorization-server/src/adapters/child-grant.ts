@@ -71,7 +71,9 @@ export async function mintChildGrant(
     // @spec #parent-member — the child `mission` claim carries the parent lineage.
     // @spec #child-client-identity / #attenuation — authority_hash commits the CHILD set.
     mission: childMissionClaim(kernel, child),
-    authorization_details: child.authority_set,
+    // Containment: the assertion carries the child's EFFECTIVE set (a fresh
+    // child has no containment, so this is its approved set as-is).
+    authorization_details: kernel.effectiveAuthoritySet(child),
     // @spec #child-client-identity — the child actor is the only authorized redeemer.
     client_id: child.client_id,
   })

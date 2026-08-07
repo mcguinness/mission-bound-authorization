@@ -647,8 +647,12 @@ async function mintDeferredToken(
     throw new errors.InvalidRequest("invalid DPoP proof");
   }
 
+  // Containment: derive the resource fallback from the EFFECTIVE set (a fresh
+  // mission has no containment, so this is the approved set as-is).
   const resource =
-    deferred.authorization_details[0]?.resource ?? record.authority_set[0]?.resource ?? opts.issuer;
+    deferred.authorization_details[0]?.resource ??
+    opts.kernel.effectiveAuthoritySet(record)[0]?.resource ??
+    opts.issuer;
   const info = resourceServerInfoFor(resource, opts.accessTokenTTL ?? 300);
   // TTL MUST NOT outlive approved_until (D42: the credential is bounded by the
   // recorded approval expiry).
@@ -784,7 +788,10 @@ async function handleChildJwtBearerGrant(
   //    the child `mission` claim is attached (never hand-set). The Grant and the
   //    AccessToken name the SAME client (record.client_id == the authenticated
   //    client, guaranteed by steps 3-4), which oidc-provider requires.
-  const resource = record.authority_set[0]?.resource ?? opts.issuer;
+  // Containment: every copy of the child's authority into rar/authorization_
+  // details projects the EFFECTIVE set (approved minus containment overlay).
+  const effective = kernel.effectiveAuthoritySet(record);
+  const resource = effective[0]?.resource ?? opts.issuer;
   let grantId: string;
   if (record.grant_id) {
     grantId = record.grant_id;
@@ -792,7 +799,7 @@ async function handleChildJwtBearerGrant(
     const grant = new provider.Grant({ accountId: record.subject.sub, clientId: record.client_id });
     grant.addOIDCScope("payments");
     grant.addResourceScope(resource, "payments");
-    for (const entry of record.authority_set) {
+    for (const entry of effective) {
       (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
     }
     grantId = await grant.save();
@@ -814,7 +821,7 @@ async function handleChildJwtBearerGrant(
     client,
     grantId,
     gty: CHILD_JWT_BEARER_GRANT_TYPE,
-    rar: record.authority_set,
+    rar: effective,
     scope: "payments",
   });
   at.resourceServer = newResourceServer(provider, resource, info);
@@ -829,7 +836,7 @@ async function handleChildJwtBearerGrant(
     token_type: "DPoP",
     expires_in: at.expiration,
     scope: "payments",
-    authorization_details: record.authority_set,
+    authorization_details: effective,
   };
   ctx.set("cache-control", "no-store");
 }
@@ -917,6 +924,49 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (!requireServiceToken(ctx)) return;
       const body = await readJsonBody(ctx.req);
       try {
+        // Mission Containment: a metadata-only commit (state unchanged, version
+        // incremented) carrying `{ event, remove }`. Mirrors the other
+        // operations' response shape plus containment_version; a terminal-state
+        // contain maps to 409 through the shared LifecycleConflictError catch.
+        if (body.operation === "contain") {
+          const event = body.event as
+            | { type?: unknown; source?: unknown; observed_at?: unknown; event_id?: unknown }
+            | undefined;
+          const remove = body.remove;
+          if (
+            !event ||
+            typeof event.type !== "string" ||
+            typeof event.source !== "string" ||
+            typeof event.observed_at !== "string" ||
+            typeof event.event_id !== "string" ||
+            !Array.isArray(remove) ||
+            remove.length === 0
+          ) {
+            ctx.status = 400;
+            ctx.body = {
+              error: "invalid_request",
+              error_description: "contain requires event {type, source, observed_at, event_id} and a non-empty remove[]",
+            };
+            return;
+          }
+          const { record } = kernel.contain(lifecycleMatch[1] as string, {
+            event: {
+              type: event.type,
+              source: event.source,
+              observed_at: event.observed_at,
+              event_id: event.event_id,
+            },
+            remove: remove as Array<{ resource: string; actions?: string[] }>,
+          });
+          ctx.status = 200;
+          ctx.body = {
+            id: record.id,
+            state: record.state,
+            version: record.version,
+            containment_version: record.containment?.containment_version ?? 0,
+          };
+          return;
+        }
         const record = kernel.transition(
           lifecycleMatch[1] as string,
           body.operation as LifecycleOperation,
@@ -1142,7 +1192,9 @@ async function handleTransaction(
     ctx.body = { error: "mission_not_active" };
     return;
   }
-  if (!isSubsetSet(requested, active.authority_set)) {
+  // Containment: the txn subset gate measures against the EFFECTIVE set, so a
+  // contained capability cannot be laundered through a transaction approval.
+  if (!isSubsetSet(requested, kernel.effectiveAuthoritySet(active))) {
     ctx.status = 403;
     ctx.body = { error: "out_of_authority" };
     return;
@@ -1497,9 +1549,12 @@ async function decide(
   const grant = new provider.Grant({ accountId: subject, clientId: String(params.client_id) });
   // Grant exactly the requested scopes (openid enables an id_token when asked).
   grant.addOIDCScope(typeof params.scope === "string" ? params.scope : "payments");
-  const resource = record.authority_set[0]?.resource ?? opts.issuer;
+  // Containment: the grant's rar copies the EFFECTIVE set. A freshly approved
+  // Mission has no containment, so this is the approved set as-is (fast path).
+  const effective = opts.kernel.effectiveAuthoritySet(record);
+  const resource = effective[0]?.resource ?? opts.issuer;
   grant.addResourceScope(resource, "payments");
-  for (const entry of record.authority_set) {
+  for (const entry of effective) {
     (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
   }
   const grantId = await grant.save();
