@@ -423,6 +423,16 @@ export async function handleAsyncDelegationExchange(
     txError(ctx, 400, "invalid_grant", "subject_token is missing the mission claim");
     return;
   }
+  // @spec async-delegation: the delegation handle (the base access token) is
+  // bound to the acting client. Require the base token's client_id to equal the
+  // authenticated acting client, so an authenticated client cannot present a base
+  // token issued to a DIFFERENT client and continue that Mission. The continuation
+  // family is re-bound to the acting client's own DPoP key (which may differ from
+  // the base token's key, so the base cnf is deliberately NOT required to match).
+  if (baseClaims.client_id !== client.clientId) {
+    txError(ctx, 400, "invalid_grant", "subject_token was not issued to the acting client");
+    return;
+  }
   const record = kernel.get(missionId);
   if (!record) {
     txError(ctx, 400, "invalid_grant", "subject_token mission not found");
