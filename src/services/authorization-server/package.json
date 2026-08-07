@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@mission/access-request": "workspace:*",
+    "@mission/pdp": "workspace:*",
     "@mission/ras": "workspace:*",
     "@types/oidc-provider": "9.5.0"
   }

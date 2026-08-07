@@ -42,6 +42,9 @@ export const ACTION_LABELS: Record<string, string> = {
 export const REASON_LABELS: Record<string, string> = {
   constraint_exceeded: "Exceeds a mission constraint (e.g. amount cap or vendor)",
   out_of_authority: "Outside the mission's granted authority",
+  authority_contained: "Capability contained after a protected event (approved, then narrowed)",
+  egress_undeclared: "Outbound channel not declared in the harness scope statement",
+  egress_destination_unlisted: "Destination not on the declared egress allowlist",
   unknown_mission: "Mission not recognized by the enforcement point",
   parameter_mismatch: "Parameters changed after the decision (time-of-check vs time-of-use)",
   view_inconsistent: "Token's mission view doesn't match the authorization server",

@@ -248,6 +248,17 @@ export async function composeStack(opts: {
       version: fresh.version,
       authority_hash: fresh.authority_hash,
       authority_set: fresh.authority_set,
+      // The containment DELTA (not a filtered set), so the PDP distinguishes
+      // never-approved (out_of_authority) from approved-then-contained
+      // (authority_contained).
+      ...(fresh.containment
+        ? {
+            containment: {
+              version: fresh.containment.containment_version,
+              contained: fresh.containment.contained,
+            },
+          }
+        : {}),
     };
   };
 

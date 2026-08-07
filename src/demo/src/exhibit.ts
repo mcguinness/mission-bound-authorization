@@ -679,7 +679,49 @@ async function main() {
   if (captured) block("PDP decision (resumed)", captured.decision);
   verdict(afterResume.ok, `${gloss("tool", "get_invoice")}(inv-1) after resume → ${afterResume.ok ? JSON.stringify(afterResume.result) : gloss("reason", afterResume.denial_reason ?? afterResume.refusal_reason ?? "")}`);
 
-  // 10c. Expansion: a successor mission from a fresh approval that widens authority.
+  // 10c. Containment: a protected event narrows the EFFECTIVE authority while
+  // the approved authority_set/authority_hash stay immutable. A simulated
+  // tainted read is reported via the lifecycle contain operation; the issuer
+  // removes payments:remittance.send. The PDP now denies exactly that action
+  // authority_contained (approved, then narrowed — distinct from
+  // out_of_authority, never approved) while other actions still permit.
+  const containBody = {
+    operation: "contain",
+    event: {
+      type: "tainted_read",
+      source: "https://siem.example/detections",
+      observed_at: new Date().toISOString(),
+      event_id: "taint-exhibit-1",
+    },
+    remove: [{ resource: CANONICAL_RESOURCE, actions: ["payments:remittance.send"] }],
+  };
+  hop("SIEM / Operator", "AS", "POST /missions/{id}/lifecycle (contain: tainted read)", "HTTP");
+  httpReq("POST", `${asUrl}/missions/${missionId}/lifecycle`, {
+    headers: { "content-type": "application/json", "x-service-token": "<service token>" },
+    body: containBody,
+  });
+  const containRes = await fetch(`${asUrl}/missions/${missionId}/lifecycle`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+    body: JSON.stringify(containBody),
+  });
+  httpRes(containRes.status, await containRes.json());
+  hop("Agent", "Payments RS", "tools/call send_remittance_email (contained capability)", "in-process MCP · O-33");
+  const containedCall = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
+  if (captured) block("PDP decision (contained capability)", captured.decision);
+  verdict(
+    containedCall.ok,
+    `${gloss("tool", "send_remittance_email")}(inv-1) after contain → ${gloss("reason", containedCall.denial_reason ?? containedCall.refusal_reason ?? "")}`,
+  );
+  hop("Agent", "Payments RS", "tools/call get_invoice (uncontained action)", "in-process MCP · O-33");
+  const uncontainedCall = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
+  verdict(
+    uncontainedCall.ok,
+    `${gloss("tool", "get_invoice")}(inv-1) after contain → ${uncontainedCall.ok ? JSON.stringify(uncontainedCall.result) : gloss("reason", uncontainedCall.denial_reason ?? uncontainedCall.refusal_reason ?? "")}`,
+  );
+  note("containment is removal-only and versioned; restore exists only via the Expansion successor below.");
+
+  // 10d. Expansion: a successor mission from a fresh approval that widens authority.
   // The cap is already at the policy ceiling (500), so the widening is on ACTIONS:
   // payments:payment.schedule is added (in the ceiling, absent from the predecessor).
   const predecessor = stack.kernel.get(missionId);
@@ -727,6 +769,10 @@ async function main() {
     `successorWidensOnly = ${successorWidensOnly(predecessor.authority_set, expansion.successor.authority_set)}: ` +
       "all predecessor actions retained, +payments:payment.schedule. Cap stays 500 (already at ceiling); the widening is on actions.",
   );
+  note(
+    `successor carries NO containment (containment = ${JSON.stringify(stack.kernel.get(expansion.successor.id)?.containment ?? null)}): ` +
+      "the fresh approval restores payments:remittance.send that containment removed from the predecessor.",
+  );
 
   // Supersession: on the successor's first redemption the predecessor is superseded atomically.
   hop("Operator", "AS", "supersede predecessor on the successor's first redemption (kernel op)", "in-process");
@@ -738,7 +784,7 @@ async function main() {
   verdict(afterSupersede.ok, `${gloss("tool", "get_invoice")}(inv-1) with the original token → ${gloss("reason", afterSupersede.denial_reason ?? afterSupersede.refusal_reason ?? "")}`);
   note("the original credential no longer authorizes; the successor is the active mission going forward.");
 
-  // 10d. revoke the successor over the wire.
+  // 10e. revoke the successor over the wire.
   hop("Operator", "AS", "POST /missions/{id}/lifecycle (revoke successor)", "HTTP");
   httpReq("POST", `${asUrl}/missions/${expansion.successor.id}/lifecycle`, {
     headers: { "content-type": "application/json", "x-service-token": "<service token>" },
