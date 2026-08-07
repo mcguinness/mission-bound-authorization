@@ -5,6 +5,7 @@
   "references": [
     { "path": "../authorization-server" },
     { "path": "../access-request" },
+    { "path": "../mcp-payments" },
     { "path": "../transparency" }
   ]
 }
