@@ -186,6 +186,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -1513,7 +1521,10 @@ surface with a lifecycle endpoint and per-entry completion discharge
 ({{I-D.draft-mcguinness-oauth-mission-status}}); Signals, the push
 complement ({{I-D.draft-mcguinness-oauth-mission-signals}});
 Expansion, widening only via an approved successor
-({{I-D.draft-mcguinness-oauth-mission-expansion}}); Management,
+({{I-D.draft-mcguinness-oauth-mission-expansion}}); Containment,
+event-triggered monotonic narrowing of a live Mission's effective
+authority ({{I-D.draft-mcguinness-oauth-mission-containment}});
+Management,
 fleet enumeration and bulk lifecycle for operators
 ({{I-D.draft-mcguinness-oauth-mission-management}}); and Discovery,
 experimental, binding encountered resources within a pre-consented
@@ -2159,6 +2170,7 @@ needs the whole matrix:
 
 | Control | Stops | Home |
 |---|---|---|
+| Capability kill | one capability within one Mission, with the body of work still running | the issuer-held containment overlay ({{I-D.draft-mcguinness-oauth-mission-containment}}) |
 | Mission kill | one body of work, across every resource and derived credential | the core's revocation; cascades to Child Missions ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) |
 | Agent kill | all work by one agent, across its Missions | the deployment's agent IAM ({{three-objects}}) |
 | Agent Deployment kill | every instance running a compromised version | the deployment's change governance ({{three-objects}}) |
@@ -2356,6 +2368,10 @@ operator plane) as its satellites.
 
 `oauth-mission-expansion`:
 : Widening through an approved successor Mission.
+
+`oauth-mission-containment`:
+: Event-triggered, monotonic narrowing of a live Mission's effective
+  authority, with restoration only through an approved successor.
 
 `oauth-mission-progressive`:
 : Experimental: policy-adjudicated expansion within a pre-consented
