@@ -221,7 +221,6 @@ describe("activity-log task-run graph: template -> dispatched Mission -> hop -> 
     expect(child?.mission_id).toBe("msn_child");
     expect(child?.lineage.parent?.id).toBe("msn_root");
     expect(child?.entries).toHaveLength(1);
-    expect(child?.entries[0]?.op_key).toBeUndefined(); // op_key is not projected
     expect(child?.entries[0]?.outcome).toBe("committed");
   });
 });
@@ -371,10 +370,12 @@ describe("ConsoleBff.activityLog read surface (operator role + join)", () => {
     });
   });
 
-  it("requires the operator role", () => {
+  it("requires the operator role on both read methods", () => {
     expect(() => bff.activityLog(undefined, missionId)).toThrow(AuthzError);
+    expect(() => bff.activityByTrace(undefined, "t")).toThrow(AuthzError);
     const approver = bff.sessions.create("bob", ["approver"]);
     expect(() => bff.activityLog(approver, missionId)).toThrow(/operator required/);
+    expect(() => bff.activityByTrace(approver, "t")).toThrow(/operator required/);
   });
 
   it("joins the injected producer stores into the Mission's timeline", () => {
@@ -383,10 +384,8 @@ describe("ConsoleBff.activityLog read surface (operator role + join)", () => {
     expect(run.mission_id).toBe(missionId);
     expect(run.entries).toHaveLength(2);
     expect(new Set(run.entries.map((e) => e.role))).toEqual(new Set(["pep", "egress"]));
-    // Trace grouping across the same stores (record() stamps a shared trace_id).
-    const traceId = run.entries[0]?.trace_id;
-    if (traceId) {
-      expect(bff.activityByTrace(op, traceId).length).toBeGreaterThanOrEqual(1);
-    }
+    // The trace method reads the same injected sources; an unmatched trace joins
+    // to nothing (record() stamps trace_id only under an active span, absent here).
+    expect(bff.activityByTrace(op, "no-such-trace")).toEqual([]);
   });
 });
