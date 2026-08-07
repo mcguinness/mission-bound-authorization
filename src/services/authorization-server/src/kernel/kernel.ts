@@ -31,6 +31,7 @@ import {
   type MissionRecord,
   type MissionState,
   type ParentRef,
+  type TemplateRef,
   TERMINAL_STATES,
 } from "./types.js";
 
@@ -64,6 +65,8 @@ CREATE TABLE IF NOT EXISTS missions (
   successor TEXT,
   parent_id TEXT,
   parent_json TEXT,
+  template_id TEXT,
+  template_json TEXT,
   projected_from TEXT,
   containment_json TEXT
 ) STRICT;
@@ -182,8 +185,9 @@ export class MissionKernel {
           `INSERT INTO missions (id, issuer, state, intent_json, authority_set_json, intent_hash,
            authority_hash, subject_iss, subject_sub, approver_iss, approver_sub, client_id,
            policy_version, approval_event_id, created_at, expires_at, version, max_derivations,
-           derivation_count, grant_id, predecessor, parent_id, parent_json, projected_from)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           derivation_count, grant_id, predecessor, parent_id, parent_json, template_id,
+           template_json, projected_from)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -211,6 +215,11 @@ export class MissionKernel {
           // creation (like `predecessor`), so it is written only here.
           record.parent?.id ?? null,
           record.parent ? JSON.stringify(record.parent) : null,
+          // @spec mission-template#template-lineage: `template` is immutable
+          // after creation (like `parent`/`predecessor`), so it is written only
+          // here. Null on every non-template Mission (fast path preserved).
+          record.template?.id ?? null,
+          record.template ? JSON.stringify(record.template) : null,
           // @spec child-delegation#child-state: a fresh Mission is never a
           // projected-suspended hold; the marker is written later by setState.
           record.projected_from ?? null,
@@ -883,6 +892,9 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     status_list_idx: (row.status_list_idx as number | null) ?? null,
     ...(row.predecessor ? { predecessor: row.predecessor as string } : {}),
     ...(row.parent_json ? { parent: JSON.parse(row.parent_json as string) as ParentRef } : {}),
+    ...(row.template_json
+      ? { template: JSON.parse(row.template_json as string) as TemplateRef }
+      : {}),
     ...(row.projected_from ? { projected_from: row.projected_from as MissionState } : {}),
     // Absent means no containment was ever applied; written only by contain().
     ...(row.containment_json

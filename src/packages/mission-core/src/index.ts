@@ -5,6 +5,7 @@ export {
   computeAnchor,
   INTENT_TYP,
   intentHash,
+  MISSION_TEMPLATE_TYP,
   UNWIND_PLAN_TYP,
   verifyAnchor,
 } from "./anchors.js";

@@ -134,6 +134,29 @@ export interface ParentRef {
 }
 
 /**
+ * @spec mission-template#template-lineage — the Mission Template reference
+ * carried on an instance Mission dispatched from a template (and in the
+ * `mission` claim of instance-derived tokens). Lineage and audit data only: it
+ * grants no authority (the instance's Authority Set is the double intersection
+ * of the derivation-policy ceiling AND the template ceiling). Defined here,
+ * beside {@link ParentRef}, so {@link MissionRecord} can carry it with no import
+ * cycle back into `template.ts`; re-exported from `template.ts` for the public
+ * surface.
+ */
+export interface TemplateRef {
+  /** The Mission Template identifier (`tmpl_`-prefixed). */
+  id: string;
+  /** The template Issuer; the instance's own `issuer` equals this. */
+  issuer: string;
+  /** The template version the instance was dispatched under. */
+  template_version: string;
+  /** The template integrity anchor (@spec mission-template) the instance commits to. */
+  template_hash: string;
+  /** The template's dispatch policy identifier (audit only). */
+  dispatch_policy: string;
+}
+
+/**
  * @spec child-delegation#child-evidence — the Child Evidence record: audit
  * material recording one child-creation decision. It grants no authority. Its
  * canonical bytes are its JCS (RFC 8785) canonicalization; its media type is
@@ -218,6 +241,13 @@ export interface MissionRecord {
   predecessor?: string;
   /** @spec child-delegation#parent-member: set on a Child Mission only. */
   parent?: ParentRef;
+  /**
+   * @spec mission-template#template-lineage: set on an instance Mission
+   * dispatched from a Mission Template. Immutable after creation (like
+   * `parent`), written only by `insertRecord`. Absent on every other Mission,
+   * so an ordinary Mission behaves identically (fast path).
+   */
+  template?: TemplateRef;
   /**
    * @spec child-delegation#child-state: a Child Mission's pre-suspension state,
    * recorded when a parent SUSPEND projects it to the reversible `suspended` hold
