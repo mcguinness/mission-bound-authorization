@@ -76,20 +76,29 @@ let signKey: CryptoKey;
 let pubJwk: Record<string, unknown>;
 
 /** Mint a real ES256-signed mission access token (aud = the RS resource). */
-async function signMissionToken(opts: { missionId?: string; authorityHash?: string; cnfJkt?: string; key?: CryptoKey }): Promise<string> {
-  return new SignJWT({
+async function signMissionToken(opts: {
+  missionId?: string;
+  authorityHash?: string;
+  cnfJkt?: string;
+  key?: CryptoKey;
+  jti?: string;
+  identityContinuationHandle?: string;
+}): Promise<string> {
+  const token = new SignJWT({
     client_id: "ap-agent",
     client_instance_id: "inst-1",
     mission: { id: opts.missionId ?? VIEW.id, authority_hash: opts.authorityHash ?? AUTHORITY_HASH },
     cnf: { jkt: opts.cnfJkt ?? CNF_JKT },
+    ...(opts.identityContinuationHandle ? { identity_continuation_handle: opts.identityContinuationHandle } : {}),
   })
     .setProtectedHeader({ alg: "ES256", kid: "mission-key" })
     .setIssuer(ISSUER)
     .setAudience(CANONICAL_RESOURCE)
     .setSubject("alice")
     .setIssuedAt()
-    .setExpirationTime("5m")
-    .sign(opts.key ?? signKey);
+    .setExpirationTime("5m");
+  if (opts.jti) token.setJti(opts.jti);
+  return token.sign(opts.key ?? signKey);
 }
 
 /** The TokenFacts the direct PEP path uses, equivalent to the signed token. */
@@ -176,6 +185,20 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
     const ev = evidence.forMission("msn_m4");
     expect(ev.some((e) => e.kind === "decision" && e.decision === true && e.action === "payments:payment.execute")).toBe(true);
     expect(ev.some((e) => e.kind === "execution" && e.outcome === "committed")).toBe(true);
+  });
+
+  it("2c: a continued credential's jti + continuation handle reach Execution Evidence as hop_reference", async () => {
+    // End to end: the claims are set on the SIGNED token, so this proves the
+    // validateMissionToken -> TokenFacts -> ExecutionEvidence.hop_reference
+    // wiring, not just the evidence-construction shape.
+    const { client, evidence } = await build();
+    const JTI = "jag_hopref_e2e";
+    const HANDLE = "ich_0123456789abcdefABCD";
+    const jwt = await signMissionToken({ jti: JTI, identityContinuationHandle: HANDLE });
+    const res = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1" }, jwt);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    const exec = evidence.forMission("msn_m4").find((e) => e.kind === "execution");
+    expect(exec?.hop_reference).toEqual({ jti: JTI, mission_id: "msn_m4", continuation_handle: HANDLE });
   });
 
   // Each adversarial input is run twice on fresh stacks -- once over the direct
