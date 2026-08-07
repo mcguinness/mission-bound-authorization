@@ -219,9 +219,23 @@ this matrix and the `@spec` tags to the affected code and tests.
   root mapping); a fully contained Mission refuses derivation with `GateError`
   `authority_contained`. Containment Evidence (JCS bytes,
   `application/mission-containment-evidence+json`) mirrors the Child Evidence
-  conventions; the lifecycle endpoint gains `operation: "contain"`. The PDP join and
-  the demo trigger land in a follow-up PR.
-  (`services/authorization-server/test/containment.test.ts`,
+  conventions; the lifecycle endpoint gains `operation: "contain"`. The PDP join:
+  `MissionView` carries the containment DELTA (version + contained entries, not a
+  filtered set) so the decision function distinguishes never-approved
+  (`out_of_authority`, step 5) from approved-then-contained (`authority_contained`,
+  inserted between the entry match and the FGA check, `containment_version` in the
+  decision context); `policyViewId` is unchanged (it commits `mission_version`,
+  which contain() bumps, so pre-containment pins deny `view_inconsistent`). The
+  refresh-path rar conformance fix: `rarForCodeResponse`/`rarForRefreshTokenResponse`
+  re-project the stored grant's issuance-time rar copy through
+  `effectiveAuthoritySet` (mission via `findByGrant`, else the delegation family
+  store), so a derivation never echoes a contained capability; no-containment
+  grants pass through byte-identical. Demo: the exhibit gains a containment
+  sequence (SIEM tainted-read event over the lifecycle wire, `authority_contained`
+  denial beside a permitted uncontained action, Expansion successor restore with
+  no containment) and a live AS+PDP+OpenFGA e2e test proves the same sequence.
+  (`services/authorization-server/test/{containment,containment-pdp-e2e,async-delegation}.test.ts`,
+  `services/pdp/test/evaluate.test.ts`,
   `packages/mission-signals/test/containment-commit.test.ts`.)
 - Unified cross-enforcement evidence base (`authzen#decision-evidence-object`):
   `EvidenceBase` gains the optional `emitter` (`id` + `role`, roles `pdp`/`pep`/
