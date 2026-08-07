@@ -192,6 +192,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-continuation:
+    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
@@ -965,6 +973,19 @@ The composition consequences:
   layer between the PS and the Access Server rather than projecting a
   Mission into a foreign issuer
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+- Authorization continuity
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}) is native for
+  the over-time case and needs no new transport: the `(approver,
+  s256)` reference is a handle that grants nothing, and the PS's
+  state-gated, one-hour auth-token issuance and federation is the
+  continuation point, with revocation latency bounded by the token
+  lifetime. That profile's cross-workload transports are OAuth-bound
+  (Identity Continuation and async delegation over token exchange),
+  for which AAuth has no substrate, and AAuth declines cross-hop
+  authority carry-forward by design ({{subset}}): a chained hop is a
+  fresh decision at its own decision point. AAuth-native cross-workload
+  continuation is therefore deferred work, alongside Child Mission
+  creation.
 
 # Limitations {#limitations}
 

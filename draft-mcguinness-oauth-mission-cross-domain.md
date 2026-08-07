@@ -59,6 +59,23 @@ informative:
   I-D.draft-mcguinness-oauth-id-assertion-framework:
   I-D.draft-mcguinness-oauth-domain-authorized-issuer:
   I-D.draft-mcguinness-oauth-actor-receipts:
+  I-D.draft-mcguinness-oauth-id-continuation-assertion:
+    title: "Identity Continuation Assertion for OAuth 2.0 Token Exchange"
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-zhu-oauth-async-delegation:
+  I-D.draft-mcguinness-oauth-mission-continuation:
+    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
@@ -339,6 +356,29 @@ the call chain. The `mission` claim object is the natural anchor to
 carry there, inert as evidence exactly as in the chaining profile
 above, so call-chain intent context stays joined to the committed
 record instead of growing an unanchored twin of it.
+
+# Relationship to Mission Continuation {#mission-continuation}
+
+This section is informative. Mission Continuation
+({{I-D.draft-mcguinness-oauth-mission-continuation}}) is the
+authorization-continuity profile: it defines how a Mission's
+authorization continues, under the same approval and constraints,
+while an identity-continuity transport re-establishes who is acting.
+This document's cross-domain grant is one of those transports, the one
+that carries a continuation ACROSS a trust boundary the origin does
+not control; Identity Continuation
+({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}) and async
+delegation ({{I-D.draft-zhu-oauth-async-delegation}}) are the
+intra-domain transports. What the profile adds over this document is
+the Mission binding common to every transport: a continuation handle
+grants nothing, each continued grant derives a subset of the Mission's
+authority and re-passes its `active` gate, so continuity is never
+authority. This document remains complete on its own: an issuer MAY
+project a Mission cross-domain without adopting the continuation
+profile, and a partner Resource AS honors the projected authority and
+resolves an audience-local subject exactly as specified here.
+Projection stays single-hop ({{what-crosses}}) regardless of how many
+intra-domain hops continue the Mission on either side.
 
 # Pre-Established Trust {#pre-established-trust}
 

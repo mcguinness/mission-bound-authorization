@@ -38,11 +38,29 @@ informative:
   RFC9126:
   RFC9396:
   RFC9943:
+  RFC8693:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-id-continuation-assertion:
+    title: "Identity Continuation Assertion for OAuth 2.0 Token Exchange"
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-zhu-oauth-async-delegation:
+  I-D.draft-mcguinness-oauth-mission-continuation:
+    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
     author:
       -
         ins: K. McGuinness
@@ -1436,6 +1454,10 @@ spine by the question each answers.
  project      Cross-Domain Projection (a Mission honored
               in another trust domain)
 
+ continue     Mission Continuation (authorization continuity
+              over ICA, async delegation, and cross-domain
+              transports)
+
  prove        Consent Evidence, Mandate, Audit
 
  analyze      Security Model (the trusted base)
@@ -1547,6 +1569,39 @@ Resource AS mints a local token bounded by the projected authority
 preserves authority across the boundary rather than narrowing it to a
 sub-actor, which is why it is a distinct verb from Delegate;
 downstream revocation latency is the local token lifetime.
+
+## Continue
+
+The question: how does a Mission's authorization continue, under the
+same approval and constraints, when the acting identity must be
+re-established at each hop or after the original credential is gone?
+The boundary: the seam between authorization continuity, which the
+Mission owns, and identity continuity, which a transport carries.
+Owner: Mission Continuation
+({{I-D.draft-mcguinness-oauth-mission-continuation}}), the
+authorization-continuity profile, which keeps three easily conflated
+things apart. Identity continuity, who is acting and how that identity
+legitimately continues, rides a transport rather than this profile:
+Identity Continuation
+({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}) for a
+short-lived, sender-constrained hop within a domain; async delegation
+({{I-D.draft-zhu-oauth-async-delegation}}) for a long-running,
+disconnected task; and the cross-domain grant
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) across a trust
+boundary. Authorization continuity, what work remains authorized under
+which constraints on whose approval, is the Mission's: every continued
+grant derives a subset of the Mission's Authority Set, is state-gated
+at issuance, is bounded by the Mission's expiry, and ends when the
+Mission goes terminal. Execution-time evidence records, against the
+Mission, what was done at each continued hop. The load-bearing
+invariant is that a continuation handle grants nothing: it names an
+accepted hop, and every continued grant re-passes the Mission's
+`active` gate, so continuity is never authority, the rule the harness
+already applies to session continuity
+({{I-D.draft-mcguinness-mission-harness}}). Continue is therefore
+distinct from Delegate, which narrows authority to a sub-actor, and it
+uses the Project verb's cross-domain grant as one transport rather
+than replacing it.
 
 ## Prove
 
@@ -2318,6 +2373,17 @@ operator plane) as its satellites.
 `oauth-mission-cross-domain`:
 : Single-hop projection of a Mission to another trust domain via the
   cross-domain grant.
+
+`oauth-mission-continuation`:
+: The authorization-continuity profile: a Mission continues its
+  authorization over identity-continuity transports (Identity
+  Continuation, async delegation, cross-domain), state-gated, with the
+  invariant that a continuation handle grants nothing.
+
+`oauth-id-continuation-assertion`:
+: A continuation transport: a short-lived token-exchange subject token
+  yielding an ID-JAG for an intra-domain hop, bound to a Mission's
+  authorization by mission-continuation.
 
 **Runtime enforcement:**
 
