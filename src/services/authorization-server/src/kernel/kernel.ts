@@ -8,7 +8,12 @@ import { randomBytes, randomInt } from "node:crypto";
 import { authorityHash, intentHash } from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { SignJWT, type CryptoKey } from "jose";
-import { buildContainmentEvidence, type ContainmentEvidence } from "./containment.js";
+import {
+  buildContainmentEvidence,
+  type ContainmentEvidence,
+  type ContainmentPolicy,
+  UnknownProtectedEventError,
+} from "./containment.js";
 import type { DerivationPolicy } from "./derive.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
 import { validateMissionIntent } from "./intent.js";
@@ -99,6 +104,14 @@ export interface KernelOptions {
   policy: DerivationPolicy;
   statusKey: CryptoKey;
   statusKid: string;
+  /**
+   * @spec containment#containment-policy — the ISSUER-HELD ContainmentPolicy
+   * (the map from a protected-event class to what narrows). OPTIONAL: only
+   * {@link MissionKernel.containOnEvent} reads it, so a kernel constructed
+   * without it behaves byte-identically to before (the manual `remove[]` path is
+   * unaffected). Absent means every event fails closed at containOnEvent.
+   */
+  containmentPolicy?: ContainmentPolicy;
   now?: () => Date;
   /**
    * @spec status#mission-status-anti-oracle — Status List index allocator.
@@ -492,6 +505,30 @@ export class MissionKernel {
   }
 
   /**
+   * @spec containment#containment-policy — event-driven containment: apply the
+   * ISSUER-HELD ContainmentPolicy DETERMINISTICALLY when a protected event
+   * fires. Look the event's `type` up in the configured policy; if NO rule
+   * matches (or no policy is configured) FAIL CLOSED with {@link
+   * UnknownProtectedEventError} (nothing is committed), otherwise delegate to
+   * {@link contain} with the matched rule's `remove` and stamp its `rule_id` as
+   * the evidence `policy`. Because a compromised caller supplies only the event
+   * (never the `remove`), it cannot shape which capability narrows. Idempotency,
+   * monotonicity, and the metadata-only commit are entirely {@link contain}'s.
+   */
+  containOnEvent(
+    id: string,
+    event: { type: string; source: string; observed_at: string; event_id: string },
+  ): { record: MissionRecord; evidence: ContainmentEvidence } {
+    const rule = this.opts.containmentPolicy?.rules.find((r) => r.event_type === event.type);
+    if (!rule) {
+      throw new UnknownProtectedEventError(
+        `no containment rule for protected-event type '${event.type}'`,
+      );
+    }
+    return this.contain(id, { event, remove: rule.remove, policyRule: rule.rule_id });
+  }
+
+  /**
    * Mission Containment: apply an issuer-committed, MONOTONIC narrowing of the
    * Mission's effective authority. The approved `authority_set`/`authority_hash`
    * are untouched; the new contained set is the UNION of the prior contained set
@@ -512,6 +549,14 @@ export class MissionKernel {
     input: {
       event: { type: string; source: string; observed_at: string; event_id: string };
       remove: Array<{ resource: string; actions?: string[] }>;
+      /**
+       * @spec containment#containment-policy — the ContainmentPolicy `rule_id`
+       * that drove this narrowing when the event was applied via {@link
+       * containOnEvent}; absent for the manual break-glass path. Recorded as the
+       * evidence `policy` field (defaulting to "manual"); it does NOT affect the
+       * monotonic union, idempotency, or the commit.
+       */
+      policyRule?: string;
     },
   ): { record: MissionRecord; evidence: ContainmentEvidence } {
     const record = this.applyExpiry(this.mustGet(id));
@@ -526,7 +571,9 @@ export class MissionKernel {
     const evidenceBase = {
       mission: { id: record.id, issuer: record.issuer, authority_hash: record.authority_hash },
       event: input.event,
-      policy: record.policy_version,
+      // @spec containment#containment-policy — the ContainmentPolicy rule_id that
+      // fired (from containOnEvent), or "manual" for the break-glass remove[] path.
+      policy: input.policyRule ?? "manual",
       created_at: nowIso,
     };
 

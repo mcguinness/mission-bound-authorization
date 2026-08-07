@@ -21,7 +21,7 @@
  */
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, CONTAINMENT_POLICY, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { decodeJwt, generateKeyPair, jwtVerify } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -31,6 +31,7 @@ import {
   ChildDelegationError,
   CONTAINMENT_EVIDENCE_MEDIA_TYPE,
   containmentEvidenceBytes,
+  type ContainmentPolicy,
   createChildMission,
   deriveAttenuationRoot,
   GateError,
@@ -43,6 +44,7 @@ import {
   STATUS_VALID,
   StatusListPublisher,
   statusListUri,
+  UnknownProtectedEventError,
   validateMissionIntent,
   verifyStatusListToken,
 } from "../src/index.js";
@@ -93,13 +95,14 @@ interface Harness {
   dirtyMarks: () => number;
 }
 
-function makeHarness(): Harness {
+function makeHarness(containmentPolicy?: ContainmentPolicy): Harness {
   const commits: LifecycleCommit[] = [];
   let marks = 0;
   let publisher: StatusListPublisher | undefined;
   const kernel = new MissionKernel({
     issuer: ISS,
     policy: POLICY as never,
+    ...(containmentPolicy ? { containmentPolicy } : {}),
     statusKey: statusKeys.privateKey,
     statusKid: "as-status",
     now: () => NOW,
@@ -145,7 +148,10 @@ describe("contain(): monotonic union + event_id idempotency", () => {
     expect(r1.record.containment?.events).toHaveLength(1);
     expect(r1.evidence).toMatchObject({
       mission: { id: m.id, issuer: ISS, authority_hash: m.authority_hash },
-      policy: "containment-v1",
+      // The manual break-glass contain() path passes no policyRule, so the
+      // evidence policy is "manual" (was the derivation policy_version before
+      // the issuer-held ContainmentPolicy landed; the doc comment was fixed too).
+      policy: "manual",
       prior_version: 1,
       new_version: 2,
       prior_containment_version: 0,
@@ -396,6 +402,111 @@ describe("contain legality by lifecycle state", () => {
       prior_state: "suspended",
       version: 3,
     });
+  });
+});
+
+describe("containOnEvent(): issuer-held ContainmentPolicy drives a deterministic narrowing", () => {
+  // A test ContainmentPolicy over this suite's POLICY resources: one rule that
+  // removes a HELD capability, one that removes a capability the Mission never
+  // held (payments:remittance.send is NOT in this suite's RES_PAY ceiling).
+  const TEST_CONTAINMENT: ContainmentPolicy = {
+    policy_version: "test-containment-1",
+    rules: [
+      {
+        rule_id: "contain-exec-on-taint-v1",
+        event_type: "content.tainted_read",
+        remove: [{ resource: RES_PAY, actions: ["payments:payment.execute"] }],
+      },
+      {
+        rule_id: "contain-phantom-v1",
+        event_type: "content.phantom_capability",
+        remove: [{ resource: RES_PAY, actions: ["payments:remittance.send"] }],
+      },
+    ],
+  };
+  const pev = (type: string, id: string) => ({
+    type,
+    source: "svc:soc",
+    observed_at: NOW.toISOString(),
+    event_id: id,
+  });
+
+  it("a matching event_type applies the rule's removal (same effect as a manual contain) and stamps evidence.policy = rule_id", () => {
+    const { kernel } = makeHarness(TEST_CONTAINMENT);
+    const m = approve(kernel);
+    const { record, evidence } = kernel.containOnEvent(m.id, pev("content.tainted_read", "pe-1"));
+    expect(record.version).toBe(2);
+    expect(record.containment?.containment_version).toBe(1);
+    expect(record.containment?.contained).toEqual([
+      { resource: RES_PAY, actions: ["payments:payment.execute"] },
+    ]);
+    expect(evidence.policy).toBe("contain-exec-on-taint-v1");
+
+    // Same effect as a manual contain() with that exact remove[].
+    const { kernel: manualKernel } = makeHarness();
+    const m2 = approve(manualKernel);
+    const manual = manualKernel.contain(m2.id, {
+      event: pev("content.tainted_read", "pe-1"),
+      remove: [{ resource: RES_PAY, actions: ["payments:payment.execute"] }],
+    });
+    expect(record.containment?.contained).toEqual(manual.record.containment?.contained);
+    expect(kernel.effectiveAuthoritySet(record)).toEqual(
+      manualKernel.effectiveAuthoritySet(manual.record),
+    );
+  });
+
+  it("an unknown event_type fails closed (UnknownProtectedEventError): no version bump, no containment row", () => {
+    const { kernel } = makeHarness(TEST_CONTAINMENT);
+    const m = approve(kernel);
+    expect(() => kernel.containOnEvent(m.id, pev("content.unmapped", "pe-x"))).toThrow(
+      UnknownProtectedEventError,
+    );
+    const fresh = kernel.get(m.id) as NonNullable<ReturnType<MissionKernel["get"]>>;
+    expect(fresh.version).toBe(1);
+    expect(fresh.containment).toBeUndefined();
+  });
+
+  it("a kernel with NO ContainmentPolicy fails every event closed", () => {
+    const { kernel } = makeHarness();
+    const m = approve(kernel);
+    expect(() => kernel.containOnEvent(m.id, pev("content.tainted_read", "pe-none"))).toThrow(
+      UnknownProtectedEventError,
+    );
+    expect((kernel.get(m.id) as NonNullable<ReturnType<MissionKernel["get"]>>).version).toBe(1);
+  });
+
+  it("a rule naming a capability the Mission never held still commits; the effective set is unchanged for un-held entries", () => {
+    const { kernel } = makeHarness(TEST_CONTAINMENT);
+    const m = approve(kernel);
+    const before = kernel.effectiveAuthoritySet(m);
+    const { record } = kernel.containOnEvent(m.id, pev("content.phantom_capability", "pe-2"));
+    expect(record.version).toBe(2); // it commits: a version bump and a containment overlay
+    expect(record.containment?.containment_version).toBe(1);
+    // Subtraction ignores non-matching entries: the effective set is unchanged.
+    expect(kernel.effectiveAuthoritySet(record)).toEqual(before);
+  });
+
+  it("is idempotent by event.event_id through the policy path (single version bump)", () => {
+    const { kernel } = makeHarness(TEST_CONTAINMENT);
+    const m = approve(kernel);
+    const first = kernel.containOnEvent(m.id, pev("content.tainted_read", "pe-dup"));
+    expect(first.record.version).toBe(2);
+    const second = kernel.containOnEvent(m.id, pev("content.tainted_read", "pe-dup"));
+    expect(second.record.version).toBe(2); // no extra bump
+    expect(second.record.containment?.containment_version).toBe(1);
+    expect(second.record.containment?.events).toHaveLength(1);
+  });
+
+  // Guard the REAL demo CONTAINMENT_POLICY shape (mirrors derivation-delegation's
+  // guard against a silent loader drop making every assertion vacuous). Also pins
+  // the CANONICAL_RESOURCE mapping (a no-op without MCP_PAYMENTS_RESOURCE set).
+  it("the seeded demo CONTAINMENT_POLICY resolves the external-comms rule to CANONICAL_RESOURCE", () => {
+    expect(CONTAINMENT_POLICY.policy_version).toBe("demo-containment-1");
+    const rule = CONTAINMENT_POLICY.rules[0];
+    expect(rule?.rule_id).toBe("contain-external-comms-on-taint-v1");
+    expect(rule?.event_type).toBe("content.tainted_read");
+    expect(rule?.remove[0]?.resource).toBe(CANONICAL_RESOURCE);
+    expect(rule?.remove[0]?.actions).toContain("payments:remittance.send");
   });
 });
 

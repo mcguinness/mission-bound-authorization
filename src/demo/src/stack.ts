@@ -15,7 +15,7 @@ import {
   MissionKernel,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { CATALOG_SERVICES, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
+import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
   Connectors,
@@ -213,7 +213,7 @@ export async function composeStack(opts: {
     };
   } else {
     const asKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });
-    kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, statusKey: asKeys.privateKey, statusKid: TOPOLOGY.keys.asStatus.kid });
+    kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, containmentPolicy: CONTAINMENT_POLICY as never, statusKey: asKeys.privateKey, statusKid: TOPOLOGY.keys.asStatus.kid });
     issuer = ISS;
     serverJwks = { keys: [] };
   }

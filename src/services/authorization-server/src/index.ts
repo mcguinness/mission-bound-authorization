@@ -2,6 +2,7 @@
 
 import {
   CANONICAL_RESOURCE,
+  CONTAINMENT_POLICY,
   demoReconciliationTemplate,
   DERIVATION_POLICY,
   seedAgentClient,
@@ -31,6 +32,8 @@ export {
   containmentEvidenceBytes,
   CONTAINMENT_EVIDENCE_MEDIA_TYPE,
   type ContainmentEvidence,
+  type ContainmentPolicy,
+  UnknownProtectedEventError,
 } from "./kernel/containment.js";
 export { validateMissionIntent, IntentError } from "./kernel/intent.js";
 export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
@@ -322,6 +325,9 @@ export async function buildAuthorizationServer(opts: {
   const kernel = new MissionKernel({
     issuer: opts.issuer,
     policy: DERIVATION_POLICY as never,
+    // @spec containment#containment-policy — the issuer-held ContainmentPolicy;
+    // only containOnEvent reads it (the manual contain path is unaffected).
+    containmentPolicy: CONTAINMENT_POLICY as never,
     statusKey: statusKeys.privateKey,
     statusKid: asStatus.kid,
     // Fan the committed transition out to the Status List republisher (PULL), the
