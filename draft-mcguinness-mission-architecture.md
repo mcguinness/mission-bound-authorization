@@ -186,6 +186,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -1288,6 +1296,19 @@ where the client supplies candidate authority, derivation is a subset
 of it and reproducible, which is the closest the family comes to
 portable derivation.
 
+The ceiling the derivation narrows against is itself a composition,
+not a single object. The derived Authority Set sits inside every
+authority source that bounds the task: the issuer's derivation
+policy, the Approver's own authority (an approval grants nothing the
+Approver could not grant), and, at enforcement time, the resource
+owner's and deployment's live policy at the decision point. The
+derivation step intersects the first two and commits the result;
+the runtime contract re-checks the rest on every action, which is
+why a permit is never implied by the Authority Set alone. A
+deployment adding further sources (a tenant boundary, an
+environment-specific floor) adds them as derivation-policy inputs or
+as decision-point policy, never as agent-negotiated widening.
+
 The derivation modes rank by how portable their result is:
 
 | Derivation mode | Portability status |
@@ -1513,7 +1534,10 @@ surface with a lifecycle endpoint and per-entry completion discharge
 ({{I-D.draft-mcguinness-oauth-mission-status}}); Signals, the push
 complement ({{I-D.draft-mcguinness-oauth-mission-signals}});
 Expansion, widening only via an approved successor
-({{I-D.draft-mcguinness-oauth-mission-expansion}}); Management,
+({{I-D.draft-mcguinness-oauth-mission-expansion}}); Containment,
+event-triggered monotonic narrowing of a live Mission's effective
+authority ({{I-D.draft-mcguinness-oauth-mission-containment}});
+Management,
 fleet enumeration and bulk lifecycle for operators
 ({{I-D.draft-mcguinness-oauth-mission-management}}); and Discovery,
 experimental, binding encountered resources within a pre-consented
@@ -2159,6 +2183,7 @@ needs the whole matrix:
 
 | Control | Stops | Home |
 |---|---|---|
+| Capability kill | one capability within one Mission, with the body of work still running | the issuer-held containment overlay ({{I-D.draft-mcguinness-oauth-mission-containment}}) |
 | Mission kill | one body of work, across every resource and derived credential | the core's revocation; cascades to Child Missions ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) |
 | Agent kill | all work by one agent, across its Missions | the deployment's agent IAM ({{three-objects}}) |
 | Agent Deployment kill | every instance running a compromised version | the deployment's change governance ({{three-objects}}) |
@@ -2356,6 +2381,10 @@ operator plane) as its satellites.
 
 `oauth-mission-expansion`:
 : Widening through an approved successor Mission.
+
+`oauth-mission-containment`:
+: Event-triggered, monotonic narrowing of a live Mission's effective
+  authority, with restoration only through an approved successor.
 
 `oauth-mission-progressive`:
 : Experimental: policy-adjudicated expansion within a pre-consented
