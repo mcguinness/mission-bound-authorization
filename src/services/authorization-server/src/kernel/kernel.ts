@@ -8,8 +8,9 @@ import { randomBytes, randomInt } from "node:crypto";
 import { authorityHash, intentHash } from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { SignJWT, type CryptoKey } from "jose";
+import { buildContainmentEvidence, type ContainmentEvidence } from "./containment.js";
 import type { DerivationPolicy } from "./derive.js";
-import { deriveAuthoritySet } from "./derive.js";
+import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
 import { validateMissionIntent } from "./intent.js";
 import {
   signStatusListToken,
@@ -20,10 +21,12 @@ import {
 } from "./status-list.js";
 import {
   type AuthorityEntry,
+  type ContainmentEventRecord,
   LEGAL_TRANSITIONS,
   type LifecycleCommit,
   type LifecycleOperation,
   type MissionClaim,
+  type MissionContainment,
   type MissionIntent,
   type MissionRecord,
   type MissionState,
@@ -61,14 +64,19 @@ CREATE TABLE IF NOT EXISTS missions (
   successor TEXT,
   parent_id TEXT,
   parent_json TEXT,
-  projected_from TEXT
+  projected_from TEXT,
+  containment_json TEXT
 ) STRICT;
 `;
 
 export class LifecycleConflictError extends Error {}
 export class GateError extends Error {
   constructor(
-    readonly reason: "mission_not_active" | "mission_expired" | "derivation_cap_exhausted",
+    readonly reason:
+      | "mission_not_active"
+      | "mission_expired"
+      | "derivation_cap_exhausted"
+      | "authority_contained",
     message: string,
   ) {
     super(message);
@@ -98,7 +106,8 @@ export interface KernelOptions {
   allocateStatusIndex?: () => number;
   /**
    * @spec status#status-list — the shared lifecycle-commit hook. Fired once per
-   * committed transition from the three real commit funnels. The Status List
+   * committed transition from the four real commit funnels (`setState`,
+   * `supersedeOnRedemption`, `insertRecord`, `contain`). The Status List
    * republisher subscribes today; Mission Signals subscribes next.
    */
   onLifecycleCommit?: (commit: LifecycleCommit) => void;
@@ -708,5 +717,9 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     ...(row.predecessor ? { predecessor: row.predecessor as string } : {}),
     ...(row.parent_json ? { parent: JSON.parse(row.parent_json as string) as ParentRef } : {}),
     ...(row.projected_from ? { projected_from: row.projected_from as MissionState } : {}),
+    // Absent means no containment was ever applied; written only by contain().
+    ...(row.containment_json
+      ? { containment: JSON.parse(row.containment_json as string) as MissionContainment }
+      : {}),
   };
 }
