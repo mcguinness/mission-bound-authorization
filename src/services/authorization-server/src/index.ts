@@ -112,6 +112,20 @@ export {
   type MintChildGrantInput,
 } from "./adapters/child-grant.js";
 export {
+  createTemplate,
+  dispatchFromTemplate,
+  TemplateStore,
+  TemplateError,
+  DispatchError,
+  type MissionTemplate,
+  type TemplateCreate,
+  type TemplateState,
+  type DispatchReason,
+  type CreateTemplateInput,
+  type DispatchInput,
+  type DispatchResult,
+} from "./kernel/template.js";
+export {
   DeferralStore,
   DeferralError,
   DEFERRED_GRANT_TYPE,
