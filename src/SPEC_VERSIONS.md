@@ -205,3 +205,21 @@ this matrix and the `@spec` tags to the affected code and tests.
   The whole `child-delegation-endpoint.test.ts` suite now exercises the full lifecycle
   end-to-end on the OAuth surface with no bespoke route.
   (`services/authorization-server/test/child-delegation-endpoint.test.ts`.)
+- Mission Containment kernel (`services/authorization-server/src/kernel/kernel.ts` +
+  `kernel/containment.ts`): an issuer-held, versioned, MONOTONIC narrowing overlay on
+  an active Mission's effective authority. The approved `authority_set`/`authority_hash`
+  stay immutable; `contain()` (legal from `active`/`suspended`, idempotent by
+  `event_id`, removal-only union) commits `containment_json` + `version + 1` atomically
+  and fires the existing lifecycle-commit fan-out as the fourth commit funnel, a
+  metadata-only commit (`prior_state === state`), so the Status List and Mission
+  Signals propagate with no new channels. `effectiveAuthoritySet()` (approved minus
+  contained; fast path returns the approved set as-is) now feeds every token-mint and
+  delegation funnel (decide grant rar, child grant/redemption, deferred, txn, async
+  continuation, cross-domain audience scoping, child strict-subset ceiling, attenuation
+  root mapping); a fully contained Mission refuses derivation with `GateError`
+  `authority_contained`. Containment Evidence (JCS bytes,
+  `application/mission-containment-evidence+json`) mirrors the Child Evidence
+  conventions; the lifecycle endpoint gains `operation: "contain"`. The PDP join and
+  the demo trigger land in a follow-up PR.
+  (`services/authorization-server/test/containment.test.ts`,
+  `packages/mission-signals/test/containment-commit.test.ts`.)
