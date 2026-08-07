@@ -33,7 +33,8 @@
     "pdpEvidence": { "kid": "pdp-evidence", "alg": "ES256" },
     "transparency": { "kid": "transparency", "alg": "ES256" },
     "rasToken": { "kid": "ras-token", "alg": "ES256" },
-    "crossDomain": { "kid": "as-crossdomain", "alg": "ES256" }
+    "crossDomain": { "kid": "as-crossdomain", "alg": "ES256" },
+    "asContinuation": { "kid": "as-continuation", "alg": "ES256" }
   },
   "openfga": {
     "url": "https://localhost:8080",

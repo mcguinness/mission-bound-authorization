@@ -273,6 +273,9 @@ importers:
       '@mission/access-request':
         specifier: workspace:*
         version: link:../access-request
+      '@mission/ras':
+        specifier: workspace:*
+        version: link:../ras
       '@types/oidc-provider':
         specifier: 9.5.0
         version: 9.5.0

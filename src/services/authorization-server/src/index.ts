@@ -190,17 +190,22 @@ export async function buildAuthorizationServer(opts: {
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
-  // txn-bound single-use approval tokens (AROP Transaction Challenge).
-  const { asToken, asStatus, asTxn } = TOPOLOGY.keys;
+  // txn-bound single-use approval tokens (AROP Transaction Challenge), and
+  // as-continuation signs the continuation ID-JAG (an identity grant gets its
+  // own signing key, discoverable on the AS jwks_uri AND trusted by the RAS).
+  const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
   const tokenKeys = await generateKeyPair(asToken.alg, { extractable: true });
   const statusKeys = await generateKeyPair(asStatus.alg, { extractable: true });
   const txnKeys = await generateKeyPair(asTxn.alg, { extractable: true });
+  const continuationKeys = await generateKeyPair(asContinuation.alg, { extractable: true });
   const tokenJwk = { ...(await exportJWK(tokenKeys.privateKey)), kid: asToken.kid, alg: asToken.alg, use: "sig" };
   const statusJwkPriv = { ...(await exportJWK(statusKeys.privateKey)), kid: asStatus.kid, alg: asStatus.alg, use: "sig" };
   const txnJwkPriv = { ...(await exportJWK(txnKeys.privateKey)), kid: asTxn.kid, alg: asTxn.alg, use: "sig" };
+  const continuationJwkPriv = { ...(await exportJWK(continuationKeys.privateKey)), kid: asContinuation.kid, alg: asContinuation.alg, use: "sig" };
   const tokenJwkPub = { ...(await exportJWK(tokenKeys.publicKey)), kid: asToken.kid, alg: asToken.alg, use: "sig" };
   const statusJwkPub = { ...(await exportJWK(statusKeys.publicKey)), kid: asStatus.kid, alg: asStatus.alg, use: "sig" };
   const txnJwkPub = { ...(await exportJWK(txnKeys.publicKey)), kid: asTxn.kid, alg: asTxn.alg, use: "sig" };
+  const continuationJwkPub = { ...(await exportJWK(continuationKeys.publicKey)), kid: asContinuation.kid, alg: asContinuation.alg, use: "sig" };
 
   const agent = await seedAgentClient();
   const child = await seedChildClient();
@@ -236,7 +241,7 @@ export async function buildAuthorizationServer(opts: {
   // OWN Chain Authority in the demo (ICAs trusted when signed by a key on its
   // jwks_uri). The resource->AS map mirrors the demo cross-domain wiring
   // (stack.ts). The subject resolver is deterministic over a constant salt.
-  const publicJwks = { keys: [tokenJwkPub, statusJwkPub, txnJwkPub] };
+  const publicJwks = { keys: [tokenJwkPub, statusJwkPub, txnJwkPub, continuationJwkPub] };
   const chainAuthorityIssuers: ContinuationIssuer[] =
     opts.chainAuthorityIssuers ?? [{ iss: opts.issuer, jwks: publicJwks as never }];
   const resourceToAs =
@@ -250,7 +255,7 @@ export async function buildAuthorizationServer(opts: {
     deferrals,
     statusListPublisher,
     clients: [agent.metadata, child.metadata],
-    jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv] },
+    jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     approverRoleSubs: new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub)),
@@ -263,16 +268,18 @@ export async function buildAuthorizationServer(opts: {
     childGrantKid: asToken.kid,
     childGrantAlg: asToken.alg,
     // @spec id-continuation-assertion — the RFC 8693 token-exchange continuation
-    // grant. The ID-JAG is signed with the ES256 as-txn key (already on the
-    // jwks_uri): issueCrossDomainGrant hardcodes an ES256 header, so the RS256 AS
-    // token key cannot sign it, and the goal is only that it verifies on jwks_uri.
+    // grant. The continuation ID-JAG is an identity grant, so it is signed with
+    // its OWN dedicated ES256 as-continuation key (D39 per-purpose). That key is
+    // published on the AS jwks_uri (so the ID-JAG verifies there) AND trusted by
+    // the RAS (so it redeems). ES256 matches the header issueCrossDomainGrant
+    // hardcodes; the RS256 AS token key could not have signed it.
     continuationStore,
     chainAuthorityIssuers,
     continuationReplay: newReplayCache(),
     resourceToAs,
     subjectResolver,
-    continuationGrantKey: txnKeys.privateKey,
-    continuationGrantKid: asTxn.kid,
+    continuationGrantKey: continuationKeys.privateKey,
+    continuationGrantKid: asContinuation.kid,
     ...(opts.resourceTxnJwks ? { resourceTxnJwks: opts.resourceTxnJwks } : {}),
     ...(opts.ars ? { ars: opts.ars } : {}),
   });
