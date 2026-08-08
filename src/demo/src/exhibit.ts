@@ -414,6 +414,11 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
       `template lineage template_hash ${dispatchedRecord.template?.template_hash === templateHash ? "==" : "!="} the consented template; ` +
       "the Authority Set == the template-clipped effective set.",
   );
+  note(
+    `subject == approver == ${dispatchedRecord.subject.sub} here by construction: at machine-speed dispatch the recipient ` +
+      "acts under the template's approver-of-record, not a distinct human subject (contrast step 2, where a human approval " +
+      "bound subject alice under a distinct approver bob for a write-bearing mission).",
+  );
   verdict(true, `dispatched mission ${dispatchedMissionId} (template-clipped, approver-of-record bob)`);
 
   // Over-ceiling dispatch is refused out_of_template_ceiling.
