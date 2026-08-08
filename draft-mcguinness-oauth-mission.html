@@ -1359,25 +1359,28 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
                 <p id="section-toc.1-1.16.2.4.1"><a href="#section-16.4" class="auto internal xref">16.4</a>.  <a href="#name-prompt-injection-and-the-ex" class="internal xref">Prompt Injection and the Exfiltration Leg</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.5">
-                <p id="section-toc.1-1.16.2.5.1"><a href="#section-16.5" class="auto internal xref">16.5</a>.  <a href="#name-issuance-scope-not-runtime-" class="internal xref">Issuance Scope, Not Runtime Enforcement</a></p>
+                <p id="section-toc.1-1.16.2.5.1"><a href="#section-16.5" class="auto internal xref">16.5</a>.  <a href="#name-authority-does-not-propagat" class="internal xref">Authority Does Not Propagate With Information</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.6">
-                <p id="section-toc.1-1.16.2.6.1"><a href="#section-16.6" class="auto internal xref">16.6</a>.  <a href="#name-denial-detail-disclosure" class="internal xref">Denial Detail Disclosure</a></p>
+                <p id="section-toc.1-1.16.2.6.1"><a href="#section-16.6" class="auto internal xref">16.6</a>.  <a href="#name-issuance-scope-not-runtime-" class="internal xref">Issuance Scope, Not Runtime Enforcement</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.7">
-                <p id="section-toc.1-1.16.2.7.1"><a href="#section-16.7" class="auto internal xref">16.7</a>.  <a href="#name-token-theft" class="internal xref">Token Theft</a></p>
+                <p id="section-toc.1-1.16.2.7.1"><a href="#section-16.7" class="auto internal xref">16.7</a>.  <a href="#name-denial-detail-disclosure" class="internal xref">Denial Detail Disclosure</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.8">
-                <p id="section-toc.1-1.16.2.8.1"><a href="#section-16.8" class="auto internal xref">16.8</a>.  <a href="#name-delegation-and-chain-compro" class="internal xref">Delegation and Chain Compromise</a></p>
+                <p id="section-toc.1-1.16.2.8.1"><a href="#section-16.8" class="auto internal xref">16.8</a>.  <a href="#name-token-theft" class="internal xref">Token Theft</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.9">
-                <p id="section-toc.1-1.16.2.9.1"><a href="#section-16.9" class="auto internal xref">16.9</a>.  <a href="#name-signing-and-key-rotation" class="internal xref">Signing and Key Rotation</a></p>
+                <p id="section-toc.1-1.16.2.9.1"><a href="#section-16.9" class="auto internal xref">16.9</a>.  <a href="#name-delegation-and-chain-compro" class="internal xref">Delegation and Chain Compromise</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.10">
-                <p id="section-toc.1-1.16.2.10.1"><a href="#section-16.10" class="auto internal xref">16.10</a>. <a href="#name-compromised-or-over-broad-d" class="internal xref">Compromised or Over-Broad Derivation</a></p>
+                <p id="section-toc.1-1.16.2.10.1"><a href="#section-16.10" class="auto internal xref">16.10</a>. <a href="#name-signing-and-key-rotation" class="internal xref">Signing and Key Rotation</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.11">
-                <p id="section-toc.1-1.16.2.11.1"><a href="#section-16.11" class="auto internal xref">16.11</a>. <a href="#name-authority-hash-is-not-a-mis" class="internal xref">Authority Hash Is Not a Mission Identifier</a></p>
+                <p id="section-toc.1-1.16.2.11.1"><a href="#section-16.11" class="auto internal xref">16.11</a>. <a href="#name-compromised-or-over-broad-d" class="internal xref">Compromised or Over-Broad Derivation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.12">
+                <p id="section-toc.1-1.16.2.12.1"><a href="#section-16.12" class="auto internal xref">16.12</a>. <a href="#name-authority-hash-is-not-a-mis" class="internal xref">Authority Hash Is Not a Mission Identifier</a></p>
 </li>
             </ul>
 </li>
@@ -1536,7 +1539,7 @@ derivation, which is sufficient for a low-risk workflow whose exposure
 is bounded by short token lifetimes and narrow authority. It does not
 evaluate individual actions: an agent taking consequential autonomous
 actions needs the second layer, the runtime enforcement chokepoint
-(<a href="#runtime-boundary" class="auto internal xref">Section 16.5</a>), specified separately. A deployment chooses its
+(<a href="#runtime-boundary" class="auto internal xref">Section 16.6</a>), specified separately. A deployment chooses its
 layers deliberately, matching the enforcement it runs to the
 consequence of what its agents do; the Mission Assurance Levels of
 <span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span> name the composed
@@ -1610,7 +1613,7 @@ and the decisions taken on them, references the Mission but cannot
 expand it. Revoking the Mission stops further derivation
 (<a href="#lifecycle" class="auto internal xref">Section 9</a>); it does not undo actions already completed.
 Evaluating each action against the Mission at the point of use is the
-runtime layer's concern (<a href="#runtime-boundary" class="auto internal xref">Section 16.5</a>), not this document's.<a href="#section-1.3-3" class="pilcrow">¶</a></p>
+runtime layer's concern (<a href="#runtime-boundary" class="auto internal xref">Section 16.6</a>), not this document's.<a href="#section-1.3-3" class="pilcrow">¶</a></p>
 <p id="section-1.3-4">The invariant across all three: the plan and the execution draw on the
 Mission's authority; neither enlarges it.<a href="#section-1.3-4" class="pilcrow">¶</a></p>
 </section>
@@ -1658,7 +1661,7 @@ approved egress channel carries a status update or an exfiltrated
 payload with equal authority. Content-level controls (data loss
 prevention, redaction) are complementary, and mediated execution
 places their natural insertion point at the mediating enforcement
-component (<a href="#runtime-boundary" class="auto internal xref">Section 16.5</a>,
+component (<a href="#runtime-boundary" class="auto internal xref">Section 16.6</a>,
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-1.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1742,7 +1745,7 @@ considered and where it belongs, not that it was overlooked.<a href="#section-1.
 approved authority and task; it does not evaluate whether a given
 runtime action serves the Mission's purpose beyond matching the
 approved <code>authorization_details</code> and <code>constraints</code>. Per-action
-evaluation is the runtime layer's role (<a href="#runtime-boundary" class="auto internal xref">Section 16.5</a>).
+evaluation is the runtime layer's role (<a href="#runtime-boundary" class="auto internal xref">Section 16.6</a>).
 Verifying an agent's declared reasoning against the task is a further
 attestation problem outside both layers.<a href="#section-1.7-2.1.1" class="pilcrow">¶</a></p>
 </li>
@@ -2396,7 +2399,7 @@ authority primarily by <code>constraints</code> that hold as invariants over tho
 objects (the owning customer, the tenant, an amount ceiling, read-only
 except named write actions, a validity window) rather than by an
 exhaustive <code>resource</code> enumeration. The runtime layer
-(<a href="#runtime-boundary" class="auto internal xref">Section 16.5</a>) checks each concrete object against the
+(<a href="#runtime-boundary" class="auto internal xref">Section 16.6</a>) checks each concrete object against the
 constraint at the point of use. Constraint-bounding lets a Mission cover
 an open-ended task with tight authority even though the specific objects
 are unknown at approval, and avoids the over-broad enumeration a
@@ -2825,7 +2828,7 @@ delegated token or in a cross-domain grant
 </li>
           <li class="normal" id="section-5.3-2.3">
             <p id="section-5.3-2.3.1">evaluating the entry against a concrete request is the runtime
-layer's responsibility (<a href="#runtime-boundary" class="auto internal xref">Section 16.5</a>), not the AS's.<a href="#section-5.3-2.3.1" class="pilcrow">¶</a></p>
+layer's responsibility (<a href="#runtime-boundary" class="auto internal xref">Section 16.6</a>), not the AS's.<a href="#section-5.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-5.3-3">This lets policy-language profiles compose without this document
@@ -2908,7 +2911,7 @@ arguments, for example an amount ceiling or a recipient domain (the
 Like all <code>constraints</code>, they are committed by <code>authority_hash</code> and
 carried to the point of use, but they are evaluated against the
 concrete call arguments by a runtime enforcement layer, not at
-issuance (<a href="#runtime-boundary" class="auto internal xref">Section 16.5</a>).<a href="#section-5.4-3.3.1" class="pilcrow">¶</a></p>
+issuance (<a href="#runtime-boundary" class="auto internal xref">Section 16.6</a>).<a href="#section-5.4-3.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-5.4-4">For example, a Mission authorized to read invoices and post small
@@ -3667,7 +3670,7 @@ revocation-latency bound at unmodified Resource Servers. Where a
 runtime layer covers the high-consequence classes with an active
 freshness source, the point-of-use decision is the revocation
 cutoff, and a deployment <span class="bcp14">MAY</span> size lifetimes by action class without
-losing the kill switch (<a href="#runtime-boundary" class="auto internal xref">Section 16.5</a>,
+losing the kill switch (<a href="#runtime-boundary" class="auto internal xref">Section 16.6</a>,
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Classes attach to
 entries while <code>exp</code> attaches to the token: an extended lifetime is
 appropriate only for a token whose carried entries are all on
@@ -3898,7 +3901,7 @@ not a widening), or <code>constraint_unrecognized</code> (an applicable entry
 carries a <code>constraints</code> key the RS cannot enforce, and the request
 fails closed). A value the client does not recognize is treated as
 <code>insufficient_authority</code>. The attribute's disclosure considerations
-are <a href="#denial-disclosure" class="auto internal xref">Section 16.6</a>'s.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
+are <a href="#denial-disclosure" class="auto internal xref">Section 16.7</a>'s.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
 <p id="section-8.2-6">A Mission-unaware Resource Server that authorizes only from <code>scope</code>
 still operates within the Mission at the coarse scope level, because
 the AS derived and bounded that scope by the Authority Set
@@ -4957,38 +4960,81 @@ permits and write to a sink the Mission permits, and the flat subset and
 constraint model cannot express "may read secrets, may write documents,
 but not write secrets into documents." Constraining exfiltration by a
 compromised agent is the runtime enforcement layer's role
-(<a href="#runtime-boundary" class="auto internal xref">Section 16.5</a>), and even there it is bounded, not closed
+(<a href="#runtime-boundary" class="auto internal xref">Section 16.6</a>), and even there it is bounded, not closed
 (see that profile's security considerations). Closing within-scope data
 laundering needs a separate taint or information-flow layer this profile
 does not define.<a href="#section-16.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="runtime-boundary">
+<div id="information-propagation">
 <section id="section-16.5">
-        <h3 id="name-issuance-scope-not-runtime-">
-<a href="#section-16.5" class="section-number selfRef">16.5. </a><a href="#name-issuance-scope-not-runtime-" class="section-name selfRef">Issuance Scope, Not Runtime Enforcement</a>
+        <h3 id="name-authority-does-not-propagat">
+<a href="#section-16.5" class="section-number selfRef">16.5. </a><a href="#name-authority-does-not-propagat" class="section-name selfRef">Authority Does Not Propagate With Information</a>
         </h3>
-<p id="section-16.5-1">This profile governs the issuance and derivation of authority: it
+<p id="section-16.5-1">The Mission Drift consideration above bounds escalation by token
+acquisition: an agent cannot exceed the approved task by acquiring
+additional tokens. The same bound holds for information. No authority
+may be acquired by information propagation alone. An agent may inherit
+another agent's knowledge; it never inherits another agent's authority.
+Information may cross a boundary without authority crossing with it.<a href="#section-16.5-1" class="pilcrow">¶</a></p>
+<p id="section-16.5-2">A work product produced under one Mission, such as a file, message,
+memory entry, queue event, or other durable shared artifact, is input
+when an agent operating under another Mission reads it, not authority.
+The receiving Mission determines what may be done with the information
+under its own Authority Set (<a href="#subset" class="auto internal xref">Section 5.1</a>), and the producing Mission's
+authority does not transfer through the artifact by copying,
+referencing, embedding, or communicating it. An agent that needs
+authority to act on what it read acquires it only through an authorized
+derivation or delegation bounded by the Mission (<a href="#delegation" class="auto internal xref">Section 11</a>), never
+from the artifact.<a href="#section-16.5-2" class="pilcrow">¶</a></p>
+<p id="section-16.5-3">This extends a possession-independence the profile already requires.
+Revocation acts on the <code>mission_id</code> independent of possession of any
+token (<a href="#revocation" class="auto internal xref">Section 9.2</a>); here, authority is likewise independent of
+possession of any information. It is not information-flow control, which
+this profile does not provide (<a href="#prompt-injection" class="auto internal xref">Section 16.4</a>): the profile does
+not constrain what agents communicate, only what that communication can
+confer. Coordination between agents remains possible and cannot route
+around Mission authority.<a href="#section-16.5-3" class="pilcrow">¶</a></p>
+<p id="section-16.5-4">The threat is emergent authority through coordination. Multiple agents
+executing independently bounded work communicate through shared state,
+so discoveries, credentials, techniques, or intermediate results persist
+across runtimes and Missions, and individually acceptable actions compose
+into behavior that no single Mission authorized. This differs from a
+compromised or multiplied agent acting within one Mission's Authority
+Set: the composing units are independent Missions coordinating through a
+carrier outside any Mission's gate. The mechanism that upholds the
+invariant across such a carrier, work-product provenance and a
+non-transitive Mission-to-Mission handoff, is specified by Mission Work
+Products <span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>; this
+document takes no normative dependency on it.<a href="#section-16.5-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="runtime-boundary">
+<section id="section-16.6">
+        <h3 id="name-issuance-scope-not-runtime-">
+<a href="#section-16.6" class="section-number selfRef">16.6. </a><a href="#name-issuance-scope-not-runtime-" class="section-name selfRef">Issuance Scope, Not Runtime Enforcement</a>
+        </h3>
+<p id="section-16.6-1">This profile governs the issuance and derivation of authority: it
 bounds what authority a Mission yields, binds it to the Approver's
 consent, and gates derivation on Mission state. It does not evaluate
-individual runtime actions. In particular, it does not:<a href="#section-16.5-1" class="pilcrow">¶</a></p>
+individual runtime actions. In particular, it does not:<a href="#section-16.6-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-16.5-2.1">
-            <p id="section-16.5-2.1.1">evaluate a request's parameters against the Mission at the point of
-use;<a href="#section-16.5-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-16.6-2.1">
+            <p id="section-16.6-2.1.1">evaluate a request's parameters against the Mission at the point of
+use;<a href="#section-16.6-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-16.5-2.2">
-            <p id="section-16.5-2.2.1">produce runtime enforcement evidence for each consequential action;<a href="#section-16.5-2.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-16.6-2.2">
+            <p id="section-16.6-2.2.1">produce runtime enforcement evidence for each consequential action;<a href="#section-16.6-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-16.5-2.3">
-            <p id="section-16.5-2.3.1">bind tool or function identities to the Mission; or<a href="#section-16.5-2.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-16.6-2.3">
+            <p id="section-16.6-2.3.1">bind tool or function identities to the Mission; or<a href="#section-16.6-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-16.5-2.4">
-            <p id="section-16.5-2.4.1">re-evaluate at execution time to close the
-approval-to-execution (time-of-check to time-of-use) gap.<a href="#section-16.5-2.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-16.6-2.4">
+            <p id="section-16.6-2.4.1">re-evaluate at execution time to close the
+approval-to-execution (time-of-check to time-of-use) gap.<a href="#section-16.6-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-16.5-3">Mission governance is necessary but not sufficient. An active Mission
+<p id="section-16.6-3">Mission governance is necessary but not sufficient. An active Mission
 still bounds a set of authority an agent may exercise freely within a
 token's lifetime, so an active Mission can become ambient authority
 for individual consequential actions. Preventing that requires a
@@ -4997,15 +5043,15 @@ against the Mission and records evidence; such a layer composes with
 this profile and is out of scope here. Which party enforces each
 Mission-carried bound is summarized in the enforcement table
 (<a href="#mission-intent" class="auto internal xref">Section 4</a>). Short token lifetimes and
-narrow authority bound, but do not eliminate, this exposure.<a href="#section-16.5-3" class="pilcrow">¶</a></p>
+narrow authority bound, but do not eliminate, this exposure.<a href="#section-16.6-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="denial-disclosure">
-<section id="section-16.6">
+<section id="section-16.7">
         <h3 id="name-denial-detail-disclosure">
-<a href="#section-16.6" class="section-number selfRef">16.6. </a><a href="#name-denial-detail-disclosure" class="section-name selfRef">Denial Detail Disclosure</a>
+<a href="#section-16.7" class="section-number selfRef">16.7. </a><a href="#name-denial-detail-disclosure" class="section-name selfRef">Denial Detail Disclosure</a>
         </h3>
-<p id="section-16.6-1">The <code>mission_denial</code> attribute (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>) tells a caller
+<p id="section-16.7-1">The <code>mission_denial</code> attribute (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>) tells a caller
 which path a denial leads into, and thereby reveals authorization
 shape: <code>step_up_required</code> confirms to the presenting party that the
 authority exists, where <code>insufficient_authority</code> denies its
@@ -5016,30 +5062,30 @@ only on a response to a validly signed, audience-correct token whose
 holder its deployment accepts learning the distinction, and <span class="bcp14">SHOULD</span>
 omit the attribute otherwise; when in doubt,
 <code>insufficient_authority</code> is the value that reveals least, and
-omission reveals nothing.<a href="#section-16.6-1" class="pilcrow">¶</a></p>
+omission reveals nothing.<a href="#section-16.7-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="token-theft">
-<section id="section-16.7">
+<section id="section-16.8">
         <h3 id="name-token-theft">
-<a href="#section-16.7" class="section-number selfRef">16.7. </a><a href="#name-token-theft" class="section-name selfRef">Token Theft</a>
+<a href="#section-16.8" class="section-number selfRef">16.8. </a><a href="#name-token-theft" class="section-name selfRef">Token Theft</a>
         </h3>
-<p id="section-16.7-1">Derived tokens are sender-constrained (DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or mTLS
+<p id="section-16.8-1">Derived tokens are sender-constrained (DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or mTLS
 <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>) at the levels set in <a href="#mission-bound-tokens" class="auto internal xref">Section 8</a> and
 <a href="#delegation" class="auto internal xref">Section 11</a>: <span class="bcp14">SHOULD</span> for the primary access token, <span class="bcp14">MUST</span> for
 delegated tokens; the companion sets the same <span class="bcp14">MUST</span> for its
 cross-domain credentials
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). A stolen token
 is bounded by the Authority Set and the Mission lifetime regardless,
-but sender-constraint prevents replay by a different party.<a href="#section-16.7-1" class="pilcrow">¶</a></p>
+but sender-constraint prevents replay by a different party.<a href="#section-16.8-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="delegation-and-chain-compromise">
-<section id="section-16.8">
+<section id="section-16.9">
         <h3 id="name-delegation-and-chain-compro">
-<a href="#section-16.8" class="section-number selfRef">16.8. </a><a href="#name-delegation-and-chain-compro" class="section-name selfRef">Delegation and Chain Compromise</a>
+<a href="#section-16.9" class="section-number selfRef">16.9. </a><a href="#name-delegation-and-chain-compro" class="section-name selfRef">Delegation and Chain Compromise</a>
         </h3>
-<p id="section-16.8-1">Delegation (<a href="#delegation" class="auto internal xref">Section 11</a>) widens the set of parties holding
+<p id="section-16.9-1">Delegation (<a href="#delegation" class="auto internal xref">Section 11</a>) widens the set of parties holding
 Mission-derived authority. Because authority only narrows down the
 chain, a compromised actor can act only within the authority it was
 delegated, for the lifetime of the token it holds: the exposure of
@@ -5059,8 +5105,8 @@ confined to its own narrowed credential: it cannot replay as the
 agent or another actor, and its credential can be revoked by key
 without revoking the rest of the chain. Deployments <span class="bcp14">SHOULD</span> keep
 delegated token lifetimes short and <span class="bcp14">SHOULD</span> make only the entries that
-need delegation delegable.<a href="#section-16.8-1" class="pilcrow">¶</a></p>
-<p id="section-16.8-2">A distinct path deserves its name: audience replay into the
+need delegation delegable.<a href="#section-16.9-1" class="pilcrow">¶</a></p>
+<p id="section-16.9-2">A distinct path deserves its name: audience replay into the
 exchange. A Mission-bound token obtained by or issued to one party,
 presented as a <code>subject_token</code>, would launder into a fresh delegated
 credential bound to the presenter. The gates above bound it: the
@@ -5072,15 +5118,15 @@ and a no-actor exchange is accepted only from the Mission's
 <code>client_id</code> (<a href="#self-exchange" class="auto internal xref">Section 11.2</a>). Sender-constraining the primary
 token (<a href="#mission-bound-tokens" class="auto internal xref">Section 8</a>) closes the remaining gap, since a
 token stolen from an audience then fails presentation at the token
-endpoint.<a href="#section-16.8-2" class="pilcrow">¶</a></p>
+endpoint.<a href="#section-16.9-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="key-rotation">
-<section id="section-16.9">
+<section id="section-16.10">
         <h3 id="name-signing-and-key-rotation">
-<a href="#section-16.9" class="section-number selfRef">16.9. </a><a href="#name-signing-and-key-rotation" class="section-name selfRef">Signing and Key Rotation</a>
+<a href="#section-16.10" class="section-number selfRef">16.10. </a><a href="#name-signing-and-key-rotation" class="section-name selfRef">Signing and Key Rotation</a>
         </h3>
-<p id="section-16.9-1">The <code>mission</code> claim and <code>authorization_details</code> are carried inside
+<p id="section-16.10-1">The <code>mission</code> claim and <code>authorization_details</code> are carried inside
 the <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> JWT and are covered by the AS's token signature; their
 integrity reduces to the AS's signing key. An AS <span class="bcp14">MUST</span> publish its
 verification keys (for example, via <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> <code>jwks_uri</code>), and the
@@ -5096,8 +5142,8 @@ assertion, a Mandate, registered evidence) states its own retention
 bound as an extension of this same rule, not a new one. Revocation for a
 known or suspected compromise is distinct from routine retirement:
 the issuer publishes the compromised key as revoked, or marks it
-with a compromise time, rather than silently rotating it out.<a href="#section-16.9-1" class="pilcrow">¶</a></p>
-<p id="section-16.9-2">Key custody carries the model: a compromised issuer signing key
+with a compromise time, rather than silently rotating it out.<a href="#section-16.10-1" class="pilcrow">¶</a></p>
+<p id="section-16.10-2">Key custody carries the model: a compromised issuer signing key
 voids every guarantee the signature carries. Issuer signing keys
 <span class="bcp14">SHOULD</span> be held in non-exportable or HSM/KMS-grade custody with
 dual-controlled generation, and <span class="bcp14">SHOULD</span> be segmented by artifact
@@ -5107,28 +5153,28 @@ artifacts) can sit under stricter custody than high-volume online
 token signing; verification is already <code>kid</code>-indexed, so the
 segmentation needs no wire change. Recovery from a signing-key
 compromise is deployment-owned and belongs in the deployment's
-documented procedures.<a href="#section-16.9-2" class="pilcrow">¶</a></p>
+documented procedures.<a href="#section-16.10-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="compromised-or-over-broad-derivation">
-<section id="section-16.10">
+<section id="section-16.11">
         <h3 id="name-compromised-or-over-broad-d">
-<a href="#section-16.10" class="section-number selfRef">16.10. </a><a href="#name-compromised-or-over-broad-d" class="section-name selfRef">Compromised or Over-Broad Derivation</a>
+<a href="#section-16.11" class="section-number selfRef">16.11. </a><a href="#name-compromised-or-over-broad-d" class="section-name selfRef">Compromised or Over-Broad Derivation</a>
         </h3>
-<p id="section-16.10-1">The AS is trusted to derive authority no broader than the Mission
+<p id="section-16.11-1">The AS is trusted to derive authority no broader than the Mission
 Intent. Both derivation modes (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>) are
 mechanical, a proposal narrowed to policy or a configured mapping,
 rather than free-form inference, and the recorded <code>policy_version</code>
 names the policy a derivation ran under so the derivation can be
-audited. General OAuth security guidance <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span> applies.<a href="#section-16.10-1" class="pilcrow">¶</a></p>
+audited. General OAuth security guidance <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span> applies.<a href="#section-16.11-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authority-hash-is-not-a-mission-identifier">
-<section id="section-16.11">
+<section id="section-16.12">
         <h3 id="name-authority-hash-is-not-a-mis">
-<a href="#section-16.11" class="section-number selfRef">16.11. </a><a href="#name-authority-hash-is-not-a-mis" class="section-name selfRef">Authority Hash Is Not a Mission Identifier</a>
+<a href="#section-16.12" class="section-number selfRef">16.12. </a><a href="#name-authority-hash-is-not-a-mis" class="section-name selfRef">Authority Hash Is Not a Mission Identifier</a>
         </h3>
-<p id="section-16.11-1"><code>authority_hash</code> commits the approved Authority Set, not the Mission.
+<p id="section-16.12-1"><code>authority_hash</code> commits the approved Authority Set, not the Mission.
 Two distinct Missions that approve byte-identical authority carry the
 same <code>authority_hash</code>: a successor Mission that re-approves the same
 Authority Set, or an unrelated Mission with the same derived authority,
@@ -5139,7 +5185,7 @@ key for a Mission. The canonical Mission Identifier names the
 Mission; <code>authority_hash</code> names the authority the Mission
 approved. A consumer that needs to bind to or correlate a specific
 Mission uses the Mission Identifier, and <code>intent_hash</code> and <code>approver</code>
-distinguish Missions that share an Authority Set.<a href="#section-16.11-1" class="pilcrow">¶</a></p>
+distinguish Missions that share an Authority Set.<a href="#section-16.12-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -5658,6 +5704,10 @@ does not create it.<a href="#section-18.7-2" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-work-products">[I-D.draft-mcguinness-oauth-mission-work-products]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Work Products"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-niyikiza-oauth-attenuating-agent-tokens">[I-D.draft-niyikiza-oauth-attenuating-agent-tokens]</dt>
         <dd>

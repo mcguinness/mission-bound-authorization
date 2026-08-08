@@ -134,13 +134,14 @@ Table of Contents
      16.2.  Mission Drift
      16.3.  Downgrade by Omission
      16.4.  Prompt Injection and the Exfiltration Leg
-     16.5.  Issuance Scope, Not Runtime Enforcement
-     16.6.  Denial Detail Disclosure
-     16.7.  Token Theft
-     16.8.  Delegation and Chain Compromise
-     16.9.  Signing and Key Rotation
-     16.10. Compromised or Over-Broad Derivation
-     16.11. Authority Hash Is Not a Mission Identifier
+     16.5.  Authority Does Not Propagate With Information
+     16.6.  Issuance Scope, Not Runtime Enforcement
+     16.7.  Denial Detail Disclosure
+     16.8.  Token Theft
+     16.9.  Delegation and Chain Compromise
+     16.10. Signing and Key Rotation
+     16.11. Compromised or Over-Broad Derivation
+     16.12. Authority Hash Is Not a Mission Identifier
    17. Privacy Considerations
      17.1.  Mission Identifier Correlation
      17.2.  Token Payload Disclosure
@@ -227,7 +228,7 @@ Table of Contents
    exposure is bounded by short token lifetimes and narrow authority.
    It does not evaluate individual actions: an agent taking
    consequential autonomous actions needs the second layer, the runtime
-   enforcement chokepoint (Section 16.5), specified separately.  A
+   enforcement chokepoint (Section 16.6), specified separately.  A
    deployment chooses its layers deliberately, matching the enforcement
    it runs to the consequence of what its agents do; the Mission
    Assurance Levels of [I-D.draft-mcguinness-mission-architecture] name
@@ -296,7 +297,7 @@ Table of Contents
    expand it.  Revoking the Mission stops further derivation
    (Section 9); it does not undo actions already completed.  Evaluating
    each action against the Mission at the point of use is the runtime
-   layer's concern (Section 16.5), not this document's.
+   layer's concern (Section 16.6), not this document's.
 
    The invariant across all three: the plan and the execution draw on
    the Mission's authority; neither enlarges it.
@@ -339,7 +340,7 @@ Table of Contents
    payload with equal authority.  Content-level controls (data loss
    prevention, redaction) are complementary, and mediated execution
    places their natural insertion point at the mediating enforcement
-   component (Section 16.5, [I-D.draft-mcguinness-mission-runtime]).
+   component (Section 16.6, [I-D.draft-mcguinness-mission-runtime]).
 
 1.6.  Scope and Future Work
 
@@ -406,7 +407,7 @@ Table of Contents
       approved authority and task; it does not evaluate whether a given
       runtime action serves the Mission's purpose beyond matching the
       approved authorization_details and constraints.  Per-action
-      evaluation is the runtime layer's role (Section 16.5).  Verifying
+      evaluation is the runtime layer's role (Section 16.6).  Verifying
       an agent's declared reasoning against the task is a further
       attestation problem outside both layers.
 
@@ -918,7 +919,7 @@ Table of Contents
    over those objects (the owning customer, the tenant, an amount
    ceiling, read-only except named write actions, a validity window)
    rather than by an exhaustive resource enumeration.  The runtime layer
-   (Section 16.5) checks each concrete object against the constraint at
+   (Section 16.6) checks each concrete object against the constraint at
    the point of use.  Constraint-bounding lets a Mission cover an open-
    ended task with tight authority even though the specific objects are
    unknown at approval, and avoids the over-broad enumeration a
@@ -1264,7 +1265,7 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission-cross-domain]);
 
    *  evaluating the entry against a concrete request is the runtime
-      layer's responsibility (Section 16.5), not the AS's.
+      layer's responsibility (Section 16.6), not the AS's.
 
    This lets policy-language profiles compose without this document
    defining them: for example, an entry carrying a Cedar policy set
@@ -1337,7 +1338,7 @@ Table of Contents
       Like all constraints, they are committed by authority_hash and
       carried to the point of use, but they are evaluated against the
       concrete call arguments by a runtime enforcement layer, not at
-      issuance (Section 16.5).
+      issuance (Section 16.6).
 
    For example, a Mission authorized to read invoices and post small
    adjustments through a finance MCP server, and to send messages
@@ -1960,7 +1961,7 @@ Table of Contents
    runtime layer covers the high-consequence classes with an active
    freshness source, the point-of-use decision is the revocation cutoff,
    and a deployment MAY size lifetimes by action class without losing
-   the kill switch (Section 16.5,
+   the kill switch (Section 16.6,
    [I-D.draft-mcguinness-mission-runtime]).  Classes attach to entries
    while exp attaches to the token: an extended lifetime is appropriate
    only for a token whose carried entries are all on runtime-gated
@@ -2152,7 +2153,7 @@ Table of Contents
    a constraints key the RS cannot enforce, and the request fails
    closed).  A value the client does not recognize is treated as
    insufficient_authority.  The attribute's disclosure considerations
-   are Section 16.6's.
+   are Section 16.7's.
 
    A Mission-unaware Resource Server that authorizes only from scope
    still operates within the Mission at the coarse scope level, because
@@ -3047,12 +3048,56 @@ Table of Contents
    subset and constraint model cannot express "may read secrets, may
    write documents, but not write secrets into documents."  Constraining
    exfiltration by a compromised agent is the runtime enforcement
-   layer's role (Section 16.5), and even there it is bounded, not closed
+   layer's role (Section 16.6), and even there it is bounded, not closed
    (see that profile's security considerations).  Closing within-scope
    data laundering needs a separate taint or information-flow layer this
    profile does not define.
 
-16.5.  Issuance Scope, Not Runtime Enforcement
+16.5.  Authority Does Not Propagate With Information
+
+   The Mission Drift consideration above bounds escalation by token
+   acquisition: an agent cannot exceed the approved task by acquiring
+   additional tokens.  The same bound holds for information.  No
+   authority may be acquired by information propagation alone.  An agent
+   may inherit another agent's knowledge; it never inherits another
+   agent's authority.  Information may cross a boundary without
+   authority crossing with it.
+
+   A work product produced under one Mission, such as a file, message,
+   memory entry, queue event, or other durable shared artifact, is input
+   when an agent operating under another Mission reads it, not
+   authority.  The receiving Mission determines what may be done with
+   the information under its own Authority Set (Section 5.1), and the
+   producing Mission's authority does not transfer through the artifact
+   by copying, referencing, embedding, or communicating it.  An agent
+   that needs authority to act on what it read acquires it only through
+   an authorized derivation or delegation bounded by the Mission
+   (Section 11), never from the artifact.
+
+   This extends a possession-independence the profile already requires.
+   Revocation acts on the mission_id independent of possession of any
+   token (Section 9.2); here, authority is likewise independent of
+   possession of any information.  It is not information-flow control,
+   which this profile does not provide (Section 16.4): the profile does
+   not constrain what agents communicate, only what that communication
+   can confer.  Coordination between agents remains possible and cannot
+   route around Mission authority.
+
+   The threat is emergent authority through coordination.  Multiple
+   agents executing independently bounded work communicate through
+   shared state, so discoveries, credentials, techniques, or
+   intermediate results persist across runtimes and Missions, and
+   individually acceptable actions compose into behavior that no single
+   Mission authorized.  This differs from a compromised or multiplied
+   agent acting within one Mission's Authority Set: the composing units
+   are independent Missions coordinating through a carrier outside any
+   Mission's gate.  The mechanism that upholds the invariant across such
+   a carrier, work-product provenance and a non-transitive Mission-to-
+   Mission handoff, is specified by Mission Work Products
+   [I-D.draft-mcguinness-oauth-mission-work-products]; this document
+   takes no normative dependency on it.
+
+16.6.  Issuance Scope, Not Runtime Enforcement
 
    This profile governs the issuance and derivation of authority: it
    bounds what authority a Mission yields, binds it to the Approver's
@@ -3081,7 +3126,7 @@ Table of Contents
    enforcement table (Section 4).  Short token lifetimes and narrow
    authority bound, but do not eliminate, this exposure.
 
-16.6.  Denial Detail Disclosure
+16.7.  Denial Detail Disclosure
 
    The mission_denial attribute (Section 8.2) tells a caller which path
    a denial leads into, and thereby reveals authorization shape:
@@ -3095,7 +3140,7 @@ Table of Contents
    when in doubt, insufficient_authority is the value that reveals
    least, and omission reveals nothing.
 
-16.7.  Token Theft
+16.8.  Token Theft
 
    Derived tokens are sender-constrained (DPoP [RFC9449] or mTLS
    [RFC8705]) at the levels set in Section 8 and Section 11: SHOULD for
@@ -3105,7 +3150,7 @@ Table of Contents
    is bounded by the Authority Set and the Mission lifetime regardless,
    but sender-constraint prevents replay by a different party.
 
-16.8.  Delegation and Chain Compromise
+16.9.  Delegation and Chain Compromise
 
    Delegation (Section 11) widens the set of parties holding Mission-
    derived authority.  Because authority only narrows down the chain, a
@@ -3140,7 +3185,7 @@ Table of Contents
    token (Section 8) closes the remaining gap, since a token stolen from
    an audience then fails presentation at the token endpoint.
 
-16.9.  Signing and Key Rotation
+16.10.  Signing and Key Rotation
 
    The mission claim and authorization_details are carried inside the
    [RFC9068] JWT and are covered by the AS's token signature; their
@@ -3171,7 +3216,7 @@ Table of Contents
    Recovery from a signing-key compromise is deployment-owned and
    belongs in the deployment's documented procedures.
 
-16.10.  Compromised or Over-Broad Derivation
+16.11.  Compromised or Over-Broad Derivation
 
    The AS is trusted to derive authority no broader than the Mission
    Intent.  Both derivation modes (Section 5) are mechanical, a proposal
@@ -3180,7 +3225,7 @@ Table of Contents
    derivation ran under so the derivation can be audited.  General OAuth
    security guidance [RFC9700] applies.
 
-16.11.  Authority Hash Is Not a Mission Identifier
+16.12.  Authority Hash Is Not a Mission Identifier
 
    authority_hash commits the approved Authority Set, not the Mission.
    Two distinct Missions that approve byte-identical authority carry the
@@ -3644,6 +3689,11 @@ Table of Contents
               McGuinness, K., "Mission Status and Lifecycle for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-status.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-work-products]
+              McGuinness, K., "Mission Work Products", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-work-products.html>.
 
    [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]
               Aimable, N., "Attenuating Authorization Tokens for Agentic
