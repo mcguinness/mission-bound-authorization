@@ -1968,53 +1968,77 @@ exist only where the instance substrate is deployed
 Mission kills.<a href="#section-9-3.30.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.31">Injection steers discovery (the agent binds the attacker's resource):</dt>
+<dt id="section-9-3.31">Emergent authority through coordination (independent Missions):</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.32">
-          <p id="section-9-3.32.1">Addressed by default-closed discovery (no consented ceiling, no
+          <p id="section-9-3.32.1">Addressed by the non-transitive Mission-to-Mission handoff rule: a
+work product crossing into a Mission is input, re-evaluated under the
+receiving Mission's own Authority Set, so a producing Mission's
+authority never transfers with the information it wrote
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>, promoted from
+the quarantine pattern of
+<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>); the legitimate path to
+act on what was read is a Child Mission bounded by the parent
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Distinct
+from one swarm instance compromised above, which is legitimate
+class-pinned multiplication under one Mission: here multiple agents
+executing independently bounded work communicate through shared state,
+so discoveries, credentials, techniques, or intermediate results
+persist across runtimes and Missions, and individually acceptable
+actions compose into behavior no single Mission authorized. Residual:
+the handoff rule denies authority transfer per artifact but does not
+by itself bound this aggregate composition through an unmanaged
+carrier; shared-state effect classification, an audience envelope, and
+lineage-keyed aggregate bounds are anticipated defense-in-depth, not
+yet specified (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>).<a href="#section-9-3.32.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.33">Injection steers discovery (the agent binds the attacker's resource):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.34">
+          <p id="section-9-3.34.1">Addressed by default-closed discovery (no consented ceiling, no
 binding), the tainted-session human floor for egress-capable
 bindings, resource identity pinning, the rule that
 self-declarations never classify consequences, and Discovery
 Evidence (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>). Residual: an
 untainted session binding within an over-broad consented family;
-ceiling breadth is a consent-time decision.<a href="#section-9-3.32.1" class="pilcrow">¶</a></p>
+ceiling breadth is a consent-time decision.<a href="#section-9-3.34.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.33">Offline sub-agent fan-out abuse:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.34">
-          <p id="section-9-3.34.1">Addressed by capability monotonicity (narrow-only) and the runtime
+<dt id="section-9-3.35">Offline sub-agent fan-out abuse:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.36">
+          <p id="section-9-3.36.1">Addressed by capability monotonicity (narrow-only) and the runtime
 kill-switch re-check on the carried chain. Residual: fan-out breadth
 is unobserved by the issuer; bounded by depth and policy, not by the
-issuer.<a href="#section-9-3.34.1" class="pilcrow">¶</a></p>
+issuer.<a href="#section-9-3.36.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.35">Operator surface abused (fleet management):</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.36">
-          <p id="section-9-3.36.1">Addressed by management Client authorization; dry-run-then-execute
+<dt id="section-9-3.37">Operator surface abused (fleet management):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.38">
+          <p id="section-9-3.38.1">Addressed by management Client authorization; dry-run-then-execute
 with a bulk token pinning the evaluated membership; every call
 audited; never agent-facing. Residual: a compromised Management Client
 stops or resumes Missions fleet-wide and learns Mission existence; it
-cannot mint or widen authority.<a href="#section-9-3.36.1" class="pilcrow">¶</a></p>
+cannot mint or widen authority.<a href="#section-9-3.38.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.37">Audit tampered, dropped, or reordered:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.38">
-          <p id="section-9-3.38.1">Addressed by transparency: append-only log, inclusion receipts,
+<dt id="section-9-3.39">Audit tampered, dropped, or reordered:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.40">
+          <p id="section-9-3.40.1">Addressed by transparency: append-only log, inclusion receipts,
 non-equivocation. Residual: single-service equivocation (per-service
 only; register with several); a producer can still log a false
-record.<a href="#section-9-3.38.1" class="pilcrow">¶</a></p>
+record.<a href="#section-9-3.40.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.39">Agent fabricates results or acts on false data:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.40">
-          <p id="section-9-3.40.1">Addressed by not addressed. Residual: full: semantic and grounding
-verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.40.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-9-3.41">A trusted-base component is compromised:</dt>
+<dt id="section-9-3.41">Agent fabricates results or acts on false data:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.42">
-          <p id="section-9-3.42.1">Addressed by not addressed; evidence detects it after the fact.
+          <p id="section-9-3.42.1">Addressed by not addressed. Residual: full: semantic and grounding
+verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.42.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.43">A trusted-base component is compromised:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.44">
+          <p id="section-9-3.44.1">Addressed by not addressed; evidence detects it after the fact.
 Residual: not prevented; degrades the specific guarantee per
-<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.42.1" class="pilcrow">¶</a></p>
+<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.44.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2497,6 +2521,10 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-work-products">[I-D.draft-mcguinness-oauth-mission-work-products]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Work Products"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="OWASP-AGENTIC">[OWASP-AGENTIC]</dt>
         <dd>

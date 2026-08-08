@@ -1908,6 +1908,13 @@ that the derivation was the right reading of the task
 <p id="section-9-3">Read substrate-neutrally, the invariants carry the five laws the
 companion handbook names for the layer: durability, attribution,
 narrowing, termination, and containment.<a href="#section-9-3" class="pilcrow">¶</a></p>
+<p id="section-9-4">Read on the artifact plane, the same invariants forbid authority from
+riding a work product an agent produces: no authority is acquired by
+information propagation alone, and a work product crossing into a
+Mission is input that the receiving Mission re-evaluates under its own
+Authority Set. This is a reading of the invariants above, not an eighth
+invariant; its normative home is the Mission Work Products companion
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>).<a href="#section-9-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="components">
@@ -3321,11 +3328,25 @@ claimed, the runtime profile's trifecta containment
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-15.2-9.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-15.2-10">Where the separation must hold within one Mission, the metering
+<p id="section-15.2-10">The quarantine pattern is the deployment-shaped case of a general rule
+that holds for every work product one Mission passes to another. A work
+product crossing into a receiving Mission is input, not authority: the
+receiving Mission re-evaluates any proposed action under its own
+Authority Set, and the producing Mission's authority does not transfer
+through the artifact by copying, referencing, embedding, or
+communicating it. The Mission Work Products companion
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>) is the normative
+home of this rule and defines the provenance object that attributes an
+artifact without granting anything. Ingesting a work product is an added
+conjunctive gate at the receiving Mission's boundary: it composes with
+the three objects' independent gates and does not nest inside them, so
+Actor, Agent Deployment, and Mission stay a gating pipeline, not a
+containment hierarchy (<a href="#three-objects" class="auto internal xref">Section 10.2</a>).<a href="#section-15.2-10" class="pilcrow">¶</a></p>
+<p id="section-15.2-11">Where the separation must hold within one Mission, the metering
 profile's exclusivity control
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>) latches read-and-egress
-apart under a single approval.<a href="#section-15.2-10" class="pilcrow">¶</a></p>
-<p id="section-15.2-11">The <strong>standing-agent pattern</strong> governs the agent whose work never
+apart under a single approval.<a href="#section-15.2-11" class="pilcrow">¶</a></p>
+<p id="section-15.2-12">The <strong>standing-agent pattern</strong> governs the agent whose work never
 ends. The agent stands; the authority cycles: the standing thing is
 a charter, a Mission with a consented authority ceiling and drawdown
 policy (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>,
@@ -3334,16 +3355,16 @@ unit of work draws under it, as an in-ceiling successor or a
 policy-approved Child Mission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), each
 expiring and discharging as its unit completes
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-15.2-11" class="pilcrow">¶</a></p>
-<p id="section-15.2-12">The progressive profile's prohibited set keeps the high-consequence
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-15.2-12" class="pilcrow">¶</a></p>
+<p id="section-15.2-13">The progressive profile's prohibited set keeps the high-consequence
 classes on a fresh human approval inside the ceiling, and its
 Ceiling Review bounds the chain in time with an evidence-rendering
-renewal.<a href="#section-15.2-12" class="pilcrow">¶</a></p>
-<p id="section-15.2-13">Without the progressive profile the same pattern runs as ordinary,
+renewal.<a href="#section-15.2-13" class="pilcrow">¶</a></p>
+<p id="section-15.2-14">Without the progressive profile the same pattern runs as ordinary,
 freshly approved unit Missions with deferred approval
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>) absorbing the
 volume: the experimental profile changes the unit economics, not the
-governance shape.<a href="#section-15.2-13" class="pilcrow">¶</a></p>
+governance shape.<a href="#section-15.2-14" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4245,30 +4266,42 @@ kill switch preserved by runtime re-check.<a href="#section-20-15.4.1" class="pi
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-20-16"><strong>Proof and portability:</strong><a href="#section-20-16" class="pilcrow">¶</a></p>
+<p id="section-20-16"><strong>Work products:</strong><a href="#section-20-16" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-20-17">
         <dt id="section-20-17.1">
-<code>mission-mandate</code>:</dt>
+<code>oauth-mission-work-products</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-20-17.2">
-          <p id="section-20-17.2.1">A signed, portable statement of a Mission's committed facts;
-evidence, not a credential.<a href="#section-20-17.2.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-20-17.3">
-<code>mission-audit</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-20-17.4">
-          <p id="section-20-17.4.1">Registration of Mission evidence in a SCITT Transparency Service;
-receipts verifiable offline.<a href="#section-20-17.4.1" class="pilcrow">¶</a></p>
+          <p id="section-20-17.2.1">Experimental: work-product provenance, attribution and not authority,
+and the non-transitive Mission-to-Mission handoff rule; a work product
+crossing into a Mission is input, re-evaluated under the receiver's
+Authority Set.<a href="#section-20-17.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-20-18"><strong>Security model:</strong><a href="#section-20-18" class="pilcrow">¶</a></p>
+<p id="section-20-18"><strong>Proof and portability:</strong><a href="#section-20-18" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-20-19">
         <dt id="section-20-19.1">
-<code>mission-security-model</code>:</dt>
+<code>mission-mandate</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-20-19.2">
-          <p id="section-20-19.2.1">The trusted base in one view: what each component must achieve and
-what its compromise costs.<a href="#section-20-19.2.1" class="pilcrow">¶</a></p>
+          <p id="section-20-19.2.1">A signed, portable statement of a Mission's committed facts;
+evidence, not a credential.<a href="#section-20-19.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-20-19.3">
+<code>mission-audit</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-20-19.4">
+          <p id="section-20-19.4.1">Registration of Mission evidence in a SCITT Transparency Service;
+receipts verifiable offline.<a href="#section-20-19.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-20-20"><strong>Security model:</strong><a href="#section-20-20" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-20-21">
+        <dt id="section-20-21.1">
+<code>mission-security-model</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-20-21.2">
+          <p id="section-20-21.2.1">The trusted base in one view: what each component must achieve and
+what its compromise costs.<a href="#section-20-21.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -4440,6 +4473,10 @@ anti-oracle property bounds what its status surfaces disclose
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-work-products">[I-D.draft-mcguinness-oauth-mission-work-products]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Work Products"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-zehavi-oauth-rar-metadata">[I-D.draft-zehavi-oauth-rar-metadata]</dt>
       <dd>
