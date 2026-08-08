@@ -84,9 +84,6 @@ function block(label: string, obj: unknown) {
 function note(text: string) {
   console.log(`${C.dim}  → ${text}${C.reset}`);
 }
-function verdict(ok: boolean, text: string) {
-  console.log(`  ${ok ? C.green + "✓ PERMIT" : C.red + "✗ DENY"}${C.reset} ${text}`);
-}
 
 /**
  * Append a dim human gloss beside a machine id (tool name, action id, or reason
@@ -187,6 +184,135 @@ function decodeHeader(jwt: string): Record<string, unknown> {
 function truncTok(jwt: string): string {
   const parts = jwt.split(".");
   return `${parts[0]}.${parts[1]}.${(parts[2] ?? "").slice(0, 12)}...`;
+}
+
+// ---------------------------------------------------------------------------
+// Reader framing (O-40): a plain-language Task/Expect frame before each step, a
+// two-axis outcome (protocol decision vs. whether it matched expectation), act
+// banners that group the steps into phases, and a mission lifecycle rail. This
+// is presentation only. Every value the outcome and rail render is read from
+// REAL returned values / the live kernel at print time (never a hand-kept
+// mirror of state that could drift).
+// ---------------------------------------------------------------------------
+
+/**
+ * The plain-language frame printed right after step() and before the trace:
+ * `task` is what this step does and for whom; `expect` is the desired outcome
+ * in spec terms. Static narration (one line each) that orients the reader.
+ */
+function goal(task: string, expect: string) {
+  console.log(`  ${C.bold}${C.yellow}Task${C.reset}    ${task}`);
+  console.log(`  ${C.bold}${C.yellow}Expect${C.reset}  ${expect}`);
+}
+
+/**
+ * The two orthogonal axes a step that ends in a decision actually has:
+ *   - the protocol DECISION the PDP/gate/issuer returned (PERMIT / DENY + reason),
+ *     rendered NEUTRAL: it is just what came back, not a pass/fail;
+ *   - whether that matched what we EXPECTED (✓ as expected / ✗ deviation).
+ * A deny-by-design step therefore reads `DENY <reason>` AND `✓ as expected`.
+ * `observed` is a one-line summary built from REAL returned values; `ok` is a
+ * REAL computed predicate, never a literal. `decision` is omitted only for a
+ * pure read-model assertion (the Activity Log join) that has no PERMIT/DENY.
+ */
+function outcome(o: { decision?: "PERMIT" | "DENY"; reason?: string; observed: string; ok: boolean }) {
+  const dec = o.decision === undefined ? "" : `${C.bold}${o.decision}${C.reset}${o.reason ? ` ${o.reason}` : ""}  `;
+  const exp = o.ok ? `${C.green}✓ as expected${C.reset}` : `${C.red}✗ deviation${C.reset}`;
+  console.log(`  ${dec}${exp}`);
+  console.log(`    ${C.dim}observed: ${o.observed}${C.reset}`);
+}
+
+/** A short, readable mission id for the rail (ids are `msn_<base64url>`). */
+function shortMission(id: string): string {
+  return id.length > 14 ? `${id.slice(0, 12)}..` : id;
+}
+
+// The mission the lifecycle rail is tracking, and a snapshot of what the rail
+// last DISPLAYED. The snapshot is used ONLY to print on-change and to name the
+// delta; the authoritative values are always re-read from the kernel below.
+type RailSnap = { id: string; state: string; version: number; policy: string; cv: number; effActions: number };
+let focusedMissionId: string | undefined;
+let lastRail: RailSnap | undefined;
+
+/** Read the focused mission's rail snapshot from the live kernel (print time). */
+function readRail(stack: DemoStack): RailSnap | undefined {
+  if (!focusedMissionId) return undefined;
+  const rec = stack.kernel.get(focusedMissionId);
+  if (!rec) return undefined;
+  const eff = stack.kernel.effectiveAuthoritySet(rec);
+  return {
+    id: rec.id,
+    state: rec.state,
+    version: rec.version,
+    policy: rec.policy_version,
+    cv: rec.containment?.containment_version ?? 0,
+    effActions: eff.flatMap((e) => e.actions).length,
+  };
+}
+
+/**
+ * Render the compact rail line for the focused mission, naming any contained
+ * actions when the effective set (read live) differs from the approved
+ * authority_set. Values come straight from the kernel at print time.
+ */
+function railLine(stack: DemoStack): string {
+  const rec = focusedMissionId ? stack.kernel.get(focusedMissionId) : undefined;
+  if (!rec) return `  ${C.dim}│ mission focus: none yet${C.reset}`;
+  const eff = stack.kernel.effectiveAuthoritySet(rec);
+  const key = (r: string, a: string) => `${r}::${a}`;
+  const approvedKeys = rec.authority_set.flatMap((e) => e.actions.map((a) => key(e.resource, a)));
+  const effKeys = new Set(eff.flatMap((e) => e.actions.map((a) => key(e.resource, a))));
+  const contained = approvedKeys.filter((k) => !effKeys.has(k)).map((k) => k.split("::")[1]);
+  const cv = rec.containment?.containment_version ?? 0;
+  const stateColor = rec.state === "active" ? C.green : rec.state === "suspended" ? C.yellow : C.red;
+  const sep = `${C.dim}  ·  ${C.reset}`;
+  const cells = [
+    `${C.cyan}mission ${shortMission(rec.id)}${C.reset}`,
+    `${C.dim}state=${C.reset}${stateColor}${rec.state}${C.reset}`,
+    `${C.dim}v${rec.version}${C.reset}`,
+    `${C.dim}policy=${rec.policy_version}${C.reset}`,
+    `${C.dim}authority ${effKeys.size}/${approvedKeys.length}${C.reset}`,
+    `${C.dim}containment v${cv}${C.reset}`,
+  ];
+  let line = `  ${C.dim}│${C.reset} ${cells.join(sep)}`;
+  if (contained.length > 0) line += `\n  ${C.dim}│ contained: ${contained.join(", ")}${C.reset}`;
+  return line;
+}
+
+/** Name the one thing that changed between two rail snapshots (or a focus shift). */
+function describeChange(prev: RailSnap | undefined, cur: RailSnap | undefined): string | undefined {
+  if (!cur) return undefined;
+  if (!prev || prev.id !== cur.id) return `focus is now mission ${shortMission(cur.id)} (${cur.state})`;
+  if (prev.state !== cur.state) return `mission ${shortMission(cur.id)}: ${prev.state} → ${cur.state}`;
+  if (prev.cv !== cur.cv) return `containment v${prev.cv} → v${cur.cv} (effective authority narrowed)`;
+  if (prev.effActions !== cur.effActions) return `effective authority: ${prev.effActions} → ${cur.effActions} actions`;
+  if (prev.version !== cur.version) return `version v${prev.version} → v${cur.version}`;
+  return undefined;
+}
+
+/**
+ * Print the lifecycle rail. At an act banner (`force`) it re-anchors the
+ * reader; elsewhere it prints ON CHANGE ONLY, deduped against what was last
+ * shown, and names the transition/containment bump/focus shift.
+ */
+function rail(stack: DemoStack, opts: { force?: boolean } = {}) {
+  const snap = readRail(stack);
+  const sig = (s: RailSnap | undefined) => (s ? `${s.id}|${s.state}|${s.version}|${s.cv}|${s.effActions}` : "none");
+  if (!opts.force && sig(snap) === sig(lastRail)) return;
+  const change = describeChange(lastRail, snap);
+  console.log(railLine(stack));
+  if (change) console.log(`  ${C.dim}↳ ${change}${C.reset}`);
+  lastRail = snap;
+}
+
+/** An act banner grouping the existing steps into a phase (no renumbering), with
+ *  the lifecycle rail re-anchored underneath it. */
+function act(stack: DemoStack, numeral: string, title: string, oneLine: string) {
+  console.log(`\n${C.bold}${C.magenta}${"━".repeat(72)}${C.reset}`);
+  console.log(`${C.bold}${C.magenta}  ACT ${numeral}  ${title}${C.reset}`);
+  console.log(`${C.dim}  ${oneLine}${C.reset}`);
+  console.log(`${C.bold}${C.magenta}${"━".repeat(72)}${C.reset}`);
+  rail(stack, { force: true });
 }
 
 // ===========================================================================
@@ -299,12 +425,15 @@ function aamLegend() {
  * fresh task, and read the joined task-run graph back from the Activity Log.
  */
 async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: string) {
-  console.log(`\n${C.bold}${C.magenta}${"═".repeat(72)}${C.reset}`);
-  console.log(`${C.bold}${C.magenta}  Agent Access Model — Nightly Reconciliation, realized on Missions${C.reset}`);
-  console.log(
-    `${C.dim}  Cloudflare's AAM run, narrated entirely in Mission vocabulary (AAM.md). Same live AS, PDP, OpenFGA, PEP, egress gate, and Activity Log.${C.reset}`,
+  // A fresh Template chapter, independent of the primary mission superseded and
+  // revoked above: reset the rail focus so the act opens with no mission yet.
+  focusedMissionId = undefined;
+  act(
+    stack,
+    "VII",
+    "Agent Access Model (Nightly Reconciliation)",
+    "Cloudflare's AAM run, narrated entirely in Mission vocabulary (AAM.md), on the same live AS, PDP, OpenFGA, PEP, egress gate, and Activity Log.",
   );
-  console.log(`${C.bold}${C.magenta}${"═".repeat(72)}${C.reset}`);
 
   let seq = 0;
   // Threaded across the seven sequential steps.
@@ -334,6 +463,10 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
 
   // ---- 13. Consent once (AAM Task Template + ceiling -> Mission Template) ----
   step(13, "Consent once: AAM Task Template → a Mission Template (POST /templates)");
+  goal(
+    "Bob consents once by registering an AAM Task Template (its ceiling, bounded lifetime, and approver of record).",
+    "the template is recorded with an integrity hash; consent is captured a single time for every later dispatch.",
+  );
   hop("Operator (Bob)", "AS", "POST /templates (consent once)", "HTTP");
   const templateBody = aamTemplateBody(asUrl, seq++);
   httpReq("POST", `${asUrl}/templates`, {
@@ -356,10 +489,23 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     "consent is captured ONCE here: the human approver of record is bob; the ceiling carries the read actions " +
       "PLUS one external-comms capability (payments:remittance.send), and NOT payments:payment.schedule.",
   );
-  verdict(true, `template ${templateId} recorded — ${C.dim}template_hash=${templateHash}${C.reset} (human consent, once)`);
+  const ceilingActions = aamCeiling().flatMap((e) => e.actions);
+  const consentOk =
+    tmplRes.status === 201 &&
+    ceilingActions.includes("payments:remittance.send") &&
+    !ceilingActions.includes("payments:payment.schedule");
+  outcome({
+    decision: "PERMIT",
+    observed: `template ${templateId} recorded (template_hash=${templateHash}); ceiling carries payments:remittance.send and NOT payments:payment.schedule`,
+    ok: consentOk,
+  });
 
   // ---- 14. Machine-speed dispatch (AAM Agent Identity Broker) ----------------
   step(14, "Machine-speed dispatch: AAM Agent Identity Broker → the mission-dispatch grant");
+  goal(
+    "The scheduler dispatches a mission from the template with no human in the loop, then attempts an over-ceiling dispatch.",
+    "the in-ceiling dispatch is admitted (template-clipped, approver of record bob); the over-ceiling one is refused out_of_template_ceiling.",
+  );
   hop("Scheduler (ap-agent)", "AS", "POST /token (mission-dispatch grant, no human)", "HTTP");
   httpReq("POST", `${asUrl}/token`, {
     headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof: htu=/token, htm=POST>" },
@@ -419,7 +565,17 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
       "acts under the template's approver-of-record, not a distinct human subject (contrast step 2, where a human approval " +
       "bound subject alice under a distinct approver bob for a write-bearing mission).",
   );
-  verdict(true, `dispatched mission ${dispatchedMissionId} (template-clipped, approver-of-record bob)`);
+  focusedMissionId = dispatchedMissionId;
+  rail(stack);
+  const dispatchOk =
+    dispRes.status === 200 &&
+    dispatchedRecord.approver.sub === "bob" &&
+    dispatchedRecord.template?.template_hash === templateHash;
+  outcome({
+    decision: "PERMIT",
+    observed: `dispatched mission ${dispatchedMissionId}, approver-of-record ${dispatchedRecord.approver.sub}, template-clipped authority`,
+    ok: dispatchOk,
+  });
 
   // Over-ceiling dispatch is refused out_of_template_ceiling.
   hop("Scheduler (ap-agent)", "AS", "POST /token (mission-dispatch — over ceiling)", "HTTP");
@@ -434,10 +590,19 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   const overRes = await dispatch(aamOverCeilingIntent(), `evt-over-${seq++}`);
   const overBody = overRes.body as { mission_denial_reason?: string };
   httpRes(overRes.status, overBody);
-  verdict(false, `over-ceiling dispatch → ${gloss("reason", overBody.mission_denial_reason ?? "")}`);
+  outcome({
+    decision: "DENY",
+    reason: gloss("reason", overBody.mission_denial_reason ?? ""),
+    observed: `the over-ceiling intent (adds payments:payment.schedule) was refused ${overBody.mission_denial_reason ?? "(no reason)"}`,
+    ok: overBody.mission_denial_reason === "out_of_template_ceiling",
+  });
 
   // ---- 15. Disconnected run (AAM Agent Identity Broker: async-delegation) ----
   step(15, "Disconnected run: AAM Agent Identity Broker → the async-delegation refresh family");
+  goal(
+    "The scheduler exchanges the dispatched token for a rotating refresh-token family so a disconnected reconciler can run.",
+    "each issued access token is clamped to the mission expiry, and the refresh token rotates on every use.",
+  );
   const missionExp = Math.floor(Date.parse(dispatchedRecord.expires_at) / 1000);
   hop("Scheduler (ap-agent)", "AS", "POST /token (RFC 8693 request_refresh_token)", "HTTP");
   httpReq("POST", `${asUrl}/token`, {
@@ -489,13 +654,23 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     ...(refBody.refresh_token ? { refresh_token: `${String(refBody.refresh_token).slice(0, 12)}...` } : {}),
   });
   const refreshedMissionId = refBody.access_token ? (decodeClaims(refBody.access_token).mission as { id?: string })?.id : undefined;
-  verdict(
-    refRes.status === 200 && refreshedMissionId === dispatchedMissionId && refBody.refresh_token !== familyRefreshToken,
-    `disconnected refresh → fresh access token (mission ${refreshedMissionId} unchanged), refresh token rotated (mandatory)`,
-  );
+  const refreshOk =
+    refRes.status === 200 &&
+    refreshedMissionId === dispatchedMissionId &&
+    refBody.refresh_token !== familyRefreshToken &&
+    exchExp <= missionExp;
+  outcome({
+    decision: "PERMIT",
+    observed: `fresh access token for mission ${refreshedMissionId} (unchanged); refresh token rotated; issued exp ${exchExp} <= mission expiry ${missionExp}`,
+    ok: refreshOk,
+  });
 
   // ---- 16. Per-action mediation (AAM Mediation Layer: PEP + EgressGate) ------
   step(16, "Per-action mediation: AAM Mediation Layer → the payments PEP + the harness EgressGate");
+  goal(
+    "The reconciler reads an invoice, then requests inference egress to a declared destination and to an exfil host.",
+    "the read and the declared destination are permitted; the exfil destination is refused (not on the allowlist).",
+  );
   // Validate the REAL dispatched token at the RS (exhibit idiom): the RS-side
   // DPoP proof re-presents the dispatcher key, so proof jkt == token cnf.jkt.
   const rsProof = await dpopProofFor(dispatcherDpop, CANONICAL_RESOURCE, "POST");
@@ -503,10 +678,14 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   note(`verified dispatched token at the RS (aud=${CANONICAL_RESOURCE}, DPoP jkt==cnf.jkt, mission claim present).`);
   hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "get_invoice")}`, "in-process MCP · O-33");
   const readRes = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
-  verdict(
-    readRes.ok,
-    `${gloss("tool", "get_invoice")}(inv-1) → ${readRes.ok ? JSON.stringify(readRes.result) : gloss("reason", readRes.denial_reason ?? readRes.refusal_reason ?? "")}`,
-  );
+  outcome({
+    decision: readRes.ok ? "PERMIT" : "DENY",
+    ...(readRes.ok ? {} : { reason: gloss("reason", readRes.denial_reason ?? readRes.refusal_reason ?? "") }),
+    observed: readRes.ok
+      ? `${gloss("tool", "get_invoice")}(inv-1) returned ${JSON.stringify(readRes.result)}`
+      : `${gloss("tool", "get_invoice")}(inv-1) denied`,
+    ok: readRes.ok,
+  });
 
   // The harness egress gate: an in-process reference realization bound to the
   // dispatched Mission, reading the REAL kernel state (no mock), over the shared
@@ -523,13 +702,20 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   });
   hop("Reconciler", "EgressGate", `request inference_api → ${ANTHROPIC}`, "in-process · harness");
   const allowedEgress = await egressGate.request("inference_api", `${ANTHROPIC}/v1/messages`);
-  verdict(allowedEgress.permitted, `egress inference_api → ${ANTHROPIC}/v1/messages (declared destination)`);
+  outcome({
+    decision: allowedEgress.permitted ? "PERMIT" : "DENY",
+    ...(allowedEgress.permitted ? {} : { reason: gloss("reason", allowedEgress.refusal_reason ?? "") }),
+    observed: `egress inference_api → ${ANTHROPIC}/v1/messages (the one declared destination)`,
+    ok: allowedEgress.permitted,
+  });
   hop("Reconciler", "EgressGate", "request inference_api → exfil.example.com", "in-process · harness");
   const refusedEgress = await egressGate.request("inference_api", "https://exfil.example.com/collect");
-  verdict(
-    refusedEgress.permitted,
-    `egress inference_api → https://exfil.example.com/collect → ${refusedEgress.permitted ? "permitted" : gloss("reason", refusedEgress.refusal_reason ?? "")}`,
-  );
+  outcome({
+    decision: refusedEgress.permitted ? "PERMIT" : "DENY",
+    ...(refusedEgress.permitted ? {} : { reason: gloss("reason", refusedEgress.refusal_reason ?? "") }),
+    observed: "egress inference_api → https://exfil.example.com/collect refused (not on the declared allowlist)",
+    ok: !refusedEgress.permitted && (refusedEgress.refusal_reason ?? "").startsWith("egress_destination_unlisted"),
+  });
   note(
     "the in-process gate reports containment_claim \"none\" (an in-process gate cannot contain a compromised agent); " +
       "its value is an honest allowlist + an evidence trail — recorded and threaded into the Activity Log (step 19).",
@@ -537,6 +723,10 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
 
   // ---- 17. Protected event -> containment (AAM Trust Ratchet) ----------------
   step(17, "Protected event → containment: AAM Trust Ratchet → Mission Containment (Baseline → Restricted)");
+  goal(
+    "A signed SOC event (content.tainted_read) is ingested, ratcheting the mission from Baseline to Restricted (AAM terms).",
+    "the effective authority narrows deterministically: send_remittance_email is denied authority_contained, while the read still permits.",
+  );
   const soc = as.protectedEventSources.find((s) => s.source === "svc:soc");
   if (!soc) throw new Error("svc:soc trusted source not seeded (config/containment.json)");
   const socKey = await importJWK(soc.privateJwk, soc.alg);
@@ -568,21 +758,32 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     "AAM Baseline → Restricted: the issuer narrows the EFFECTIVE Authority Set deterministically from the signed event; " +
       "the approved authority_hash stays immutable (containment is a versioned removal-only overlay).",
   );
+  rail(stack);
   hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "send_remittance_email")} (contained capability)`, "in-process MCP · O-33");
   const containedCall = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
-  verdict(
-    containedCall.ok,
-    `${gloss("tool", "send_remittance_email")}(inv-1) → ${gloss("reason", containedCall.denial_reason ?? containedCall.refusal_reason ?? "")}`,
-  );
+  outcome({
+    decision: "DENY",
+    reason: gloss("reason", containedCall.denial_reason ?? containedCall.refusal_reason ?? ""),
+    observed: `${gloss("tool", "send_remittance_email")}(inv-1) denied ${containedCall.denial_reason ?? containedCall.refusal_reason ?? ""}`,
+    ok: !containedCall.ok && containedCall.denial_reason === "authority_contained",
+  });
   hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "get_invoice")} (uncontained read)`, "in-process MCP · O-33");
   const stillRead = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
-  verdict(
-    stillRead.ok,
-    `${gloss("tool", "get_invoice")}(inv-1) after contain → ${stillRead.ok ? JSON.stringify(stillRead.result) : gloss("reason", stillRead.denial_reason ?? stillRead.refusal_reason ?? "")}`,
-  );
+  outcome({
+    decision: stillRead.ok ? "PERMIT" : "DENY",
+    ...(stillRead.ok ? {} : { reason: gloss("reason", stillRead.denial_reason ?? stillRead.refusal_reason ?? "") }),
+    observed: stillRead.ok
+      ? `${gloss("tool", "get_invoice")}(inv-1) still returns ${JSON.stringify(stillRead.result)}`
+      : `${gloss("tool", "get_invoice")}(inv-1) denied`,
+    ok: stillRead.ok,
+  });
 
   // ---- 18. Restore only in a new task ---------------------------------------
   step(18, "Restore only in a new task: the capability returns via a FRESH dispatch, never mid-run");
+  goal(
+    "The scheduler dispatches a fresh mission to restore the capability; the contained mission is retried.",
+    "the fresh task carries remittance.send again; the contained mission never regains it mid-run.",
+  );
   hop("Scheduler (ap-agent)", "AS", "POST /token (mission-dispatch — a fresh task)", "HTTP");
   const restoreRes = await dispatch(aamIntent(), `evt-restore-${seq++}`);
   const restoreBody = restoreRes.body as { access_token?: string; mission_id?: string; authorization_details?: unknown };
@@ -595,20 +796,28 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   }
   const restoredMissionId = restoreBody.mission_id;
   const restoredActions = (restoreBody.authorization_details as Array<{ actions: string[] }>).flatMap((e) => e.actions);
-  verdict(
-    restoredMissionId !== dispatchedMissionId && restoredActions.includes("payments:remittance.send"),
-    `fresh dispatch → mission ${restoredMissionId} restores ${gloss("action", "payments:remittance.send")} (a new task, new approval-of-record)`,
-  );
+  const restoreOk = restoredMissionId !== dispatchedMissionId && restoredActions.includes("payments:remittance.send");
+  outcome({
+    decision: "PERMIT",
+    observed: `fresh dispatch → mission ${restoredMissionId} (a new task) carries ${gloss("action", "payments:remittance.send")} again`,
+    ok: restoreOk,
+  });
   // The contained Mission never regains it mid-run.
   hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "send_remittance_email")} (contained mission, re-tried)`, "in-process MCP · O-33");
   const stillContained = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
-  verdict(
-    stillContained.ok,
-    `contained mission ${dispatchedMissionId} → ${gloss("reason", stillContained.denial_reason ?? stillContained.refusal_reason ?? "")} (never regained mid-run)`,
-  );
+  outcome({
+    decision: "DENY",
+    reason: gloss("reason", stillContained.denial_reason ?? stillContained.refusal_reason ?? ""),
+    observed: `contained mission ${dispatchedMissionId} still denied ${stillContained.denial_reason ?? stillContained.refusal_reason ?? ""} (never regained mid-run)`,
+    ok: !stillContained.ok && stillContained.denial_reason === "authority_contained",
+  });
 
   // ---- 19. Agent Activity Log (the console-bff join) ------------------------
   step(19, "Agent Activity Log: AAM Agent Activity Log → ConsoleBff.activityLog() (the joined task-run graph)");
+  goal(
+    "Olivia reads the joined task-run graph from the Activity Log for the dispatched mission.",
+    "ingestion, containment evidence, the authority_contained decision, and the egress refusal all join under the one mission.",
+  );
   hop("Operator (Olivia)", "Console BFF", "activityLog(dispatched mission)", "in-process · read-model join");
   const session = stack.bff.sessions.create("olivia", ["operator"]);
   const run = stack.bff.activityLog(session, dispatchedMissionId);
@@ -630,6 +839,29 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   const containment = run.entries.find((e) => e.kind === "containment");
   const contained = run.entries.find((e) => e.kind === "decision" && e.denial_reason === "authority_contained");
   const egress = run.entries.find((e) => e.kind === "egress" && e.outcome === "refused");
+  // "Follows" is a TIMESTAMP relation over the read-model's own ordering key
+  // (activity-log.ts: `at`), NOT an array-index one. The earlier
+  // `indexOf(contained) > indexOf(ingestion)` check was flaky: the global
+  // timestamp sort breaks exact-tick ties by INPUT order, and a decision row is
+  // fed ahead of the ingestion row it can share a millisecond with, so `indexOf`
+  // sometimes reports the contained decision before the ingestion even though it
+  // is not causally before it. Assert the real causal claim over the timestamp
+  // key instead: SOME authority_contained decision is stamped at or after both
+  // the ingestion and the containment it followed. `some` (not the first `find`)
+  // is deliberate: it holds for whichever contained decision actually follows,
+  // and it can still come out false (no contained decision follows).
+  const ingestionAt = ingestion ? Date.parse(ingestion.at) : Number.POSITIVE_INFINITY;
+  const containmentAt = containment ? Date.parse(containment.at) : Number.POSITIVE_INFINITY;
+  const followsBoth =
+    !!ingestion &&
+    !!containment &&
+    run.entries.some(
+      (e) =>
+        e.kind === "decision" &&
+        e.denial_reason === "authority_contained" &&
+        Date.parse(e.at) >= ingestionAt &&
+        Date.parse(e.at) >= containmentAt,
+    );
   const joinedOk =
     !!ingestion &&
     !!containment &&
@@ -637,12 +869,14 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     !!egress &&
     ingestion.event_id === AAM_TAINT_EVENT_ID &&
     containment.event_id === AAM_TAINT_EVENT_ID &&
-    run.entries.indexOf(contained) > run.entries.indexOf(ingestion) &&
+    followsBoth &&
     egress.scope_statement_digest === scopeDigest(scopeStatement);
-  verdict(
-    joinedOk,
-    "joined under the dispatched Mission: ingestion and Containment Evidence share the event_id, the authority_contained decision follows both, and the egress refusal binds to the published scope statement.",
-  );
+  outcome({
+    observed:
+      `ingestion and Containment Evidence share event_id ${AAM_TAINT_EVENT_ID}; ` +
+      "an authority_contained decision follows both (by timestamp), and the egress refusal carries the published scope-statement digest.",
+    ok: joinedOk,
+  });
 
   aamLegend();
   console.log(
@@ -672,8 +906,19 @@ async function main() {
   console.log(`${C.dim}Real OAuth issuance against a live AS at ${asUrl}. Every artifact below is the real value on the wire.${C.reset}`);
   legend(asUrl);
 
+  act(
+    stack,
+    "I",
+    "Discovery and intent",
+    "The agent discovers what it can reach and drafts an over-broad proposal. Nothing is granted yet.",
+  );
+
   // ---- 0. Discovery -------------------------------------------------------
   step(0, "Discovery: the agent asks what it can reach");
+  goal(
+    "Alice's agent asks the catalog what it can reach, before any mission exists.",
+    "payments shows as reachable but consent_required; no authority is granted yet.",
+  );
   hop("Agent", "AS", "GET /service-catalog?type=mcp", `in-process; represents GET ${asUrl}/service-catalog`);
   note("access token audience = catalog");
   block("catalog response (before any mission)", stack.catalog.catalog("alice", { type: "mcp" }));
@@ -681,6 +926,10 @@ async function main() {
 
   // ---- 1. Intent shaping (untrusted, two-estate proposal) -----------------
   step(1, "Intent shaping: a two-estate proposal (untrusted)");
+  goal(
+    "Alice's agent drafts an over-broad two-estate proposal (payments plus the LedgerCloud SaaS ledger).",
+    "nothing is granted here; the proposal is untrusted input the issuer will bound at approval.",
+  );
   hop("Agent", "Agent (self)", "compose mission_intent", "in-process; submitted via PAR in step 2");
   const missionIntent = JSON.stringify({
     goal: "Pay approved Acme invoices for Q3 and post the corresponding ledger entries",
@@ -705,8 +954,19 @@ async function main() {
   block("mission_intent (submitted via PAR, mission_intent parameter)", JSON.parse(missionIntent));
   note("This is a proposal. Nothing here grants authority; the issuer derives and bounds it at approval.");
 
+  act(
+    stack,
+    "II",
+    "Consent and issuance",
+    "The real OAuth dance mints a mission-bound token pair, narrowed by the issuer to the policy ceiling.",
+  );
+
   // ---- 2. REAL issuance: PAR -> authorize -> approve -> token --------------
   step(2, "Real issuance: the live OAuth dance mints a real token pair");
+  goal(
+    "The agent runs the real OAuth dance (PAR, authorize, Bob approves, token) to mint a mission-bound token pair.",
+    "the issuer narrows the proposal to the policy ceiling: bogus vendor.delete dropped, vendors reduced to acme, cap 999999 to 500; a real access token and id_token are issued.",
+  );
   const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, scope: "openid profile email payments" });
 
   // PAR (Agent → AS, real HTTP): push the request carrying the mission_intent.
@@ -798,9 +1058,22 @@ async function main() {
 
   block("raw access_token (compact JWS, signature truncated)", truncTok(issued.accessToken));
   block("raw id_token (compact JWS, signature truncated)", truncTok(issued.idToken));
+  focusedMissionId = missionId;
+  rail(stack);
+
+  act(
+    stack,
+    "III",
+    "Doing the work",
+    "The resource server validates the token, then the agent runs the mission's tool calls, including two just-in-time approval bindings.",
+  );
 
   // ---- 3. Validate the real token at the resource server ------------------
   step(3, "Validate the real token at the resource server");
+  goal(
+    "The payments resource server validates the real access token before trusting it.",
+    "the signature verifies against the AS jwks, the DPoP proof jkt matches the token cnf.jkt, and the mission claim is present.",
+  );
   hop("Payments RS", "AS", "verify AS-signed token — GET /jwks", "in-process; fetches the AS jwks");
   note(`RS-side DPoP proof: same DPoP key as the token, htu=${CANONICAL_RESOURCE}, htm=POST.`);
   const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST");
@@ -812,6 +1085,10 @@ async function main() {
 
   // ---- 4. Discovery again -------------------------------------------------
   step(4, "Discovery again: the catalog now reflects the active mission");
+  goal(
+    "The agent re-reads the catalog now that an active mission covers payments.",
+    "the payments connection reflects the active mission, no longer just consent_required.",
+  );
   hop("Agent", "AS", "GET /service-catalog?type=mcp", `in-process; represents GET ${asUrl}/service-catalog`);
   block(
     "catalog payments connection",
@@ -819,8 +1096,16 @@ async function main() {
   );
 
   // ---- Tool-call tracer (real token) --------------------------------------
-  const traceCall = async (n: number, label: string, kind: "read" | "wire", tool: string, args: Record<string, unknown>) => {
+  const traceCall = async (
+    n: number,
+    label: string,
+    kind: "read" | "wire",
+    tool: string,
+    args: Record<string, unknown>,
+    g: { task: string; expect: string },
+  ) => {
     step(n, label);
+    goal(g.task, g.expect);
     hop("Agent", "Payments RS", `tools/call ${gloss("tool", tool)}`, "in-process MCP · O-33");
     block(`MCP tools/call — ${tool}`, { tool, arguments: args, authorization: "DPoP <real mission-bound access token>" });
     const res =
@@ -833,22 +1118,39 @@ async function main() {
       block("PDP request (AuthZEN envelope)", captured.envelope);
       block("PDP decision", captured.decision);
     }
-    verdict(
-      res.ok,
-      `${gloss("tool", tool)} → ${res.ok ? JSON.stringify(res.result) : gloss("reason", res.denial_reason ?? res.refusal_reason ?? "")}`,
-    );
+    outcome({
+      decision: res.ok ? "PERMIT" : "DENY",
+      ...(res.ok ? {} : { reason: gloss("reason", res.denial_reason ?? res.refusal_reason ?? "") }),
+      observed: res.ok ? `${gloss("tool", tool)} returned ${JSON.stringify(res.result)}` : `${gloss("tool", tool)} denied`,
+      ok: res.ok,
+    });
     return res;
   };
 
   // ---- 5. Read tool -------------------------------------------------------
-  await traceCall(5, "Read tool call — in-authority (get_invoice)", "read", "get_invoice", { invoice_id: "inv-1" });
-  // ---- 6. Wire transfer ---------------------------------------------------
-  await traceCall(6, "Wire transfer — transaction-assurance tier (execute_wire_transfer)", "wire", "execute_wire_transfer", {
-    invoice_id: "inv-1",
+  await traceCall(5, "Read tool call: in-authority (get_invoice)", "read", "get_invoice", { invoice_id: "inv-1" }, {
+    task: "The agent calls get_invoice, a read squarely inside the mission's authority.",
+    expect: "the PDP permits; the invoice is returned.",
   });
+  // ---- 6. Wire transfer ---------------------------------------------------
+  await traceCall(
+    6,
+    "Wire transfer: transaction-assurance tier (execute_wire_transfer)",
+    "wire",
+    "execute_wire_transfer",
+    { invoice_id: "inv-1" },
+    {
+      task: "The agent executes a wire transfer for inv-1, a transaction-tier action within cap and vendor bounds.",
+      expect: "the PDP permits; the transfer executes.",
+    },
+  );
 
   // ---- 7. JIT access via AROP Transaction Challenge ----------------------
   step(7, "JIT access: an in-mission action, gated behind a per-action approval (AROP)");
+  goal(
+    "The agent attempts send_remittance_email, an in-authority action that deployment policy gates behind a per-action approval.",
+    "the first call is denied pending a challenge; after Bob approves over the wire, the re-presented txn-token lets it through.",
+  );
   note("send_remittance_email is WITHIN the mission's authority, but deployment policy requires an action-bound approval, resolved just-in-time over real HTTP.");
 
   // 7.1 Base token, no txn-token: the RS gates the action and returns an
@@ -860,10 +1162,12 @@ async function main() {
     authorization: "DPoP <real mission-bound access token>",
   });
   const challengeAttempt = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
-  verdict(
-    challengeAttempt.ok,
-    `${gloss("tool", "send_remittance_email")}(inv-1) → ${gloss("reason", challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason ?? "")}`,
-  );
+  outcome({
+    decision: "DENY",
+    reason: gloss("reason", challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason ?? ""),
+    observed: `${gloss("tool", "send_remittance_email")}(inv-1) denied ${challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason ?? ""}; the RS returns an access_challenge to present`,
+    ok: !challengeAttempt.ok && (challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason) === "action_approval_required",
+  });
   const accessChallenge = challengeAttempt.access_challenge;
   if (!accessChallenge) throw new Error("expected an access_challenge (RS challengeSigner wired)");
   hop("Payments RS", "Agent", "401-style txn-challenge (RS-signed)", "in-process");
@@ -982,14 +1286,22 @@ async function main() {
   });
   const granted = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts, undefined, txnToken);
   if (captured) block("PDP decision (permit: token-derived approval matched parameter_digest)", captured.decision);
-  verdict(
-    granted.ok,
-    `${gloss("tool", "send_remittance_email")}(inv-1) → ${granted.ok ? JSON.stringify(granted.result) : gloss("reason", granted.denial_reason ?? granted.refusal_reason ?? "")}`,
-  );
+  outcome({
+    decision: granted.ok ? "PERMIT" : "DENY",
+    ...(granted.ok ? {} : { reason: gloss("reason", granted.denial_reason ?? granted.refusal_reason ?? "") }),
+    observed: granted.ok
+      ? `${gloss("tool", "send_remittance_email")}(inv-1) executed with the txn-token: ${JSON.stringify(granted.result)}`
+      : `${gloss("tool", "send_remittance_email")}(inv-1) denied`,
+    ok: granted.ok,
+  });
   note("The approval was carried by the AS-issued txn-token, never as a tool input. The mission was never widened; the gate sat inside the mission's authority.");
 
   // ---- 8. AROP over DTR: deferred token response on the real /token endpoint --
   step(8, "AROP over DTR: a deferred token response, approved just-in-time (real /token)");
+  goal(
+    "The agent asks the /token endpoint itself for a mission-subset credential, deferred until Bob approves.",
+    "the AS returns a deferral to poll; once Bob approves, a real resource-bound mission token is issued, single-use.",
+  );
   note("Sibling AROP binding to step 7: instead of an RS-signed challenge, the client asks the /token endpoint itself for a mission-subset credential; when it cannot be issued yet, the AS returns a deferral_code the client polls (DTR draft-00).");
 
   // 8.1 Initiation: the agent POSTs the deferred grant with the mission subset it
@@ -1060,14 +1372,29 @@ async function main() {
     (dtrClaims.mission as { id: string }).id === missionId &&
     (dtrClaims.cnf as { jkt: string }).jkt === issued.dpopJkt &&
     dtrClaims.aud === CANONICAL_RESOURCE;
-  verdict(dtrOk, `deferred grant → REAL mission token (aud=${dtrClaims.aud as string}, single-use handle consumed)`);
+  outcome({
+    decision: "PERMIT",
+    observed: `deferred grant issued a real mission token (aud=${dtrClaims.aud as string}); mission id matches ${missionId}, cnf.jkt matches the base token, single-use handle consumed`,
+    ok: dtrOk,
+  });
   note(
     `mission.id == active mission ${missionId} (unchanged, D42); cnf.jkt ${(dtrClaims.cnf as { jkt: string }).jkt === issued.dpopJkt ? "==" : "!="} base token jkt; ` +
       `NOT opaque (3-segment JWT, aud-bound); exp <= approved_until.`,
   );
 
+  act(
+    stack,
+    "IV",
+    "Cross-domain continuation",
+    "The mission carries across domains: an ID-JAG grant into the LedgerCloud SaaS estate.",
+  );
+
   // ---- 9. Cross-domain: the ID-JAG leg into the SaaS estate ---------------
   step(9, "Cross-domain: an ID-JAG grant crosses into the LedgerCloud (SaaS) estate");
+  goal(
+    "The agent carries the mission across domains: an ID-JAG grant is redeemed at the LedgerCloud RAS, then a journal entry is posted.",
+    "the RAS mints a local SaaS token, the post succeeds, and a second redemption of the same grant is rejected (single-use).",
+  );
   hop("AS", "Agent", "ID-JAG grant issued", "in-process");
   const grant = await as.issueCrossDomainGrant(missionId, issued.dpopJkt);
   block("ID-JAG grant — protected header", decodeHeader(grant.grant));
@@ -1088,7 +1415,12 @@ async function main() {
   });
   const saasCall = await as.saas.callTool("post_journal_entry", { vendor_id: "acme", amount: "125.00" }, redeemed.access_token, saasDpop);
   block("SaaS tool result", saasCall);
-  verdict(saasCall.ok, `post_journal_entry(acme, $125.00) → ${saasCall.ok ? JSON.stringify(saasCall.result) : saasCall.error}`);
+  outcome({
+    decision: saasCall.ok ? "PERMIT" : "DENY",
+    ...(saasCall.ok ? {} : { reason: saasCall.error ?? "" }),
+    observed: saasCall.ok ? `post_journal_entry(acme, $125.00) returned ${JSON.stringify(saasCall.result)}` : "post_journal_entry denied",
+    ok: saasCall.ok,
+  });
 
   // Replay: the ID-JAG grant is single-use (one-time jti).
   let replayFailed = false;
@@ -1098,29 +1430,66 @@ async function main() {
     replayFailed = true;
     const code = (e as { code?: string }).code ?? "error";
     block("replay rejected", { error: code, message: (e as Error).message });
-    verdict(false, `second redemption of the SAME grant → ${code} (single-use)`);
+    outcome({
+      decision: "DENY",
+      reason: code,
+      observed: `second redemption of the SAME grant rejected ${code} (single-use)`,
+      ok: code === "invalid_grant",
+    });
   }
   if (!replayFailed) throw new Error("expected the ID-JAG replay to fail invalid_grant");
 
+  act(
+    stack,
+    "V",
+    "Authority boundaries",
+    "The token is valid and its bounds still bind: a wire over the cap and a wire to an unlisted vendor are both denied by design.",
+  );
+
   // ---- 10. Denials --------------------------------------------------------
   step(10, "Denials: valid token, but out of bounds / authority");
+  goal(
+    "The agent pushes past the mission's bounds: a wire over the cap, then a wire to an unlisted vendor.",
+    "both are denied by design (over the 500 cap; vendor not in the mission's allowlist).",
+  );
   hop("Agent", "Payments RS", "tools/call execute_wire_transfer (inv-2, over-cap)", "in-process MCP · O-33");
   const over = await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-2" }, facts);
   hop("Payments RS (PEP)", "PDP", "evaluate", "in-process · D28");
   hop("PDP", "OpenFGA", "check", "HTTP https://localhost:8080");
   if (captured) block("PDP decision (over-cap $900)", captured.decision);
-  verdict(over.ok, `${gloss("tool", "execute_wire_transfer")}(inv-2, $900) → ${gloss("reason", over.denial_reason ?? over.refusal_reason ?? "")}`);
+  outcome({
+    decision: "DENY",
+    reason: gloss("reason", over.denial_reason ?? over.refusal_reason ?? ""),
+    observed: `${gloss("tool", "execute_wire_transfer")}(inv-2, $900) denied ${over.denial_reason ?? over.refusal_reason ?? ""} (over the 500 cap)`,
+    ok: !over.ok && over.denial_reason === "constraint_exceeded",
+  });
   hop("Agent", "Payments RS", "tools/call execute_wire_transfer (inv-3, globex)", "in-process MCP · O-33");
   const globex = await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-3" }, facts);
   hop("Payments RS (PEP)", "PDP", "evaluate", "in-process · D28");
   hop("PDP", "OpenFGA", "check", "HTTP https://localhost:8080");
   if (captured) block("PDP decision (globex vendor)", captured.decision);
-  verdict(globex.ok, `${gloss("tool", "execute_wire_transfer")}(inv-3, globex) → ${gloss("reason", globex.denial_reason ?? globex.refusal_reason ?? "")}`);
+  outcome({
+    decision: "DENY",
+    reason: gloss("reason", globex.denial_reason ?? globex.refusal_reason ?? ""),
+    observed: `${gloss("tool", "execute_wire_transfer")}(inv-3, globex) denied ${globex.denial_reason ?? globex.refusal_reason ?? ""} (vendor not in the mission's allowlist)`,
+    ok: !globex.ok && globex.denial_reason === "out_of_authority",
+  });
+
+  act(
+    stack,
+    "VI",
+    "Mission lifecycle",
+    "The operator drives the mission's lifecycle (suspend, resume, contain, expand, supersede, revoke); then Olivia reads the tamper-evident feed.",
+  );
 
   // ---- 10. Lifecycle ------------------------------------------------------
   // MUST run AFTER the cross-domain leg and all tool calls: these transitions
   // drive the mission non-active / superseded and deny everything downstream.
   step(11, "Lifecycle: transitions that gate everything downstream");
+  goal(
+    "The operator drives the mission through its lifecycle: suspend, resume, contain a tainted capability, expand via a fresh approval, supersede, and revoke.",
+    "each transition gates what follows: suspended and superseded tokens are denied, containment removes one capability while others still permit, and the successor restores it.",
+  );
   const lifecycle = async (operation: string, id: string): Promise<{ status: number; body: unknown }> => {
     const res = await fetch(`${asUrl}/missions/${id}/lifecycle`, {
       method: "POST",
@@ -1138,10 +1507,16 @@ async function main() {
   });
   const suspendRes = await lifecycle("suspend", missionId);
   httpRes(suspendRes.status, suspendRes.body);
+  rail(stack);
   hop("Agent", "Payments RS", "tools/call get_invoice (while suspended)", "in-process MCP · O-33");
   const whileSuspended = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
   if (captured) block("PDP decision (suspended)", captured.decision);
-  verdict(whileSuspended.ok, `${gloss("tool", "get_invoice")}(inv-1) while suspended → ${gloss("reason", whileSuspended.denial_reason ?? whileSuspended.refusal_reason ?? "")}`);
+  outcome({
+    decision: "DENY",
+    reason: gloss("reason", whileSuspended.denial_reason ?? whileSuspended.refusal_reason ?? ""),
+    observed: `${gloss("tool", "get_invoice")}(inv-1) while suspended denied ${whileSuspended.denial_reason ?? whileSuspended.refusal_reason ?? ""}`,
+    ok: !whileSuspended.ok && whileSuspended.denial_reason === "mission_inactive",
+  });
 
   // 10b. resume -> the action is permitted again.
   hop("Operator", "AS", "POST /missions/{id}/lifecycle (resume)", "HTTP");
@@ -1151,10 +1526,18 @@ async function main() {
   });
   const resumeRes = await lifecycle("resume", missionId);
   httpRes(resumeRes.status, resumeRes.body);
+  rail(stack);
   hop("Agent", "Payments RS", "tools/call get_invoice (after resume)", "in-process MCP · O-33");
   const afterResume = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
   if (captured) block("PDP decision (resumed)", captured.decision);
-  verdict(afterResume.ok, `${gloss("tool", "get_invoice")}(inv-1) after resume → ${afterResume.ok ? JSON.stringify(afterResume.result) : gloss("reason", afterResume.denial_reason ?? afterResume.refusal_reason ?? "")}`);
+  outcome({
+    decision: afterResume.ok ? "PERMIT" : "DENY",
+    ...(afterResume.ok ? {} : { reason: gloss("reason", afterResume.denial_reason ?? afterResume.refusal_reason ?? "") }),
+    observed: afterResume.ok
+      ? `${gloss("tool", "get_invoice")}(inv-1) permitted again: ${JSON.stringify(afterResume.result)}`
+      : `${gloss("tool", "get_invoice")}(inv-1) denied`,
+    ok: afterResume.ok,
+  });
 
   // 10c. Containment: a protected event narrows the EFFECTIVE authority while
   // the approved authority_set/authority_hash stay immutable. A simulated
@@ -1183,19 +1566,26 @@ async function main() {
     body: JSON.stringify(containBody),
   });
   httpRes(containRes.status, await containRes.json());
+  rail(stack);
   hop("Agent", "Payments RS", "tools/call send_remittance_email (contained capability)", "in-process MCP · O-33");
   const containedCall = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
   if (captured) block("PDP decision (contained capability)", captured.decision);
-  verdict(
-    containedCall.ok,
-    `${gloss("tool", "send_remittance_email")}(inv-1) after contain → ${gloss("reason", containedCall.denial_reason ?? containedCall.refusal_reason ?? "")}`,
-  );
+  outcome({
+    decision: "DENY",
+    reason: gloss("reason", containedCall.denial_reason ?? containedCall.refusal_reason ?? ""),
+    observed: `${gloss("tool", "send_remittance_email")}(inv-1) after contain denied ${containedCall.denial_reason ?? containedCall.refusal_reason ?? ""}`,
+    ok: !containedCall.ok && containedCall.denial_reason === "authority_contained",
+  });
   hop("Agent", "Payments RS", "tools/call get_invoice (uncontained action)", "in-process MCP · O-33");
   const uncontainedCall = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
-  verdict(
-    uncontainedCall.ok,
-    `${gloss("tool", "get_invoice")}(inv-1) after contain → ${uncontainedCall.ok ? JSON.stringify(uncontainedCall.result) : gloss("reason", uncontainedCall.denial_reason ?? uncontainedCall.refusal_reason ?? "")}`,
-  );
+  outcome({
+    decision: uncontainedCall.ok ? "PERMIT" : "DENY",
+    ...(uncontainedCall.ok ? {} : { reason: gloss("reason", uncontainedCall.denial_reason ?? uncontainedCall.refusal_reason ?? "") }),
+    observed: uncontainedCall.ok
+      ? `${gloss("tool", "get_invoice")}(inv-1) still permits: ${JSON.stringify(uncontainedCall.result)}`
+      : `${gloss("tool", "get_invoice")}(inv-1) denied`,
+    ok: uncontainedCall.ok,
+  });
   note("containment is removal-only and versioned; restore exists only via the Expansion successor below.");
 
   // 10d. Expansion: a successor mission from a fresh approval that widens authority.
@@ -1255,11 +1645,19 @@ async function main() {
   hop("Operator", "AS", "supersede predecessor on the successor's first redemption (kernel op)", "in-process");
   stack.kernel.supersedeOnRedemption(expansion.successor.id);
   note(`predecessor ${missionId} state → ${stack.kernel.get(missionId)?.state}`);
+  rail(stack);
   hop("Agent", "Payments RS", "tools/call get_invoice (original token, predecessor superseded)", "in-process MCP · O-33");
   const afterSupersede = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
   if (captured) block("PDP decision (predecessor superseded)", captured.decision);
-  verdict(afterSupersede.ok, `${gloss("tool", "get_invoice")}(inv-1) with the original token → ${gloss("reason", afterSupersede.denial_reason ?? afterSupersede.refusal_reason ?? "")}`);
+  outcome({
+    decision: "DENY",
+    reason: gloss("reason", afterSupersede.denial_reason ?? afterSupersede.refusal_reason ?? ""),
+    observed: `${gloss("tool", "get_invoice")}(inv-1) with the original token denied ${afterSupersede.denial_reason ?? afterSupersede.refusal_reason ?? ""}`,
+    ok: !afterSupersede.ok && afterSupersede.denial_reason === "mission_inactive",
+  });
   note("the original credential no longer authorizes; the successor is the active mission going forward.");
+  focusedMissionId = expansion.successor.id;
+  rail(stack);
 
   // 10e. revoke the successor over the wire.
   hop("Operator", "AS", "POST /missions/{id}/lifecycle (revoke successor)", "HTTP");
@@ -1269,9 +1667,14 @@ async function main() {
   });
   const revokeRes = await lifecycle("revoke", expansion.successor.id);
   httpRes(revokeRes.status, revokeRes.body);
+  rail(stack);
 
   // ---- 11. Evidence -------------------------------------------------------
   step(12, "Evidence: the tamper-evident feed, verified");
+  goal(
+    "Olivia reads the tamper-evident evidence feed for the mission.",
+    "every evidence row verifies against the transparency log.",
+  );
   hop("Operator (Olivia)", "Transparency", "read verified timeline", "in-process");
   for (const ev of stack.evidence.forMission(missionId)) {
     const t = ev.kind === "decision" ? "decision-evidence" : ev.kind === "execution" ? "execution-evidence" : "refusal-record";
