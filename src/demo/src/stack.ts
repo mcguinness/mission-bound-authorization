@@ -16,7 +16,7 @@ import {
   MissionKernel,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
+import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, type SeededTrustedSource, TOPOLOGY } from "@mission/demo-data";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
   Connectors,
@@ -50,6 +50,14 @@ export interface AuthServerExtras {
   saas: SaasMcpServer;
   rasIssuer: string;
   saasResource: string;
+  /**
+   * @spec containment#protected-events — the config-seeded trusted protected-event
+   * sources with their PER-BOOT keypairs (D25), threaded straight from BuiltAs.
+   * seedTrustedSources() mints a fresh keypair per boot, so the private half is
+   * unreachable except by reference; the exhibit signs a SOC report (svc:soc)
+   * with it to drive real containment (AAM Trust Ratchet).
+   */
+  protectedEventSources: SeededTrustedSource[];
   /** Issue an ID-JAG cross-domain grant from a mission, DPoP-bound to cnfJkt. */
   issueCrossDomainGrant: (
     missionId: string,
@@ -213,6 +221,7 @@ export async function composeStack(opts: {
       saas,
       rasIssuer: RAS_ISS,
       saasResource,
+      protectedEventSources: as.protectedEventSources,
       issueCrossDomainGrant: (missionId, cnfJkt) =>
         issueCrossDomainGrant(kernel, xdKeys.privateKey, crossDomainKey.kid, {
           missionId,
