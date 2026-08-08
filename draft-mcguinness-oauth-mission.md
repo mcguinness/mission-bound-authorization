@@ -176,6 +176,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-work-products:
+    title: "Mission Work Products"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -3077,6 +3085,48 @@ compromised agent is the runtime enforcement layer's role
 (see that profile's security considerations). Closing within-scope data
 laundering needs a separate taint or information-flow layer this profile
 does not define.
+
+## Authority Does Not Propagate With Information {#information-propagation}
+
+The Mission Drift consideration above bounds escalation by token
+acquisition: an agent cannot exceed the approved task by acquiring
+additional tokens. The same bound holds for information. No authority
+may be acquired by information propagation alone. An agent may inherit
+another agent's knowledge; it never inherits another agent's authority.
+Information may cross a boundary without authority crossing with it.
+
+A work product produced under one Mission, such as a file, message,
+memory entry, queue event, or other durable shared artifact, is input
+when an agent operating under another Mission reads it, not authority.
+The receiving Mission determines what may be done with the information
+under its own Authority Set ({{subset}}), and the producing Mission's
+authority does not transfer through the artifact by copying,
+referencing, embedding, or communicating it. An agent that needs
+authority to act on what it read acquires it only through an authorized
+derivation or delegation bounded by the Mission ({{delegation}}), never
+from the artifact.
+
+This extends a possession-independence the profile already requires.
+Revocation acts on the `mission_id` independent of possession of any
+token ({{revocation}}); here, authority is likewise independent of
+possession of any information. It is not information-flow control, which
+this profile does not provide ({{prompt-injection}}): the profile does
+not constrain what agents communicate, only what that communication can
+confer. Coordination between agents remains possible and cannot route
+around Mission authority.
+
+The threat is emergent authority through coordination. Multiple agents
+executing independently bounded work communicate through shared state,
+so discoveries, credentials, techniques, or intermediate results persist
+across runtimes and Missions, and individually acceptable actions compose
+into behavior that no single Mission authorized. This differs from a
+compromised or multiplied agent acting within one Mission's Authority
+Set: the composing units are independent Missions coordinating through a
+carrier outside any Mission's gate. The mechanism that upholds the
+invariant across such a carrier, work-product provenance and a
+non-transitive Mission-to-Mission handoff, is specified by Mission Work
+Products {{I-D.draft-mcguinness-oauth-mission-work-products}}; this
+document takes no normative dependency on it.
 
 ## Issuance Scope, Not Runtime Enforcement {#runtime-boundary}
 
