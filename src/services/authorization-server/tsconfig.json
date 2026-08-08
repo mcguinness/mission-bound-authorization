@@ -7,6 +7,7 @@
     { "path": "../../packages/store" },
     { "path": "../../packages/demo-data" },
     { "path": "../../packages/telemetry" },
-    { "path": "../../packages/actor-chain" }
+    { "path": "../../packages/actor-chain" },
+    { "path": "../mcp-payments" }
   ]
 }

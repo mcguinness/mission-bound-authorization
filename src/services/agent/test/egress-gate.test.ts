@@ -15,7 +15,7 @@
 import type { MissionStatusLease } from "@mission/core";
 import { type EgressEvidence, EvidenceStore } from "@mission/mcp-payments";
 import { describe, expect, it } from "vitest";
-import { EgressGate, type EgressGateConfig } from "../src/egress-gate.js";
+import { EgressGate, type EgressGateConfig, type EgressRefusal } from "../src/egress-gate.js";
 import {
   buildScopeStatement,
   type ExecutionEnvironmentScopeStatement,
@@ -178,6 +178,58 @@ describe("egress gate: statement/allowlist consistency", () => {
       ),
     };
     expect(() => makeGate({ statement: inconsistent })).toThrow(/not mediated/);
+  });
+});
+
+describe("egress gate: onRefusal harness-reporter seam (advisory low-trust class)", () => {
+  it("fires onRefusal for an undeclared channel, carrying the refusal payload", async () => {
+    const seen: EgressRefusal[] = [];
+    const { gate } = makeGate({ onRefusal: (r) => seen.push(r) });
+    await gate.request("dns_resolution", `${ANTHROPIC}/v1/messages`);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toEqual({
+      channel_class: "dns_resolution",
+      destination: `${ANTHROPIC}/v1/messages`,
+      refusal_reason: "egress_undeclared:dns_resolution",
+      mission_id: "msn-egress",
+      scope_statement_digest: scopeDigest(STATEMENT),
+    });
+  });
+
+  it("fires onRefusal for an unlisted destination", async () => {
+    const seen: EgressRefusal[] = [];
+    const { gate } = makeGate({ onRefusal: (r) => seen.push(r) });
+    await gate.request("inference_api", "https://exfil.example.com/v1/messages");
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.refusal_reason).toBe("egress_destination_unlisted:https://exfil.example.com");
+    expect(seen[0]?.destination).toBe("https://exfil.example.com/v1/messages");
+  });
+
+  it("does NOT fire onRefusal for a mission-state refusal (only channel/destination classes)", async () => {
+    const seen: EgressRefusal[] = [];
+    const { gate } = makeGate({ readState: suspended, onRefusal: (r) => seen.push(r) });
+    const decision = await gate.request("dns_resolution", "https://exfil.example.com/x");
+    expect(decision.refusal_reason).toBe("mission_not_active:suspended");
+    expect(seen).toEqual([]); // the guard's refusal is never forwarded as advisory
+  });
+
+  it("does NOT fire onRefusal for a permitted request", async () => {
+    const seen: EgressRefusal[] = [];
+    const { gate } = makeGate({ onRefusal: (r) => seen.push(r) });
+    const decision = await gate.request("inference_api", `${ANTHROPIC}/v1/messages`);
+    expect(decision.permitted).toBe(true);
+    expect(seen).toEqual([]);
+  });
+
+  it("swallows a throwing forwarder (fail-closed component); the refusal is still recorded", async () => {
+    const { gate, evidence } = makeGate({
+      onRefusal: () => {
+        throw new Error("broken forwarder");
+      },
+    });
+    const decision = await gate.request("dns_resolution", `${ANTHROPIC}/v1/messages`);
+    expect(decision.permitted).toBe(false);
+    expect((egressRecords(evidence)[0] as EgressEvidence).outcome).toBe("refused");
   });
 });
 

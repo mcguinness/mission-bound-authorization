@@ -40,7 +40,9 @@ import {
   childMissionClaim,
   createChildMission,
 } from "../kernel/child-delegation.js";
+import { UnknownProtectedEventError } from "../kernel/containment.js";
 import { isSubsetSet } from "../kernel/derive.js";
+import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError, LifecycleConflictError, type MissionKernel } from "../kernel/kernel.js";
 import {
@@ -173,6 +175,33 @@ export interface AdapterOptions {
   continuationGrantKid?: string;
   /** Template store backing mission-dispatch + the /templates admin routes. */
   templateStore?: TemplateStore;
+  /**
+   * @spec containment#protected-events — the trusted protected-event source
+   * registry, keyed by source IDENTITY (NOT the transport origin). An incoming
+   * report's JWS is verified against the resolved source's key, and the source
+   * must be trusted FOR the reported `event_type`. When unset, POST
+   * /missions/:id/protected-events replies 501 (ingestion is not wired).
+   */
+  protectedEventSources?: ReadonlyMap<string, ProtectedEventSource>;
+  /**
+   * @spec containment#containment-plane — the issuer-side evidence store. Holds
+   * the `ingestion` records (accepted AND rejected) and the retained Containment
+   * Evidence. When unset, the ingestion endpoint replies 501.
+   */
+  issuerEvidence?: IssuerEvidenceStore;
+}
+
+/**
+ * @spec containment#protected-events — a resolved trusted source: the public
+ * key its reports are verified against, the protected-event types it is trusted
+ * to report, and whether it is a LOW-TRUST advisory source (a harness-forwarded
+ * egress reporter, whose records are marked advisory; the PEP/PDP remain the
+ * backstop).
+ */
+export interface ProtectedEventSource {
+  key: CryptoKey;
+  eventTypes: ReadonlySet<string>;
+  advisory: boolean;
 }
 
 /**
@@ -1023,7 +1052,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             };
             return;
           }
-          const { record } = kernel.contain(lifecycleMatch[1] as string, {
+          const { record, evidence } = kernel.contain(lifecycleMatch[1] as string, {
             event: {
               type: event.type,
               source: event.source,
@@ -1032,6 +1061,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             },
             remove: remove as Array<{ resource: string; actions?: string[] }>,
           });
+          // Retain the returned Containment Evidence issuer-side (break-glass
+          // path: its evidence `policy` is "manual"). Previously discarded.
+          opts.issuerEvidence?.retainContainment(evidence);
           ctx.status = 200;
           ctx.body = {
             id: record.id,
@@ -1060,6 +1092,152 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         } else {
           ctx.status = 404;
           ctx.body = { error: "unknown_mission" };
+        }
+      }
+      return;
+    }
+
+    // --- Protected-event ingestion (@spec containment#protected-events) ---
+    // A trusted source reports a protected event as a COMPACT JWS
+    // (application/protected-event+jwt by local agreement). The source is
+    // authenticated by its SIGNATURE, resolved for the payload `source` IDENTITY
+    // (NOT the transport origin) from the config-seeded trusted-source registry,
+    // and must be trusted FOR the reported `type`. Containment then applies
+    // DETERMINISTICALLY through the issuer-held policy (kernel.containOnEvent):
+    // the caller supplies only the event, never what narrows. This is
+    // deliberately NOT behind requireServiceToken: the JWS is the authenticator,
+    // and "unknown/untrusted source -> 403 + recorded rejection" must be
+    // reachable (a transport-secret gate would 401 first). BOTH outcomes are
+    // recorded issuer-side; fail closed (never silently ignored).
+    const protectedEventMatch = ctx.path.match(/^\/missions\/([^/]+)\/protected-events$/);
+    if (protectedEventMatch && ctx.method === "POST") {
+      const missionId = protectedEventMatch[1] as string;
+      const sources = opts.protectedEventSources;
+      const issuerEvidence = opts.issuerEvidence;
+      if (!sources || !issuerEvidence) {
+        ctx.status = 501;
+        ctx.body = { error: "temporarily_unavailable" };
+        return;
+      }
+      const emitter = { id: opts.issuer, role: "issuer" as const };
+      // Record one REJECTED ingestion (fail closed) and set the response.
+      const reject = (
+        status: number,
+        reason: string,
+        f: { event_type: string; source: string; event_id: string; advisory: boolean },
+      ): void => {
+        issuerEvidence.recordIngestion({
+          kind: "ingestion",
+          event_type: f.event_type,
+          source: f.source,
+          outcome: "rejected",
+          rejection_reason: reason,
+          mission_id: missionId,
+          event_id: f.event_id,
+          ...(f.advisory ? { advisory: true } : {}),
+          emitter,
+        });
+        ctx.status = status;
+        ctx.body = { error: "protected_event_rejected", rejection_reason: reason };
+      };
+
+      const raw = (await readTextBody(ctx.req)).trim();
+      // Peek the payload to discover the claimed source (key lookup needs it).
+      // NOT trusted until jwtVerify re-reads it from the verified payload below.
+      let peek: Record<string, unknown>;
+      try {
+        peek = decodeJwt(raw) as Record<string, unknown>;
+      } catch {
+        reject(403, "malformed_jws", {
+          event_type: "unknown",
+          source: "unknown",
+          event_id: "unknown",
+          advisory: false,
+        });
+        return;
+      }
+      const claimedSource = typeof peek.source === "string" ? peek.source : "unknown";
+      const claimedType = typeof peek.type === "string" ? peek.type : "unknown";
+      const claimedEventId = typeof peek.event_id === "string" ? peek.event_id : "unknown";
+      const entry = sources.get(claimedSource);
+      if (!entry) {
+        reject(403, "unknown_source", {
+          event_type: claimedType,
+          source: claimedSource,
+          event_id: claimedEventId,
+          advisory: false,
+        });
+        return;
+      }
+      // Verify the SIGNATURE against the resolved source's key (ES256 only).
+      let payload: Record<string, unknown>;
+      try {
+        ({ payload } = await jwtVerify(raw, entry.key, { algorithms: ["ES256"] }));
+      } catch {
+        reject(403, "bad_signature", {
+          event_type: claimedType,
+          source: claimedSource,
+          event_id: claimedEventId,
+          advisory: entry.advisory,
+        });
+        return;
+      }
+      // Read the VERIFIED payload; assert the verified source is the one we keyed
+      // on (closes a source-substitution hole) and is trusted for this `type`.
+      const type = typeof payload.type === "string" ? payload.type : "";
+      const source = typeof payload.source === "string" ? payload.source : "";
+      const observed_at = typeof payload.observed_at === "string" ? payload.observed_at : "";
+      const event_id = typeof payload.event_id === "string" ? payload.event_id : "";
+      const advisory = entry.advisory;
+      if (source !== claimedSource || !entry.eventTypes.has(type)) {
+        reject(403, "source_not_trusted_for_type", {
+          event_type: type || claimedType,
+          source: source || claimedSource,
+          event_id: event_id || claimedEventId,
+          advisory,
+        });
+        return;
+      }
+      if (payload.mission_id !== missionId) {
+        reject(403, "mission_mismatch", { event_type: type, source, event_id, advisory });
+        return;
+      }
+      try {
+        const { record, evidence } = kernel.containOnEvent(missionId, {
+          type,
+          source,
+          observed_at,
+          event_id,
+        });
+        // Retain the returned Containment Evidence issuer-side (no longer dropped)
+        // and record the ACCEPTED ingestion, carrying the rule_id that fired.
+        issuerEvidence.retainContainment(evidence);
+        issuerEvidence.recordIngestion({
+          kind: "ingestion",
+          event_type: type,
+          source,
+          outcome: "applied",
+          ...(evidence.policy ? { rule_id: evidence.policy } : {}),
+          mission_id: missionId,
+          event_id,
+          ...(advisory ? { advisory: true } : {}),
+          emitter,
+        });
+        ctx.status = 200;
+        ctx.body = {
+          containment_version: record.containment?.containment_version ?? 0,
+          removed: evidence.removed,
+        };
+      } catch (e) {
+        // Order matters: UnknownProtectedEventError -> 422 must precede the
+        // LifecycleConflictError -> 409 and the unknown-mission -> 404 arms, else
+        // the headline reject-and-record behavior is shadowed by a 404.
+        if (e instanceof UnknownProtectedEventError) {
+          reject(422, "unknown_event_type", { event_type: type, source, event_id, advisory });
+        } else if (e instanceof LifecycleConflictError) {
+          reject(409, "mission_terminal", { event_type: type, source, event_id, advisory });
+        } else {
+          reject(404, "unknown_mission", { event_type: type, source, event_id, advisory });
         }
       }
       return;
@@ -1909,6 +2087,13 @@ function optional<T>(key: string, value: T | undefined): Record<string, T> {
 
 function str(v: string | string[] | undefined): string | undefined {
   return typeof v === "string" ? v : undefined;
+}
+
+/** Read a raw text body (e.g. a compact JWS protected-event report). */
+async function readTextBody(req: IncomingMessage): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {

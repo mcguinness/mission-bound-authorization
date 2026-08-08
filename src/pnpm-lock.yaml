@@ -257,6 +257,9 @@ importers:
       '@mission/demo-data':
         specifier: workspace:*
         version: link:../../packages/demo-data
+      '@mission/mcp-payments':
+        specifier: workspace:*
+        version: link:../mcp-payments
       '@mission/store':
         specifier: workspace:*
         version: link:../../packages/store
