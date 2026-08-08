@@ -1357,7 +1357,8 @@ claim.<a href="#section-4-3.8.1" class="pilcrow">¶</a></p>
           <p id="section-5-2.1.1">No authority may be acquired by information propagation alone.<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-2.2">
-          <p id="section-5-2.2.1">An agent may inherit another agent's knowledge; it never inherits another agent's authority.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.2.1">An agent may inherit another agent's knowledge; it never inherits
+another agent's authority.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-2.3">
           <p id="section-5-2.3.1">Information may cross a boundary without authority crossing with it.<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
@@ -1381,22 +1382,22 @@ JSON object <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> with
 <span class="break"></span><dl class="dlParallel" id="section-6-2">
         <dt id="section-6-2.1">mission_id:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.2">
-          <p id="section-6-2.2.1">The Producing Mission.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.2.1"><span class="bcp14">REQUIRED</span>. The Producing Mission.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.3">deployment_id:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.4">
-          <p id="section-6-2.4.1">The Agent Deployment that produced the work product.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span>. The Agent Deployment that produced the work product.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.5">producer:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.6">
-          <p id="section-6-2.6.1">The producing principal or agent under that Mission.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.6.1"><span class="bcp14">REQUIRED</span>. The producing principal or agent under that Mission.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.7">created_at:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.8">
-          <p id="section-6-2.8.1">The production time, as an <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time.<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.8.1"><span class="bcp14">REQUIRED</span>. The production time, as an <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time.<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.9">parent_artifact:</dt>
@@ -1414,15 +1415,21 @@ A reader can therefore distinguish a provenance claim, "produced by an
 agent executing Mission M," from an authority claim, "Mission M
 authorized me to do what this proposes," which the object never makes.<a href="#section-6-3" class="pilcrow">¶</a></p>
 <p id="section-6-4">The <code>producer</code> member names the producing Mission's principal or agent.
-This differs from the emitting component recorded on activity and
-decision records elsewhere in the suite, where the producer of a record
-is the component that emitted it, a PDP, a PEP, or an executor. The two
-are distinct: this object attributes the work product to the Producing
-Mission, not to the component that logged an event.<a href="#section-6-4" class="pilcrow">¶</a></p>
-<p id="section-6-5">Work Product Provenance rides the family's unified evidence envelope as
-a new kind, alongside the suite's other evidence objects, and is audit
-material a deployment retains and discloses under the access rules for
-its Mission evidence (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-6-5" class="pilcrow">¶</a></p>
+This differs from the producer of an evidence record elsewhere in the
+suite, which is the principal or component that emitted the record, a
+Mission Issuer, a PDP, a PEP, or an executor
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). The two are distinct: this
+object attributes the work product to the Producing Mission, not to the
+component that emitted a record.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">Work Product Provenance is attribution metadata carried with the work
+product, not one of the suite's evidence objects: it records where the
+artifact came from, not what was done. Where a deployment retains it, it
+is recorded as Mission evidence attributed to the Producing Mission, the
+producer of Mission evidence in the audit sense
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>), and disclosed under the access
+rules for that deployment's Mission evidence. An implementation <span class="bcp14">MAY</span>
+realize it as a discriminated kind on a shared evidence structure; this
+document defines only the members above and requires no new media type.<a href="#section-6-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="handoff">
@@ -1436,16 +1443,23 @@ product crosses from its Producing Mission into an independent Receiving
 Mission is:<a href="#section-7-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-2.1">
-          <p id="section-7-2.1.1">A work product crossing into a Receiving Mission is input, not authority.<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.1.1">A work product crossing into a Receiving Mission is input, not
+authority.<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.2">
-          <p id="section-7-2.2.1">The Receiving Mission re-evaluates any proposed action under its own Authority Set.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.2.1">The Receiving Mission re-evaluates any proposed action under its own
+Authority Set.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.3">
-          <p id="section-7-2.3.1">The Producing Mission's authority does not transfer through the work product by copying, referencing, embedding, or communicating it.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.3.1">The Producing Mission's authority does not transfer through the work
+product by copying, referencing, embedding, or communicating it.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.4">
-          <p id="section-7-2.4.1">Where an agent needs authority to act on what it read, that authority is obtained only through the authority plane, a Child Mission request bounded by the parent under the subset rule (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) or another authorized Mission transition, never from the work product.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.4.1">Where an agent needs authority to act on what it read, that authority
+is obtained only through the authority plane, a Child Mission request
+bounded by the parent under the subset rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) or another
+authorized Mission transition, never from the work product.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-3">The handoff is non-transitive: authority earned by the Producing Mission
@@ -1479,10 +1493,11 @@ projection: it moves information, not the Mission.<a href="#section-7.1-1" class
 continuity, authorization continuity, and execution-time evidence
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>). Work provenance
 is the artifact-scoped companion to the third, and does not rename it.<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">Execution-time evidence answers "what was done": it is action-scoped and
-recorded against the Mission at each continued hop. Work provenance
-answers "under what approved work did this artifact come into existence":
-it is artifact-scoped and attributed to the Producing Mission. The two
+<p id="section-8-2">Execution-time evidence answers "what was done": it is action-scoped
+and recorded against the Mission at each continued hop. Work provenance
+answers "under what approved work did this artifact come into
+existence": it is artifact-scoped and attributed to the Producing
+Mission. The two
 sit beside each other. Evidence ties an action back to the Mission that
 took it; provenance ties an artifact back to the Mission that produced
 it. Neither answers what a reader of the artifact may do; that remains
@@ -1530,10 +1545,10 @@ now.<a href="#section-9-3" class="pilcrow">¶</a></p>
 <p id="section-10-1">Work Product Provenance attributes an artifact to a Mission and to a
 producing principal, so it can reveal the existence of a Mission and the
 identity of an actor to anyone who reads the artifact. A deployment
-attaches provenance only where attribution is warranted, keeps it to the
-five members this document defines, and discloses it under the same
-access rules as its other Mission evidence. The object is policy-free, so
-it never carries authority, constraint, or classification that could
+attaches provenance only where attribution is warranted, keeps it to
+the five members this document defines, and discloses it under the same
+access rules as its other Mission evidence. The object is policy-free,
+so it never carries authority, constraint, or classification that could
 widen what a reader learns. This document adds no anonymous surface.<a href="#section-10-1" class="pilcrow">¶</a></p>
 </section>
 </div>

@@ -217,13 +217,16 @@ Table of Contents
    it to the approved work under which it came into existence.  The
    object is a JSON object [RFC8259] with these members and only these:
 
-   mission_id:  The Producing Mission.
+   mission_id:  REQUIRED.  The Producing Mission.
 
-   deployment_id:  The Agent Deployment that produced the work product.
+   deployment_id:  REQUIRED.  The Agent Deployment that produced the
+      work product.
 
-   producer:  The producing principal or agent under that Mission.
+   producer:  REQUIRED.  The producing principal or agent under that
+      Mission.
 
-   created_at:  The production time, as an [RFC3339] date-time.
+   created_at:  REQUIRED.  The production time, as an [RFC3339] date-
+      time.
 
    parent_artifact:  OPTIONAL.  A back-reference to the work product
       this one derived from, forming a provenance chain.
@@ -238,18 +241,23 @@ Table of Contents
    object never makes.
 
    The producer member names the producing Mission's principal or agent.
-   This differs from the emitting component recorded on activity and
-   decision records elsewhere in the suite, where the producer of a
-   record is the component that emitted it, a PDP, a PEP, or an
-   executor.  The two are distinct: this object attributes the work
-   product to the Producing Mission, not to the component that logged an
-   event.
+   This differs from the producer of an evidence record elsewhere in the
+   suite, which is the principal or component that emitted the record, a
+   Mission Issuer, a PDP, a PEP, or an executor
+   ([I-D.draft-mcguinness-mission-audit]).  The two are distinct: this
+   object attributes the work product to the Producing Mission, not to
+   the component that emitted a record.
 
-   Work Product Provenance rides the family's unified evidence envelope
-   as a new kind, alongside the suite's other evidence objects, and is
-   audit material a deployment retains and discloses under the access
-   rules for its Mission evidence
-   ([I-D.draft-mcguinness-mission-audit]).
+   Work Product Provenance is attribution metadata carried with the work
+   product, not one of the suite's evidence objects: it records where
+   the artifact came from, not what was done.  Where a deployment
+   retains it, it is recorded as Mission evidence attributed to the
+   Producing Mission, the producer of Mission evidence in the audit
+   sense ([I-D.draft-mcguinness-mission-audit]), and disclosed under the
+   access rules for that deployment's Mission evidence.  An
+   implementation MAY realize it as a discriminated kind on a shared
+   evidence structure; this document defines only the members above and
+   requires no new media type.
 
 7.  Non-Transitive Mission-to-Mission Handoff
 

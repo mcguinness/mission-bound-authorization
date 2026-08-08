@@ -696,12 +696,11 @@ Table of Contents
       attribution collapses to the shared client_id, and containment
       falls back to the Deployment and Mission kills.
 
-   Emergent authority through coordination (independent Missions
-   compose via shared state):  Addressed by the non-transitive Mission-
-      to-Mission handoff rule: a work product crossing into a Mission is
-      input, re-evaluated under the receiving Mission's own Authority
-      Set, so a producing Mission's authority never transfers with the
-      information it wrote
+   Emergent authority through coordination (independent Missions):  Addressed
+      by the non-transitive Mission-to-Mission handoff rule: a work
+      product crossing into a Mission is input, re-evaluated under the
+      receiving Mission's own Authority Set, so a producing Mission's
+      authority never transfers with the information it wrote
       ([I-D.draft-mcguinness-oauth-mission-work-products], promoted from
       the quarantine pattern of
       [I-D.draft-mcguinness-mission-architecture]); the legitimate path
