@@ -234,6 +234,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-work-products:
+    title: "Mission Work Products"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-attenuation:
     title: "Mission Offline Attenuation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html
@@ -713,6 +721,14 @@ profile.
 Read substrate-neutrally, the invariants carry the five laws the
 companion handbook names for the layer: durability, attribution,
 narrowing, termination, and containment.
+
+Read on the artifact plane, the same invariants forbid authority from
+riding a work product an agent produces: no authority is acquired by
+information propagation alone, and a work product crossing into a
+Mission is input that the receiving Mission re-evaluates under its own
+Authority Set. This is a reading of the invariants above, not an eighth
+invariant; its normative home is the Mission Work Products companion
+({{I-D.draft-mcguinness-oauth-mission-work-products}}).
 
 # Mission Roles and Components {#components}
 
@@ -1809,6 +1825,21 @@ input and an egress path at once.
   claimed, the runtime profile's trifecta containment
   ({{I-D.draft-mcguinness-mission-runtime}}).
 
+The quarantine pattern is the deployment-shaped case of a general rule
+that holds for every work product one Mission passes to another. A work
+product crossing into a receiving Mission is input, not authority: the
+receiving Mission re-evaluates any proposed action under its own
+Authority Set, and the producing Mission's authority does not transfer
+through the artifact by copying, referencing, embedding, or
+communicating it. The Mission Work Products companion
+({{I-D.draft-mcguinness-oauth-mission-work-products}}) is the normative
+home of this rule and defines the provenance object that attributes an
+artifact without granting anything. Ingesting a work product is an added
+conjunctive gate at the receiving Mission's boundary: it composes with
+the three objects' independent gates and does not nest inside them, so
+Actor, Agent Deployment, and Mission stay a gating pipeline, not a
+containment hierarchy ({{three-objects}}).
+
 Where the separation must hold within one Mission, the metering
 profile's exclusivity control
 ({{I-D.draft-mcguinness-mission-metering}}) latches read-and-egress
@@ -2447,6 +2478,14 @@ operator plane) as its satellites.
 `oauth-mission-attenuation`:
 : Experimental: narrower Mission-bound tokens minted offline; the
   kill switch preserved by runtime re-check.
+
+**Work products:**
+
+`oauth-mission-work-products`:
+: Experimental: work-product provenance, attribution and not authority,
+  and the non-transitive Mission-to-Mission handoff rule; a work product
+  crossing into a Mission is input, re-evaluated under the receiver's
+  Authority Set.
 
 **Proof and portability:**
 

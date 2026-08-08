@@ -225,6 +225,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-work-products:
+    title: "Mission Work Products"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-approval-revision:
     title: "Mission Approval Revision for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html
@@ -879,6 +887,28 @@ One instance of a swarm is compromised (class-pinned multiplication):
   ({{trusted-base}}); without it attribution collapses to the shared
   `client_id`, and containment falls back to the Deployment and
   Mission kills.
+
+Emergent authority through coordination (independent Missions):
+: Addressed by the non-transitive Mission-to-Mission handoff rule: a
+  work product crossing into a Mission is input, re-evaluated under the
+  receiving Mission's own Authority Set, so a producing Mission's
+  authority never transfers with the information it wrote
+  ({{I-D.draft-mcguinness-oauth-mission-work-products}}, promoted from
+  the quarantine pattern of
+  {{I-D.draft-mcguinness-mission-architecture}}); the legitimate path to
+  act on what was read is a Child Mission bounded by the parent
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Distinct
+  from one swarm instance compromised above, which is legitimate
+  class-pinned multiplication under one Mission: here multiple agents
+  executing independently bounded work communicate through shared state,
+  so discoveries, credentials, techniques, or intermediate results
+  persist across runtimes and Missions, and individually acceptable
+  actions compose into behavior no single Mission authorized. Residual:
+  the handoff rule denies authority transfer per artifact but does not
+  by itself bound this aggregate composition through an unmanaged
+  carrier; shared-state effect classification, an audience envelope, and
+  lineage-keyed aggregate bounds are anticipated defense-in-depth, not
+  yet specified ({{I-D.draft-mcguinness-oauth-mission-work-products}}).
 
 Injection steers discovery (the agent binds the attacker's resource):
 : Addressed by default-closed discovery (no consented ceiling, no
