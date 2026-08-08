@@ -25,6 +25,14 @@ export const AUTHORITY_ENTRY_TYP = "mission-authority-entry";
  * under the existing envelope (no change to `computeAnchor` is needed).
  */
 export const UNWIND_PLAN_TYP = "mission-unwind-plan";
+/**
+ * @spec draft-mcguinness-oauth-mission-template
+ * The integrity-anchor `typ` for a Mission Template: a human-consented ceiling +
+ * dispatch policy + bounds. The template body is hashed under this domain
+ * separator via {@link computeAnchor} (no change to `computeAnchor` is needed);
+ * the resulting `template_hash` is carried on each dispatched instance's lineage.
+ */
+export const MISSION_TEMPLATE_TYP = "mission-template";
 
 export function computeAnchor(typ: string, iss: string, value: JsonValue): string {
   const envelope: JsonValue = { typ, iss, value };

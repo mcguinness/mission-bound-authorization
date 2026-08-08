@@ -39,5 +39,8 @@
     "payments:payment.schedule",
     "payments:payment.execute",
     "payments:remittance.send"
+  ],
+  "dispatch_prohibited_actions": [
+    "payments:payment.execute"
   ]
 }

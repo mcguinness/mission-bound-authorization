@@ -1,6 +1,14 @@
 /** Assembly: kernel + adapters + keys. Used by server.ts and tests. */
 
-import { CANONICAL_RESOURCE, DERIVATION_POLICY, seedAgentClient, seedChildClient, TOPOLOGY, USERS } from "@mission/demo-data";
+import {
+  CANONICAL_RESOURCE,
+  demoReconciliationTemplate,
+  DERIVATION_POLICY,
+  seedAgentClient,
+  seedChildClient,
+  TOPOLOGY,
+  USERS,
+} from "@mission/demo-data";
 import { exportJWK, generateKeyPair, type JWK } from "jose";
 import type Provider from "oidc-provider";
 import { buildProvider, type TxnArs } from "./adapters/provider.js";
@@ -12,6 +20,8 @@ import { DeferralStore } from "./kernel/deferred.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
+import { createTemplate } from "./kernel/template.js";
+import { TemplateStore } from "./kernel/template-store.js";
 import { TERMINAL_STATES } from "./kernel/types.js";
 import type { LifecycleCommit, MissionRecord } from "./kernel/types.js";
 
@@ -111,6 +121,20 @@ export {
   MAX_CHILD_GRANT_LIFETIME_S,
   type MintChildGrantInput,
 } from "./adapters/child-grant.js";
+export {
+  createTemplate,
+  dispatchFromTemplate,
+  TemplateStore,
+  TemplateError,
+  DispatchError,
+  type MissionTemplate,
+  type TemplateCreate,
+  type TemplateState,
+  type DispatchReason,
+  type CreateTemplateInput,
+  type DispatchInput,
+  type DispatchResult,
+} from "./kernel/template.js";
 export {
   DeferralStore,
   DeferralError,
@@ -212,6 +236,13 @@ export interface BuiltAs {
    * returns undefined once the Mission reaches a terminal lifecycle state).
    */
   delegationFamilyStore: DelegationFamilyStore;
+  /**
+   * @spec mission-template — the Mission Template store, seeded with one demo
+   * read-only reconciliation template. Exposed so the wire PR can dispatch
+   * instances (dispatchFromTemplate) and a test/exhibit can inspect templates
+   * and dispatch events. Holds no kernel reference (dispatch is a pure function).
+   */
+  templateStore: TemplateStore;
 }
 
 export async function buildAuthorizationServer(opts: {
@@ -278,6 +309,11 @@ export async function buildAuthorizationServer(opts: {
   // fan-out below (a terminal Mission terminates every delegation family rooted in
   // it, and the provider-capturing terminal subscriber revokes each family's grant).
   const delegationFamilyStore = new DelegationFamilyStore();
+  // @spec mission-template — the Mission Template store, seeded with one demo
+  // read-only reconciliation template. Independent of the kernel (dispatch is a
+  // pure function over both); the wire PR calls dispatchFromTemplate.
+  const templateStore = new TemplateStore();
+  createTemplate(templateStore, demoReconciliationTemplate(opts.issuer) as never);
   // @spec async-delegation — forward reference to the provider (assigned after
   // buildProvider, like statusListPublisher). Captured by the terminal subscriber in
   // the fan-out so it can revoke per-delegation family grants; undefined until
@@ -402,5 +438,6 @@ export async function buildAuthorizationServer(opts: {
     canonicalResource: CANONICAL_RESOURCE,
     continuationStore,
     delegationFamilyStore,
+    templateStore,
   };
 }
