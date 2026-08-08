@@ -1,0 +1,15 @@
+{
+  "policy_version": "demo-containment-1",
+  "rules": [
+    {
+      "rule_id": "contain-external-comms-on-taint-v1",
+      "event_type": "content.tainted_read",
+      "remove": [
+        {
+          "resource": "http://localhost:4403/mcp",
+          "actions": ["payments:remittance.send"]
+        }
+      ]
+    }
+  ]
+}

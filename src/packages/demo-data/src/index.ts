@@ -401,6 +401,76 @@ export const DERIVATION_POLICY: DerivationPolicy = {
   ) as [CeilingEntry, ...CeilingEntry[]],
 };
 
+export interface ContainmentRemoveEntry {
+  resource: string;
+  actions?: string[];
+}
+
+export interface ContainmentRule {
+  rule_id: string;
+  event_type: string;
+  remove: ContainmentRemoveEntry[];
+}
+
+/**
+ * @spec containment#containment-policy — the ISSUER-HELD map from a
+ * protected-event class to what narrows. Structurally identical to the kernel's
+ * ContainmentPolicy; demo-data has no dep on the kernel (it is passed `as never`
+ * at the boundary, like DERIVATION_POLICY).
+ */
+export interface ContainmentPolicy {
+  policy_version: string;
+  rules: ContainmentRule[];
+}
+
+function loadContainmentPolicy(): ContainmentPolicy {
+  const file = "containment.json";
+  const root = asObject(file, readJson(file), "containment");
+  const rules = asArray(file, root.rules, "containment.rules").map((raw, i) => {
+    const r = asObject(file, raw, `containment.rules[${i}]`);
+    const remove = asArray(file, r.remove, `containment.rules[${i}].remove`).map((rawEntry, j) => {
+      const e = asObject(file, rawEntry, `containment.rules[${i}].remove[${j}]`);
+      const entry: ContainmentRemoveEntry = {
+        resource: reqString(file, e, "resource", `containment.rules[${i}].remove[${j}]`),
+      };
+      if (e.actions !== undefined) {
+        entry.actions = reqStringArray(file, e, "actions", `containment.rules[${i}].remove[${j}]`);
+      }
+      return entry;
+    });
+    if (remove.length === 0) {
+      throw new ConfigError(file, `containment.rules[${i}].remove must be non-empty`);
+    }
+    return {
+      rule_id: reqString(file, r, "rule_id", `containment.rules[${i}]`),
+      event_type: reqString(file, r, "event_type", `containment.rules[${i}]`),
+      remove,
+    };
+  });
+  return { policy_version: reqString(file, root, "policy_version", "containment"), rules };
+}
+
+const CONTAINMENT_POLICY_RAW = loadContainmentPolicy();
+
+/**
+ * @spec containment#containment-policy — the demo issuer-held ContainmentPolicy.
+ * A protected `content.tainted_read` event removes the external-communication
+ * capability (`payments:remittance.send`). Like DERIVATION_POLICY, the payments
+ * resource resolves to the (possibly env-overridden) CANONICAL_RESOURCE so the
+ * removal targets the same resource the Mission actually holds.
+ */
+export const CONTAINMENT_POLICY: ContainmentPolicy = {
+  policy_version: CONTAINMENT_POLICY_RAW.policy_version,
+  rules: CONTAINMENT_POLICY_RAW.rules.map((rule) => ({
+    ...rule,
+    remove: rule.remove.map((entry) =>
+      entry.resource === DEFAULT_PAYMENTS_RESOURCE
+        ? { ...entry, resource: CANONICAL_RESOURCE }
+        : entry,
+    ),
+  })),
+};
+
 /**
  * @spec mission-template — a demo Mission Template descriptor (the wire PR and
  * the demo seed one instance of it). Shaped as `createTemplate`'s input; the AS
