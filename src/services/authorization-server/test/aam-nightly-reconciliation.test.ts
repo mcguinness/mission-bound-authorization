@@ -97,9 +97,20 @@ let payments: PaymentsStore;
 let pep: Pep;
 let pepEvidence: EvidenceStore;
 let egressEvidence: EvidenceStore;
-let egressGate: EgressGate;
 const egressRefusals: EgressRefusal[] = [];
 let seq = 0;
+
+// The harness egress scope statement: inference_api is mediated to a single
+// destination; transport in_memory forces containment_claim: "none" (the honest
+// downgrade; see AAM.md). The gate itself is built in step 4, once the
+// dispatched Mission id exists.
+const SCOPE_STATEMENT = buildScopeStatement({
+  isolation_mechanism: "in-process AAM reference demo (no isolation boundary)",
+  transport: "in_memory",
+  mediated_action_classes: ["payments"],
+  excluded_unmediated_paths: ["direct process network access"],
+  channel_classes: [{ channel_class: "inference_api", disposition: "mediated", destinations: [ANTHROPIC] }],
+});
 
 // State threaded across the seven sequential steps.
 let templateId = "";
@@ -335,32 +346,15 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
       sourceDigest: sourceDigestOf({ name: "payments", tools: ["get_invoice", "send_remittance_email"] }),
     });
 
-    // The harness egress gate: an in-process reference realization. inference_api
-    // is mediated to a single destination; transport in_memory forces
-    // containment_claim: "none" (the honest downgrade -- see AAM.md).
+    // The gate's own evidence store; the gate is built in step 4 (needs the mission id).
     egressEvidence = new EvidenceStore();
-    egressGate = new EgressGate({
-      statement: buildScopeStatement({
-        isolation_mechanism: "in-process AAM reference demo (no isolation boundary)",
-        transport: "in_memory",
-        mediated_action_classes: ["payments"],
-        excluded_unmediated_paths: ["direct process network access"],
-        channel_classes: [{ channel_class: "inference_api", disposition: "mediated", destinations: [ANTHROPIC] }],
-      }),
-      missionId: "pending", // rebound to the dispatched Mission in step 4
-      readState: async () => "active",
-      evidence: egressEvidence,
-      emitterId: "aam-egress-gate",
-      instanceEpoch: "aam-epoch",
-      onRefusal: (r) => egressRefusals.push(r),
-    });
   });
 
   afterAll(() => {
     asServer?.close();
   });
 
-  // STEP 1 -- Consent once. AAM Task Template + capability ceiling.
+  // STEP 1: Consent once. AAM Task Template + capability ceiling.
   it("step 1 (consent once): POST /templates records the reconciliation ceiling + human approver", async () => {
     const res = await createTemplateAdmin(reconciliationTemplateBody());
     const body = (await res.json()) as { template_id?: string; template_version?: string; template_hash?: string };
@@ -381,7 +375,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(ceilingActions).not.toContain("payments:payment.schedule");
   });
 
-  // STEP 2 -- Machine-speed dispatch. AAM Agent Identity Broker (issuance).
+  // STEP 2: Machine-speed dispatch. AAM Agent Identity Broker (issuance).
   it("step 2 (machine-speed dispatch): the scheduler dispatches a fresh Mission; over-ceiling is refused", async () => {
     const res = await dispatch({ intent: reconciliationIntent(), dispatchEventId: `evt-dispatch-${seq++}` });
     const body = (await res.json()) as {
@@ -414,7 +408,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(refusedBody.mission_denial_reason).toBe("out_of_template_ceiling");
   });
 
-  // STEP 3 -- Disconnected run. AAM Agent Identity Broker (async-delegation transport).
+  // STEP 3: Disconnected run. AAM Agent Identity Broker (async-delegation transport).
   it("step 3 (disconnected run): the dispatched Mission obtains a refresh-token family clamped to its expiry", async () => {
     const record = as.kernel.get(dispatchedMissionId);
     // The Mission's absolute lifetime is bounded by the template (well below FAR_FUTURE).
@@ -446,7 +440,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect((decodeJwt(rbody.access_token as string).mission as { id?: string })?.id).toBe(dispatchedMissionId);
   });
 
-  // STEP 4 -- Per-action mediation. AAM Mediation Layer (PEP/PDP + egress gate).
+  // STEP 4: Per-action mediation. AAM Mediation Layer (PEP/PDP + egress gate).
   it("step 4 (per-action mediation): a tool call is permitted via the PEP/PDP; off-allowlist egress is refused", async () => {
     const token = tokenFactsFor(dispatchedMissionId);
 
@@ -462,15 +456,10 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     // Pre-containment, the external-comms capability still permits at the PDP.
     expect((await evalAction(dispatchedMissionId, "payments:remittance.send")).decision).toBe(true);
 
-    // A permitted egress (the declared inference destination) passes the gate...
-    egressGate = new EgressGate({
-      statement: buildScopeStatement({
-        isolation_mechanism: "in-process AAM reference demo (no isolation boundary)",
-        transport: "in_memory",
-        mediated_action_classes: ["payments"],
-        excluded_unmediated_paths: ["direct process network access"],
-        channel_classes: [{ channel_class: "inference_api", disposition: "mediated", destinations: [ANTHROPIC] }],
-      }),
+    // The harness egress gate: an in-process reference realization bound to the
+    // dispatched Mission, over the shared scope statement.
+    const egressGate = new EgressGate({
+      statement: SCOPE_STATEMENT,
       missionId: dispatchedMissionId,
       readState: async () => "active",
       evidence: egressEvidence,
@@ -478,6 +467,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
       instanceEpoch: "aam-epoch",
       onRefusal: (r) => egressRefusals.push(r),
     });
+    // A permitted egress (the declared inference destination) passes the gate...
     const allowed = await egressGate.request("inference_api", `${ANTHROPIC}/v1/messages`);
     expect(allowed.permitted).toBe(true);
 
@@ -490,7 +480,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(egressRefusals.some((r) => r.refusal_reason.startsWith("egress_destination_unlisted"))).toBe(true);
   });
 
-  // STEP 5 -- Protected event -> containment. AAM Trust Ratchet (Baseline -> Restricted).
+  // STEP 5: Protected event -> containment. AAM Trust Ratchet (Baseline -> Restricted).
   it("step 5 (containment): a trusted SOC taint report contains remittance.send while invoice.read stays", async () => {
     const soc = as.protectedEventSources.find((s) => s.source === "svc:soc") as SeededTrustedSource;
     expect(soc, "svc:soc seeded from config").toBeDefined();
@@ -534,7 +524,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(stillRead.permitted).toBe(true);
   });
 
-  // STEP 6 -- Restore only in a new task. AAM: capability returns via a fresh dispatch.
+  // STEP 6: Restore only in a new task. AAM: capability returns via a fresh dispatch.
   it("step 6 (restore in a new task): a fresh dispatch restores remittance.send; the contained Mission never does", async () => {
     const res = await dispatch({ intent: reconciliationIntent(), dispatchEventId: `evt-restore-${seq++}` });
     const body = (await res.json()) as { mission_id?: string; authorization_details?: unknown };
@@ -554,7 +544,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(stillContained.context.denial_reason).toBe("authority_contained");
   });
 
-  // STEP 7 -- Activity Log. AAM Agent Activity Log (the console-bff join).
+  // STEP 7: Activity Log. AAM Agent Activity Log (the console-bff join).
   it("step 7 (activity log): the joined task-run graph shows ingestion -> containment -> authority_contained + the egress refusal", () => {
     const bff = new ConsoleBff({
       kernel: as.kernel,
@@ -597,10 +587,10 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(idxDen).toBeGreaterThan(idxIng);
     expect(idxDen).toBeGreaterThan(idxCont);
 
-    // Everything is threaded under the dispatched Mission.
+    // Everything is threaded under the dispatched Mission, and the egress
+    // evidence binds to the declared scope statement (the honest-claim link).
     expect(ingestion?.mission_id).toBe(dispatchedMissionId);
     expect(egress?.mission_id).toBe(dispatchedMissionId);
-    expect(scopeDigest).toBeTypeOf("function"); // scope-statement digest carried on egress evidence
-    expect(egress?.scope_statement_digest).toBeTruthy();
+    expect(egress?.scope_statement_digest).toBe(scopeDigest(SCOPE_STATEMENT));
   });
 });
