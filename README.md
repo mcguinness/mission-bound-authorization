@@ -25,7 +25,7 @@ with the PEP/PDP boundary are its data plane.
 
 At a glance:
 
-- **28 drafts, deliberately decomposed.** One mandatory core (the
+- **32 drafts, deliberately decomposed.** One mandatory core (the
   OAuth 2.0 issuance profile, [on the
   datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)),
   three further bindings (one an experimental sketch) and normative
@@ -477,6 +477,19 @@ under Deferred Approval alone is the stable path.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval-revision.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-approval-revision) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-approval-revision) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval-revision.diff)
 
+#### Mission Template for OAuth 2.0
+
+Experimental. An Approver consents once to a task template: a ceiling of
+resources, actions, and constraints, plus a dispatch policy and bounds.
+Each dispatch then instantiates an ordinary Mission from the template by
+policy, at machine speed, with no fresh approval per run. Every instance
+is a full Mission, bounded by its own derived Authority Set,
+independently gated and revocable, and never exceeding the ceiling.
+High-consequence authority classes are never dispatched by policy; they
+stay on a fresh human decision.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-template.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-template) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-template) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-template.diff)
+
 ### Lifecycle
 
 #### Mission Status and Lifecycle for OAuth 2.0
@@ -553,6 +566,21 @@ emits its per-Mission events. The highest-blast-radius surface in the
 family, and documented as such.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-management.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-management) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-management) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-management.diff)
+
+#### Mission Containment for OAuth 2.0
+
+Optional. Narrows a live Mission without ending it. When a declared
+protected event fires (a tainted read, an anomaly signal, a discovery
+tainted-session event), the Mission Issuer commits a contain transition:
+an issuer-held, versioned overlay removes capability from the Mission's
+effective authority while the Mission stays active and the approved
+anchors stay immutable. Containment is monotonic and removal-only, and
+every derivation (token, child, cross-domain, offline) is gated on the
+effective authority. Removed authority returns only through a successor
+Mission under the expansion profile, with the predecessor's containment
+history disclosed to the Approver.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-containment.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-containment) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-containment) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-containment.diff)
 
 ### Runtime enforcement
 
@@ -760,6 +788,18 @@ the core so the mandatory profile carries no cross-domain dependencies.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-domain.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-cross-domain) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-cross-domain) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-domain.diff)
 
+#### Mission Continuation: Authorization Continuity for Mission-Bound Authorization
+
+Profiles authorization continuity: how a Mission's work continues across
+hops and over time without re-presenting the original credential and
+without widening authority. The Identity Continuation Assertion, async
+delegation, and cross-domain projection are the transports; the Mission
+binds all of them under one invariant, a continuation handle grants
+nothing. Identity continuity re-establishes who is acting; the Mission
+remains the record of what work stays authorized.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-continuation.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-continuation) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-continuation) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-continuation.diff)
+
 ### Proof and portability
 
 Three layers of proof, from the approval surface outward: Consent
@@ -809,6 +849,21 @@ no new mechanism and points to the profiles' normative security
 considerations.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-security-model.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-mission-security-model) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-security-model) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-security-model.diff)
+
+#### Mission Work Products
+
+Experimental. Keeps information from carrying authority: an artifact can
+cross a boundary with knowledge, but not with the producing Mission's
+authority. Defines a policy-free work-product provenance object that
+attributes an artifact to the approved work under which it came into
+existence, and a non-transitive Mission-to-Mission handoff rule: an
+artifact crossing into a receiving Mission is input, and the receiving
+Mission re-evaluates any proposed action under its own Authority Set.
+One invariant holds throughout: no authority is acquired by information
+propagation alone. Provenance records where an artifact came from; it
+never says what the reader may do.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-work-products.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-work-products) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-work-products) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-work-products.diff)
 
 ## Contributing
 
