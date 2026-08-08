@@ -26,6 +26,7 @@
 
 import type { EmitterRole } from "@mission/mcp-payments";
 import type {
+  ArtifactEvidence,
   DecisionEvidence,
   EgressEvidence,
   Evidence,
@@ -71,6 +72,15 @@ export interface ActivityEntry {
   denial_reason?: string;
   /** The Containment overlay version, from Containment Evidence (`new_containment_version`). */
   containment_version?: number;
+  /**
+   * @spec work-products#provenance — the producing MISSION's principal/agent on
+   * an `artifact` row. DELIBERATELY DISTINCT from `emitter_id`/`role` (which name
+   * the emitting COMPONENT): work-product attribution is never conflated with the
+   * enforcement-point emitter, so `producer` provenance gets its own field.
+   */
+  artifact_producer?: string;
+  /** The provenance-chain back-reference, on an `artifact` row. */
+  parent_artifact?: string;
   // --- correlation ids (already on the contract; used, never invented) ---
   trace_id?: string;
   event_id?: string;
@@ -201,6 +211,21 @@ function toEntry(e: Evidence): ActivityEntry {
         event_id: n.event_id,
         ...(n.trace_id !== undefined ? { trace_id: n.trace_id } : {}),
         ...(n.scope_statement_digest !== undefined ? { scope_statement_digest: n.scope_statement_digest } : {}),
+      };
+    }
+    case "artifact": {
+      // @spec work-products#provenance — the work-product provenance row. It
+      // carries NO emitter (attribution is not an enforcement-point emit) and NO
+      // authority member; `producer` (the producing principal) maps to the
+      // distinct `artifact_producer`, never `emitter_id`. `at` is the artifact's
+      // production time (`created_at`), the timeline ordering key.
+      const a = e as ArtifactEvidence;
+      return {
+        mission_id: a.mission_id,
+        kind: "artifact",
+        at: a.created_at,
+        artifact_producer: a.producer,
+        ...(a.parent_artifact !== undefined ? { parent_artifact: a.parent_artifact } : {}),
       };
     }
   }

@@ -131,12 +131,77 @@ export interface IngestionEvidence {
   at: string;
 }
 
+/**
+ * @spec work-products#provenance — the WORK-PRODUCT PROVENANCE object: the
+ * artifact-scoped companion to the execution-time evidence continuity. It answers
+ * "under what approved work did this information come into existence?", NEVER
+ * "what may the reader do." A first-class kind on the UNIFIED evidence envelope
+ * so one verification/join path carries it, but POLICY-FREE and attribution-only:
+ * it carries EXACTLY these five members and no authority claim of any kind.
+ *
+ * The crucial distinction from the activity-log `producer` (which names the
+ * emitting COMPONENT, pdp/pep/executor/...): here `producer` is the producing
+ * MISSION's PRINCIPAL/agent. The two are never conflated (the activity-log join
+ * maps this onto its own `artifact_producer` field, never `emitter.id`).
+ *
+ * Deliberately does NOT extend {@link EvidenceBase} (like {@link
+ * IngestionEvidence}): a provenance object carries no
+ * `authority_hash`/`action`/`instance_epoch` (those are enforcement-point
+ * members, and an authority hash on an attribution object would blur the
+ * provenance/authority line this object exists to keep sharp). It carries its OWN
+ * `created_at` (the artifact's production time), so it is BUILT by {@link
+ * buildArtifactEvidence} and travels attached to the work product; it is never
+ * emitted through {@link EvidenceStore.record} (which would stamp the envelope's
+ * `at`/`trace_id`, members this object intentionally omits).
+ */
+export interface ArtifactEvidence {
+  kind: "artifact";
+  /** The producing Mission (attribution of the approved work). */
+  mission_id: string;
+  /** The Agent Deployment that produced the artifact. */
+  deployment_id: string;
+  /** The producing principal/agent under that Mission (NOT the emitting component). */
+  producer: string;
+  /** Production time. */
+  created_at: string;
+  /** Optional back-reference to the artifact this derived from (provenance chain). */
+  parent_artifact?: string;
+}
+
+/** The members {@link buildArtifactEvidence} accepts; `created_at` defaults to now. */
+export type ArtifactEvidenceInput = {
+  mission_id: string;
+  deployment_id: string;
+  producer: string;
+  created_at?: string;
+  parent_artifact?: string;
+};
+
+/**
+ * @spec work-products#provenance — build a work-product provenance object.
+ * Policy-free and attribution-only (mirrors {@link
+ * buildContainmentEvidence}'s pure-builder shape): it stamps EXACTLY the five
+ * provenance members and nothing else. `created_at` defaults to now when the
+ * caller does not supply a production time.
+ */
+export function buildArtifactEvidence(input: ArtifactEvidenceInput): ArtifactEvidence {
+  return {
+    kind: "artifact",
+    mission_id: input.mission_id,
+    deployment_id: input.deployment_id,
+    producer: input.producer,
+    created_at: input.created_at ?? new Date().toISOString(),
+    ...(input.parent_artifact !== undefined ? { parent_artifact: input.parent_artifact } : {}),
+  };
+}
+
 export type Evidence =
   | DecisionEvidence
   | RefusalRecord
   | ExecutionEvidence
   | EgressEvidence
-  | IngestionEvidence;
+  | IngestionEvidence
+  | ArtifactEvidence;
 
 /** Distributive omit so the union's discriminated shapes are preserved. */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;

@@ -126,6 +126,14 @@ export {
   type ChildResult,
 } from "./kernel/child-delegation.js";
 export {
+  produceWorkProduct,
+  ingestWorkProduct,
+  type WorkProduct,
+  type ProduceWorkProductInput,
+  type IngestWorkProductInput,
+  type IngestedWorkProduct,
+} from "./kernel/work-products.js";
+export {
   mintChildGrant,
   CHILD_GRANT_TYP,
   CHILD_JWT_BEARER_GRANT_TYPE,
