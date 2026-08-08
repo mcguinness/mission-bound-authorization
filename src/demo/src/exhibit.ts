@@ -10,13 +10,29 @@
  */
 
 import { createExpansion, DEFERRED_GRANT_TYPE, successorWidensOnly, validateMissionIntent } from "@mission/authorization-server";
-import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
+import { buildScopeStatement, EgressGate, type MissionState, scopeDigest } from "@mission/agent";
+import { CANONICAL_RESOURCE, type CeilingEntry, DERIVATION_POLICY, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import { SAAS_RESOURCE } from "@mission/mcp-saas";
 import type { TokenFacts } from "@mission/mcp-payments";
 import type { Decision, EvaluationRequest } from "@mission/pdp";
-import { composeStack } from "./stack.js";
+import { calculateJwkThumbprint, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
+import { composeStack, type AuthServerExtras, type DemoStack } from "./stack.js";
 import { label as humanName } from "./labels.js";
 import { dpopProofFor, issueMissionToken, tokenGrantRequest } from "./oauth-client.js";
+
+/**
+ * The AAM grant-type URNs are NOT re-exported from @mission/authorization-server
+ * (defined at services/authorization-server/src/adapters/provider.ts:95 and
+ * .../adapters/continuation-grant.ts:45,48). The exhibit is a downstream package,
+ * so it pins the wire values locally; token-exchange + access_token are the
+ * RFC 8693 standard URNs. If the grant strings ever drift, the dispatch/exchange
+ * legs of the AAM section below will fail loudly at /token.
+ */
+const MISSION_DISPATCH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-dispatch";
+const TOKEN_EXCHANGE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange";
+const ACCESS_TOKEN_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token";
+/** The single declared inference destination the harness egress gate mediates. */
+const ANTHROPIC = "https://api.anthropic.com";
 
 const C = {
   dim: "\x1b[2m",
@@ -171,6 +187,462 @@ function decodeHeader(jwt: string): Record<string, unknown> {
 function truncTok(jwt: string): string {
   const parts = jwt.split(".");
   return `${parts[0]}.${parts[1]}.${(parts[2] ?? "").slice(0, 12)}...`;
+}
+
+// ===========================================================================
+// Agent Access Model (Nightly Reconciliation) — the AAM run narrated ENTIRELY
+// in Mission vocabulary, driven against the SAME live stack the sections above
+// use. The AAM -> Mission mapping is in AAM.md; the wire recipes below are the
+// ones the authoritative e2e proves
+// (services/authorization-server/test/aam-nightly-reconciliation.test.ts).
+// ===========================================================================
+
+/** The bounded per-instance lifetime (the AAM "bounded task budget"). */
+const AAM_LIFETIME_S = 900;
+/** A far-future ceiling expiry, well above the per-instance clamp so the clamp
+ *  (and the refresh-family lifetime bound) is observable but never expires mid-run. */
+const AAM_FAR_FUTURE = "2099-01-01T00:00:00Z";
+const AAM_TAINT_EVENT_ID = "aam-exhibit-taint-1";
+
+/**
+ * The read-only reconciliation ceiling PLUS the single external-communication
+ * capability (payments:remittance.send = "post to one finance channel"), built
+ * from the derivation policy so every entry stays entry-wise within it: keep
+ * read/list + remittance.send, copy constraints verbatim, keep CANONICAL_RESOURCE
+ * (so containment's resource-remap targets the resource the Mission holds).
+ */
+function aamCeiling(): CeilingEntry[] {
+  const keep = (a: string) => a.endsWith(".read") || a.endsWith(".list") || a === "payments:remittance.send";
+  return DERIVATION_POLICY.ceiling
+    .map((e) => {
+      const entry: CeilingEntry = { type: e.type, resource: e.resource, actions: e.actions.filter(keep) };
+      if (e.constraints) entry.constraints = e.constraints;
+      return entry;
+    })
+    .filter((e) => e.actions.length > 0);
+}
+
+/** The Task Template body (consent once): the ceiling, a bounded lifetime, and the
+ *  human approver of record. */
+function aamTemplateBody(issuer: string, seq: number): Record<string, unknown> {
+  return {
+    template_version: "aam-nightly-reconciliation-1",
+    issuer,
+    approver: { iss: issuer, sub: "bob" }, // the consenting human of record
+    ceiling: aamCeiling(),
+    dispatch_policy: "aam-nightly-reconciliation",
+    dispatchers: ["ap-agent"], // the scheduler dispatches
+    recipients: ["subagent-invoice-extractor"], // the reconciliation sub-agent receives
+    per_instance_lifetime_s: AAM_LIFETIME_S,
+    max_active: 5,
+    rate_per_min: 30,
+    approval_event_id: `aam-tmpl-evt-${seq}`,
+    expires_at: AAM_FAR_FUTURE,
+  };
+}
+
+/** In-ceiling reconciliation intent: read invoices + post the finance remittance. */
+function aamIntent(): string {
+  return JSON.stringify({
+    goal: "nightly reconciliation of Acme invoices",
+    resources: [CANONICAL_RESOURCE],
+    expires_at: AAM_FAR_FUTURE,
+    proposed_authority: [
+      {
+        type: "mission_resource_access",
+        resource: CANONICAL_RESOURCE,
+        actions: ["payments:invoice.read", "payments:remittance.send"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ],
+  });
+}
+
+/** An intent that exceeds the read/post ceiling (payment.schedule is in the
+ *  derivation policy but was filtered out of this template's ceiling). */
+function aamOverCeilingIntent(): string {
+  return JSON.stringify({
+    goal: "schedule a payment (exceeds the reconciliation ceiling)",
+    resources: [CANONICAL_RESOURCE],
+    expires_at: AAM_FAR_FUTURE,
+    proposed_authority: [
+      {
+        type: "mission_resource_access",
+        resource: CANONICAL_RESOURCE,
+        actions: ["payments:payment.schedule"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ],
+  });
+}
+
+/** The AAM component -> Mission surface legend (mirrors legend()'s row style). */
+function aamLegend() {
+  const row = (component: string, surface: string) =>
+    console.log(`  ${C.bold}${C.cyan}${component.padEnd(27)}${C.reset}${C.dim}${surface}${C.reset}`);
+  console.log(`\n${C.bold}AAM → Mission${C.reset} ${C.dim}— each Agent Access Model component and the Mission surface that realizes it (AAM.md).${C.reset}`);
+  row("Task Template + ceiling", "Mission Template + POST /templates (consent once)");
+  row("Agent Identity Broker", "mission-dispatch grant + async-delegation refresh family");
+  row("Task-Scoped Access Engine", "the PDP (@mission/pdp) over OpenFGA");
+  row("Mediation Layer", "the payments PEP + the harness EgressGate");
+  row("Trust Ratchet", "Mission Containment (signed protected-event ingestion)");
+  row("Agent Activity Log", "ConsoleBff.activityLog() (the console-bff join)");
+  row("Grant Review Loop", "not adopted — a Mission is lifetime-bounded, not a standing grant");
+}
+
+/**
+ * The seven-step AAM Nightly Reconciliation walk, driven against the SAME stack
+ * as the sections above (do not spin a second stack): consent once (Template),
+ * dispatch at machine speed (mission-dispatch grant), run disconnected
+ * (async-delegation refresh family), mediate per action (PEP + EgressGate),
+ * ratchet down on a signed protected event (Containment), restore only in a
+ * fresh task, and read the joined task-run graph back from the Activity Log.
+ */
+async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: string) {
+  console.log(`\n${C.bold}${C.magenta}${"═".repeat(72)}${C.reset}`);
+  console.log(`${C.bold}${C.magenta}  Agent Access Model — Nightly Reconciliation, realized on Missions${C.reset}`);
+  console.log(
+    `${C.dim}  Cloudflare's AAM run, narrated entirely in Mission vocabulary (AAM.md). Same live AS, PDP, OpenFGA, PEP, egress gate, and Activity Log.${C.reset}`,
+  );
+  console.log(`${C.bold}${C.magenta}${"═".repeat(72)}${C.reset}`);
+
+  let seq = 0;
+  // Threaded across the seven sequential steps.
+  let templateId = "";
+  // The dispatcher (ap-agent) DPoP key: the dispatched mission token binds to it,
+  // and the RS-side proof in step 16 re-presents it (proof jkt == token cnf.jkt).
+  const dispatcherDpop = await generateKeyPair("ES256", { extractable: true });
+
+  const dispatch = (intent: string, evtId: string) =>
+    tokenGrantRequest(asUrl, as.agentClientJwk, dispatcherDpop, {
+      grant_type: MISSION_DISPATCH_GRANT_TYPE,
+      template_id: templateId,
+      mission_intent: intent,
+      dispatch_event_id: evtId,
+    });
+
+  // The harness egress scope statement: inference_api is mediated to a single
+  // destination; transport in_memory forces containment_claim "none" (the honest
+  // downgrade — an in-process gate cannot contain a compromised agent; see AAM.md).
+  const scopeStatement = buildScopeStatement({
+    isolation_mechanism: "in-process AAM reference demo (no isolation boundary)",
+    transport: "in_memory",
+    mediated_action_classes: ["payments"],
+    excluded_unmediated_paths: ["direct process network access"],
+    channel_classes: [{ channel_class: "inference_api", disposition: "mediated", destinations: [ANTHROPIC] }],
+  });
+
+  // ---- 13. Consent once (AAM Task Template + ceiling -> Mission Template) ----
+  step(13, "Consent once: AAM Task Template → a Mission Template (POST /templates)");
+  hop("Operator (Bob)", "AS", "POST /templates (consent once)", "HTTP");
+  const templateBody = aamTemplateBody(asUrl, seq++);
+  httpReq("POST", `${asUrl}/templates`, {
+    headers: { "content-type": "application/json", "x-service-token": "<service token>" },
+    body: templateBody,
+  });
+  const tmplRes = await fetch(`${asUrl}/templates`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+    body: JSON.stringify(templateBody),
+  });
+  const tmplJson = (await tmplRes.json()) as { template_id?: string; template_version?: string; template_hash?: string };
+  httpRes(tmplRes.status, tmplJson);
+  if (tmplRes.status !== 201 || !tmplJson.template_id || !tmplJson.template_hash) {
+    throw new Error(`POST /templates failed: ${tmplRes.status} ${JSON.stringify(tmplJson)}`);
+  }
+  templateId = tmplJson.template_id;
+  const templateHash = tmplJson.template_hash;
+  note(
+    "consent is captured ONCE here: the human approver of record is bob; the ceiling carries the read actions " +
+      "PLUS one external-comms capability (payments:remittance.send), and NOT payments:payment.schedule.",
+  );
+  verdict(true, `template ${templateId} recorded — ${C.dim}template_hash=${templateHash}${C.reset} (human consent, once)`);
+
+  // ---- 14. Machine-speed dispatch (AAM Agent Identity Broker) ----------------
+  step(14, "Machine-speed dispatch: AAM Agent Identity Broker → the mission-dispatch grant");
+  hop("Scheduler (ap-agent)", "AS", "POST /token (mission-dispatch grant, no human)", "HTTP");
+  httpReq("POST", `${asUrl}/token`, {
+    headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof: htu=/token, htm=POST>" },
+    body: {
+      grant_type: MISSION_DISPATCH_GRANT_TYPE,
+      template_id: templateId,
+      mission_intent: "<in-ceiling reconciliation intent (read invoices + post remittance)>",
+      dispatch_event_id: "evt-dispatch-...",
+      client_assertion: "<private_key_jwt>",
+    },
+  });
+  const dispRes = await dispatch(aamIntent(), `evt-dispatch-${seq++}`);
+  const dispBody = dispRes.body as {
+    access_token?: string;
+    token_type?: string;
+    mission_id?: string;
+    authorization_details?: unknown;
+    expires_in?: number;
+  };
+  httpRes(dispRes.status, {
+    ...dispBody,
+    ...(dispBody.access_token ? { access_token: truncTok(dispBody.access_token) } : {}),
+  });
+  if (dispRes.status !== 200 || !dispBody.mission_id || !dispBody.access_token) {
+    throw new Error(`mission-dispatch failed: ${dispRes.status} ${JSON.stringify(dispBody)}`);
+  }
+  const dispatchedMissionId = dispBody.mission_id;
+  const dispatchedAccessToken = dispBody.access_token;
+  const dispatchedRecord = stack.kernel.get(dispatchedMissionId);
+  if (!dispatchedRecord) throw new Error("dispatched mission record not found");
+  block("dispatched Mission Record (issuer output — no human in this loop)", {
+    id: dispatchedRecord.id,
+    state: dispatchedRecord.state,
+    subject: dispatchedRecord.subject,
+    approver: dispatchedRecord.approver,
+    template: dispatchedRecord.template,
+    authority_hash: dispatchedRecord.authority_hash,
+    expires_at: dispatchedRecord.expires_at,
+  });
+  const dispClaims = decodeClaims(dispatchedAccessToken);
+  block("dispatched access token — decoded claims", {
+    iss: dispClaims.iss,
+    sub: dispClaims.sub,
+    aud: dispClaims.aud,
+    cnf: dispClaims.cnf,
+    mission: dispClaims.mission,
+    authorization_details: dispClaims.authorization_details,
+    exp: dispClaims.exp,
+  });
+  note(
+    `machine speed, no human: approver-of-record == the template's human (${dispatchedRecord.approver.sub}); ` +
+      `template lineage template_hash ${dispatchedRecord.template?.template_hash === templateHash ? "==" : "!="} the consented template; ` +
+      "the Authority Set == the template-clipped effective set.",
+  );
+  verdict(true, `dispatched mission ${dispatchedMissionId} (template-clipped, approver-of-record bob)`);
+
+  // Over-ceiling dispatch is refused out_of_template_ceiling.
+  hop("Scheduler (ap-agent)", "AS", "POST /token (mission-dispatch — over ceiling)", "HTTP");
+  httpReq("POST", `${asUrl}/token`, {
+    headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof>" },
+    body: {
+      grant_type: MISSION_DISPATCH_GRANT_TYPE,
+      template_id: templateId,
+      mission_intent: "<intent adding payments:payment.schedule — outside the ceiling>",
+    },
+  });
+  const overRes = await dispatch(aamOverCeilingIntent(), `evt-over-${seq++}`);
+  const overBody = overRes.body as { mission_denial_reason?: string };
+  httpRes(overRes.status, overBody);
+  verdict(false, `over-ceiling dispatch → ${gloss("reason", overBody.mission_denial_reason ?? "")}`);
+
+  // ---- 15. Disconnected run (AAM Agent Identity Broker: async-delegation) ----
+  step(15, "Disconnected run: AAM Agent Identity Broker → the async-delegation refresh family");
+  const missionExp = Math.floor(Date.parse(dispatchedRecord.expires_at) / 1000);
+  hop("Scheduler (ap-agent)", "AS", "POST /token (RFC 8693 request_refresh_token)", "HTTP");
+  httpReq("POST", `${asUrl}/token`, {
+    headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof>" },
+    body: {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      request_refresh_token: "true",
+      subject_token: "<dispatched mission access token>",
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      resource: CANONICAL_RESOURCE,
+    },
+  });
+  const exchRes = await tokenGrantRequest(asUrl, as.agentClientJwk, dispatcherDpop, {
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    request_refresh_token: "true",
+    subject_token: dispatchedAccessToken,
+    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    resource: CANONICAL_RESOURCE,
+  });
+  const exchBody = exchRes.body as { access_token?: string; token_type?: string; refresh_token?: string };
+  httpRes(exchRes.status, {
+    ...exchBody,
+    ...(exchBody.access_token ? { access_token: truncTok(exchBody.access_token) } : {}),
+    ...(exchBody.refresh_token ? { refresh_token: `${String(exchBody.refresh_token).slice(0, 12)}...` } : {}),
+  });
+  if (exchRes.status !== 200 || !exchBody.refresh_token || !exchBody.access_token) {
+    throw new Error(`async-delegation exchange failed: ${exchRes.status} ${JSON.stringify(exchBody)}`);
+  }
+  const familyRefreshToken = exchBody.refresh_token;
+  const exchExp = decodeClaims(exchBody.access_token).exp as number;
+  note(
+    `a rotated, sender-constrained refresh-token FAMILY, whose issued access token never outlives the Mission: ` +
+      `token exp ${exchExp} ${exchExp <= missionExp ? "<=" : ">"} mission expiry ${missionExp} (absolute-lifetime clamp).`,
+  );
+
+  hop("Reconciler (offline, disconnected)", "AS", "POST /token (grant_type=refresh_token)", "HTTP");
+  httpReq("POST", `${asUrl}/token`, {
+    headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof>" },
+    body: { grant_type: "refresh_token", refresh_token: "<family refresh token>" },
+  });
+  const refRes = await tokenGrantRequest(asUrl, as.agentClientJwk, dispatcherDpop, {
+    grant_type: "refresh_token",
+    refresh_token: familyRefreshToken,
+  });
+  const refBody = refRes.body as { access_token?: string; token_type?: string; refresh_token?: string };
+  httpRes(refRes.status, {
+    ...refBody,
+    ...(refBody.access_token ? { access_token: truncTok(refBody.access_token) } : {}),
+    ...(refBody.refresh_token ? { refresh_token: `${String(refBody.refresh_token).slice(0, 12)}...` } : {}),
+  });
+  const refreshedMissionId = refBody.access_token ? (decodeClaims(refBody.access_token).mission as { id?: string })?.id : undefined;
+  verdict(
+    refRes.status === 200 && refreshedMissionId === dispatchedMissionId && refBody.refresh_token !== familyRefreshToken,
+    `disconnected refresh → fresh access token (mission ${refreshedMissionId} unchanged), refresh token rotated (mandatory)`,
+  );
+
+  // ---- 16. Per-action mediation (AAM Mediation Layer: PEP + EgressGate) ------
+  step(16, "Per-action mediation: AAM Mediation Layer → the payments PEP + the harness EgressGate");
+  // Validate the REAL dispatched token at the RS (exhibit idiom): the RS-side
+  // DPoP proof re-presents the dispatcher key, so proof jkt == token cnf.jkt.
+  const rsProof = await dpopProofFor(dispatcherDpop, CANONICAL_RESOURCE, "POST");
+  const facts: TokenFacts = await stack.server.validateToken(dispatchedAccessToken, rsProof, CANONICAL_RESOURCE, "POST");
+  note(`verified dispatched token at the RS (aud=${CANONICAL_RESOURCE}, DPoP jkt==cnf.jkt, mission claim present).`);
+  hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "get_invoice")}`, "in-process MCP · O-33");
+  const readRes = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
+  verdict(
+    readRes.ok,
+    `${gloss("tool", "get_invoice")}(inv-1) → ${readRes.ok ? JSON.stringify(readRes.result) : gloss("reason", readRes.denial_reason ?? readRes.refusal_reason ?? "")}`,
+  );
+
+  // The harness egress gate: an in-process reference realization bound to the
+  // dispatched Mission, reading the REAL kernel state (no mock), over the shared
+  // scope statement, writing to the stack's OWN egress evidence store (joins step 19).
+  const egressGate = new EgressGate({
+    statement: scopeStatement,
+    missionId: dispatchedMissionId,
+    readState: async (id) => stack.kernel.get(id)?.state as MissionState | undefined,
+    authorityHash: dispatchedRecord.authority_hash,
+    evidence: stack.egressEvidence,
+    emitterId: "aam-egress-gate",
+    instanceEpoch: "demo-epoch",
+    onRefusal: (r) => note(`gate reporter: ${r.refusal_reason}`),
+  });
+  hop("Reconciler", "EgressGate", `request inference_api → ${ANTHROPIC}`, "in-process · harness");
+  const allowedEgress = await egressGate.request("inference_api", `${ANTHROPIC}/v1/messages`);
+  verdict(allowedEgress.permitted, `egress inference_api → ${ANTHROPIC}/v1/messages (declared destination)`);
+  hop("Reconciler", "EgressGate", "request inference_api → exfil.example.com", "in-process · harness");
+  const refusedEgress = await egressGate.request("inference_api", "https://exfil.example.com/collect");
+  verdict(
+    refusedEgress.permitted,
+    `egress inference_api → https://exfil.example.com/collect → ${refusedEgress.permitted ? "permitted" : gloss("reason", refusedEgress.refusal_reason ?? "")}`,
+  );
+  note(
+    "the in-process gate reports containment_claim \"none\" (an in-process gate cannot contain a compromised agent); " +
+      "its value is an honest allowlist + an evidence trail — recorded and threaded into the Activity Log (step 19).",
+  );
+
+  // ---- 17. Protected event -> containment (AAM Trust Ratchet) ----------------
+  step(17, "Protected event → containment: AAM Trust Ratchet → Mission Containment (Baseline → Restricted)");
+  const soc = as.protectedEventSources.find((s) => s.source === "svc:soc");
+  if (!soc) throw new Error("svc:soc trusted source not seeded (config/containment.json)");
+  const socKey = await importJWK(soc.privateJwk, soc.alg);
+  const socEvent = await new SignJWT({
+    type: "content.tainted_read",
+    source: "svc:soc",
+    observed_at: new Date().toISOString(),
+    event_id: AAM_TAINT_EVENT_ID,
+    mission_id: dispatchedMissionId,
+  })
+    .setProtectedHeader({ alg: soc.alg, kid: soc.kid })
+    .setIssuedAt()
+    .sign(socKey);
+  hop("SOC source (svc:soc)", "AS", `POST /missions/{id}/protected-events (signed content.tainted_read)`, "HTTP");
+  httpReq("POST", `${asUrl}/missions/${dispatchedMissionId}/protected-events`, {
+    headers: { "content-type": "application/protected-event+jwt" },
+    body: { "<compact JWS>": "content.tainted_read, signed by svc:soc (decoded below)" },
+  });
+  block("protected-event — protected header", decodeHeader(socEvent));
+  block("protected-event — decoded claims", decodeClaims(socEvent));
+  const peRes = await fetch(`${asUrl}/missions/${dispatchedMissionId}/protected-events`, {
+    method: "POST",
+    headers: { "content-type": "application/protected-event+jwt" },
+    body: socEvent,
+  });
+  const peBody = (await peRes.json()) as { containment_version?: number; removed?: unknown };
+  httpRes(peRes.status, peBody);
+  note(
+    "AAM Baseline → Restricted: the issuer narrows the EFFECTIVE Authority Set deterministically from the signed event; " +
+      "the approved authority_hash stays immutable (containment is a versioned removal-only overlay).",
+  );
+  hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "send_remittance_email")} (contained capability)`, "in-process MCP · O-33");
+  const containedCall = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
+  verdict(
+    containedCall.ok,
+    `${gloss("tool", "send_remittance_email")}(inv-1) → ${gloss("reason", containedCall.denial_reason ?? containedCall.refusal_reason ?? "")}`,
+  );
+  hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "get_invoice")} (uncontained read)`, "in-process MCP · O-33");
+  const stillRead = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
+  verdict(
+    stillRead.ok,
+    `${gloss("tool", "get_invoice")}(inv-1) after contain → ${stillRead.ok ? JSON.stringify(stillRead.result) : gloss("reason", stillRead.denial_reason ?? stillRead.refusal_reason ?? "")}`,
+  );
+
+  // ---- 18. Restore only in a new task ---------------------------------------
+  step(18, "Restore only in a new task: the capability returns via a FRESH dispatch, never mid-run");
+  hop("Scheduler (ap-agent)", "AS", "POST /token (mission-dispatch — a fresh task)", "HTTP");
+  const restoreRes = await dispatch(aamIntent(), `evt-restore-${seq++}`);
+  const restoreBody = restoreRes.body as { access_token?: string; mission_id?: string; authorization_details?: unknown };
+  httpRes(restoreRes.status, {
+    ...restoreBody,
+    ...(restoreBody.access_token ? { access_token: truncTok(restoreBody.access_token) } : {}),
+  });
+  if (restoreRes.status !== 200 || !restoreBody.mission_id) {
+    throw new Error(`restore dispatch failed: ${restoreRes.status} ${JSON.stringify(restoreBody)}`);
+  }
+  const restoredMissionId = restoreBody.mission_id;
+  const restoredActions = (restoreBody.authorization_details as Array<{ actions: string[] }>).flatMap((e) => e.actions);
+  verdict(
+    restoredMissionId !== dispatchedMissionId && restoredActions.includes("payments:remittance.send"),
+    `fresh dispatch → mission ${restoredMissionId} restores ${gloss("action", "payments:remittance.send")} (a new task, new approval-of-record)`,
+  );
+  // The contained Mission never regains it mid-run.
+  hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "send_remittance_email")} (contained mission, re-tried)`, "in-process MCP · O-33");
+  const stillContained = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
+  verdict(
+    stillContained.ok,
+    `contained mission ${dispatchedMissionId} → ${gloss("reason", stillContained.denial_reason ?? stillContained.refusal_reason ?? "")} (never regained mid-run)`,
+  );
+
+  // ---- 19. Agent Activity Log (the console-bff join) ------------------------
+  step(19, "Agent Activity Log: AAM Agent Activity Log → ConsoleBff.activityLog() (the joined task-run graph)");
+  hop("Operator (Olivia)", "Console BFF", "activityLog(dispatched mission)", "in-process · read-model join");
+  const session = stack.bff.sessions.create("olivia", ["operator"]);
+  const run = stack.bff.activityLog(session, dispatchedMissionId);
+  block("task-run graph — lineage", { mission_id: run.mission_id, template: run.lineage.template });
+  console.log(`${C.dim}  entries (ingestion → Containment Evidence → authority_contained; + the egress refusal):${C.reset}`);
+  for (const e of run.entries) {
+    const detail = [
+      e.action ? `action=${e.action}` : "",
+      e.outcome ? `outcome=${e.outcome}` : "",
+      e.denial_reason ? `reason=${e.denial_reason}` : "",
+      e.event_id ? `event_id=${e.event_id}` : "",
+      e.containment_version !== undefined ? `containment_version=${e.containment_version}` : "",
+    ]
+      .filter(Boolean)
+      .join("  ");
+    console.log(`  ${C.cyan}${e.kind.padEnd(11)}${C.reset} ${C.dim}${detail}${C.reset}`);
+  }
+  const ingestion = run.entries.find((e) => e.kind === "ingestion" && e.action === "content.tainted_read" && e.outcome === "applied");
+  const containment = run.entries.find((e) => e.kind === "containment");
+  const contained = run.entries.find((e) => e.kind === "decision" && e.denial_reason === "authority_contained");
+  const egress = run.entries.find((e) => e.kind === "egress" && e.outcome === "refused");
+  const joinedOk =
+    !!ingestion &&
+    !!containment &&
+    !!contained &&
+    !!egress &&
+    ingestion.event_id === AAM_TAINT_EVENT_ID &&
+    containment.event_id === AAM_TAINT_EVENT_ID &&
+    run.entries.indexOf(contained) > run.entries.indexOf(ingestion) &&
+    egress.scope_statement_digest === scopeDigest(scopeStatement);
+  verdict(
+    joinedOk,
+    "joined under the dispatched Mission: ingestion and Containment Evidence share the event_id, the authority_contained decision follows both, and the egress refusal binds to the published scope statement.",
+  );
+
+  aamLegend();
+  console.log(
+    `\n${C.green}${C.bold}AAM section complete.${C.reset} ${C.dim}Consent-once Template, machine-speed dispatch, disconnected run, per-action mediation, protected-event containment, fresh-task restore, and the Activity Log — all on the same live stack.${C.reset}`,
+  );
 }
 
 async function main() {
@@ -805,8 +1277,14 @@ async function main() {
     console.log(`  ${row.verified ? C.green + "✓ VERIFIED" : C.red + "✗ FAILED  "}${C.reset} ${row.evidence_type} ${C.dim}from ${row.producer}${C.reset}`);
   }
 
+  // ---- 13-19. Agent Access Model (Nightly Reconciliation) -----------------
+  // A second, self-contained chapter on the SAME live stack: Cloudflare's AAM
+  // run narrated entirely in Mission vocabulary (its own Template + dispatched
+  // missions; independent of the primary mission superseded/revoked above).
+  await runAamSection(stack, as, asUrl);
+
   console.log(
-    `\n${C.green}${C.bold}Exhibit complete.${C.reset} ${C.dim}Real issuance (access + id token), RS validation, tool calls, cross-domain ID-JAG, lifecycle, and evidence — all on the wire.${C.reset}`,
+    `\n${C.green}${C.bold}Exhibit complete.${C.reset} ${C.dim}Real issuance (access + id token), RS validation, tool calls, cross-domain ID-JAG, lifecycle, and evidence — plus the AAM Nightly Reconciliation walk — all on the same live stack.${C.reset}`,
   );
   as.closeAuthServer();
   process.exit(0);
