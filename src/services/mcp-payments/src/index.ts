@@ -10,6 +10,9 @@ export {
   type RefusalRecord,
   type EgressEvidence,
   type IngestionEvidence,
+  type ArtifactEvidence,
+  type ArtifactEvidenceInput,
+  buildArtifactEvidence,
 } from "./evidence.js";
 export {
   Pep,
