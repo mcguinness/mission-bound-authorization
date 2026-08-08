@@ -170,6 +170,12 @@ d("work products: information may propagate, authority may not", () => {
     const beforeDeny = await evalAction(missionB.id, ARTIFACT_ACTION);
     expect(beforeDeny.decision).toBe(false);
     expect(beforeDeny.context.denial_reason).toBe("out_of_authority");
+    // Pin the mechanism: the SAME PDP on B PERMITS an action B IS authorized for
+    // (invoice.read). B's Mission is live, its view is consistent, and the FGA
+    // path works for B, so the remittance denial is attributable to the missing
+    // Authority Set entry alone, not a dead view or a broken authority check.
+    const bAuthorized = await evalAction(missionB.id, "payments:invoice.read");
+    expect(bAuthorized.decision, JSON.stringify(bAuthorized.context)).toBe(true);
     const bBefore = as.kernel.get(missionB.id);
     const effBefore = as.kernel.effectiveAuthoritySet(bBefore!);
     const versionBefore = bBefore!.version;
@@ -207,6 +213,22 @@ d("work products: information may propagate, authority may not", () => {
     // makes NO claim that B may act (it is not an authority claim).
     expect(ingested.provenance.mission_id).toBe(missionA.id);
     expect(ingested.provenance.producer).toBe("agent:A1");
+
+    // Provenance chain: a derived work product carries a back-reference to the
+    // artifact it derived from, and that reference survives ingest unchanged.
+    const derived = produceWorkProduct(as.kernel, {
+      missionId: missionA.id,
+      deploymentId: "dep_A1",
+      producer: "agent:A1",
+      content: { note: "follow-up derived from the remittance note" },
+      parentArtifact: "artifact:remittance-note-v1",
+    });
+    expect(derived.provenance.parent_artifact).toBe("artifact:remittance-note-v1");
+    const ingestedDerived = ingestWorkProduct(as.kernel, {
+      workProduct: derived,
+      receivingMissionId: missionB.id,
+    });
+    expect(ingestedDerived.provenance.parent_artifact).toBe("artifact:remittance-note-v1");
 
     // (2) Authority did NOT change. The ingest committed nothing to B: same
     // version, same authority_hash, byte-identical effective Authority Set.
