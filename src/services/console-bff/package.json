@@ -10,6 +10,7 @@
   "dependencies": {
     "@mission/access-request": "workspace:*",
     "@mission/authorization-server": "workspace:*",
+    "@mission/mcp-payments": "workspace:*",
     "@mission/transparency": "workspace:*",
     "@mission/demo-data": "workspace:*",
     "jose": "^6.1.3"

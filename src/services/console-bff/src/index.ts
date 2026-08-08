@@ -10,16 +10,57 @@
  */
 
 import type { AccessRequestService } from "@mission/access-request";
-import type { MissionKernel, MissionRecord } from "@mission/authorization-server";
+import type { ContainmentEvidence, MissionKernel, MissionRecord } from "@mission/authorization-server";
+import type { Evidence, IngestionEvidence } from "@mission/mcp-payments";
 import {
   type SignedStatement,
   type TransparencyService,
   verifyTransparentStatement,
 } from "@mission/transparency";
 import type { JWK } from "jose";
+import {
+  type ActivityEntry,
+  type ActivityRun,
+  activityByTrace,
+  buildActivityLog,
+  type MissionLineage,
+} from "./activity-log.js";
 import { requireRole, type Session, SessionStore } from "./sessions.js";
 
 export { SessionStore, requireRole, AuthzError, type Session, type Role } from "./sessions.js";
+export {
+  type ActivityEntry,
+  type ActivityKind,
+  type ActivityLogInput,
+  type ActivityRun,
+  activityByTrace,
+  buildActivityLog,
+  type MissionLineage,
+} from "./activity-log.js";
+
+/** A read accessor over an enforcement-point EvidenceStore (D32: producers
+ * retain their own; the Activity Log only READS). `EvidenceStore` satisfies it. */
+export interface EvidenceReader {
+  all(): readonly Evidence[];
+}
+
+/** A read accessor over the issuer-side store (ingestion + Containment
+ * Evidence). `IssuerEvidenceStore` satisfies it. */
+export interface IssuerEvidenceReader {
+  ingestionRecords(): readonly IngestionEvidence[];
+  containmentRecords(): readonly ContainmentEvidence[];
+}
+
+/** @spec activity-log — the injected producer read sources for the joined
+ * Activity Log. Additive and OPTIONAL: absent on the surfaces that retain no
+ * evidence (the no-auth-server demo path has no issuer store). No store moves;
+ * each producer keeps writing its own (D32). */
+export interface ActivityDeps {
+  /** Enforcement-point readers (the PEP store, the egress gate store, ...). */
+  evidence: readonly EvidenceReader[];
+  /** Issuer-side reader; absent on the no-auth-server path. */
+  issuerEvidence?: IssuerEvidenceReader;
+}
 
 export interface ConsoleDeps {
   kernel: MissionKernel;
@@ -31,6 +72,10 @@ export interface ConsoleDeps {
   serviceJwks: { keys: JWK[] };
   /** Receipt lookup by statement (M10 registration returns these). */
   receiptFor: (statement: SignedStatement) => { jws: string; index: number; treeSize: number } | undefined;
+  /** @spec activity-log — OPTIONAL producer sources for the joined Activity Log
+   * (see {@link ActivityDeps}). Absent leaves the surface working with empty
+   * timelines (lineage still resolves from the kernel). */
+  activity?: ActivityDeps;
 }
 
 export interface FleetRow {
@@ -135,6 +180,51 @@ export class ConsoleBff {
       });
     }
     return rows;
+  }
+
+  // --- Agent Activity Log (read-side join over the unified evidence) ---------
+
+  /**
+   * @spec activity-log (AAM Agent Activity Log) — the joined, per-task-run
+   * timeline: read the producer-retained records (D32) through the injected
+   * accessors and join them by Mission + lineage into the task-run graph rooted
+   * at `missionId` (template -> dispatched Mission -> continued hops -> Child
+   * Missions). Pure read; no evidence moves. Operator-facing.
+   */
+  activityLog(session: Session | undefined, missionId: string): ActivityRun {
+    requireRole(session, "operator");
+    return buildActivityLog(missionId, this.activitySources());
+  }
+
+  /**
+   * @spec activity-log — the trace-grouped view: the whole task run as one flat
+   * ordered sequence of records sharing `trace_id`, across producers.
+   */
+  activityByTrace(session: Session | undefined, traceId: string): ActivityEntry[] {
+    requireRole(session, "operator");
+    return activityByTrace(traceId, this.activitySources());
+  }
+
+  /** Gather the injected producer sources + kernel lineage into one join input.
+   * `all()`/`ingestionRecords()` return every Mission's records; the join filters
+   * per node, so a whole task-run graph (root + descendants) is covered. */
+  private activitySources(): {
+    evidence: Evidence[];
+    containment: ContainmentEvidence[];
+    missions: MissionLineage[];
+  } {
+    const a = this.deps.activity;
+    const evidence: Evidence[] = [];
+    for (const reader of a?.evidence ?? []) evidence.push(...reader.all());
+    if (a?.issuerEvidence) evidence.push(...a.issuerEvidence.ingestionRecords());
+    const containment: ContainmentEvidence[] = a?.issuerEvidence ? [...a.issuerEvidence.containmentRecords()] : [];
+    const missions: MissionLineage[] = this.deps.kernel.allMissions().map((m: MissionRecord) => ({
+      id: m.id,
+      ...(m.parent ? { parent: m.parent } : {}),
+      ...(m.template ? { template: m.template } : {}),
+      ...(m.predecessor ? { predecessor: m.predecessor } : {}),
+    }));
+    return { evidence, containment, missions };
   }
 }
 

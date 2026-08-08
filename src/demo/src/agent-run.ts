@@ -14,7 +14,6 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { buildScopeStatement, createMediatedHarness, EgressGate, type MissionState, runAgentLoop } from "@mission/agent";
 import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
-import { EvidenceStore } from "@mission/mcp-payments";
 import { composeStack } from "./stack.js";
 import { issueMissionToken } from "./oauth-client.js";
 
@@ -86,12 +85,14 @@ async function main(): Promise<void> {
       { channel_class: "inference_api", disposition: "mediated", destinations: ["https://api.anthropic.com"] },
     ],
   });
-  const egressEvidence = new EvidenceStore(); // the gate retains its own records (D32)
+  // The gate retains its own records (D32); use the stack's egress store so the
+  // records join the Activity Log without relocating the store. The gate stays
+  // the sole writer.
   const gate = new EgressGate({
     statement: scopeStatement,
     missionId,
     readState,
-    evidence: egressEvidence,
+    evidence: stack.egressEvidence,
     emitterId: "demo-agent-egress-gate",
     instanceEpoch: "demo-epoch",
     authorityHash: missionClaim.authority_hash,
@@ -131,7 +132,7 @@ async function main(): Promise<void> {
   console.log(`\n${C.bold}Planner's final answer:${C.reset} ${text}`);
 
   // The gate recorded EVERY inference egress (permitted and refused alike).
-  const egressRecords = egressEvidence.forMission(missionId);
+  const egressRecords = stack.egressEvidence.forMission(missionId);
   const permitted = egressRecords.filter((r) => r.kind === "egress" && r.outcome === "permitted").length;
   console.log(
     `${C.dim}egress gate: ${egressRecords.length} inference egress(es) mediated (${permitted} permitted, ${egressRecords.length - permitted} refused) -> https://api.anthropic.com only${C.reset}`,
