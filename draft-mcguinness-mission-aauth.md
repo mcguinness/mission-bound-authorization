@@ -992,7 +992,21 @@ The composition consequences:
 **Substrate maturity.** AAuth is an individual Internet-Draft, and
 this binding pins its wire behavior to
 draft-hardt-oauth-aauth-protocol-08. A change to AAuth's mission
-surfaces revises this document; a deployment tracks both.
+surfaces revises this document; a deployment tracks both. This
+document stays Standards Track because the Mission-model content it
+specifies, the equivalence, the projected anchors, and the lifecycle,
+is complete and stable in its own terms; the tracked risk is AAuth's
+substrate maturity, not this document's. This is the same disclosure
+the offline attenuation profile makes for its own substrate
+({{I-D.draft-mcguinness-oauth-mission-attenuation}}), applied here to
+a Standards Track document rather than an Experimental one, so the
+maturity signal reads the same way regardless of category. A
+deployment that needs a binding whose base conformance floor carries
+no unratified dependency uses the issuance profile or the standalone
+Mission Authority Server binding, each of which confines its own
+Internet-Draft references to an optional capability above that floor
+({{I-D.draft-mcguinness-oauth-mission}},
+{{I-D.draft-mcguinness-mission-authority-server}}).
 
 **Blob visibility.** Only the agent and the PS hold the mission blob,
 and AAuth forbids a Resource or Access Server to dereference the

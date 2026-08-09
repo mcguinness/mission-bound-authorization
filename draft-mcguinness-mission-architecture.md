@@ -429,9 +429,15 @@ agent runs stays with the harness and the orchestrator.
 
 The model's boundary is deliberate. The family does not define:
 
-- **A new authority format.** Rich Authorization Requests {{RFC9396}}
-  and kindred mechanisms already fill that role; the family leaves
-  expressing authority to them ({{the-mission}}).
+- **A new authority format, or a new grant protocol.** Rich
+  Authorization Requests {{RFC9396}} and kindred mechanisms already
+  fill the authority-expression role; the family leaves that to them
+  ({{the-mission}}). The same restraint holds against GNAP and the
+  capability-system lineage (macaroons, Biscuit, UCAN,
+  object-capability narrowing): this family composes with deployed
+  grant protocols and attenuation primitives rather than introducing
+  a competing one of its own; the core states the comparison
+  ({{I-D.draft-mcguinness-oauth-mission}}).
 - **A policy language.** The PDP evaluates the Mission's Authority
   Set, constraints, and state; how a deployment authors policy beyond
   them is local ({{I-D.draft-mcguinness-mission-runtime}}).
@@ -729,6 +735,21 @@ Mission is input that the receiving Mission re-evaluates under its own
 Authority Set. This is a reading of the invariants above, not an eighth
 invariant; its normative home is the Mission Work Products companion
 ({{I-D.draft-mcguinness-oauth-mission-work-products}}).
+
+Read under composition, the invariants bound one Mission's own
+Authority Set; they do not by themselves bound the aggregate surface a
+delegation tree, a cross-domain hop, or a chain of child generations
+reaches together. Delegation depth resets at each cross-domain hop and
+at each child generation, and a child's own derivation cap is
+independent of its parent's, so the authorized surface a body of work
+can reach can exceed what any single approval appears to bound. This
+is again a reading of the invariants above, not an eighth invariant;
+disclosing the composed bound at the consent surface is the
+cross-domain and child-delegation profiles' role
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
+{{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and bounding
+aggregate consumption is the metering profile's
+({{I-D.draft-mcguinness-mission-metering}}).
 
 # Mission Roles and Components {#components}
 
@@ -2228,8 +2249,15 @@ mediated actions within the staleness bound ({{validity-model}}),
 but it terminates no process and closes no network path. The
 converse holds too: killing a workload leaves the Mission `active`
 and its authority derivable to a replacement instance unless the
-Mission is also revoked. A deployment's incident runbook names which
-of these controls exist and who may pull each.
+Mission is also revoked. Capability kill carries its own residual: it
+gates derivations minted after the transition and propagates to Child
+Missions justified by the contained entry, but a cross-domain grant
+already redeemed or an offline attenuation root already minted before
+the transition keeps its own bounded lifetime, exactly as the
+credential-kill row's residual does
+({{I-D.draft-mcguinness-oauth-mission-containment}}). A deployment's
+incident runbook names which of these controls exist and who may pull
+each.
 
 # Mission Requirements {#requirements}
 
