@@ -1246,13 +1246,15 @@ a candidate entry from a ceiling (a Mission Intent's
 Set entry narrowed to a derived or delegated token,
 {{authorization-derivation}}, {{delegation-constraints}}), a
 registered Common Constraint key present in the ceiling entry that the
-AS does not implement narrowing for MUST cause the AS to fail closed
-and refuse the derivation (for example `invalid_authorization_details`
-{{RFC9396}}), never emit a candidate entry that omits the key.
-Omitting an unimplemented key would widen effective authority past the
-ceiling exactly as an unenforced key would at the Resource Server
-({{rs-enforcement}}); an AS MUST NOT claim to narrow a Common
-Constraint it cannot evaluate.
+AS does not implement narrowing for MUST NOT be dropped while the
+entry survives. The AS MUST instead fail closed: refuse the whole
+derivation, or omit the entry from the result, exactly as an
+unrecognized `resources` value already may be, signaling a partial
+derivation through `mission_derivation` where that applies
+({{authorization-derivation}}). Carrying the entry forward with the
+key dropped would widen effective authority past the ceiling exactly
+as an unenforced key would at the Resource Server
+({{rs-enforcement}}).
 
 This document defines the initial Common Constraints:
 
@@ -1334,24 +1336,26 @@ MUST fix its subset and intersection in value-space terms, so that
 independent deployments compute the same result for the same values and
 the subset rule of {{subset}} is reproducible.
 
-An `amount` string (`max_amount`, and any future Common Constraint
-that reuses this shape) MUST match `1*DIGIT ["." 1*DIGIT]`: one or
-more decimal digits, optionally followed by a single `.` and a
-fractional part of one to 18 decimal digits. A leading `-` is out of
-scope for a ceiling value and MUST be rejected.
+A decimal-string value in a Common Constraint (`max_amount`'s
+`amount` member, and any future Common Constraint with a
+decimal-valued member) MUST match `^[0-9]+(\.[0-9]{1,18})?$`: one or
+more decimal digits, optionally followed by a single `.` and one to
+18 further decimal digits. A leading `-` is out of scope for a
+ceiling value and MUST be rejected.
 A value of any other form, including scientific notation
 (`"1e300"`), a sign, a thousands separator, or a non-numeric token
 (`"NaN"`, `"Infinity"`), is malformed, and a consumer MUST reject it
-rather than attempt to parse it: the AS refuses derivation with
-`invalid_authorization_details` {{RFC9396}}, and a Resource Server
-treats a malformed `amount` the same as a `constraints` key it
-cannot enforce ({{rs-enforcement}}). Comparison and intersection over
-two `amount` values MUST be computed as exact decimal arithmetic (for
-example, by scaling both values to integers by their fractional digit
-count and comparing the integers) and MUST NOT parse either value
-into an IEEE 754 binary floating-point type: that representation does
-not hold every value the grammar above admits exactly and can compare
-or combine two values incorrectly.
+rather than attempt to parse it: an Intent carrying one in
+`proposed_authority` is refused at submission
+({{submission-via-par}}), and a Resource Server treats a malformed
+decimal value the same as a `constraints` key it cannot enforce
+({{rs-enforcement}}). Comparison and intersection over two such
+decimal-string values MUST be computed as exact decimal arithmetic
+(for example, by scaling both values to integers by their fractional
+digit count and comparing the integers) and MUST NOT parse either
+value into an IEEE 754 binary floating-point type: that
+representation does not hold every value the grammar above admits
+exactly and can compare or combine two values incorrectly.
 
 A numeric constraint value MUST lie within the range JCS {{RFC8785}}
 serializes exactly. Monetary amounts avoid that hazard by
