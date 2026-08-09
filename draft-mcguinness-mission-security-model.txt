@@ -548,6 +548,25 @@ Table of Contents
    compromised agent.  The model makes misuse bounded and, where
    evidence is produced, attributable.
 
+   Earned is also not provable at the wire.  The High-Assurance Agent
+   claims name conditions a deployment satisfies, not something a token
+   or a decision response proves: the execution-environment scope
+   statement they rest on is self-declared
+   ([I-D.draft-mcguinness-mission-runtime],
+   [I-D.draft-mcguinness-mission-harness]), and absent independent
+   evidence, a relying party cannot distinguish, from the protocol
+   artifacts alone, a deployment that built the claimed isolation from
+   one that merely published the claim.  Execution-environment
+   attestation is what closes that gap; the runtime profile requires it
+   for the two High-Assurance Agent claims specifically, not for base
+   conformance ([I-D.draft-mcguinness-mission-runtime]).  Retained
+   negative-conformance evidence is the complementary recommendation: it
+   does not prove the claim at decision time, but it lets an auditor
+   check afterward that the deployment ran the tests the claim implies
+   ([I-D.draft-mcguinness-mission-runtime]).  Short of attestation, the
+   trust assumption is plain: an unattested High-Assurance claim is an
+   organizational assertion, taken on trust, not a technical one.
+
    It does not make a compromised trusted component safe.  The
    compromise of each component degrades a specific guarantee, as listed
    in Section 6.  It does not verify the agent's reasoning or the
@@ -733,6 +752,41 @@ Table of Contents
       the carried chain.  Residual: fan-out breadth is unobserved by the
       issuer; bounded by depth and policy, not by the issuer.
 
+   Materialized-capability containment escape (Mission Containment):  Addressed
+      two ways.  Issuance-side, containment gates every future
+      derivation, delegation, cross-domain projection, and offline
+      attenuation root against the Effective Authority Set, and
+      propagates a contain transition to the child Missions the
+      contained entry justified
+      ([I-D.draft-mcguinness-oauth-mission-containment],
+      [I-D.draft-mcguinness-oauth-mission-child-delegation]).  Runtime-
+      side, a containment-aware PDP denies the contained portion of an
+      already-issued token's authority at the next action, even though
+      the Mission stays active ([I-D.draft-mcguinness-mission-runtime]).
+      Residual: what neither reaches.  A cross-domain grant already
+      redeemed into a local token the origin issuer cannot observe, and
+      an offline attenuation root already minted, are validated by a
+      party that does not consult the origin Mission's overlay; each
+      keeps producing authority for its own bounded lifetime, closed
+      only by short grant and root lifetimes
+      ([I-D.draft-mcguinness-oauth-mission-cross-domain],
+      [I-D.draft-mcguinness-oauth-mission-attenuation]).
+
+   Effective-ceiling composition (depth, cross-domain hops, and child
+
+   generations):  Addressed by each dimension bounding itself: per-
+      domain depth reset at a cross-domain hop, per-Mission
+      max_derivations that a child does not inherit from its parent, and
+      issuer adjudication at each child generation
+      ([I-D.draft-mcguinness-oauth-mission-cross-domain],
+      [I-D.draft-mcguinness-oauth-mission-child-delegation]).  Residual:
+      the composed bound across all active dimensions, depth times
+      domains times child generations, plus the aggregate derivations a
+      child subtree can draw, can exceed what a single approval appears
+      to authorize; disclosing the composed bound at the consent surface
+      is a deployment's to add, and an aggregate consumption cap is the
+      metering profile's role ([I-D.draft-mcguinness-mission-metering]).
+
    Operator surface abused (fleet management):  Addressed by management
       Client authorization; dry-run-then-execute with a bulk token
       pinning the evaluated membership; every call audited; never agent-
@@ -753,7 +807,7 @@ Table of Contents
       evidence detects it after the fact.  Residual: not prevented;
       degrades the specific guarantee per Section 6.
 
-   Nine residuals are worth stating on their own, because they are the
+   Ten residuals are worth stating on their own, because they are the
    limits most likely to matter and most often overstated away
    elsewhere:
 
@@ -841,6 +895,20 @@ Table of Contents
       controlled, and termination cascades.  The trade between the two
       is availability against observation, and a deployment that chooses
       offline minting accepts the unobserved breadth.
+
+   *  *Self-graded enforcement.* The strongest claims of Section 8 rest
+      on a self-declared execution-environment scope statement
+      ([I-D.draft-mcguinness-mission-runtime],
+      [I-D.draft-mcguinness-mission-harness]): the wire carries no
+      signal that lets a relying party tell a deployment that built the
+      claimed isolation from one that only published the claim.
+      Execution-environment attestation narrows this for the High-
+      Assurance Agent claims, where it is required
+      ([I-D.draft-mcguinness-mission-runtime]); elsewhere the claim is
+      an organizational assertion taken on trust, and retained negative-
+      conformance evidence ([I-D.draft-mcguinness-mission-runtime]) is
+      what lets an auditor check it after the fact rather than at the
+      wire.
 
    *  *Availability.* The model fails closed everywhere a trusted
       component cannot establish the fact it needs (Section 7), which
@@ -1169,6 +1237,11 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-consent-
               evidence.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-containment]
+              McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-containment.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth

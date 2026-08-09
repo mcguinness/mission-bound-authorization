@@ -1516,9 +1516,15 @@ agent runs stays with the harness and the orchestrator.<a href="#section-4-11" c
 <p id="section-5-1">The model's boundary is deliberate. The family does not define:<a href="#section-5-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5-2.1">
-          <p id="section-5-2.1.1"><strong>A new authority format.</strong> Rich Authorization Requests <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>
-and kindred mechanisms already fill that role; the family leaves
-expressing authority to them (<a href="#the-mission" class="auto internal xref">Section 4</a>).<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.1.1"><strong>A new authority format, or a new grant protocol.</strong> Rich
+Authorization Requests <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> and kindred mechanisms already
+fill the authority-expression role; the family leaves that to them
+(<a href="#the-mission" class="auto internal xref">Section 4</a>). The same restraint holds against GNAP and the
+capability-system lineage (macaroons, Biscuit, UCAN,
+object-capability narrowing): this family composes with deployed
+grant protocols and attenuation primitives rather than introducing
+a competing one of its own; the core states the comparison
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-2.2">
           <p id="section-5-2.2.1"><strong>A policy language.</strong> The PDP evaluates the Mission's Authority
@@ -1915,6 +1921,20 @@ Mission is input that the receiving Mission re-evaluates under its own
 Authority Set. This is a reading of the invariants above, not an eighth
 invariant; its normative home is the Mission Work Products companion
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>).<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-5">Read under composition, the invariants bound one Mission's own
+Authority Set; they do not by themselves bound the aggregate surface a
+delegation tree, a cross-domain hop, or a chain of child generations
+reaches together. Delegation depth resets at each cross-domain hop and
+at each child generation, and a child's own derivation cap is
+independent of its parent's, so the authorized surface a body of work
+can reach can exceed what any single approval appears to bound. This
+is again a reading of the invariants above, not an eighth invariant;
+disclosing the composed bound at the consent surface is the
+cross-domain and child-delegation profiles' role
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), and bounding
+aggregate consumption is the metering profile's
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="components">
@@ -3850,8 +3870,15 @@ mediated actions within the staleness bound (<a href="#validity-model" class="au
 but it terminates no process and closes no network path. The
 converse holds too: killing a workload leaves the Mission <code>active</code>
 and its authority derivable to a replacement instance unless the
-Mission is also revoked. A deployment's incident runbook names which
-of these controls exist and who may pull each.<a href="#section-18.1-3" class="pilcrow">¶</a></p>
+Mission is also revoked. Capability kill carries its own residual: it
+gates derivations minted after the transition and propagates to Child
+Missions justified by the contained entry, but a cross-domain grant
+already redeemed or an offline attenuation root already minted before
+the transition keeps its own bounded lifetime, exactly as the
+credential-kill row's residual does
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>). A deployment's
+incident runbook names which of these controls exist and who may pull
+each.<a href="#section-18.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

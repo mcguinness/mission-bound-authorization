@@ -1457,7 +1457,17 @@ resource, under the resource-narrowing semantics the subset rule fixes
         <dd style="margin-left: 1.5em" id="section-5-2.10">
           <p id="section-5-2.10.1"><span class="bcp14">REQUIRED</span>. An object carrying <code>id</code> and <code>version</code>, identifying the
 Dispatch Policy under which the Mission Issuer instantiates from this
-template. Its content is deployment-defined.<a href="#section-5-2.10.1" class="pilcrow">¶</a></p>
+template. Its content is deployment-defined. Committing only <code>id</code> and
+<code>version</code> leaves the policy body itself uncommitted, so a change to
+its logic between template consent and a given dispatch is not
+detectable from the template alone. A deployment <span class="bcp14">SHOULD</span> additionally
+commit the Dispatch Policy body under an integrity anchor, computed
+the way the issuance profile computes <code>authority_hash</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), or disclose it under
+Consent Evidence
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>), so a
+machine-speed dispatch decision stays auditable against the policy
+content a human actually consented to, not only its identifier.<a href="#section-5-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.11">
@@ -1695,7 +1705,19 @@ Set is the surviving set and whose:<a href="#section-7-4.7.1" class="pilcrow">¶
 <li class="normal" id="section-7-4.7.2.1">
               <p id="section-7-4.7.2.1.1"><code>approver</code> is the template's human approver, the accountable
 principal (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The Dispatcher
-is not the approver;<a href="#section-7-4.7.2.1.1" class="pilcrow">¶</a></p>
+is not the approver. Mirroring how the child-delegation profile
+marks a policy-adjudicated child creation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), the
+Mission record <span class="bcp14">MUST</span> mark this approval as
+template-policy-adjudicated rather than human, so the
+approver-of-record shift from a fresh human decision to policy
+adjudication under a prior human consent is flagged consistently
+across the family. The <code>template</code> lineage member
+(<a href="#template-member" class="auto internal xref">Section 7.1</a>), present on every dispatched Mission and
+absent on an ordinarily approved one, is that marking: its
+presence, together with the Dispatch Policy <code>id</code> and <code>version</code> it
+carries, identifies the adjudicating policy against the template's
+human approver, and no further field is needed;<a href="#section-7-4.7.2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-7-4.7.2.2">
               <p id="section-7-4.7.2.2.1"><code>subject</code> is established as the issuance profile requires, never
@@ -2000,31 +2022,37 @@ template's human approver and whose anchors are over the instance's
 own Intent and Authority Set;<a href="#section-14-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.3">
-          <p id="section-14-2.3.1">refuse a Dispatch outside the ceiling with <code>out_of_template_ceiling</code>
-and a Dispatch of a prohibited class with <code>dispatch_prohibited_class</code>
-(<a href="#denial-reasons" class="auto internal xref">Section 9</a>);<a href="#section-14-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-14-2.3.1">mark every dispatched Mission's approval as template-policy-adjudicated
+rather than human, via the <code>template</code> lineage member's presence and
+its Dispatch Policy <code>id</code> and <code>version</code>, identified against the
+template's human approver (<a href="#dispatch" class="auto internal xref">Section 7</a>, <a href="#template-member" class="auto internal xref">Section 7.1</a>);<a href="#section-14-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.4">
-          <p id="section-14-2.4.1">make every Dispatch idempotent per dispatch event identifier
-(<a href="#dispatch" class="auto internal xref">Section 7</a>);<a href="#section-14-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-14-2.4.1">refuse a Dispatch outside the ceiling with <code>out_of_template_ceiling</code>
+and a Dispatch of a prohibited class with <code>dispatch_prohibited_class</code>
+(<a href="#denial-reasons" class="auto internal xref">Section 9</a>);<a href="#section-14-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.5">
-          <p id="section-14-2.5.1">answer a Dispatch in one authenticated back-channel round trip, using
-no PAR, no interactive consent surface, and never
-<code>authorization_pending</code> (<a href="#dispatch" class="auto internal xref">Section 7</a>);<a href="#section-14-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-14-2.5.1">make every Dispatch idempotent per dispatch event identifier
+(<a href="#dispatch" class="auto internal xref">Section 7</a>);<a href="#section-14-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.6">
-          <p id="section-14-2.6.1">record the <code>template</code> lineage member on the dispatched Mission
-(<a href="#template-member" class="auto internal xref">Section 7.1</a>);<a href="#section-14-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-14-2.6.1">answer a Dispatch in one authenticated back-channel round trip, using
+no PAR, no interactive consent surface, and never
+<code>authorization_pending</code> (<a href="#dispatch" class="auto internal xref">Section 7</a>);<a href="#section-14-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.7">
-          <p id="section-14-2.7.1">stop dispatch past the published <code>review_cadence</code> until a fresh human
-approval (<a href="#template-consent" class="auto internal xref">Section 6</a>); and<a href="#section-14-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-14-2.7.1">record the <code>template</code> lineage member on the dispatched Mission
+(<a href="#template-member" class="auto internal xref">Section 7.1</a>);<a href="#section-14-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.8">
-          <p id="section-14-2.8.1">publish the bounds and the action-class mapping in the Mission
+          <p id="section-14-2.8.1">stop dispatch past the published <code>review_cadence</code> until a fresh human
+approval (<a href="#template-consent" class="auto internal xref">Section 6</a>); and<a href="#section-14-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-2.9">
+          <p id="section-14-2.9.1">publish the bounds and the action-class mapping in the Mission
 Deployment Profile (<a href="#the-mission-template" class="auto internal xref">Section 5</a>, <a href="#prohibited-classes" class="auto internal xref">Section 8</a>)
-and retain the audit linkage of <a href="#audit-linkage" class="auto internal xref">Section 11</a>.<a href="#section-14-2.8.1" class="pilcrow">¶</a></p>
+and retain the audit linkage of <a href="#audit-linkage" class="auto internal xref">Section 11</a>.<a href="#section-14-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-14-3">A Resource Server requires no new behavior: it enforces a dispatched

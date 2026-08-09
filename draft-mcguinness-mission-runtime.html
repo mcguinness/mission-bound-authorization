@@ -2447,7 +2447,7 @@ payload after the decision and before presentation.<a href="#section-4.6-11" cla
         <h3 id="name-least-exposure">
 <a href="#section-4.7" class="section-number selfRef">4.7. </a><a href="#name-least-exposure" class="section-name selfRef">Least Exposure</a>
         </h3>
-<p id="section-4.7-1">Mission containment applies to exposure as well as authority. An
+<p id="section-4.7-1">A Mission bounds exposure as well as authority. An
 agent exceeds the Mission envelope by invoking an action outside the
 Authority Set, but also by being exposed to inputs the approved task
 does not need: tools, data, memories, prompts, schemas, credentials,
@@ -2639,22 +2639,37 @@ deployment declares it.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
 that is otherwise available to the PEP or PDP for that token under
 the issuance profile (for example, through introspection when the
 authority is not represented inline).<a href="#section-7.1.1-1" class="pilcrow">¶</a></p>
-<p id="section-7.1.1-2">For an entry of type <code>mission_resource_access</code>, the action's
+<p id="section-7.1.1-2">Where a Mission participates in the Containment profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), this input is
+the Mission's current Effective Authority Set, the approved set
+minus contained capability, not the approved set the token's
+<code>authorization_details</code> entry names at face value. The PDP <span class="bcp14">MUST</span>
+refuse an action within an entry that is currently contained even
+though a token issued before the contain transition still carries
+it, established from the same Mission state source and freshness
+bound that governs the <code>active</code> check (<a href="#state-freshness" class="auto internal xref">Section 7.3</a>); a
+Mission stays <code>active</code> while contained, so this check, not the state
+check, is what a containment-aware PDP adds. A deployment that does
+not deploy the Containment profile evaluates the approved Authority
+Set unchanged, as the rest of this section states. The decision-API
+binding provides the extension point through which a companion
+profile carries which evaluated set the PDP used (<a href="#authzen" class="auto internal xref">Section 15</a>).<a href="#section-7.1.1-2" class="pilcrow">¶</a></p>
+<p id="section-7.1.1-3">For an entry of type <code>mission_resource_access</code>, the action's
 <code>resource</code> and invoked action or tool identity <span class="bcp14">MUST</span> be within that
 entry's <code>resource</code> and <code>actions</code>, under the subset rule of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. The PEP asserts the
 capability identity (for example, the tool or function name) it will
 invoke. The PDP <span class="bcp14">MUST</span> refuse an identity outside the approved
-<code>actions</code>.<a href="#section-7.1.1-2" class="pilcrow">¶</a></p>
-<p id="section-7.1.1-3">For any other <code>authorization_details</code> type, the PDP <span class="bcp14">MUST</span> evaluate
+<code>actions</code>.<a href="#section-7.1.1-3" class="pilcrow">¶</a></p>
+<p id="section-7.1.1-4">For any other <code>authorization_details</code> type, the PDP <span class="bcp14">MUST</span> evaluate
 the action under that type's documented runtime semantics and <span class="bcp14">MUST</span>
-refuse if it does not understand or cannot enforce those semantics.<a href="#section-7.1.1-3" class="pilcrow">¶</a></p>
-<p id="section-7.1.1-4">The identity of the executing component that serves a capability
+refuse if it does not understand or cannot enforce those semantics.<a href="#section-7.1.1-4" class="pilcrow">¶</a></p>
+<p id="section-7.1.1-5">The identity of the executing component that serves a capability
 (for example, an MCP server instance) is a request-time fact the
 decision-API binding <span class="bcp14">MAY</span> carry (<a href="#authzen" class="auto internal xref">Section 15</a>); Resource policy <span class="bcp14">MAY</span>
-refuse an executor outside the deployment's trusted set.<a href="#section-7.1.1-4" class="pilcrow">¶</a></p>
-<p id="section-7.1.1-5">A capability sourced from a discovered catalog is additionally
-subject to the capability-drift rule of <a href="#capability-drift" class="auto internal xref">Section 7.1.2</a>.<a href="#section-7.1.1-5" class="pilcrow">¶</a></p>
+refuse an executor outside the deployment's trusted set.<a href="#section-7.1.1-5" class="pilcrow">¶</a></p>
+<p id="section-7.1.1-6">A capability sourced from a discovered catalog is additionally
+subject to the capability-drift rule of <a href="#capability-drift" class="auto internal xref">Section 7.1.2</a>.<a href="#section-7.1.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="capability-drift">
@@ -3816,7 +3831,10 @@ at volume rather than degrading into per-action rubber-stamping
 Enforcement Scope Statement does not declare the path scope, <span class="bcp14">MUST NOT</span>
 claim agent-compromise-resistant enforcement; it may still claim base
 runtime conformance. The claim names exactly the set of classes it
-covers.<a href="#section-12.1-5" class="pilcrow">¶</a></p>
+covers. This claim additionally requires execution-environment
+attestation of the scope statement, the condition
+<a href="#trifecta-containment" class="auto internal xref">Section 12.2</a> states for both High-Assurance Agent
+claims.<a href="#section-12.1-5" class="pilcrow">¶</a></p>
 <p id="section-12.1-6">The guarantee is the conjunction of these conditions, not any one of
 them. Mediated custody alone prevents only off-path presentation of
 the credential: the agent still initiates every action and supplies
@@ -3874,23 +3892,31 @@ column records the level each condition has outside this claim:<a href="#section
         <h3 id="name-trifecta-containment">
 <a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-trifecta-containment" class="section-name selfRef">Trifecta Containment</a>
         </h3>
-<p id="section-12.2-1">An agent that holds private-data authority, is exposed to untrusted
+<p id="section-12.2-1">The name is unrelated to Mission Containment
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), the
+issuer-held overlay that removes capability from a Mission's
+Authority Set. Trifecta containment names resistance to the
+exfiltration trifecta below; Mission Containment names a governance
+operation over the Authority Set. Context distinguishes the two, and
+a deployment that runs both keeps the terms separate in its
+Enforcement Scope Statement.<a href="#section-12.2-1" class="pilcrow">¶</a></p>
+<p id="section-12.2-2">An agent that holds private-data authority, is exposed to untrusted
 content, and can communicate externally combines the three
 ingredients of injection-driven exfiltration
 (<a href="#prompt-injection-exfiltration" class="auto internal xref">Section 17.3</a>). The profiles gate each
 ingredient separately; this claim names the composite. A deployment
 claims <strong>trifecta containment</strong> for a Mission's governed work only
 when all of the following hold, each <span class="bcp14">MUST</span> under this claim regardless
-of its base-profile level:<a href="#section-12.2-1" class="pilcrow">¶</a></p>
+of its base-profile level:<a href="#section-12.2-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-12.2-2.1">
-            <p id="section-12.2-2.1.1"><strong>Private-data exposure.</strong> Least exposure (<a href="#least-exposure" class="auto internal xref">Section 4.7</a>) is
+<li class="normal" id="section-12.2-3.1">
+            <p id="section-12.2-3.1.1"><strong>Private-data exposure.</strong> Least exposure (<a href="#least-exposure" class="auto internal xref">Section 4.7</a>) is
 applied: the context surfaced to the agent is scoped to the active
 Mission, and credential material stays out of the agent for every
-mediated class (<a href="#custody" class="auto internal xref">Section 4.6</a>).<a href="#section-12.2-2.1.1" class="pilcrow">¶</a></p>
+mediated class (<a href="#custody" class="auto internal xref">Section 4.6</a>).<a href="#section-12.2-3.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-12.2-2.2">
-            <p id="section-12.2-2.2.1"><strong>Untrusted content.</strong> A taint policy for untrusted content, as the
+          <li class="normal" id="section-12.2-3.2">
+            <p id="section-12.2-3.2.1"><strong>Untrusted content.</strong> A taint policy for untrusted content, as the
 harness profile defines one
 (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), is in force and its
 egress rule is enforced, not advisory: a consequential
@@ -3906,32 +3932,37 @@ every tainted egress human-gated, remains a condition of this
 claim. Where the decision-API binding carries taint context
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), the PDP enforces the
 rule; otherwise the harness does, and the scope statement says
-which.<a href="#section-12.2-2.2.1" class="pilcrow">¶</a></p>
+which.<a href="#section-12.2-3.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-12.2-2.3">
-            <p id="section-12.2-2.3.1"><strong>External communication.</strong> The external-communication and
+          <li class="normal" id="section-12.2-3.3">
+            <p id="section-12.2-3.3.1"><strong>External communication.</strong> The external-communication and
 external-commitment classes are mediated: no unmediated path, the
 scope statement's egress-channel enumeration covers them
 (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), and the
-sender-constraint keys are held by the mediating PEP (<a href="#custody" class="auto internal xref">Section 4.6</a>).<a href="#section-12.2-2.3.1" class="pilcrow">¶</a></p>
+sender-constraint keys are held by the mediating PEP (<a href="#custody" class="auto internal xref">Section 4.6</a>).<a href="#section-12.2-3.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-12.2-3">The claim is published with the enforcement-scope conformance
+<p id="section-12.2-4">The claim is published with the enforcement-scope conformance
 statement (<a href="#runtime-conformance" class="auto internal xref">Section 4.2</a>). It is containment, not immunity:
 the limits of <a href="#prompt-injection-exfiltration" class="auto internal xref">Section 17.3</a> stand, in particular
 within-scope laundering, bounded quantitatively where an
 egress-volume bound is metered
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>), and PEP-placement
-completeness.<a href="#section-12.2-3" class="pilcrow">¶</a></p>
-<p id="section-12.2-4">Both this claim and agent-compromise-resistant enforcement
+completeness.<a href="#section-12.2-4" class="pilcrow">¶</a></p>
+<p id="section-12.2-5">Both this claim and agent-compromise-resistant enforcement
 (<a href="#compromise-resistant" class="auto internal xref">Section 12.1</a>) rest on the execution-environment scope
-statement, a self-declared artifact. A deployment <span class="bcp14">MAY</span> bind that
-statement to execution-environment attestation, presenting Entity
-Attestation Token evidence under the AI-agent-instance profile
+statement, a self-declared artifact: the wire alone does not let a
+relying party distinguish a deployment that built the declared
+isolation from one that only published the statement. A deployment
+claiming either <span class="bcp14">MUST</span> bind the statement to execution-environment
+attestation, presenting Entity Attestation Token evidence under the
+AI-agent-instance profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>) covering the
-isolation properties the statement declares; a verifier <span class="bcp14">SHOULD</span> treat
-an unattested claim as an organizational assertion and an attested
-one as a technical one.<a href="#section-12.2-4" class="pilcrow">¶</a></p>
+isolation properties the statement declares, and <span class="bcp14">MUST NOT</span> represent
+the claim as met without it. The requirement is scoped to these two
+High-Assurance Agent claims; base runtime conformance does not
+require attestation, and a deployment claiming only the base profile
+<span class="bcp14">MAY</span> publish its scope statement unattested.<a href="#section-12.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4605,6 +4636,10 @@ any decision-API wire members are defined by the binding
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>

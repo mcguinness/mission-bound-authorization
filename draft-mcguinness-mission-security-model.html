@@ -1786,7 +1786,25 @@ five conditions unmet does not obtain the guarantee. This
 matches the suite's front-door framing: adopting the profiles does not by
 itself make a deployment resistant to a compromised agent. The model
 makes misuse bounded and, where evidence is produced, attributable.<a href="#section-8-3" class="pilcrow">¶</a></p>
-<p id="section-8-4">It does not make a compromised trusted component safe. The compromise of
+<p id="section-8-4">Earned is also not provable at the wire. The High-Assurance Agent
+claims name conditions a deployment satisfies, not something a token
+or a decision response proves: the execution-environment scope
+statement they rest on is self-declared
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), and absent independent
+evidence, a relying party cannot distinguish, from the protocol
+artifacts alone, a deployment that built the claimed isolation from
+one that merely published the claim. Execution-environment
+attestation is what closes that gap; the runtime profile requires it
+for the two High-Assurance Agent claims specifically, not for base
+conformance (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Retained
+negative-conformance evidence is the complementary recommendation:
+it does not prove the claim at decision time, but it lets an auditor
+check afterward that the deployment ran the tests the claim implies
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Short of attestation, the
+trust assumption is plain: an unattested High-Assurance claim is an
+organizational assertion, taken on trust, not a technical one.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5">It does not make a compromised trusted component safe. The compromise of
 each component degrades a specific guarantee, as listed in
 <a href="#trusted-base" class="auto internal xref">Section 6</a>. It does not verify the agent's reasoning or the
 truthfulness of its outputs; semantic and intent verification are a
@@ -1795,8 +1813,8 @@ inherits the threat models of the substrates the companions profile
 (Token Exchange, Attenuating Agent Tokens, SCITT, Deferred Token
 Response), which those substrates own. <a href="#adversary-model" class="auto internal xref">Section 9</a> gives the
 per-adversary-move detail: what addresses each move, and the residual it
-leaves.<a href="#section-8-4" class="pilcrow">¶</a></p>
-<p id="section-8-5">"On behalf of" is not treated as a permission model. The family
+leaves.<a href="#section-8-5" class="pilcrow">¶</a></p>
+<p id="section-8-6">"On behalf of" is not treated as a permission model. The family
 splits what that phrase conflates: the Mission carries the approved
 task the agent pursues for the Subject; a derived token presents
 delegated authority without identity collapse, since <code>sub</code> remains
@@ -1805,7 +1823,7 @@ chain names who executed; and personal sanction is carried only by
 approval events (the approval event, action-bound approval), never
 inferred from token possession. Authority derived down this chain
 never exceeds its source (the subset rule), so broad "acting as"
-standing cannot be laundered out of a narrow approval.<a href="#section-8-5" class="pilcrow">¶</a></p>
+standing cannot be laundered out of a narrow approval.<a href="#section-8-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="adversary-model">
@@ -2011,38 +2029,83 @@ is unobserved by the issuer; bounded by depth and policy, not by the
 issuer.<a href="#section-9-3.36.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.37">Operator surface abused (fleet management):</dt>
+<dt id="section-9-3.37">Materialized-capability containment escape (Mission Containment):</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.38">
-          <p id="section-9-3.38.1">Addressed by management Client authorization; dry-run-then-execute
+          <p id="section-9-3.38.1">Addressed two ways. Issuance-side, containment gates every future
+derivation, delegation, cross-domain projection, and offline
+attenuation root against the Effective Authority Set, and
+propagates a contain transition to the child Missions the
+contained entry justified
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).
+Runtime-side, a containment-aware PDP denies the contained portion
+of an already-issued token's authority at the next action, even
+though the Mission stays <code>active</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Residual: what neither
+reaches. A cross-domain grant already redeemed into a local token
+the origin issuer cannot observe, and an offline attenuation root
+already minted, are validated by a party that does not consult the
+origin Mission's overlay; each keeps producing authority for its
+own bounded lifetime, closed only by short grant and root
+lifetimes
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>).<a href="#section-9-3.38.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.39">Effective-ceiling composition (depth, cross-domain hops, and child</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.40">
+          <p id="section-9-3.40.1"></p><a href="#section-9-3.40" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.41">generations):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.42">
+          <p id="section-9-3.42.1">Addressed by each dimension bounding itself: per-domain depth
+reset at a cross-domain hop, per-Mission <code>max_derivations</code> that a
+child does not inherit from its parent, and issuer adjudication at
+each child generation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Residual:
+the composed bound across all active dimensions, depth times
+domains times child generations, plus the aggregate derivations a
+child subtree can draw, can exceed what a single approval appears
+to authorize; disclosing the composed bound at the consent surface
+is a deployment's to add, and an aggregate consumption cap is the
+metering profile's role
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9-3.42.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.43">Operator surface abused (fleet management):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.44">
+          <p id="section-9-3.44.1">Addressed by management Client authorization; dry-run-then-execute
 with a bulk token pinning the evaluated membership; every call
 audited; never agent-facing. Residual: a compromised Management Client
 stops or resumes Missions fleet-wide and learns Mission existence; it
-cannot mint or widen authority.<a href="#section-9-3.38.1" class="pilcrow">¶</a></p>
+cannot mint or widen authority.<a href="#section-9-3.44.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.39">Audit tampered, dropped, or reordered:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.40">
-          <p id="section-9-3.40.1">Addressed by transparency: append-only log, inclusion receipts,
+<dt id="section-9-3.45">Audit tampered, dropped, or reordered:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.46">
+          <p id="section-9-3.46.1">Addressed by transparency: append-only log, inclusion receipts,
 non-equivocation. Residual: single-service equivocation (per-service
 only; register with several); a producer can still log a false
-record.<a href="#section-9-3.40.1" class="pilcrow">¶</a></p>
+record.<a href="#section-9-3.46.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.41">Agent fabricates results or acts on false data:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.42">
-          <p id="section-9-3.42.1">Addressed by not addressed. Residual: full: semantic and grounding
-verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.42.1" class="pilcrow">¶</a></p>
+<dt id="section-9-3.47">Agent fabricates results or acts on false data:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.48">
+          <p id="section-9-3.48.1">Addressed by not addressed. Residual: full: semantic and grounding
+verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.48.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.43">A trusted-base component is compromised:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.44">
-          <p id="section-9-3.44.1">Addressed by not addressed; evidence detects it after the fact.
+<dt id="section-9-3.49">A trusted-base component is compromised:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.50">
+          <p id="section-9-3.50.1">Addressed by not addressed; evidence detects it after the fact.
 Residual: not prevented; degrades the specific guarantee per
-<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.44.1" class="pilcrow">¶</a></p>
+<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.50.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-9-4">Nine residuals are worth stating on their own, because they are the
+<p id="section-9-4">Ten residuals are worth stating on their own, because they are the
 limits most likely to matter and most often overstated away elsewhere:<a href="#section-9-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9-5.1">
@@ -2138,14 +2201,29 @@ availability against observation, and a deployment that chooses
 offline minting accepts the unobserved breadth.<a href="#section-9-5.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-5.9">
-          <p id="section-9-5.9.1"><strong>Availability.</strong> The model fails closed everywhere a trusted component
+          <p id="section-9-5.9.1"><strong>Self-graded enforcement.</strong> The strongest claims of <a href="#guarantees" class="auto internal xref">Section 8</a>
+rest on a self-declared execution-environment scope statement
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>): the wire carries no
+signal that lets a relying party tell a deployment that built the
+claimed isolation from one that only published the claim.
+Execution-environment attestation narrows this for the
+High-Assurance Agent claims, where it is required
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); elsewhere the claim is
+an organizational assertion taken on trust, and retained
+negative-conformance evidence
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) is what lets an auditor
+check it after the fact rather than at the wire.<a href="#section-9-5.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-5.10">
+          <p id="section-9-5.10.1"><strong>Availability.</strong> The model fails closed everywhere a trusted component
 cannot establish the fact it needs (<a href="#cross-cutting" class="auto internal xref">Section 7</a>), which trades
 availability for safety. An attacker who degrades a state source, an
 event stream, or a PDP does not gain unauthorized action, but converts
 the attack into work stoppage and, for in-flight work, unwind activity.
 A deployment provisions state-source, event-stream, and PDP
 availability accordingly, because under this model their outage stops
-governed work rather than loosening it.<a href="#section-9-5.9.1" class="pilcrow">¶</a></p>
+governed work rather than loosening it.<a href="#section-9-5.10.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2493,6 +2571,10 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>

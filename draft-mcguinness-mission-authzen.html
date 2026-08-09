@@ -1466,8 +1466,12 @@ semantics of parameter binding, the failure
 modes, or the runtime conformance scope; those are normatively defined
 in <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> and are referenced,
 not duplicated, here.<a href="#section-1-5" class="pilcrow">¶</a></p>
-<p id="section-1-6">The end-to-end flow this binding realizes:<a href="#section-1-6" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-1-7">
+<p id="section-1-6">AuthZEN continues the Policy Decision Point / Policy Enforcement
+Point request-response vocabulary XACML established for externalized
+authorization; this binding adopts AuthZEN's JSON/HTTP profile of
+that model, not a new one.<a href="#section-1-6" class="pilcrow">¶</a></p>
+<p id="section-1-7">The end-to-end flow this binding realizes:<a href="#section-1-7" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-1-8">
 <pre>
  Agent        PEP              PDP           Access Request Service
    |           |                |                     |
@@ -1487,7 +1491,7 @@ not duplicated, here.<a href="#section-1-5" class="pilcrow">¶</a></p>
    |           |- submit access request -------------&gt;|
    |           |&lt;--------------- approval ------------|
    |           |- re-evaluate -&gt;|                     |
-</pre><a href="#section-1-7" class="pilcrow">¶</a>
+</pre><a href="#section-1-8" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -1799,6 +1803,27 @@ correlator. When present it is checked as in <a href="#pdp-request" class="auto 
 </dd>
         <dd class="break"></dd>
 </dl>
+<p id="section-5.2-3">This context anchors the Mission's approved Authority Set through
+<code>authority_hash</code>. Where a Mission participates in a companion that
+overlays evaluated authority on top of the approved set, for example
+Mission Containment's Effective Authority Set
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), the PDP
+evaluates the request against that overlaid set, not the approved
+set alone, per the runtime profile's Authority decision input
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). This document defines no
+member carrying such an overlay's evaluated state. A companion
+profile <span class="bcp14">MAY</span> extend the <code>mission</code> context with the member it needs,
+by specification, mirroring the denial-reason extension rule
+(<a href="#runtime-denial-classification" class="auto internal xref">Section 6.4</a>): an extension member name <span class="bcp14">MUST</span>
+be a collision-resistant name or a name coordinated within this
+document family, and a PDP that does not recognize an extension
+member evaluates the approved Authority Set unchanged. A denial
+produced against the overlaid set carries the overlay's own denial
+reason, not <code>out_of_authority</code>: the Containment profile's
+<code>authority_contained</code> denies capability the Approver granted and the
+issuer later removed, a distinct history from capability never
+approved
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>).<a href="#section-5.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="context-actor">
@@ -5122,6 +5147,10 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 <dt id="I-D.draft-mcguinness-oauth-client-instance-assertion">[I-D.draft-mcguinness-oauth-client-instance-assertion]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertion"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-01</span>, <time datetime="2026-06-24" class="refDate">24 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>

@@ -2291,7 +2291,21 @@ creation.<a href="#section-9-4.7.1" class="pilcrow">¶</a></p>
 <p id="section-10-1"><strong>Substrate maturity.</strong> AAuth is an individual Internet-Draft, and
 this binding pins its wire behavior to
 draft-hardt-oauth-aauth-protocol-08. A change to AAuth's mission
-surfaces revises this document; a deployment tracks both.<a href="#section-10-1" class="pilcrow">¶</a></p>
+surfaces revises this document; a deployment tracks both. This
+document stays Standards Track because the Mission-model content it
+specifies, the equivalence, the projected anchors, and the lifecycle,
+is complete and stable in its own terms; the tracked risk is AAuth's
+substrate maturity, not this document's. This is the same disclosure
+the offline attenuation profile makes for its own substrate
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>), applied here to
+a Standards Track document rather than an Experimental one, so the
+maturity signal reads the same way regardless of category. A
+deployment that needs a binding whose base conformance floor carries
+no unratified dependency uses the issuance profile or the standalone
+Mission Authority Server binding, each of which confines its own
+Internet-Draft references to an optional capability above that floor
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-10-1" class="pilcrow">¶</a></p>
 <p id="section-10-2"><strong>Blob visibility.</strong> Only the agent and the PS hold the mission blob,
 and AAuth forbids a Resource or Access Server to dereference the
 reference. A Resource therefore verifies from token claims and the
