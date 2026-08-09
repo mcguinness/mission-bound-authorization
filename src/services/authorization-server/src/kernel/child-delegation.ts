@@ -421,7 +421,13 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     created_at: nowIso,
     expires_at: expiresAt,
     version: 1,
-    max_derivations: parent.max_derivations,
+    // @spec child-delegation#child-creation — the Child Mission's derivation
+    // cap comes from the CHILD's own Intent, independent of the parent's (the
+    // rule PR #408 standardized), mirroring template.ts's dispatch-instance
+    // mapping. A child intent that omits `controls.max_derivations` gets
+    // `null` (unbounded), exactly like an ordinary Mission approval; it is NOT
+    // inherited from the parent.
+    max_derivations: input.intent.controls?.max_derivations ?? null,
     derivation_count: 0,
     grant_id: null,
     status_list_idx: null,

@@ -23,10 +23,50 @@ export interface ExpansionInput {
   approvedUntil: string;
 }
 
+/**
+ * @spec containment#restoration — one applied containment transition the
+ * predecessor carried, disclosed at expansion consent: at minimum the
+ * contained capability (`removed`) and the event class that contained it
+ * (`event_type`). Mirrors {@link ContainmentEventRecord} member-for-member,
+ * renamed only where the disclosure vocabulary differs (`type` -> `event_type`).
+ */
+export interface ContainmentHistoryEntry {
+  event_type: string;
+  removed: Array<{ resource: string; actions?: string[] }>;
+}
+
+/**
+ * @spec containment#restoration — the anti-laundering evidence for one
+ * expansion: which predecessor and successor it links, and (when non-empty)
+ * the containment history disclosed at consent. Mirrors the Child Evidence /
+ * Containment Evidence conventions (prefixed random `evidence_id`,
+ * `created_at`); not yet wired to a retention channel, like
+ * {@link ChildEvidence} before it.
+ */
+export interface ExpansionEvidence {
+  evidence_id: string;
+  predecessor: { id: string; issuer: string; authority_hash: string };
+  successor: { id: string; issuer: string; authority_hash: string };
+  /** Present only when the predecessor carried a non-empty containment overlay. */
+  containment_history?: ContainmentHistoryEntry[];
+  created_at: string;
+}
+
 export interface ExpansionResult {
   successor: MissionRecord;
   /** The successor `mission` claim adds a `predecessor` member. */
   predecessor: string;
+  /**
+   * @spec containment#restoration — the anti-laundering MUST: present (and
+   * non-empty) only when the predecessor carried a non-empty containment
+   * overlay, surfacing the containment history for the expansion consent
+   * disclosure. The successor's OWN containment overlay stays empty regardless
+   * (containment MUST NOT propagate to a successor); this is disclosure only,
+   * never a re-application of the overlay.
+   */
+  containmentHistory?: ContainmentHistoryEntry[];
+  /** @spec containment#restoration — the evidence record for this expansion. */
+  evidence: ExpansionEvidence;
 }
 
 /**
@@ -73,7 +113,32 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     predecessor: input.predecessorId,
   };
   kernel.insertRecord(record);
-  return { successor: record, predecessor: input.predecessorId };
+
+  // @spec containment#restoration — the anti-laundering MUST: surface a
+  // non-empty predecessor containment history at expansion consent, rather
+  // than letting a widened successor issue with no trace of why the authority
+  // it restores was ever narrowed. Read directly off the predecessor's applied
+  // events (each already pairs the event class with what it removed), never
+  // the successor, whose own overlay stays empty.
+  const containmentHistory: ContainmentHistoryEntry[] | undefined =
+    predecessor.containment && predecessor.containment.events.length > 0
+      ? predecessor.containment.events.map((e) => ({ event_type: e.type, removed: e.removed }))
+      : undefined;
+
+  const evidence: ExpansionEvidence = {
+    evidence_id: `exp_${randomBytes(9).toString("base64url")}`,
+    predecessor: { id: predecessor.id, issuer: predecessor.issuer, authority_hash: predecessor.authority_hash },
+    successor: { id: record.id, issuer: record.issuer, authority_hash: record.authority_hash },
+    ...(containmentHistory ? { containment_history: containmentHistory } : {}),
+    created_at: record.created_at,
+  };
+
+  return {
+    successor: record,
+    predecessor: input.predecessorId,
+    ...(containmentHistory ? { containmentHistory } : {}),
+    evidence,
+  };
 }
 
 /**

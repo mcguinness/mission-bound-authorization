@@ -6,9 +6,55 @@
  * can widen past the ceiling (the compromised-shaper property).
  */
 
+import { compareAmounts, isValidAmount } from "@mission/core";
 import type { JsonValue } from "@mission/core";
 import { IntentError } from "./intent.js";
 import type { AuthorityEntry, DelegateMatcher, MissionIntent } from "./types.js";
+
+/**
+ * @spec mission#common-constraints — every `constraints` member name the core
+ * defines as a specification-defined Common Constraint (the initial registry:
+ * {{common-constraints}}). `max_amount` is IMPLEMENTED below; the rest are
+ * not (the derivation engine narrows only `max_amount`/`vendors` today).
+ * `vendors` is deliberately absent: it is a deployment-defined key, not a
+ * registered Common Constraint, so it is out of scope for the fail-closed
+ * rule and keeps its existing (implemented) handling.
+ */
+const REGISTERED_COMMON_CONSTRAINTS = new Set([
+  "max_amount",
+  "resource_issued_after",
+  "resource_issued_before",
+  "tenant",
+  "recipient_domain",
+  "time_window",
+  "data_classification",
+  "allowed_tools",
+  "requires_action_approval",
+]);
+
+/** Common Constraint keys this derivation engine implements narrowing for. */
+const IMPLEMENTED_COMMON_CONSTRAINTS = new Set(["max_amount"]);
+
+/**
+ * @spec mission#common-constraints — FAIL CLOSED (refuse the derivation)
+ * when either operand carries a registered-but-unimplemented Common
+ * Constraint. Silently dropping it (the prior behavior) would widen effective
+ * authority: the operand's narrowing intent would vanish from the derived
+ * entry with no trace. A key that is registered AND implemented (`max_amount`)
+ * or that is not registered at all (deployment-defined, e.g. `vendors`) passes
+ * through untouched.
+ */
+function assertNoUnimplementedCommonConstraint(constraints: AuthorityEntry["constraints"]): void {
+  if (!constraints) return;
+  for (const key of Object.keys(constraints)) {
+    if (REGISTERED_COMMON_CONSTRAINTS.has(key) && !IMPLEMENTED_COMMON_CONSTRAINTS.has(key)) {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `registered Common Constraint '${key}' is not implemented by this derivation engine; refusing rather than silently dropping it`,
+      );
+    }
+  }
+}
 
 export interface DerivationPolicy {
   policy_version: string;
@@ -40,6 +86,11 @@ export function deriveAuthoritySet(intent: MissionIntent, policy: DerivationPoli
 function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): AuthorityEntry | null {
   const actions = proposal.actions.filter((a) => ceiling.actions.includes(a));
   if (actions.length === 0) return null;
+  // @spec mission#common-constraints — fail closed before narrowing anything:
+  // an unimplemented registered key on EITHER operand must refuse, never
+  // silently vanish from the derived entry below.
+  assertNoUnimplementedCommonConstraint(proposal.constraints);
+  assertNoUnimplementedCommonConstraint(ceiling.constraints);
   const entry: AuthorityEntry = { type: "mission_resource_access", resource: ceiling.resource, actions };
   const constraints: NonNullable<AuthorityEntry["constraints"]> = {};
   const ceilCap = ceiling.constraints?.max_amount;
@@ -70,7 +121,14 @@ function minAmount(
   if (!a) return b;
   if (!b) return a;
   if (a.currency !== b.currency) return b; // ceiling wins on currency mismatch
-  return Number.parseFloat(a.amount) <= Number.parseFloat(b.amount) ? a : b;
+  // @spec mission#max-amount — exact decimal-value comparison (never
+  // IEEE-754 float): a malformed amount on either side refuses the
+  // derivation rather than comparing as a silently-coerced NaN.
+  if (!isValidAmount(a.amount) || !isValidAmount(b.amount)) {
+    const bad = !isValidAmount(a.amount) ? a.amount : b.amount;
+    throw new IntentError("invalid_authorization_details", `malformed max_amount value: ${JSON.stringify(bad)}`);
+  }
+  return compareAmounts(a.amount, b.amount) <= 0 ? a : b;
 }
 
 // ---------------------------------------------------------------------------
@@ -221,7 +279,13 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
   if (gCap) {
     if (!cCap) return false;
     if (cCap.currency !== gCap.currency) return false;
-    if (Number.parseFloat(cCap.amount) > Number.parseFloat(gCap.amount)) return false;
+    // @spec mission#max-amount — exact decimal-value comparison. A malformed
+    // amount on either side fails closed (not a subset) rather than comparing
+    // via IEEE-754 float coercion; isSubsetEntry stays a total, non-throwing
+    // predicate so its callers (e.g. child-delegation's strict-subset gate)
+    // keep treating it as a plain boolean.
+    if (!isValidAmount(cCap.amount) || !isValidAmount(gCap.amount)) return false;
+    if (compareAmounts(cCap.amount, gCap.amount) > 0) return false;
   }
   const gVendors = granted.constraints?.vendors;
   const cVendors = candidate.constraints?.vendors;

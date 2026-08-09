@@ -561,3 +561,51 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
     expect(childEvidenceBytes(dev)).toBe(canonicalize(denyExpected as unknown as JsonValue));
   });
 });
+
+describe("child derivation cap is independent of the parent's (@spec child-delegation#child-creation, PR #408)", () => {
+  it("uses the child's OWN controls.max_derivations, not the parent's", () => {
+    const parent = kernel.approve({
+      intent: validateMissionIntent(
+        JSON.stringify({
+          goal: "Pay Acme invoices for Q3",
+          resources: [RESOURCE],
+          expires_at: PARENT_EXP,
+          proposed_authority: proposed(["payments:invoice.read"]),
+          controls: { max_derivations: 5 },
+        }),
+      ),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "parent-agent",
+      approvalEventId: `apev-${seq++}`,
+    });
+    expect(parent.max_derivations).toBe(5);
+
+    const { child } = createChild(parent.id, ["payments:invoice.read"], {
+      intentOver: { controls: { max_derivations: 2 } },
+    });
+    // The child's cap is its OWN intent's value, distinct from the parent's.
+    expect(child.max_derivations).toBe(2);
+    expect(child.max_derivations).not.toBe(parent.max_derivations);
+  });
+
+  it("a child intent omitting controls.max_derivations gets null (unbounded), like an ordinary Mission", () => {
+    const parent = kernel.approve({
+      intent: validateMissionIntent(
+        JSON.stringify({
+          goal: "Pay Acme invoices for Q3",
+          resources: [RESOURCE],
+          expires_at: PARENT_EXP,
+          proposed_authority: proposed(["payments:invoice.read"]),
+          controls: { max_derivations: 5 },
+        }),
+      ),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "parent-agent",
+      approvalEventId: `apev-${seq++}`,
+    });
+    const { child } = createChild(parent.id, ["payments:invoice.read"]);
+    expect(child.max_derivations).toBeNull();
+  });
+});

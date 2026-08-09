@@ -18,6 +18,7 @@ import {
   type AuthorityEntry,
   deriveAttenuationRoot,
   deriveAuthoritySet,
+  IntentError,
   isSubsetEntry,
   MissionKernel,
   type MissionIntent,
@@ -304,5 +305,105 @@ describe("demo ceiling wiring (@spec attenuation#delegation)", () => {
     expect(DERIVATION_POLICY.ceiling[0]?.delegation?.max_depth).toBe(2);
     expect(DERIVATION_POLICY.ceiling[0]?.delegation?.children).toBeDefined();
     expect(DERIVATION_POLICY.ceiling[1]?.delegation).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (e) intersect FAILS CLOSED on a registered-but-unimplemented Common
+// Constraint (@spec mission#common-constraints). Before this fix an
+// unrecognized constraint key was silently dropped from the derived entry,
+// which WIDENS effective authority (the narrowing it named never applies).
+// ---------------------------------------------------------------------------
+describe("intersect fails closed on a registered-but-unimplemented Common Constraint", () => {
+  it("refuses (never silently widens) when the PROPOSAL carries an unimplemented registered constraint", () => {
+    const ceilingEntry = entry();
+    const policy = { policy_version: "t", ceiling: [ceilingEntry] };
+    const intent: MissionIntent = {
+      goal: "g",
+      resources: [ceilingEntry.resource],
+      expires_at: EXP,
+      proposed_authority: [
+        entry({
+          constraints: { time_window: { not_before: "2026-01-01T00:00:00Z" } } as never,
+        }),
+      ],
+    };
+    expect(() => deriveAuthoritySet(intent, policy)).toThrow(IntentError);
+    expect(() => deriveAuthoritySet(intent, policy)).toThrow(/time_window/);
+  });
+
+  it("refuses when the CEILING carries an unimplemented registered constraint (never silently vanishes)", () => {
+    const ceilingEntry = entry({
+      constraints: { time_window: { not_before: "2026-01-01T00:00:00Z" } } as never,
+    });
+    const policy = { policy_version: "t", ceiling: [ceilingEntry] };
+    const intent: MissionIntent = {
+      goal: "g",
+      resources: [ceilingEntry.resource],
+      expires_at: EXP,
+      proposed_authority: [entry()],
+    };
+    expect(() => deriveAuthoritySet(intent, policy)).toThrow(/time_window/);
+  });
+
+  it("max_amount and vendors (implemented Common/deployment-defined constraints) still narrow normally", () => {
+    const ceilingEntry = entry({
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    });
+    const policy = { policy_version: "t", ceiling: [ceilingEntry] };
+    const intent: MissionIntent = {
+      goal: "g",
+      resources: [ceilingEntry.resource],
+      expires_at: EXP,
+      proposed_authority: [
+        entry({ constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] } }),
+      ],
+    };
+    const derived = deriveAuthoritySet(intent, policy);
+    expect(derived[0]?.constraints?.max_amount?.amount).toBe("100.00");
+    expect(derived[0]?.constraints?.vendors).toEqual(["acme"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (f) exact decimal-value comparison for max_amount (@spec mission#max-amount).
+// Number.parseFloat compares amounts as IEEE-754 doubles, which can make a
+// WIDER candidate compare as equal/narrower once past Number.MAX_SAFE_INTEGER.
+// ---------------------------------------------------------------------------
+describe("isSubsetEntry compares max_amount by exact decimal value, not IEEE-754 float", () => {
+  it("a candidate 1 unit above the granted cap is NOT a subset, even though both amounts round to the same double", () => {
+    const granted = entry({ constraints: { max_amount: { amount: "9007199254740992.00", currency: "USD" } } });
+    // 9007199254740992 (2^53) and 9007199254740993 are DISTINCT decimal values
+    // but Number.parseFloat rounds both to the identical double, so the old
+    // float comparison would wrongly treat the candidate as no wider.
+    const candidateWider = entry({
+      constraints: { max_amount: { amount: "9007199254740993.00", currency: "USD" } },
+    });
+    expect(Number.parseFloat("9007199254740993.00")).toBe(Number.parseFloat("9007199254740992.00"));
+    expect(isSubsetEntry(candidateWider, granted)).toBe(false);
+
+    // An equal amount still passes (unchanged behavior).
+    const candidateEqual = entry({
+      constraints: { max_amount: { amount: "9007199254740992.00", currency: "USD" } },
+    });
+    expect(isSubsetEntry(candidateEqual, granted)).toBe(true);
+  });
+
+  it("a malformed candidate amount fails closed (not a subset), never silently permitted", () => {
+    const granted = entry({ constraints: { max_amount: { amount: "500.00", currency: "USD" } } });
+    const malformed = entry({ constraints: { max_amount: { amount: "NaN", currency: "USD" } } });
+    expect(isSubsetEntry(malformed, granted)).toBe(false);
+  });
+
+  it("a malformed proposed max_amount refuses derivation (IntentError), never silently coerced", () => {
+    const ceilingEntry = entry({ constraints: { max_amount: { amount: "500.00", currency: "USD" } } });
+    const policy = { policy_version: "t", ceiling: [ceilingEntry] };
+    const intent: MissionIntent = {
+      goal: "g",
+      resources: [ceilingEntry.resource],
+      expires_at: EXP,
+      proposed_authority: [entry({ constraints: { max_amount: { amount: "1e300", currency: "USD" } } })],
+    };
+    expect(() => deriveAuthoritySet(intent, policy)).toThrow(IntentError);
   });
 });
