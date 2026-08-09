@@ -21,9 +21,11 @@
  * payments:remittance.send (the nightly job's whole scope, consented once),
  * but every dispatch attempt that would grant it is refused
  * dispatch_prohibited_class: the Template only ever instantiates the
- * low-consequence read/reconcile/contain slice at machine speed. The actual
+ * low-consequence read and reconcile slice at machine speed. The actual
  * remittance runs under a SEPARATE, ordinarily-approved Mission (a `direct`
  * approval_basis) that a human approved, never under a dispatched instance.
+ * Containment (the Trust Ratchet) applies to whichever Mission actually
+ * holds the capability, not only to a dispatched instance (step 6).
  *
  * Auto-skips only when OpenFGA is unreachable (docker compose up); with the
  * gate up this file runs all eight steps (0 skipped).

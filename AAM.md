@@ -17,10 +17,11 @@ Template Ceiling
 (`draft-mcguinness-oauth-mission-template.md#prohibited-classes`). Bob's
 consent ceiling below still names `payments:remittance.send` (the whole
 nightly job's scope, consented once), but every Dispatch that would confer it
-is refused `dispatch_prohibited_class`. The Template only ever instantiates the
-low-consequence read/reconcile/contain slice at machine speed; the actual
+is refused `dispatch_prohibited_class`. The Template only ever instantiates
+the low-consequence read and reconcile slice at machine speed; the actual
 remittance runs under a separate, ordinarily-approved Mission that a human
-approved.
+approved, and containment (the Trust Ratchet) applies to whichever Mission
+actually holds the capability, not only to a dispatched instance.
 
 The authoritative proof is the end-to-end test, not this document:
 `src/services/authorization-server/test/aam-nightly-reconciliation.test.ts`
