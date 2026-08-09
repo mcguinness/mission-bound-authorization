@@ -222,6 +222,19 @@ Partial provision:
   Mission-bound credential, with a defined join in its place
   ({{credential}}).
 
+Lifecycle-gated substrate:
+: The floor. Mission state exists at the issuer; reliance MAY be
+  bounded by credential lifetime alone (TTL-first), with no
+  consumer-facing freshness source required. The OAuth core alone
+  satisfies this ({{lifecycle}}).
+
+State-observable substrate:
+: Consumers have an authenticated freshness source with a stated
+  staleness bound (Status pull, introspection, or Signals). A binding
+  MUST provide at least the lifecycle-gated capability;
+  state-observable is the overlay that runtime enforcement builds on
+  ({{lifecycle}}, {{I-D.draft-mcguinness-mission-runtime}}).
+
 Mission Substrate Statement:
 : The published section of a Mission Substrate Binding that states,
   item by item, how the binding provides each primitive
@@ -290,14 +303,25 @@ administrator to transition a Mission to `revoked` by its Mission
 Identifier: the state space is not provided without a way to cause
 its kill-switch state.
 
-A binding MUST specify at least one state source from which consumers
-learn a Mission's current state, with a stated staleness bound, so
-deployments can meet the runtime profile's freshness rules. Each state
-source MUST be authenticated and integrity-protected, so a consumer
-verifies a state report's origin and detects tampering before relying
-on it. In consequence, state whose origin or integrity a consumer
-cannot verify is treated as unavailable and fails closed. Verifying a
-signed state report consumes the issuer key material of {{keys}}.
+A binding MUST provide the lifecycle-gated capability: the state
+space and the revocation transition above are sufficient on their
+own, and a consumer MAY bound its reliance on Mission state by
+credential lifetime alone, with no consumer-facing freshness source
+required. The OAuth core's stateless baseline satisfies this floor
+unmodified.
+
+A binding MAY additionally provide the state-observable capability: at
+least one state source from which consumers learn a Mission's current
+state, with a stated staleness bound, so deployments can meet the
+runtime profile's freshness rules for enforcement that needs it. Each
+state source MUST be authenticated and integrity-protected, so a
+consumer verifies a state report's origin and detects tampering before
+relying on it. In consequence, state whose origin or integrity a
+consumer cannot verify is treated as unavailable and fails closed.
+Verifying a signed state report consumes the issuer key material of
+{{keys}}. A lifecycle-gated-only substrate supports issuance gating
+but not action-time state enforcement inside the credential lifetime
+({{I-D.draft-mcguinness-mission-runtime}}).
 
 Home: the Mission Lifecycle and Gating section of
 {{I-D.draft-mcguinness-oauth-mission}}; the freshness rules are the
@@ -561,9 +585,9 @@ A **Mission Substrate Binding**:
    provides the Mission Identifier and `issuer` ({{identifier}});
 2. provides the lifecycle state space with the only-`active` rule,
    fail-safe treatment of unrecognized states, verbatim extension
-   states, an authenticated, possession-independent means to
-   transition a Mission to `revoked` by its Mission Identifier, and a
-   state source with a stated staleness bound ({{lifecycle}});
+   states, and an authenticated, possession-independent means to
+   transition a Mission to `revoked` by its Mission Identifier: the
+   lifecycle-gated capability ({{lifecycle}});
 3. represents the Authority Set in the core's shape and applies the
    subset rule and Common Constraint value-space semantics at every
    narrowing ({{authority}});
@@ -581,6 +605,11 @@ A **Mission Substrate Binding**:
 8. realizes the approval-event steps on its approval surface
    ({{approval-fidelity}}).
 
+A binding MAY additionally claim the state-observable capability
+({{lifecycle}}); this document's conformance role does not require
+it, but a binding that claims it states its state source and
+staleness bound in the Mission Substrate Statement ({{statement}}).
+
 ## Mission Substrate Statement {#statement}
 
 A Mission Substrate Binding MUST publish a Mission Substrate
@@ -593,7 +622,8 @@ pattern, that states how the binding provides each primitive of
    not apply ({{credential}});
 2. the identifier mapping and any substrate-native Mission reference
    ({{identifier}});
-3. each state source and its staleness bound ({{lifecycle}});
+3. whether the binding claims the state-observable capability and,
+   if so, each state source and its staleness bound ({{lifecycle}});
 4. how the binding carries the Authority Set (token payload,
    status-served view, or native artifact) and where each narrowing
    occurs ({{authority}});
@@ -641,7 +671,11 @@ misattribution remain as residuals.
 
 ## State Source Fidelity
 
-Revocation reaches a consumer only through a state source, so the
+This consideration applies to a binding that claims the
+state-observable capability ({{lifecycle}}); a lifecycle-gated-only
+binding provides no state source, and its exposure is bounded by
+credential lifetime instead. Revocation reaches such a binding's
+consumer only through a state source, so the
 staleness bound stated for each source ({{lifecycle}}) is what the
 runtime profile computes its freshness rules and permit lifetimes
 from ({{I-D.draft-mcguinness-mission-runtime}}). A source that

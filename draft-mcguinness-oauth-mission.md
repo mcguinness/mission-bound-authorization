@@ -2512,14 +2512,15 @@ documents that behavior. Already-issued access tokens remain valid
 until they expire; a deployment requiring lower cutoff latency SHOULD
 use short token lifetimes.
 
-The stateless baseline needs no status surface: a token is a
-self-contained authorization and verification is stateless. A
-deployment MAY additionally offer token introspection
-({{introspection}}) so a Resource Server can observe Mission state
-per request and cut off a revoked Mission without waiting out the
-token lifetime. A canonical Mission Status surface (keyed by
-`mission_id`) and signed status responses are specified separately as
-an OPTIONAL companion profile by Mission Status
+The stateless baseline satisfies the lifecycle-gated capability: a
+token is a self-contained authorization, verification is stateless,
+and it needs no status surface. A deployment MAY additionally offer
+token introspection ({{introspection}}), an OPTIONAL state-observable
+overlay, so a Resource Server can observe Mission state per request
+and cut off a revoked Mission without waiting out the token lifetime.
+A canonical Mission Status surface (keyed by `mission_id`) and signed
+status responses are specified separately as another OPTIONAL
+state-observable overlay by Mission Status
 {{I-D.draft-mcguinness-oauth-mission-status}}; this document does not
 require them.
 
@@ -2532,7 +2533,8 @@ current state rather than inferring it from token validity.
 
 # Mission State via Token Introspection {#introspection}
 
-This section is OPTIONAL. The stateless baseline
+This section is OPTIONAL: it is one state-observable overlay on the
+lifecycle-gated baseline. The stateless baseline
 ({{mission-bound-tokens}}) needs no introspection; an AS that does not
 offer it, and a Resource Server that does not use it, are unaffected.
 It lets a Mission-state-aware Resource Server observe a Mission's
