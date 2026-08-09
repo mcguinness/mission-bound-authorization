@@ -2163,16 +2163,37 @@ event produces.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
 <p id="section-7.1-5">A Child Mission is created under a parent grant rather than a
 first-party approval (<a href="#issuance-relationship" class="auto internal xref">Section 3</a>), so its human
 accountability is inherited from the Parent Mission's own approval.
-Where the deployment requires a human approval event for child creation
-(<a href="#child-creation" class="auto internal xref">Section 6</a>), that event meets the issuance profile's
-approval-event requirements in full and its human Approver is the
-record's approver.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
-<p id="section-7.1-6">Where creation is adjudicated by policy with no human
-interaction (<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>), the record's approver is the
-adjudicating policy (identified by the <code>child_creation_policy</code> reference
-where the entry carries one, <a href="#fanout" class="auto internal xref">Section 9</a>) together with the Subject and
-Approver of the Parent Mission the parent grant resolves to, and the
-record <span class="bcp14">MUST</span> mark the approval as policy-adjudicated rather than human.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
+The Child Mission's <code>approval_basis</code> (the issuance profile's Mission
+Record member, <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) records how.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+<p id="section-7.1-6">Where the deployment requires a human approval event for child
+creation (<a href="#child-creation" class="auto internal xref">Section 6</a>), that event meets the issuance
+profile's approval-event requirements in full, its human Approver is
+the record's <code>approver</code>, and <code>approval_basis.type</code> is <code>direct</code>:
+<code>consent_principal</code> is that Approver, <code>activation</code> is
+<code>{ approval_event_id }</code>, <code>activation_actor</code> equals
+<code>consent_principal</code>, and <code>root_commitment</code> is the child's own
+<code>authority_hash</code>, exactly as for an ordinary Mission.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
+<p id="section-7.1-7">Where creation is adjudicated by policy with no human interaction
+(<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>), <code>approval_basis.type</code> is
+<code>policy_drawdown</code>: <code>consent_principal</code> is the Parent Mission's own
+<code>approver</code>, the accountable human standing behind the delegation that
+permits child creation (<a href="#fanout" class="auto internal xref">Section 9</a>); <code>activation_actor</code> is the
+requesting parent agent, the Parent Mission's <code>client_id</code>, distinct
+from <code>consent_principal</code>; and <code>root_commitment</code> is the entry's
+<code>child_creation_policy</code> reference where the entry carries one,
+otherwise the Parent Mission's own <code>authority_hash</code>, which commits
+the authorizing delegation entry. Either way <code>root_commitment</code> <span class="bcp14">MUST</span>
+reference a committed value: the anti-laundering guarantee that a
+<code>policy_drawdown</code> basis always traces to something the human's
+approval actually committed. Where the entry carries a
+<code>child_creation_policy</code>, <code>activation</code> carries that policy's <code>id</code> and
+<code>version</code> and this creation's own delegation event identifier (above)
+as <code>activation_event_id</code>. Where it does not, the drawdown is against
+the parent's approved delegation entry itself, not a separate policy
+artifact: <code>activation</code> omits <code>policy_id</code> and carries only the
+delegation event identifier as <code>activation_event_id</code>. The record's
+<code>approver</code> is <code>consent_principal</code>: the Parent Mission's human
+Approver, never the policy and never the requesting agent.<a href="#section-7.1-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2854,10 +2875,16 @@ caller-supplied <code>parent</code> identifier alone;<a href="#section-16-2.2.1"
           <p id="section-16-2.5.1">record the <code>parent</code> member on child Mission records and tokens;<a href="#section-16-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.6">
-          <p id="section-16-2.6.1">implement cascade revocation; and<a href="#section-16-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.6.1">record the Child Mission's <code>approval_basis</code> (<a href="#record-requirements" class="auto internal xref">Section 7.1</a>):
+<code>direct</code> for a human-approved child, <code>policy_drawdown</code> for one
+policy adjudicates, with <code>consent_principal</code> always the Parent
+Mission's human <code>approver</code>;<a href="#section-16-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.7">
-          <p id="section-16-2.7.1">record child delegation evidence.<a href="#section-16-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.7.1">implement cascade revocation; and<a href="#section-16-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-2.8">
+          <p id="section-16-2.8.1">record child delegation evidence.<a href="#section-16-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-16-3">A Resource Server does not need to understand this profile to enforce

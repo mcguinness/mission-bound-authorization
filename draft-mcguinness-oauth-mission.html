@@ -3146,24 +3146,33 @@ approval event for deployments whose approvals are asynchronous or
 reviewer-narrowed, under the extension seam of <a href="#extensibility" class="auto internal xref">Section 12</a>;
 the steps above, their order, and the atomicity of record creation
 with the approval decision are what any relocation preserves.<a href="#section-6-4" class="pilcrow">¶</a></p>
-<p id="section-6-5">The consent rendering is hardened against client text:<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-5">Every Mission is rooted in an approved authorization basis
+(<a href="#mission-record" class="auto internal xref">Section 7</a>): the steps above define the <code>direct</code> basis,
+which <span class="bcp14">MUST</span> be a human approval event. A companion profile <span class="bcp14">MAY</span> define
+a named standing-consent basis instead (a template ceiling, a
+drawdown policy), so a policy can approve an instance at machine
+speed within a bound a human already consented to; such a basis <span class="bcp14">MUST</span>
+still trace to an accountable human through
+<code>approval_basis.consent_principal</code> and <code>root_commitment</code>, and creates
+no fresh approval event per instance.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">The consent rendering is hardened against client text:<a href="#section-6-6" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-6-6.1">
-          <p id="section-6-6.1.1">Client-supplied strings (<code>goal</code>, <code>constraints</code>,
+<li class="normal" id="section-6-7.1">
+          <p id="section-6-7.1.1">Client-supplied strings (<code>goal</code>, <code>constraints</code>,
 <code>success_criteria</code>) <span class="bcp14">MUST</span> be rendered as inert text and <span class="bcp14">MUST NOT</span> be
-interpreted as markup.<a href="#section-6-6.1.1" class="pilcrow">¶</a></p>
+interpreted as markup.<a href="#section-6-7.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-6.2">
-          <p id="section-6-6.2.1">The AS <span class="bcp14">SHOULD</span> mitigate Unicode direction-override and
-confusable-character presentation in them.<a href="#section-6-6.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-6-7.2">
+          <p id="section-6-7.2.1">The AS <span class="bcp14">SHOULD</span> mitigate Unicode direction-override and
+confusable-character presentation in them.<a href="#section-6-7.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-6.3">
-          <p id="section-6-6.3.1">The rendering <span class="bcp14">MUST</span> visually distinguish the AS-derived Authority
+        <li class="normal" id="section-6-7.3">
+          <p id="section-6-7.3.1">The rendering <span class="bcp14">MUST</span> visually distinguish the AS-derived Authority
 Set from client-supplied text, so crafted client text cannot pass
-as derived authority.<a href="#section-6-6.3.1" class="pilcrow">¶</a></p>
+as derived authority.<a href="#section-6-7.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-6-7">A deployment <span class="bcp14">MUST</span> declare a minimum approval-authentication strength
+<p id="section-6-8">A deployment <span class="bcp14">MUST</span> declare a minimum approval-authentication strength
 for Missions whose derived Authority Set carries high-risk authority:
 irreversible, external-commitment, or privileged-administration
 actions under the deployment's classification, or a consumption bound
@@ -3176,19 +3185,19 @@ authentication for such a Mission <span class="bcp14">MUST</span> meet that mini
 <code>controls.acr</code> can raise the required strength but never lower it below
 the floor. The material notices of the consent-evidence profile
 identify these same high-risk classes
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-6-7" class="pilcrow">¶</a></p>
-<p id="section-6-8">An Approver who declines, and an Approver whose authentication cannot
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-6-8" class="pilcrow">¶</a></p>
+<p id="section-6-9">An Approver who declines, and an Approver whose authentication cannot
 satisfy <code>controls.acr</code> or the declared approval-strength floor, yield
 <code>access_denied</code> on the authorization
 response (<span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>). A token-endpoint <code>resource</code> value outside the
-Authority Set yields <code>invalid_target</code> (<span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>).<a href="#section-6-8" class="pilcrow">¶</a></p>
-<p id="section-6-9">Rendering a bound is not the same as enforcing it: a deployment <span class="bcp14">MUST NOT</span> present a rendered bound as enforced when no party enforces it.
+Authority Set yields <code>invalid_target</code> (<span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>).<a href="#section-6-9" class="pilcrow">¶</a></p>
+<p id="section-6-10">Rendering a bound is not the same as enforcing it: a deployment <span class="bcp14">MUST NOT</span> present a rendered bound as enforced when no party enforces it.
 Which party enforces each bound, and what holds when that enforcer is
 absent, is summarized in the enforcement table (<a href="#mission-intent" class="auto internal xref">Section 4</a>).
 An AS <span class="bcp14">SHOULD</span> make clear to the Approver which rendered bounds its
 deployment actually enforces, so consent is not given to a limit that
-binds nowhere.<a href="#section-6-9" class="pilcrow">¶</a></p>
-<p id="section-6-10">The <code>authority_hash</code> is the <strong>authority commitment</strong>: it binds, by
+binds nowhere.<a href="#section-6-10" class="pilcrow">¶</a></p>
+<p id="section-6-11">The <code>authority_hash</code> is the <strong>authority commitment</strong>: it binds, by
 cryptographic digest, exactly the authority the Approver approved. It
 commits the approved authority, not the way that authority was
 rendered to the Approver; this profile commits no separate consent
@@ -3198,16 +3207,16 @@ Mission carries this value (<a href="#mission-bound-tokens" class="auto internal
 holding the full Authority Set can verify a token's authority against
 what was approved. A party holding only a narrowed subset cannot
 recompute it and treats it as an audit anchor (see
-<a href="#consent-binding" class="auto internal xref">Section 16.1</a>).<a href="#section-6-10" class="pilcrow">¶</a></p>
-<p id="section-6-11">If the derived Authority Set changes between rendering and consent,
+<a href="#consent-binding" class="auto internal xref">Section 16.1</a>).<a href="#section-6-11" class="pilcrow">¶</a></p>
+<p id="section-6-12">If the derived Authority Set changes between rendering and consent,
 the AS <span class="bcp14">MUST</span> recompute the anchors and <span class="bcp14">MUST NOT</span> activate the Mission
-unless the Approver consents to the changed set.<a href="#section-6-11" class="pilcrow">¶</a></p>
-<p id="section-6-12">The <code>intent_hash</code> commits the <strong>approved Mission Intent</strong>: the
+unless the Approver consents to the changed set.<a href="#section-6-12" class="pilcrow">¶</a></p>
+<p id="section-6-13">The <code>intent_hash</code> commits the <strong>approved Mission Intent</strong>: the
 task the Approver consented to, as recorded on the Mission. It makes
 the recorded task tamper-evident: an auditor can verify the Mission's
 <code>intent</code> against <code>intent_hash</code> and detect any later
 alteration. <code>intent_hash</code> commits the task; <code>authority_hash</code>
-commits the authority derived from it.<a href="#section-6-12" class="pilcrow">¶</a></p>
+commits the authority derived from it.<a href="#section-6-13" class="pilcrow">¶</a></p>
 <div id="grant-binding">
 <section id="section-6.1">
         <h3 id="name-binding-the-mission-to-the-">
@@ -3262,11 +3271,13 @@ control records one accountable Approver under the same
 co-approvers.<a href="#section-6.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.2-2.2">
-            <p id="section-6.2-2.2.1"><strong>Approval-authority provenance</strong> (the standing policy or delegation
-an administrator or headless approval traces back to). This is
-governance state about who stands behind a delegated approval, not
-part of binding tokens to approved authority, and is left to a
-governance layer.<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-6.2-2.2.1"><strong>Approval-authority provenance</strong> (the deeper standing behind a
+delegate's authority to approve for another principal, for
+example, whether an administrator was themselves entitled to
+approve on a user's behalf). This is governance state about the
+delegate's own standing, not the named standing-consent basis
+<code>approval_basis</code> records for a template or drawdown-policy
+activation (<a href="#mission-record" class="auto internal xref">Section 7</a>), and is left to a governance layer.<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-6.2-3">Both remain out of the core. Where a deployment needs them, they are
@@ -3469,45 +3480,119 @@ recorded task tamper-evident.<a href="#section-7-4.14.1" class="pilcrow">¶</a><
 <code>approver</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-4.18">
           <p id="section-7-4.18.1"><span class="bcp14">REQUIRED</span>. An object. The Approver,
-an object with <code>iss</code> and <code>sub</code>. <span class="bcp14">MAY</span> equal <code>subject</code>.<a href="#section-7-4.18.1" class="pilcrow">¶</a></p>
+an object with <code>iss</code> and <code>sub</code>. <span class="bcp14">MAY</span> equal <code>subject</code>. Equal to
+<code>approval_basis.consent_principal</code> (below).<a href="#section-7-4.18.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-4.19">
-<code>client_id</code>:</dt>
+<code>approval_basis</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-4.20">
-          <p id="section-7-4.20.1"><span class="bcp14">REQUIRED</span>. A string. The Agent (OAuth client) that
-submitted the Mission Intent.<a href="#section-7-4.20.1" class="pilcrow">¶</a></p>
+          <p id="section-7-4.20.1"><span class="bcp14">REQUIRED</span>. An object. The authorization basis this Mission is
+rooted in: every Mission is rooted in an approved authorization
+basis, fixed at the approval event and immutable thereafter, like
+<code>approver</code> and <code>subject</code>. Members:<a href="#section-7-4.20.1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7-4.20.2">
+            <dt id="section-7-4.20.2.1">
+<code>type</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-7-4.20.2.2">
+              <p id="section-7-4.20.2.2.1"><span class="bcp14">REQUIRED</span>. A string: <code>direct</code>, defined in full by this document,
+or an additional value defined by a companion profile that
+generalizes approval to a named standing-consent basis (for
+example, <code>template</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>) or
+<code>policy_drawdown</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)),
+subject to the forward-compatibility rule of <a href="#lifecycle" class="auto internal xref">Section 9</a>.<a href="#section-7-4.20.2.2.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-7-4.20.2.3">
+<code>consent_principal</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-7-4.20.2.4">
+              <p id="section-7-4.20.2.4.1"><span class="bcp14">REQUIRED</span>. An object with <code>iss</code> and <code>sub</code>. The accountable human
+(or human-accountable principal) who consented. This is the
+value of <code>approver</code>; this document does not add a second
+accountable principal.<a href="#section-7-4.20.2.4.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-7-4.20.2.5">
+<code>activation</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-7-4.20.2.6">
+              <p id="section-7-4.20.2.6.1"><span class="bcp14">REQUIRED</span>. An object naming what activated this Mission
+instance, shaped by <code>type</code>. For <code>direct</code>: <code>approval_event_id</code>,
+mirroring the record's own <code>approval_event_id</code> (below).<a href="#section-7-4.20.2.6.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-7-4.20.2.7">
+<code>activation_actor</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-7-4.20.2.8">
+              <p id="section-7-4.20.2.8.1"><span class="bcp14">REQUIRED</span>. An object with <code>iss</code> and <code>sub</code>. Who or what triggered
+this instance. For <code>direct</code> it equals <code>consent_principal</code>: the
+Approver triggers their own approval. A standing-consent <code>type</code>
+names a dispatching or requesting party distinct from the
+consenting human.<a href="#section-7-4.20.2.8.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-7-4.20.2.9">
+<code>root_commitment</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-7-4.20.2.10">
+              <p id="section-7-4.20.2.10.1"><span class="bcp14">REQUIRED</span>. A string. The commitment to the consented root: an
+integrity anchor where the root is a committed object, otherwise
+the committed reference that identifies it. For <code>direct</code>, this
+Mission's own <code>authority_hash</code>.<a href="#section-7-4.20.2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+</dl>
+<p id="section-7-4.20.3">For <code>direct</code>, <code>activation.approval_event_id</code> <span class="bcp14">MUST</span> identify a human
+approval event (<a href="#approval-event" class="auto internal xref">Section 6</a>). A companion profile defining a
+standing-consent <code>type</code> <span class="bcp14">MUST</span> make its <code>consent_principal</code> and
+<code>root_commitment</code> trace to an accountable human's approval of the
+named standing consent, with no fresh approval event per instance.<a href="#section-7-4.20.3" class="pilcrow">¶</a></p>
+<p id="section-7-4.20.4"><code>approval_basis</code> is provenance: it is recorded alongside <code>approver</code>
+and is not folded into <code>intent_hash</code> or <code>authority_hash</code>
+(<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>). Neither anchor commits it, and it <span class="bcp14">MUST NOT</span>
+be added to either digest; a profile that commits the Mission
+Record itself covers it under that profile's own anchor. The
+<code>mission</code> claim <span class="bcp14">MAY</span> carry <code>approval_basis.type</code> (<a href="#mission-claim" class="auto internal xref">Section 8.1</a>)
+as a wire signal; it <span class="bcp14">MUST NOT</span> be relied on to grant or widen
+authority.<a href="#section-7-4.20.4" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-4.21">
-<code>policy_version</code>:</dt>
+<code>client_id</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-4.22">
-          <p id="section-7-4.22.1"><span class="bcp14">REQUIRED</span>. A string. The derivation policy version
-in effect at the approval event.<a href="#section-7-4.22.1" class="pilcrow">¶</a></p>
+          <p id="section-7-4.22.1"><span class="bcp14">REQUIRED</span>. A string. The Agent (OAuth client) that
+submitted the Mission Intent.<a href="#section-7-4.22.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-4.23">
-<code>approval_event_id</code>:</dt>
+<code>policy_version</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-4.24">
-          <p id="section-7-4.24.1"><span class="bcp14">REQUIRED</span>. A string. A unique identifier of the
+          <p id="section-7-4.24.1"><span class="bcp14">REQUIRED</span>. A string. The derivation policy version
+in effect at the approval event.<a href="#section-7-4.24.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-4.25">
+<code>approval_event_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-4.26">
+          <p id="section-7-4.26.1"><span class="bcp14">REQUIRED</span>. A string. A unique identifier of the
 approval event, used as the approval idempotency key: a retried or
 duplicate delivery of the same approval decision (a replayed
 callback, a double-submitted consent form) <span class="bcp14">MUST NOT</span> create a second
 Mission, and the AS deduplicates on this identifier. It is otherwise
-an opaque audit identifier with no wire semantics.<a href="#section-7-4.24.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-7-4.25">
-<code>created_at</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-7-4.26">
-          <p id="section-7-4.26.1"><span class="bcp14">REQUIRED</span>. A string. RFC 3339 timestamp of creation.<a href="#section-7-4.26.1" class="pilcrow">¶</a></p>
+an opaque audit identifier with no wire semantics.<a href="#section-7-4.26.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-4.27">
-<code>expires_at</code>:</dt>
+<code>created_at</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-4.28">
-          <p id="section-7-4.28.1"><span class="bcp14">REQUIRED</span>. A string. Mirrors
-<code>intent.expires_at</code>.<a href="#section-7-4.28.1" class="pilcrow">¶</a></p>
+          <p id="section-7-4.28.1"><span class="bcp14">REQUIRED</span>. A string. RFC 3339 timestamp of creation.<a href="#section-7-4.28.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-4.29">
+<code>expires_at</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-4.30">
+          <p id="section-7-4.30.1"><span class="bcp14">REQUIRED</span>. A string. Mirrors
+<code>intent.expires_at</code>.<a href="#section-7-4.30.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -3534,7 +3619,7 @@ outside carries it as <code>mission_id</code>, as in the token-response paramete
         <h3 id="name-worked-example">
 <a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
         </h3>
-<div class="lang-json sourcecode" id="section-7.2-1">
+<div class="breakable lang-json sourcecode" id="section-7.2-1">
 <pre>
 {
   "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -3570,6 +3655,16 @@ outside carries it as <code>mission_id</code>, as in the token-response paramete
     "sub": "user_3p2q8mN1a0kV7tR" },
   "approver": { "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR" },
+  "approval_basis": {
+    "type": "direct",
+    "consent_principal": { "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR" },
+    "activation": { "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z" },
+    "activation_actor": { "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR" },
+    "root_commitment":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
   "client_id": "s6BhdRkqt3",
   "policy_version": "deploy-policy:v17",
   "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
@@ -3815,6 +3910,17 @@ and audit commitment with no liveness: a validator can check that
 the token's <code>exp</code> does not exceed it, and its passing says nothing
 a state surface does not, since expiry is not revocation and only
 <code>active</code> permits reliance (<a href="#lifecycle" class="auto internal xref">Section 9</a>).<a href="#section-8.1-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-8.1-2.9">
+<code>approval_basis</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-8.1-2.10">
+            <p id="section-8.1-2.10.1"><span class="bcp14">OPTIONAL</span>. An object carrying <code>type</code> only: the Mission's
+<code>approval_basis.type</code> (<a href="#mission-record" class="auto internal xref">Section 7</a>), as a wire signal of
+which authorization basis the Mission is rooted in. The record's
+other <code>approval_basis</code> members are not carried on the token. It
+<span class="bcp14">MUST NOT</span> be relied on to grant or widen authority; the carried
+<code>authorization_details</code> and <code>authority_hash</code> remain authoritative.<a href="#section-8.1-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -4856,7 +4962,8 @@ issuance surfaces:<a href="#section-15-2" class="pilcrow">¶</a></p>
 (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>);<a href="#section-15-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-3.3">
-          <p id="section-15-3.3.1">the approval event with its integrity anchors (<a href="#approval-event" class="auto internal xref">Section 6</a>);<a href="#section-15-3.3.1" class="pilcrow">¶</a></p>
+          <p id="section-15-3.3.1">the approval event with its integrity anchors and recorded
+<code>approval_basis</code> (<a href="#approval-event" class="auto internal xref">Section 6</a>, <a href="#mission-record" class="auto internal xref">Section 7</a>);<a href="#section-15-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-3.4">
           <p id="section-15-3.4.1">issuance of Mission-bound access tokens carrying the <code>mission</code> claim
@@ -6054,6 +6161,10 @@ registry.<a href="#section-18.7-6" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-template">[I-D.draft-mcguinness-oauth-mission-template]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Template for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-work-products">[I-D.draft-mcguinness-oauth-mission-work-products]</dt>
         <dd>

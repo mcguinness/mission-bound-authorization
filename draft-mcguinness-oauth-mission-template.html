@@ -1709,19 +1709,26 @@ Set is the surviving set and whose:<a href="#section-7-4.7.1" class="pilcrow">¶
 <li class="normal" id="section-7-4.7.2.1">
               <p id="section-7-4.7.2.1.1"><code>approver</code> is the template's human approver, the accountable
 principal (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The Dispatcher
-is not the approver. Mirroring how the child-delegation profile
-marks a policy-adjudicated child creation
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), the
-Mission record <span class="bcp14">MUST</span> mark this approval as
-template-policy-adjudicated rather than human, so the
+is not the approver. The instance is rooted in the
+<code>approval_basis</code> authorization basis the issuance profile defines
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), with <code>type: "template"</code>:
+<code>consent_principal</code> is the template's human approver (equal to
+<code>approver</code>); <code>activation</code> carries the template's <code>id</code> (as
+<code>template_id</code>, the same value the Dispatch grant names
+<a href="#grant-type" class="auto internal xref">Section 7.2</a>), <code>template_version</code>, and <code>template_hash</code> (the
+<code>template</code> lineage member's fields, <a href="#template-member" class="auto internal xref">Section 7.1</a>), plus
+this Dispatch's <code>dispatch_event_id</code>; <code>activation_actor</code> is the
+Dispatcher, distinct from <code>consent_principal</code>; and
+<code>root_commitment</code> is <code>template_hash</code>. This makes the
 approver-of-record shift from a fresh human decision to policy
-adjudication under a prior human consent is flagged consistently
-across the family. The <code>template</code> lineage member
+adjudication under a prior human consent structured and flagged
+consistently across the family, superseding a bare
+policy-adjudicated marking. The <code>template</code> lineage member
 (<a href="#template-member" class="auto internal xref">Section 7.1</a>), present on every dispatched Mission and
-absent on an ordinarily approved one, is that marking: its
-presence, together with the Dispatch Policy <code>id</code> and <code>version</code> it
-carries, identifies the adjudicating policy against the template's
-human approver, and no further field is needed;<a href="#section-7-4.7.2.1.1" class="pilcrow">¶</a></p>
+absent on an ordinarily approved one, remains the claim-carried
+record of which template and Dispatch Policy adjudicated the
+instance; <code>approval_basis</code> is the structured authorization-basis
+record, and the two are consistent by construction;<a href="#section-7-4.7.2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-7-4.7.2.2">
               <p id="section-7-4.7.2.2.1"><code>subject</code> is established as the issuance profile requires, never
@@ -2115,10 +2122,11 @@ template's human approver and whose anchors are over the instance's
 own Intent and Authority Set;<a href="#section-14-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.3">
-          <p id="section-14-2.3.1">mark every dispatched Mission's approval as template-policy-adjudicated
-rather than human, via the <code>template</code> lineage member's presence and
-its Dispatch Policy <code>id</code> and <code>version</code>, identified against the
-template's human approver (<a href="#dispatch" class="auto internal xref">Section 7</a>, <a href="#template-member" class="auto internal xref">Section 7.1</a>);<a href="#section-14-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-14-2.3.1">record every dispatched Mission's <code>approval_basis</code> with <code>type:
+"template"</code>: <code>consent_principal</code> the template's human approver,
+<code>activation</code> the template lineage and this Dispatch's
+<code>dispatch_event_id</code>, <code>activation_actor</code> the Dispatcher, and
+<code>root_commitment</code> the <code>template_hash</code> (<a href="#dispatch" class="auto internal xref">Section 7</a>);<a href="#section-14-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.4">
           <p id="section-14-2.4.1">refuse a Dispatch outside the ceiling with <code>out_of_template_ceiling</code>

@@ -1845,12 +1845,12 @@ profile.<a href="#section-9-1" class="pilcrow">¶</a></p>
 <strong>Authority serves an approved task</strong>:</dt>
         <dd style="margin-left: 1.5em" id="section-9-2.2">
           <p id="section-9-2.2.1">No Mission-bound authority exists except by derivation for a
-Mission, and a Mission is created only by an explicit approval
-event that commits <code>intent_hash</code> and <code>authority_hash</code> (the core).
-Fields an agent can influence shape authority only through the
-pre-approval derivation the Approver consents to; once the Mission
-is approved they are inert and never derive, widen, or gate
-authority.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+Mission, and a Mission is created only when rooted in an approved
+authorization basis that commits <code>intent_hash</code> and <code>authority_hash</code>
+(the core). Fields an agent can influence shape authority only
+through the pre-approval derivation the Approver consents to; once
+the Mission is approved they are inert and never derive, widen, or
+gate authority.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-9-2.3">
@@ -1911,17 +1911,25 @@ that the derivation was the right reading of the task
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-9-3">Read substrate-neutrally, the invariants carry the five laws the
+<p id="section-9-3">Read against "approved" in the first invariant, the core names three
+authorization bases, never an eighth invariant: <code>direct</code>, a human's
+own approval; <code>template</code>, a dispatch drawing on a ceiling the human
+consented to once; and <code>policy_drawdown</code>, a child instance a policy
+adjudicates within a bound the parent's human already consented to.
+All three fix the same accountable human as <code>consent_principal</code>; they
+differ only in what activated this instance and what root that
+activation traces to (the core).<a href="#section-9-3" class="pilcrow">¶</a></p>
+<p id="section-9-4">Read substrate-neutrally, the invariants carry the five laws the
 companion handbook names for the layer: durability, attribution,
-narrowing, termination, and containment.<a href="#section-9-3" class="pilcrow">¶</a></p>
-<p id="section-9-4">Read on the artifact plane, the same invariants forbid authority from
+narrowing, termination, and containment.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-5">Read on the artifact plane, the same invariants forbid authority from
 riding a work product an agent produces: no authority is acquired by
 information propagation alone, and a work product crossing into a
 Mission is input that the receiving Mission re-evaluates under its own
 Authority Set. This is a reading of the invariants above, not an eighth
 invariant; its normative home is the Mission Work Products companion
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>).<a href="#section-9-4" class="pilcrow">¶</a></p>
-<p id="section-9-5">Read under composition, the invariants bound one Mission's own
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>).<a href="#section-9-5" class="pilcrow">¶</a></p>
+<p id="section-9-6">Read under composition, the invariants bound one Mission's own
 Authority Set; they do not by themselves bound the aggregate surface a
 delegation tree, a cross-domain hop, or a chain of child generations
 reaches together. Delegation depth resets at each cross-domain hop and
@@ -1934,7 +1942,7 @@ cross-domain and child-delegation profiles' role
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), and bounding
 aggregate consumption is the metering profile's
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9-5" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="components">
@@ -2934,12 +2942,14 @@ consents an authority ceiling for later staged widening
 approval event requires an accountable principal deciding against
 committed inputs before any authority exists, and the proposer is
 never the approver. A deterministic, versioned policy can approve at
-machine speed within a ceiling a human consented to (policy approves
-the instance because a human approved the policy, with
-<code>policy_version</code> keeping that chain re-checkable), while a model's
-generated judgment is never the sole authority for granting or
-widening: a generated approver reading attacker-influenced proposals
-is itself an injection surface. The high-consequence classes stay on
+machine speed within a ceiling a human consented to (the core's
+<code>policy_drawdown</code> and <code>template</code> authorization bases, <a href="#invariants" class="auto internal xref">Section 9</a>):
+policy approves the instance because a human approved the policy or
+the template, with <code>policy_version</code> keeping that chain re-checkable,
+while a model's generated judgment is never the sole authority for
+granting or widening: a generated approver reading
+attacker-influenced proposals is itself an injection surface. The
+high-consequence classes stay on
 a fresh human decision, per the progressive profile's prohibited set
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-14.2-2" class="pilcrow">¶</a></p>
 </section>
