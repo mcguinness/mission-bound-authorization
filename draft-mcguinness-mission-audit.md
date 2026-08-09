@@ -133,6 +133,30 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-template:
+    title: "Mission Template for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -303,6 +327,44 @@ The log then proves a specific record was registered at a time; the
 evidence is retrieved separately, under access control, and its
 canonical bytes are rehashed and checked against the committed digest
 ({{receipts}}).
+
+## The Mission Evidence Base {#evidence-base}
+
+Several registrable evidence types, defined across the runtime,
+AuthZEN, harness, and containment profiles, record an enforcement or
+issuer decision under a shared shape: a reference to the Mission the
+record concerns, an `emitter` object naming the component that
+produced it (`id`, a string; `role`, one of `pdp`, `pep`, `executor`,
+`harness`, `egress`, or `issuer`), and, where the defining profile
+fixes it, an `entry_digest` naming the Authority Set entry the record
+concerns ({{I-D.draft-mcguinness-mission-authzen}}). Two further
+members carry correlation a record MAY need: `hop_reference`,
+attributing a record to the continuation hop that authorized it,
+defined as a coordinated Decision Evidence member by the AuthZEN
+binding ({{I-D.draft-mcguinness-mission-authzen}}), and
+`scope_statement_digest`, binding a record to the published
+Enforcement Scope Statement in effect when it was made, defined by the
+harness profile ({{I-D.draft-mcguinness-mission-harness}}).
+
+This is a naming convention this document names once, not a wire
+object every evidence type carries verbatim. Each type's defining
+profile fixes the concrete form of the Mission reference (a nested
+`mission` object or a flat `mission_id`/`issuer` pair), its own record
+identifier, and its own timestamp member, and adds its own
+kind-specific members on top; no member named here is required across
+every type, and a defining profile states which of them it carries and
+whether each is required, optional, or absent for that type.
+
+The shared naming does not weaken, and is not a substitute for, the
+per-type separation {{evidence-types}} fixes. Each evidence type keeps
+its own registered `payload-preimage-content-type` or JWS `typ`, and a
+signature or hash commitment produced over one type's canonical bytes
+remains verifiable only as that type: domain separation comes from the
+signed content-type or `typ` value ({{hash-commitment}}), never from
+members a record happens to share with another type. A relying party
+that recognizes these member names by convention still MUST check a
+record's registered type identifier against the exact type it expects
+before treating the record as that type ({{registration-policy}}).
 
 ## Evidence Types {#evidence-types}
 
@@ -683,6 +745,61 @@ A Mission Issuer deploying this profile SHOULD register a derivation record
 where approval becomes an issued token, and the family's evidence
 otherwise leaves that step to Authorization Server logs no profile
 mandates; registering it closes the approval-to-action gap.
+
+# Cross-Producer Correlation {#cross-producer-correlation}
+
+This section is non-normative reference-architecture guidance. It
+describes how a deployment builds an activity view across evidence its
+separate producers retain; it defines no wire member and imposes no
+requirement of this profile.
+
+Registration ({{registration}}) commits evidence by hash to one
+Mission-keyed transparency feed ({{feed}}); it does not itself join
+records into a timeline. Independently of registration, evidence is
+producer-retained (each PDP, PEP, executor, egress gate, harness, and
+the Mission Issuer keeps its own store, {{I-D.draft-mcguinness-mission-runtime}}),
+and a deployment builds a per-Mission activity view by joining those
+retained records at query time, over correlation members the evidence
+conventions already carry:
+
+- `mission_id`, or the nested Mission reference an object carries: the
+  join's outer key, present on every record.
+- `event_id`: correlates a containment-plane ingestion decision to the
+  Containment Evidence it produced when the outcome was applied
+  ({{I-D.draft-mcguinness-oauth-mission-containment}}).
+- `hop_reference`: correlates an action's evidence to the continuation
+  hop that authorized it ({{evidence-base}}).
+- `entry_digest`: correlates records across producers and decisions
+  that concern the same Authority Set entry.
+- `trace_id`: a deployment-supplied telemetry correlation identifier
+  threading every record one task run produced, when the deployment's
+  evidence-emitting components share one. This document does not
+  define its form or require it.
+
+Each key joins only where the producing profile's evidence carries it:
+a record with no `hop_reference` was not taken under a continuation,
+and Containment Evidence carries no `trace_id`.
+
+A Mission's lineage members thread a whole task-run graph, one Mission
+at a time, into a tree: the `parent` member a Child Mission's record
+carries ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), the
+`template` member a template-dispatched Mission carries
+({{I-D.draft-mcguinness-oauth-mission-template}}), and the
+`predecessor` member an expansion successor carries
+({{I-D.draft-mcguinness-oauth-mission-expansion}}). A template's
+dispatched instances, a dispatched Mission's Child Missions, and the
+continuation hops carried on their evidence, form the branches; an
+expansion successor's `predecessor` is lineage metadata pointing back
+to the Mission it succeeds, not a branch of the same run, because a
+successor's authority comes only from its own approval
+({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+
+A reference realization of this guidance is a console activity log: a
+read-model view joining Decision Evidence, Execution Evidence, Refusal
+Records, egress evidence, issuer ingestion records, and Containment
+Evidence across their producers into a per-Mission task-run timeline,
+by the keys and the lineage tree above, without registering, moving,
+or duplicating any producer's evidence of record.
 
 # The Mission as Subject {#feed}
 

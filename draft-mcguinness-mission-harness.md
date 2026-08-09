@@ -28,6 +28,7 @@ author:
 normative:
   RFC3339:
   RFC8259:
+  RFC8785:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -329,12 +330,34 @@ mediated, the statement MAY name the destination set the channel may
 reach, so the published claim and the enforced allowlist are the same
 object. An egress on a channel the statement does not mark mediated,
 or to a destination outside a named set, MUST be refused and recorded
-({{harness-evidence}}). The gate applies the same fail-closed Mission
+({{egress-evidence}}). The gate applies the same fail-closed Mission
 state rule as the resume checks ({{resume-checks}}): work whose
 Mission is not active does not egress. An in-process gate mediates the
 agent's egress interface and supports no containment claim. The gate
 is not the session-taint rule: the taint duties of {{session-taint}}
 apply independently of the channel and destination check.
+
+## Destination-Set Matching {#destination-matching}
+
+A destination is a URI. Set membership, for the destination set a
+channel's mediated-egress statement names above, is decided as
+follows:
+
+- By default, a destination matches a set entry by origin equality:
+  identical scheme, host, and port.
+- A set entry MAY instead be an explicit suffix or wildcard form
+  naming a subdomain range (for example, `*.example.com`); a
+  destination matches such an entry when its host falls within the
+  named range, under the entry's scheme and port.
+- A destination matching no entry in the named set MUST be refused.
+
+This rule governs only the egress gate's destination-set membership
+check. It is independent of the pre-consented-egress match of
+{{session-taint}}, which is on the concrete destination value an
+Approver named at approval, never on set membership: a destination
+inside a named egress-mediation set is not thereby pre-consented, and
+a pre-consented destination is not thereby exempt from this check if
+the channel it travels is gated.
 
 The enumeration is not static where open-world discovery is deployed:
 a channel created by a discovery binding enters it at binding,
@@ -1134,6 +1157,15 @@ A Harness Evidence object is a JSON object {{RFC8259}} with:
   `disposition` the statement declares for that channel
   ({{mediated-egress}}). REQUIRED for an `egress_refused` event.
 
+`scope_statement_digest`:
+: OPTIONAL. A string. The integrity-anchor encoded digest
+  ({{I-D.draft-mcguinness-oauth-mission}}) of the published
+  Enforcement Scope Statement ({{I-D.draft-mcguinness-mission-runtime}}),
+  or of this profile's execution-environment scope statement where
+  that is the referenced artifact ({{mediated-egress}}), in effect
+  when this record was made, so a record can be joined to the
+  published scope claim after the fact.
+
 `occurred_at`:
 : REQUIRED. RFC 3339 {{RFC3339}} timestamp.
 
@@ -1163,6 +1195,72 @@ Example:
   "occurred_at": "2026-11-02T02:00:05Z"
 }
 ~~~
+
+## Egress Evidence {#egress-evidence}
+
+The egress gate of {{mediated-egress}} is a distinct enforcement point
+from the harness-lifecycle suppression and resume decisions the
+Harness Evidence Object above records. It MUST emit its own record for
+every mediated egress it permits or refuses: a flat, enforcement-point
+record, not a Harness Evidence Object, mirroring the retention
+conventions of PEP-emitted evidence rather than harness-lifecycle
+evidence.
+
+An Egress Evidence object is a JSON object {{RFC8259}} with:
+
+`mission`:
+: REQUIRED. Object containing `id`, `issuer`, and, when known,
+  `authority_hash`, in the form Harness Evidence carries it
+  ({{harness-evidence-object}}).
+
+`channel_class`:
+: REQUIRED. A string. The channel class the egress used, from the
+  execution-environment scope statement's enumeration
+  ({{mediated-egress}}).
+
+`destination`:
+: REQUIRED. A string. The destination URI, matched under
+  {{destination-matching}}.
+
+`outcome`:
+: REQUIRED. One of `permitted` or `refused`.
+
+`refusal_reason`:
+: CONDITIONAL. A string. REQUIRED when `outcome` is `refused`: the
+  failure condition (for example, an unmediated channel class or a
+  destination matching no entry in the named set,
+  {{destination-matching}}).
+
+`emitter`:
+: REQUIRED. An object, in the form Decision Evidence defines
+  ({{I-D.draft-mcguinness-mission-authzen}}), with `role` `egress`.
+
+`scope_statement_digest`:
+: OPTIONAL. A string, in the form Harness Evidence defines above.
+
+`occurred_at`:
+: REQUIRED. RFC 3339 {{RFC3339}} timestamp.
+
+The object is closed to uncoordinated extension under the same rule as
+Harness Evidence.
+
+Its type identifier is `application/mission-egress-evidence+json` (a
+local-use identifier pending registration), and its canonical bytes
+are its JCS {{RFC8785}} canonicalization; it is registrable on the
+Mission's transparency feed under the same producer-key conventions as
+Harness Evidence ({{I-D.draft-mcguinness-mission-audit}}).
+
+Egress Evidence and Harness Evidence relate but do not merge. A
+refused egress always produces an Egress Evidence record at the gate.
+When the refusal also drives a harness-lifecycle consequence the
+harness must track (for example, the refusal contributes to a stop
+decision), the harness MAY additionally emit a Harness Evidence record
+with `event_type` `egress_refused` ({{harness-evidence-object}}) for
+that lifecycle reporting. The two records are correlated by their
+shared `mission` reference and timestamp proximity, not combined into
+one object, because the egress gate and the harness's lifecycle logic
+are retained by potentially different components in the mediation
+path.
 
 # Worked Example {#example}
 
