@@ -2450,6 +2450,11 @@ reclassification, not by a stable document absorbing a dependency.
 `oauth-mission-approval-revision`:
 : Experimental: in-review narrowing revision of a deferred proposal.
 
+`oauth-mission-template`:
+: Experimental: one consent to a task template's ceiling; each dispatch
+  instantiates an ordinary Mission from it by policy, at machine speed,
+  bounded by its own derived Authority Set and never exceeding the ceiling.
+
 **Lifecycle:**
 
 Status is the lifecycle suite's root document (state reading,
