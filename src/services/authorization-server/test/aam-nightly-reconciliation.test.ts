@@ -7,14 +7,26 @@
  *
  * AAM component            -> Mission realization exercised here
  *   Task Template + ceiling ->  oauth-mission-template + POST /templates
- *   Agent Identity Broker   ->  the mission-dispatch grant + async-delegation RT
+ *   Agent Identity Broker   ->  the mission-dispatch grant (low-consequence) +
+ *                                an ordinary human approval (external-commitment)
  *   Task-Scoped Access Eng. ->  the PDP (@mission/pdp evaluate over OpenFGA)
  *   Mediation Layer         ->  the payments PEP + the harness EgressGate
  *   Trust Ratchet           ->  Mission Containment (protected-event ingestion)
  *   Agent Activity Log      ->  ConsoleBff.activityLog() (the console-bff join)
  *
+ * @spec draft-mcguinness-oauth-mission-template#prohibited-classes: the
+ * Template draft forbids a Dispatch from ever conferring a prohibited class
+ * (external-commitment among them), even when that class sits inside the
+ * Template Ceiling. Bob's consent ceiling below still names
+ * payments:remittance.send (the nightly job's whole scope, consented once),
+ * but every dispatch attempt that would grant it is refused
+ * dispatch_prohibited_class: the Template only ever instantiates the
+ * low-consequence read/reconcile/contain slice at machine speed. The actual
+ * remittance runs under a SEPARATE, ordinarily-approved Mission (a `direct`
+ * approval_basis) that a human approved, never under a dispatched instance.
+ *
  * Auto-skips only when OpenFGA is unreachable (docker compose up); with the
- * gate up this file runs all seven steps (0 skipped).
+ * gate up this file runs all eight steps (0 skipped).
  */
 
 import { type Server } from "node:http";
@@ -112,13 +124,14 @@ const SCOPE_STATEMENT = buildScopeStatement({
   channel_classes: [{ channel_class: "inference_api", disposition: "mediated", destinations: [ANTHROPIC] }],
 });
 
-// State threaded across the seven sequential steps.
+// State threaded across the eight sequential steps.
 let templateId = "";
 let templateHash = "";
-let dispatchedMissionId = "";
+let dispatchedMissionId = ""; // low-consequence, machine-speed (Template-dispatched)
 let dispatchedAccessToken = "";
 let familyRefreshToken = "";
-let restoredMissionId = "";
+let humanMissionId = ""; // the external-commitment capability, human-approved
+let restoredHumanMissionId = "";
 
 // --- Auth helpers (ap-agent = the scheduler/dispatcher client) ---------------
 
@@ -195,6 +208,25 @@ async function refreshFamily(refreshToken: string): Promise<Response> {
   return tokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken });
 }
 
+/**
+ * Mint an ORDINARY, human-approved Mission directly at the kernel (the
+ * `direct` approval_basis path {@link ApproveInput}): approver bob, subject
+ * alice (write-bearing missions need a distinct approver, per Governance D37),
+ * never a Dispatcher, never a Template. This is the "human path" the
+ * prohibited-class rule requires for payments:remittance.send.
+ */
+function approveHumanMission(intentJson: string): { id: string } {
+  const intent = as.kernel.validateIntent(intentJson);
+  const record = as.kernel.approve({
+    intent,
+    subject: { iss: ISSUER, sub: "alice" },
+    approver: { iss: ISSUER, sub: "bob" },
+    clientId: "ap-agent",
+    approvalEventId: `aam-human-evt-${seq++}`,
+  });
+  return { id: record.id };
+}
+
 // --- The consent ceiling + intents ------------------------------------------
 
 /**
@@ -203,7 +235,10 @@ async function refreshFamily(refreshToken: string): Promise<Response> {
  * programmatically from the derivation policy so every entry stays entry-wise
  * within it: keep read/list actions and remittance.send, copy constraints
  * verbatim, drop delegation, keep CANONICAL_RESOURCE (so containment's
- * resource-remap targets the same resource the Mission holds).
+ * resource-remap targets the same resource the Mission holds). Consenting to
+ * this ceiling does NOT mean a Dispatch may ever instantiate remittance.send:
+ * the prohibited-class rule blocks that regardless of ceiling membership; see
+ * lowConsequenceIntent() below for what actually gets dispatched.
  */
 function reconciliationCeiling(): CeilingEntry[] {
   const keep = (a: string) => a.endsWith(".read") || a.endsWith(".list") || a === "payments:remittance.send";
@@ -233,7 +268,34 @@ function reconciliationTemplateBody(): Record<string, unknown> {
   };
 }
 
-/** In-ceiling reconciliation intent: read invoices + post the finance remittance. */
+/**
+ * The LOW-CONSEQUENCE dispatch intent: read only. This is the only intent a
+ * machine-speed Dispatch of this Template ever successfully instantiates.
+ */
+function lowConsequenceIntent(): string {
+  return JSON.stringify({
+    goal: "nightly reconciliation of Acme invoices (read-only)",
+    resources: [RESOURCE],
+    expires_at: FAR_FUTURE,
+    proposed_authority: [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ],
+  });
+}
+
+/**
+ * The PROHIBITED-CLASS intent: read invoices + post the finance remittance.
+ * `payments:remittance.send` is within the Template Ceiling, but a Dispatch of
+ * this intent MUST be refused dispatch_prohibited_class (external_commitment).
+ * The same JSON string is reused, unmodified, as the mission_intent of the
+ * ordinary human approval below: one intent, two paths, one of which the
+ * Template refuses and one of which a human approves.
+ */
 function reconciliationIntent(): string {
   return JSON.stringify({
     goal: "nightly reconciliation of Acme invoices",
@@ -368,16 +430,18 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     // The human approver of record is recorded on the Template (consent once).
     const stored = as.templateStore.get(templateId);
     expect(stored?.approver.sub).toBe("bob");
-    // The ceiling carries the external-comms capability that the ratchet later removes.
+    // The ceiling carries the external-comms capability, consented to once for
+    // the WHOLE nightly job -- but consent to the ceiling is not consent for a
+    // Dispatch to ever confer it (step 2 refuses every attempt).
     const ceilingActions = (stored?.ceiling ?? []).flatMap((e) => e.actions);
     expect(ceilingActions).toContain("payments:invoice.read");
     expect(ceilingActions).toContain("payments:remittance.send");
     expect(ceilingActions).not.toContain("payments:payment.schedule");
   });
 
-  // STEP 2: Machine-speed dispatch. AAM Agent Identity Broker (issuance).
-  it("step 2 (machine-speed dispatch): the scheduler dispatches a fresh Mission; over-ceiling is refused", async () => {
-    const res = await dispatch({ intent: reconciliationIntent(), dispatchEventId: `evt-dispatch-${seq++}` });
+  // STEP 2: Machine-speed dispatch, kept low-consequence. AAM Agent Identity Broker.
+  it("step 2 (machine-speed dispatch): only the low-consequence read intent is admitted; remittance and over-ceiling are both refused", async () => {
+    const res = await dispatch({ intent: lowConsequenceIntent(), dispatchEventId: `evt-dispatch-${seq++}` });
     const body = (await res.json()) as {
       access_token?: string;
       token_type?: string;
@@ -395,13 +459,26 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     // Template lineage + approver-of-record == the template's human.
     expect(record?.template?.template_hash).toBe(templateHash);
     expect(record?.approver.sub).toBe("bob");
-    // Authority Set == the template-clipped effective set (the dispatch response).
+    // Authority Set == the template-clipped effective set (the dispatch response),
+    // and it is READ-ONLY: the Dispatch never confers the prohibited class.
     expect(body.authorization_details).toEqual(as.kernel.effectiveAuthoritySet(record!));
     const actions = (body.authorization_details as Array<{ actions: string[] }>).flatMap((e) => e.actions);
     expect(actions).toContain("payments:invoice.read");
-    expect(actions).toContain("payments:remittance.send");
+    expect(actions).not.toContain("payments:remittance.send");
 
-    // A dispatch exceeding the ceiling is refused out_of_template_ceiling.
+    // @spec mission-template#prohibited-classes -- the CONFORMANCE proof: an
+    // intent that IS within the Template Ceiling (remittance.send is a
+    // consented ceiling entry) is still refused, because it is a prohibited
+    // class. This is what closes the finding: config now covers the class the
+    // PEP classifies external_commitment, so no Dispatch can grant it.
+    const prohibited = await dispatch({ intent: reconciliationIntent(), dispatchEventId: `evt-prohibited-${seq++}` });
+    const prohibitedBody = (await prohibited.json()) as { mission_denial_reason?: string };
+    expect(prohibited.status, JSON.stringify(prohibitedBody)).toBe(400);
+    expect(prohibitedBody.mission_denial_reason).toBe("dispatch_prohibited_class");
+
+    // A dispatch exceeding the ceiling is refused out_of_template_ceiling (a
+    // DIFFERENT reason -- distinguishing "not consented" from "consented but
+    // too consequential for machine-speed dispatch").
     const refused = await dispatch({ intent: overCeilingIntent(), dispatchEventId: `evt-over-${seq++}` });
     const refusedBody = (await refused.json()) as { mission_denial_reason?: string };
     expect(refused.status, JSON.stringify(refusedBody)).toBe(400);
@@ -441,7 +518,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
   });
 
   // STEP 4: Per-action mediation. AAM Mediation Layer (PEP/PDP + egress gate).
-  it("step 4 (per-action mediation): a tool call is permitted via the PEP/PDP; off-allowlist egress is refused", async () => {
+  it("step 4 (per-action mediation): the read is permitted; remittance is out_of_authority on this mission; off-allowlist egress is refused", async () => {
     const token = tokenFactsFor(dispatchedMissionId);
 
     // A permitted tool call, mediated by the real PEP over the live PDP.
@@ -453,8 +530,14 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
         .some((e) => e.kind === "decision" && e.decision === true && e.action === "payments:invoice.read"),
     ).toBe(true);
 
-    // Pre-containment, the external-comms capability still permits at the PDP.
-    expect((await evalAction(dispatchedMissionId, "payments:remittance.send")).decision).toBe(true);
+    // The low-consequence dispatched Mission never held the external-comms
+    // capability (step 2), so the PDP denies it out_of_authority -- a SECOND,
+    // independent line of defense behind the Dispatch-time refusal.
+    const remittanceDecision = await evalAction(dispatchedMissionId, "payments:remittance.send");
+    expect(remittanceDecision.decision).toBe(false);
+    const remittanceAttempt = await pep.enforce("send_remittance_email", { invoice_id: "inv-1" }, token);
+    expect(remittanceAttempt.permitted).toBe(false);
+    expect(remittanceAttempt.denial_reason ?? remittanceAttempt.refusal_reason).toBe("out_of_authority");
 
     // The harness egress gate: an in-process reference realization bound to the
     // dispatched Mission, over the shared scope statement.
@@ -480,8 +563,35 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(egressRefusals.some((r) => r.refusal_reason.startsWith("egress_destination_unlisted"))).toBe(true);
   });
 
-  // STEP 5: Protected event -> containment. AAM Trust Ratchet (Baseline -> Restricted).
-  it("step 5 (containment): a trusted SOC taint report contains remittance.send while invoice.read stays", async () => {
+  // STEP 5: The human path. AAM Agent Identity Broker (approval-gated issuance,
+  // never a Dispatch) for the external-commitment capability the Template may
+  // not confer.
+  it("step 5 (human path): the SAME intent a Dispatch refused is approved directly by a human, with a direct approval_basis", async () => {
+    const { id } = approveHumanMission(reconciliationIntent());
+    humanMissionId = id;
+    const record = as.kernel.get(humanMissionId);
+    expect(record).toBeDefined();
+    // A direct approval_basis: a fresh human decision, NOT template lineage.
+    expect(record?.approval_basis.type).toBe("direct");
+    expect(record?.template).toBeUndefined();
+    expect(record?.approver.sub).toBe("bob");
+    expect(record?.subject.sub).toBe("alice"); // distinct approver (Governance D37)
+
+    // The external-comms capability is genuinely granted here...
+    expect((await evalAction(humanMissionId, "payments:remittance.send")).decision).toBe(true);
+
+    // ...and the actual remittance now runs, mediated by the same PEP, under
+    // THIS Mission -- not under any Template-dispatched instance.
+    const token = tokenFactsFor(humanMissionId);
+    const send = await pep.enforce("send_remittance_email", { invoice_id: "inv-1" }, token);
+    expect(send.permitted, JSON.stringify(send)).toBe(true);
+  });
+
+  // STEP 6: Protected event -> containment. AAM Trust Ratchet (Baseline -> Restricted).
+  // Targets the human-approved Mission (the one actually holding the
+  // external-comms capability); the low-consequence dispatched Mission from
+  // step 2 is untouched, proving containment is Mission-scoped.
+  it("step 6 (containment): a trusted SOC taint report contains the human-approved mission's remittance.send; the machine-speed mission is untouched", async () => {
     const soc = as.protectedEventSources.find((s) => s.source === "svc:soc") as SeededTrustedSource;
     expect(soc, "svc:soc seeded from config").toBeDefined();
     const key = (await importJWK(soc.privateJwk, soc.alg)) as CryptoKey;
@@ -490,12 +600,12 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
       source: "svc:soc",
       observed_at: new Date().toISOString(),
       event_id: TAINT_EVENT_ID,
-      mission_id: dispatchedMissionId,
+      mission_id: humanMissionId,
     })
       .setProtectedHeader({ alg: soc.alg, kid: soc.kid })
       .setIssuedAt()
       .sign(key);
-    const res = await fetch(`${ISSUER}/missions/${dispatchedMissionId}/protected-events`, {
+    const res = await fetch(`${ISSUER}/missions/${humanMissionId}/protected-events`, {
       method: "POST",
       headers: { "content-type": "application/protected-event+jwt" },
       body: jws,
@@ -506,46 +616,52 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(body.removed).toEqual([{ resource: RESOURCE, actions: ["payments:remittance.send"] }]);
 
     // The PDP now denies the external-comms action authority_contained...
-    const contained = await evalAction(dispatchedMissionId, "payments:remittance.send");
+    const contained = await evalAction(humanMissionId, "payments:remittance.send");
     expect(contained.decision).toBe(false);
     expect(contained.context.denial_reason).toBe("authority_contained");
     expect(contained.context.containment_version).toBe(1);
-    // ...while the still-permitted read action stays permitted.
-    expect((await evalAction(dispatchedMissionId, "payments:invoice.read")).decision).toBe(true);
+    // ...while the still-permitted read action on the SAME mission stays permitted.
+    expect((await evalAction(humanMissionId, "payments:invoice.read")).decision).toBe(true);
 
     // Mediated through the real PEP, the contained action denies authority_contained
-    // (this Decision Evidence is what threads into the Activity Log in step 7)...
-    const token = tokenFactsFor(dispatchedMissionId);
-    const send = await pep.enforce("send_remittance_email", { invoice_id: "inv-1" }, token);
+    // (this Decision Evidence is what threads into the Activity Log in step 8)...
+    const humanToken = tokenFactsFor(humanMissionId);
+    const send = await pep.enforce("send_remittance_email", { invoice_id: "inv-1" }, humanToken);
     expect(send.permitted).toBe(false);
     expect(send.denial_reason).toBe("authority_contained");
-    // ...and the invoice read still permits mid-run.
-    const stillRead = await pep.enforce("get_invoice", { invoice_id: "inv-1" }, token);
+
+    // ...and the low-consequence, machine-speed dispatched Mission from step 2
+    // is a DIFFERENT Mission: this containment event never named it, so its
+    // read still permits, undisturbed by the human-approved mission's ratchet.
+    const dispatchedToken = tokenFactsFor(dispatchedMissionId);
+    const stillRead = await pep.enforce("get_invoice", { invoice_id: "inv-1" }, dispatchedToken);
     expect(stillRead.permitted).toBe(true);
+    expect(as.kernel.get(dispatchedMissionId)?.containment).toBeUndefined();
   });
 
-  // STEP 6: Restore only in a new task. AAM: capability returns via a fresh dispatch.
-  it("step 6 (restore in a new task): a fresh dispatch restores remittance.send; the contained Mission never does", async () => {
-    const res = await dispatch({ intent: reconciliationIntent(), dispatchEventId: `evt-restore-${seq++}` });
-    const body = (await res.json()) as { mission_id?: string; authorization_details?: unknown };
-    expect(res.status, JSON.stringify(body)).toBe(200);
-    restoredMissionId = body.mission_id as string;
-    expect(restoredMissionId).not.toBe(dispatchedMissionId);
+  // STEP 7: Restore only in a new task. AAM: capability returns via a fresh
+  // human approval (a Dispatch can never restore a prohibited class either).
+  it("step 7 (restore in a new task): a fresh human approval restores remittance.send; the contained Mission never does", async () => {
+    const { id } = approveHumanMission(reconciliationIntent());
+    restoredHumanMissionId = id;
+    expect(restoredHumanMissionId).not.toBe(humanMissionId);
+    const record = as.kernel.get(restoredHumanMissionId);
+    expect(record?.approval_basis.type).toBe("direct");
 
     // The NEW task restores the external-comms capability.
-    const restoredActions = (body.authorization_details as Array<{ actions: string[] }>).flatMap((e) => e.actions);
-    expect(restoredActions).toContain("payments:remittance.send");
-    expect((await evalAction(restoredMissionId, "payments:remittance.send")).decision).toBe(true);
+    expect((await evalAction(restoredHumanMissionId, "payments:remittance.send")).decision).toBe(true);
 
     // The contained Mission never regains it mid-run.
-    expect(as.kernel.get(dispatchedMissionId)?.containment).toBeDefined();
-    const stillContained = await evalAction(dispatchedMissionId, "payments:remittance.send");
+    expect(as.kernel.get(humanMissionId)?.containment).toBeDefined();
+    const stillContained = await evalAction(humanMissionId, "payments:remittance.send");
     expect(stillContained.decision).toBe(false);
     expect(stillContained.context.denial_reason).toBe("authority_contained");
   });
 
-  // STEP 7: Activity Log. AAM Agent Activity Log (the console-bff join).
-  it("step 7 (activity log): the joined task-run graph shows ingestion -> containment -> authority_contained + the egress refusal", () => {
+  // STEP 8: Activity Log. AAM Agent Activity Log (the console-bff join), over
+  // BOTH missions: the machine-speed read/egress trail, and the human-approved
+  // mission's ingestion -> containment -> authority_contained trail.
+  it("step 8 (activity log): the dispatched mission's read+egress trail, and the human mission's ingestion -> containment -> authority_contained", () => {
     const bff = new ConsoleBff({
       kernel: as.kernel,
       ars: {} as never,
@@ -557,24 +673,37 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
       activity: { evidence: [pepEvidence, egressEvidence], issuerEvidence: as.issuerEvidence },
     });
     const session = bff.sessions.create("olivia", ["operator"]);
-    const run = bff.activityLog(session, dispatchedMissionId);
 
-    // The run is the dispatched Mission's, with its Template lineage.
-    expect(run.mission_id).toBe(dispatchedMissionId);
-    expect(run.lineage.template).toBeDefined();
+    // The machine-speed, Template-dispatched run: its own read decision + the
+    // egress refusal, with Template lineage. NO containment ever touched it.
+    const dispatchedRun = bff.activityLog(session, dispatchedMissionId);
+    expect(dispatchedRun.mission_id).toBe(dispatchedMissionId);
+    expect(dispatchedRun.lineage.template).toBeDefined();
+    const dispatchedRead = dispatchedRun.entries.find(
+      (e) => e.kind === "decision" && e.decision === true && e.action === "payments:invoice.read",
+    );
+    const dispatchedEgress = dispatchedRun.entries.find((e) => e.kind === "egress" && e.outcome === "refused");
+    expect(dispatchedRead, "the dispatched mission's read decision is present").toBeDefined();
+    expect(dispatchedEgress, "the egress refusal is present").toBeDefined();
+    expect(dispatchedEgress?.mission_id).toBe(dispatchedMissionId);
+    expect(dispatchedEgress?.scope_statement_digest).toBe(scopeDigest(SCOPE_STATEMENT));
 
-    const entries = run.entries;
+    // The human-approved run: NO Template lineage; ingestion -> Containment
+    // Evidence -> authority_contained, joined under the SAME protected event.
+    const humanRun = bff.activityLog(session, humanMissionId);
+    expect(humanRun.mission_id).toBe(humanMissionId);
+    expect(humanRun.lineage.template).toBeUndefined();
+
+    const entries = humanRun.entries;
     const ingestion = entries.find(
       (e) => e.kind === "ingestion" && e.action === "content.tainted_read" && e.outcome === "applied",
     );
     const containment = entries.find((e) => e.kind === "containment");
     const contained = entries.find((e) => e.kind === "decision" && e.denial_reason === "authority_contained");
-    const egress = entries.find((e) => e.kind === "egress" && e.outcome === "refused");
 
     expect(ingestion, "ingestion entry present").toBeDefined();
     expect(containment, "containment entry present").toBeDefined();
     expect(contained, "authority_contained decision present").toBeDefined();
-    expect(egress, "egress refusal present").toBeDefined();
 
     // ingestion -> ContainmentEvidence are the SAME protected event (shared event_id),
     // and the authority_contained denial follows both in the timeline.
@@ -587,10 +716,6 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(idxDen).toBeGreaterThan(idxIng);
     expect(idxDen).toBeGreaterThan(idxCont);
 
-    // Everything is threaded under the dispatched Mission, and the egress
-    // evidence binds to the declared scope statement (the honest-claim link).
-    expect(ingestion?.mission_id).toBe(dispatchedMissionId);
-    expect(egress?.mission_id).toBe(dispatchedMissionId);
-    expect(egress?.scope_statement_digest).toBe(scopeDigest(SCOPE_STATEMENT));
+    expect(ingestion?.mission_id).toBe(humanMissionId);
   });
 });

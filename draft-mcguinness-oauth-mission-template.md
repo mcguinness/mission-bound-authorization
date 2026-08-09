@@ -608,6 +608,16 @@ identifiers to the runtime profile's action classes
 ({{I-D.draft-mcguinness-mission-runtime}}), or an equivalent declared
 classification.
 
+The deployment's configured dispatch-prohibited action set MUST cover
+every action the published mapping classifies as irreversible,
+external-commitment, or privileged-administration, as satisfying the
+runtime profile's external-communication predicate
+({{I-D.draft-mcguinness-mission-runtime}}), or as cross-domain. A
+configured set narrower than the mapping is nonconformant: it lets a
+Dispatch confer a class the deployment's own mapping already
+identifies as prohibited, which is exactly the outcome this section
+forbids.
+
 A Dispatch that would grant a prohibited class is refused with
 `dispatch_prohibited_class` ({{denial-reasons}}). Unlike the
 progressive profile, which falls back to a fresh human approval in
