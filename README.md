@@ -900,3 +900,26 @@ the template's draft-name substitution exceeds BSD sed's per-expression
 buffer once a repository carries this many drafts, failing with
 `sed: unterminated substitute pattern`. CI uses GNU sed and is
 unaffected.
+
+### Family manifest
+
+`family-manifest.json` at the repository root is the machine-readable
+inventory of the suite: one entry per `draft-*.md`, with its title,
+category, maturity, architectural group (matching "The documents"
+below), adoption-order rung, and the other family drafts it
+references. It is the single source of truth that README's document
+catalog, the Adoption order list, and the architecture's Mission
+Document Map are all expected to stay consistent with.
+
+```sh
+$ node scripts/check-family-manifest.mjs
+```
+
+The check is dependency-free (Node 22+, no `npm install` needed) and
+runs in CI on every pull request and push
+(`.github/workflows/family-manifest.yml`). It fails on inventory drift
+(a draft on disk with no manifest entry, or vice versa), a
+front-matter `category` that disagrees with the manifest, a draft not
+linked under "The documents" below, a draft missing from the
+architecture's Mission Document Map, or a draft with a real
+`adoption_rung` missing from the Adoption order list above.
