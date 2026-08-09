@@ -28,6 +28,7 @@ author:
 
 normative:
   RFC3339:
+  RFC6755:
   RFC7523:
   RFC8259:
   RFC8414:
@@ -361,6 +362,9 @@ with child-specific binding to the parent. The request contains:
   ({{child-client-identity}}), under which child credentials never
   transit the parent, composes naturally with instance-specific keys.
 
+The parent redeems the pushed request at the token endpoint under the
+grant type this profile defines for child creation ({{grant-type}}).
+
 The Mission Issuer MUST resolve the parent from `parent_token`, verify
 that it matches `parent`, verify that the parent is `active`, and verify
 that the applicable parent Authority Set entry's `delegation` member
@@ -462,9 +466,62 @@ non-active after the parent-state check.
 The approval or policy adjudication in step 2 is deployment-specific.
 A deployment MAY require a human approval event for Child Mission
 creation or MAY allow policy to approve child creation when the parent
-Mission's Authority Set explicitly permits it. In step 3 the parent
+Mission's Authority Set explicitly permits it. Step 2 is the parent's
+redemption of the pushed request at the token endpoint, under the
+grant type of {{grant-type}}. In step 3 the parent
 conveys only a grant reference, never a child token ({{child-client-identity}});
 in step 4 the child actor authenticates itself and redeems its own grant.
+
+## Grant Type {#grant-type}
+
+This profile binds child creation to the token endpoint through a
+dedicated grant type, adding no new endpoint. The parent redeems the
+`request_uri` of {{child-creation}} at the token endpoint with:
+
+`grant_type`:
+: REQUIRED. `urn:ietf:params:oauth:grant-type:mission-child-creation`.
+
+`request_uri`:
+: REQUIRED. The `request_uri` the PAR endpoint returned for the pushed
+  child-creation request ({{child-creation}}).
+
+No other request parameter is accepted at this grant; every
+child-creation input travels in the pushed request. The parent
+authenticates at the token endpoint with the same client credential it
+used at the PAR endpoint, and the Mission Issuer MUST verify that the
+redeeming client is the client that pushed the request. A malformed or
+unresolvable `request_uri` MUST be refused with `invalid_request`; a
+`request_uri` that resolves but was pushed by a different client MUST
+be refused with `invalid_client`.
+
+Redeeming the `request_uri` runs {{request-processing}} in full and
+performs exactly one child-creation decision: the pushed request is
+consumed on redemption, so a repeated redemption of the same
+`request_uri` MUST be refused and MUST NOT derive a second Child
+Mission. This is the single gated derivation this profile permits per
+pushed child-creation request.
+
+On success the Mission Issuer responds with:
+
+`mission_id`:
+: REQUIRED. The Child Mission identifier.
+
+`parent`:
+: REQUIRED. The `parent` member of {{parent-member}}.
+
+`grant_type`:
+: REQUIRED. `urn:ietf:params:oauth:grant-type:jwt-bearer`
+  ({{RFC7523}}), naming the grant the child actor redeems next
+  ({{child-client-identity}}), not this creation grant.
+
+`assertion`:
+: REQUIRED. The child-bound JWT authorization grant of
+  {{child-client-identity}}.
+
+This grant issues no access token to its redeemer. The parent receives
+a grant reference for the child actor, never a Child Mission token,
+consistent with the rule that child credentials never transit the
+parent ({{child-client-identity}}).
 
 ## Request Processing {#request-processing}
 
@@ -514,8 +571,10 @@ child_actor=%7B%22sub%22%3A%22subagent-invoice-extractor%22%2C
 client_id=s6BhdRkqt3
 ~~~
 
-The Mission Issuer processes the request per {{request-processing}}
-and creates the Child Mission. The sub-agent then authenticates as
+The parent then redeems the returned `request_uri` at the token
+endpoint ({{grant-type}}); the Mission Issuer processes the request
+per {{request-processing}} and creates the Child Mission. The
+sub-agent then authenticates as
 `subagent-invoice-extractor` at the token endpoint and redeems its own
 grant ({{child-client-identity}}); no child credential transits the
 parent. The decoded child access token:
@@ -1342,6 +1401,26 @@ interoperable extension prove necessary, the expansion profile's IANA
 considerations anticipate a shared "Mission Denial Reason" registry
 with a Specification Required {{RFC8126}} policy; this document does
 not create it.
+
+This document requests registration of the following value in the
+"OAuth URI" registry established by {{RFC6755}}:
+
+URN:
+: `urn:ietf:params:oauth:grant-type:mission-child-creation`
+
+Common Name:
+: Mission Child Creation Grant Type
+
+Change Controller:
+: IETF
+
+Specification Document:
+: this document, {{grant-type}}
+
+This is a proposed registration. The value is used under the reserved
+`urn:ietf:params:oauth` arc by implementations of this profile in
+advance of registration completing; this document is the specification
+that names and defines it.
 
 --- back
 

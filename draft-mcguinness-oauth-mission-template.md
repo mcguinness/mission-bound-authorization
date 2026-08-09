@@ -28,6 +28,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC6755:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -424,7 +425,8 @@ single authenticated back-channel request that references the template
 by `id` and carries the dispatch intent, and it is answered in one
 round trip. This document defines no new endpoint and no new
 Authorization Server metadata: dispatch is a non-interactive Mission
-creation under the pre-consented template.
+creation under the pre-consented template, at the token endpoint under
+the grant type this document defines ({{grant-type}}).
 
 Because the human decision was made once, at template creation, a
 Dispatch uses no Pushed Authorization Request, no front-channel
@@ -519,6 +521,63 @@ and a consumer that does not understand it MUST ignore it. The
 instance's authority comes only from its own `authority_hash`. The
 `template` member exists so the dispatch is re-checkable in audit
 ({{audit-linkage}}).
+
+## Grant Type {#grant-type}
+
+This document binds Dispatch to the token endpoint through a
+dedicated grant type, adding no new endpoint. A Dispatcher requests an
+instance with:
+
+`grant_type`:
+: REQUIRED. `urn:ietf:params:oauth:grant-type:mission-dispatch`.
+
+`template_id`:
+: REQUIRED. The Mission Template's `id` ({{the-mission-template}}).
+
+`mission_intent`:
+: REQUIRED. The dispatch intent, in the issuance profile's Mission
+  Intent shape ({{I-D.draft-mcguinness-oauth-mission}}), from which the
+  instance Authority Set is derived ({{dispatch}}).
+
+`dispatch_event_id`:
+: REQUIRED. The dispatch event identifier that makes the Dispatch
+  idempotent ({{dispatch}}). A redemption bearing an identifier the
+  Mission Issuer has already committed MUST return the previously
+  committed instance and MUST NOT derive a second Mission.
+
+The Dispatcher authenticates at the token endpoint with its own client
+credential; the Mission Issuer authorizes it against the template's
+`allowed_dispatchers` as step 2 of {{dispatch}} requires. This grant
+performs exactly one derivation per `dispatch_event_id`: the
+adjudication order of {{dispatch}} runs once for a new identifier, and
+a repeated identifier is gated to the previously committed instance
+rather than a fresh derivation. This is the single gated derivation
+this document permits per dispatch event.
+
+On success the Mission Issuer responds with an access token bound to
+the instance, sender-constrained to the Dispatcher's key:
+
+`access_token`:
+: REQUIRED. A Mission-bound access token for the dispatched instance.
+
+`token_type`:
+: REQUIRED. The token type of the issued access token, reflecting the
+  sender-constraining mechanism in use (`DPoP` where the deployment
+  uses DPoP).
+
+`expires_in`:
+: REQUIRED. The access token's lifetime in seconds.
+
+`mission_id`:
+: REQUIRED. The dispatched Mission's identifier.
+
+`authorization_details`:
+: REQUIRED. The instance's effective Authority Set.
+
+A Dispatch refused under {{dispatch}} or {{prohibited-classes}} carries
+the OAuth `error` member together with `mission_denial_reason`
+({{denial-reasons}}), exactly as any other adjudication denial in this
+family.
 
 # Prohibited Classes {#prohibited-classes}
 
@@ -727,8 +786,28 @@ it MUST NOT use to grant authority ({{template-member}}).
 
 # IANA Considerations {#iana}
 
-This document has no IANA actions. Following the restraint of the
-sibling profiles:
+This document requests registration of the following value in the
+"OAuth URI" registry established by {{RFC6755}}:
+
+URN:
+: `urn:ietf:params:oauth:grant-type:mission-dispatch`
+
+Common Name:
+: Mission Dispatch Grant Type
+
+Change Controller:
+: IETF
+
+Specification Document:
+: this document, {{grant-type}}
+
+This is a proposed registration. The value is used under the reserved
+`urn:ietf:params:oauth` arc by implementations of this document in
+advance of registration completing; this document is the specification
+that names and defines it.
+
+Beyond that registration, this document requests no further IANA
+action. Following the restraint of the sibling profiles:
 
 - `template_hash` is a Mission integrity anchor whose `typ`,
   `mission-template`, follows the issuance profile's collision-resistant
