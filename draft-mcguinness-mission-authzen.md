@@ -127,6 +127,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-continuation:
+    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-audit:
+    title: "Mission Audit Transparency"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -1715,10 +1731,27 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
   the emitting component) and `role` (REQUIRED, one of `pdp`, `pep`, or
   `executor`). For Decision Evidence `role` is `pdp`. A companion
   profile MAY register coordinated additional roles (`harness`,
-  `egress`) for records emitted under these conventions at other
-  enforcement points. A verifier MUST
+  `egress`, `issuer`) for records emitted under these conventions at
+  other enforcement points, or by the Mission Issuer's own retained
+  producers (for example, protected-event ingestion,
+  {{I-D.draft-mcguinness-oauth-mission-containment}}). A verifier MUST
   bind the emitter's signing key to the enforcement scope and audience
   the record serves ({{decision-evidence-integrity}}).
+
+`hop_reference`:
+: OPTIONAL. An object. Present when the action this record concerns
+  was authorized under a continuation profile's continued credential
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), attributing
+  the record to the specific hop that carried the authorization.
+  Sub-members: `jti` (REQUIRED, a string, the authorizing token's
+  identifier) and `mission_id` (REQUIRED, a string, the Mission the
+  continued credential carries); `continuation_handle` (OPTIONAL, a
+  string, the hop's identity-continuation handle, when present).
+  Absent for a decision not taken under a continuation. This member
+  formalizes, as a coordinated Decision Evidence member, the
+  continuation profile's requirement that execution-time evidence
+  record the continuation hop reference
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}).
 
 `denial_reason`:
 : CONDITIONAL. A string. Present when `decision` is `deny`. A value from
@@ -1861,6 +1894,12 @@ only facts the PEP verified:
   bind the emitter's signing key to the enforcement scope and audience
   the record serves ({{decision-evidence-integrity}}).
 
+`hop_reference`:
+: OPTIONAL. An object, in the form Decision Evidence defines
+  ({{decision-evidence-object}}). Present only when the PEP verified
+  enough of the presented credential, before the failure, to establish
+  it was a continued credential.
+
 `evidence_envelope`:
 : REQUIRED. An object. Integrity protection in the form of
   {{decision-evidence-integrity}}, emitted by the refusing PEP, whose
@@ -1953,6 +1992,14 @@ The JWS protected header MUST carry:
   {{iana}}). A verifier MUST reject a JWS whose protected `typ` is not
   the media type of the object it is verifying, so signatures over one
   record kind cannot be cross-used for another.
+
+This rule is unaffected by the members Decision Evidence, Execution
+Evidence, and Refusal Records share with each other and with other
+evidence types, named once as a base shape
+({{I-D.draft-mcguinness-mission-audit}}). Shared member names describe
+a common shape for readability; they carry no exemption, and the `typ`
+check above remains the sole authority for which kind a signature
+covers.
 
 ~~~ json
 {
@@ -2133,6 +2180,11 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   ({{decision-evidence-object}}), with `role` `pep` or `executor`. A
   verifier MUST bind the emitter's signing key to the enforcement scope
   and audience the record serves ({{decision-evidence-integrity}}).
+
+`hop_reference`:
+: OPTIONAL. An object, in the form Decision Evidence defines
+  ({{decision-evidence-object}}). Present when the linked Decision
+  Evidence carries one.
 
 `attempted_at`:
 : OPTIONAL. An RFC 3339 timestamp. Timing context.
