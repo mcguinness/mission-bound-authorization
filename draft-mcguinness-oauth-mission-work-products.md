@@ -206,12 +206,16 @@ Work Product Provenance:
 
 # The Work Product Invariant {#invariant}
 
-This document states one invariant:
+This document states one invariant, in normative language so
+conformance to it is testable ({{conformance}}):
 
-- No authority may be acquired by information propagation alone.
-- An agent may inherit another agent's knowledge; it never inherits
-  another agent's authority.
-- Information may cross a boundary without authority crossing with it.
+- No authority is acquired by information propagation alone.
+- An agent MAY inherit another agent's knowledge. A consumer MUST NOT
+  treat a work product, or its Work Product Provenance object, as a
+  grant of the producing agent's authority.
+- Information MAY cross a boundary without authority crossing with it.
+  A component on that path MUST NOT construe the crossing of
+  information as also conferring authority.
 
 The invariant extends the credential-plane claims of {{relationship}} to
 the artifact plane; it does not contradict or replace them. The
@@ -240,6 +244,19 @@ created_at:
 parent_artifact:
 : OPTIONAL. A back-reference to the work product this one derived from,
   forming a provenance chain.
+
+Where a work product carries a Work Product Provenance object, that
+object MUST be attached by a trusted mediator acting for the Producing
+Mission, such as its Agent Deployment's execution environment or the
+Mission Issuer, from that mediator's own record of which Mission's
+approved work was executing when the artifact was produced. The
+producing agent MUST NOT self-author or self-assert its own Work
+Product Provenance: an agent attaching its own attribution could claim
+an origin under approved work it never executed, an authority-bearing
+forgery the custody boundary exists to prevent. This is a rule about
+who may write the object, not about what it contains: the object
+still carries only the five members above, and none of them is a
+permission.
 
 The object is policy-free by construction: it carries no authority, no
 constraint, no classification, and no permission. Its sole function is
@@ -276,15 +293,17 @@ Mission is:
 
 - A work product crossing into a Receiving Mission is input, not
   authority.
-- The Receiving Mission re-evaluates any proposed action under its own
-  Authority Set.
-- The Producing Mission's authority does not transfer through the work
-  product by copying, referencing, embedding, or communicating it.
+- The Receiving Mission MUST re-evaluate any proposed action under its
+  own Authority Set before acting on a work product it reads.
+- The Producing Mission's authority MUST NOT be treated as transferred
+  through the work product by copying, referencing, embedding, or
+  communicating it.
 - Where an agent needs authority to act on what it read, that authority
-  is obtained only through the authority plane, a Child Mission request
-  bounded by the parent under the subset rule
+  MUST be obtained only through the authority plane, a Child Mission
+  request bounded by the parent under the subset rule
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) or another
-  authorized Mission transition, never from the work product.
+  authorized Mission transition, and MUST NOT be taken from the work
+  product.
 
 The handoff is non-transitive: authority earned by the Producing Mission
 does not accrue to the Receiving Mission because the two share an
@@ -319,6 +338,43 @@ sit beside each other. Evidence ties an action back to the Mission that
 took it; provenance ties an artifact back to the Mission that produced
 it. Neither answers what a reader of the artifact may do; that remains
 the Receiving Mission's Authority Set to decide ({{handoff}}).
+
+# Conformance {#conformance}
+
+This section maps the invariant of {{invariant}} and the handoff rule
+of {{handoff}} to per-role requirements, so a deployment claiming this
+document is testable against them.
+
+A mediator that attaches Work Product Provenance (an Agent Deployment's
+execution environment, or the Mission Issuer) MUST:
+
+- populate `mission_id`, `deployment_id`, and `producer` from its own
+  record of the Mission and Agent Deployment executing when the
+  artifact was produced, never from an unauthenticated assertion by
+  the producing agent ({{provenance}});
+- carry no member beyond the five this document defines, and no
+  authority, constraint, classification, or permission in any of them
+  ({{provenance}}); and
+- disclose an attached object under the same access rules as the
+  deployment's other Mission evidence ({{provenance}}).
+
+A producing agent MUST NOT self-author or self-assert its own Work
+Product Provenance ({{provenance}}).
+
+A Receiving Mission (its agent, harness, or PDP) MUST:
+
+- re-evaluate any proposed action against its own Authority Set before
+  acting on a work product or the provenance attributed to it,
+  regardless of the Producing Mission's approval or lifecycle state
+  ({{handoff}}); and
+- treat a Work Product Provenance object, or its absence, as
+  attribution only, and MUST NOT treat either as authority for an
+  action ({{invariant}}, {{handoff}}).
+
+Any party needing authority over a work product's subject matter MUST
+obtain it through the authority plane, a Child Mission request or
+another authorized Mission transition, and MUST NOT derive it from a
+work product or its provenance ({{handoff}}).
 
 # Security Considerations {#security-considerations}
 

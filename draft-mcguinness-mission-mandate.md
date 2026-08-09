@@ -877,6 +877,15 @@ authority on presentation of a Mandate. Authority flows only through
 the substrate's issuance surfaces
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
+This is a deliberate departure from prior art that binds authority to
+a signed artifact's presentation: zcap-ld capabilities, W3C Verifiable
+Credentials used as authorization tokens, and other JWT-shaped
+capability formats, where holding the artifact is sufficient for
+access. A Mandate keeps the JWT shape those systems use and abandons
+that semantics: it is minted as a statement of committed facts, never
+as a right exercised on presentation, so verifying one answers what
+was approved and never what the holder may do.
+
 ## Stale-State Reliance
 
 A verified Mandate over a revoked Mission is still a verified Mandate:

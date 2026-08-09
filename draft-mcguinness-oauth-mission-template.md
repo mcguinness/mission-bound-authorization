@@ -284,7 +284,17 @@ A Mission Template is a consented object with these members:
 `dispatch_policy`:
 : REQUIRED. An object carrying `id` and `version`, identifying the
   Dispatch Policy under which the Mission Issuer instantiates from this
-  template. Its content is deployment-defined.
+  template. Its content is deployment-defined. Committing only `id` and
+  `version` leaves the policy body itself uncommitted, so a change to
+  its logic between template consent and a given dispatch is not
+  detectable from the template alone. A deployment SHOULD additionally
+  commit the Dispatch Policy body under an integrity anchor, computed
+  the way the issuance profile computes `authority_hash`
+  ({{I-D.draft-mcguinness-oauth-mission}}), or disclose it under
+  Consent Evidence
+  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), so a
+  machine-speed dispatch decision stays auditable against the policy
+  content a human actually consented to, not only its identifier.
 
 `allowed_dispatchers`:
 : REQUIRED. An array identifying the principals permitted to dispatch
@@ -458,7 +468,19 @@ The Mission Issuer adjudicates a Dispatch in this order:
 
    - `approver` is the template's human approver, the accountable
      principal ({{I-D.draft-mcguinness-oauth-mission}}). The Dispatcher
-     is not the approver;
+     is not the approver. Mirroring how the child-delegation profile
+     marks a policy-adjudicated child creation
+     ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), the
+     Mission record MUST mark this approval as
+     template-policy-adjudicated rather than human, so the
+     approver-of-record shift from a fresh human decision to policy
+     adjudication under a prior human consent is flagged consistently
+     across the family. The `template` lineage member
+     ({{template-member}}), present on every dispatched Mission and
+     absent on an ordinarily approved one, is that marking: its
+     presence, together with the Dispatch Policy `id` and `version` it
+     carries, identifies the adjudicating policy against the template's
+     human approver, and no further field is needed;
    - `subject` is established as the issuance profile requires, never
      taken from Dispatcher input, and is within `allowed_recipients`
      ({{I-D.draft-mcguinness-oauth-mission}});
@@ -678,6 +700,10 @@ conforming issuance-profile Mission Issuer
   bounds, and commit an ordinary Mission whose `approver` is the
   template's human approver and whose anchors are over the instance's
   own Intent and Authority Set;
+- mark every dispatched Mission's approval as template-policy-adjudicated
+  rather than human, via the `template` lineage member's presence and
+  its Dispatch Policy `id` and `version`, identified against the
+  template's human approver ({{dispatch}}, {{template-member}});
 - refuse a Dispatch outside the ceiling with `out_of_template_ceiling`
   and a Dispatch of a prohibited class with `dispatch_prohibited_class`
   ({{denial-reasons}});
