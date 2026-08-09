@@ -25,6 +25,7 @@ import {
   statusListUri,
 } from "./status-list.js";
 import {
+  type ApprovalBasis,
   type AuthorityEntry,
   type ContainmentEventRecord,
   LEGAL_TRANSITIONS,
@@ -56,6 +57,7 @@ CREATE TABLE IF NOT EXISTS missions (
   subject_sub TEXT NOT NULL,
   approver_iss TEXT NOT NULL,
   approver_sub TEXT NOT NULL,
+  approval_basis_json TEXT NOT NULL,
   client_id TEXT NOT NULL,
   policy_version TEXT NOT NULL,
   approval_event_id TEXT NOT NULL UNIQUE,
@@ -156,6 +158,17 @@ export class MissionKernel {
     const authoritySet = this.derive(input.intent);
     // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy.
     const id = `msn_${randomBytes(18).toString("base64url")}`;
+    const authorityHashValue = authorityHash(this.opts.issuer, authoritySet as never);
+    // @spec mission#approval-basis — direct: the human approval event itself
+    // creates the record; consent_principal == activation_actor == approver,
+    // and root_commitment is this Mission's own authority_hash.
+    const approvalBasis: ApprovalBasis = {
+      type: "direct",
+      consent_principal: input.approver,
+      activation: { approval_event_id: input.approvalEventId },
+      activation_actor: input.approver,
+      root_commitment: authorityHashValue,
+    };
     const record: MissionRecord = {
       id,
       issuer: this.opts.issuer,
@@ -163,9 +176,10 @@ export class MissionKernel {
       intent: input.intent,
       authority_set: authoritySet,
       intent_hash: intentHash(this.opts.issuer, input.intent as never),
-      authority_hash: authorityHash(this.opts.issuer, authoritySet as never),
+      authority_hash: authorityHashValue,
       subject: input.subject,
       approver: input.approver,
+      approval_basis: approvalBasis,
       client_id: input.clientId,
       policy_version: this.opts.policy.policy_version,
       approval_event_id: input.approvalEventId,
@@ -196,11 +210,12 @@ export class MissionKernel {
       this.db
         .prepare(
           `INSERT INTO missions (id, issuer, state, intent_json, authority_set_json, intent_hash,
-           authority_hash, subject_iss, subject_sub, approver_iss, approver_sub, client_id,
+           authority_hash, subject_iss, subject_sub, approver_iss, approver_sub,
+           approval_basis_json, client_id,
            policy_version, approval_event_id, created_at, expires_at, version, max_derivations,
            derivation_count, grant_id, predecessor, parent_id, parent_json, template_id,
            template_json, projected_from)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -214,6 +229,9 @@ export class MissionKernel {
           record.subject.sub,
           record.approver.iss,
           record.approver.sub,
+          // @spec mission#approval-basis: fixed at creation, immutable (like
+          // `parent`/`template`), so it is written only here.
+          JSON.stringify(record.approval_basis),
           record.client_id,
           record.policy_version,
           record.approval_event_id,
@@ -778,6 +796,9 @@ export class MissionKernel {
       issuer: record.issuer,
       authority_hash: record.authority_hash,
       expires_at: Math.floor(Date.parse(record.expires_at) / 1000),
+      // @spec mission#approval-basis: the read-only wire signal. MUST NOT be
+      // relied on to grant authority.
+      approval_basis: { type: record.approval_basis.type },
     };
   }
 
@@ -927,6 +948,7 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     authority_hash: row.authority_hash as string,
     subject: { iss: row.subject_iss as string, sub: row.subject_sub as string },
     approver: { iss: row.approver_iss as string, sub: row.approver_sub as string },
+    approval_basis: JSON.parse(row.approval_basis_json as string) as ApprovalBasis,
     client_id: row.client_id as string,
     policy_version: row.policy_version as string,
     approval_event_id: row.approval_event_id as string,

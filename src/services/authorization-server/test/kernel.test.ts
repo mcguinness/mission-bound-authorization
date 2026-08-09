@@ -1,3 +1,4 @@
+import { authorityHash, intentHash } from "@mission/core";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -8,6 +9,7 @@ import {
   isSubsetSet,
   LifecycleConflictError,
   MissionKernel,
+  type MissionRecord,
   validateMissionIntent,
 } from "../src/index.js";
 
@@ -122,6 +124,33 @@ describe("approval event and record (@spec mission#integrity-anchors)", () => {
     expect(record.id).toMatch(/^msn_/);
     const again = approve(intent(), 1);
     expect(again.id).toBe(record.id);
+  });
+});
+
+describe("approval basis (@spec mission#approval-basis)", () => {
+  it("records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor", () => {
+    const record = approve(intent(), 100);
+    const stored = kernel.get(record.id);
+    expect(stored?.approval_basis).toEqual({
+      type: "direct",
+      consent_principal: { iss: ISS, sub: "bob" },
+      activation: { approval_event_id: "apev-100" },
+      activation_actor: { iss: ISS, sub: "bob" },
+      root_commitment: record.authority_hash,
+    });
+    // approver IS approval_basis.consent_principal (D48/O-38 convergence).
+    expect(stored?.approver).toEqual(stored?.approval_basis.consent_principal);
+    // Not folded into either integrity anchor: recomputing both from `intent`
+    // and `authority_set` alone still matches, so approval_basis carries no
+    // weight in the digests (the lock's hashing decision, made checkable).
+    expect(record.intent_hash).toBe(intentHash(ISS, record.intent as never));
+    expect(record.authority_hash).toBe(authorityHash(ISS, record.authority_set as never));
+  });
+
+  it("carries approval_basis.type as a read-only signal on the mission claim", () => {
+    const record = approve(intent(), 101);
+    const claim = kernel.missionClaim(kernel.get(record.id) as MissionRecord);
+    expect(claim.approval_basis).toEqual({ type: "direct" });
   });
 });
 

@@ -41,6 +41,13 @@ export type ChildFanoutControls = {
   max_child_depth?: number;
   /** Which actors / actor classes may receive a Child Mission from this entry. */
   allowed_child_actors?: DelegateMatcher[];
+  /**
+   * @spec child-delegation#fanout — a policy reference evaluated before each
+   * child creation. When carried, it is the `root_commitment` of a
+   * policy-adjudicated child's {@link ApprovalBasis} (see
+   * `ApprovalBasisPolicyDrawdown`).
+   */
+  child_creation_policy?: string;
 } & {
   [k: string]: JsonValue | undefined;
 };
@@ -211,6 +218,95 @@ export interface ContainmentEventRecord {
   removed: Array<{ resource: string; actions?: string[] }>;
 }
 
+/**
+ * @spec mission#approval-basis — convergence Finding #1: the reframed
+ * invariant is "every Mission is rooted in an approved authorization basis,"
+ * generalizing "every Mission is created by an explicit approval event."
+ * `approval_basis` is a Mission Record member, fixed at creation and
+ * immutable for the life of the Mission (like `approver`/`subject`, unlike
+ * containment, which is evaluated state). It separates three previously
+ * collapsed facts: `consent_principal` (who consented — identical to
+ * {@link MissionRecord.approver}), `activation` (which policy/event activated
+ * THIS instance), and `activation_actor` (who or what dispatched it). It is
+ * provenance recorded ALONGSIDE `approver`, NOT folded into `intent_hash` or
+ * `authority_hash` (the core keeps its two-anchor domain separation); `type`
+ * MAY ride the `mission` claim as a read-only signal (see
+ * {@link MissionClaim.approval_basis}) that MUST NOT be relied on to grant
+ * authority.
+ */
+export type ApprovalBasis = ApprovalBasisDirect | ApprovalBasisTemplate | ApprovalBasisPolicyDrawdown;
+
+export type ApprovalBasisType = ApprovalBasis["type"];
+
+/**
+ * @spec mission#approval-basis — the default and strongest basis: a human
+ * approval event created this Mission directly. `approver`/`activation_actor`
+ * are the SAME approving human; this is the pre-existing, unchanged behavior
+ * of {@link MissionKernel.approve}, now named.
+ */
+export interface ApprovalBasisDirect {
+  type: "direct";
+  /** The approving human. Identical to {@link MissionRecord.approver}. */
+  consent_principal: { iss: string; sub: string };
+  activation: { approval_event_id: string };
+  /** The Approver themselves: identical to `consent_principal` for `direct`. */
+  activation_actor: { iss: string; sub: string };
+  /** This Mission's own `authority_hash`. */
+  root_commitment: string;
+}
+
+/**
+ * @spec mission-template#template-lineage — a template instance's basis:
+ * standing consent to a template ceiling, activated at dispatch time with no
+ * per-instance human approval. `consent_principal` is the template's
+ * consenting human (identical to `approver`, unchanged from prior "copy the
+ * human into approver" behavior); `activation_actor` is the Dispatcher client
+ * that triggered THIS instance.
+ */
+export interface ApprovalBasisTemplate {
+  type: "template";
+  /** The template's consenting human. Identical to {@link MissionRecord.approver}. */
+  consent_principal: { iss: string; sub: string };
+  activation: {
+    template_id: string;
+    template_version: string;
+    template_hash: string;
+    dispatch_event_id: string;
+  };
+  /** The Dispatcher client that triggered this instance. */
+  activation_actor: { iss: string; sub: string };
+  /** The template's integrity anchor (`template_hash`). */
+  root_commitment: string;
+}
+
+/**
+ * @spec child-delegation#child-creation — a policy-adjudicated child's basis:
+ * the parent's own approval, drawn down by a fan-out policy with no
+ * per-child human interaction (today's only child-creation path).
+ * `consent_principal` is the parent's accountable human (identical to
+ * `approver`, inherited from the Parent Mission); `activation_actor` is the
+ * parent agent / requesting principal that triggered this child.
+ */
+export interface ApprovalBasisPolicyDrawdown {
+  type: "policy_drawdown";
+  /** The parent's accountable human. Identical to {@link MissionRecord.approver}. */
+  consent_principal: { iss: string; sub: string };
+  activation: {
+    /** The `child_creation_policy` reference, when the justifying entry carries one. */
+    policy_id?: string;
+    policy_version: string;
+    activation_event_id: string;
+  };
+  /** The parent agent / requesting principal that triggered this child. */
+  activation_actor: { iss: string; sub: string };
+  /**
+   * The drawdown policy's committed reference: the justifying entry's
+   * `child_creation_policy` when carried, else the parent's `authority_hash`
+   * (the integrity anchor of the consented root that grants the drawdown).
+   */
+  root_commitment: string;
+}
+
 /** @spec mission#mission-record */
 export interface MissionRecord {
   id: string;
@@ -222,6 +318,11 @@ export interface MissionRecord {
   authority_hash: string;
   subject: { iss: string; sub: string };
   approver: { iss: string; sub: string };
+  /**
+   * @spec mission#approval-basis — fixed at creation, immutable. `approver`
+   * above IS `approval_basis.consent_principal`; see {@link ApprovalBasis}.
+   */
+  approval_basis: ApprovalBasis;
   client_id: string;
   policy_version: string;
   approval_event_id: string;
@@ -292,4 +393,10 @@ export interface MissionClaim {
   issuer: string;
   authority_hash: string;
   expires_at: number;
+  /**
+   * @spec mission#approval-basis — the read-only wire signal of the basis
+   * type. MUST NOT be relied on to grant authority; the full
+   * {@link ApprovalBasis} lives on the Mission Record only.
+   */
+  approval_basis: { type: ApprovalBasisType };
 }
