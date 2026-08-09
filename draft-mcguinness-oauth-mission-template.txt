@@ -592,6 +592,16 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime]), or an equivalent declared
    classification.
 
+   The deployment's configured dispatch-prohibited action set MUST cover
+   every action the published mapping classifies as irreversible,
+   external-commitment, or privileged-administration, as satisfying the
+   runtime profile's external-communication predicate
+   ([I-D.draft-mcguinness-mission-runtime]), or as cross-domain.  A
+   configured set narrower than the mapping is nonconformant: it lets a
+   Dispatch confer a class the deployment's own mapping already
+   identifies as prohibited, which is exactly the outcome this section
+   forbids.
+
    A Dispatch that would grant a prohibited class is refused with
    dispatch_prohibited_class (Section 9).  Unlike the progressive
    profile, which falls back to a fresh human approval in band, a
@@ -858,7 +868,9 @@ Table of Contents
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
 
-   [RFC6755]  "*** BROKEN REFERENCE ***".
+   [RFC6755]  Campbell, B. and H. Tschofenig, "An IETF URN Sub-Namespace
+              for OAuth", RFC 6755, DOI 10.17487/RFC6755, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6755>.
 
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,

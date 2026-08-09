@@ -2731,9 +2731,9 @@ Table of Contents
    [I-D.draft-zehavi-oauth-rar-metadata]
               Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
               Remediation", Work in Progress, Internet-Draft, draft-
-              zehavi-oauth-rar-metadata-05, 4 July 2026,
+              zehavi-oauth-rar-metadata-06, 9 August 2026,
               <https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-
-              rar-metadata-05>.
+              rar-metadata-06>.
 
    [I-D.draft-zhu-oauth-async-delegation]
               Zhu, L. and Z. Berg, "Delegated Refresh Tokens for OAuth

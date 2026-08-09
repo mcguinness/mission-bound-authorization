@@ -4283,14 +4283,15 @@ couple routine token revocation to Mission revocation unless it
 documents that behavior. Already-issued access tokens remain valid
 until they expire; a deployment requiring lower cutoff latency <span class="bcp14">SHOULD</span>
 use short token lifetimes.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
-<p id="section-9.2-4">The stateless baseline needs no status surface: a token is a
-self-contained authorization and verification is stateless. A
-deployment <span class="bcp14">MAY</span> additionally offer token introspection
-(<a href="#introspection" class="auto internal xref">Section 10</a>) so a Resource Server can observe Mission state
-per request and cut off a revoked Mission without waiting out the
-token lifetime. A canonical Mission Status surface (keyed by
-<code>mission_id</code>) and signed status responses are specified separately as
-an <span class="bcp14">OPTIONAL</span> companion profile by Mission Status
+<p id="section-9.2-4">The stateless baseline satisfies the lifecycle-gated capability: a
+token is a self-contained authorization, verification is stateless,
+and it needs no status surface. A deployment <span class="bcp14">MAY</span> additionally offer
+token introspection (<a href="#introspection" class="auto internal xref">Section 10</a>), an <span class="bcp14">OPTIONAL</span> state-observable
+overlay, so a Resource Server can observe Mission state per request
+and cut off a revoked Mission without waiting out the token lifetime.
+A canonical Mission Status surface (keyed by <code>mission_id</code>) and signed
+status responses are specified separately as another <span class="bcp14">OPTIONAL</span>
+state-observable overlay by Mission Status
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>; this document does not
 require them.<a href="#section-9.2-4" class="pilcrow">¶</a></p>
 <p id="section-9.2-5">Token validity and Mission validity are distinct: a token can outlive
@@ -4308,7 +4309,8 @@ current state rather than inferring it from token validity.<a href="#section-9.2
       <h2 id="name-mission-state-via-token-int">
 <a href="#section-10" class="section-number selfRef">10. </a><a href="#name-mission-state-via-token-int" class="section-name selfRef">Mission State via Token Introspection</a>
       </h2>
-<p id="section-10-1">This section is <span class="bcp14">OPTIONAL</span>. The stateless baseline
+<p id="section-10-1">This section is <span class="bcp14">OPTIONAL</span>: it is one state-observable overlay on the
+lifecycle-gated baseline. The stateless baseline
 (<a href="#mission-bound-tokens" class="auto internal xref">Section 8</a>) needs no introspection; an AS that does not
 offer it, and a Resource Server that does not use it, are unaffected.
 It lets a Mission-state-aware Resource Server observe a Mission's

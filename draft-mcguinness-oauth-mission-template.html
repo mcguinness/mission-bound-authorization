@@ -1907,13 +1907,22 @@ publish in the Mission Deployment Profile a mapping from its action
 identifiers to the runtime profile's action classes
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), or an equivalent declared
 classification.<a href="#section-8-3" class="pilcrow">¶</a></p>
-<p id="section-8-4">A Dispatch that would grant a prohibited class is refused with
+<p id="section-8-4">The deployment's configured dispatch-prohibited action set <span class="bcp14">MUST</span> cover
+every action the published mapping classifies as irreversible,
+external-commitment, or privileged-administration, as satisfying the
+runtime profile's external-communication predicate
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), or as cross-domain. A
+configured set narrower than the mapping is nonconformant: it lets a
+Dispatch confer a class the deployment's own mapping already
+identifies as prohibited, which is exactly the outcome this section
+forbids.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5">A Dispatch that would grant a prohibited class is refused with
 <code>dispatch_prohibited_class</code> (<a href="#denial-reasons" class="auto internal xref">Section 9</a>). Unlike the
 progressive profile, which falls back to a fresh human approval in
 band, a Dispatch has no interactive surface to escalate on: the human
 path is an ordinary Mission created through a fresh approval
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), requested out of band. The
-Dispatch Policy <span class="bcp14">MUST NOT</span> dispatch a Mission bearing a prohibited class.<a href="#section-8-4" class="pilcrow">¶</a></p>
+Dispatch Policy <span class="bcp14">MUST NOT</span> dispatch a Mission bearing a prohibited class.<a href="#section-8-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="denial-reasons">
@@ -2254,7 +2263,7 @@ object by that value.<a href="#section-15-5.4.1" class="pilcrow">¶</a></p>
 <dd class="break"></dd>
 <dt id="RFC6755">[RFC6755]</dt>
         <dd>
-<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<span class="refAuthor">Campbell, B.</span> and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"An IETF URN Sub-Namespace for OAuth"</span>, <span class="seriesInfo">RFC 6755</span>, <span class="seriesInfo">DOI 10.17487/RFC6755</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6755">https://www.rfc-editor.org/rfc/rfc6755</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8174">[RFC8174]</dt>
       <dd>

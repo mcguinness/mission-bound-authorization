@@ -1465,7 +1465,9 @@ Table of Contents
               Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
               <https://www.rfc-editor.org/rfc/rfc3339>.
 
-   [RFC6755]  "*** BROKEN REFERENCE ***".
+   [RFC6755]  Campbell, B. and H. Tschofenig, "An IETF URN Sub-Namespace
+              for OAuth", RFC 6755, DOI 10.17487/RFC6755, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6755>.
 
    [RFC7523]  Jones, M., Campbell, B., and C. Mortimore, "JSON Web Token
               (JWT) Profile for OAuth 2.0 Client Authentication and
