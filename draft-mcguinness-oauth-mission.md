@@ -1240,6 +1240,22 @@ deployment-defined and is interpreted only within the issuing
 deployment; a consumer that does not recognize it MUST fail closed
 ({{rs-enforcement}}).
 
+The same duty binds the AS side of narrowing: whenever the AS derives
+a candidate entry from a ceiling (a Mission Intent's
+`proposed_authority` narrowed to the Authority Set, or an Authority
+Set entry narrowed to a derived or delegated token,
+{{authorization-derivation}}, {{delegation-constraints}}), a
+registered Common Constraint key present in the ceiling entry that the
+AS does not implement narrowing for MUST NOT be dropped while the
+entry survives. The AS MUST instead fail closed: refuse the whole
+derivation, or omit the entry from the result, exactly as an
+unrecognized `resources` value already may be, signaling a partial
+derivation through `mission_derivation` where that applies
+({{authorization-derivation}}). Carrying the entry forward with the
+key dropped would widen effective authority past the ceiling exactly
+as an unenforced key would at the Resource Server
+({{rs-enforcement}}).
+
 This document defines the initial Common Constraints:
 
 - `max_amount` (object): a per-action ceiling on a monetary amount.
@@ -1319,6 +1335,27 @@ not. A Common Constraint definition
 MUST fix its subset and intersection in value-space terms, so that
 independent deployments compute the same result for the same values and
 the subset rule of {{subset}} is reproducible.
+
+A decimal-string value in a Common Constraint (`max_amount`'s
+`amount` member, and any future Common Constraint with a
+decimal-valued member) MUST match `^[0-9]+(\.[0-9]{1,18})?$`: one or
+more decimal digits, optionally followed by a single `.` and one to
+18 further decimal digits. A leading `-` is out of scope for a
+ceiling value and MUST be rejected.
+A value of any other form, including scientific notation
+(`"1e300"`), a sign, a thousands separator, or a non-numeric token
+(`"NaN"`, `"Infinity"`), is malformed, and a consumer MUST reject it
+rather than attempt to parse it: an Intent carrying one in
+`proposed_authority` is refused at submission
+({{submission-via-par}}), and a Resource Server treats a malformed
+decimal value the same as a `constraints` key it cannot enforce
+({{rs-enforcement}}). Comparison and intersection over two such
+decimal-string values MUST be computed as exact decimal arithmetic
+(for example, by scaling both values to integers by their fractional
+digit count and comparing the integers) and MUST NOT parse either
+value into an IEEE 754 binary floating-point type: that
+representation does not hold every value the grammar above admits
+exactly and can compare or combine two values incorrectly.
 
 A numeric constraint value MUST lie within the range JCS {{RFC8785}}
 serializes exactly. Monetary amounts avoid that hazard by
