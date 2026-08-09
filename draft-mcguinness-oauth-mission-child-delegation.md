@@ -57,6 +57,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   RFC8126:
@@ -97,6 +105,14 @@ informative:
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
     author:
       -
         ins: K. McGuinness
@@ -175,6 +191,14 @@ where a deployment runs them, because those profiles define the
 rules react to. A deployment that runs neither still implements this
 profile: under the issuance profile's forward-compatibility rule, the
 cascade treats any non-active parent state as a terminal trigger.
+
+Containment propagation ({{child-state}}) additionally depends on the
+Mission Containment profile
+({{I-D.draft-mcguinness-oauth-mission-containment}}) where a deployment
+runs it, because that profile defines the containment overlay and the
+contained-capability concept the propagation rule reacts to. A
+deployment that does not run Containment holds no overlay to propagate
+and is unaffected by that rule.
 
 A Child Mission is an ordinary Mission under the issuance profile with
 two additions: it is created under a parent grant rather than a
@@ -747,6 +771,24 @@ If the Mission Issuer cannot prove the child Authority Set is a strict
 subset of the parent, it MUST refuse child creation with
 `not_strict_subset`.
 
+## Derivation Budget Is Not Inherited {#derivation-budget}
+
+A Child Mission's `controls.max_derivations`
+({{I-D.draft-mcguinness-oauth-mission}}) is set on its own Mission
+Intent at child creation and is independent of the parent's: the
+attenuation rules above bound a child's authority, expiry, and
+delegation policy against the parent, but not its derivation count. A
+Parent Mission's own `max_derivations` caps derivation at the parent
+alone; it does not by default bound how many derivations the child
+subtree performs in aggregate, and a deep or wide subtree can derive
+far more than the parent's own cap suggests. Where a deployment
+requires a human approval event for child creation
+({{child-creation}}), it SHOULD disclose at that consent surface that
+the child subtree's aggregate derivation volume can exceed the
+parent's `max_derivations`. Bounding the aggregate across a subtree is
+the role of consumption metering, not this profile's attenuation rules
+({{I-D.draft-mcguinness-mission-metering}}).
+
 # Fan-Out Controls {#fanout}
 
 This profile defines the on-switch for child creation as a member of the
@@ -964,8 +1006,18 @@ entry is discharged, the Mission Issuer MUST discharge every child
 entry justified by it, so spent authority does not survive in the
 subtree.
 
-The issuer holds both records, so the propagation needs no consumer
-coordination.
+Where a deployment also runs the Mission Containment profile
+({{I-D.draft-mcguinness-oauth-mission-containment}}), containment
+propagates entry-wise too: when a parent Authority Set entry is
+contained, the Mission Issuer MUST propagate the containment to every
+child entry justified by it, so a Child Mission does not keep deriving
+contained authority while the parent stays `active`. A containment
+transition on the parent does not itself change any child's lifecycle
+state; it narrows the child's effective authority exactly as it
+narrows the parent's.
+
+The issuer holds both records in either case, so the propagation needs
+no consumer coordination.
 
 While a parent is `suspended`, the issuer MUST report each dependent
 child's state as `suspended` on every state-reporting surface (the

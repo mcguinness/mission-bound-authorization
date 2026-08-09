@@ -100,6 +100,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
@@ -836,6 +844,20 @@ against the issuer, and Mission Lifecycle Signals
 {{I-D.draft-mcguinness-oauth-mission-signals}} pushes lifecycle
 transitions to the partner domain.
 
+Origin containment narrows a live Mission without ending it
+({{I-D.draft-mcguinness-oauth-mission-containment}}), and a
+cross-domain grant issued after a contain transition already carries
+the narrowed authority: grant issuance is a derivation, gated on the
+Mission's Effective Authority Set like any other. Parallel to the
+point above, containment cannot reach a projection grant a Resource AS
+has already redeemed: the local tokens it keeps minting from that
+grant run to the grant's own lifetime, exactly as an already-minted
+token runs to its own expiry under revocation. Deployments relying on
+containment to bound cross-domain authority SHOULD use short grant
+lifetimes and a frequent re-lease cadence
+({{cross-domain-grant}}), so containment takes effect on the Mission's
+next lease rather than waiting out a long-lived grant.
+
 ## The Grant at the Trust Boundary {#grant-at-boundary}
 
 The cross-domain grant is the highest-authority credential in the
@@ -871,6 +893,15 @@ deployment that needs a global bound on delegation depth across domains
 constrains it out of band, through the resource-to-AS mapping and each
 Resource AS's local policy ({{pre-established-trust}}); this profile
 bounds delegation depth only within a single domain.
+
+Because the reset is per domain, projecting one Mission into M
+Resource AS domains multiplies the reachable depth: the aggregate
+composed bound is up to N times M, not N, even though the Approver saw
+only the per-domain N at consent. A deployment SHOULD disclose the
+composed bound, `max_depth` times the number of domains a Mission may
+be projected to, at the consent surface, not the per-domain `max_depth`
+alone, so the approval reflects what the projection can actually reach
+in aggregate.
 
 # Privacy Considerations
 
