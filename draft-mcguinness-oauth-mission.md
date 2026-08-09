@@ -32,6 +32,7 @@ normative:
   RFC3986:
   RFC6234:
   RFC6749:
+  RFC6750:
   RFC7636:
   RFC7800:
   RFC8259:
@@ -44,11 +45,11 @@ normative:
   RFC9207:
   RFC9396:
   RFC9449:
+  RFC9700:
   RFC7662:
   RFC8414:
   RFC7519:
   RFC9728:
-  I-D.draft-mcguinness-oauth-actor-profile:
   ISO4217:
     title: "ISO 4217:2015, Codes for the representation of currencies and funds"
     author:
@@ -59,11 +60,27 @@ normative:
 
 informative:
   RFC8126:
-  RFC6750:
   RFC7009:
   RFC8935:
   RFC9493:
-  RFC9700:
+  RFC9635:
+  I-D.draft-mcguinness-oauth-actor-profile:
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Mission Child Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   FAPI.GrantManagement:
     title: "Grant Management for OAuth 2.0"
     target: https://openid.net/specs/fapi-grant-management-01.html
@@ -319,6 +336,44 @@ intent commitment, and offline capability attenuation
 narrowing. None combines the durable approved object, state-gated
 issuance, and integrity anchors this document defines.
 
+## Relationship to GNAP
+
+The Grant Negotiation and Authorization Protocol {{RFC9635}} occupies
+much of the same design space as this document: a continuable
+authorization request, richer client instance identification, and
+native support for delegation. This document takes a different path
+for the estates it targets. Rather than introduce a new grant
+protocol, endpoints, and client machinery, it composes with the OAuth
+2.0 surfaces already deployed: Pushed Authorization Requests
+({{RFC9126}}), Rich Authorization Requests ({{RFC9396}}), DPoP
+({{RFC9449}}), and {{RFC9068}} access tokens. A Mission derives from
+and issues through those surfaces rather than replacing them, so an
+estate that already runs PAR, RAR, and sender-constrained tokens
+adopts the Mission model without standing up a GNAP grant endpoint or
+migrating its clients to it. Where a deployment starts from GNAP
+rather than from OAuth 2.0's authorization code grant, the Mission
+model, a durable, approval-anchored, integrity-bound task object
+gating derivation, is a candidate binding onto that substrate; this
+document does not define one.
+
+## Capability-System Prior Art
+
+The Authority Set's subset rule ({{subset}}) and the offline
+attenuation it supports continue a lineage of capability systems:
+macaroons' caveat narrowing, Biscuit's offline attenuation blocks,
+UCAN's delegation chains, SPKI/SDSI's local-name reduction, and
+object-capability designs generally, in which a holder narrows what it
+passes on and the narrowing needs no further contact with an issuer to
+be enforced. This document's distinction is not the narrowing rule
+itself but what it narrows: a durable, approval-anchored governance
+object, centrally revocable by its issuer for the Mission's full
+lifetime, rather than a bearer credential whose only life is the
+caveats attached to it. A delegate's or an offline holder's
+attenuation narrows within that governance object; it does not
+replace it, and revoking the Mission still reaches everything derived
+from it that has not already left the issuer's reach
+({{revocation}}).
+
 ## The Mission, the Plan, and Execution
 
 The Mission is the durable, AS-held object that commits the approved
@@ -390,11 +445,12 @@ This document is a self-contained, minimum-viable profile: it binds
 Missions to OAuth 2.0 and is implementable on its own, depending only
 on the OAuth and JOSE specifications it cites.
 
-One normative dependency is on an in-progress individual draft, so
-this document cannot advance ahead of it: the OAuth Actor Profile
-({{I-D.draft-mcguinness-oauth-actor-profile}}) for the `act` chain.
-That dependency is confined to the OPTIONAL Delegation capability,
-so the mandatory single-domain core does not depend on it.
+It references the OAuth Actor Profile
+({{I-D.draft-mcguinness-oauth-actor-profile}}), an in-progress
+individual draft, for the `act` chain shape the OPTIONAL Delegation
+capability uses. That reference is informative and confined to
+Delegation, so the mandatory single-domain core does not depend on
+it, and this document's RFC path does not wait on that draft's.
 Cross-domain projection, a single hop that lets an Authorization
 Server in another trust domain honor a Mission, is specified by the
 companion Mission Cross-Domain Projection profile
@@ -2128,12 +2184,17 @@ required. A Resource Server:
   `authorization_details` entry permits; in particular, `scope` MUST
   NOT be used to bypass a constraint carried only in
   `authorization_details`.
+- MUST treat the presence of the `mission` claim ({{mission-claim}})
+  as the wire signal that this profile's actor-freezing `client_id`
+  semantics apply; this document defines no separate claim for the
+  signal.
 - MUST NOT treat `client_id` as the identity of the acting party on a
-  delegated token: this profile keeps `client_id` equal to the
-  Mission's approved agent on every derived token ({{delegation}}),
-  and the immediate actor is the outermost `act`.
-- MUST, when it authorizes or logs the caller, process the `act`
-  chain to identify the acting party.
+  token that carries an `act` chain: this profile keeps `client_id`
+  equal to the Mission's approved agent on every derived token
+  ({{delegation}}), and the immediate actor is the outermost `act`.
+- MUST, when it authorizes or logs the caller, derive the acting
+  party from the `act` chain where the token carries one, and from
+  `client_id` where it carries none.
 - MAY, for a Mission-governed resource, be configured to require the
   `mission` claim, and MUST then reject a token that lacks it with
   `invalid_token`. The downgrade this rejection prevents, and the
@@ -2164,13 +2225,19 @@ required. A Resource Server:
   `active: true` result as proof the caller holds the bound key; the
   AS does not check possession at introspection ({{introspection}}).
 
-A deployment MUST NOT route delegated tokens to a Resource Server
-that authorizes or logs the caller on `client_id` without processing
-`act`. The `act`-processing requirement above binds a Mission-aware
-RS; a Mission-unaware {{RFC9068}} RS reads `client_id` as the
-immediate client and would misattribute a delegate's action to the
-approved agent, and the misattribution is silent and lands in audit
-records.
+A deployment MUST NOT route a delegated Mission-bound token to a
+Mission-unaware Resource Server that authorizes or logs the caller on
+`client_id` without processing the `act` chain. The requirement above
+binds a Mission-aware RS; a Mission-unaware {{RFC9068}} RS reads
+`client_id` as the immediate client and, on a delegated token, would
+misattribute a delegate's action to the approved agent, silently, in
+its own audit records. A resource that requires Mission-bound tokens
+at all advertises that through the `mission_bound_authorization_required`
+protected resource metadata member ({{protected-resource-metadata}}),
+and a Resource Server that serves such a resource is, by that
+requirement, Mission-aware; a deployment that delegates routes
+delegated Mission-bound traffic only to a Resource Server it knows to
+be Mission-aware in this sense.
 
 A `constraints` member narrows authority, so treating an
 unenforceable key as absent, or reducing it to disclosure-only, would
@@ -2597,9 +2664,15 @@ the delegation history lives nowhere else; that is exactly the
 discipline this profile's chosen design requires, so rebinding buys no
 relaxation. The operational rule of {{rs-enforcement}} therefore holds
 regardless of the binding choice: a Resource Server that authorizes or
-logs the caller MUST process the `act` chain, and a deployment MUST
-NOT route delegated tokens to a Resource Server that authorizes or
-logs on `client_id` without processing `act` ({{rs-enforcement}}).
+logs the caller on a token carrying an `act` chain MUST process that
+chain, and a deployment MUST NOT route a delegated Mission-bound
+token to a Mission-unaware Resource Server that authorizes or logs on
+`client_id` without processing it ({{rs-enforcement}}). It is the
+`mission` claim's presence, not the binding choice, that signals a
+token carries these actor-freezing semantics when an `act` chain is
+also present; a consumer that is not Mission-aware has no way to opt
+into or out of the rule, which is why routing a delegated token to
+one is what this document forbids.
 
 ## Self-Exchange Down-Scoping {#self-exchange}
 
@@ -3217,6 +3290,25 @@ token ({{mission-bound-tokens}}) closes the remaining gap, since a
 token stolen from an audience then fails presentation at the token
 endpoint.
 
+## client_id Misattribution by a Generic Resource Server or Logger {#client-id-misattribution}
+
+A generic {{RFC9068}} Resource Server, or a logging, SIEM, or audit
+pipeline built for ordinary OAuth tokens, typically keys identity and
+attribution on `client_id`. Because this profile keeps `client_id`
+equal to the Mission's approved agent on every derived token and
+carries the executing party only in the `act` chain
+({{delegation}}, {{rs-enforcement}}), such a component silently
+attributes a delegate's action to the approved agent rather than to
+the actor that performed it. The failure is not a rejected request,
+so it produces no error a client or operator would notice; it
+surfaces only as a wrong actor in an audit trail or an authorization
+decision made on that trail. A deployment that delegates MUST route
+delegated Mission-bound traffic, including to logging and audit
+infrastructure, only through components that process the `act` chain
+({{rs-enforcement}}), and SHOULD review any existing component that
+authorizes or logs solely from `client_id` for this gap before
+exposing it to delegated Mission-bound tokens.
+
 ## Signing and Key Rotation {#key-rotation}
 
 The `mission` claim and `authorization_details` are carried inside
@@ -3272,6 +3364,52 @@ Mission; `authority_hash` names the authority the Mission
 approved. A consumer that needs to bind to or correlate a specific
 Mission uses the Mission Identifier, and `intent_hash` and `approver`
 distinguish Missions that share an Authority Set.
+
+## Composition and the Effective Ceiling
+
+Delegation depth ({{delegation-constraints}}) resets to 0 at each
+cross-domain hop ({{I-D.draft-mcguinness-oauth-mission-cross-domain}})
+and, where a deployment runs the child-delegation profile, at each
+child generation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
+`max_derivations` ({{mission-intent}}) is a per-Mission bound the
+issuer AS enforces for that Mission alone; a Child Mission's own
+`max_derivations` is independent of its parent's, and the parent's
+cap does not bound the child subtree by default. The aggregate
+surface a Mission's descendants can reach, the product of delegation
+depth, the number of trust domains projected into, and the number of
+child generations, together with the derivations summed across an
+entire child subtree, can therefore exceed what a single approval
+appears to bound at consent time. This is a composition property of
+independently-bounded mechanisms, not a defect in any one of them.
+A deployment SHOULD disclose the composed bound, not only the
+immediate Mission's, at the consent surface, and MAY impose a global
+cap out of band where a single approval's apparent bound must hold in
+practice. Bounding aggregate consumption (calls, spend, or activity
+over the life of a Mission and its descendants) is the metering
+profile's role ({{I-D.draft-mcguinness-mission-metering}}), not a
+property this document or its composition partners provide by
+themselves.
+
+## The Containment Materialized-Capability Residual
+
+Where a deployment runs the Mission Containment profile
+({{I-D.draft-mcguinness-oauth-mission-containment}}), containment
+narrows an Authority Set entry's authorization to derive going
+forward and propagates to Child Missions justified by that entry, per
+that profile. It does not reach back into authority already
+materialized before the containment transition: a cross-domain grant
+already redeemed at a Resource AS
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or an offline
+attenuation root already minted and now attenuating on its own
+outside the issuer's reach, continues to operate for its own
+remaining lifetime. This is the same residual bound that revocation
+carries ({{revocation}}): a party that already holds a materialized
+credential is bounded by that credential's own lifetime, not by a
+state change at the issuer it can no longer observe in time. A
+deployment that needs containment to take effect quickly against
+already-materialized authority SHOULD keep cross-domain grant and
+offline attenuation root lifetimes short, so the residual window is
+one the next lease or re-mint closes.
 
 # Privacy Considerations
 
@@ -3453,28 +3591,56 @@ Metadata" registry ({{RFC9728}}):
 - Change Controller: IESG
 - Specification Document(s): this document, {{protected-resource-metadata}}
 
-## Common Constraints {#iana-common-constraints}
+## Common Constraints Registry {#iana-common-constraints}
 
-This document creates no Common Constraints registry. The Common
-Constraints it defines (`max_amount`, `resource_issued_after`,
-`resource_issued_before`, `tenant`, `recipient_domain`,
-`time_window`, `data_classification`, `allowed_tools`,
-`requires_action_approval`) are specified in
-{{common-constraints}}, and a further
-Common Constraint is defined by specification: it fixes a name matching
-`^[A-Za-z0-9_.:-]+$`, its JSON {{RFC8259}} value syntax, its subset
-rule, and its intersection rule, in value-space terms
-({{common-constraints}}). Names are kept collision-free by the same
-convention the rest of this document uses: a specification-defined name
-is coordinated within this document family, and any other name is
-collision-resistant or remains deployment-defined
-({{common-constraints}}).
+This document establishes the "Mission Common Constraints" registry.
+The registration policy is Specification Required {{RFC8126}}. A
+Designated Expert reviews a submission for the discipline
+{{common-constraints}} requires: a name matching
+`^[A-Za-z0-9_.:-]+$` not already registered, a JSON {{RFC8259}} value
+syntax precise enough for independent implementations to agree on,
+and a subset rule and an intersection rule both stated in
+value-space terms, with the intersection of any two valid values
+never broader than either operand. Registration does not require IETF
+review or a Standards Track document; a Specification Required
+reference that a Designated Expert can review against these criteria
+suffices.
 
-Should the set of interoperable Common Constraints grow beyond what
-specification coordination bears, a future revision can create a
-"Mission Common Constraints" registry with a Specification Required
-{{RFC8126}} policy, seeded with the entries then defined; this document
-does not create it.
+Each registration records:
+
+- **Key Name**: the `constraints` member name.
+- **Value Space**: the JSON value type and any additional syntax
+  rules.
+- **Subset Rule**: how a candidate value is judged no broader than a
+  reference value.
+- **Intersection Rule**: how two values for the key combine into a
+  result no broader than either operand.
+- **Change Controller**: IETF, or the registrant for any other
+  registration.
+- **Reference**: the specification defining the key.
+
+This document populates the registry with the Common Constraints it
+defines ({{common-constraints}}); the "Ref" column below is this
+document, at the section shown, for every row, and the full Subset
+Rule and Intersection Rule text is there, not restated in the table:
+
+| Key Name | Value Space | Subset / Intersection | Controller | Ref |
+|---|---|---|---|---|
+| `max_amount` | Object: `amount` (decimal string), `currency` (ISO 4217) | Same currency, candidate <= reference; intersection is the smaller amount | IETF | {{common-constraints}} |
+| `resource_issued_after` | String, RFC 3339 date-time | Candidate >= reference; intersection is the later instant | IETF | {{common-constraints}} |
+| `resource_issued_before` | String, RFC 3339 date-time | Candidate <= reference; intersection is the earlier instant | IETF | {{common-constraints}} |
+| `tenant` | String | Equal; intersection is the shared value | IETF | {{common-constraints}} |
+| `recipient_domain` | String, DNS name | Equal or a subdomain; intersection is the narrower value | IETF | {{common-constraints}} |
+| `time_window` | Object: `not_before`, `not_after` (RFC 3339 date-time) | Candidate window within reference window; intersection is the overlap | IETF | {{common-constraints}} |
+| `data_classification` | Array of strings | Candidate array a subset of reference array; intersection is the common members | IETF | {{common-constraints}} |
+| `allowed_tools` | Array of strings | Candidate array a subset of reference array; intersection is the common members | IETF | {{common-constraints}} |
+| `requires_action_approval` | Boolean | Candidate `true` or equal to reference; intersection is the logical OR | IETF | {{common-constraints}} |
+
+Names are kept collision-free by the convention
+{{common-constraints}} already uses: a specification-defined name is
+coordinated through this registry, and any other name is either
+collision-resistant or remains deployment-defined and outside the
+registry.
 
 --- back
 
@@ -3825,6 +3991,16 @@ resolve before interoperating.
   the PAR submission and rendering duties, twice-stated rules
   reduced to one home, a third integrity-anchor test vector, and
   registry hygiene.
+- External review resolutions: GNAP and capability-system prior art
+  positioned in Relationship to Other Authorization Objects; the
+  `mission` claim named as the actor-freezing wire signal, with the
+  Resource Server routing guardrail and a new Security
+  Considerations subsection on `client_id` misattribution; RFC 6750
+  and RFC 9700 promoted to normative and the OAuth Actor Profile
+  reference demoted to informative; an actual Common Constraints
+  IANA registry replacing the future-revision deferral; and new
+  Security Considerations on composition's effective ceiling and the
+  containment materialized-capability residual.
 
 -00
 
