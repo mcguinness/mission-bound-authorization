@@ -73,6 +73,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-template:
+    title: "Mission Template for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-containment:
     title: "Mission Containment for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
@@ -1577,6 +1585,16 @@ reviewer-narrowed, under the extension seam of {{extensibility}};
 the steps above, their order, and the atomicity of record creation
 with the approval decision are what any relocation preserves.
 
+Every Mission is rooted in an approved authorization basis
+({{mission-record}}): the steps above define the `direct` basis,
+which MUST be a human approval event. A companion profile MAY define
+a named standing-consent basis instead (a template ceiling, a
+drawdown policy), so a policy can approve an instance at machine
+speed within a bound a human already consented to; such a basis MUST
+still trace to an accountable human through
+`approval_basis.consent_principal` and `root_commitment`, and creates
+no fresh approval event per instance.
+
 The consent rendering is hardened against client text:
 
 - Client-supplied strings (`goal`, `constraints`,
@@ -1686,11 +1704,13 @@ are deliberately out of scope and deferred:
   control records one accountable Approver under the same
   `authority_hash`; this document does not natively represent the
   co-approvers.
-- **Approval-authority provenance** (the standing policy or delegation
-  an administrator or headless approval traces back to). This is
-  governance state about who stands behind a delegated approval, not
-  part of binding tokens to approved authority, and is left to a
-  governance layer.
+- **Approval-authority provenance** (the deeper standing behind a
+  delegate's authority to approve for another principal, for
+  example, whether an administrator was themselves entitled to
+  approve on a user's behalf). This is governance state about the
+  delegate's own standing, not the named standing-consent basis
+  `approval_basis` records for a template or drawdown-policy
+  activation ({{mission-record}}), and is left to a governance layer.
 
 Both remain out of the core. Where a deployment needs them, they are
 recorded by the deferred-approval profile's Approval Decision Set
@@ -1841,7 +1861,63 @@ profile defines:
 
 `approver`:
 : REQUIRED. An object. The Approver,
-  an object with `iss` and `sub`. MAY equal `subject`.
+  an object with `iss` and `sub`. MAY equal `subject`. Equal to
+  `approval_basis.consent_principal` (below).
+
+`approval_basis`:
+: REQUIRED. An object. The authorization basis this Mission is
+  rooted in: every Mission is rooted in an approved authorization
+  basis, fixed at the approval event and immutable thereafter, like
+  `approver` and `subject`. Members:
+
+  `type`:
+  : REQUIRED. A string: `direct`, defined in full by this document,
+    or an additional value defined by a companion profile that
+    generalizes approval to a named standing-consent basis (for
+    example, `template`
+    ({{I-D.draft-mcguinness-oauth-mission-template}}) or
+    `policy_drawdown`
+    ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})),
+    subject to the forward-compatibility rule of {{lifecycle}}.
+
+  `consent_principal`:
+  : REQUIRED. An object with `iss` and `sub`. The accountable human
+    (or human-accountable principal) who consented. This is the
+    value of `approver`; this document does not add a second
+    accountable principal.
+
+  `activation`:
+  : REQUIRED. An object naming what activated this Mission
+    instance, shaped by `type`. For `direct`: `approval_event_id`,
+    mirroring the record's own `approval_event_id` (below).
+
+  `activation_actor`:
+  : REQUIRED. An object with `iss` and `sub`. Who or what triggered
+    this instance. For `direct` it equals `consent_principal`: the
+    Approver triggers their own approval. A standing-consent `type`
+    names a dispatching or requesting party distinct from the
+    consenting human.
+
+  `root_commitment`:
+  : REQUIRED. A string. The commitment to the consented root: an
+    integrity anchor where the root is a committed object, otherwise
+    the committed reference that identifies it. For `direct`, this
+    Mission's own `authority_hash`.
+
+  For `direct`, `activation.approval_event_id` MUST identify a human
+  approval event ({{approval-event}}). A companion profile defining a
+  standing-consent `type` MUST make its `consent_principal` and
+  `root_commitment` trace to an accountable human's approval of the
+  named standing consent, with no fresh approval event per instance.
+
+  `approval_basis` is provenance: it is recorded alongside `approver`
+  and is not folded into `intent_hash` or `authority_hash`
+  ({{integrity-anchors}}). Neither anchor commits it, and it MUST NOT
+  be added to either digest; a profile that commits the Mission
+  Record itself covers it under that profile's own anchor. The
+  `mission` claim MAY carry `approval_basis.type` ({{mission-claim}})
+  as a wire signal; it MUST NOT be relied on to grant or widen
+  authority.
 
 `client_id`:
 : REQUIRED. A string. The Agent (OAuth client) that
@@ -1918,6 +1994,16 @@ outside carries it as `mission_id`, as in the token-response parameter
     "sub": "user_3p2q8mN1a0kV7tR" },
   "approver": { "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR" },
+  "approval_basis": {
+    "type": "direct",
+    "consent_principal": { "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR" },
+    "activation": { "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z" },
+    "activation_actor": { "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR" },
+    "root_commitment":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
   "client_id": "s6BhdRkqt3",
   "policy_version": "deploy-policy:v17",
   "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
@@ -2136,6 +2222,14 @@ The `mission` claim is a JSON object:
   the token's `exp` does not exceed it, and its passing says nothing
   a state surface does not, since expiry is not revocation and only
   `active` permits reliance ({{lifecycle}}).
+
+`approval_basis`:
+: OPTIONAL. An object carrying `type` only: the Mission's
+  `approval_basis.type` ({{mission-record}}), as a wire signal of
+  which authorization basis the Mission is rooted in. The record's
+  other `approval_basis` members are not carried on the token. It
+  MUST NOT be relied on to grant or widen authority; the carried
+  `authorization_details` and `authority_hash` remain authoritative.
 
 The `mission` claim is an open object ({{extensibility}}): additional
 members MAY appear alongside the members above. This document defines no
@@ -2996,7 +3090,8 @@ issuance surfaces:
 - submission of a Mission Intent via PAR ({{mission-intent}});
 - derivation of `mission_resource_access` authorization details
   ({{authorization-derivation}});
-- the approval event with its integrity anchors ({{approval-event}});
+- the approval event with its integrity anchors and recorded
+  `approval_basis` ({{approval-event}}, {{mission-record}});
 - issuance of Mission-bound access tokens carrying the `mission` claim
   ({{mission-bound-tokens}});
 - the subset rule ({{subset}}); and
