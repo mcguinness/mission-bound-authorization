@@ -750,20 +750,24 @@ Table of Contents
    Where creation is adjudicated by policy with no human interaction
    (Section 6.1), approval_basis.type is policy_drawdown:
    consent_principal is the Parent Mission's own approver, the
-   accountable human standing behind the delegation policy that permits
-   child creation (Section 9); activation carries the adjudicating
-   policy's id and version and this creation's own delegation event
-   identifier (above) as activation_event_id; activation_actor is the
-   requesting parent agent, the Parent Mission's client_id, distinct
-   from consent_principal; and root_commitment is the committed
-   reference to the adjudicating policy: the entry's
-   child_creation_policy reference where the entry carries one, or the
-   deployment's published child-creation policy reference otherwise
-   (Section 9).  A Mission Issuer that cannot commit such a reference
-   MUST NOT record policy_drawdown; it creates the Child Mission under a
-   fresh human approval event (direct) instead.  The record's approver
-   is consent_principal: the Parent Mission's human Approver, never the
-   policy and never the requesting agent.
+   accountable human standing behind the delegation that permits child
+   creation (Section 9); activation_actor is the requesting parent
+   agent, the Parent Mission's client_id, distinct from
+   consent_principal; and root_commitment is the entry's
+   child_creation_policy reference where the entry carries one,
+   otherwise the Parent Mission's own authority_hash, which commits the
+   authorizing delegation entry.  Either way root_commitment MUST
+   reference a committed value: the anti-laundering guarantee that a
+   policy_drawdown basis always traces to something the human's approval
+   actually committed.  Where the entry carries a child_creation_policy,
+   activation carries that policy's id and version and this creation's
+   own delegation event identifier (above) as activation_event_id.
+   Where it does not, the drawdown is against the parent's approved
+   delegation entry itself, not a separate policy artifact: activation
+   omits policy_id and carries only the delegation event identifier as
+   activation_event_id.  The record's approver is consent_principal: the
+   Parent Mission's human Approver, never the policy and never the
+   requesting agent.
 
 8.  Attenuation Rules
 

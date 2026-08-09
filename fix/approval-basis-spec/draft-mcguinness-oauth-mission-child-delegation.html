@@ -2176,20 +2176,24 @@ the record's <code>approver</code>, and <code>approval_basis.type</code> is <cod
 <p id="section-7.1-7">Where creation is adjudicated by policy with no human interaction
 (<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>), <code>approval_basis.type</code> is
 <code>policy_drawdown</code>: <code>consent_principal</code> is the Parent Mission's own
-<code>approver</code>, the accountable human standing behind the delegation
-policy that permits child creation (<a href="#fanout" class="auto internal xref">Section 9</a>); <code>activation</code> carries
-the adjudicating policy's <code>id</code> and <code>version</code> and this creation's own
-delegation event identifier (above) as <code>activation_event_id</code>;
-<code>activation_actor</code> is the requesting parent agent, the Parent
-Mission's <code>client_id</code>, distinct from <code>consent_principal</code>; and
-<code>root_commitment</code> is the committed reference to the adjudicating
-policy: the entry's <code>child_creation_policy</code> reference where the entry
-carries one, or the deployment's published child-creation policy
-reference otherwise (<a href="#fanout" class="auto internal xref">Section 9</a>). A Mission Issuer that cannot commit
-such a reference <span class="bcp14">MUST NOT</span> record <code>policy_drawdown</code>; it creates the
-Child Mission under a fresh human approval event (<code>direct</code>) instead.
-The record's <code>approver</code> is <code>consent_principal</code>: the Parent Mission's
-human Approver, never the policy and never the requesting agent.<a href="#section-7.1-7" class="pilcrow">¶</a></p>
+<code>approver</code>, the accountable human standing behind the delegation that
+permits child creation (<a href="#fanout" class="auto internal xref">Section 9</a>); <code>activation_actor</code> is the
+requesting parent agent, the Parent Mission's <code>client_id</code>, distinct
+from <code>consent_principal</code>; and <code>root_commitment</code> is the entry's
+<code>child_creation_policy</code> reference where the entry carries one,
+otherwise the Parent Mission's own <code>authority_hash</code>, which commits
+the authorizing delegation entry. Either way <code>root_commitment</code> <span class="bcp14">MUST</span>
+reference a committed value: the anti-laundering guarantee that a
+<code>policy_drawdown</code> basis always traces to something the human's
+approval actually committed. Where the entry carries a
+<code>child_creation_policy</code>, <code>activation</code> carries that policy's <code>id</code> and
+<code>version</code> and this creation's own delegation event identifier (above)
+as <code>activation_event_id</code>. Where it does not, the drawdown is against
+the parent's approved delegation entry itself, not a separate policy
+artifact: <code>activation</code> omits <code>policy_id</code> and carries only the
+delegation event identifier as <code>activation_event_id</code>. The record's
+<code>approver</code> is <code>consent_principal</code>: the Parent Mission's human
+Approver, never the policy and never the requesting agent.<a href="#section-7.1-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
