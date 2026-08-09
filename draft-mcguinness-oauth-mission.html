@@ -2755,10 +2755,25 @@ definition. Any other member name remains
 deployment-defined and is interpreted only within the issuing
 deployment; a consumer that does not recognize it <span class="bcp14">MUST</span> fail closed
 (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>).<a href="#section-5.2-4" class="pilcrow">¶</a></p>
-<p id="section-5.2-5">This document defines the initial Common Constraints:<a href="#section-5.2-5" class="pilcrow">¶</a></p>
+<p id="section-5.2-5">The same duty binds the AS side of narrowing: whenever the AS derives
+a candidate entry from a ceiling (a Mission Intent's
+<code>proposed_authority</code> narrowed to the Authority Set, or an Authority
+Set entry narrowed to a derived or delegated token,
+<a href="#authorization-derivation" class="auto internal xref">Section 5</a>, <a href="#delegation-constraints" class="auto internal xref">Section 11.3</a>), a
+registered Common Constraint key present in the ceiling entry that the
+AS does not implement narrowing for <span class="bcp14">MUST NOT</span> be dropped while the
+entry survives. The AS <span class="bcp14">MUST</span> instead fail closed: refuse the whole
+derivation, or omit the entry from the result, exactly as an
+unrecognized <code>resources</code> value already may be, signaling a partial
+derivation through <code>mission_derivation</code> where that applies
+(<a href="#authorization-derivation" class="auto internal xref">Section 5</a>). Carrying the entry forward with the
+key dropped would widen effective authority past the ceiling exactly
+as an unenforced key would at the Resource Server
+(<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>).<a href="#section-5.2-5" class="pilcrow">¶</a></p>
+<p id="section-5.2-6">This document defines the initial Common Constraints:<a href="#section-5.2-6" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.2-6.1">
-            <p id="section-5.2-6.1.1"><code>max_amount</code> (object): a per-action ceiling on a monetary amount.
+<li class="normal" id="section-5.2-7.1">
+            <p id="section-5.2-7.1.1"><code>max_amount</code> (object): a per-action ceiling on a monetary amount.
 The value is an object with two members: <code>amount</code> (<span class="bcp14">REQUIRED</span>, a
 string containing a decimal number) and <code>currency</code> (<span class="bcp14">REQUIRED</span>, an
 ISO 4217 <span>[<a href="#ISO4217" class="cite xref">ISO4217</a>]</span> currency code). Subset: no broader when the <code>currency</code>
@@ -2767,37 +2782,37 @@ to the reference <code>amount</code>, compared in decimal value space;
 differing currencies fail the comparison (no conversion is
 defined). Intersection: when the <code>currency</code> values are equal, the
 value with the smaller <code>amount</code>; differing currencies have no
-intersection and the combination fails.<a href="#section-5.2-6.1.1" class="pilcrow">¶</a></p>
+intersection and the combination fails.<a href="#section-5.2-7.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.2-6.2">
-            <p id="section-5.2-6.2.1"><code>resource_issued_after</code> (string, an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time):
+          <li class="normal" id="section-5.2-7.2">
+            <p id="section-5.2-7.2.1"><code>resource_issued_after</code> (string, an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time):
 the action applies only to resources issued at or after this instant.
 Subset: no broader when greater than or equal to the reference.
-Intersection: the later instant.<a href="#section-5.2-6.2.1" class="pilcrow">¶</a></p>
+Intersection: the later instant.<a href="#section-5.2-7.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.2-6.3">
-            <p id="section-5.2-6.3.1"><code>resource_issued_before</code> (string, an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time):
+          <li class="normal" id="section-5.2-7.3">
+            <p id="section-5.2-7.3.1"><code>resource_issued_before</code> (string, an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time):
 the action applies only to resources issued at or before this
 instant. Subset: no broader when less than or equal to the reference.
 Intersection: the earlier instant. The <code>resource_</code> qualifier in both
 names marks that the window bounds resource issuance, not token
-issuance.<a href="#section-5.2-6.3.1" class="pilcrow">¶</a></p>
+issuance.<a href="#section-5.2-7.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.2-6.4">
-            <p id="section-5.2-6.4.1"><code>tenant</code> (string): the action applies only to resources of the named
+          <li class="normal" id="section-5.2-7.4">
+            <p id="section-5.2-7.4.1"><code>tenant</code> (string): the action applies only to resources of the named
 tenant. Subset: no broader when equal to the reference value.
 Intersection: the common value when the two are equal; otherwise
-there is no intersection and the combination fails.<a href="#section-5.2-6.4.1" class="pilcrow">¶</a></p>
+there is no intersection and the combination fails.<a href="#section-5.2-7.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.2-6.5">
-            <p id="section-5.2-6.5.1"><code>recipient_domain</code> (string, a DNS name): the action applies only to
+          <li class="normal" id="section-5.2-7.5">
+            <p id="section-5.2-7.5.1"><code>recipient_domain</code> (string, a DNS name): the action applies only to
 recipients within the named domain. Subset: no broader when equal to
 the reference or a DNS subdomain of it. Intersection: the narrower
 value when one is equal to or a subdomain of the other; otherwise
-there is no intersection and the combination fails.<a href="#section-5.2-6.5.1" class="pilcrow">¶</a></p>
+there is no intersection and the combination fails.<a href="#section-5.2-7.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.2-6.6">
-            <p id="section-5.2-6.6.1"><code>time_window</code> (object): the action may be exercised only within the
+          <li class="normal" id="section-5.2-7.6">
+            <p id="section-5.2-7.6.1"><code>time_window</code> (object): the action may be exercised only within the
 window, evaluated at the point of use (unlike <code>resource_issued_after</code>
 and <code>resource_issued_before</code>, which bound resource issuance, and
 unlike token <code>exp</code>, which bounds the credential). The value has two
@@ -2808,37 +2823,37 @@ lies within the reference window, an absent candidate bound counting
 as unbounded and therefore broader than any present reference bound.
 Intersection: the overlap (the later <code>not_before</code>, the earlier
 <code>not_after</code>); an empty overlap has no intersection and the
-combination fails.<a href="#section-5.2-6.6.1" class="pilcrow">¶</a></p>
+combination fails.<a href="#section-5.2-7.6.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.2-6.7">
-            <p id="section-5.2-6.7.1"><code>data_classification</code> (array of strings): the action applies only to
+          <li class="normal" id="section-5.2-7.7">
+            <p id="section-5.2-7.7.1"><code>data_classification</code> (array of strings): the action applies only to
 data whose classification label is among the named values. Label
 semantics are deployment- or registry-defined; the comparison is not.
 Subset: no broader when the candidate array's members are a subset of
 the reference array's, compared as exact strings. Intersection: the
 common members; an empty result has no intersection and the
-combination fails.<a href="#section-5.2-6.7.1" class="pilcrow">¶</a></p>
+combination fails.<a href="#section-5.2-7.7.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.2-6.8">
-            <p id="section-5.2-6.8.1"><code>allowed_tools</code> (array of strings): the action may be exercised only
+          <li class="normal" id="section-5.2-7.8">
+            <p id="section-5.2-7.8.1"><code>allowed_tools</code> (array of strings): the action may be exercised only
 through a capability whose identifier is among the named values (a
 tool or function identity, asserted at the point of use by the
 enforcing component). Subset: no broader when the candidate array's
 members are a subset of the reference array's, compared as exact
 strings. Intersection: the common members; an empty result has no
-intersection and the combination fails.<a href="#section-5.2-6.8.1" class="pilcrow">¶</a></p>
+intersection and the combination fails.<a href="#section-5.2-7.8.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.2-6.9">
-            <p id="section-5.2-6.9.1"><code>requires_action_approval</code> (boolean): when <code>true</code>, each exercise of
+          <li class="normal" id="section-5.2-7.9">
+            <p id="section-5.2-7.9.1"><code>requires_action_approval</code> (boolean): when <code>true</code>, each exercise of
 the action requires a fresh, action-bound approval at the point of
 use; the enforcing component <span class="bcp14">MUST NOT</span> permit the action on Mission
 authority alone. A value of <code>false</code> is equivalent to omitting the
 member. Subset: no broader when the candidate is <code>true</code> or equals
 the reference (narrowing may add the requirement, never remove it).
-Intersection: the logical OR of the two values.<a href="#section-5.2-6.9.1" class="pilcrow">¶</a></p>
+Intersection: the logical OR of the two values.<a href="#section-5.2-7.9.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.2-7">These comparisons are in value space, not lexical: <code>max_amount</code>
+<p id="section-5.2-8">These comparisons are in value space, not lexical: <code>max_amount</code>
           <code>amount</code> members are compared as the decimal numbers the strings
 contain, so <code>"500"</code>, <code>"500.0"</code>, and <code>"500.00"</code> are equal;
 <code>resource_issued_after</code> and <code>resource_issued_before</code> values are
@@ -2851,13 +2866,33 @@ compared as DNS names, case-insensitively and on whole labels, so
 not. A Common Constraint definition
 <span class="bcp14">MUST</span> fix its subset and intersection in value-space terms, so that
 independent deployments compute the same result for the same values and
-the subset rule of <a href="#subset" class="auto internal xref">Section 5.1</a> is reproducible.<a href="#section-5.2-7" class="pilcrow">¶</a></p>
-<p id="section-5.2-8">A numeric constraint value <span class="bcp14">MUST</span> lie within the range JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
+the subset rule of <a href="#subset" class="auto internal xref">Section 5.1</a> is reproducible.<a href="#section-5.2-8" class="pilcrow">¶</a></p>
+<p id="section-5.2-9">A decimal-string value in a Common Constraint (<code>max_amount</code>'s
+<code>amount</code> member, and any future Common Constraint with a
+decimal-valued member) <span class="bcp14">MUST</span> match <code>^[0-9]+(\.[0-9]{1,18})?$</code>: one or
+more decimal digits, optionally followed by a single <code>.</code> and one to
+18 further decimal digits. A leading <code>-</code> is out of scope for a
+ceiling value and <span class="bcp14">MUST</span> be rejected.
+A value of any other form, including scientific notation
+(<code>"1e300"</code>), a sign, a thousands separator, or a non-numeric token
+(<code>"NaN"</code>, <code>"Infinity"</code>), is malformed, and a consumer <span class="bcp14">MUST</span> reject it
+rather than attempt to parse it: an Intent carrying one in
+<code>proposed_authority</code> is refused at submission
+(<a href="#submission-via-par" class="auto internal xref">Section 4.1</a>), and a Resource Server treats a malformed
+decimal value the same as a <code>constraints</code> key it cannot enforce
+(<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>). Comparison and intersection over two such
+decimal-string values <span class="bcp14">MUST</span> be computed as exact decimal arithmetic
+(for example, by scaling both values to integers by their fractional
+digit count and comparing the integers) and <span class="bcp14">MUST NOT</span> parse either
+value into an IEEE 754 binary floating-point type: that
+representation does not hold every value the grammar above admits
+exactly and can compare or combine two values incorrectly.<a href="#section-5.2-9" class="pilcrow">¶</a></p>
+<p id="section-5.2-10">A numeric constraint value <span class="bcp14">MUST</span> lie within the range JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
 serializes exactly. Monetary amounts avoid that hazard by
 construction: <code>max_amount</code> carries its <code>amount</code> as a string containing
 a decimal number, paired with an ISO 4217 <span>[<a href="#ISO4217" class="cite xref">ISO4217</a>]</span> <code>currency</code> code, and a
 future Common Constraint for a monetary value <span class="bcp14">SHOULD</span> reuse this shape
-rather than a JSON number.<a href="#section-5.2-8" class="pilcrow">¶</a></p>
+rather than a JSON number.<a href="#section-5.2-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="other-types">

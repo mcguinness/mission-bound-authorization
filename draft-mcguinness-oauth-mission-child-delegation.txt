@@ -85,9 +85,10 @@ Table of Contents
      6.2.  Cross-Issuer Scope
      6.3.  Creation and Revocation Race
      6.4.  Protocol Flow
-     6.5.  Request Processing
-     6.6.  Worked Example
-     6.7.  Child Creation Denial Reasons
+     6.5.  Grant Type
+     6.6.  Request Processing
+     6.7.  Worked Example
+     6.8.  Child Creation Denial Reasons
    7.  The Parent Mission Reference
      7.1.  Mission Record Requirements
    8.  Attenuation Rules
@@ -344,6 +345,9 @@ Table of Contents
       credentials never transit the parent, composes naturally with
       instance-specific keys.
 
+   The parent redeems the pushed request at the token endpoint under the
+   grant type this profile defines for child creation (Section 6.5).
+
    The Mission Issuer MUST resolve the parent from parent_token, verify
    that it matches parent, verify that the parent is active, and verify
    that the applicable parent Authority Set entry's delegation member
@@ -443,12 +447,59 @@ Table of Contents
    The approval or policy adjudication in step 2 is deployment-specific.
    A deployment MAY require a human approval event for Child Mission
    creation or MAY allow policy to approve child creation when the
-   parent Mission's Authority Set explicitly permits it.  In step 3 the
-   parent conveys only a grant reference, never a child token
-   (Section 6.1); in step 4 the child actor authenticates itself and
-   redeems its own grant.
+   parent Mission's Authority Set explicitly permits it.  Step 2 is the
+   parent's redemption of the pushed request at the token endpoint,
+   under the grant type of Section 6.5.  In step 3 the parent conveys
+   only a grant reference, never a child token (Section 6.1); in step 4
+   the child actor authenticates itself and redeems its own grant.
 
-6.5.  Request Processing
+6.5.  Grant Type
+
+   This profile binds child creation to the token endpoint through a
+   dedicated grant type, adding no new endpoint.  The parent redeems the
+   request_uri of Section 6 at the token endpoint with:
+
+   grant_type:  REQUIRED. urn:ietf:params:oauth:grant-type:mission-
+      child-creation.
+
+   request_uri:  REQUIRED.  The request_uri the PAR endpoint returned
+      for the pushed child-creation request (Section 6).
+
+   No other request parameter is accepted at this grant; every child-
+   creation input travels in the pushed request.  The parent
+   authenticates at the token endpoint with the same client credential
+   it used at the PAR endpoint, and the Mission Issuer MUST verify that
+   the redeeming client is the client that pushed the request.  A
+   malformed or unresolvable request_uri MUST be refused with
+   invalid_request; a request_uri that resolves but was pushed by a
+   different client MUST be refused with invalid_client.
+
+   Redeeming the request_uri runs Section 6.6 in full and performs
+   exactly one child-creation decision: the pushed request is consumed
+   on redemption, so a repeated redemption of the same request_uri MUST
+   be refused and MUST NOT derive a second Child Mission.  This is the
+   single gated derivation this profile permits per pushed child-
+   creation request.
+
+   On success the Mission Issuer responds with:
+
+   mission_id:  REQUIRED.  The Child Mission identifier.
+
+   parent:  REQUIRED.  The parent member of Section 7.
+
+   grant_type:  REQUIRED. urn:ietf:params:oauth:grant-type:jwt-bearer
+      ([RFC7523]), naming the grant the child actor redeems next
+      (Section 6.1), not this creation grant.
+
+   assertion:  REQUIRED.  The child-bound JWT authorization grant of
+      Section 6.1.
+
+   This grant issues no access token to its redeemer.  The parent
+   receives a grant reference for the child actor, never a Child Mission
+   token, consistent with the rule that child credentials never transit
+   the parent (Section 6.1).
+
+6.6.  Request Processing
 
    The Mission Issuer processes child creation in this order:
 
@@ -482,7 +533,7 @@ Table of Contents
    its own grant for the Child Mission's tokens (Section 6.1).  Failure
    at any step MUST prevent child creation.
 
-6.6.  Worked Example
+6.7.  Worked Example
 
    Under the Q3 reconciliation Mission
    msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-, the approved agent s6BhdRkqt3,
@@ -503,11 +554,12 @@ Table of Contents
      %22sub_profile%22%3A%22ai_agent%22%7D&
    client_id=s6BhdRkqt3
 
-   The Mission Issuer processes the request per Section 6.5 and creates
-   the Child Mission.  The sub-agent then authenticates as subagent-
-   invoice-extractor at the token endpoint and redeems its own grant
-   (Section 6.1); no child credential transits the parent.  The decoded
-   child access token:
+   The parent then redeems the returned request_uri at the token
+   endpoint (Section 6.5); the Mission Issuer processes the request per
+   Section 6.6 and creates the Child Mission.  The sub-agent then
+   authenticates as subagent-invoice-extractor at the token endpoint and
+   redeems its own grant (Section 6.1); no child credential transits the
+   parent.  The decoded child access token:
 
    {
      "iss": "https://as.example.com",
@@ -549,7 +601,7 @@ Table of Contents
    for a child of a root Mission.  The cnf key is the sub-agent's own
    (Section 6.1).
 
-6.7.  Child Creation Denial Reasons
+6.8.  Child Creation Denial Reasons
 
    This profile defines these symbolic denial reasons:
 
@@ -785,7 +837,7 @@ Table of Contents
    children:  OPTIONAL.  An object.  Its PRESENCE on a parent Authority
       Set entry's delegation member is what permits Child Mission
       creation for that entry; an entry whose delegation carries no
-      children permits no child (Section 6.7).  Its members are the fan-
+      children permits no child (Section 6.8).  Its members are the fan-
       out controls, each applied per entry, per parent Mission:
 
       max_children:  OPTIONAL.  A positive integer.  The maximum number
@@ -1194,7 +1246,7 @@ Table of Contents
       and enforces the controls of this profile.  A client MUST NOT
       infer the fan-out controls (Section 9) a deployment enforces from
       this member alone; an unenforceable requested control is refused
-      at creation (Section 6.7).
+      at creation (Section 6.8).
 
 16.  Conformance
 
@@ -1324,7 +1376,7 @@ Table of Contents
    profile, carried inside the already-registered mission claim.
 
    This document defines one closed set of symbolic codes: the child
-   creation denial reasons (Section 6.7).  Like the issuance profile's
+   creation denial reasons (Section 6.8).  Like the issuance profile's
    restraint with mission members, these are documented in this
    specification rather than placed in a new IANA registry: they ride in
    the shared mission_denial_reason member defined and registered by the
@@ -1336,6 +1388,22 @@ Table of Contents
    expansion profile's IANA considerations anticipate a shared "Mission
    Denial Reason" registry with a Specification Required [RFC8126]
    policy; this document does not create it.
+
+   This document requests registration of the following value in the
+   "OAuth URI" registry established by [RFC6755]:
+
+   URN:  urn:ietf:params:oauth:grant-type:mission-child-creation
+
+   Common Name:  Mission Child Creation Grant Type
+
+   Change Controller:  IETF
+
+   Specification Document:  this document, Section 6.5
+
+   This is a proposed registration.  The value is used under the
+   reserved urn:ietf:params:oauth arc by implementations of this profile
+   in advance of registration completing; this document is the
+   specification that names and defines it.
 
 20.  References
 
@@ -1369,6 +1437,8 @@ Table of Contents
    [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
               Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
               <https://www.rfc-editor.org/rfc/rfc3339>.
+
+   [RFC6755]  "*** BROKEN REFERENCE ***".
 
    [RFC7523]  Jones, M., Campbell, B., and C. Mortimore, "JSON Web Token
               (JWT) Profile for OAuth 2.0 Client Authentication and

@@ -1200,6 +1200,9 @@ it deterministically.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
                 <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-the-template-lineage-member" class="internal xref">The template lineage member</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-grant-type" class="internal xref">Grant Type</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
@@ -1649,7 +1652,8 @@ single authenticated back-channel request that references the template
 by <code>id</code> and carries the dispatch intent, and it is answered in one
 round trip. This document defines no new endpoint and no new
 Authorization Server metadata: dispatch is a non-interactive Mission
-creation under the pre-consented template.<a href="#section-7-1" class="pilcrow">¶</a></p>
+creation under the pre-consented template, at the token endpoint under
+the grant type this document defines (<a href="#grant-type" class="auto internal xref">Section 7.2</a>).<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">Because the human decision was made once, at template creation, a
 Dispatch uses no Pushed Authorization Request, no front-channel
 authorization request, and no interactive consent surface, and the
@@ -1773,6 +1777,95 @@ and a consumer that does not understand it <span class="bcp14">MUST</span> ignor
 instance's authority comes only from its own <code>authority_hash</code>. The
 <code>template</code> member exists so the dispatch is re-checkable in audit
 (<a href="#audit-linkage" class="auto internal xref">Section 11</a>).<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="grant-type">
+<section id="section-7.2">
+        <h3 id="name-grant-type">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-grant-type" class="section-name selfRef">Grant Type</a>
+        </h3>
+<p id="section-7.2-1">This document binds Dispatch to the token endpoint through a
+dedicated grant type, adding no new endpoint. A Dispatcher requests an
+instance with:<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7.2-2">
+          <dt id="section-7.2-2.1">
+<code>grant_type</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-2.2">
+            <p id="section-7.2-2.2.1"><span class="bcp14">REQUIRED</span>. <code>urn:ietf:params:oauth:grant-type:mission-dispatch</code>.<a href="#section-7.2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-2.3">
+<code>template_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-2.4">
+            <p id="section-7.2-2.4.1"><span class="bcp14">REQUIRED</span>. The Mission Template's <code>id</code> (<a href="#the-mission-template" class="auto internal xref">Section 5</a>).<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-2.5">
+<code>mission_intent</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-2.6">
+            <p id="section-7.2-2.6.1"><span class="bcp14">REQUIRED</span>. The dispatch intent, in the issuance profile's Mission
+Intent shape (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), from which the
+instance Authority Set is derived (<a href="#dispatch" class="auto internal xref">Section 7</a>).<a href="#section-7.2-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-2.7">
+<code>dispatch_event_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-2.8">
+            <p id="section-7.2-2.8.1"><span class="bcp14">REQUIRED</span>. The dispatch event identifier that makes the Dispatch
+idempotent (<a href="#dispatch" class="auto internal xref">Section 7</a>). A redemption bearing an identifier the
+Mission Issuer has already committed <span class="bcp14">MUST</span> return the previously
+committed instance and <span class="bcp14">MUST NOT</span> derive a second Mission.<a href="#section-7.2-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-7.2-3">The Dispatcher authenticates at the token endpoint with its own client
+credential; the Mission Issuer authorizes it against the template's
+<code>allowed_dispatchers</code> as step 2 of <a href="#dispatch" class="auto internal xref">Section 7</a> requires. This grant
+performs exactly one derivation per <code>dispatch_event_id</code>: the
+adjudication order of <a href="#dispatch" class="auto internal xref">Section 7</a> runs once for a new identifier, and
+a repeated identifier is gated to the previously committed instance
+rather than a fresh derivation. This is the single gated derivation
+this document permits per dispatch event.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-4">On success the Mission Issuer responds with an access token bound to
+the instance, sender-constrained to the Dispatcher's key:<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7.2-5">
+          <dt id="section-7.2-5.1">
+<code>access_token</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-5.2">
+            <p id="section-7.2-5.2.1"><span class="bcp14">REQUIRED</span>. A Mission-bound access token for the dispatched instance.<a href="#section-7.2-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-5.3">
+<code>token_type</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-5.4">
+            <p id="section-7.2-5.4.1"><span class="bcp14">REQUIRED</span>. The token type of the issued access token, reflecting the
+sender-constraining mechanism in use (<code>DPoP</code> where the deployment
+uses DPoP).<a href="#section-7.2-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-5.5">
+<code>expires_in</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-5.6">
+            <p id="section-7.2-5.6.1"><span class="bcp14">REQUIRED</span>. The access token's lifetime in seconds.<a href="#section-7.2-5.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-5.7">
+<code>mission_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-5.8">
+            <p id="section-7.2-5.8.1"><span class="bcp14">REQUIRED</span>. The dispatched Mission's identifier.<a href="#section-7.2-5.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-5.9">
+<code>authorization_details</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-5.10">
+            <p id="section-7.2-5.10.1"><span class="bcp14">REQUIRED</span>. The instance's effective Authority Set.<a href="#section-7.2-5.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-7.2-6">A Dispatch refused under <a href="#dispatch" class="auto internal xref">Section 7</a> or <a href="#prohibited-classes" class="auto internal xref">Section 8</a> carries
+the OAuth <code>error</code> member together with <code>mission_denial_reason</code>
+(<a href="#denial-reasons" class="auto internal xref">Section 9</a>), exactly as any other adjudication denial in this
+family.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2066,32 +2159,60 @@ it <span class="bcp14">MUST NOT</span> use to grant authority (<a href="#templat
       <h2 id="name-iana-considerations">
 <a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-15-1">This document has no IANA actions. Following the restraint of the
-sibling profiles:<a href="#section-15-1" class="pilcrow">¶</a></p>
+<p id="section-15-1">This document requests registration of the following value in the
+"OAuth URI" registry established by <span>[<a href="#RFC6755" class="cite xref">RFC6755</a>]</span>:<a href="#section-15-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-15-2">
+        <dt id="section-15-2.1">URN:</dt>
+        <dd style="margin-left: 1.5em" id="section-15-2.2">
+          <p id="section-15-2.2.1"><code>urn:ietf:params:oauth:grant-type:mission-dispatch</code><a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-15-2.3">Common Name:</dt>
+        <dd style="margin-left: 1.5em" id="section-15-2.4">
+          <p id="section-15-2.4.1">Mission Dispatch Grant Type<a href="#section-15-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-15-2.5">Change Controller:</dt>
+        <dd style="margin-left: 1.5em" id="section-15-2.6">
+          <p id="section-15-2.6.1">IETF<a href="#section-15-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-15-2.7">Specification Document:</dt>
+        <dd style="margin-left: 1.5em" id="section-15-2.8">
+          <p id="section-15-2.8.1">this document, <a href="#grant-type" class="auto internal xref">Section 7.2</a><a href="#section-15-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-15-3">This is a proposed registration. The value is used under the reserved
+<code>urn:ietf:params:oauth</code> arc by implementations of this document in
+advance of registration completing; this document is the specification
+that names and defines it.<a href="#section-15-3" class="pilcrow">¶</a></p>
+<p id="section-15-4">Beyond that registration, this document requests no further IANA
+action. Following the restraint of the sibling profiles:<a href="#section-15-4" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-15-2.1">
-          <p id="section-15-2.1.1"><code>template_hash</code> is a Mission integrity anchor whose <code>typ</code>,
+<li class="normal" id="section-15-5.1">
+          <p id="section-15-5.1.1"><code>template_hash</code> is a Mission integrity anchor whose <code>typ</code>,
 <code>mission-template</code>, follows the issuance profile's collision-resistant
 <code>typ</code> convention (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and requires
-no registration;<a href="#section-15-2.1.1" class="pilcrow">¶</a></p>
+no registration;<a href="#section-15-5.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-15-2.2">
-          <p id="section-15-2.2.1">the <code>template</code> member of the <code>mission</code> claim (<a href="#template-member" class="auto internal xref">Section 7.1</a>) is
+        <li class="normal" id="section-15-5.2">
+          <p id="section-15-5.2.1">the <code>template</code> member of the <code>mission</code> claim (<a href="#template-member" class="auto internal xref">Section 7.1</a>) is
 carried inside the already-open <code>mission</code> claim and needs no separate
-registration;<a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
+registration;<a href="#section-15-5.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-15-2.3">
-          <p id="section-15-2.3.1"><code>out_of_template_ceiling</code> and <code>dispatch_prohibited_class</code> are
+        <li class="normal" id="section-15-5.3">
+          <p id="section-15-5.3.1"><code>out_of_template_ceiling</code> and <code>dispatch_prohibited_class</code> are
 specification-defined values of the shared <code>mission_denial_reason</code>
 member the expansion profile established
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), not a new
-registry; and<a href="#section-15-2.3.1" class="pilcrow">¶</a></p>
+registry; and<a href="#section-15-5.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-15-2.4">
-          <p id="section-15-2.4.1">the Mission Template's type identifier,
+        <li class="normal" id="section-15-5.4">
+          <p id="section-15-5.4.1">the Mission Template's type identifier,
 <code>application/mission-template+json</code>, is used by local agreement
 pending registration; an audit or transparency profile registers the
-object by that value.<a href="#section-15-2.4.1" class="pilcrow">¶</a></p>
+object by that value.<a href="#section-15-5.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2122,6 +2243,10 @@ object by that value.<a href="#section-15-2.4.1" class="pilcrow">¶</a></p>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6755">[RFC6755]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8174">[RFC8174]</dt>
       <dd>
