@@ -113,6 +113,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
@@ -240,6 +248,8 @@ This document defines:
   reports ({{protected-events}});
 - derivation gating on the Effective Authority Set
   ({{derivation-gating}});
+- the Baseline and Runtime-Enforced containment properties
+  ({{containment-properties}});
 - the `authority_contained` denial reason ({{denial-reason}});
 - visibility of containment on status and introspection surfaces
   ({{visibility}});
@@ -286,7 +296,9 @@ Contained capability:
 Effective Authority Set:
 : The approved Authority Set minus contained capability and, where
   the Status profile's completion capability runs, minus discharged
-  entries. Every authority that leaves the Mission is bounded by it
+  entries. Every derivation gated after a contain transition is
+  bounded by it; authority that left the Mission before the
+  transition keeps its own bound, not this one
   ({{derivation-gating}}).
 
 Protected event:
@@ -428,10 +440,10 @@ goes unrecorded.
 
 # Derivation Gating {#derivation-gating}
 
-A derived or delegated credential MUST NOT carry contained
-capability. Token derivation under a contained Mission MUST evaluate
-the request against the Effective Authority Set, with the issuance
-profile's subset rule unchanged:
+A credential derived or delegated after a contain transition MUST NOT
+carry contained capability. Token derivation under a contained Mission
+MUST evaluate the request against the Effective Authority Set, with
+the issuance profile's subset rule unchanged:
 
 - a derivation request whose authority lies entirely within the
   contained set MUST fail, with the `authority_contained` denial
@@ -501,6 +513,41 @@ grant and root lifetimes short and lease or re-mint on a cadence
 shorter than its containment response target, so the next lease or the
 next root falls after the contain transition and picks up the narrowed
 Effective Authority Set.
+
+# Containment Properties {#containment-properties}
+
+{{derivation-gating}} and {{materialized-residual}} together state one
+containment property; a second exists only where the substrate
+supports it. What a consumer actually gets depends on which one it
+relies on:
+
+Baseline:
+: a new-derivation kill. From the transition forward, no derivation,
+  delegation, projection, or attenuation root minted after it carries
+  contained capability ({{derivation-gating}}). A token issued before
+  the transition, or capability already materialized outside the
+  issuer's reach, can still carry the removed capability until that
+  artifact's own lifetime runs out ({{materialized-residual}}).
+  Baseline needs nothing of a consumer beyond the ordinary bearer
+  check, signature and `exp`: it is the property a lifecycle-gated
+  substrate provides ({{I-D.draft-mcguinness-mission-substrate}}).
+
+Runtime-Enforced:
+: an action-time kill. A consumer that checks a fresh, authenticated
+  state source at or near the time of the action, Mission Status,
+  introspection, or the runtime layer's PDP, denies contained
+  capability whether or not the credential it evaluates predates the
+  transition, bounded by that source's staleness plus the permit and
+  execution windows ({{I-D.draft-mcguinness-mission-runtime}}).
+  Runtime-Enforced requires the substrate to be state-observable
+  ({{I-D.draft-mcguinness-mission-substrate}}); a consumer that never
+  consults such a source gets Baseline only, however long the Mission
+  has been contained.
+
+Neither property is a deployment failure: a consumer that only checks
+`exp` is a fully conformant Baseline consumer, and its exposure to
+contained capability is bounded by token lifetime, not by a defect in
+this document.
 
 # The authority_contained Denial Reason {#denial-reason}
 
@@ -827,9 +874,14 @@ Mission Issuer role and only when it contains a Mission. A conforming
 
 A containment-capable Mission Issuer is also a conforming
 issuance-profile Mission Issuer
-({{I-D.draft-mcguinness-oauth-mission}}). A Resource Server requires
-no new behavior: a token it sees never carries contained capability
-({{derivation-gating}}).
+({{I-D.draft-mcguinness-oauth-mission}}). Containment gives every
+Resource Server the Baseline property with no change to the Resource
+Server; the Runtime-Enforced property additionally requires it to
+consult a fresh state source ({{containment-properties}}). "No new
+behavior" holds only for a Resource Server that relies on Baseline: a
+token issued after the contain transition never carries contained
+capability, and a token issued before the transition can still carry
+it until that token's own expiry ({{containment-properties}}).
 
 # Security Considerations {#security-considerations}
 
