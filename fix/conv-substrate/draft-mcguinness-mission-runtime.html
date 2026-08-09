@@ -1801,7 +1801,11 @@ Mission lifecycle state or the freshness of that state
 <p id="section-3-1">This profile is defined against the Mission model rather than against
 OAuth 2.0 mechanics. It consumes these substrate primitives: the
 Mission identifier and issuer; the lifecycle state space with its
-only-<code>active</code>-permits rule and a freshness source; the Authority Set
+only-<code>active</code>-permits rule, always in its lifecycle-gated form and
+additionally in its state-observable form (an authenticated freshness
+source with a stated staleness bound) wherever an enforcement scope's
+published staleness bound is tighter than the credential lifetime
+(<a href="#state-freshness" class="auto internal xref">Section 7.3</a>); the Authority Set
 representation with its subset rule and Common Constraints; the
 Mission-bound credential carrying the <code>mission</code> claim, consumed when
 the binding provides it; the integrity-anchor envelope; and the
@@ -2867,40 +2871,52 @@ authenticated status or event feed from the Mission <code>issuer</code>, a
 materialized policy view, or a short-lived cross-domain credential
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) whose lifetime
 is the deployment's accepted state lease.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<p id="section-7.3-2">The substrate this profile enforces against provides at least a
+lifecycle-gated capability (Mission state at the issuer, with reliance
+boundable by credential lifetime alone) and <span class="bcp14">MAY</span> additionally provide a
+state-observable capability (an authenticated freshness source with a
+stated staleness bound). A deployment claiming runtime enforcement for
+an action class whose published staleness bound is tighter than the
+credential lifetime REQUIRES a state-observable substrate for that
+class; the high-consequence classes below always are. A
+lifecycle-gated-only substrate supports issuance gating and a
+lifetime-bounded action-time posture only: it cannot reflect a
+revocation faster than the credential lifetime, so it cannot host a
+class whose bound demands that.<a href="#section-7.3-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-7.3-2.1">
-            <p id="section-7.3-2.1.1">The PDP <span class="bcp14">MUST</span> refuse a consequential action when it cannot establish,
+<li class="normal" id="section-7.3-3.1">
+            <p id="section-7.3-3.1.1">The PDP <span class="bcp14">MUST</span> refuse a consequential action when it cannot establish,
 within the deployment's published staleness bound, that the Mission
-is <code>active</code>.<a href="#section-7.3-2.1.1" class="pilcrow">¶</a></p>
+is <code>active</code>.<a href="#section-7.3-3.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.3-2.2">
-            <p id="section-7.3-2.2.1">A state source <span class="bcp14">MUST</span> either report the Mission state with a freshness
+          <li class="normal" id="section-7.3-3.2">
+            <p id="section-7.3-3.2.1">A state source <span class="bcp14">MUST</span> either report the Mission state with a freshness
 time, or define a lease interval over which a previously established
 <code>active</code> state remains acceptable for the relevant action class.
 A permit issued from that state view <span class="bcp14">MUST</span> expire no later than the
-applicable freshness time or lease interval.<a href="#section-7.3-2.2.1" class="pilcrow">¶</a></p>
+applicable freshness time or lease interval.<a href="#section-7.3-3.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.3-2.3">
-            <p id="section-7.3-2.3.1">When the credential issuer also holds the Mission, the PDP can learn
+          <li class="normal" id="section-7.3-3.3">
+            <p id="section-7.3-3.3.1">When the credential issuer also holds the Mission, the PDP can learn
 state through token introspection (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>) at the issuer per
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. A non-issuer Resource AS
 introspecting a local token
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) cannot report
 current Mission state; it can establish local token validity, but not
-issuer-side Mission freshness.<a href="#section-7.3-2.3.1" class="pilcrow">¶</a></p>
+issuer-side Mission freshness.<a href="#section-7.3-3.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.3-2.4">
-            <p id="section-7.3-2.4.1">This document defines no cross-issuer by-Mission status query.
+          <li class="normal" id="section-7.3-3.4">
+            <p id="section-7.3-3.4.1">This document defines no cross-issuer by-Mission status query.
 Deployments that need tighter freshness than the token or
 cross-domain grant
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) lifetime
 provides use the Mission Status profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) or Mission Lifecycle
 Signals (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), or an
-out-of-band trusted status feed.<a href="#section-7.3-2.4.1" class="pilcrow">¶</a></p>
+out-of-band trusted status feed.<a href="#section-7.3-3.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.3-2.5">
-            <p id="section-7.3-2.5.1">The maximum staleness bound per action class and state source is
+          <li class="normal" id="section-7.3-3.5">
+            <p id="section-7.3-3.5.1">The maximum staleness bound per action class and state source is
 declared in the Enforcement Scope Statement
 (<a href="#runtime-conformance" class="auto internal xref">Section 4.2</a>), together with the revocation latency it
 implies. Publishing the bound without its latency consequence is
@@ -2912,10 +2928,10 @@ only for paths outside PDP gating. This document imposes no
 universal value because the acceptable latency is deployment- and
 consequence-specific; the bound is the number that determines the
 profile's headline revocation property. The per-class budgets
-below are the <span class="bcp14">RECOMMENDED</span> defaults for the value.<a href="#section-7.3-2.5.1" class="pilcrow">¶</a></p>
+below are the <span class="bcp14">RECOMMENDED</span> defaults for the value.<a href="#section-7.3-3.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.3-2.6">
-            <p id="section-7.3-2.6.1">For the high-consequence classes, the state source <span class="bcp14">MUST</span> be an active
+          <li class="normal" id="section-7.3-3.6">
+            <p id="section-7.3-3.6.1">For the high-consequence classes, the state source <span class="bcp14">MUST</span> be an active
 freshness mechanism that can reflect a revocation within the staleness
 bound: token introspection at the issuer (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>), the Mission Status
 profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), a Mission
@@ -2926,10 +2942,10 @@ Lifecycle Signals (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" 
 Token-lifetime expiry alone is not an acceptable state source for
 these classes: it bounds staleness only by the lifetime, so a revoked
 Mission keeps deriving consequence until tokens age out, which is the
-ambient-authority gap this profile exists to close.<a href="#section-7.3-2.6.1" class="pilcrow">¶</a></p>
+ambient-authority gap this profile exists to close.<a href="#section-7.3-3.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-7.3-3">For a deployment whose access tokens are short-lived and whose
+<p id="section-7.3-4">For a deployment whose access tokens are short-lived and whose
 issuance and refresh are state-gated per the core
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the refresh cycle itself is
 a conforming active freshness source for any action class whose
@@ -2938,8 +2954,8 @@ is an active check, and a token that exists is evidence the Mission
 was <code>active</code> within the lifetime. This source's revocation latency
 floor is the token lifetime, so it conforms only for classes whose
 bound admits that floor, and the higher-frequency sources (Status,
-introspection, Signals) remain the path to tighter bounds.<a href="#section-7.3-3" class="pilcrow">¶</a></p>
-<p id="section-7.3-4"><strong>Token-lifetime freshness.</strong> Below the high-consequence floor, token
+introspection, Signals) remain the path to tighter bounds.<a href="#section-7.3-4" class="pilcrow">¶</a></p>
+<p id="section-7.3-5"><strong>Token-lifetime freshness.</strong> Below the high-consequence floor, token
 expiry is itself a conforming state source: derivation and refresh
 are gated on <code>active</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so a
 token's remaining lifetime bounds the staleness of the authority it
@@ -2949,15 +2965,16 @@ the clock: no status call, no introspection, no change at the
 consuming resource. A deployment declares it per class in its
 Enforcement Scope Statement like any other source; what it cannot do
 is reflect a revocation faster than the lifetime, which is why the
-high-consequence classes require an active source.<a href="#section-7.3-4" class="pilcrow">¶</a></p>
-<p id="section-7.3-5">Together the sources form a single freshness dial, and a deployment
+high-consequence classes require an active source.<a href="#section-7.3-5" class="pilcrow">¶</a></p>
+<p id="section-7.3-6">Together the sources form a single freshness dial, and a deployment
 picks a position per action class rather than one posture for the
-estate. The comparison, informative:<a href="#section-7.3-5" class="pilcrow">¶</a></p>
+estate. The comparison, informative:<a href="#section-7.3-6" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
           <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">State source</th>
+              <th class="text-left" rowspan="1" colspan="1">Capability</th>
               <th class="text-left" rowspan="1" colspan="1">Exposure bound</th>
               <th class="text-left" rowspan="1" colspan="1">Per-action cost</th>
               <th class="text-left" rowspan="1" colspan="1">Depends on</th>
@@ -2967,6 +2984,7 @@ estate. The comparison, informative:<a href="#section-7.3-5" class="pilcrow">¶<
           <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Token-lifetime expiry</td>
+              <td class="text-left" rowspan="1" colspan="1">lifecycle-gated</td>
               <td class="text-left" rowspan="1" colspan="1">maximum token lifetime</td>
               <td class="text-left" rowspan="1" colspan="1">local clock check</td>
               <td class="text-left" rowspan="1" colspan="1">nothing beyond the token</td>
@@ -2974,6 +2992,7 @@ estate. The comparison, informative:<a href="#section-7.3-5" class="pilcrow">¶<
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">State-gated refresh</td>
+              <td class="text-left" rowspan="1" colspan="1">lifecycle-gated</td>
               <td class="text-left" rowspan="1" colspan="1">token lifetime (the refresh interval)</td>
               <td class="text-left" rowspan="1" colspan="1">none at action time</td>
               <td class="text-left" rowspan="1" colspan="1">the issuer at each refresh</td>
@@ -2981,6 +3000,7 @@ estate. The comparison, informative:<a href="#section-7.3-5" class="pilcrow">¶<
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Mission Status List</td>
+              <td class="text-left" rowspan="1" colspan="1">state-observable</td>
               <td class="text-left" rowspan="1" colspan="1">Status List Token TTL</td>
               <td class="text-left" rowspan="1" colspan="1">local bit read</td>
               <td class="text-left" rowspan="1" colspan="1">one list fetch per window</td>
@@ -2988,6 +3008,7 @@ estate. The comparison, informative:<a href="#section-7.3-5" class="pilcrow">¶<
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Status operation or introspection</td>
+              <td class="text-left" rowspan="1" colspan="1">state-observable</td>
               <td class="text-left" rowspan="1" colspan="1">published staleness bound</td>
               <td class="text-left" rowspan="1" colspan="1">one lookup within the bound, cacheable to <code>fresh_until</code>
 </td>
@@ -2996,6 +3017,7 @@ estate. The comparison, informative:<a href="#section-7.3-5" class="pilcrow">¶<
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Lifecycle Signals</td>
+              <td class="text-left" rowspan="1" colspan="1">state-observable</td>
               <td class="text-left" rowspan="1" colspan="1">delivery latency within the verified stream</td>
               <td class="text-left" rowspan="1" colspan="1">none (event-driven)</td>
               <td class="text-left" rowspan="1" colspan="1">stream liveness</td>
@@ -3003,14 +3025,14 @@ estate. The comparison, informative:<a href="#section-7.3-5" class="pilcrow">¶<
             </tr>
           </tbody>
         </table>
-<p id="section-7.3-7">No position on this dial requires a per-request issuer call: the
+<p id="section-7.3-8">No position on this dial requires a per-request issuer call: the
 tightest posture costs one lookup per staleness bound, amortized by
 caching, and the loosest costs a clock. The dial is the architecture's
 freshness dial made concrete
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), and the Enforcement
-Scope Statement records the chosen position per class.<a href="#section-7.3-7" class="pilcrow">¶</a></p>
-<p id="section-7.3-8">The following are the <span class="bcp14">RECOMMENDED</span> default freshness postures per
-class, adopted absent a documented, consequence-specific analysis:<a href="#section-7.3-8" class="pilcrow">¶</a></p>
+Scope Statement records the chosen position per class.<a href="#section-7.3-8" class="pilcrow">¶</a></p>
+<p id="section-7.3-9">The following are the <span class="bcp14">RECOMMENDED</span> default freshness postures per
+class, adopted absent a documented, consequence-specific analysis:<a href="#section-7.3-9" class="pilcrow">¶</a></p>
 <table class="center" id="table-3">
           <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
@@ -3046,8 +3068,8 @@ class, adopted absent a documented, consequence-specific analysis:<a href="#sect
             </tr>
           </tbody>
         </table>
-<p id="section-7.3-10">A deployment justifies any looser value for a high-consequence class
-in its Enforcement Scope Statement.<a href="#section-7.3-10" class="pilcrow">¶</a></p>
+<p id="section-7.3-11">A deployment justifies any looser value for a high-consequence class
+in its Enforcement Scope Statement.<a href="#section-7.3-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="policy-view">

@@ -423,20 +423,23 @@ Table of Contents
    This profile is defined against the Mission model rather than against
    OAuth 2.0 mechanics.  It consumes these substrate primitives: the
    Mission identifier and issuer; the lifecycle state space with its
-   only-active-permits rule and a freshness source; the Authority Set
-   representation with its subset rule and Common Constraints; the
-   Mission-bound credential carrying the mission claim, consumed when
-   the binding provides it; the integrity-anchor envelope; and the
-   Mission's audit horizon.  The Mission-bound credential primitive is
-   binding-dependent: a binding that does not provide it supplies an
-   externally established Mission reference instead, under the binding-
-   establishment step of Section 7.2.  The issuance profile
-   [I-D.draft-mcguinness-oauth-mission] is this version's normative
-   substrate: it defines each primitive for OAuth 2.0, and every OAuth
-   artifact named in this document enters through it.  Another
-   authorization substrate that provides the same primitives with the
-   same semantics can host this profile unchanged; such a binding is
-   defined by that substrate, not here.
+   only-active-permits rule, always in its lifecycle-gated form and
+   additionally in its state-observable form (an authenticated freshness
+   source with a stated staleness bound) wherever an enforcement scope's
+   published staleness bound is tighter than the credential lifetime
+   (Section 7.3); the Authority Set representation with its subset rule
+   and Common Constraints; the Mission-bound credential carrying the
+   mission claim, consumed when the binding provides it; the integrity-
+   anchor envelope; and the Mission's audit horizon.  The Mission-bound
+   credential primitive is binding-dependent: a binding that does not
+   provide it supplies an externally established Mission reference
+   instead, under the binding-establishment step of Section 7.2.  The
+   issuance profile [I-D.draft-mcguinness-oauth-mission] is this
+   version's normative substrate: it defines each primitive for OAuth
+   2.0, and every OAuth artifact named in this document enters through
+   it.  Another authorization substrate that provides the same
+   primitives with the same semantics can host this profile unchanged;
+   such a binding is defined by that substrate, not here.
 
 4.  The Runtime Model
 
@@ -1323,6 +1326,19 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]) whose lifetime is
    the deployment's accepted state lease.
 
+   The substrate this profile enforces against provides at least a
+   lifecycle-gated capability (Mission state at the issuer, with
+   reliance boundable by credential lifetime alone) and MAY additionally
+   provide a state-observable capability (an authenticated freshness
+   source with a stated staleness bound).  A deployment claiming runtime
+   enforcement for an action class whose published staleness bound is
+   tighter than the credential lifetime REQUIRES a state-observable
+   substrate for that class; the high-consequence classes below always
+   are.  A lifecycle-gated-only substrate supports issuance gating and a
+   lifetime-bounded action-time posture only: it cannot reflect a
+   revocation faster than the credential lifetime, so it cannot host a
+   class whose bound demands that.
+
    *  The PDP MUST refuse a consequential action when it cannot
       establish, within the deployment's published staleness bound, that
       the Mission is active.
@@ -1404,44 +1420,46 @@ Table of Contents
    picks a position per action class rather than one posture for the
    estate.  The comparison, informative:
 
-   +==============+=========+==============+============+==============+
-   |State source  |Exposure |Per-action    |Depends on  |Cannot provide|
-   |              |bound    |cost          |            |              |
-   +==============+=========+==============+============+==============+
-   |Token-lifetime|maximum  |local clock   |nothing     |suspend,      |
-   |expiry        |token    |check         |beyond the  |complete, or  |
-   |              |lifetime |              |token       |any revocation|
-   |              |         |              |            |inside the    |
-   |              |         |              |            |lifetime      |
-   +--------------+---------+--------------+------------+--------------+
-   |State-gated   |token    |none at action|the issuer  |anything      |
-   |refresh       |lifetime |time          |at each     |between       |
-   |              |(the     |              |refresh     |refreshes     |
-   |              |refresh  |              |            |              |
-   |              |interval)|              |            |              |
-   +--------------+---------+--------------+------------+--------------+
-   |Mission Status|Status   |local bit read|one list    |terminal-state|
-   |List          |List     |              |fetch per   |detail; a non-|
-   |              |Token TTL|              |window      |VALID bit     |
-   |              |         |              |            |sends the     |
-   |              |         |              |            |consumer to   |
-   |              |         |              |            |the           |
-   |              |         |              |            |authoritative |
-   |              |         |              |            |surface       |
-   +--------------+---------+--------------+------------+--------------+
-   |Status        |published|one lookup    |status      |revocation    |
-   |operation or  |staleness|within the    |surface     |inside the    |
-   |introspection |bound    |bound,        |availability|bound         |
-   |              |         |cacheable to  |            |              |
-   |              |         |fresh_until   |            |              |
-   +--------------+---------+--------------+------------+--------------+
-   |Lifecycle     |delivery |none (event-  |stream      |the pull      |
-   |Signals       |latency  |driven)       |liveness    |floor; a dead |
-   |              |within   |              |            |stream is     |
-   |              |the      |              |            |stale state   |
-   |              |verified |              |            |              |
-   |              |stream   |              |            |              |
-   +--------------+---------+--------------+------------+--------------+
+   +=============+==========+=========+===========+============+=============+
+   |State source |Capability|Exposure |Per-action |Depends on  |Cannot       |
+   |             |          |bound    |cost       |            |provide      |
+   +=============+==========+=========+===========+============+=============+
+   |Token-       |lifecycle-|maximum  |local clock|nothing     |suspend,     |
+   |lifetime     |gated     |token    |check      |beyond the  |complete, or |
+   |expiry       |          |lifetime |           |token       |any          |
+   |             |          |         |           |            |revocation   |
+   |             |          |         |           |            |inside the   |
+   |             |          |         |           |            |lifetime     |
+   +-------------+----------+---------+-----------+------------+-------------+
+   |State-gated  |lifecycle-|token    |none at    |the issuer  |anything     |
+   |refresh      |gated     |lifetime |action time|at each     |between      |
+   |             |          |(the     |           |refresh     |refreshes    |
+   |             |          |refresh  |           |            |             |
+   |             |          |interval)|           |            |             |
+   +-------------+----------+---------+-----------+------------+-------------+
+   |Mission      |state-    |Status   |local bit  |one list    |terminal-    |
+   |Status List  |observable|List     |read       |fetch per   |state detail;|
+   |             |          |Token TTL|           |window      |a non-VALID  |
+   |             |          |         |           |            |bit sends the|
+   |             |          |         |           |            |consumer to  |
+   |             |          |         |           |            |the          |
+   |             |          |         |           |            |authoritative|
+   |             |          |         |           |            |surface      |
+   +-------------+----------+---------+-----------+------------+-------------+
+   |Status       |state-    |published|one lookup |status      |revocation   |
+   |operation or |observable|staleness|within the |surface     |inside the   |
+   |introspection|          |bound    |bound,     |availability|bound        |
+   |             |          |         |cacheable  |            |             |
+   |             |          |         |to         |            |             |
+   |             |          |         |fresh_until|            |             |
+   +-------------+----------+---------+-----------+------------+-------------+
+   |Lifecycle    |state-    |delivery |none       |stream      |the pull     |
+   |Signals      |observable|latency  |(event-    |liveness    |floor; a dead|
+   |             |          |within   |driven)    |            |stream is    |
+   |             |          |the      |           |            |stale state  |
+   |             |          |verified |           |            |             |
+   |             |          |stream   |           |            |             |
+   +-------------+----------+---------+-----------+------------+-------------+
 
                                   Table 2
 
