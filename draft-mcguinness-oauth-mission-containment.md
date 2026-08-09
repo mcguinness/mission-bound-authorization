@@ -96,6 +96,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-consent-evidence:
+    title: "Mission Consent Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -286,6 +294,18 @@ The issuance profile uses "containment" for set containment in its
 subset rule; this document uses Containment for the incident-response
 control. Context distinguishes them.
 
+This document's Containment is also distinct from trifecta containment,
+the runtime enforcement layer's claim that private-data exposure,
+untrusted-content taint, and external-communication paths are jointly
+gated for a Mission's governed work
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Trifecta
+Containment"). Mission Containment narrows what a Mission's authority
+permits; trifecta containment is a property of how a deployment
+executes a Mission's work. The two compose but neither implies the
+other: a Mission can be contained under this document without trifecta
+containment holding, and trifecta containment can hold for a Mission
+that this document has never contained.
+
 # The Containment Overlay {#overlay}
 
 A Mission participating in this profile carries a containment
@@ -408,16 +428,64 @@ profile's subset rule unchanged:
   that revocation carries, bounded the same way by their own `exp`
   and the deployment's freshness rules ({{propagation}}).
 
-The same bound applies wherever authority leaves the Mission. A Child
-Mission attenuates from the parent's Effective Authority Set, so a
-contained capability never reaches a sub-agent
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). A
-cross-domain projection projects the Effective Authority Set, so a
-contained capability never crosses the trust boundary
+The same bound applies wherever authority leaves the Mission, for every
+derivation gated after the transition. A Child Mission attenuates from
+the parent's Effective Authority Set, so a contained capability is
+absent from every child derivation gated after the transition; a
+contain transition also propagates entry-wise to every Child Mission
+already justified by the contained entry, so an existing child does not
+keep deriving it either
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+"Child Mission State"). A cross-domain projection issued after the
+transition projects the Effective Authority Set, so a contained
+capability is absent from it
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). An offline
-attenuation root is derived from the Effective Authority Set, so no
-offline chain can narrow its way back to contained capability
+attenuation root issued after the transition is derived from the
+Effective Authority Set, so no offline chain minted from it can narrow
+its way back to contained capability
 ({{I-D.draft-mcguinness-oauth-mission-attenuation}}).
+
+What derivation gating and propagation do not reach is authority
+already materialized, before the transition, into a standing minting
+capability outside the issuer's control: a cross-domain projection
+grant already redeemed at a Resource AS, or an offline attenuation root
+already minted into a holder's possession. That residual is bounded on
+its own terms, not by this document ({{materialized-residual}}).
+
+# The Materialized-Capability Residual {#materialized-residual}
+
+Derivation gating stops the Mission Issuer from minting new contained
+authority, and propagation ({{propagation}}) carries a contain
+transition to every existing Child Mission it justified. Neither
+reaches authority the Mission already turned, before the transition,
+into a standing minting capability the issuer does not hold:
+
+- a cross-domain projection grant a Resource AS already redeemed
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) keeps minting
+  local tokens from that grant for the grant's own lifetime, because
+  the Resource AS re-derives nothing from the Mission and holds no
+  overlay to consult; and
+- an offline attenuation root already minted into a holder's
+  possession ({{I-D.draft-mcguinness-oauth-mission-attenuation}})
+  keeps minting narrower offline children for its own `del_max_depth`
+  and lifetime, because the attenuation substrate defines no channel
+  back to the issuer for either artifact to learn of the transition.
+
+This residual is the same shape as the residual an already-issued
+access token carries under revocation
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation"):
+authority materialized before a narrowing event outlives the event,
+bounded by the artifact's own lifetime rather than by a check this
+document adds. Containment does not widen what either artifact can do;
+it only fails to reach it early.
+
+Closing this gap is a lifetime problem, not a protocol gap this
+document can add a check for: a deployment that relies on containment
+to bound cross-domain projection or offline attenuation SHOULD keep
+grant and root lifetimes short and lease or re-mint on a cadence
+shorter than its containment response target, so the next lease or the
+next root falls after the contain transition and picks up the narrowed
+Effective Authority Set.
 
 # The authority_contained Denial Reason {#denial-reason}
 
@@ -523,6 +591,15 @@ expansion:
 Together they keep the successor clean without letting it launder:
 capability removed for cause can return, but only past an Approver
 who saw the cause.
+
+That guarantee is only as strong as the disclosure's own integrity
+reaching the Approver unaltered, and the issuance profile does not
+itself anchor consent-disclosure integrity. Where an implementation
+needs the containment history surfaced at expansion consent to be
+non-repudiable, it SHOULD commit that disclosure under the Consent
+Evidence companion's consent-disclosure commitment
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) rather than
+rely on an unattested record of what the Approver was shown.
 
 # Containment Policy {#containment-policy}
 
@@ -633,6 +710,10 @@ Mission Issuer role and only when it contains a Mission. A conforming
   on the Effective Authority Set, and deny an all-contained request
   with `authority_contained` ({{derivation-gating}},
   {{denial-reason}});
+- where it also implements Child Delegation, propagate a contain
+  transition entry-wise to every existing Child Mission the contained
+  entry justified ({{I-D.draft-mcguinness-oauth-mission-child-delegation}},
+  Section "Child Mission State");
 - carry `containment_version` on its status and introspection
   surfaces and never present contained capability as live
   ({{visibility}});
@@ -681,8 +762,15 @@ bulk lifecycle operations
 
 A compromised event source can fire protected events at will.
 Monotonicity bounds its blast radius: every transition it forces
-yields too little authority, never too much, and the overlay it
-inflates cannot be spent, delegated, or projected. Recovery is
+yields too little authority, never too much. The overlay it inflates
+cannot be spent, delegated, or projected in any derivation gated after
+the transition, and propagation carries it to every Child Mission the
+contained entry already justified
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+"Child Mission State"). The exception is the same one any adversary
+faces: the materialized-capability residual
+({{materialized-residual}}), bounded by the affected artifact's own
+lifetime regardless of which event forced the transition. Recovery is
 bounded too: the poisoned Missions are enumerable from their
 Containment Evidence, and each restores only through an approval that
 sees the containment history ({{restoration}}).
