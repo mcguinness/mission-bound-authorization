@@ -787,7 +787,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   });
   note(
     "the in-process gate reports containment_claim \"none\" (an in-process gate cannot contain a compromised agent); " +
-      "its value is an honest allowlist + an evidence trail — recorded and threaded into the Activity Log (step 20).",
+      "its value is an honest allowlist + an evidence trail, recorded and threaded into the Activity Log (step 20).",
   );
 
   // ---- 17. The human path (AAM Agent Identity Broker: approval-gated issuance) ----

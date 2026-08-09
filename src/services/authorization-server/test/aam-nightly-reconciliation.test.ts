@@ -433,7 +433,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     const stored = as.templateStore.get(templateId);
     expect(stored?.approver.sub).toBe("bob");
     // The ceiling carries the external-comms capability, consented to once for
-    // the WHOLE nightly job -- but consent to the ceiling is not consent for a
+    // the WHOLE nightly job, but consent to the ceiling is not consent for a
     // Dispatch to ever confer it (step 2 refuses every attempt).
     const ceilingActions = (stored?.ceiling ?? []).flatMap((e) => e.actions);
     expect(ceilingActions).toContain("payments:invoice.read");
@@ -468,7 +468,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(actions).toContain("payments:invoice.read");
     expect(actions).not.toContain("payments:remittance.send");
 
-    // @spec mission-template#prohibited-classes -- the CONFORMANCE proof: an
+    // @spec mission-template#prohibited-classes: the CONFORMANCE proof, an
     // intent that IS within the Template Ceiling (remittance.send is a
     // consented ceiling entry) is still refused, because it is a prohibited
     // class. This is what closes the finding: config now covers the class the
@@ -479,7 +479,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(prohibitedBody.mission_denial_reason).toBe("dispatch_prohibited_class");
 
     // A dispatch exceeding the ceiling is refused out_of_template_ceiling (a
-    // DIFFERENT reason -- distinguishing "not consented" from "consented but
+    // DIFFERENT reason, distinguishing "not consented" from "consented but
     // too consequential for machine-speed dispatch").
     const refused = await dispatch({ intent: overCeilingIntent(), dispatchEventId: `evt-over-${seq++}` });
     const refusedBody = (await refused.json()) as { mission_denial_reason?: string };
@@ -533,7 +533,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     ).toBe(true);
 
     // The low-consequence dispatched Mission never held the external-comms
-    // capability (step 2), so the PDP denies it out_of_authority -- a SECOND,
+    // capability (step 2), so the PDP denies it out_of_authority: a SECOND,
     // independent line of defense behind the Dispatch-time refusal.
     const remittanceDecision = await evalAction(dispatchedMissionId, "payments:remittance.send");
     expect(remittanceDecision.decision).toBe(false);
@@ -583,7 +583,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect((await evalAction(humanMissionId, "payments:remittance.send")).decision).toBe(true);
 
     // ...and the actual remittance now runs, mediated by the same PEP, under
-    // THIS Mission -- not under any Template-dispatched instance.
+    // THIS Mission, not under any Template-dispatched instance.
     const token = tokenFactsFor(humanMissionId);
     const send = await pep.enforce("send_remittance_email", { invoice_id: "inv-1" }, token);
     expect(send.permitted, JSON.stringify(send)).toBe(true);
