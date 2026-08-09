@@ -39,4 +39,5 @@ export type {
   StopPolicy,
 } from "./binding.js";
 export { canonicalize, type JsonValue } from "./canonicalize.js";
+export { compareAmounts, InvalidAmountError, isValidAmount } from "./decimal-amount.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";

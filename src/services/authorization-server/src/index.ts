@@ -110,6 +110,8 @@ export {
   createExpansion,
   successorMissionClaim,
   successorWidensOnly,
+  type ContainmentHistoryEntry,
+  type ExpansionEvidence,
   type ExpansionInput,
   type ExpansionResult,
 } from "./kernel/expansion.js";

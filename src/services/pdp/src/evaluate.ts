@@ -9,7 +9,7 @@
  */
 
 import { type ContextActor, validateContextActor } from "@mission/actor-chain";
-import { AUTHORITY_ENTRY_TYP, computeAnchor } from "@mission/core";
+import { AUTHORITY_ENTRY_TYP, compareAmounts, computeAnchor, isValidAmount } from "@mission/core";
 import { getTracer } from "@mission/telemetry";
 import { SignJWT, type CryptoKey } from "jose";
 import type { Fga } from "./fga.js";
@@ -192,7 +192,15 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
     const cap = entry.constraints?.max_amount;
     const amt = req.context.amount;
     if (cap && amt) {
-      if (amt.currency !== cap.currency || Number.parseFloat(amt.amount) > Number.parseFloat(cap.amount)) {
+      // @spec mission#max-amount — exact decimal-value comparison at the
+      // enforcement point, never IEEE-754 float; a malformed amount on
+      // either side fails closed (denied), never silently permitted.
+      if (
+        amt.currency !== cap.currency ||
+        !isValidAmount(amt.amount) ||
+        !isValidAmount(cap.amount) ||
+        compareAmounts(amt.amount, cap.amount) > 0
+      ) {
         return deny("constraint_exceeded");
       }
     }

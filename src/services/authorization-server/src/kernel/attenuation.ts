@@ -21,6 +21,7 @@ import {
   type AATToolArgs,
   type AATTools,
   aatToolId,
+  isValidAmount,
   parHash,
   parseAatToolId,
 } from "@mission/core";
@@ -60,6 +61,18 @@ function argsFromConstraints(constraints: AuthorityEntry["constraints"]): AATToo
   }
   if (constraints.max_amount) {
     const { amount, currency } = constraints.max_amount;
+    // @spec mission#max-amount — reject a malformed cap rather than minting a
+    // root whose `range.max` silently becomes NaN or an absurd magnitude: the
+    // AAT `range` constraint's `max` is a JSON number by wire contract (a
+    // separate concern from the decimal-string comparisons elsewhere on this
+    // path), so the fix here is validating before the one-time numeric
+    // conversion, not replacing it. A malformed max here would otherwise
+    // become an effectively-unbounded ceiling downstream: NaN < NaN and
+    // NaN > NaN are both false, so `constraintSubset`'s child.max > parent.max
+    // check never fires.
+    if (!isValidAmount(amount)) {
+      throw new Error(`attenuation root-mapping: malformed max_amount value ${JSON.stringify(amount)}`);
+    }
     args[`amount_${currency.toLowerCase()}`] = {
       constraint_type: "range",
       max: Number.parseFloat(amount),
