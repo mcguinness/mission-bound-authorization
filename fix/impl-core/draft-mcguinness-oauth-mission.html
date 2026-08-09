@@ -2761,13 +2761,15 @@ a candidate entry from a ceiling (a Mission Intent's
 Set entry narrowed to a derived or delegated token,
 <a href="#authorization-derivation" class="auto internal xref">Section 5</a>, <a href="#delegation-constraints" class="auto internal xref">Section 11.3</a>), a
 registered Common Constraint key present in the ceiling entry that the
-AS does not implement narrowing for <span class="bcp14">MUST</span> cause the AS to fail closed
-and refuse the derivation (for example <code>invalid_authorization_details</code>
-          <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>), never emit a candidate entry that omits the key.
-Omitting an unimplemented key would widen effective authority past the
-ceiling exactly as an unenforced key would at the Resource Server
-(<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>); an AS <span class="bcp14">MUST NOT</span> claim to narrow a Common
-Constraint it cannot evaluate.<a href="#section-5.2-5" class="pilcrow">¶</a></p>
+AS does not implement narrowing for <span class="bcp14">MUST NOT</span> be dropped while the
+entry survives. The AS <span class="bcp14">MUST</span> instead fail closed: refuse the whole
+derivation, or omit the entry from the result, exactly as an
+unrecognized <code>resources</code> value already may be, signaling a partial
+derivation through <code>mission_derivation</code> where that applies
+(<a href="#authorization-derivation" class="auto internal xref">Section 5</a>). Carrying the entry forward with the
+key dropped would widen effective authority past the ceiling exactly
+as an unenforced key would at the Resource Server
+(<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>).<a href="#section-5.2-5" class="pilcrow">¶</a></p>
 <p id="section-5.2-6">This document defines the initial Common Constraints:<a href="#section-5.2-6" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5.2-7.1">
@@ -2865,24 +2867,26 @@ not. A Common Constraint definition
 <span class="bcp14">MUST</span> fix its subset and intersection in value-space terms, so that
 independent deployments compute the same result for the same values and
 the subset rule of <a href="#subset" class="auto internal xref">Section 5.1</a> is reproducible.<a href="#section-5.2-8" class="pilcrow">¶</a></p>
-<p id="section-5.2-9">An <code>amount</code> string (<code>max_amount</code>, and any future Common Constraint
-that reuses this shape) <span class="bcp14">MUST</span> match <code>1*DIGIT ["." 1*DIGIT]</code>: one or
-more decimal digits, optionally followed by a single <code>.</code> and a
-fractional part of one to 18 decimal digits. A leading <code>-</code> is out of
-scope for a ceiling value and <span class="bcp14">MUST</span> be rejected.
+<p id="section-5.2-9">A decimal-string value in a Common Constraint (<code>max_amount</code>'s
+<code>amount</code> member, and any future Common Constraint with a
+decimal-valued member) <span class="bcp14">MUST</span> match <code>^[0-9]+(\.[0-9]{1,18})?$</code>: one or
+more decimal digits, optionally followed by a single <code>.</code> and one to
+18 further decimal digits. A leading <code>-</code> is out of scope for a
+ceiling value and <span class="bcp14">MUST</span> be rejected.
 A value of any other form, including scientific notation
 (<code>"1e300"</code>), a sign, a thousands separator, or a non-numeric token
 (<code>"NaN"</code>, <code>"Infinity"</code>), is malformed, and a consumer <span class="bcp14">MUST</span> reject it
-rather than attempt to parse it: the AS refuses derivation with
-<code>invalid_authorization_details</code> <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>, and a Resource Server
-treats a malformed <code>amount</code> the same as a <code>constraints</code> key it
-cannot enforce (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>). Comparison and intersection over
-two <code>amount</code> values <span class="bcp14">MUST</span> be computed as exact decimal arithmetic (for
-example, by scaling both values to integers by their fractional digit
-count and comparing the integers) and <span class="bcp14">MUST NOT</span> parse either value
-into an IEEE 754 binary floating-point type: that representation does
-not hold every value the grammar above admits exactly and can compare
-or combine two values incorrectly.<a href="#section-5.2-9" class="pilcrow">¶</a></p>
+rather than attempt to parse it: an Intent carrying one in
+<code>proposed_authority</code> is refused at submission
+(<a href="#submission-via-par" class="auto internal xref">Section 4.1</a>), and a Resource Server treats a malformed
+decimal value the same as a <code>constraints</code> key it cannot enforce
+(<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>). Comparison and intersection over two such
+decimal-string values <span class="bcp14">MUST</span> be computed as exact decimal arithmetic
+(for example, by scaling both values to integers by their fractional
+digit count and comparing the integers) and <span class="bcp14">MUST NOT</span> parse either
+value into an IEEE 754 binary floating-point type: that
+representation does not hold every value the grammar above admits
+exactly and can compare or combine two values incorrectly.<a href="#section-5.2-9" class="pilcrow">¶</a></p>
 <p id="section-5.2-10">A numeric constraint value <span class="bcp14">MUST</span> lie within the range JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
 serializes exactly. Monetary amounts avoid that hazard by
 construction: <code>max_amount</code> carries its <code>amount</code> as a string containing
