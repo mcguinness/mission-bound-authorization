@@ -32,7 +32,14 @@ import {
   type TemplateState,
   TemplateStore,
 } from "./template-store.js";
-import { type AuthorityEntry, type MissionIntent, type MissionRecord, type TemplateRef, TERMINAL_STATES } from "./types.js";
+import {
+  type ApprovalBasis,
+  type AuthorityEntry,
+  type MissionIntent,
+  type MissionRecord,
+  type TemplateRef,
+  TERMINAL_STATES,
+} from "./types.js";
 
 // Re-export the persisted types so the template module is the single public
 // surface for the feature (TemplateRef itself rides the types.ts star-export).
@@ -312,6 +319,24 @@ export function dispatchFromTemplate(
     template_hash: template.template_hash,
     dispatch_policy: template.dispatch_policy,
   };
+  // @spec mission#approval-basis, mission-template#template-lineage —
+  // standing consent to the template ceiling activates this instance:
+  // consent_principal is the template's human (== approver, unchanged);
+  // activation is the template lineage + this dispatch event;
+  // activation_actor is the Dispatcher client; root_commitment is the
+  // template's own integrity anchor.
+  const approvalBasis: ApprovalBasis = {
+    type: "template",
+    consent_principal: template.approver,
+    activation: {
+      template_id: template.id,
+      template_version: template.template_version,
+      template_hash: template.template_hash,
+      dispatch_event_id: input.dispatchEventId,
+    },
+    activation_actor: { iss: template.issuer, sub: input.dispatcher },
+    root_commitment: template.template_hash,
+  };
   const record: MissionRecord = {
     id,
     issuer: template.issuer,
@@ -322,6 +347,7 @@ export function dispatchFromTemplate(
     authority_hash: authorityHash(template.issuer, final as never),
     subject: input.subject,
     approver: template.approver,
+    approval_basis: approvalBasis,
     client_id: input.recipient,
     policy_version: input.policyVersion,
     approval_event_id: approvalEventId,

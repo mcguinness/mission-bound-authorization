@@ -11,7 +11,7 @@
 import { randomBytes } from "node:crypto";
 import { authorityHash, intentHash } from "@mission/core";
 import type { MissionKernel } from "./kernel.js";
-import type { AuthorityEntry, MissionIntent, MissionRecord } from "./types.js";
+import type { ApprovalBasis, AuthorityEntry, MissionIntent, MissionRecord } from "./types.js";
 
 export interface ExpansionInput {
   predecessorId: string;
@@ -90,6 +90,18 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
       : input.approvedUntil;
 
   const id = `msn_${randomBytes(18).toString("base64url")}`;
+  const authorityHashValue = authorityHash(predecessor.issuer, authoritySet as never);
+  // @spec mission#approval-basis — Expansion is a fresh human approval that
+  // widens authority (like kernel.approve()'s direct path): consent_principal
+  // == activation_actor == the new approver, and root_commitment is the
+  // successor's own authority_hash.
+  const approvalBasis: ApprovalBasis = {
+    type: "direct",
+    consent_principal: input.approver,
+    activation: { approval_event_id: input.approvalEventId },
+    activation_actor: input.approver,
+    root_commitment: authorityHashValue,
+  };
   const record: MissionRecord = {
     id,
     issuer: predecessor.issuer,
@@ -97,9 +109,10 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     intent: input.intent,
     authority_set: authoritySet,
     intent_hash: intentHash(predecessor.issuer, input.intent as never),
-    authority_hash: authorityHash(predecessor.issuer, authoritySet as never),
+    authority_hash: authorityHashValue,
     subject: predecessor.subject,
     approver: input.approver,
+    approval_basis: approvalBasis,
     client_id: predecessor.client_id,
     policy_version: predecessor.policy_version,
     approval_event_id: input.approvalEventId,

@@ -1,4 +1,4 @@
-import { canonicalize, type JsonValue } from "@mission/core";
+import { authorityHash, canonicalize, intentHash, type JsonValue } from "@mission/core";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -420,6 +420,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       constraints: { max_amount: { amount: maxAmount, currency: "USD" } },
       delegation: { max_depth: 2, children: childrenCtl(maxChildren) },
     });
+    const dApprovalEventId = `apev-d-${seq++}`;
     const parentRecord: MissionRecord = {
       id: `msn_dparent_${seq++}`,
       issuer: ISS,
@@ -430,9 +431,16 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       authority_hash: "sha-256:d-authority",
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
+      approval_basis: {
+        type: "direct",
+        consent_principal: { iss: ISS, sub: "bob" },
+        activation: { approval_event_id: dApprovalEventId },
+        activation_actor: { iss: ISS, sub: "bob" },
+        root_commitment: "sha-256:d-authority",
+      },
       client_id: "parent-agent",
       policy_version: "d-policy",
-      approval_event_id: `apev-d-${seq++}`,
+      approval_event_id: dApprovalEventId,
       created_at: now().toISOString(),
       expires_at: PARENT_EXP,
       version: 1,
@@ -607,5 +615,89 @@ describe("child derivation cap is independent of the parent's (@spec child-deleg
     });
     const { child } = createChild(parent.id, ["payments:invoice.read"]);
     expect(child.max_derivations).toBeNull();
+  });
+});
+
+describe("approval basis (@spec mission#approval-basis, child-delegation#child-creation)", () => {
+  it("records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)", () => {
+    const parent = approveParent();
+    const { child } = createChild(parent.id, ["payments:invoice.read"]);
+    const persisted = kernel.get(child.id);
+    expect(persisted?.approval_basis).toEqual({
+      type: "policy_drawdown",
+      consent_principal: { iss: ISS, sub: "bob" },
+      activation: {
+        policy_version: parent.policy_version,
+        activation_event_id: child.approval_event_id,
+      },
+      // The requesting principal: the PARENT's own agent, distinct from the
+      // consenting human ("bob").
+      activation_actor: { iss: ISS, sub: "parent-agent" },
+      root_commitment: parent.authority_hash,
+    });
+    // approver IS approval_basis.consent_principal (D48/O-38 convergence).
+    expect(persisted?.approver).toEqual(persisted?.approval_basis.consent_principal);
+    expect(persisted?.approval_basis.activation_actor).not.toEqual(
+      persisted?.approval_basis.consent_principal,
+    );
+    // Not folded into either integrity anchor: recomputing both from `intent`
+    // and `authority_set` alone still matches, so approval_basis carries no
+    // weight in the digests (the lock's hashing decision, made checkable).
+    expect(child.intent_hash).toBe(intentHash(child.issuer, child.intent as never));
+    expect(child.authority_hash).toBe(authorityHash(child.issuer, child.authority_set as never));
+  });
+
+  it("carries approval_basis.type on the child mission claim", () => {
+    const parent = approveParent();
+    const { child } = createChild(parent.id, ["payments:invoice.read"]);
+    const claim = childMissionClaim(kernel, kernel.get(child.id) as MissionRecord);
+    expect((claim as { approval_basis: unknown }).approval_basis).toEqual({ type: "policy_drawdown" });
+  });
+
+  it("uses the justifying entry's child_creation_policy reference as root_commitment when the entry carries one", () => {
+    const R = "https://basis.example/mcp";
+    const policy = {
+      policy_version: "basis-policy",
+      ceiling: [
+        {
+          type: "mission_resource_access",
+          resource: R,
+          actions: ["res.read"],
+          delegation: {
+            max_depth: 1,
+            children: { max_children: 5, child_creation_policy: "urn:policy:child-drawdown:v1" },
+          },
+        },
+      ],
+    };
+    const basisKernel = new MissionKernel({
+      issuer: ISS,
+      policy: policy as never,
+      statusKey: key,
+      statusKid: "as-status",
+      now,
+    });
+    const parent = basisKernel.approve({
+      intent: validateMissionIntent(
+        JSON.stringify({ goal: "root", resources: [R], expires_at: PARENT_EXP }),
+      ),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "parent-agent",
+      approvalEventId: `apev-basis-${seq++}`,
+    });
+    const { child } = createChildMission(basisKernel, {
+      parentId: parent.id,
+      intent: validateMissionIntent(
+        JSON.stringify({ goal: "sub", resources: [R], expires_at: PARENT_EXP }),
+      ),
+      childActor: { sub: "basis-child", sub_profile: "ai_agent" },
+    });
+    const persisted = basisKernel.get(child.id);
+    expect(persisted?.approval_basis.type).toBe("policy_drawdown");
+    expect(persisted?.approval_basis.root_commitment).toBe("urn:policy:child-drawdown:v1");
+    expect(
+      (persisted?.approval_basis as { activation: { policy_id?: string } }).activation.policy_id,
+    ).toBe("urn:policy:child-drawdown:v1");
   });
 });

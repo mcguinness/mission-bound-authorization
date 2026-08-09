@@ -1,4 +1,4 @@
-import { authorityHash } from "@mission/core";
+import { authorityHash, intentHash } from "@mission/core";
 import { demoReconciliationTemplate, DERIVATION_POLICY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -12,6 +12,7 @@ import {
   dispatchFromTemplate,
   IntentError,
   MissionKernel,
+  type MissionRecord,
   TemplateError,
   TemplateStore,
   validateMissionIntent,
@@ -346,6 +347,44 @@ describe("instance ordinariness (@spec mission-template#dispatch)", () => {
     const persisted = kernel.get(mission.id);
     expect(persisted?.template).toEqual(mission.template);
     expect(persisted?.template?.id).toBe(t.id);
+  });
+});
+
+describe("approval basis (@spec mission#approval-basis, mission-template#template-lineage)", () => {
+  it("records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human", () => {
+    const t = mkTemplate();
+    const { mission } = dispatch(t.id, { dispatchEventId: "dsp-basis-1" });
+    const persisted = kernel.get(mission.id);
+    expect(persisted?.approval_basis).toEqual({
+      type: "template",
+      consent_principal: { iss: ISS, sub: "human-approver" },
+      activation: {
+        template_id: t.id,
+        template_version: t.template_version,
+        template_hash: t.template_hash,
+        dispatch_event_id: "dsp-basis-1",
+      },
+      activation_actor: { iss: ISS, sub: "orchestrator" },
+      root_commitment: t.template_hash,
+    });
+    // approver IS approval_basis.consent_principal (D48/O-38 convergence).
+    expect(persisted?.approver).toEqual(persisted?.approval_basis.consent_principal);
+    // The Dispatcher (activation_actor) is distinct from the consenting human.
+    expect(persisted?.approval_basis.activation_actor).not.toEqual(
+      persisted?.approval_basis.consent_principal,
+    );
+    // Not folded into either integrity anchor: recomputing both from `intent`
+    // and `authority_set` alone still matches, so approval_basis carries no
+    // weight in the digests (the lock's hashing decision, made checkable).
+    expect(mission.intent_hash).toBe(intentHash(ISS, mission.intent as never));
+    expect(mission.authority_hash).toBe(authorityHash(ISS, mission.authority_set as never));
+  });
+
+  it("carries approval_basis.type on the mission claim", () => {
+    const t = mkTemplate();
+    const { mission } = dispatch(t.id);
+    const claim = kernel.missionClaim(kernel.get(mission.id) as MissionRecord);
+    expect(claim.approval_basis).toEqual({ type: "template" });
   });
 });
 

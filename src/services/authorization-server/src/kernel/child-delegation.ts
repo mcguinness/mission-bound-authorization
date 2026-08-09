@@ -32,6 +32,7 @@ import { authorityHash, canonicalize, intentHash, type JsonValue } from "@missio
 import { isSubsetEntry, isSubsetSet } from "./derive.js";
 import type { MissionKernel } from "./kernel.js";
 import {
+  type ApprovalBasis,
   type AuthorityEntry,
   type CascadeMode,
   type ChildEvidence,
@@ -398,6 +399,34 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     created_at: nowIso,
   };
 
+  // @spec child-delegation#child-evidence — the PRIMARY justifying entry (the
+  // child's first Authority Set entry) is also the approval-basis anchor: its
+  // `child_creation_policy`, when carried, is the drawdown policy reference.
+  const primaryPi = justifying[0] as number;
+  const primaryChildren = childrenOf(parentEntry(primaryPi));
+  const primaryPolicyId = primaryChildren?.child_creation_policy;
+  const approvalEventId = `dlg_${randomBytes(12).toString("base64url")}`;
+  // @spec mission#approval-basis, child-delegation#child-creation — every
+  // child creation in this reference implementation is policy-adjudicated
+  // (the fan-out on-switch above), never a separate per-child human
+  // approval: consent_principal is the parent's accountable human (== the
+  // inherited approver); activation_actor is the parent agent that requested
+  // this child (the parent's own client_id, distinct from consent_principal);
+  // root_commitment is the justifying entry's `child_creation_policy`
+  // reference when carried, else the parent's own authority_hash (the
+  // integrity anchor of the consented root the drawdown draws against).
+  const approvalBasis: ApprovalBasis = {
+    type: "policy_drawdown",
+    consent_principal: parent.approver,
+    activation: {
+      ...(primaryPolicyId ? { policy_id: primaryPolicyId } : {}),
+      policy_version: parent.policy_version,
+      activation_event_id: approvalEventId,
+    },
+    activation_actor: { iss: parent.issuer, sub: parent.client_id },
+    root_commitment: primaryPolicyId ?? parent.authority_hash,
+  };
+
   const child: MissionRecord = {
     id: childId,
     // @spec child-delegation#cross-issuer — the child issuer equals parent.issuer.
@@ -412,12 +441,13 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     // (§issuance-relationship): a Child Mission is created under a parent grant.
     subject: parent.subject,
     approver: parent.approver,
+    approval_basis: approvalBasis,
     // @spec child-delegation#child-client-identity — client_id == child actor sub.
     client_id: clientId,
     policy_version: parent.policy_version,
     // @spec child-delegation#record-requirements — the delegation event IS the
     // child's approval event (dlg_-prefixed; no separate human approval).
-    approval_event_id: `dlg_${randomBytes(12).toString("base64url")}`,
+    approval_event_id: approvalEventId,
     created_at: nowIso,
     expires_at: expiresAt,
     version: 1,
@@ -438,8 +468,6 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // @spec child-delegation#child-evidence — permit record. `fanout` is recorded
   // for the PRIMARY justifying entry (the child's first Authority Set entry);
   // active_children is the bucket count AFTER this insert.
-  const primaryPi = justifying[0] as number;
-  const primaryChildren = childrenOf(parentEntry(primaryPi));
   const primaryMax = asNum(primaryChildren?.max_children);
   const evidence = makeEvidence("created", "strict_subset", undefined, {
     active_children: (buckets.get(primaryPi) ?? 0) + 1,
