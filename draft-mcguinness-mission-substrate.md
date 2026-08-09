@@ -320,7 +320,7 @@ relying on it. In consequence, state whose origin or integrity a
 consumer cannot verify is treated as unavailable and fails closed.
 Verifying a signed state report consumes the issuer key material of
 {{keys}}. A lifecycle-gated-only substrate supports issuance gating
-but not action-time state enforcement
+but not action-time state enforcement inside the credential lifetime
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
 Home: the Mission Lifecycle and Gating section of
