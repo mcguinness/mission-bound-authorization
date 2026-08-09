@@ -90,23 +90,24 @@ Table of Contents
    8.  Protected Events
    9.  Derivation Gating
    10. The Materialized-Capability Residual
-   11. The authority_contained Denial Reason
-   12. Visibility
-   13. Propagation
-   14. Restoration Through Expansion
-   15. Containment Policy
-   16. Containment Evidence
-     16.1.  Containment Evidence Object
-     16.2.  Canonical Bytes
-   17. Protected Event Receipt
-   18. Conformance
-   19. Security Considerations
-     19.1.  Forced Premature Containment
-     19.2.  The Containment Plane
-     19.3.  Compromised Event Source
-     19.4.  Containment History at Expansion
-   20. Privacy Considerations
-   21. IANA Considerations
+   11. Containment Properties
+   12. The authority_contained Denial Reason
+   13. Visibility
+   14. Propagation
+   15. Restoration Through Expansion
+   16. Containment Policy
+   17. Containment Evidence
+     17.1.  Containment Evidence Object
+     17.2.  Canonical Bytes
+   18. Protected Event Receipt
+   19. Conformance
+   20. Security Considerations
+     20.1.  Forced Premature Containment
+     20.2.  The Containment Plane
+     20.3.  Compromised Event Source
+     20.4.  Containment History at Expansion
+   21. Privacy Considerations
+   22. IANA Considerations
    Acknowledgments
    References
      Normative References
@@ -187,19 +188,22 @@ Table of Contents
 
    *  derivation gating on the Effective Authority Set (Section 9);
 
-   *  the authority_contained denial reason (Section 11);
+   *  the Baseline and Runtime-Enforced containment properties
+      (Section 11);
+
+   *  the authority_contained denial reason (Section 12);
 
    *  visibility of containment on status and introspection surfaces
-      (Section 12);
+      (Section 13);
 
-   *  propagation over the existing state machinery (Section 13);
+   *  propagation over the existing state machinery (Section 14);
 
    *  restoration, only through an approved successor Mission
-      (Section 14);
+      (Section 15);
 
-   *  the containment policy and its consent seam (Section 15); and
+   *  the containment policy and its consent seam (Section 16); and
 
-   *  the Containment Evidence object (Section 16).
+   *  the Containment Evidence object (Section 17).
 
    This document does NOT define:
 
@@ -207,14 +211,14 @@ Table of Contents
       max_amount ceiling); the overlay is removal-only (Section 6.1);
 
    *  any transition that reverts containment in place; restoration is a
-      successor Mission (Section 14);
+      successor Mission (Section 15);
 
    *  a dedicated containment event type for Signals consumers; the
       metadata-only lifecycle event carries the change in the interim
-      (Section 13);
+      (Section 14);
 
    *  the content of the controls.containment Mission Intent member; it
-      is named as an extension point only (Section 15); or
+      is named as an extension point only (Section 16); or
 
    *  how a deployment detects a tainted read or an anomaly; detection
       belongs to the harness, runtime, and discovery layers (Section 8).
@@ -241,8 +245,10 @@ Table of Contents
 
    Effective Authority Set:  The approved Authority Set minus contained
       capability and, where the Status profile's completion capability
-      runs, minus discharged entries.  Every authority that leaves the
-      Mission is bounded by it (Section 9).
+      runs, minus discharged entries.  Every derivation gated after a
+      contain transition is bounded by it; authority that left the
+      Mission before the transition keeps its own bound, not this one
+      (Section 9).
 
    Protected event:  An event class the containment policy declares as a
       containment trigger, whose verified occurrence commits a contain
@@ -302,7 +308,7 @@ Table of Contents
    need a per-constraint comparator to prove each successive overlay no
    broader than the last.  A deployment that needs a tighter constraint
    contains the affected actions and re-approves them, tightened,
-   through a successor Mission (Section 14).
+   through a successor Mission (Section 15).
 
 6.2.  Relationship to Entry Discharge
 
@@ -324,7 +330,7 @@ Table of Contents
       capability: the new contained set MUST be a superset of the prior
       one, and a transition MUST NOT remove an entry, restore an action,
       or otherwise revert containment.  No operation of this profile
-      shrinks the overlay (Section 14).
+      shrinks the overlay (Section 15).
 
    *  *Idempotent per event.* Each contain transition is attributed to a
       protected event by its event_id.  A duplicate report of the same
@@ -351,7 +357,7 @@ Table of Contents
 
 8.  Protected Events
 
-   The containment policy (Section 15) declares the event classes that
+   The containment policy (Section 16) declares the event classes that
    trigger containment.  Representative classes, defined by their own
    layers, not here: a tainted read under the harness taint policy
    ([I-D.draft-mcguinness-mission-harness]), an anomaly signal from the
@@ -376,20 +382,20 @@ Table of Contents
 
    The Mission Issuer MUST record a Protected Event Receipt for every
    protected event it receives, whether the event is applied as a
-   contain transition or rejected (Section 17).  Fail-closed means the
+   contain transition or rejected (Section 18).  Fail-closed means the
    event is rejected rather than acted on; it never means the event goes
    unrecorded.
 
 9.  Derivation Gating
 
-   A derived or delegated credential MUST NOT carry contained
-   capability.  Token derivation under a contained Mission MUST evaluate
-   the request against the Effective Authority Set, with the issuance
-   profile's subset rule unchanged:
+   A credential derived or delegated after a contain transition MUST NOT
+   carry contained capability.  Token derivation under a contained
+   Mission MUST evaluate the request against the Effective Authority
+   Set, with the issuance profile's subset rule unchanged:
 
    *  a derivation request whose authority lies entirely within the
       contained set MUST fail, with the authority_contained denial
-      reason (Section 11);
+      reason (Section 12);
 
    *  a derivation request covering both contained and uncontained
       capability MUST omit the contained capability: the issued token
@@ -397,7 +403,7 @@ Table of Contents
 
    *  tokens already issued before the transition are the same residual
       that revocation carries, bounded the same way by their own exp and
-      the deployment's freshness rules (Section 13).
+      the deployment's freshness rules (Section 14).
 
    The same bound applies wherever authority leaves the Mission, for
    every derivation gated after the transition.  A Child Mission
@@ -426,7 +432,7 @@ Table of Contents
 10.  The Materialized-Capability Residual
 
    Derivation gating stops the Mission Issuer from minting new contained
-   authority, and propagation (Section 13) carries a contain transition
+   authority, and propagation (Section 14) carries a contain transition
    to every existing Child Mission it justified.  Neither reaches
    authority the Mission already turned, before the transition, into a
    standing minting capability the issuer does not hold:
@@ -459,7 +465,40 @@ Table of Contents
    the next root falls after the contain transition and picks up the
    narrowed Effective Authority Set.
 
-11.  The authority_contained Denial Reason
+11.  Containment Properties
+
+   Section 9 and Section 10 together state one containment property; a
+   second exists only where the substrate supports it.  What a consumer
+   actually gets depends on which one it relies on:
+
+   Baseline:  a new-derivation kill.  From the transition forward, no
+      derivation, delegation, projection, or attenuation root minted
+      after it carries contained capability (Section 9).  A token issued
+      before the transition, or capability already materialized outside
+      the issuer's reach, can still carry the removed capability until
+      that artifact's own lifetime runs out (Section 10).  Baseline
+      needs nothing of a consumer beyond the ordinary bearer check,
+      signature and exp: it is the property a lifecycle-gated substrate
+      provides ([I-D.draft-mcguinness-mission-substrate]).
+
+   Runtime-Enforced:  an action-time kill.  A consumer that checks a
+      fresh, authenticated state source at or near the time of the
+      action, Mission Status, introspection, or the runtime layer's PDP,
+      denies contained capability whether or not the credential it
+      evaluates predates the transition, bounded by that source's
+      staleness plus the permit and execution windows
+      ([I-D.draft-mcguinness-mission-runtime]).  Runtime-Enforced
+      requires the substrate to be state-observable
+      ([I-D.draft-mcguinness-mission-substrate]); a consumer that never
+      consults such a source gets Baseline only, however long the
+      Mission has been contained.
+
+   Neither property is a deployment failure: a consumer that only checks
+   exp is a fully conformant Baseline consumer, and its exposure to
+   contained capability is bounded by token lifetime, not by a defect in
+   this document.
+
+12.  The authority_contained Denial Reason
 
    authority_contained:  The requested capability was approved for this
       Mission and is currently contained.
@@ -471,7 +510,7 @@ Table of Contents
    authority_contained reports capability the Approver granted and the
    issuer then contained.  That history is what makes the denial
    expansion-eligible: once-approved authority is a candidate for re-
-   adjudication (Section 14), where never-approved authority is an
+   adjudication (Section 15), where never-approved authority is an
    ordinary out-of-authority denial.
 
    At the token endpoint the denial uses the issuance profile's error
@@ -490,7 +529,7 @@ Table of Contents
    eligible, and eligibility is not an authorization in favor of
    expansion.
 
-12.  Visibility
+13.  Visibility
 
    A contained Mission MUST NOT present contained capability as live.
    When this profile runs:
@@ -507,7 +546,7 @@ Table of Contents
    consumer that reads it holds a precise question: whether the
    authority view it materialized predates the current overlay.
 
-13.  Propagation
+14.  Propagation
 
    Containment rides the existing state-propagation machinery and adds
    none:
@@ -538,14 +577,14 @@ Table of Contents
    [I-D.draft-mcguinness-mission-runtime]); this document does not
    restate them.
 
-14.  Restoration Through Expansion
+15.  Restoration Through Expansion
 
    Contained authority returns only as a new approval.  No transition of
    this profile removes capability from the overlay; the path back is a
    successor Mission adjudicated under the expansion profile
    ([I-D.draft-mcguinness-oauth-mission-expansion]), whose authority
    comes only from its own approval event.  An authority_contained
-   denial is the expansion-eligible signal for that path (Section 11).
+   denial is the expansion-eligible signal for that path (Section 12).
 
    Two rules close the laundering gap between containment and expansion:
 
@@ -572,7 +611,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-consent-evidence]) rather than
    rely on an unattested record of what the Approver was shown.
 
-15.  Containment Policy
+16.  Containment Policy
 
    The map from protected event class to narrowing is the containment
    policy.  It is issuer-held, parallel to the derivation policy by
@@ -591,13 +630,13 @@ Table of Contents
    consented member can only tighten what the issuer-held policy would
    do, never loosen it.
 
-16.  Containment Evidence
+17.  Containment Evidence
 
    The Mission Issuer MUST record a Containment Evidence object for each
    contain transition.  This evidence is audit material and does not
    grant authority.
 
-16.1.  Containment Evidence Object
+17.1.  Containment Evidence Object
 
    A Containment Evidence object is a JSON object [RFC8259] with:
 
@@ -651,7 +690,7 @@ Table of Contents
      "created_at": "2026-11-02T09:41:02Z"
    }
 
-16.2.  Canonical Bytes
+17.2.  Canonical Bytes
 
    A Containment Evidence object's canonical bytes are its JCS [RFC8785]
    canonicalization, and its type identifier is application/mission-
@@ -659,7 +698,7 @@ Table of Contents
    registration.  An audit or transparency profile registers the object
    by these values.
 
-17.  Protected Event Receipt
+18.  Protected Event Receipt
 
    Containment Evidence records the transition a protected event drove;
    it has no object for a protected event the Mission Issuer rejected.
@@ -684,7 +723,7 @@ Table of Contents
    policy:  CONDITIONAL.  Identifier of the containment policy rule
       applied.  REQUIRED when outcome is applied; matches the policy
       member of the Containment Evidence object the transition committed
-      (Section 16.1).
+      (Section 17.1).
 
    rejection_reason:  CONDITIONAL.  A string.  REQUIRED when outcome is
       rejected: the reason the event was not applied (for example, an
@@ -730,11 +769,11 @@ Table of Contents
    transparency profile registers the object by these values.
 
    An applied receipt's event_id correlates it to the Containment
-   Evidence object the same event produced (Section 16.1); a rejected
+   Evidence object the same event produced (Section 17.1); a rejected
    receipt has no corresponding Containment Evidence, because no
    transition committed.
 
-18.  Conformance
+19.  Conformance
 
    An implementation claims conformance to this document only in the
    Mission Issuer role and only when it contains a Mission.  A
@@ -749,7 +788,7 @@ Table of Contents
 
    *  gate every derivation, delegation, projection, and attenuation
       root on the Effective Authority Set, and deny an all-contained
-      request with authority_contained (Section 9, Section 11);
+      request with authority_contained (Section 9, Section 12);
 
    *  where it also implements Child Delegation, propagate a contain
       transition entry-wise to every existing Child Mission the
@@ -758,31 +797,37 @@ Table of Contents
       Section "Child Mission State");
 
    *  carry containment_version on its status and introspection surfaces
-      and never present contained capability as live (Section 12);
+      and never present contained capability as live (Section 13);
 
    *  record a Containment Evidence object per contain transition
-      (Section 16);
+      (Section 17);
 
    *  record a Protected Event Receipt for the ingestion decision on
-      every protected event received, applied or rejected (Section 17);
+      every protected event received, applied or rejected (Section 18);
       and
 
    *  where it also adjudicates expansion, start the successor
       uncontained and surface the predecessor's containment history at
-      the expansion consent (Section 14).
+      the expansion consent (Section 15).
 
    A containment-capable Mission Issuer is also a conforming issuance-
-   profile Mission Issuer ([I-D.draft-mcguinness-oauth-mission]).  A
-   Resource Server requires no new behavior: a token it sees never
-   carries contained capability (Section 9).
+   profile Mission Issuer ([I-D.draft-mcguinness-oauth-mission]).
+   Containment gives every Resource Server the Baseline property with no
+   change to the Resource Server; the Runtime-Enforced property
+   additionally requires it to consult a fresh state source
+   (Section 11).  "No new behavior" holds only for a Resource Server
+   that relies on Baseline: a token issued after the contain transition
+   never carries contained capability, and a token issued before the
+   transition can still carry it until that token's own expiry
+   (Section 11).
 
-19.  Security Considerations
+20.  Security Considerations
 
    Containment's guarantee is directional: every rule in this document
    moves authority in one direction, down.  The risks specific to it are
    who can force that movement and what the movement discloses.
 
-19.1.  Forced Premature Containment
+20.1.  Forced Premature Containment
 
    Containment is monotonic by construction: it only removes capability,
    so it is not a path to escalation, and a compromised or injected
@@ -793,9 +838,9 @@ Table of Contents
    forced premature discharge, bounded the same way: the event-source
    authentication, integrity, and fail-closed rules of Section 8 bound
    who can force it, and restoration remains available through a fresh
-   approval (Section 14).
+   approval (Section 15).
 
-19.2.  The Containment Plane
+20.2.  The Containment Plane
 
    Whatever surface applies contain transitions, the issuer's event
    intake or an operator plane, holds a denial capability over live
@@ -805,7 +850,7 @@ Table of Contents
    bulk lifecycle operations
    ([I-D.draft-mcguinness-oauth-mission-management]).
 
-19.3.  Compromised Event Source
+20.3.  Compromised Event Source
 
    A compromised event source can fire protected events at will.
    Monotonicity bounds its blast radius: every transition it forces
@@ -820,18 +865,18 @@ Table of Contents
    event forced the transition.  Recovery is bounded too: the poisoned
    Missions are enumerable from their Containment Evidence, and each
    restores only through an approval that sees the containment history
-   (Section 14).
+   (Section 15).
 
-19.4.  Containment History at Expansion
+20.4.  Containment History at Expansion
 
-   The disclosure rule of Section 14 is load-bearing: without it,
+   The disclosure rule of Section 15 is load-bearing: without it,
    expansion is a laundering path in which capability removed for cause
    returns through a successor the Approver believes is clean.  An
    implementation that omits the predecessor's containment history from
    the expansion consent defeats containment for any adversary patient
    enough to ask again.
 
-20.  Privacy Considerations
+21.  Privacy Considerations
 
    A containment overlay discloses incident posture: that an event
    fired, which capability it implicated, and when.  The Mission Status
@@ -848,7 +893,7 @@ Table of Contents
    that a report was made and refused, which is itself incident posture
    under the same rule.
 
-21.  IANA Considerations
+22.  IANA Considerations
 
    This document requires no IANA action.
 
@@ -868,11 +913,11 @@ Table of Contents
 
    The Containment Evidence type identifier application/mission-
    containment-evidence+json is used by local agreement pending
-   registration (Section 16.2).
+   registration (Section 17.2).
 
    The Protected Event Receipt type identifier application/mission-
    protected-event-receipt+json is used by local agreement pending
-   registration (Section 17).
+   registration (Section 18).
 
 Acknowledgments
 
@@ -953,6 +998,11 @@ Informative References
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime.html>.
+
+   [I-D.draft-mcguinness-mission-substrate]
+              McGuinness, K., "Mission Substrate Requirements", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-substrate.html>.
 
    [I-D.draft-mcguinness-oauth-mission-attenuation]
               McGuinness, K., "Mission Offline Attenuation for OAuth

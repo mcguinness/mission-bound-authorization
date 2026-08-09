@@ -2578,20 +2578,31 @@ TTL-only end of that dial is a first-class posture, not a fallback.
 A deployment that relies on lifetimes alone verifies with local
 cryptography and a clock: no state source, no freshness discipline,
 no availability coupling, and a worst-case exposure equal to the
-lifetime by construction. That posture is the right choice at action
-grain, where an artifact lives seconds to minutes and no revocation
-can land inside its window, and for short missions; the family's own
+lifetime by construction. That is not a deployment falling short of
+the substrate; it is the <strong>lifecycle-gated</strong> capability, the floor
+every substrate provides, satisfied by Mission state existing at the
+issuer with reliance bounded by credential lifetime alone
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span> is the normative
+definition). That posture is the right choice at action grain, where
+an artifact lives seconds to minutes and no revocation can land
+inside its window, and for short missions; the family's own
 short-lived artifacts (the permit, the cross-domain grant, the Join
 Assertion) already sit at this end. What a lifetime cannot do is
 suspend, complete, or kill now, which is the task-grain residue the
-Mission's state carries. The two ends are one mechanism seen from
-opposite sides: a lifetime relocates the freshness check from the
-verification path to the issuance path, so every re-issuance is the
-policy re-check, which is the family's
+Mission's state carries and which the <strong>state-observable</strong> capability
+reaches: an authenticated freshness source with a stated staleness
+bound, a named substrate capability a binding MAY provide on top of
+the lifecycle-gated floor (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>),
+and the one runtime enforcement requires
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The two ends are one
+mechanism seen from opposite sides: a lifetime relocates the freshness
+check from the verification path to the issuance path, so every
+re-issuance is the policy re-check, which is the family's
 gates-new-derivation-only rule in its other reading. A deployment
 states where it sits on the dial through its bounded-revocation
 claim (<a href="#assurance-claims-axis" class="auto internal xref">Section 16.1</a>): a TTL-only posture claims the
-lifetime as its bound, honestly and with no state surface. The
+lifetime as its bound, honestly, lifecycle-gated and
+substrate-conformant on its own, with no state-observable overlay. The
 runtime profile prices each position, source by source, in its state
 and freshness section (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-11.10-4" class="pilcrow">¶</a></p>
 </section>
@@ -3880,15 +3891,20 @@ mediated actions within the staleness bound (<a href="#validity-model" class="au
 but it terminates no process and closes no network path. The
 converse holds too: killing a workload leaves the Mission <code>active</code>
 and its authority derivable to a replacement instance unless the
-Mission is also revoked. Capability kill carries its own residual: it
-gates derivations minted after the transition and propagates to Child
-Missions justified by the contained entry, but a cross-domain grant
-already redeemed or an offline attenuation root already minted before
-the transition keeps its own bounded lifetime, exactly as the
-credential-kill row's residual does
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>). A deployment's
-incident runbook names which of these controls exist and who may pull
-each.<a href="#section-18.1-3" class="pilcrow">¶</a></p>
+Mission is also revoked. Capability kill claims one of two properties,
+and which one tracks the deployment's assurance level
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>): at Baseline
+Issuance, a new-derivation kill, gating derivations minted after the
+transition and propagating to Child Missions justified by the
+contained entry, while a cross-domain grant already redeemed or an
+offline attenuation root already minted before the transition keeps
+its own bounded lifetime, exactly as the credential-kill row's
+residual does; at Runtime-Enforced and above, an action-time kill that
+additionally reaches a token issued before the transition, bounded by
+the state source's staleness plus the permit and execution windows.
+A deployment's incident runbook names which of these controls exist,
+who may pull each, and which capability-kill property its own
+assurance level claims.<a href="#section-18.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
