@@ -494,7 +494,11 @@ Mission-bound token:
 This profile is defined against the Mission model rather than against
 OAuth 2.0 mechanics. It consumes these substrate primitives: the
 Mission identifier and issuer; the lifecycle state space with its
-only-`active`-permits rule and a freshness source; the Authority Set
+only-`active`-permits rule, always in its lifecycle-gated form and
+additionally in its state-observable form (an authenticated freshness
+source with a stated staleness bound) wherever an enforcement scope's
+published staleness bound is tighter than the credential lifetime
+({{state-freshness}}); the Authority Set
 representation with its subset rule and Common Constraints; the
 Mission-bound credential carrying the `mission` claim, consumed when
 the binding provides it; the integrity-anchor envelope; and the
@@ -1353,6 +1357,19 @@ materialized policy view, or a short-lived cross-domain credential
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) whose lifetime
 is the deployment's accepted state lease.
 
+The substrate this profile enforces against provides at least a
+lifecycle-gated capability (Mission state at the issuer, with reliance
+boundable by credential lifetime alone) and MAY additionally provide a
+state-observable capability (an authenticated freshness source with a
+stated staleness bound). A deployment claiming runtime enforcement for
+an action class whose published staleness bound is tighter than the
+credential lifetime REQUIRES a state-observable substrate for that
+class; the high-consequence classes below always are. A
+lifecycle-gated-only substrate supports issuance gating and a
+lifetime-bounded action-time posture only: it cannot reflect a
+revocation faster than the credential lifetime, so it cannot host a
+class whose bound demands that.
+
 - The PDP MUST refuse a consequential action when it cannot establish,
   within the deployment's published staleness bound, that the Mission
   is `active`.
@@ -1429,13 +1446,13 @@ Together the sources form a single freshness dial, and a deployment
 picks a position per action class rather than one posture for the
 estate. The comparison, informative:
 
-| State source | Exposure bound | Per-action cost | Depends on | Cannot provide |
-|---|---|---|---|---|
-| Token-lifetime expiry | maximum token lifetime | local clock check | nothing beyond the token | suspend, complete, or any revocation inside the lifetime |
-| State-gated refresh | token lifetime (the refresh interval) | none at action time | the issuer at each refresh | anything between refreshes |
-| Mission Status List | Status List Token TTL | local bit read | one list fetch per window | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
-| Status operation or introspection | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
-| Lifecycle Signals | delivery latency within the verified stream | none (event-driven) | stream liveness | the pull floor; a dead stream is stale state |
+| State source | Capability | Exposure bound | Per-action cost | Depends on | Cannot provide |
+|---|---|---|---|---|---|
+| Token-lifetime expiry | lifecycle-gated | maximum token lifetime | local clock check | nothing beyond the token | suspend, complete, or any revocation inside the lifetime |
+| State-gated refresh | lifecycle-gated | token lifetime (the refresh interval) | none at action time | the issuer at each refresh | anything between refreshes |
+| Mission Status List | state-observable | Status List Token TTL | local bit read | one list fetch per window | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
+| Status operation or introspection | state-observable | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
+| Lifecycle Signals | state-observable | delivery latency within the verified stream | none (event-driven) | stream liveness | the pull floor; a dead stream is stale state |
 
 No position on this dial requires a per-request issuer call: the
 tightest posture costs one lookup per staleness bound, amortized by
