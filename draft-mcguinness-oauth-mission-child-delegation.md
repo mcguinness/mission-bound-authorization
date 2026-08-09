@@ -769,17 +769,35 @@ event produces.
 A Child Mission is created under a parent grant rather than a
 first-party approval ({{issuance-relationship}}), so its human
 accountability is inherited from the Parent Mission's own approval.
-Where the deployment requires a human approval event for child creation
-({{child-creation}}), that event meets the issuance profile's
-approval-event requirements in full and its human Approver is the
-record's approver.
+The Child Mission's `approval_basis` (the issuance profile's Mission
+Record member, {{I-D.draft-mcguinness-oauth-mission}}) records how.
 
-Where creation is adjudicated by policy with no human
-interaction ({{child-client-identity}}), the record's approver is the
-adjudicating policy (identified by the `child_creation_policy` reference
-where the entry carries one, {{fanout}}) together with the Subject and
-Approver of the Parent Mission the parent grant resolves to, and the
-record MUST mark the approval as policy-adjudicated rather than human.
+Where the deployment requires a human approval event for child
+creation ({{child-creation}}), that event meets the issuance
+profile's approval-event requirements in full, its human Approver is
+the record's `approver`, and `approval_basis.type` is `direct`:
+`consent_principal` is that Approver, `activation` is
+`{ approval_event_id }`, `activation_actor` equals
+`consent_principal`, and `root_commitment` is the child's own
+`authority_hash`, exactly as for an ordinary Mission.
+
+Where creation is adjudicated by policy with no human interaction
+({{child-client-identity}}), `approval_basis.type` is
+`policy_drawdown`: `consent_principal` is the Parent Mission's own
+`approver`, the accountable human standing behind the delegation
+policy that permits child creation ({{fanout}}); `activation` carries
+the adjudicating policy's `id` and `version` and this creation's own
+delegation event identifier (above) as `activation_event_id`;
+`activation_actor` is the requesting parent agent, the Parent
+Mission's `client_id`, distinct from `consent_principal`; and
+`root_commitment` is the committed reference to the adjudicating
+policy: the entry's `child_creation_policy` reference where the entry
+carries one, or the deployment's published child-creation policy
+reference otherwise ({{fanout}}). A Mission Issuer that cannot commit
+such a reference MUST NOT record `policy_drawdown`; it creates the
+Child Mission under a fresh human approval event (`direct`) instead.
+The record's `approver` is `consent_principal`: the Parent Mission's
+human Approver, never the policy and never the requesting agent.
 
 # Attenuation Rules {#attenuation}
 
@@ -1281,6 +1299,10 @@ A conforming Child-Mission-capable Mission Issuer MUST:
 - enforce strict-subset authority and expiry;
 - enforce delegation and fan-out controls;
 - record the `parent` member on child Mission records and tokens;
+- record the Child Mission's `approval_basis` ({{record-requirements}}):
+  `direct` for a human-approved child, `policy_drawdown` for one
+  policy adjudicates, with `consent_principal` always the Parent
+  Mission's human `approver`;
 - implement cascade revocation; and
 - record child delegation evidence.
 

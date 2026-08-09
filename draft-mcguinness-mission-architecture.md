@@ -678,12 +678,12 @@ profile.
 
 **Authority serves an approved task**:
 : No Mission-bound authority exists except by derivation for a
-  Mission, and a Mission is created only by an explicit approval
-  event that commits `intent_hash` and `authority_hash` (the core).
-  Fields an agent can influence shape authority only through the
-  pre-approval derivation the Approver consents to; once the Mission
-  is approved they are inert and never derive, widen, or gate
-  authority.
+  Mission, and a Mission is created only when rooted in an approved
+  authorization basis that commits `intent_hash` and `authority_hash`
+  (the core). Fields an agent can influence shape authority only
+  through the pre-approval derivation the Approver consents to; once
+  the Mission is approved they are inert and never derive, widen, or
+  gate authority.
 
 **Only `active` permits**:
 : Issuance, refresh, and reliance require the exact state `active`;
@@ -723,6 +723,15 @@ profile.
 : The integrity anchors prove what was approved and committed, not
   that the derivation was the right reading of the task
   ({{derivation-boundary}}).
+
+Read against "approved" in the first invariant, the core names three
+authorization bases, never an eighth invariant: `direct`, a human's
+own approval; `template`, a dispatch drawing on a ceiling the human
+consented to once; and `policy_drawdown`, a child instance a policy
+adjudicates within a bound the parent's human already consented to.
+All three fix the same accountable human as `consent_principal`; they
+differ only in what activated this instance and what root that
+activation traces to (the core).
 
 Read substrate-neutrally, the invariants carry the five laws the
 companion handbook names for the layer: durability, attribution,
@@ -1553,12 +1562,14 @@ Who holds the deciding side is a spectrum, not a species: the
 approval event requires an accountable principal deciding against
 committed inputs before any authority exists, and the proposer is
 never the approver. A deterministic, versioned policy can approve at
-machine speed within a ceiling a human consented to (policy approves
-the instance because a human approved the policy, with
-`policy_version` keeping that chain re-checkable), while a model's
-generated judgment is never the sole authority for granting or
-widening: a generated approver reading attacker-influenced proposals
-is itself an injection surface. The high-consequence classes stay on
+machine speed within a ceiling a human consented to (the core's
+`policy_drawdown` and `template` authorization bases, {{invariants}}):
+policy approves the instance because a human approved the policy or
+the template, with `policy_version` keeping that chain re-checkable,
+while a model's generated judgment is never the sole authority for
+granting or widening: a generated approver reading
+attacker-influenced proposals is itself an injection surface. The
+high-consequence classes stay on
 a fresh human decision, per the progressive profile's prohibited set
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
