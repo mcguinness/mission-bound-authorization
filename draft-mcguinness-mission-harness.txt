@@ -81,6 +81,7 @@ Table of Contents
    3.  Conventions and Terminology
    4.  Mission Substrate
    5.  Mission Mediation
+     5.1.  Destination-Set Matching
    6.  Mission Binding
      6.1.  Binding Inheritance
    7.  Resume Checks
@@ -101,6 +102,7 @@ Table of Contents
    14. Untrusted Content and Egress
    15. Harness Evidence
      15.1.  Harness Evidence Object
+     15.2.  Egress Evidence
    16. Worked Example
    17. Conformance
    18. Security Considerations
@@ -348,12 +350,36 @@ Table of Contents
    published claim and the enforced allowlist are the same object.  An
    egress on a channel the statement does not mark mediated, or to a
    destination outside a named set, MUST be refused and recorded
-   (Section 15).  The gate applies the same fail-closed Mission state
+   (Section 15.2).  The gate applies the same fail-closed Mission state
    rule as the resume checks (Section 7): work whose Mission is not
    active does not egress.  An in-process gate mediates the agent's
    egress interface and supports no containment claim.  The gate is not
    the session-taint rule: the taint duties of Section 14 apply
    independently of the channel and destination check.
+
+5.1.  Destination-Set Matching
+
+   A destination is a URI.  Set membership, for the destination set a
+   channel's mediated-egress statement names above, is decided as
+   follows:
+
+   *  By default, a destination matches a set entry by origin equality:
+      identical scheme, host, and port.
+
+   *  A set entry MAY instead be an explicit suffix or wildcard form
+      naming a subdomain range (for example, *.example.com); a
+      destination matches such an entry when its host falls within the
+      named range, under the entry's scheme and port.
+
+   *  A destination matching no entry in the named set MUST be refused.
+
+   This rule governs only the egress gate's destination-set membership
+   check.  It is independent of the pre-consented-egress match of
+   Section 14, which is on the concrete destination value an Approver
+   named at approval, never on set membership: a destination inside a
+   named egress-mediation set is not thereby pre-consented, and a pre-
+   consented destination is not thereby exempt from this check if the
+   channel it travels is gated.
 
    The enumeration is not static where open-world discovery is deployed:
    a channel created by a discovery binding enters it at binding,
@@ -1194,6 +1220,14 @@ Table of Contents
       disposition the statement declares for that channel (Section 5).
       REQUIRED for an egress_refused event.
 
+   scope_statement_digest:  OPTIONAL.  A string.  The integrity-anchor
+      encoded digest ([I-D.draft-mcguinness-oauth-mission]) of the
+      published Enforcement Scope Statement
+      ([I-D.draft-mcguinness-mission-runtime]), or of this profile's
+      execution-environment scope statement where that is the referenced
+      artifact (Section 5), in effect when this record was made, so a
+      record can be joined to the published scope claim after the fact.
+
    occurred_at:  REQUIRED.  RFC 3339 [RFC3339] timestamp.
 
    The object is closed to uncoordinated extension: a companion profile
@@ -1220,6 +1254,64 @@ Table of Contents
      "reason": "mission_not_active",
      "occurred_at": "2026-11-02T02:00:05Z"
    }
+
+15.2.  Egress Evidence
+
+   The egress gate of Section 5 is a distinct enforcement point from the
+   harness-lifecycle suppression and resume decisions the Harness
+   Evidence Object above records.  It MUST emit its own record for every
+   mediated egress it permits or refuses: a flat, enforcement-point
+   record, not a Harness Evidence Object, mirroring the retention
+   conventions of PEP-emitted evidence rather than harness-lifecycle
+   evidence.
+
+   An Egress Evidence object is a JSON object [RFC8259] with:
+
+   mission:  REQUIRED.  Object containing id, issuer, and, when known,
+      authority_hash, in the form Harness Evidence carries it
+      (Section 15.1).
+
+   channel_class:  REQUIRED.  A string.  The channel class the egress
+      used, from the execution-environment scope statement's enumeration
+      (Section 5).
+
+   destination:  REQUIRED.  A string.  The destination URI, matched
+      under Section 5.1.
+
+   outcome:  REQUIRED.  One of permitted or refused.
+
+   refusal_reason:  CONDITIONAL.  A string.  REQUIRED when outcome is
+      refused: the failure condition (for example, an unmediated channel
+      class or a destination matching no entry in the named set,
+      Section 5.1).
+
+   emitter:  REQUIRED.  An object, in the form Decision Evidence defines
+      ([I-D.draft-mcguinness-mission-authzen]), with role egress.
+
+   scope_statement_digest:  OPTIONAL.  A string, in the form Harness
+      Evidence defines above.
+
+   occurred_at:  REQUIRED.  RFC 3339 [RFC3339] timestamp.
+
+   The object is closed to uncoordinated extension under the same rule
+   as Harness Evidence.
+
+   Its type identifier is application/mission-egress-evidence+json (a
+   local-use identifier pending registration), and its canonical bytes
+   are its JCS [RFC8785] canonicalization; it is registrable on the
+   Mission's transparency feed under the same producer-key conventions
+   as Harness Evidence ([I-D.draft-mcguinness-mission-audit]).
+
+   Egress Evidence and Harness Evidence relate but do not merge.  A
+   refused egress always produces an Egress Evidence record at the gate.
+   When the refusal also drives a harness-lifecycle consequence the
+   harness must track (for example, the refusal contributes to a stop
+   decision), the harness MAY additionally emit a Harness Evidence
+   record with event_type egress_refused (Section 15.1) for that
+   lifecycle reporting.  The two records are correlated by their shared
+   mission reference and timestamp proximity, not combined into one
+   object, because the egress gate and the harness's lifecycle logic are
+   retained by potentially different components in the mediation path.
 
 16.  Worked Example
 
@@ -1441,6 +1533,11 @@ Table of Contents
               Interchange Format", STD 90, RFC 8259,
               DOI 10.17487/RFC8259, December 2017,
               <https://www.rfc-editor.org/rfc/rfc8259>.
+
+   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
+              Canonicalization Scheme (JCS)", RFC 8785,
+              DOI 10.17487/RFC8785, June 2020,
+              <https://www.rfc-editor.org/rfc/rfc8785>.
 
 21.2.  Informative References
 

@@ -98,14 +98,15 @@ Table of Contents
    16. Containment Evidence
      16.1.  Containment Evidence Object
      16.2.  Canonical Bytes
-   17. Conformance
-   18. Security Considerations
-     18.1.  Forced Premature Containment
-     18.2.  The Containment Plane
-     18.3.  Compromised Event Source
-     18.4.  Containment History at Expansion
-   19. Privacy Considerations
-   20. IANA Considerations
+   17. Protected Event Receipt
+   18. Conformance
+   19. Security Considerations
+     19.1.  Forced Premature Containment
+     19.2.  The Containment Plane
+     19.3.  Compromised Event Source
+     19.4.  Containment History at Expansion
+   20. Privacy Considerations
+   21. IANA Considerations
    Acknowledgments
    References
      Normative References
@@ -372,6 +373,12 @@ Table of Contents
    ignore the event.  An unverifiable report can cost the Mission
    authority early; it can never preserve authority the policy would
    have removed.
+
+   The Mission Issuer MUST record a Protected Event Receipt for every
+   protected event it receives, whether the event is applied as a
+   contain transition or rejected (Section 17).  Fail-closed means the
+   event is rejected rather than acted on; it never means the event goes
+   unrecorded.
 
 9.  Derivation Gating
 
@@ -652,7 +659,82 @@ Table of Contents
    registration.  An audit or transparency profile registers the object
    by these values.
 
-17.  Conformance
+17.  Protected Event Receipt
+
+   Containment Evidence records the transition a protected event drove;
+   it has no object for a protected event the Mission Issuer rejected.
+   The Mission Issuer MUST also record a Protected Event Receipt for the
+   ingestion decision on every protected event it receives (Section 8),
+   whatever the outcome, so a rejected report is recorded rather than
+   only silently withheld.
+
+   A Protected Event Receipt is a JSON object [RFC8259] with:
+
+   receipt_id:  REQUIRED.  Unique identifier.
+
+   mission:  REQUIRED.  Mission reference: id, issuer, and
+      authority_hash.
+
+   event:  REQUIRED.  The protected event, in the form Containment
+      Evidence carries it: type, source, observed_at (an RFC 3339
+      [RFC3339] date-time), and event_id.
+
+   outcome:  REQUIRED.  One of applied or rejected.
+
+   policy:  CONDITIONAL.  Identifier of the containment policy rule
+      applied.  REQUIRED when outcome is applied; matches the policy
+      member of the Containment Evidence object the transition committed
+      (Section 16.1).
+
+   rejection_reason:  CONDITIONAL.  A string.  REQUIRED when outcome is
+      rejected: the reason the event was not applied (for example, an
+      unverifiable signature, a source not trusted for the reported
+      event type, or a Mission the event does not name or that is in a
+      terminal state).  A deployment MAY define additional values, which
+      MUST be collision-resistant names, following the Collision-
+      Resistant Name guidance of [RFC7519] Section 4.2.
+
+   emitter:  REQUIRED.  An object, in the form Decision Evidence defines
+      ([I-D.draft-mcguinness-mission-authzen]), with role issuer.
+
+   created_at:  REQUIRED.  RFC 3339 [RFC3339] timestamp of the ingestion
+      decision.
+
+   Example, a rejected report:
+
+   {
+     "receipt_id": "per_9wLq3XtN7m",
+     "mission": {
+       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       "issuer": "https://as.example.com",
+       "authority_hash":
+         "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6"
+     },
+     "event": {
+       "type": "session-taint",
+       "source": "https://harness.example.com",
+       "observed_at": "2026-11-02T09:40:55Z",
+       "event_id": "evt_2mK7pQ4c1x"
+     },
+     "outcome": "rejected",
+     "rejection_reason": "source_not_trusted_for_type",
+     "emitter": { "id": "as.example.com", "role": "issuer" },
+     "created_at": "2026-11-02T09:40:56Z"
+   }
+
+   A Protected Event Receipt's canonical bytes are its JCS [RFC8785]
+   canonicalization, and its type identifier is application/mission-
+   protected-event-receipt+json, used by local agreement pending
+   registration, mirroring the Child and Discovery Evidence registration
+   conventions ([I-D.draft-mcguinness-mission-audit]).  An audit or
+   transparency profile registers the object by these values.
+
+   An applied receipt's event_id correlates it to the Containment
+   Evidence object the same event produced (Section 16.1); a rejected
+   receipt has no corresponding Containment Evidence, because no
+   transition committed.
+
+18.  Conformance
 
    An implementation claims conformance to this document only in the
    Mission Issuer role and only when it contains a Mission.  A
@@ -679,7 +761,11 @@ Table of Contents
       and never present contained capability as live (Section 12);
 
    *  record a Containment Evidence object per contain transition
-      (Section 16); and
+      (Section 16);
+
+   *  record a Protected Event Receipt for the ingestion decision on
+      every protected event received, applied or rejected (Section 17);
+      and
 
    *  where it also adjudicates expansion, start the successor
       uncontained and surface the predecessor's containment history at
@@ -690,13 +776,13 @@ Table of Contents
    Resource Server requires no new behavior: a token it sees never
    carries contained capability (Section 9).
 
-18.  Security Considerations
+19.  Security Considerations
 
    Containment's guarantee is directional: every rule in this document
    moves authority in one direction, down.  The risks specific to it are
    who can force that movement and what the movement discloses.
 
-18.1.  Forced Premature Containment
+19.1.  Forced Premature Containment
 
    Containment is monotonic by construction: it only removes capability,
    so it is not a path to escalation, and a compromised or injected
@@ -709,7 +795,7 @@ Table of Contents
    who can force it, and restoration remains available through a fresh
    approval (Section 14).
 
-18.2.  The Containment Plane
+19.2.  The Containment Plane
 
    Whatever surface applies contain transitions, the issuer's event
    intake or an operator plane, holds a denial capability over live
@@ -719,7 +805,7 @@ Table of Contents
    bulk lifecycle operations
    ([I-D.draft-mcguinness-oauth-mission-management]).
 
-18.3.  Compromised Event Source
+19.3.  Compromised Event Source
 
    A compromised event source can fire protected events at will.
    Monotonicity bounds its blast radius: every transition it forces
@@ -736,7 +822,7 @@ Table of Contents
    restores only through an approval that sees the containment history
    (Section 14).
 
-18.4.  Containment History at Expansion
+19.4.  Containment History at Expansion
 
    The disclosure rule of Section 14 is load-bearing: without it,
    expansion is a laundering path in which capability removed for cause
@@ -745,7 +831,7 @@ Table of Contents
    the expansion consent defeats containment for any adversary patient
    enough to ask again.
 
-19.  Privacy Considerations
+20.  Privacy Considerations
 
    A containment overlay discloses incident posture: that an event
    fired, which capability it implicated, and when.  The Mission Status
@@ -754,12 +840,15 @@ Table of Contents
    authenticate and authorize; this document adds no anonymous surface
    and preserves the Status profile's anti-oracle posture
    ([I-D.draft-mcguinness-oauth-mission-status]).  Containment Evidence
-   carries event detail (type, source, event_id) and is audit material:
-   a deployment retains and discloses it under the same access rules as
-   its other Mission evidence, and SHOULD NOT copy event detail onto
-   broader surfaces than the audit trail requires.
+   and the Protected Event Receipt both carry event detail (type,
+   source, event_id) and are audit material: a deployment retains and
+   discloses them under the same access rules as its other Mission
+   evidence, and SHOULD NOT copy event detail onto broader surfaces than
+   the audit trail requires.  A rejected receipt additionally discloses
+   that a report was made and refused, which is itself incident posture
+   under the same rule.
 
-20.  IANA Considerations
+21.  IANA Considerations
 
    This document requires no IANA action.
 
@@ -780,6 +869,10 @@ Table of Contents
    The Containment Evidence type identifier application/mission-
    containment-evidence+json is used by local agreement pending
    registration (Section 16.2).
+
+   The Protected Event Receipt type identifier application/mission-
+   protected-event-receipt+json is used by local agreement pending
+   registration (Section 17).
 
 Acknowledgments
 
@@ -815,6 +908,10 @@ Normative References
               Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
               <https://www.rfc-editor.org/rfc/rfc3339>.
 
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7519>.
+
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
@@ -830,6 +927,11 @@ Normative References
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
 Informative References
+
+   [I-D.draft-mcguinness-mission-audit]
+              McGuinness, K., "Mission Audit Transparency", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-audit.html>.
 
    [I-D.draft-mcguinness-mission-authzen]
               McGuinness, K., "Mission-Bound Runtime Enforcement:

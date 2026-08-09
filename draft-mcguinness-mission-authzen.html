@@ -3599,76 +3599,96 @@ signed this record, with members <code>id</code> (<span class="bcp14">REQUIRED</
 the emitting component) and <code>role</code> (<span class="bcp14">REQUIRED</span>, one of <code>pdp</code>, <code>pep</code>, or
 <code>executor</code>). For Decision Evidence <code>role</code> is <code>pdp</code>. A companion
 profile <span class="bcp14">MAY</span> register coordinated additional roles (<code>harness</code>,
-<code>egress</code>) for records emitted under these conventions at other
-enforcement points. A verifier <span class="bcp14">MUST</span>
+<code>egress</code>, <code>issuer</code>) for records emitted under these conventions at
+other enforcement points, or by the Mission Issuer's own retained
+producers (for example, protected-event ingestion,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>). A verifier <span class="bcp14">MUST</span>
 bind the emitter's signing key to the enforcement scope and audience
 the record serves (<a href="#decision-evidence-integrity" class="auto internal xref">Section 7.3</a>).<a href="#section-7.1-1.40.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.1-1.41">
-<code>denial_reason</code>:</dt>
+<code>hop_reference</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.1-1.42">
-            <p id="section-7.1-1.42.1">CONDITIONAL. A string. Present when <code>decision</code> is <code>deny</code>. A value from
+            <p id="section-7.1-1.42.1"><span class="bcp14">OPTIONAL</span>. An object. Present when the action this record concerns
+was authorized under a continuation profile's continued credential
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>), attributing
+the record to the specific hop that carried the authorization.
+Sub-members: <code>jti</code> (<span class="bcp14">REQUIRED</span>, a string, the authorizing token's
+identifier) and <code>mission_id</code> (<span class="bcp14">REQUIRED</span>, a string, the Mission the
+continued credential carries); <code>continuation_handle</code> (<span class="bcp14">OPTIONAL</span>, a
+string, the hop's identity-continuation handle, when present).
+Absent for a decision not taken under a continuation. This member
+formalizes, as a coordinated Decision Evidence member, the
+continuation profile's requirement that execution-time evidence
+record the continuation hop reference
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>).<a href="#section-7.1-1.42.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-1.43">
+<code>denial_reason</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-1.44">
+            <p id="section-7.1-1.44.1">CONDITIONAL. A string. Present when <code>decision</code> is <code>deny</code>. A value from
 the set of <a href="#runtime-denial-classification" class="auto internal xref">Section 6.4</a>, including any
 specification-defined extension under that section's extensibility
 rule; a consumer <span class="bcp14">MUST</span> treat an unrecognized value as a deny and <span class="bcp14">MUST NOT</span> attach any other semantics to it. When the denial
 is a constraint violation, the value is <code>parameter_violation</code> and the
 specific failing <code>constraints</code> keys are carried in
 <code>contributing_constraints</code>, not in <code>denial_reason</code>, so the reason
-enum and the open constraint-key space never mix in one field.<a href="#section-7.1-1.42.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-7.1-1.43">
-<code>evaluated_at</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.1-1.44">
-            <p id="section-7.1-1.44.1"><span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-7.1-1.44.1" class="pilcrow">¶</a></p>
+enum and the open constraint-key space never mix in one field.<a href="#section-7.1-1.44.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.1-1.45">
-<code>authorizing_entry</code>:</dt>
+<code>evaluated_at</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.1-1.46">
-            <p id="section-7.1-1.46.1"><span class="bcp14">OPTIONAL</span>. An object. The <code>authorization_details</code> entry the decision
-was evaluated against.<a href="#section-7.1-1.46.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-1.46.1"><span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-7.1-1.46.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.1-1.47">
-<code>entry_digest</code>:</dt>
+<code>authorizing_entry</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.1-1.48">
-            <p id="section-7.1-1.48.1"><span class="bcp14">OPTIONAL</span>. A string. The integrity-anchor encoded digest
+            <p id="section-7.1-1.48.1"><span class="bcp14">OPTIONAL</span>. An object. The <code>authorization_details</code> entry the decision
+was evaluated against.<a href="#section-7.1-1.48.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-1.49">
+<code>entry_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-1.50">
+            <p id="section-7.1-1.50.1"><span class="bcp14">OPTIONAL</span>. A string. The integrity-anchor encoded digest
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) of that entry, for a
 deployment that does not record the entry in full. A record of a
 permit <span class="bcp14">MUST</span> carry <code>authorizing_entry</code> or <code>entry_digest</code>, per the
 runtime record requirements
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-7.1-1.48.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-7.1-1.49">
-<code>taint</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.1-1.50">
-            <p id="section-7.1-1.50.1"><span class="bcp14">OPTIONAL</span>. An object. The presented taint context
-(<a href="#context-taint" class="auto internal xref">Section 5.8</a>), recorded as supplied. <span class="bcp14">REQUIRED</span> when the
-decision request carried <code>context.taint</code>.<a href="#section-7.1-1.50.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-7.1-1.50.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.1-1.51">
-<code>mission_history</code>:</dt>
+<code>taint</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.1-1.52">
-            <p id="section-7.1-1.52.1"><span class="bcp14">OPTIONAL</span>. An array of objects. The presented history predicates
+            <p id="section-7.1-1.52.1"><span class="bcp14">OPTIONAL</span>. An object. The presented taint context
+(<a href="#context-taint" class="auto internal xref">Section 5.8</a>), recorded as supplied. <span class="bcp14">REQUIRED</span> when the
+decision request carried <code>context.taint</code>.<a href="#section-7.1-1.52.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-1.53">
+<code>mission_history</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-1.54">
+            <p id="section-7.1-1.54.1"><span class="bcp14">OPTIONAL</span>. An array of objects. The presented history predicates
 (<a href="#context-history" class="auto internal xref">Section 5.10</a>), each recorded as supplied and extended
 with an <code>outcome</code> member (<span class="bcp14">REQUIRED</span>, a string): <code>satisfied</code>,
 <code>not_satisfied</code> (established false), or <code>unavailable</code> (not
 establishable, including an unrecognized <code>predicate</code> value or an
 evidence store that could not be consulted within its bound).
 <span class="bcp14">REQUIRED</span> when the decision request carried
-<code>context.mission_history</code>.<a href="#section-7.1-1.52.1" class="pilcrow">¶</a></p>
+<code>context.mission_history</code>.<a href="#section-7.1-1.54.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-7.1-1.53">
+<dt id="section-7.1-1.55">
 <code>evidence_envelope</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.1-1.54">
-            <p id="section-7.1-1.54.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection
+          <dd style="margin-left: 1.5em" id="section-7.1-1.56">
+            <p id="section-7.1-1.56.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection
 (<a href="#decision-evidence-integrity" class="auto internal xref">Section 7.3</a>), carrying a <code>format</code> (string,
-required) and a <code>value</code> (string, required).<a href="#section-7.1-1.54.1" class="pilcrow">¶</a></p>
+required) and a <code>value</code> (string, required).<a href="#section-7.1-1.56.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -3817,12 +3837,21 @@ the record serves (<a href="#decision-evidence-integrity" class="auto internal x
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.2-2.31">
-<code>evidence_envelope</code>:</dt>
+<code>hop_reference</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.2-2.32">
-            <p id="section-7.2-2.32.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection in the form of
+            <p id="section-7.2-2.32.1"><span class="bcp14">OPTIONAL</span>. An object, in the form Decision Evidence defines
+(<a href="#decision-evidence-object" class="auto internal xref">Section 7</a>). Present only when the PEP verified
+enough of the presented credential, before the failure, to establish
+it was a continued credential.<a href="#section-7.2-2.32.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-2.33">
+<code>evidence_envelope</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-2.34">
+            <p id="section-7.2-2.34.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection in the form of
 <a href="#decision-evidence-integrity" class="auto internal xref">Section 7.3</a>, emitted by the refusing PEP, whose
 JWS protected <code>typ</code> is <code>application/mission-refusal-record+json</code>
-(<a href="#iana" class="auto internal xref">Section 14</a>).<a href="#section-7.2-2.32.1" class="pilcrow">¶</a></p>
+(<a href="#iana" class="auto internal xref">Section 14</a>).<a href="#section-7.2-2.34.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -3919,7 +3948,14 @@ the media type of the object it is verifying, so signatures over one
 record kind cannot be cross-used for another.<a href="#section-7.3-4.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<div class="lang-json sourcecode" id="section-7.3-5">
+<p id="section-7.3-5">This rule is unaffected by the members Decision Evidence, Execution
+Evidence, and Refusal Records share with each other and with other
+evidence types, named once as a base shape
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). Shared member names describe
+a common shape for readability; they carry no exemption, and the <code>typ</code>
+check above remains the sole authority for which kind a signature
+covers.<a href="#section-7.3-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-7.3-6">
 <pre>
 {
   "evidence_envelope": {
@@ -3927,11 +3963,11 @@ record kind cannot be cross-used for another.<a href="#section-7.3-4.3.1" class=
     "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
   }
 }
-</pre><a href="#section-7.3-5" class="pilcrow">¶</a>
+</pre><a href="#section-7.3-6" class="pilcrow">¶</a>
 </div>
-<p id="section-7.3-6">This profile defines only the <code>jws-compact</code> format. Additional formats
+<p id="section-7.3-7">This profile defines only the <code>jws-compact</code> format. Additional formats
 <span class="bcp14">MAY</span> be defined by future specifications; implementations <span class="bcp14">MUST</span> reject
-envelopes with unsupported formats.<a href="#section-7.3-6" class="pilcrow">¶</a></p>
+envelopes with unsupported formats.<a href="#section-7.3-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="worked-example">
@@ -4148,32 +4184,40 @@ and audience the record serves (<a href="#decision-evidence-integrity" class="au
 </dd>
           <dd class="break"></dd>
 <dt id="section-8.1-1.19">
-<code>attempted_at</code>:</dt>
+<code>hop_reference</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-8.1-1.20">
-            <p id="section-8.1-1.20.1"><span class="bcp14">OPTIONAL</span>. An RFC 3339 timestamp. Timing context.<a href="#section-8.1-1.20.1" class="pilcrow">¶</a></p>
+            <p id="section-8.1-1.20.1"><span class="bcp14">OPTIONAL</span>. An object, in the form Decision Evidence defines
+(<a href="#decision-evidence-object" class="auto internal xref">Section 7</a>). Present when the linked Decision
+Evidence carries one.<a href="#section-8.1-1.20.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-8.1-1.21">
-<code>completed_at</code>:</dt>
+<code>attempted_at</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-8.1-1.22">
             <p id="section-8.1-1.22.1"><span class="bcp14">OPTIONAL</span>. An RFC 3339 timestamp. Timing context.<a href="#section-8.1-1.22.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-8.1-1.23">
-<code>result_summary</code>:</dt>
+<code>completed_at</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-8.1-1.24">
-            <p id="section-8.1-1.24.1"><span class="bcp14">OPTIONAL</span>. An object. Minimal action result metadata
-(for example, affected resource counts). <span class="bcp14">MUST NOT</span> carry user-content
-payloads.<a href="#section-8.1-1.24.1" class="pilcrow">¶</a></p>
+            <p id="section-8.1-1.24.1"><span class="bcp14">OPTIONAL</span>. An RFC 3339 timestamp. Timing context.<a href="#section-8.1-1.24.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-8.1-1.25">
-<code>evidence_envelope</code>:</dt>
+<code>result_summary</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-8.1-1.26">
-            <p id="section-8.1-1.26.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection in the
+            <p id="section-8.1-1.26.1"><span class="bcp14">OPTIONAL</span>. An object. Minimal action result metadata
+(for example, affected resource counts). <span class="bcp14">MUST NOT</span> carry user-content
+payloads.<a href="#section-8.1-1.26.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-8.1-1.27">
+<code>evidence_envelope</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-8.1-1.28">
+            <p id="section-8.1-1.28.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection in the
 same form as Decision Evidence (<a href="#decision-evidence-integrity" class="auto internal xref">Section 7.3</a>),
 carrying a <code>format</code> (string, required) and a <code>value</code> (string,
-required).<a href="#section-8.1-1.26.1" class="pilcrow">¶</a></p>
+required).<a href="#section-8.1-1.28.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -5132,6 +5176,10 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
         <dd>
 <span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"AuthZEN Profile for Model Context Protocol Tool Authorization - Draft 1"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://openid.github.io/authzen/authzen-mcp-profile-1_0.html">https://openid.github.io/authzen/authzen-mcp-profile-1_0.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Audit Transparency"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
@@ -5151,6 +5199,10 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 <dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-continuation">[I-D.draft-mcguinness-oauth-mission-continuation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Continuation: Authorization Continuity for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>

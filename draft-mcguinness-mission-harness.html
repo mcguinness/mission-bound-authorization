@@ -1186,6 +1186,11 @@ treats session continuity as proof that Mission authority continues.<a href="#se
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
             <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-mission-mediation" class="internal xref">Mission Mediation</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-destination-set-matching" class="internal xref">Destination-Set Matching</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
             <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-mission-binding" class="internal xref">Mission Binding</a></p>
@@ -1258,6 +1263,9 @@ treats session continuity as proof that Mission authority continues.<a href="#se
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
                 <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-harness-evidence-object" class="internal xref">Harness Evidence Object</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
+                <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="auto internal xref">15.2</a>.  <a href="#name-egress-evidence" class="internal xref">Egress Evidence</a></p>
 </li>
             </ul>
 </li>
@@ -1625,18 +1633,48 @@ mediated, the statement <span class="bcp14">MAY</span> name the destination set 
 reach, so the published claim and the enforced allowlist are the same
 object. An egress on a channel the statement does not mark mediated,
 or to a destination outside a named set, <span class="bcp14">MUST</span> be refused and recorded
-(<a href="#harness-evidence" class="auto internal xref">Section 15</a>). The gate applies the same fail-closed Mission
+(<a href="#egress-evidence" class="auto internal xref">Section 15.2</a>). The gate applies the same fail-closed Mission
 state rule as the resume checks (<a href="#resume-checks" class="auto internal xref">Section 7</a>): work whose
 Mission is not active does not egress. An in-process gate mediates the
 agent's egress interface and supports no containment claim. The gate
 is not the session-taint rule: the taint duties of <a href="#session-taint" class="auto internal xref">Section 14</a>
 apply independently of the channel and destination check.<a href="#section-5-10" class="pilcrow">¶</a></p>
-<p id="section-5-11">The enumeration is not static where open-world discovery is deployed:
+<div id="destination-matching">
+<section id="section-5.1">
+        <h3 id="name-destination-set-matching">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-destination-set-matching" class="section-name selfRef">Destination-Set Matching</a>
+        </h3>
+<p id="section-5.1-1">A destination is a URI. Set membership, for the destination set a
+channel's mediated-egress statement names above, is decided as
+follows:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.1-2.1">
+            <p id="section-5.1-2.1.1">By default, a destination matches a set entry by origin equality:
+identical scheme, host, and port.<a href="#section-5.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.1-2.2">
+            <p id="section-5.1-2.2.1">A set entry <span class="bcp14">MAY</span> instead be an explicit suffix or wildcard form
+naming a subdomain range (for example, <code>*.example.com</code>); a
+destination matches such an entry when its host falls within the
+named range, under the entry's scheme and port.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.1-2.3">
+            <p id="section-5.1-2.3.1">A destination matching no entry in the named set <span class="bcp14">MUST</span> be refused.<a href="#section-5.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.1-3">This rule governs only the egress gate's destination-set membership
+check. It is independent of the pre-consented-egress match of
+<a href="#session-taint" class="auto internal xref">Section 14</a>, which is on the concrete destination value an
+Approver named at approval, never on set membership: a destination
+inside a named egress-mediation set is not thereby pre-consented, and
+a pre-consented destination is not thereby exempt from this check if
+the channel it travels is gated.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.1-4">The enumeration is not static where open-world discovery is deployed:
 a channel created by a discovery binding enters it at binding,
 recorded in Harness Evidence, and an egress channel that entered
 neither way is a mediated-environment violation, not a discovery
-(<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>).<a href="#section-5-11" class="pilcrow">¶</a></p>
-<p id="section-5-12">The statement also declares the deployment's taint policy
+(<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>).<a href="#section-5.1-4" class="pilcrow">¶</a></p>
+<p id="section-5.1-5">The statement also declares the deployment's taint policy
 (<a href="#session-taint" class="auto internal xref">Section 14</a>). Verifying that no unmediated path exists is a
 deployment audit obligation, not a protocol property: this profile
 fixes what the statement declares, not how a deployment proves it.
@@ -1646,25 +1684,27 @@ statement. Where a deployment claims the runtime profile's trifecta
 containment or agent-compromise-resistant enforcement, that profile
 requires the attestation (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>),
 and this execution-environment scope statement is the artifact it
-attests.<a href="#section-5-12" class="pilcrow">¶</a></p>
-<p id="section-5-13">Mediation governs the agent's outputs; the same duty applies to its
+attests.<a href="#section-5.1-5" class="pilcrow">¶</a></p>
+<p id="section-5.1-6">Mediation governs the agent's outputs; the same duty applies to its
 inputs. A Mission-aware harness <span class="bcp14">SHOULD</span> surface to the agent only the
-context the active Mission needs:<a href="#section-5-13" class="pilcrow">¶</a></p>
+context the active Mission needs:<a href="#section-5.1-6" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5-14.1">
-          <p id="section-5-14.1.1">the tool catalog and schemas scoped to the Mission's Authority Set;<a href="#section-5-14.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-5.1-7.1">
+            <p id="section-5.1-7.1.1">the tool catalog and schemas scoped to the Mission's Authority Set;<a href="#section-5.1-7.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-5-14.2">
-          <p id="section-5-14.2.1">memory and retrieved content admitted per the taint policy
-(<a href="#session-taint" class="auto internal xref">Section 14</a>); and<a href="#section-5-14.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.1-7.2">
+            <p id="section-5.1-7.2.1">memory and retrieved content admitted per the taint policy
+(<a href="#session-taint" class="auto internal xref">Section 14</a>); and<a href="#section-5.1-7.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-5-14.3">
-          <p id="section-5-14.3.1">cached credentials and connections keyed per <a href="#cache-keys" class="auto internal xref">Section 10.1</a>.<a href="#section-5-14.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.1-7.3">
+            <p id="section-5.1-7.3.1">cached credentials and connections keyed per <a href="#cache-keys" class="auto internal xref">Section 10.1</a>.<a href="#section-5.1-7.3.1" class="pilcrow">¶</a></p>
 </li>
-      </ul>
-<p id="section-5-15">This applies the runtime profile's least-exposure rule
+        </ul>
+<p id="section-5.1-8">This applies the runtime profile's least-exposure rule
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) at the harness, the layer
-that assembles the agent's context.<a href="#section-5-15" class="pilcrow">¶</a></p>
+that assembles the agent's context.<a href="#section-5.1-8" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="mission-binding">
@@ -2774,9 +2814,21 @@ action suppressed) (<a href="#session-taint" class="auto internal xref">Section 
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.33">
-<code>occurred_at</code>:</dt>
+<code>scope_statement_digest</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.34">
-            <p id="section-15.1-2.34.1"><span class="bcp14">REQUIRED</span>. RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-15.1-2.34.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.34.1"><span class="bcp14">OPTIONAL</span>. A string. The integrity-anchor encoded digest
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) of the published
+Enforcement Scope Statement (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>),
+or of this profile's execution-environment scope statement where
+that is the referenced artifact (<a href="#mediated-egress" class="auto internal xref">Section 5</a>), in effect
+when this record was made, so a record can be joined to the
+published scope claim after the fact.<a href="#section-15.1-2.34.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.1-2.35">
+<code>occurred_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.1-2.36">
+            <p id="section-15.1-2.36.1"><span class="bcp14">REQUIRED</span>. RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-15.1-2.36.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2806,6 +2858,98 @@ it does not understand.<a href="#section-15.1-3" class="pilcrow">¶</a></p>
 }
 </pre><a href="#section-15.1-5" class="pilcrow">¶</a>
 </div>
+</section>
+</div>
+<div id="egress-evidence">
+<section id="section-15.2">
+        <h3 id="name-egress-evidence">
+<a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-egress-evidence" class="section-name selfRef">Egress Evidence</a>
+        </h3>
+<p id="section-15.2-1">The egress gate of <a href="#mediated-egress" class="auto internal xref">Section 5</a> is a distinct enforcement point
+from the harness-lifecycle suppression and resume decisions the
+Harness Evidence Object above records. It <span class="bcp14">MUST</span> emit its own record for
+every mediated egress it permits or refuses: a flat, enforcement-point
+record, not a Harness Evidence Object, mirroring the retention
+conventions of PEP-emitted evidence rather than harness-lifecycle
+evidence.<a href="#section-15.2-1" class="pilcrow">¶</a></p>
+<p id="section-15.2-2">An Egress Evidence object is a JSON object <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> with:<a href="#section-15.2-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-15.2-3">
+          <dt id="section-15.2-3.1">
+<code>mission</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-3.2">
+            <p id="section-15.2-3.2.1"><span class="bcp14">REQUIRED</span>. Object containing <code>id</code>, <code>issuer</code>, and, when known,
+<code>authority_hash</code>, in the form Harness Evidence carries it
+(<a href="#harness-evidence-object" class="auto internal xref">Section 15.1</a>).<a href="#section-15.2-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-3.3">
+<code>channel_class</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-3.4">
+            <p id="section-15.2-3.4.1"><span class="bcp14">REQUIRED</span>. A string. The channel class the egress used, from the
+execution-environment scope statement's enumeration
+(<a href="#mediated-egress" class="auto internal xref">Section 5</a>).<a href="#section-15.2-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-3.5">
+<code>destination</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-3.6">
+            <p id="section-15.2-3.6.1"><span class="bcp14">REQUIRED</span>. A string. The destination URI, matched under
+<a href="#destination-matching" class="auto internal xref">Section 5.1</a>.<a href="#section-15.2-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-3.7">
+<code>outcome</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-3.8">
+            <p id="section-15.2-3.8.1"><span class="bcp14">REQUIRED</span>. One of <code>permitted</code> or <code>refused</code>.<a href="#section-15.2-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-3.9">
+<code>refusal_reason</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-3.10">
+            <p id="section-15.2-3.10.1">CONDITIONAL. A string. <span class="bcp14">REQUIRED</span> when <code>outcome</code> is <code>refused</code>: the
+failure condition (for example, an unmediated channel class or a
+destination matching no entry in the named set,
+<a href="#destination-matching" class="auto internal xref">Section 5.1</a>).<a href="#section-15.2-3.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-3.11">
+<code>emitter</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-3.12">
+            <p id="section-15.2-3.12.1"><span class="bcp14">REQUIRED</span>. An object, in the form Decision Evidence defines
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), with <code>role</code> <code>egress</code>.<a href="#section-15.2-3.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-3.13">
+<code>scope_statement_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-3.14">
+            <p id="section-15.2-3.14.1"><span class="bcp14">OPTIONAL</span>. A string, in the form Harness Evidence defines above.<a href="#section-15.2-3.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.2-3.15">
+<code>occurred_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.2-3.16">
+            <p id="section-15.2-3.16.1"><span class="bcp14">REQUIRED</span>. RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-15.2-3.16.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-15.2-4">The object is closed to uncoordinated extension under the same rule as
+Harness Evidence.<a href="#section-15.2-4" class="pilcrow">¶</a></p>
+<p id="section-15.2-5">Its type identifier is <code>application/mission-egress-evidence+json</code> (a
+local-use identifier pending registration), and its canonical bytes
+are its JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonicalization; it is registrable on the
+Mission's transparency feed under the same producer-key conventions as
+Harness Evidence (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-15.2-5" class="pilcrow">¶</a></p>
+<p id="section-15.2-6">Egress Evidence and Harness Evidence relate but do not merge. A
+refused egress always produces an Egress Evidence record at the gate.
+When the refusal also drives a harness-lifecycle consequence the
+harness must track (for example, the refusal contributes to a stop
+decision), the harness <span class="bcp14">MAY</span> additionally emit a Harness Evidence record
+with <code>event_type</code> <code>egress_refused</code> (<a href="#harness-evidence-object" class="auto internal xref">Section 15.1</a>) for
+that lifecycle reporting. The two records are correlated by their
+shared <code>mission</code> reference and timestamp proximity, not combined into
+one object, because the egress gate and the harness's lifecycle logic
+are retained by potentially different components in the mediation
+path.<a href="#section-15.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3081,8 +3225,12 @@ of <a href="#harness-evidence" class="auto internal xref">Section 15</a> is loca
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8259">[RFC8259]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Bray, T., Ed.</span>, <span class="refTitle">"The JavaScript Object Notation (JSON) Data Interchange Format"</span>, <span class="seriesInfo">STD 90</span>, <span class="seriesInfo">RFC 8259</span>, <span class="seriesInfo">DOI 10.17487/RFC8259</span>, <time datetime="2017-12" class="refDate">December 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8259">https://www.rfc-editor.org/rfc/rfc8259</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8785">[RFC8785]</dt>
+      <dd>
+<span class="refAuthor">Rundgren, A.</span>, <span class="refAuthor">Jordan, B.</span>, and <span class="refAuthor">S. Erdtman</span>, <span class="refTitle">"JSON Canonicalization Scheme (JCS)"</span>, <span class="seriesInfo">RFC 8785</span>, <span class="seriesInfo">DOI 10.17487/RFC8785</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8785">https://www.rfc-editor.org/rfc/rfc8785</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>

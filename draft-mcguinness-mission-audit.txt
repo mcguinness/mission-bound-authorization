@@ -83,27 +83,29 @@ Table of Contents
    5.  Mission Substrate
    6.  Registering Mission Evidence
      6.1.  Hash Commitment
-     6.2.  Evidence Types
-       6.2.1.  The Lifecycle Transition Object
-       6.2.2.  The Derivation Record
-       6.2.3.  The Erasure Record
-     6.3.  Registration Policy and Authoritative Producers
-     6.4.  Registration Availability
-     6.5.  Retrieval
-     6.6.  What to Register
-   7.  The Mission as Subject
-   8.  Receipts and Transparent Statements
-     8.1.  Verification Failures
-   9.  Worked Example
-   10. What Transparency Adds, and Does Not
-   11. Conformance
-   12. Security Considerations
-   13. Privacy Considerations
-     13.1.  Evidence Minimization
-   14. IANA Considerations
-   15. References
-     15.1.  Normative References
-     15.2.  Informative References
+     6.2.  The Mission Evidence Base
+     6.3.  Evidence Types
+       6.3.1.  The Lifecycle Transition Object
+       6.3.2.  The Derivation Record
+       6.3.3.  The Erasure Record
+     6.4.  Registration Policy and Authoritative Producers
+     6.5.  Registration Availability
+     6.6.  Retrieval
+     6.7.  What to Register
+   7.  Cross-Producer Correlation
+   8.  The Mission as Subject
+   9.  Receipts and Transparent Statements
+     9.1.  Verification Failures
+   10. Worked Example
+   11. What Transparency Adds, and Does Not
+   12. Conformance
+   13. Security Considerations
+   14. Privacy Considerations
+     14.1.  Evidence Minimization
+   15. IANA Considerations
+   16. References
+     16.1.  Normative References
+     16.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -130,15 +132,15 @@ Table of Contents
    tree head.  Detecting whether the service later drops or reorders a
    record, or shows different auditors different heads, rests on
    trusting that single service or on registering with more than one
-   (Section 10, Section 12).  The Mission is the statement subject, so
+   (Section 11, Section 13).  The Mission is the statement subject, so
    all of a Mission's evidence shares one subject and forms one feed an
-   auditor can assemble and replay as a single narrative (Section 6.5).
+   auditor can assemble and replay as a single narrative (Section 6.6).
 
    This adds transparency to evidence the suite already defines; it
    defines no new evidence object.  It is optional, and what it proves
    is bounded: transparency makes misbehavior detectable and
    attributable, it does not make a dishonest issuer honest
-   (Section 10).
+   (Section 11).
 
 2.  Conventions and Terminology
 
@@ -225,7 +227,7 @@ Table of Contents
    version's normative substrate.  Evidence produced under another
    Mission substrate registers and verifies the same way once its types
    and canonical bytes are defined as in the evidence-type table
-   (Section 6.2).
+   (Section 6.3).
 
 6.  Registering Mission Evidence
 
@@ -238,13 +240,13 @@ Table of Contents
    *  iss: the producing component's issuer identifier, bound to the key
       the record is signed with; and
 
-   *  sub: the Mission, as defined in Section 7.
+   *  sub: the Mission, as defined in Section 8.
 
 6.1.  Hash Commitment
 
    A Signed Statement MUST commit to the evidence by hash rather than
    carry the evidence itself, so sensitive task data stays out of the
-   log (Section 13).  The commitment uses the COSE hash-envelope
+   log (Section 14).  The commitment uses the COSE hash-envelope
    mechanism [I-D.draft-ietf-cose-hash-envelope]: the COSE_Sign1 payload
    is the hash of the evidence, carried inline, and the protected header
    signals how the hash was produced.  The payload is not detached, and
@@ -253,7 +255,7 @@ Table of Contents
    themselves.
 
    The committed value is the SHA-256 [RFC6234] digest of the evidence
-   bytes that Section 6.2 fixes for the evidence type.  For an object
+   bytes that Section 6.3 fixes for the evidence type.  For an object
    that is already signed, those bytes are the retained object as
    issued, hashed as-is; for an object this profile canonicalizes, they
    are its JCS canonical bytes.  The protected header carries:
@@ -262,20 +264,58 @@ Table of Contents
       for SHA-256 [I-D.draft-ietf-cose-hash-envelope]; and
 
    *  payload-preimage-content-type (label 259): the media type of the
-      evidence that was hashed, from Section 6.2.
+      evidence that was hashed, from Section 6.3.
 
    The log then proves a specific record was registered at a time; the
    evidence is retrieved separately, under access control, and its
    canonical bytes are rehashed and checked against the committed digest
-   (Section 8).
+   (Section 9).
 
-6.2.  Evidence Types
+6.2.  The Mission Evidence Base
+
+   Several registrable evidence types, defined across the runtime,
+   AuthZEN, harness, and containment profiles, record an enforcement or
+   issuer decision under a shared shape: a reference to the Mission the
+   record concerns, an emitter object naming the component that produced
+   it (id, a string; role, one of pdp, pep, executor, harness, egress,
+   or issuer), and, where the defining profile fixes it, an entry_digest
+   naming the Authority Set entry the record concerns
+   ([I-D.draft-mcguinness-mission-authzen]).  Two further members carry
+   correlation a record MAY need: hop_reference, attributing a record to
+   the continuation hop that authorized it, defined as a coordinated
+   Decision Evidence member by the AuthZEN binding
+   ([I-D.draft-mcguinness-mission-authzen]), and scope_statement_digest,
+   binding a record to the published Enforcement Scope Statement in
+   effect when it was made, defined by the harness profile
+   ([I-D.draft-mcguinness-mission-harness]).
+
+   This is a naming convention this document names once, not a wire
+   object every evidence type carries verbatim.  Each type's defining
+   profile fixes the concrete form of the Mission reference (a nested
+   mission object or a flat mission_id/issuer pair), its own record
+   identifier, and its own timestamp member, and adds its own kind-
+   specific members on top; no member named here is required across
+   every type, and a defining profile states which of them it carries
+   and whether each is required, optional, or absent for that type.
+
+   The shared naming does not weaken, and is not a substitute for, the
+   per-type separation Section 6.3 fixes.  Each evidence type keeps its
+   own registered payload-preimage-content-type or JWS typ, and a
+   signature or hash commitment produced over one type's canonical bytes
+   remains verifiable only as that type: domain separation comes from
+   the signed content-type or typ value (Section 6.1), never from
+   members a record happens to share with another type.  A relying party
+   that recognizes these member names by convention still MUST check a
+   record's registered type identifier against the exact type it expects
+   before treating the record as that type (Section 6.4).
+
+6.3.  Evidence Types
 
    Each registrable evidence type fixes the exact bytes that are hashed,
    the media type carried in payload-preimage-content-type, and the
    producer authoritative for it.  A producer MUST commit to the
    canonical bytes named here.  A relying party MUST verify the producer
-   is authoritative for the type (Section 6.3) before treating a record
+   is authoritative for the type (Section 6.4) before treating a record
    as part of the Mission's feed.
 
      +============+=================+====================+==========+
@@ -289,11 +329,11 @@ Table of Contents
      +------------+-----------------+--------------------+----------+
      | Lifecycle  | Signals SET as  | application/       | issuer   |
      | transition | issued; else    | secevent+jwt, else |          |
-     |            | Section 6.2.1   | application/       |          |
+     |            | Section 6.3.1   | application/       |          |
      |            | (JCS)           | mission-lifecycle- |          |
      |            |                 | transition+json    |          |
      +------------+-----------------+--------------------+----------+
-     | Derivation | Section 6.2.2   | application/       | issuer   |
+     | Derivation | Section 6.3.2   | application/       | issuer   |
      | record     | (JCS)           | mission-           |          |
      |            |                 | derivation-        |          |
      |            |                 | record+json        |          |
@@ -338,7 +378,7 @@ Table of Contents
      |            | harness profile |                    |          |
      |            | fixes           |                    |          |
      +------------+-----------------+--------------------+----------+
-     | Erasure    | Section 6.2.3   | application/       | producer |
+     | Erasure    | Section 6.3.3   | application/       | producer |
      | record     | (JCS)           | mission-erasure-   | of the   |
      |            |                 | record+json        | erased   |
      |            |                 |                    | record's |
@@ -373,7 +413,7 @@ Table of Contents
    The media types and type identifiers are defined as follows:
 
    *  the approval-event, lifecycle-transition, and derivation-record
-      media types are defined by this profile (Section 14);
+      media types are defined by this profile (Section 15);
 
    *  the consent, decision, execution, and refusal evidence types are
       registered by the profiles that define those objects
@@ -394,12 +434,12 @@ Table of Contents
       discovery profile ([I-D.draft-mcguinness-mission-discovery]).
 
    The approval event's canonical bytes are the whole Mission record at
-   creation with state excluded, canonicalized (Section 6.2): every
+   creation with state excluded, canonicalized (Section 6.3): every
    committed member is included, including members companion profiles
    add to the record under its extensibility rules, so the commitment
    covers the record as approved and not a fixed subset.  These bytes
    carry no typ/iss integrity-anchor envelope, unlike the derivation
-   record's entries_digest and token_digest (Section 6.2.2); domain
+   record's entries_digest and token_digest (Section 6.3.2); domain
    separation instead comes from the signed payload-preimage-content-
    type in the COSE hash-envelope protected header (Section 6.1), which
    binds the committed hash to application/mission-approval-record+json
@@ -412,14 +452,14 @@ Table of Contents
    that reference informative, and a deployment not running the
    Experimental profile omits the row.  A deployment that does not run
    the Signals profile commits lifecycle transitions as the transition
-   object (Section 6.2.1) instead of the Signals SET.
+   object (Section 6.3.1) instead of the Signals SET.
 
    A Child Evidence record registers on the Parent Mission's feed: the
-   sub is the parent's (Section 7), its producer is the issuer, and the
+   sub is the parent's (Section 8), its producer is the issuer, and the
    child Mission's id inside the evidence makes the delegation navigable
    from parent to child.
 
-6.2.1.  The Lifecycle Transition Object
+6.3.1.  The Lifecycle Transition Object
 
    A deployment that does not run the Signals profile commits a
    lifecycle transition as a minimal JSON object with these members,
@@ -440,12 +480,12 @@ Table of Contents
    *  salt (string, required): a random salt of at least 128 bits,
       base64url-encoded, retained with the evidence.  The object's other
       members are drawn from an enumerable space, so an unsalted
-      commitment is confirmable by dictionary (Section 13).
+      commitment is confirmable by dictionary (Section 14).
 
    Its media type is application/mission-lifecycle-transition+json
-   (Section 14).
+   (Section 15).
 
-6.2.1.1.  Computed Example
+6.3.1.1.  Computed Example
 
    A minimal transition object recording the revocation of Mission
    msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-; the salt is a fixed
@@ -469,7 +509,7 @@ Table of Contents
    The committed digest is the SHA-256 of those bytes; its base64url
    form is SD3SCb7vm3b_Ivsm19ENQAGAv7pjLS-mNWGcaXqslmc.  The Signed
    Statement carries the digest bytes inline as its payload, with this
-   protected header (Section 6.1, Section 7):
+   protected header (Section 6.1, Section 8):
 
    {
      / alg /                    1: -7,   / ES256 /
@@ -484,7 +524,7 @@ Table of Contents
      }
    }
 
-6.2.2.  The Derivation Record
+6.3.2.  The Derivation Record
 
    The family's evidence runs from the approval to the enforced action,
    but the derivation event between them, the issuer issuing a token
@@ -525,10 +565,10 @@ Table of Contents
       which the token was issued.
 
    Its media type is application/mission-derivation-record+json
-   (Section 14), and its authoritative producer is the issuer: the
-   Signed Statement's iss MUST equal the Mission issuer (Section 6.2).
+   (Section 15), and its authoritative producer is the issuer: the
+   Signed Statement's iss MUST equal the Mission issuer (Section 6.3).
 
-6.2.2.1.  Computed Example
+6.3.2.1.  Computed Example
 
    For Mission msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-, the Mission Issuer
    issues a token for audience https://erp.example.com, narrowed to the
@@ -573,14 +613,14 @@ Table of Contents
    form is ilGnfpu7hz4kMZeqXWuxwNi0i_fO2vzjWGOY_i9yt4s.  The Signed
    Statement carries the digest bytes inline as its payload, with
    payload-preimage-content-type application/mission-derivation-
-   record+json and the same iss and sub as Section 6.2.1.1.
+   record+json and the same iss and sub as Section 6.3.1.1.
 
-6.2.3.  The Erasure Record
+6.3.3.  The Erasure Record
 
    When retained evidence is destroyed inside its retention window,
    under a data-subject request or a retention limit, the erasure itself
    is registered, so the resulting audit failure is explained on the
-   feed rather than indistinguishable from convenient loss (Section 13).
+   feed rather than indistinguishable from convenient loss (Section 14).
    The canonical bytes are the JCS serialization of a JSON object with:
 
    *  erased (string, required): the committed digest, from the Signed
@@ -592,7 +632,7 @@ Table of Contents
    *  erased_at (string, required): an RFC 3339 [RFC3339] date-time.
 
    *  salt (string, required): a random salt of at least 128 bits,
-      base64url encoded, per the enumerable-shape rule of Section 13.
+      base64url encoded, per the enumerable-shape rule of Section 14.
 
    The record's producer is the authoritative producer of the erased
    record's type, and it registers on the same Mission feed.  A relying
@@ -600,11 +640,11 @@ Table of Contents
    commitment treats the audit failure as explained (recorded-basis
    erasure, still not content-verified); an unexplained gap, in a
    deployment that registers erasures, remains worth recording
-   (Section 8.1).
+   (Section 9.1).
 
-6.3.  Registration Policy and Authoritative Producers
+6.4.  Registration Policy and Authoritative Producers
 
-   Each evidence type has one authoritative producer (Section 6.2).  A
+   Each evidence type has one authoritative producer (Section 6.3).  A
    relying party MUST verify that a record's iss is the authoritative
    producer for the record's type before treating the record as part of
    the Mission's feed; a record from any other producer is not part of
@@ -635,7 +675,7 @@ Table of Contents
    the same publication of a harness that registers its evidence
    ([I-D.draft-mcguinness-mission-harness]).
 
-6.4.  Registration Availability
+6.5.  Registration Availability
 
    Registration is asynchronous to the events it records.  A producer
    MUST NOT block approval, issuance, or a lifecycle transition on a
@@ -665,7 +705,7 @@ Table of Contents
    that needs the event time itself attested relies on the timestamps
    the evidence carries, which the record's hash commits.
 
-6.5.  Retrieval
+6.6.  Retrieval
 
    The transparency substrate registers Signed Statements and resolves a
    Receipt by its entry identifier; the SCITT reference APIs
@@ -677,7 +717,7 @@ Table of Contents
    A deployment that wants an auditor to retrieve all of a Mission's
    records by sub provides that enumeration itself, out of band, over
    the records it registered; this profile fixes the sub so those
-   records share one correlator (Section 7), not a standardized feed
+   records share one correlator (Section 8), not a standardized feed
    query.
 
    Out of band is not undocumented.  A deployment claiming this profile
@@ -688,7 +728,7 @@ Table of Contents
 
    *  in what order;
 
-   *  with what completeness relative to Section 6.6; and
+   *  with what completeness relative to Section 6.7; and
 
    *  under what auditor authentication.
 
@@ -697,7 +737,7 @@ Table of Contents
    undocumented one leaves the feed assembled only by the deployment
    itself, which is the trust this profile exists to remove.
 
-6.6.  What to Register
+6.7.  What to Register
 
    A deployment claiming this profile MUST register at least the
    governance-critical records: the approval event and every Mission
@@ -706,34 +746,96 @@ Table of Contents
    action trail is transparent and not only the governance trail.
 
    A Mission Issuer deploying this profile SHOULD register a derivation
-   record (Section 6.2.2) for each derivation event.  The derivation is
+   record (Section 6.3.2) for each derivation event.  The derivation is
    where approval becomes an issued token, and the family's evidence
    otherwise leaves that step to Authorization Server logs no profile
    mandates; registering it closes the approval-to-action gap.
 
-7.  The Mission as Subject
+7.  Cross-Producer Correlation
+
+   This section is non-normative reference-architecture guidance.  It
+   describes how a deployment builds an activity view across evidence
+   its separate producers retain; it defines no wire member and imposes
+   no requirement of this profile.
+
+   Registration (Section 6) commits evidence by hash to one Mission-
+   keyed transparency feed (Section 8); it does not itself join records
+   into a timeline.  Independently of registration, evidence is
+   producer-retained (each PDP, PEP, executor, egress gate, harness, and
+   the Mission Issuer keeps its own store,
+   [I-D.draft-mcguinness-mission-runtime]), and a deployment builds a
+   per-Mission activity view by joining those retained records at query
+   time, over correlation members the evidence conventions already
+   carry:
+
+   *  mission_id, or the nested Mission reference an object carries: the
+      join's outer key, present on every record.
+
+   *  event_id: correlates a containment-plane ingestion decision to the
+      Containment Evidence it produced when the outcome was applied
+      ([I-D.draft-mcguinness-oauth-mission-containment]).
+
+   *  hop_reference: correlates an action's evidence to the continuation
+      hop that authorized it (Section 6.2).
+
+   *  entry_digest: correlates records across producers and decisions
+      that concern the same Authority Set entry.
+
+   *  trace_id: a deployment-supplied telemetry correlation identifier
+      threading every record one task run produced, when the
+      deployment's evidence-emitting components share one.  This
+      document does not define its form or require it.
+
+   Each key joins only where the producing profile's evidence carries
+   it: a record with no hop_reference was not taken under a
+   continuation, and Containment Evidence carries no trace_id.
+
+   A Mission's lineage members thread a whole task-run graph, one
+   Mission at a time, into a tree: the parent member a Child Mission's
+   record carries
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]), the template
+   member a template-dispatched Mission carries
+   ([I-D.draft-mcguinness-oauth-mission-template]), and the predecessor
+   member an expansion successor carries
+   ([I-D.draft-mcguinness-oauth-mission-expansion]).  A template's
+   dispatched instances, a dispatched Mission's Child Missions, and the
+   continuation hops carried on their evidence, form the branches; an
+   expansion successor's predecessor is lineage metadata pointing back
+   to the Mission it succeeds, not a branch of the same run, because a
+   successor's authority comes only from its own approval
+   ([I-D.draft-mcguinness-oauth-mission-expansion]).
+
+   A reference realization of this guidance is a console activity log: a
+   read-model view joining Decision Evidence, Execution Evidence,
+   Refusal Records, egress evidence, issuer ingestion records, and
+   Containment Evidence across their producers into a per-Mission task-
+   run timeline, by the keys and the lineage tree above, without
+   registering, moving, or duplicating any producer's evidence of
+   record.
+
+8.  The Mission as Subject
 
    The sub of every Signed Statement about a Mission is a stable
    identifier of that Mission, derived from the mission claim's issuer
    and id.  All evidence about one Mission shares one sub and forms one
    Transparency Service feed.  Where the deployment provides feed
-   retrieval (Section 6.5), an auditor collects a Mission's registered
+   retrieval (Section 6.6), an auditor collects a Mission's registered
    evidence by that sub, ordered and append-only within what the
    retrieval returns.
 
    That retrieval is out-of-band enumeration the deployment provides
-   (Section 6.5), not a standardized subject query the substrate
+   (Section 6.6), not a standardized subject query the substrate
    defines: the substrate's non-equivocation guarantee binds the log and
    its Receipts, not the completeness of an enumeration the audited
    deployment itself assembles.  A deployment can therefore present
    different auditors different subject listings, and such a per-auditor
    split view is not detectable from a single service without a
    standardized listing or registration with more than one service
-   (Section 8, Section 12).
+   (Section 9, Section 13).
 
    The feed is complete only relative to what the deployment is expected
-   to register and to enumerate (Section 6.6); an omitted or withheld
-   record is visible only against that expectation (Section 12).
+   to register and to enumerate (Section 6.7); an omitted or withheld
+   record is visible only against that expectation (Section 13).
 
    For that to hold, every producer MUST compute the identical sub.
    This profile fixes a single construction; a producer MUST use it.  A
@@ -764,7 +866,7 @@ Table of Contents
    lineage to the parent is the parent member of its mission claim,
    which an auditor follows to the parent's sub to see that trigger, and
    the parent's children are enumerated by the Child Evidence records on
-   the parent's feed (Section 6.2), each carrying the child's id.
+   the parent's feed (Section 6.3), each carrying the child's id.
 
    Across trust domains a Mission's issuer and id are unchanged
    ([I-D.draft-mcguinness-oauth-mission]), so every producer in every
@@ -773,12 +875,12 @@ Table of Contents
 
    Where domains register with different services, each service holds a
    partial feed and its non-equivocation guarantee is per-service
-   (Section 8); an auditor that needs the Mission's whole history
+   (Section 9); an auditor that needs the Mission's whole history
    reconciles it across those services.  A deployment that wants a
    single coherent feed SHOULD have its cross-domain producers register
    with one shared service.
 
-8.  Receipts and Transparent Statements
+9.  Receipts and Transparent Statements
 
    On registration the Transparency Service returns a Receipt, a signed
    inclusion proof ([RFC9943]).
@@ -803,17 +905,17 @@ Table of Contents
    3.  verify the inclusion proof binds the Signed Statement to the log;
 
    4.  when auditing a specific Mission, confirm sub is that Mission's
-       feed (Section 7); and
+       feed (Section 8); and
 
    5.  retrieve the referenced evidence under access control, rehash the
-       evidence bytes as Section 6.2 fixes them for its type (with the
-       retained salt, where one was used, Section 13), and compare the
+       evidence bytes as Section 6.3 fixes them for its type (with the
+       retained salt, where one was used, Section 14), and compare the
        result against the committed digest.
 
    A relying party MUST complete steps 1 through 5 before relying on a
    record as transparent.
 
-8.1.  Verification Failures
+9.1.  Verification Failures
 
    This profile distinguishes an integrity failure, where the
    transparency claim is false, from an audit failure, where the claim
@@ -833,7 +935,7 @@ Table of Contents
       check is incomplete.  The relying party MUST NOT treat the record
       as content-verified.  It MUST NOT treat unretrievable evidence as
       evidence of tampering.  An erasure record on the feed
-      (Section 6.2.3) explains the gap as recorded-basis erasure; a gap
+      (Section 6.3.3) explains the gap as recorded-basis erasure; a gap
       without one, in a deployment that registers erasures, is itself
       worth recording, though still not proof of tampering.
 
@@ -865,7 +967,7 @@ Table of Contents
    monitor MUST NOT claim non-equivocation: it obtains tamper evidence
    only against alteration after registration, not against a split view.
 
-9.  Worked Example
+10.  Worked Example
 
    At the approval event for Mission
    msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-, the Mission Issuer records
@@ -891,7 +993,7 @@ Table of Contents
    }
 
    The payload is the SHA-256 digest of the retained Consent Evidence
-   object as issued (Section 6.2), carried inline as the raw digest
+   object as issued (Section 6.3), carried inline as the raw digest
    whose base64url form is CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz,
    not that display string.  The Transparency Service appends the
    statement and returns a Receipt, a COSE_Sign1 with an inclusion proof
@@ -900,11 +1002,11 @@ Table of Contents
 
    As the Mission proceeds, its other producers write to the same sub:
    the Mission Issuer registers a derivation record when it derives the
-   agent's token (Section 6.2.2), the PDP registers a decision-evidence
+   agent's token (Section 6.3.2), the PDP registers a decision-evidence
    commitment when it permits the journal-entries.write, and the Mission
    Issuer registers a lifecycle-change commitment when alice later
    completes the Mission.  Collecting the records registered under that
-   one sub (Section 6.5) gives the Mission's whole history, in order,
+   one sub (Section 6.6) gives the Mission's whole history, in order,
    append-only:
 
    sub =
@@ -925,9 +1027,9 @@ Table of Contents
    at t0, included in the service's signed tree head, and unaltered
    since, without trusting the Mission Issuer's own records.  Detecting
    a later drop or reorder by the service rests on trusting that single
-   service or reconciling across several (Section 10).
+   service or reconciling across several (Section 11).
 
-   Two failures are distinct (Section 8.1).  If the retrieved Consent
+   Two failures are distinct (Section 9.1).  If the retrieved Consent
    Evidence hashes to a value other than the committed digest, the
    retained record was altered after registration: an integrity failure,
    and the auditor rejects it.  If the record cannot be retrieved at
@@ -935,7 +1037,7 @@ Table of Contents
    registered at t0 and included in a signed tree head, but cannot
    confirm its content: an audit failure, not proof of tampering.
 
-10.  What Transparency Adds, and Does Not
+11.  What Transparency Adds, and Does Not
 
    Transparency makes the evidence set tamper-evident and independently
    verifiable: a registered record's inclusion is provable from its
@@ -947,7 +1049,7 @@ Table of Contents
    reordered and that the feed is the same for every auditor are trusted
    properties of that service, not ones a Receipt proves: this profile
    defines no consistency proofs or gossip, so checking them rests on
-   registering with more than one service (Section 8, Section 12).
+   registering with more than one service (Section 9, Section 13).
 
    It does not make a dishonest producer honest.  A producer can
    register a false record; transparency makes the false record
@@ -959,7 +1061,7 @@ Table of Contents
    by hash, a Receipt without the retrievable evidence proves only that
    some record was logged, not what it said.
 
-11.  Conformance
+12.  Conformance
 
    A producer conforming to this profile MUST:
 
@@ -968,7 +1070,7 @@ Table of Contents
       (Section 6);
 
    *  set sub to the Mission feed by the fixed construction of
-      Section 7;
+      Section 8;
 
    *  set iss to its own issuer identifier, bound to the signing key;
       and
@@ -978,37 +1080,37 @@ Table of Contents
 
    A relying party conforming to this profile MUST:
 
-   *  perform verification steps 1 through 5 of Section 8 before relying
+   *  perform verification steps 1 through 5 of Section 9 before relying
       on a record as transparent;
 
    *  treat a signature, Receipt, inclusion-proof, or committed-hash
       mismatch as an integrity failure and reject the record;
 
    *  treat unretrievable evidence as an audit failure, not as evidence
-      of tampering (Section 8.1); and
+      of tampering (Section 9.1); and
 
    *  treat a producer or Transparency Service key it cannot verify
       against a trust anchor as an audit failure, and not treat the
-      record as transparent (Section 8.1).
+      record as transparent (Section 9.1).
 
-12.  Security Considerations
+13.  Security Considerations
 
    The transparency substrate's security considerations apply.  This
    profile adds:
 
    *  Accountability, not prevention.  Transparency detects and
       attributes tampering and omission after the fact; it does not stop
-      a producer from registering a false record (Section 10).
+      a producer from registering a false record (Section 11).
 
    *  Transparency Service trust.  A single service is trusted not to
       equivocate; a deployment that needs that property checked SHOULD
-      register with multiple independent services (Section 8).
+      register with multiple independent services (Section 9).
 
    *  Operator independence.  The Transparency Service SHOULD be
       operated independently of the authoritative producers for the
       feeds it holds.  The cross-domain value of transparency is
       verification without trust in the producer's own infrastructure
-      (Section 10); a service operated by the producer whose records it
+      (Section 11); a service operated by the producer whose records it
       holds returns the auditor to exactly that trust.  Where producer
       and service share an operator, registration with a second,
       independent service is the compensating control.  A deployment
@@ -1046,7 +1148,7 @@ Table of Contents
       key is no longer resolvable cannot be verified offline, and the
       compensating control is lost.
 
-13.  Privacy Considerations
+14.  Privacy Considerations
 
    A Transparency Service log is append-only and may be widely readable,
    so nothing registered can be redacted later.  A producer MUST NOT
@@ -1062,7 +1164,7 @@ Table of Contents
    widely readable log.  Even the committed metadata leaks information:
    the sub is a durable per-Mission correlator and the registration
    times reveal a Mission's activity pattern.  The sub construction is
-   fixed (Section 7) and does not expose the Subject directly, so the
+   fixed (Section 8) and does not expose the Subject directly, so the
    concern is not Subject leakage but that the identifier, existence,
    and cadence are visible in the log.
 
@@ -1073,16 +1175,16 @@ Table of Contents
    can confirm the commitment by dictionary; the salt makes the
    committed digest unguessable while still reproducible at
    verification, where the salt is retrieved with the evidence
-   (Section 8).
+   (Section 9).
 
    The lifecycle-transition object carries the salt as a required member
-   of its canonical bytes for exactly this reason (Section 6.2.1), and
+   of its canonical bytes for exactly this reason (Section 6.3.1), and
    any other profile-fixed low-entropy shape MUST do the same.
 
    Deleting retained evidence has a consequence the log makes permanent.
    The Receipt, the sub, and the registration cadence stay in the log,
    but the evidence they commit to is gone, so every record over the
-   erased evidence becomes a permanent audit failure (Section 8.1): its
+   erased evidence becomes a permanent audit failure (Section 9.1): its
    content can never again be checked against the commitment.  A
    deployment that may need to erase evidence, for a data-subject
    request or a retention limit, weighs this before registering.
@@ -1090,12 +1192,12 @@ Table of Contents
    into a permanent, visible gap rather than a silent one.
 
    A deployment that erases committed evidence MUST register an erasure
-   record (Section 6.2.3) on the same feed, so the gap carries its
+   record (Section 6.3.3) on the same feed, so the gap carries its
    basis: lawful erasure and convenient loss are otherwise
    indistinguishable, and the verification taxonomy forbids reading the
    gap as tampering.
 
-13.1.  Evidence Minimization
+14.1.  Evidence Minimization
 
    The evidence layer is an accountability substrate, and unbounded it
    becomes a surveillance substrate.  A deployment SHOULD apply these
@@ -1136,22 +1238,22 @@ Table of Contents
       and their salts) without over-sharing the raw committed content
       beyond the recipient's need.
 
-14.  IANA Considerations
+15.  IANA Considerations
 
    This document defines four media types for the evidence types of
-   Section 6.2 that no other profile defines:
+   Section 6.3 that no other profile defines:
 
    *  application/mission-approval-record+json for the approval-event
       record;
 
    *  application/mission-lifecycle-transition+json for the minimal
-      lifecycle-transition object (Section 6.2.1);
+      lifecycle-transition object (Section 6.3.1);
 
    *  application/mission-derivation-record+json for the derivation
-      record (Section 6.2.2); and
+      record (Section 6.3.2); and
 
    *  application/mission-erasure-record+json for the erasure record
-      (Section 6.2.3).
+      (Section 6.3.3).
 
    This document makes no registration request for them yet;
    registration is deferred pending a demonstrated cross-domain
@@ -1184,9 +1286,9 @@ Table of Contents
    substrate's ([RFC9943]).  This profile derives the sub by profile
    rather than registering a new identifier.
 
-15.  References
+16.  References
 
-15.1.  Normative References
+16.1.  Normative References
 
    [I-D.draft-ietf-cose-hash-envelope]
               Steele, O., Lasker, S., and H. Birkholz, "COSE Hash
@@ -1252,7 +1354,7 @@ Table of Contents
               DOI 10.17487/RFC9943, June 2026,
               <https://www.rfc-editor.org/rfc/rfc9943>.
 
-15.2.  Informative References
+16.2.  Informative References
 
    [I-D.draft-ietf-scitt-scrapi]
               Birkholz, H., Geater, J., and A. Delignat-Lavaud, "Supply
@@ -1298,11 +1400,26 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-containment]
+              McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-containment.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-expansion]
+              McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-expansion.html>.
+
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-
               signals.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-template]
+              McGuinness, K., "Mission Template for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-template.html>.
 
    [RFC8610]  Birkholz, H., Vigano, C., and C. Bormann, "Concise Data
               Definition Language (CDDL): A Notational Convention to
