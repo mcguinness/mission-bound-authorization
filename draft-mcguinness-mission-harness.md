@@ -346,6 +346,13 @@ The statement also declares the deployment's taint policy
 ({{session-taint}}). Verifying that no unmediated path exists is a
 deployment audit obligation, not a protocol property: this profile
 fixes what the statement declares, not how a deployment proves it.
+Absent execution-environment attestation, a relying party cannot
+tell a harness that enforces this from one that only publishes the
+statement. Where a deployment claims the runtime profile's trifecta
+containment or agent-compromise-resistant enforcement, that profile
+requires the attestation ({{I-D.draft-mcguinness-mission-runtime}}),
+and this execution-environment scope statement is the artifact it
+attests.
 
 Mediation governs the agent's outputs; the same duty applies to its
 inputs. A Mission-aware harness SHOULD surface to the agent only the

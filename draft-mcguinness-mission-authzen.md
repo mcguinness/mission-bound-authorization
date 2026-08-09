@@ -119,6 +119,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -193,6 +201,11 @@ semantics of parameter binding, the failure
 modes, or the runtime conformance scope; those are normatively defined
 in {{I-D.draft-mcguinness-mission-runtime}} and are referenced,
 not duplicated, here.
+
+AuthZEN continues the Policy Decision Point / Policy Enforcement
+Point request-response vocabulary XACML established for externalized
+authorization; this binding adopts AuthZEN's JSON/HTTP profile of
+that model, not a new one.
 
 The end-to-end flow this binding realizes:
 
@@ -437,6 +450,28 @@ materialized view:
   the current view, so a PEP need not supply it; a PEP that has the
   value supplies it and the PDP uses it as a content-addressed
   correlator. When present it is checked as in {{pdp-request}}.
+
+This context anchors the Mission's approved Authority Set through
+`authority_hash`. Where a Mission participates in a companion that
+overlays evaluated authority on top of the approved set, for example
+Mission Containment's Effective Authority Set
+({{I-D.draft-mcguinness-oauth-mission-containment}}), the PDP
+evaluates the request against that overlaid set, not the approved
+set alone, per the runtime profile's Authority decision input
+({{I-D.draft-mcguinness-mission-runtime}}). This document defines no
+member carrying such an overlay's evaluated state. A companion
+profile MAY extend the `mission` context with the member it needs,
+by specification, mirroring the denial-reason extension rule
+({{runtime-denial-classification}}): an extension member name MUST
+be a collision-resistant name or a name coordinated within this
+document family, and a PDP that does not recognize an extension
+member evaluates the approved Authority Set unchanged. A denial
+produced against the overlaid set carries the overlay's own denial
+reason, not `out_of_authority`: the Containment profile's
+`authority_contained` denies capability the Approver granted and the
+issuer later removed, a distinct history from capability never
+approved
+({{I-D.draft-mcguinness-oauth-mission-containment}}).
 
 ## Actor Decision Context {#context-actor}
 

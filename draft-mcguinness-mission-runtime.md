@@ -181,6 +181,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -975,7 +983,7 @@ payload after the decision and before presentation.
 
 ## Least Exposure {#least-exposure}
 
-Mission containment applies to exposure as well as authority. An
+A Mission bounds exposure as well as authority. An
 agent exceeds the Mission envelope by invoking an action outside the
 Authority Set, but also by being exposed to inputs the approved task
 does not need: tools, data, memories, prompts, schemas, credentials,
@@ -1147,6 +1155,22 @@ The action MUST be authorized by an applicable
 that is otherwise available to the PEP or PDP for that token under
 the issuance profile (for example, through introspection when the
 authority is not represented inline).
+
+Where a Mission participates in the Containment profile
+({{I-D.draft-mcguinness-oauth-mission-containment}}), this input is
+the Mission's current Effective Authority Set, the approved set
+minus contained capability, not the approved set the token's
+`authorization_details` entry names at face value. The PDP MUST
+refuse an action within an entry that is currently contained even
+though a token issued before the contain transition still carries
+it, established from the same Mission state source and freshness
+bound that governs the `active` check ({{state-freshness}}); a
+Mission stays `active` while contained, so this check, not the state
+check, is what a containment-aware PDP adds. A deployment that does
+not deploy the Containment profile evaluates the approved Authority
+Set unchanged, as the rest of this section states. The decision-API
+binding provides the extension point through which a companion
+profile carries which evaluated set the PDP used ({{authzen}}).
 
 For an entry of type `mission_resource_access`, the action's
 `resource` and invoked action or tool identity MUST be within that
@@ -1962,7 +1986,10 @@ A deployment that leaves any of the four conditions unmet, or whose
 Enforcement Scope Statement does not declare the path scope, MUST NOT
 claim agent-compromise-resistant enforcement; it may still claim base
 runtime conformance. The claim names exactly the set of classes it
-covers.
+covers. This claim additionally requires execution-environment
+attestation of the scope statement, the condition
+{{trifecta-containment}} states for both High-Assurance Agent
+claims.
 
 The guarantee is the conjunction of these conditions, not any one of
 them. Mediated custody alone prevents only off-path presentation of
@@ -1985,6 +2012,15 @@ column records the level each condition has outside this claim:
 | Active-state freshness | MUST ({{state-freshness}}) | Revocation lag bounded only by token lifetime |
 
 ## Trifecta Containment {#trifecta-containment}
+
+The name is unrelated to Mission Containment
+({{I-D.draft-mcguinness-oauth-mission-containment}}), the
+issuer-held overlay that removes capability from a Mission's
+Authority Set. Trifecta containment names resistance to the
+exfiltration trifecta below; Mission Containment names a governance
+operation over the Authority Set. Context distinguishes the two, and
+a deployment that runs both keeps the terms separate in its
+Enforcement Scope Statement.
 
 An agent that holds private-data authority, is exposed to untrusted
 content, and can communicate externally combines the three
@@ -2032,13 +2068,18 @@ completeness.
 
 Both this claim and agent-compromise-resistant enforcement
 ({{compromise-resistant}}) rest on the execution-environment scope
-statement, a self-declared artifact. A deployment MAY bind that
-statement to execution-environment attestation, presenting Entity
-Attestation Token evidence under the AI-agent-instance profile
+statement, a self-declared artifact: the wire alone does not let a
+relying party distinguish a deployment that built the declared
+isolation from one that only published the statement. A deployment
+claiming either MUST bind the statement to execution-environment
+attestation, presenting Entity Attestation Token evidence under the
+AI-agent-instance profile
 ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) covering the
-isolation properties the statement declares; a verifier SHOULD treat
-an unattested claim as an organizational assertion and an attested
-one as a technical one.
+isolation properties the statement declares, and MUST NOT represent
+the claim as met without it. The requirement is scoped to these two
+High-Assurance Agent claims; base runtime conformance does not
+require attestation, and a deployment claiming only the base profile
+MAY publish its scope statement unattested.
 
 # Negative Conformance Tests {#negative-conformance}
 
