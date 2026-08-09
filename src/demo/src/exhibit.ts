@@ -336,6 +336,10 @@ const AAM_TAINT_EVENT_ID = "aam-exhibit-taint-1";
  * from the derivation policy so every entry stays entry-wise within it: keep
  * read/list + remittance.send, copy constraints verbatim, keep CANONICAL_RESOURCE
  * (so containment's resource-remap targets the resource the Mission holds).
+ * Consenting to this ceiling is NOT consent for a Dispatch to ever confer
+ * remittance.send: the prohibited-class rule blocks that regardless of ceiling
+ * membership (@spec mission-template#prohibited-classes). See
+ * aamLowConsequenceIntent() below for what a Dispatch actually instantiates.
  */
 function aamCeiling(): CeilingEntry[] {
   const keep = (a: string) => a.endsWith(".read") || a.endsWith(".list") || a === "payments:remittance.send";
@@ -367,7 +371,34 @@ function aamTemplateBody(issuer: string, seq: number): Record<string, unknown> {
   };
 }
 
-/** In-ceiling reconciliation intent: read invoices + post the finance remittance. */
+/**
+ * The LOW-CONSEQUENCE dispatch intent: read only. This is the only intent a
+ * machine-speed Dispatch of this Template ever successfully instantiates.
+ */
+function aamLowConsequenceIntent(): string {
+  return JSON.stringify({
+    goal: "nightly reconciliation of Acme invoices (read-only)",
+    resources: [CANONICAL_RESOURCE],
+    expires_at: AAM_FAR_FUTURE,
+    proposed_authority: [
+      {
+        type: "mission_resource_access",
+        resource: CANONICAL_RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ],
+  });
+}
+
+/**
+ * The PROHIBITED-CLASS intent: read invoices + post the finance remittance.
+ * payments:remittance.send is within the Template Ceiling, but a Dispatch of
+ * this intent MUST be refused dispatch_prohibited_class (external_commitment).
+ * The SAME JSON string is reused, unmodified, as the mission_intent of the
+ * ordinary human approval in step 17: one intent, two paths, only one of which
+ * the Template may instantiate.
+ */
 function aamIntent(): string {
   return JSON.stringify({
     goal: "nightly reconciliation of Acme invoices",
@@ -408,7 +439,7 @@ function aamLegend() {
     console.log(`  ${C.bold}${C.cyan}${component.padEnd(27)}${C.reset}${C.dim}${surface}${C.reset}`);
   console.log(`\n${C.bold}AAM → Mission${C.reset} ${C.dim}— each Agent Access Model component and the Mission surface that realizes it (AAM.md).${C.reset}`);
   row("Task Template + ceiling", "Mission Template + POST /templates (consent once)");
-  row("Agent Identity Broker", "mission-dispatch grant + async-delegation refresh family");
+  row("Agent Identity Broker", "the mission-dispatch grant (low-consequence) + an ordinary approval (external-commitment)");
   row("Task-Scoped Access Engine", "the PDP (@mission/pdp) over OpenFGA");
   row("Mediation Layer", "the payments PEP + the harness EgressGate");
   row("Trust Ratchet", "Mission Containment (signed protected-event ingestion)");
@@ -417,12 +448,15 @@ function aamLegend() {
 }
 
 /**
- * The seven-step AAM Nightly Reconciliation walk, driven against the SAME stack
- * as the sections above (do not spin a second stack): consent once (Template),
- * dispatch at machine speed (mission-dispatch grant), run disconnected
- * (async-delegation refresh family), mediate per action (PEP + EgressGate),
- * ratchet down on a signed protected event (Containment), restore only in a
- * fresh task, and read the joined task-run graph back from the Activity Log.
+ * The eight-step AAM Nightly Reconciliation walk, driven against the SAME
+ * stack as the sections above (do not spin a second stack): consent once
+ * (Template), dispatch the low-consequence slice at machine speed
+ * (mission-dispatch grant, with every remittance-bearing attempt refused
+ * dispatch_prohibited_class), run disconnected (async-delegation refresh
+ * family), mediate per action (PEP + EgressGate), take the human path for the
+ * external-commitment capability (an ordinary approval), ratchet it down on a
+ * signed protected event (Containment), restore only in a fresh human
+ * approval, and read the joined task-run graph back from the Activity Log.
  */
 async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: string) {
   // A fresh Template chapter, independent of the primary mission superseded and
@@ -436,7 +470,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   );
 
   let seq = 0;
-  // Threaded across the seven sequential steps.
+  // Threaded across the eight sequential steps.
   let templateId = "";
   // The dispatcher (ap-agent) DPoP key: the dispatched mission token binds to it,
   // and the RS-side proof in step 16 re-presents it (proof jkt == token cnf.jkt).
@@ -500,11 +534,11 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     ok: consentOk,
   });
 
-  // ---- 14. Machine-speed dispatch (AAM Agent Identity Broker) ----------------
-  step(14, "Machine-speed dispatch: AAM Agent Identity Broker → the mission-dispatch grant");
+  // ---- 14. Machine-speed dispatch, kept low-consequence (AAM Agent Identity Broker) ----
+  step(14, "Machine-speed dispatch: only the low-consequence read intent is admitted");
   goal(
-    "The scheduler dispatches a mission from the template with no human in the loop, then attempts an over-ceiling dispatch.",
-    "the in-ceiling dispatch is admitted (template-clipped, approver of record bob); the over-ceiling one is refused out_of_template_ceiling.",
+    "The scheduler dispatches the read-only intent with no human in the loop, then attempts a remittance-bearing dispatch and an over-ceiling one.",
+    "the read-only dispatch is admitted (template-clipped, approver of record bob); remittance is refused dispatch_prohibited_class; over-ceiling is refused out_of_template_ceiling.",
   );
   hop("Scheduler (ap-agent)", "AS", "POST /token (mission-dispatch grant, no human)", "HTTP");
   httpReq("POST", `${asUrl}/token`, {
@@ -512,12 +546,12 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     body: {
       grant_type: MISSION_DISPATCH_GRANT_TYPE,
       template_id: templateId,
-      mission_intent: "<in-ceiling reconciliation intent (read invoices + post remittance)>",
+      mission_intent: "<low-consequence reconciliation intent (read invoices only)>",
       dispatch_event_id: "evt-dispatch-...",
       client_assertion: "<private_key_jwt>",
     },
   });
-  const dispRes = await dispatch(aamIntent(), `evt-dispatch-${seq++}`);
+  const dispRes = await dispatch(aamLowConsequenceIntent(), `evt-dispatch-${seq++}`);
   const dispBody = dispRes.body as {
     access_token?: string;
     token_type?: string;
@@ -558,26 +592,49 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   note(
     `machine speed, no human: approver-of-record == the template's human (${dispatchedRecord.approver.sub}); ` +
       `template lineage template_hash ${dispatchedRecord.template?.template_hash === templateHash ? "==" : "!="} the consented template; ` +
-      "the Authority Set == the template-clipped effective set.",
-  );
-  note(
-    `subject == approver == ${dispatchedRecord.subject.sub} here by construction: at machine-speed dispatch the recipient ` +
-      "acts under the template's approver-of-record, not a distinct human subject (contrast step 2, where a human approval " +
-      "bound subject alice under a distinct approver bob for a write-bearing mission).",
+      "the Authority Set == the template-clipped effective set, and it is READ-ONLY.",
   );
   focusedMissionId = dispatchedMissionId;
   rail(stack);
+  const dispatchedActions = (dispBody.authorization_details as Array<{ actions: string[] }>).flatMap((e) => e.actions);
   const dispatchOk =
     dispRes.status === 200 &&
     dispatchedRecord.approver.sub === "bob" &&
-    dispatchedRecord.template?.template_hash === templateHash;
+    dispatchedRecord.template?.template_hash === templateHash &&
+    !dispatchedActions.includes("payments:remittance.send");
   outcome({
     decision: "PERMIT",
-    observed: `dispatched mission ${dispatchedMissionId}, approver-of-record ${dispatchedRecord.approver.sub}, template-clipped authority`,
+    observed: `dispatched mission ${dispatchedMissionId}, approver-of-record ${dispatchedRecord.approver.sub}, template-clipped READ-ONLY authority`,
     ok: dispatchOk,
   });
 
-  // Over-ceiling dispatch is refused out_of_template_ceiling.
+  // @spec mission-template#prohibited-classes: the CONFORMANCE proof; an
+  // intent that IS within the Template Ceiling (remittance.send is a consented
+  // ceiling entry) is still refused, because it is a prohibited class. This is
+  // what closes the finding: config now covers the class the PEP classifies
+  // external_commitment, so no Dispatch can grant it, in-ceiling or not.
+  hop("Scheduler (ap-agent)", "AS", "POST /token (mission-dispatch: remittance, within the ceiling)", "HTTP");
+  httpReq("POST", `${asUrl}/token`, {
+    headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof>" },
+    body: {
+      grant_type: MISSION_DISPATCH_GRANT_TYPE,
+      template_id: templateId,
+      mission_intent: "<intent adding payments:remittance.send (within the ceiling, but a prohibited class)>",
+    },
+  });
+  const prohibRes = await dispatch(aamIntent(), `evt-prohibited-${seq++}`);
+  const prohibBody = prohibRes.body as { mission_denial_reason?: string };
+  httpRes(prohibRes.status, prohibBody);
+  outcome({
+    decision: "DENY",
+    reason: gloss("reason", prohibBody.mission_denial_reason ?? ""),
+    observed: `the remittance-bearing intent (within the ceiling) was refused ${prohibBody.mission_denial_reason ?? "(no reason)"}: a Dispatch never confers a prohibited class`,
+    ok: prohibBody.mission_denial_reason === "dispatch_prohibited_class",
+  });
+
+  // Over-ceiling dispatch is refused out_of_template_ceiling, a DIFFERENT
+  // reason, distinguishing "never consented" from "consented but too
+  // consequential for machine-speed dispatch".
   hop("Scheduler (ap-agent)", "AS", "POST /token (mission-dispatch — over ceiling)", "HTTP");
   httpReq("POST", `${asUrl}/token`, {
     headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof>" },
@@ -669,7 +726,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   step(16, "Per-action mediation: AAM Mediation Layer → the payments PEP + the harness EgressGate");
   goal(
     "The reconciler reads an invoice, then requests inference egress to a declared destination and to an exfil host.",
-    "the read and the declared destination are permitted; the exfil destination is refused (not on the allowlist).",
+    "the read is permitted; remittance is out_of_authority on THIS mission; the declared egress destination is permitted; the exfil destination is refused.",
   );
   // Validate the REAL dispatched token at the RS (exhibit idiom): the RS-side
   // DPoP proof re-presents the dispatcher key, so proof jkt == token cnf.jkt.
@@ -687,9 +744,21 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     ok: readRes.ok,
   });
 
+  // A SECOND, independent line of defense behind the Dispatch-time refusal:
+  // this Mission never held remittance.send (step 14), so the PDP denies it
+  // out_of_authority even if the reconciler tried it.
+  hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "send_remittance_email")} (never in this mission's authority)`, "in-process MCP · O-33");
+  const noAuthorityCall = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
+  outcome({
+    decision: "DENY",
+    reason: gloss("reason", noAuthorityCall.denial_reason ?? noAuthorityCall.refusal_reason ?? ""),
+    observed: `${gloss("tool", "send_remittance_email")}(inv-1) denied ${noAuthorityCall.denial_reason ?? noAuthorityCall.refusal_reason ?? ""}: the human path (step 17) is required`,
+    ok: !noAuthorityCall.ok && noAuthorityCall.denial_reason === "out_of_authority",
+  });
+
   // The harness egress gate: an in-process reference realization bound to the
   // dispatched Mission, reading the REAL kernel state (no mock), over the shared
-  // scope statement, writing to the stack's OWN egress evidence store (joins step 19).
+  // scope statement, writing to the stack's OWN egress evidence store (joins step 20).
   const egressGate = new EgressGate({
     statement: scopeStatement,
     missionId: dispatchedMissionId,
@@ -718,14 +787,64 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   });
   note(
     "the in-process gate reports containment_claim \"none\" (an in-process gate cannot contain a compromised agent); " +
-      "its value is an honest allowlist + an evidence trail — recorded and threaded into the Activity Log (step 19).",
+      "its value is an honest allowlist + an evidence trail, recorded and threaded into the Activity Log (step 20).",
   );
 
-  // ---- 17. Protected event -> containment (AAM Trust Ratchet) ----------------
-  step(17, "Protected event → containment: AAM Trust Ratchet → Mission Containment (Baseline → Restricted)");
+  // ---- 17. The human path (AAM Agent Identity Broker: approval-gated issuance) ----
+  step(17, "The human path: the SAME intent a Dispatch refused is approved directly by a human");
   goal(
-    "A signed SOC event (content.tainted_read) is ingested, ratcheting the mission from Baseline to Restricted (AAM terms).",
-    "the effective authority narrows deterministically: send_remittance_email is denied authority_contained, while the read still permits.",
+    "Bob approves the exact intent step 14 refused as a Dispatch, minting an ordinary Mission (a direct approval_basis).",
+    "the Mission carries remittance.send with a direct approval_basis, distinct approver bob != subject alice, and NO template lineage.",
+  );
+  hop("Approver (Bob)", "AS", "PAR → authorize → decide → token (ordinary human approval)", "HTTP");
+  const humanIssued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent: aamIntent(), scope: "payments" });
+  const humanClaims = decodeClaims(humanIssued.accessToken);
+  const humanMissionId = (humanClaims.mission as { id: string }).id;
+  const humanRecord = stack.kernel.get(humanMissionId);
+  if (!humanRecord) throw new Error("human-approved mission record not found");
+  block("human-approved Mission Record (a fresh human decision, NOT a Dispatch)", {
+    id: humanRecord.id,
+    state: humanRecord.state,
+    subject: humanRecord.subject,
+    approver: humanRecord.approver,
+    approval_basis: humanRecord.approval_basis,
+    template: humanRecord.template,
+    authority_hash: humanRecord.authority_hash,
+  });
+  note(
+    `approval_basis.type == "${humanRecord.approval_basis.type}" (direct, not "template"); template lineage is ` +
+      `${humanRecord.template === undefined ? "absent" : "present"}; subject ${humanRecord.subject.sub} != approver ${humanRecord.approver.sub} ` +
+      "(write-bearing missions need a distinct approver, Governance D37).",
+  );
+  const humanRsProof = await dpopProofFor(humanIssued.dpopKeys, CANONICAL_RESOURCE, "POST");
+  const humanFacts: TokenFacts = await stack.server.validateToken(humanIssued.accessToken, humanRsProof, CANONICAL_RESOURCE, "POST");
+  const humanOk = humanRecord.approval_basis.type === "direct" && humanRecord.template === undefined;
+  outcome({
+    decision: "PERMIT",
+    observed: `mission ${humanMissionId}: approval_basis "direct", no template lineage, remittance.send granted by a human decision`,
+    ok: humanOk,
+  });
+  hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "send_remittance_email")} (human-approved mission, base token)`, "in-process MCP · O-33");
+  const humanAttempt = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, humanFacts);
+  note(
+    "deployment policy still gates send_remittance_email behind a per-action approval (AROP) regardless of which Mission " +
+      "holds it: the SAME JIT gate demonstrated fully in Act II (steps 7-8) applies here too. This section's claim is " +
+      "narrower: the capability lives on a human-approved Mission, never on a Dispatch.",
+  );
+  outcome({
+    decision: humanAttempt.ok ? "PERMIT" : "DENY",
+    ...(humanAttempt.ok ? {} : { reason: gloss("reason", humanAttempt.denial_reason ?? humanAttempt.refusal_reason ?? "") }),
+    observed: humanAttempt.ok
+      ? `${gloss("tool", "send_remittance_email")}(inv-1) executed under the human-approved mission`
+      : `${gloss("tool", "send_remittance_email")}(inv-1) pending the per-action approval (Act II shows it through to execution)`,
+    ok: humanAttempt.ok || (humanAttempt.denial_reason ?? humanAttempt.refusal_reason) === "action_approval_required",
+  });
+
+  // ---- 18. Protected event -> containment (AAM Trust Ratchet) ----------------
+  step(18, "Protected event → containment: AAM Trust Ratchet → Mission Containment (Baseline → Restricted)");
+  goal(
+    "A signed SOC event (content.tainted_read) targets the human-approved mission, ratcheting it from Baseline to Restricted (AAM terms).",
+    "the effective authority narrows deterministically on THAT mission only: remittance.send denies authority_contained there, while the low-consequence dispatched mission is untouched.",
   );
   const soc = as.protectedEventSources.find((s) => s.source === "svc:soc");
   if (!soc) throw new Error("svc:soc trusted source not seeded (config/containment.json)");
@@ -735,19 +854,19 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     source: "svc:soc",
     observed_at: new Date().toISOString(),
     event_id: AAM_TAINT_EVENT_ID,
-    mission_id: dispatchedMissionId,
+    mission_id: humanMissionId,
   })
     .setProtectedHeader({ alg: soc.alg, kid: soc.kid })
     .setIssuedAt()
     .sign(socKey);
   hop("SOC source (svc:soc)", "AS", `POST /missions/{id}/protected-events (signed content.tainted_read)`, "HTTP");
-  httpReq("POST", `${asUrl}/missions/${dispatchedMissionId}/protected-events`, {
+  httpReq("POST", `${asUrl}/missions/${humanMissionId}/protected-events`, {
     headers: { "content-type": "application/protected-event+jwt" },
     body: { "<compact JWS>": "content.tainted_read, signed by svc:soc (decoded below)" },
   });
   block("protected-event — protected header", decodeHeader(socEvent));
   block("protected-event — decoded claims", decodeClaims(socEvent));
-  const peRes = await fetch(`${asUrl}/missions/${dispatchedMissionId}/protected-events`, {
+  const peRes = await fetch(`${asUrl}/missions/${humanMissionId}/protected-events`, {
     method: "POST",
     headers: { "content-type": "application/protected-event+jwt" },
     body: socEvent,
@@ -759,71 +878,76 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
       "the approved authority_hash stays immutable (containment is a versioned removal-only overlay).",
   );
   rail(stack);
-  hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "send_remittance_email")} (contained capability)`, "in-process MCP · O-33");
-  const containedCall = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
+  hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "send_remittance_email")} (contained capability, human-approved mission)`, "in-process MCP · O-33");
+  const containedCall = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, humanFacts);
   outcome({
     decision: "DENY",
     reason: gloss("reason", containedCall.denial_reason ?? containedCall.refusal_reason ?? ""),
     observed: `${gloss("tool", "send_remittance_email")}(inv-1) denied ${containedCall.denial_reason ?? containedCall.refusal_reason ?? ""}`,
     ok: !containedCall.ok && containedCall.denial_reason === "authority_contained",
   });
-  hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "get_invoice")} (uncontained read)`, "in-process MCP · O-33");
+  hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "get_invoice")} (low-consequence dispatched mission, untouched)`, "in-process MCP · O-33");
   const stillRead = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
   outcome({
     decision: stillRead.ok ? "PERMIT" : "DENY",
     ...(stillRead.ok ? {} : { reason: gloss("reason", stillRead.denial_reason ?? stillRead.refusal_reason ?? "") }),
     observed: stillRead.ok
-      ? `${gloss("tool", "get_invoice")}(inv-1) still returns ${JSON.stringify(stillRead.result)}`
+      ? `${gloss("tool", "get_invoice")}(inv-1) on the DIFFERENT, machine-speed mission still returns ${JSON.stringify(stillRead.result)} (containment is Mission-scoped)`
       : `${gloss("tool", "get_invoice")}(inv-1) denied`,
-    ok: stillRead.ok,
+    ok: stillRead.ok && stack.kernel.get(dispatchedMissionId)?.containment === undefined,
   });
 
-  // ---- 18. Restore only in a new task ---------------------------------------
-  step(18, "Restore only in a new task: the capability returns via a FRESH dispatch, never mid-run");
+  // ---- 19. Restore only in a new task ---------------------------------------
+  step(19, "Restore only in a new task: the capability returns via a FRESH human approval, never mid-run");
   goal(
-    "The scheduler dispatches a fresh mission to restore the capability; the contained mission is retried.",
+    "Bob approves a fresh Mission to restore the capability; the contained mission is retried.",
     "the fresh task carries remittance.send again; the contained mission never regains it mid-run.",
   );
-  hop("Scheduler (ap-agent)", "AS", "POST /token (mission-dispatch — a fresh task)", "HTTP");
-  const restoreRes = await dispatch(aamIntent(), `evt-restore-${seq++}`);
-  const restoreBody = restoreRes.body as { access_token?: string; mission_id?: string; authorization_details?: unknown };
-  httpRes(restoreRes.status, {
-    ...restoreBody,
-    ...(restoreBody.access_token ? { access_token: truncTok(restoreBody.access_token) } : {}),
-  });
-  if (restoreRes.status !== 200 || !restoreBody.mission_id) {
-    throw new Error(`restore dispatch failed: ${restoreRes.status} ${JSON.stringify(restoreBody)}`);
-  }
-  const restoredMissionId = restoreBody.mission_id;
-  const restoredActions = (restoreBody.authorization_details as Array<{ actions: string[] }>).flatMap((e) => e.actions);
-  const restoreOk = restoredMissionId !== dispatchedMissionId && restoredActions.includes("payments:remittance.send");
+  hop("Approver (Bob)", "AS", "PAR → authorize → decide → token (a fresh human approval)", "HTTP");
+  const restoreIssued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent: aamIntent(), scope: "payments" });
+  const restoreClaims = decodeClaims(restoreIssued.accessToken);
+  const restoredHumanMissionId = (restoreClaims.mission as { id: string }).id;
+  const restoredRecord = stack.kernel.get(restoredHumanMissionId);
+  if (!restoredRecord) throw new Error("restored mission record not found");
+  const restoreOk =
+    restoredHumanMissionId !== humanMissionId &&
+    restoredRecord.approval_basis.type === "direct" &&
+    restoredRecord.authority_set.flatMap((e) => e.actions).includes("payments:remittance.send");
   outcome({
     decision: "PERMIT",
-    observed: `fresh dispatch → mission ${restoredMissionId} (a new task) carries ${gloss("action", "payments:remittance.send")} again`,
+    observed: `fresh human approval → mission ${restoredHumanMissionId} (a new task) carries ${gloss("action", "payments:remittance.send")} again`,
     ok: restoreOk,
   });
   // The contained Mission never regains it mid-run.
   hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "send_remittance_email")} (contained mission, re-tried)`, "in-process MCP · O-33");
-  const stillContained = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
+  const stillContained = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, humanFacts);
   outcome({
     decision: "DENY",
     reason: gloss("reason", stillContained.denial_reason ?? stillContained.refusal_reason ?? ""),
-    observed: `contained mission ${dispatchedMissionId} still denied ${stillContained.denial_reason ?? stillContained.refusal_reason ?? ""} (never regained mid-run)`,
+    observed: `contained mission ${humanMissionId} still denied ${stillContained.denial_reason ?? stillContained.refusal_reason ?? ""} (never regained mid-run)`,
     ok: !stillContained.ok && stillContained.denial_reason === "authority_contained",
   });
 
-  // ---- 19. Agent Activity Log (the console-bff join) ------------------------
-  step(19, "Agent Activity Log: AAM Agent Activity Log → ConsoleBff.activityLog() (the joined task-run graph)");
+  // ---- 20. Agent Activity Log (the console-bff join) ------------------------
+  step(20, "Agent Activity Log: AAM Agent Activity Log → ConsoleBff.activityLog() (the joined task-run graph, over BOTH missions)");
   goal(
-    "Olivia reads the joined task-run graph from the Activity Log for the dispatched mission.",
-    "ingestion, containment evidence, the authority_contained decision, and the egress refusal all join under the one mission.",
+    "Olivia reads the joined task-run graph for the dispatched mission and for the human-approved mission.",
+    "the dispatched run shows the read decision + the egress refusal; the human run shows ingestion, containment evidence, and the authority_contained decision.",
   );
-  hop("Operator (Olivia)", "Console BFF", "activityLog(dispatched mission)", "in-process · read-model join");
+  hop("Operator (Olivia)", "Console BFF", "activityLog(dispatched mission), activityLog(human-approved mission)", "in-process · read-model join");
   const session = stack.bff.sessions.create("olivia", ["operator"]);
-  const run = stack.bff.activityLog(session, dispatchedMissionId);
-  block("task-run graph — lineage", { mission_id: run.mission_id, template: run.lineage.template });
-  console.log(`${C.dim}  entries (ingestion → Containment Evidence → authority_contained; + the egress refusal):${C.reset}`);
-  for (const e of run.entries) {
+
+  const dispatchedRun = stack.bff.activityLog(session, dispatchedMissionId);
+  block("dispatched (machine-speed) run: lineage", { mission_id: dispatchedRun.mission_id, template: dispatchedRun.lineage.template });
+  const dispatchedRead = dispatchedRun.entries.find(
+    (e) => e.kind === "decision" && e.decision === true && e.action === "payments:invoice.read",
+  );
+  const dispatchedEgress = dispatchedRun.entries.find((e) => e.kind === "egress" && e.outcome === "refused");
+
+  const humanRun = stack.bff.activityLog(session, humanMissionId);
+  block("human-approved run: lineage (no template)", { mission_id: humanRun.mission_id, template: humanRun.lineage.template });
+  console.log(`${C.dim}  human-approved run entries (ingestion → Containment Evidence → authority_contained):${C.reset}`);
+  for (const e of humanRun.entries) {
     const detail = [
       e.action ? `action=${e.action}` : "",
       e.outcome ? `outcome=${e.outcome}` : "",
@@ -835,10 +959,9 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
       .join("  ");
     console.log(`  ${C.cyan}${e.kind.padEnd(11)}${C.reset} ${C.dim}${detail}${C.reset}`);
   }
-  const ingestion = run.entries.find((e) => e.kind === "ingestion" && e.action === "content.tainted_read" && e.outcome === "applied");
-  const containment = run.entries.find((e) => e.kind === "containment");
-  const contained = run.entries.find((e) => e.kind === "decision" && e.denial_reason === "authority_contained");
-  const egress = run.entries.find((e) => e.kind === "egress" && e.outcome === "refused");
+  const ingestion = humanRun.entries.find((e) => e.kind === "ingestion" && e.action === "content.tainted_read" && e.outcome === "applied");
+  const containment = humanRun.entries.find((e) => e.kind === "containment");
+  const contained = humanRun.entries.find((e) => e.kind === "decision" && e.denial_reason === "authority_contained");
   // "Follows" is a TIMESTAMP relation over the read-model's own ordering key
   // (activity-log.ts: `at`), NOT an array-index one. The earlier
   // `indexOf(contained) > indexOf(ingestion)` check was flaky: the global
@@ -855,7 +978,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   const followsBoth =
     !!ingestion &&
     !!containment &&
-    run.entries.some(
+    humanRun.entries.some(
       (e) =>
         e.kind === "decision" &&
         e.denial_reason === "authority_contained" &&
@@ -863,24 +986,27 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
         Date.parse(e.at) >= containmentAt,
     );
   const joinedOk =
+    !!dispatchedRead &&
+    !!dispatchedEgress &&
+    dispatchedRun.lineage.template !== undefined &&
+    humanRun.lineage.template === undefined &&
     !!ingestion &&
     !!containment &&
     !!contained &&
-    !!egress &&
     ingestion.event_id === AAM_TAINT_EVENT_ID &&
     containment.event_id === AAM_TAINT_EVENT_ID &&
     followsBoth &&
-    egress.scope_statement_digest === scopeDigest(scopeStatement);
+    dispatchedEgress?.scope_statement_digest === scopeDigest(scopeStatement);
   outcome({
     observed:
-      `ingestion and Containment Evidence share event_id ${AAM_TAINT_EVENT_ID}; ` +
-      "an authority_contained decision follows both (by timestamp), and the egress refusal carries the published scope-statement digest.",
+      `dispatched run: read decision + egress refusal (template lineage present); human run: ingestion and Containment ` +
+      `Evidence share event_id ${AAM_TAINT_EVENT_ID}, and an authority_contained decision follows both (by timestamp, no template lineage).`,
     ok: joinedOk,
   });
 
   aamLegend();
   console.log(
-    `\n${C.green}${C.bold}AAM section complete.${C.reset} ${C.dim}Consent-once Template, machine-speed dispatch, disconnected run, per-action mediation, protected-event containment, fresh-task restore, and the Activity Log — all on the same live stack.${C.reset}`,
+    `\n${C.green}${C.bold}AAM section complete.${C.reset} ${C.dim}Consent-once Template, low-consequence machine-speed dispatch, disconnected run, per-action mediation, the human path for remittance, protected-event containment, fresh-task restore, and the Activity Log, all on the same live stack.${C.reset}`,
   );
 }
 
@@ -1685,7 +1811,7 @@ async function main() {
     console.log(`  ${row.verified ? C.green + "✓ VERIFIED" : C.red + "✗ FAILED  "}${C.reset} ${row.evidence_type} ${C.dim}from ${row.producer}${C.reset}`);
   }
 
-  // ---- 13-19. Agent Access Model (Nightly Reconciliation) -----------------
+  // ---- 13-20. Agent Access Model (Nightly Reconciliation) -----------------
   // A second, self-contained chapter on the SAME live stack: Cloudflare's AAM
   // run narrated entirely in Mission vocabulary (its own Template + dispatched
   // missions; independent of the primary mission superseded/revoked above).
