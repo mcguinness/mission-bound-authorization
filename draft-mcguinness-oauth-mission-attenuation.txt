@@ -482,6 +482,18 @@ Table of Contents
        runtime profile fails closed on unestablished state
        ([I-D.draft-mcguinness-mission-runtime]).
 
+   Where a deployment also runs the Mission Containment profile
+   ([I-D.draft-mcguinness-oauth-mission-containment]), active is not the
+   same question as uncontained: a contained Mission stays active, so
+   this check alone does not stop a root minted before the contain
+   transition, or the offline children it keeps minting under it.
+   Containment gates derivation at the issuer and propagates to Child
+   Missions; it defines no consumer-side check that this profile's per-
+   presentation state evaluation picks up, so an attenuation root
+   already in a holder's possession keeps minting against the Mission's
+   pre-containment authority until the root's own exp or del_max_depth
+   ends it, or the Mission itself is revoked or expires (Section 13).
+
    A cached chain does not bypass this: a chain held in a harness cache
    is still re-checked against current Mission state on every
    presentation, since the cache is never evidence of continuing
@@ -710,6 +722,20 @@ Table of Contents
       deployment mitigation, a PEP MAY maintain a denylist keyed by leaf
       jti or cnf to refuse specific leaves.
 
+   *  Containment does not reach an already-minted root.  The Mission
+      Containment profile narrows a live Mission's effective authority
+      while keeping the Mission active
+      ([I-D.draft-mcguinness-oauth-mission-containment]).  Because the
+      kill switch of Section 9 checks only active, a root minted before
+      the contain transition, and the subtree of offline children under
+      it, keep minting against the pre-containment authority for the
+      root's own lifetime: containment narrows what a fresh root can
+      carry, but it is not a way to stop an outstanding one early.  A
+      deployment that relies on containment to bound offline attenuation
+      SHOULD keep root lifetimes short and del_max_depth conservative
+      for this reason, and MAY apply the per-branch denylist mitigation
+      above to a specific root or subtree it learns is contained.
+
    *  Audit.  Because the issuer does not observe offline derivations,
       the consuming enforcement points are the only place a derivation
       is seen; runtime enforcement evidence
@@ -826,6 +852,11 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-child-
               delegation.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-containment]
+              McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-containment.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth

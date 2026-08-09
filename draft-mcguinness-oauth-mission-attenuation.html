@@ -1706,19 +1706,31 @@ runtime profile fails closed on unestablished state
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-9-4">A cached chain does not bypass this: a chain held in a harness cache is
+<p id="section-9-4">Where a deployment also runs the Mission Containment profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), <code>active</code> is not
+the same question as uncontained: a contained Mission stays <code>active</code>,
+so this check alone does not stop a root minted before the contain
+transition, or the offline children it keeps minting under it.
+Containment gates derivation at the issuer and propagates to Child
+Missions; it defines no consumer-side check that this profile's
+per-presentation state evaluation picks up, so an attenuation root
+already in a holder's possession keeps minting against the Mission's
+pre-containment authority until the root's own <code>exp</code> or
+<code>del_max_depth</code> ends it, or the Mission itself is revoked or expires
+(<a href="#security-considerations" class="auto internal xref">Section 13</a>).<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-5">A cached chain does not bypass this: a chain held in a harness cache is
 still re-checked against current Mission state on every presentation,
 since the cache is never evidence of continuing authority
 (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>). A revoked or expired
 Mission <span class="bcp14">MUST</span> cause refusal of every token in the chain, regardless of
-the children's own <code>exp</code>.<a href="#section-9-4" class="pilcrow">¶</a></p>
-<p id="section-9-5">A deployment <span class="bcp14">MUST NOT</span> accept Mission-bound attenuation tokens on a path
+the children's own <code>exp</code>.<a href="#section-9-5" class="pilcrow">¶</a></p>
+<p id="section-9-6">A deployment <span class="bcp14">MUST NOT</span> accept Mission-bound attenuation tokens on a path
 that does not enforce current Mission state: without that check the
 offline chain is ungoverned bearer authority until it ages out, which
 defeats the purpose of binding it to a Mission. Offline attenuation is
 thus a capability for deployments running the runtime enforcement
 profile (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); it is not available
-to a deployment that relies on token lifetime alone.<a href="#section-9-5" class="pilcrow">¶</a></p>
+to a deployment that relies on token lifetime alone.<a href="#section-9-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="relationship-delegation">
@@ -1964,14 +1976,29 @@ maintain a denylist keyed by leaf <code>jti</code> or <code>cnf</code> to refuse
 leaves.<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.6">
-          <p id="section-13-2.6.1">Audit. Because the issuer does not observe offline derivations, the
+          <p id="section-13-2.6.1">Containment does not reach an already-minted root. The Mission
+Containment profile narrows a live Mission's effective authority
+while keeping the Mission <code>active</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>). Because the
+kill switch of <a href="#kill-switch" class="auto internal xref">Section 9</a> checks only <code>active</code>, a root minted
+before the contain transition, and the subtree of offline children
+under it, keep minting against the pre-containment authority for the
+root's own lifetime: containment narrows what a fresh root can carry,
+but it is not a way to stop an outstanding one early. A deployment
+that relies on containment to bound offline attenuation <span class="bcp14">SHOULD</span> keep
+root lifetimes short and <code>del_max_depth</code> conservative for this
+reason, and <span class="bcp14">MAY</span> apply the per-branch denylist mitigation above to a
+specific root or subtree it learns is contained.<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.7">
+          <p id="section-13-2.7.1">Audit. Because the issuer does not observe offline derivations, the
 consuming enforcement points are the only place a derivation is seen;
 runtime enforcement evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) is the audit record
 for offline-attenuated actions. PEP evidence for an action under an
 attenuated token <span class="bcp14">SHOULD</span> carry the chain linkage, the leaf's <code>jti</code>,
 its <code>del_depth</code>, and its <code>par_hash</code>, so offline derivations are
-reconstructable in audit.<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
+reconstructable in audit.<a href="#section-13-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2095,6 +2122,10 @@ this document, <a href="#request-discovery" class="auto internal xref">Section 6
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>

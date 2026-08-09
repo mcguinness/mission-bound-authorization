@@ -1228,6 +1228,9 @@ Mission is never created by session ancestry alone.<a href="#section-abstract-1"
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
                 <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-subset-evaluation" class="internal xref">Subset Evaluation</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-derivation-budget-is-not-in" class="internal xref">Derivation Budget Is Not Inherited</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
@@ -1387,14 +1390,21 @@ where a deployment runs them, because those profiles define the
 rules react to. A deployment that runs neither still implements this
 profile: under the issuance profile's forward-compatibility rule, the
 cascade treats any non-active parent state as a terminal trigger.<a href="#section-3-2" class="pilcrow">¶</a></p>
-<p id="section-3-3">A Child Mission is an ordinary Mission under the issuance profile with
+<p id="section-3-3">Containment propagation (<a href="#child-state" class="auto internal xref">Section 10.1</a>) additionally depends on the
+Mission Containment profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>) where a deployment
+runs it, because that profile defines the containment overlay and the
+contained-capability concept the propagation rule reacts to. A
+deployment that does not run Containment holds no overlay to propagate
+and is unaffected by that rule.<a href="#section-3-3" class="pilcrow">¶</a></p>
+<p id="section-3-4">A Child Mission is an ordinary Mission under the issuance profile with
 two additions: it is created under a parent grant rather than a
 first-party approval, and its record and tokens carry the <code>parent</code>
 member (<a href="#parent-member" class="auto internal xref">Section 7</a>). The child's own <code>authority_hash</code> remains
 the authority commitment for its tokens; the <code>parent</code> member is lineage
-and audit data only.<a href="#section-3-3" class="pilcrow">¶</a></p>
-<p id="section-3-4">Where this document refers to "the issuance profile" without a section,
-it means <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> as a whole.<a href="#section-3-4" class="pilcrow">¶</a></p>
+and audit data only.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<p id="section-3-5">Where this document refers to "the issuance profile" without a section,
+it means <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> as a whole.<a href="#section-3-5" class="pilcrow">¶</a></p>
 <div id="child-vs-token">
 <section id="section-3.1">
         <h3 id="name-relationship-to-delegated-t">
@@ -2158,6 +2168,28 @@ subset of the parent, it <span class="bcp14">MUST</span> refuse child creation w
 <code>not_strict_subset</code>.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="derivation-budget">
+<section id="section-8.2">
+        <h3 id="name-derivation-budget-is-not-in">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-derivation-budget-is-not-in" class="section-name selfRef">Derivation Budget Is Not Inherited</a>
+        </h3>
+<p id="section-8.2-1">A Child Mission's <code>controls.max_derivations</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) is set on its own Mission
+Intent at child creation and is independent of the parent's: the
+attenuation rules above bound a child's authority, expiry, and
+delegation policy against the parent, but not its derivation count. A
+Parent Mission's own <code>max_derivations</code> caps derivation at the parent
+alone; it does not by default bound how many derivations the child
+subtree performs in aggregate, and a deep or wide subtree can derive
+far more than the parent's own cap suggests. Where a deployment
+requires a human approval event for child creation
+(<a href="#child-creation" class="auto internal xref">Section 6</a>), it <span class="bcp14">SHOULD</span> disclose at that consent surface that
+the child subtree's aggregate derivation volume can exceed the
+parent's <code>max_derivations</code>. Bounding the aggregate across a subtree is
+the role of consumption metering, not this profile's attenuation rules
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="fanout">
@@ -2429,57 +2461,66 @@ section), discharge propagates entry-wise: when a parent Authority Set
 entry is discharged, the Mission Issuer <span class="bcp14">MUST</span> discharge every child
 entry justified by it, so spent authority does not survive in the
 subtree.<a href="#section-10.1-6" class="pilcrow">¶</a></p>
-<p id="section-10.1-7">The issuer holds both records, so the propagation needs no consumer
-coordination.<a href="#section-10.1-7" class="pilcrow">¶</a></p>
-<p id="section-10.1-8">While a parent is <code>suspended</code>, the issuer <span class="bcp14">MUST</span> report each dependent
+<p id="section-10.1-7">Where a deployment also runs the Mission Containment profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), containment
+propagates entry-wise too: when a parent Authority Set entry is
+contained, the Mission Issuer <span class="bcp14">MUST</span> propagate the containment to every
+child entry justified by it, so a Child Mission does not keep deriving
+contained authority while the parent stays <code>active</code>. A containment
+transition on the parent does not itself change any child's lifecycle
+state; it narrows the child's effective authority exactly as it
+narrows the parent's.<a href="#section-10.1-7" class="pilcrow">¶</a></p>
+<p id="section-10.1-8">The issuer holds both records in either case, so the propagation needs
+no consumer coordination.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
+<p id="section-10.1-9">While a parent is <code>suspended</code>, the issuer <span class="bcp14">MUST</span> report each dependent
 child's state as <code>suspended</code> on every state-reporting surface (the
 Mission Status operation and token introspection,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), and <span class="bcp14">MUST</span> restore the
-child's own state when the parent resumes to <code>active</code>.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
-<p id="section-10.1-9">A child whose own <code>expires_at</code> passes during the suspension is
+child's own state when the parent resumes to <code>active</code>.<a href="#section-10.1-9" class="pilcrow">¶</a></p>
+<p id="section-10.1-10">A child whose own <code>expires_at</code> passes during the suspension is
 <code>expired</code>: expiry takes precedence over the projected <code>suspended</code>
-state.<a href="#section-10.1-9" class="pilcrow">¶</a></p>
-<p id="section-10.1-10">Projection onset and lift are not silent. Each is a committed
+state.<a href="#section-10.1-10" class="pilcrow">¶</a></p>
+<p id="section-10.1-11">Projection onset and lift are not silent. Each is a committed
 metadata-only change on every affected child for the purposes of the
 status profile's state version
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>): the child's state
 version increments at onset and again at lift, and, where the
 deployment runs Lifecycle Signals
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), a lifecycle-change
-event is emitted for each affected child.<a href="#section-10.1-10" class="pilcrow">¶</a></p>
-<p id="section-10.1-11">Likewise, once a terminal cascade trigger (<a href="#cascade" class="auto internal xref">Section 10</a>) commits at any
+event is emitted for each affected child.<a href="#section-10.1-11" class="pilcrow">¶</a></p>
+<p id="section-10.1-12">Likewise, once a terminal cascade trigger (<a href="#cascade" class="auto internal xref">Section 10</a>) commits at any
 ancestor, the issuer <span class="bcp14">MUST</span> report each dependent descendant's state as
 <code>cascaded</code> on every state-reporting surface (the Mission Status
 operation and token introspection,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) from that commit, ahead
-of each descendant's own per-generation transition.<a href="#section-10.1-11" class="pilcrow">¶</a></p>
-<p id="section-10.1-12">The transitive transitions still commit in generation order
+of each descendant's own per-generation transition.<a href="#section-10.1-12" class="pilcrow">¶</a></p>
+<p id="section-10.1-13">The transitive transitions still commit in generation order
 (<a href="#cascade" class="auto internal xref">Section 10</a>); this rule bounds only what a consumer reads, so a
 consumer keying on a descendant's own state never reads <code>active</code>
-mid-cascade.<a href="#section-10.1-12" class="pilcrow">¶</a></p>
-<p id="section-10.1-13">Expiry takes precedence over <code>cascaded</code> as it does over the projected
+mid-cascade.<a href="#section-10.1-13" class="pilcrow">¶</a></p>
+<p id="section-10.1-14">Expiry takes precedence over <code>cascaded</code> as it does over the projected
 <code>suspended</code> state: where a child's own <code>expires_at</code> coincides with a
 terminal cascade of its parent (for example, a child whose <code>expires_at</code>
 equals the parent's on parent expiry), the child's own <code>expired</code> state
 wins and it is reported <code>expired</code>, not <code>cascaded</code>. This matches the
 <code>cascaded</code> state, which a child enters only when its own expiry was not
-reached.<a href="#section-10.1-13" class="pilcrow">¶</a></p>
-<p id="section-10.1-14">Mission Status for a Child Mission <span class="bcp14">SHOULD</span> also include a parent
-projection for authorized callers, as additional context:<a href="#section-10.1-14" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-10.1-15">
-          <dt id="section-10.1-15.1">
+reached.<a href="#section-10.1-14" class="pilcrow">¶</a></p>
+<p id="section-10.1-15">Mission Status for a Child Mission <span class="bcp14">SHOULD</span> also include a parent
+projection for authorized callers, as additional context:<a href="#section-10.1-15" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10.1-16">
+          <dt id="section-10.1-16.1">
 <code>parent</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-15.2">
-            <p id="section-10.1-15.2.1">Object containing parent <code>id</code>, <code>issuer</code>, current parent <code>state</code> when
-known, <code>cascade_mode</code>, and freshness information.<a href="#section-10.1-15.2.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-10.1-16.2">
+            <p id="section-10.1-16.2.1">Object containing parent <code>id</code>, <code>issuer</code>, current parent <code>state</code> when
+known, <code>cascade_mode</code>, and freshness information.<a href="#section-10.1-16.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-10.1-16">Under <code>immediate</code> cascade a consumer needs no parent-state check of its
+<p id="section-10.1-17">Under <code>immediate</code> cascade a consumer needs no parent-state check of its
 own: it relies on the Mission Issuer's child state transition, read
 from the child's own state surfaces. The consumer obligations of the
 experimental consumer-verified modes are defined with those modes
-(<a href="#experimental-cascade" class="auto internal xref">Appendix A</a>).<a href="#section-10.1-16" class="pilcrow">¶</a></p>
+(<a href="#experimental-cascade" class="auto internal xref">Appendix A</a>).<a href="#section-10.1-17" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2919,6 +2960,10 @@ not create it.<a href="#section-19-7" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
@@ -2975,6 +3020,10 @@ not create it.<a href="#section-19-7" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-ai-agent-instance">[I-D.draft-mcguinness-oauth-ai-agent-instance]</dt>
         <dd>

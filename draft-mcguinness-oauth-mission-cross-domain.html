@@ -2163,6 +2163,19 @@ holding the <code>mission_id</code>, including a Resource AS, a state query
 against the issuer, and Mission Lifecycle Signals
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span> pushes lifecycle
 transitions to the partner domain.<a href="#section-15.1-3" class="pilcrow">¶</a></p>
+<p id="section-15.1-4">Origin containment narrows a live Mission without ending it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), and a
+cross-domain grant issued after a contain transition already carries
+the narrowed authority: grant issuance is a derivation, gated on the
+Mission's Effective Authority Set like any other. Parallel to the
+point above, containment cannot reach a projection grant a Resource AS
+has already redeemed: the local tokens it keeps minting from that
+grant run to the grant's own lifetime, exactly as an already-minted
+token runs to its own expiry under revocation. Deployments relying on
+containment to bound cross-domain authority <span class="bcp14">SHOULD</span> use short grant
+lifetimes and a frequent re-lease cadence
+(<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>), so containment takes effect on the Mission's
+next lease rather than waiting out a long-lived grant.<a href="#section-15.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="grant-at-boundary">
@@ -2206,6 +2219,14 @@ deployment that needs a global bound on delegation depth across domains
 constrains it out of band, through the resource-to-AS mapping and each
 Resource AS's local policy (<a href="#pre-established-trust" class="auto internal xref">Section 8</a>); this profile
 bounds delegation depth only within a single domain.<a href="#section-15.3-1" class="pilcrow">¶</a></p>
+<p id="section-15.3-2">Because the reset is per domain, projecting one Mission into M
+Resource AS domains multiplies the reachable depth: the aggregate
+composed bound is up to N times M, not N, even though the Approver saw
+only the per-domain N at consent. A deployment <span class="bcp14">SHOULD</span> disclose the
+composed bound, <code>max_depth</code> times the number of domains a Mission may
+be projected to, at the consent surface, not the per-domain <code>max_depth</code>
+alone, so the approval reflects what the projection can actually reach
+in aggregate.<a href="#section-15.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2345,6 +2366,10 @@ registered by the issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-m
 <dt id="I-D.draft-mcguinness-oauth-id-continuation-assertion">[I-D.draft-mcguinness-oauth-id-continuation-assertion]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Identity Continuation Assertion for OAuth 2.0 Token Exchange"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-continuation">[I-D.draft-mcguinness-oauth-mission-continuation]</dt>
         <dd>
