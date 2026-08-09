@@ -123,6 +123,9 @@ it.
               Completion (retire authority per entry)
               Discovery (bind encountered resources
               within a consented ceiling; experimental)
+ contain      Containment (issuer-held monotonic narrowing of a live
+              Mission's authority, driven by protected events;
+              experimental)
                          |
  enforce      Runtime contract -> AuthZEN binding: a PEP obtains a
  each action  PDP permit before every consequential action
@@ -132,6 +135,10 @@ it.
 
  delegate     Child Delegation (child Missions, cascade revocation)
               Offline Attenuation (narrower tokens minted offline)
+
+ dispatch     Mission Template (consent once to a ceiling, then
+              instantiate many Missions from it at machine speed;
+              experimental)
 
  project      Cross-Domain Projection (one Mission honored in
               another trust domain via the cross-domain grant)
