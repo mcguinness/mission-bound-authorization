@@ -358,8 +358,15 @@ token-less surface; the two are peer bindings of one requirement.
 The child-creation token exchange carries:
 
 `grant_type`:
-: REQUIRED. `urn:ietf:params:oauth:grant-type:mission-child-creation`,
-  this profile's child-creation grant type ({{grant-type}}).
+: REQUIRED. `urn:ietf:params:oauth:grant-type:token-exchange`, the
+  {{RFC8693}} token-exchange grant type ({{grant-type}}).
+
+`requested_token_type`:
+: REQUIRED. `urn:ietf:params:oauth:token-type:jwt`. This value selects
+  child creation: the Mission Issuer returns the child-bound JWT
+  authorization grant ({{child-client-identity}}). Expansion, the peer
+  operation on the same grant, is selected by the access-token type
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 `subject_token`:
 : REQUIRED. The Parent Mission's sender-constrained Mission-bound access
@@ -591,13 +598,19 @@ grant.
 
 ## Grant Type {#grant-type}
 
-This profile binds child creation to the token endpoint through a
-dedicated grant type, adding no new endpoint. The parent presents the
-child-creation token exchange ({{child-creation}}) at the token endpoint
-under:
+This profile binds child creation to the token endpoint through the
+{{RFC8693}} token-exchange grant type, adding no new grant type and no
+new endpoint. The parent presents the child-creation token exchange
+({{child-creation}}) at the token endpoint under:
 
 `grant_type`:
-: REQUIRED. `urn:ietf:params:oauth:grant-type:mission-child-creation`.
+: REQUIRED. `urn:ietf:params:oauth:grant-type:token-exchange`.
+
+`requested_token_type`:
+: REQUIRED. `urn:ietf:params:oauth:token-type:jwt`, which selects child
+  creation. Expansion is the peer operation on the same grant, selected
+  by the access-token type
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 The exchange follows {{RFC8693}}, carrying `subject_token`,
 `subject_token_type`, `child_actor`, `mission_intent`, and the optional
@@ -693,8 +706,8 @@ Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
-grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
-  mission-child-creation&
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&
+requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Ajwt&
 subject_token=<parent%20Mission-bound%20access%20token>&
 subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3A
   access_token&
@@ -1548,11 +1561,11 @@ Controller IETF; Reference this document, {{child-creation}}.
 The child-creation token exchange carries the already-registered
 `mission_intent` request parameter and the already-registered
 {{RFC8693}} token-exchange parameters `subject_token`,
-`subject_token_type`, `actor_token`, and `actor_token_type`; none of
-these needs registration by this document. This document removes the
-earlier revision's registration request for a `parent_token`
-parameter: the parent is resolved from `subject_token`, so no dedicated
-parent-token parameter exists. The `parent` and `child_actor`
+`subject_token_type`, `requested_token_type`, `actor_token`, and
+`actor_token_type`; none of these needs registration by this document.
+This document removes the earlier revision's registration request for a
+`parent_token` parameter: the parent is resolved from `subject_token`,
+so no dedicated parent-token parameter exists. The `parent` and `child_actor`
 parameters are presented only on the token endpoint's authenticated
 back channel, never on a front-channel authorization request
 ({{child-creation}}).
@@ -1585,25 +1598,14 @@ considerations anticipate a shared "Mission Denial Reason" registry
 with a Specification Required {{RFC8126}} policy; this document does
 not create it.
 
-This document requests registration of the following value in the
-"OAuth URI" registry established by {{RFC6755}}:
-
-URN:
-: `urn:ietf:params:oauth:grant-type:mission-child-creation`
-
-Common Name:
-: Mission Child Creation Grant Type
-
-Change Controller:
-: IETF
-
-Specification Document:
-: this document, {{grant-type}}
-
-This is a proposed registration. The value is used under the reserved
-`urn:ietf:params:oauth` arc by implementations of this profile in
-advance of registration completing; this document is the specification
-that names and defines it.
+Child creation uses the already-registered {{RFC8693}}
+`urn:ietf:params:oauth:grant-type:token-exchange` grant type, selected
+by the `requested_token_type` value `urn:ietf:params:oauth:token-type:jwt`
+({{grant-type}}); this document requests no new grant-type registration.
+An earlier revision requested registration of a dedicated
+`urn:ietf:params:oauth:grant-type:mission-child-creation` grant type;
+this document removes that request, folding child creation into the
+token-exchange grant the rest of the Mission family already uses.
 
 --- back
 

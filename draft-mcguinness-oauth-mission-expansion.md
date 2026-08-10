@@ -361,6 +361,13 @@ token endpoint. The request carries:
 : REQUIRED. `urn:ietf:params:oauth:grant-type:token-exchange`, the
   {{RFC8693}} token-exchange grant type.
 
+`requested_token_type`:
+: REQUIRED. `urn:ietf:params:oauth:token-type:access_token`. This value
+  selects expansion: the Mission Issuer returns the successor's
+  Mission-bound access token. Child creation, the peer operation on the
+  same grant, is selected by the JWT token type
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
+
 `subject_token`:
 : REQUIRED. The predecessor Mission's sender-constrained Mission-bound
   access token. The Mission Issuer resolves the predecessor from this
@@ -998,6 +1005,7 @@ Content-Type: application/x-www-form-urlencoded
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&
+requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
 subject_token=<predecessor%20Mission-bound%20access%20token>&
 subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
 mission_intent=%7B...journal-entries%20cap%20%242000...%7D&
@@ -1265,8 +1273,9 @@ Reason" registry with a Specification Required {{RFC8126}} policy.
 The expansion request is an {{RFC8693}} token exchange carrying the
 already-registered `mission_intent` request parameter and the
 already-registered token-exchange parameters `subject_token`,
-`subject_token_type`, `actor_token`, and `actor_token_type`; none of
-these needs registration by this document. The deferred completion mode
+`subject_token_type`, `requested_token_type`, `actor_token`, and
+`actor_token_type`; none of these needs registration by this document.
+The deferred completion mode
 uses the deferred token response substrate
 ({{I-D.draft-gerber-oauth-deferred-token-response}}) and registers
 nothing here. This document removes the earlier revision's registration
