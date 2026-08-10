@@ -965,6 +965,11 @@ export class MissionKernel {
    * @spec status#status-list — fan the committed transition out to the
    * lifecycle-commit subscriber (no-op when none is wired). `record` MUST be the
    * post-commit persisted row so `state`/`version` are authoritative.
+   *
+   * @spec containment#propagation — also carries `record.containment`'s
+   * current `containment_version` (absent-means-none), so a `contain` commit
+   * (metadata-only: `prior_state` equals `state`) still surfaces the
+   * narrowing to a subscriber comparing only `state`.
    */
   private emitCommit(record: MissionRecord, prior?: MissionState, successor?: string): void {
     const onCommit = this.opts.onLifecycleCommit;
@@ -978,6 +983,9 @@ export class MissionKernel {
       expires_at: record.expires_at,
       ...(prior ? { prior_state: prior } : {}),
       ...(successor ? { successor } : {}),
+      ...(record.containment
+        ? { containment_version: record.containment.containment_version }
+        : {}),
     });
   }
 
