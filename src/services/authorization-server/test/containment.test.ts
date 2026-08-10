@@ -378,6 +378,255 @@ describe("delegation surfaces bound to the effective set", () => {
   });
 });
 
+describe("containment propagates entry-wise to existing children (@spec child-delegation#child-state, issue #412)", () => {
+  it("a contained parent entry narrows a justified child's effective set; a non-contained action and the parent's own state are unaffected", () => {
+    const { kernel, commits } = makeHarness();
+    const parent = approve(kernel);
+
+    // childBoth draws on BOTH RES_PAY actions: proves the removal is ENTRY-WISE
+    // (only payment.execute drops), not a wholesale wipe of the child.
+    const { child: childBoth } = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: intent({
+        resources: [RES_PAY],
+        proposed_authority: [
+          {
+            type: "mission_resource_access",
+            resource: RES_PAY,
+            actions: ["payments:invoice.read", "payments:payment.execute"],
+          },
+        ],
+      }),
+      childActor: { sub: "subagent-both", sub_profile: "ai_agent" },
+    });
+    const commitsBefore = commits.length;
+
+    const { record: parentAfter } = kernel.contain(parent.id, {
+      event: ev("evt-cascade-1"),
+      remove: [{ resource: RES_PAY, actions: ["payments:payment.execute"] }],
+    });
+
+    // The parent itself only narrows; its lifecycle state is untouched.
+    expect(parentAfter.state).toBe("active");
+
+    const childAfter = kernel.get(childBoth.id) as NonNullable<ReturnType<MissionKernel["get"]>>;
+    // Propagated: same version bump / containment shape contain() always produces.
+    expect(childAfter.version).toBe(2);
+    expect(childAfter.containment?.containment_version).toBe(1);
+    expect(childAfter.containment?.contained).toEqual([
+      { resource: RES_PAY, actions: ["payments:payment.execute"] },
+    ]);
+    // Entry-wise: invoice.read (never removed from the parent) survives.
+    const childEffective = kernel.effectiveAuthoritySet(childAfter);
+    expect(childEffective).toHaveLength(1);
+    expect(childEffective[0]?.resource).toBe(RES_PAY);
+    expect(childEffective[0]?.actions).toEqual(["payments:invoice.read"]);
+    // The child's own approved authority_set (and hash) is untouched; only the
+    // overlay narrows.
+    expect(childAfter.authority_hash).toBe(childBoth.authority_hash);
+
+    // The propagation committed on the CHILD too (metadata-only: prior_state ===
+    // state), so Status List / Signals subscribers see it, exactly like the
+    // parent's own contain() commit.
+    const childCommit = commits.slice(commitsBefore).find((c) => c.id === childBoth.id);
+    expect(childCommit).toMatchObject({ id: childBoth.id, state: "active", prior_state: "active", version: 2 });
+
+    // The child can no longer derive the contained capability: a further child
+    // (grandchild) needing payment.execute is refused not_strict_subset because
+    // the ceiling is now the child's EFFECTIVE (not approved) set.
+    try {
+      createChildMission(kernel, {
+        parentId: childBoth.id,
+        intent: intent({
+          resources: [RES_PAY],
+          proposed_authority: [
+            { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
+          ],
+        }),
+        childActor: { sub: "grandchild-agent", sub_profile: "ai_agent" },
+      });
+      expect.unreachable("a grandchild must not re-derive contained authority");
+    } catch (e) {
+      expect(e).toBeInstanceOf(ChildDelegationError);
+      expect((e as ChildDelegationError).reason).toBe("not_strict_subset");
+    }
+  });
+
+  it("leaves a same-family child untouched (no overlay, no version bump) when the containment names a DIFFERENT resource entirely", () => {
+    const { kernel } = makeHarness();
+    const parent = approve(kernel); // holds both RES_PAY and RES_FILE
+    // childPay holds ONLY the RES_PAY entry; it draws nothing from RES_FILE.
+    const { child: childPay } = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: intent({
+        resources: [RES_PAY],
+        proposed_authority: [
+          { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:invoice.read"] },
+        ],
+      }),
+      childActor: { sub: "subagent-pay-only", sub_profile: "ai_agent" },
+    });
+
+    const { record: parentAfter } = kernel.contain(parent.id, {
+      event: ev("evt-cascade-6"),
+      remove: [{ resource: RES_FILE }],
+    });
+    expect(parentAfter.containment?.containment_version).toBe(1);
+
+    // Entry-granularity "unaffected": the child is not written AT ALL (no
+    // overlay, no version bump), because none of its Authority Set entries
+    // share the contained resource. Distinct from the action-granularity case
+    // above, where the child IS written but a specific action survives.
+    const childAfter = kernel.get(childPay.id) as NonNullable<ReturnType<MissionKernel["get"]>>;
+    expect(childAfter.containment).toBeUndefined();
+    expect(childAfter.version).toBe(1);
+  });
+
+  it("fully containing a child's only capability refuses its OWN derivation with GateError authority_contained", () => {
+    const { kernel } = makeHarness();
+    const parent = approve(kernel);
+    // childExecOnly draws on ONLY payment.execute: containing it empties the
+    // child's effective set entirely.
+    const { child: childExecOnly } = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: intent({
+        resources: [RES_PAY],
+        proposed_authority: [
+          { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
+        ],
+      }),
+      childActor: { sub: "subagent-exec", sub_profile: "ai_agent" },
+    });
+
+    kernel.contain(parent.id, {
+      event: ev("evt-cascade-2"),
+      remove: [{ resource: RES_PAY, actions: ["payments:payment.execute"] }],
+    });
+
+    expect(kernel.effectiveAuthoritySet(kernel.get(childExecOnly.id) as never)).toEqual([]);
+    try {
+      kernel.gateDerivation(childExecOnly.id);
+      expect.unreachable("a fully contained child must refuse derivation");
+    } catch (e) {
+      expect(e).toBeInstanceOf(GateError);
+      expect((e as GateError).reason).toBe("authority_contained");
+    }
+  });
+
+  it("does not touch an unrelated child (different parent, no shared justifying entry)", () => {
+    const { kernel } = makeHarness();
+    const parentA = approve(kernel);
+    const parentB = approve(kernel);
+    const { child: childOfA } = createChildMission(kernel, {
+      parentId: parentA.id,
+      intent: intent({
+        resources: [RES_PAY],
+        proposed_authority: [
+          { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
+        ],
+      }),
+      childActor: { sub: "subagent-a", sub_profile: "ai_agent" },
+    });
+    const { child: childOfB } = createChildMission(kernel, {
+      parentId: parentB.id,
+      intent: intent({
+        resources: [RES_PAY],
+        proposed_authority: [
+          { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
+        ],
+      }),
+      childActor: { sub: "subagent-b", sub_profile: "ai_agent" },
+    });
+
+    kernel.contain(parentA.id, {
+      event: ev("evt-cascade-3"),
+      remove: [{ resource: RES_PAY, actions: ["payments:payment.execute"] }],
+    });
+
+    // childOfA (justified by the contained parent) narrows.
+    expect(kernel.get(childOfA.id)?.containment?.containment_version).toBe(1);
+    // childOfB (a different family entirely) is completely untouched.
+    const bAfter = kernel.get(childOfB.id) as NonNullable<ReturnType<MissionKernel["get"]>>;
+    expect(bAfter.containment).toBeUndefined();
+    expect(bAfter.version).toBe(1);
+    expect(kernel.get(parentB.id)?.containment).toBeUndefined();
+  });
+
+  it("is transitive: a grandchild justified through the child also narrows", () => {
+    const { kernel } = makeHarness();
+    const parent = approve(kernel);
+    const { child } = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: intent({
+        resources: [RES_PAY],
+        proposed_authority: [
+          {
+            type: "mission_resource_access",
+            resource: RES_PAY,
+            actions: ["payments:invoice.read", "payments:payment.execute"],
+          },
+        ],
+      }),
+      childActor: { sub: "child-agent", sub_profile: "ai_agent" },
+    });
+    const { child: grandchild } = createChildMission(kernel, {
+      parentId: child.id,
+      intent: intent({
+        resources: [RES_PAY],
+        proposed_authority: [
+          {
+            type: "mission_resource_access",
+            resource: RES_PAY,
+            actions: ["payments:invoice.read", "payments:payment.execute"],
+          },
+        ],
+      }),
+      childActor: { sub: "grandchild-agent", sub_profile: "ai_agent" },
+    });
+
+    kernel.contain(parent.id, {
+      event: ev("evt-cascade-4"),
+      remove: [{ resource: RES_PAY, actions: ["payments:payment.execute"] }],
+    });
+
+    const grandchildEffective = kernel.effectiveAuthoritySet(
+      kernel.get(grandchild.id) as NonNullable<ReturnType<MissionKernel["get"]>>,
+    );
+    expect(grandchildEffective).toHaveLength(1);
+    expect(grandchildEffective[0]?.resource).toBe(RES_PAY);
+    expect(grandchildEffective[0]?.actions).toEqual(["payments:invoice.read"]);
+  });
+
+  it("skips an already-terminal child without aborting or throwing", () => {
+    const { kernel } = makeHarness();
+    const parent = approve(kernel);
+    const { child } = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: intent({
+        resources: [RES_PAY],
+        proposed_authority: [
+          { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
+        ],
+      }),
+      childActor: { sub: "subagent-term", sub_profile: "ai_agent" },
+    });
+    kernel.transition(child.id, "revoke");
+    expect(kernel.get(child.id)?.state).toBe("revoked");
+
+    expect(() =>
+      kernel.contain(parent.id, {
+        event: ev("evt-cascade-5"),
+        remove: [{ resource: RES_PAY, actions: ["payments:payment.execute"] }],
+      }),
+    ).not.toThrow();
+
+    // Untouched: a terminal Mission cannot derive further, so nothing to propagate.
+    const revokedChild = kernel.get(child.id) as NonNullable<ReturnType<MissionKernel["get"]>>;
+    expect(revokedChild.state).toBe("revoked");
+    expect(revokedChild.containment).toBeUndefined();
+  });
+});
+
 describe("contain legality by lifecycle state", () => {
   it("refuses a terminal-state contain; permits a suspended-state contain", () => {
     const { kernel, commits } = makeHarness();

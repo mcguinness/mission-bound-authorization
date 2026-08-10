@@ -27,10 +27,12 @@
  * Mission's authority:
  *   - {@link produceWorkProduct} stamps the {@link ArtifactEvidence} provenance
  *     object (attribution only, policy-free) on a work product produced under a
- *     Mission.
+ *     Mission, ONLY when attached through a trusted-mediator custody path (@spec
+ *     work-products#conformance): it refuses ({@link ProvenanceCustodyError}) a
+ *     bare, self-asserted `producer` with no distinct {@link ProvenanceMediator}.
  *   - {@link ingestWorkProduct} ingests that work product into a receiving
- *     Mission as INPUT and returns ONLY the provenance claim plus content,
- *     granting NO authority.
+ *     Mission as INPUT and returns ONLY the provenance claim plus content
+ *     (MUST-level, @spec work-products#handoff), granting NO authority.
  *
  * Both use {@link MissionKernel.gateActive}, NEVER {@link
  * MissionKernel.gateDerivation}: producing or ingesting a work product is not a
@@ -59,6 +61,42 @@ export interface WorkProduct<C = JsonValue> {
   content: C;
 }
 
+/**
+ * @spec work-products#conformance — the trusted mediator attaching Work
+ * Product Provenance: "an Agent Deployment's execution environment, or the
+ * Mission Issuer", the only two competent attachers this document names.
+ * `role` reuses the suite's existing evidence-envelope role vocabulary
+ * (`EmitterRole` in @mission/mcp-payments: harness = the Agent Deployment's
+ * execution environment; issuer = the Mission Issuer) narrowed to those two,
+ * rather than inventing a parallel one. `id` MUST be the mediator's OWN
+ * identity, distinct from `producer`: the custody boundary this models is
+ * "who attaches the object", and a mediator whose `id` equals the producing
+ * agent's is that agent self-attaching under another name.
+ */
+export interface ProvenanceMediator {
+  id: string;
+  role: "harness" | "issuer";
+}
+
+/**
+ * @spec work-products#conformance — why {@link produceWorkProduct} refused to
+ * attach a Work Product Provenance object.
+ */
+export type ProvenanceCustodyDenialReason = "self_asserted" | "untrusted_mediator_role";
+
+/**
+ * @spec work-products#conformance — the custody boundary refusal: a producing
+ * agent MUST NOT self-author or self-assert its own Work Product Provenance.
+ */
+export class ProvenanceCustodyError extends Error {
+  constructor(
+    readonly reason: ProvenanceCustodyDenialReason,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 /** The members {@link produceWorkProduct} accepts. */
 export interface ProduceWorkProductInput<C = JsonValue> {
   /** The producing Mission (Mission A). */
@@ -67,6 +105,14 @@ export interface ProduceWorkProductInput<C = JsonValue> {
   deploymentId: string;
   /** The producing principal/agent under that Mission (NOT the emitting component). */
   producer: string;
+  /**
+   * @spec work-products#conformance — the trusted mediator attaching this
+   * provenance object, from its OWN record of which Mission's approved work
+   * was executing when the artifact was produced. REQUIRED: there is no path
+   * through {@link produceWorkProduct} that stamps provenance from a bare,
+   * unauthenticated `producer` assertion alone.
+   */
+  mediator: ProvenanceMediator;
   /** The durable content of the work product. */
   content: C;
   /** Optional provenance-chain back-reference to the artifact this derived from. */
@@ -95,22 +141,45 @@ export interface IngestedWorkProduct<C = JsonValue> {
 }
 
 /**
- * @spec work-products#provenance — stamp provenance on a work product produced
- * under Mission A. Production happens under a LIVE Mission (and live lineage):
- * gateActive refuses when the Mission or any ancestor is non-active. It is
- * gateActive, NOT gateDerivation, because producing an artifact is not a token
- * derivation and MUST NOT consume the Mission's derivation cap.
+ * @spec work-products#provenance, #conformance — stamp provenance on a work
+ * product produced under Mission A. Production happens under a LIVE Mission
+ * (and live lineage): gateActive refuses when the Mission or any ancestor is
+ * non-active. It is gateActive, NOT gateDerivation, because producing an
+ * artifact is not a token derivation and MUST NOT consume the Mission's
+ * derivation cap.
  *
- * The provenance object is policy-free and attribution-only: it records the
- * producing Mission, the Agent Deployment, the producing principal, and the
- * production time (plus an optional parent-artifact back-reference), and nothing
- * else. It makes a PROVENANCE claim, never an authority claim.
+ * The custody boundary (@spec work-products#conformance): the object MUST be
+ * attached by a trusted mediator (an Agent Deployment's execution environment
+ * or the Mission Issuer), never self-authored by the producing agent. Two
+ * independent, MUST-level guards precede the stamp:
+ *   - `mediator.role` MUST be one this document recognizes as competent to
+ *     attach provenance (`harness` | `issuer`); anything else is refused
+ *     `untrusted_mediator_role`.
+ *   - `mediator.id` MUST be distinct from `producer`: an attacher asserting
+ *     the producing agent's own identity is that agent self-authoring under
+ *     another name, refused `self_asserted`.
+ * Neither guard touches the stamped object itself: on success the provenance
+ * object still carries EXACTLY the five members @spec work-products#provenance
+ * defines (the mediator identity is the custody check's input, never a sixth
+ * member), so it stays policy-free by construction.
  */
 export function produceWorkProduct<C = JsonValue>(
   kernel: MissionKernel,
   input: ProduceWorkProductInput<C>,
 ): WorkProduct<C> {
   const record = kernel.gateActive(input.missionId);
+  if (input.mediator.role !== "harness" && input.mediator.role !== "issuer") {
+    throw new ProvenanceCustodyError(
+      "untrusted_mediator_role",
+      `provenance mediator role '${input.mediator.role}' is not a trusted attacher (harness|issuer)`,
+    );
+  }
+  if (input.mediator.id === input.producer) {
+    throw new ProvenanceCustodyError(
+      "self_asserted",
+      "a producing agent MUST NOT self-author or self-assert its own Work Product Provenance",
+    );
+  }
   const provenance = buildArtifactEvidence({
     mission_id: record.id,
     deployment_id: input.deploymentId,
