@@ -74,7 +74,7 @@ informative:
         name: Dick Hardt
     date: 2026
   I-D.draft-mcguinness-mission-aauth:
-    title: "Mission-Bound Authorization for AAuth"
+    title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
     author:
       -
@@ -386,10 +386,11 @@ used for adjudication are the Mission Issuer's own verified values
 : CONDITIONAL. REQUIRED when the metadata names an Authorization
   Server: the issuer identifier it names.
 
-Under the AAuth binding, the Person Server performs the equivalent
-pinning with the substrate's own material: the Access Server
-association and the R3 document's `r3_s256`
-({{I-D.draft-mcguinness-mission-aauth}}).
+In an AAuth deployment, the Person Server performs the equivalent
+pinning with native material: the Access Server association and,
+where the deployment adopts Rich Resource Requests, the R3 document's
+`r3_s256` ({{I-D.draft-hardt-aauth-r3}},
+{{I-D.draft-mcguinness-mission-aauth}}).
 
 # Discovery Adjudication {#adjudication}
 
