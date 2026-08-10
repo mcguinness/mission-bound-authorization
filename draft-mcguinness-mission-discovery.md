@@ -152,16 +152,19 @@ A Mission commits its authority at approval, but an open-world agent
 meets resources the approval could not name. This document defines
 discovery as a governed operation: the Encounter, the Discovery
 Adjudication that evaluates a newly met resource against a
-pre-consented ceiling, the identity a discovered resource must pin
+pre-consented ceiling or, where the binding's Controller natively
+adjudicates each governed request, against the approved mission
+context, the identity a discovered resource must pin
 before any binding, and the Discovery Evidence that makes each
 binding reproducible in audit. Two floors hold regardless of policy:
 a resource's self-declaration is accountability material and never
 classification authority, and in a session that has ingested
 untrusted content nothing newly discovered binds by policy, because
 a request to a new origin is itself egress. A Mission without a
-ceiling binds nothing discovered: the open world is reachable only
-through consent given in advance, narrowed at every step, and
-evidenced at every binding.
+ceiling or an adjudicating Controller binds nothing discovered: the
+open world is reachable only through consent given in advance,
+exercised by ceiling policy or contextual judgment, narrowed at
+every step, and evidenced at every binding.
 
 --- middle
 
@@ -198,8 +201,9 @@ sessions never bind a newly discovered resource by policy alone.
 
 This document is Experimental. It extends stable interfaces only
 through their declared seams: the progressive profile's drawdown
-path, the runtime profile's decision context, and the evidence
-objects' coordinated-extension rules. A deployment that does not
+path, the runtime profile's decision context, the AAuth binding's
+Person Server decision gate, and the evidence objects'
+coordinated-extension rules. A deployment that does not
 adopt it is unaffected; a Mission whose Authority Set and ceiling
 name every resource it touches never encounters this document. The
 stable path for a resource outside every envelope is a fresh
@@ -233,16 +237,18 @@ It additionally uses:
 Encounter:
 : The event of an agent meeting, during execution, a resource,
   capability catalog, or service that no entry of its Mission's
-  Authority Set names.
+  consented ceiling names or, under contextual adjudication, for
+  which the Mission's governance record holds no prior binding.
 
 Discovery Adjudicator:
 : The component that decides an encounter. It is always the Mission
-  Issuer: the issuer of the Mission on the drawdown path, or the
-  AAuth Person Server at its token gate
-  ({{I-D.draft-mcguinness-mission-aauth}}), which is that binding's
-  Mission Issuer. A binding creates authority, and authority is
-  created only at the Mission Issuer; a PDP enforces bindings and
-  refuses the unbound, and never adjudicates one.
+  Issuer: on the ceiling path, the issuer of the Mission; on the
+  contextual path, the binding's Controller at its native decision
+  gate, under the AAuth binding the Person Server
+  ({{I-D.draft-mcguinness-mission-aauth}}). A binding creates
+  authority, and authority is created only at the Mission Issuer; a
+  PDP enforces bindings and refuses the unbound, and never
+  adjudicates one.
 
 Egress-capable:
 : Creating authority in the runtime profile's
@@ -262,19 +268,25 @@ Discovery Binding:
 # Mission Substrate {#mission-substrate}
 
 This profile is defined against the Mission model rather than OAuth
-mechanics. It consumes:
+mechanics. Both adjudication modes ({{adjudication}}) consume the
+Mission record's committed members and the only-`active` rule.
 
-- the Mission record's committed members and the only-`active` rule;
-- the Authority Set representation with the subset rule's
-  resource-narrowing semantics;
+Ceiling adjudication additionally consumes:
+
+- the issuance profile's Authority Set representation with the
+  subset rule's resource-narrowing semantics, the substrate's
+  Structured Authority capability;
 - the integrity-anchor envelope for the digests its evidence
   carries; and
 - the progressive profile's consented ceiling, which is the only
-  object a discovery binding may draw against.
+  object a policy binding may draw against.
 
-Where these exist under another binding, this profile composes
-unchanged; the AAuth binding hosts the adjudication at its Person
-Server token gate.
+Contextual adjudication consumes the approved context and the
+ordered governance record in their place, and its evidence digests
+ride the binding's native commitment. It exists only where the
+binding's Controller natively adjudicates each governed request; the
+AAuth binding hosts it at the Person Server's decision gate
+({{I-D.draft-mcguinness-mission-aauth}}).
 
 # The Encounter {#encounter}
 
@@ -400,9 +412,10 @@ An adjudication takes, at minimum:
 - the Encountered Resource object as the Mission Issuer verified it
   ({{resource-identity}});
 - the self-declaration digest where one exists;
-- the authority sought: the entry or entries the binding would
-  create, whose action classes under the deployment's classification
-  drive every floor of this document;
+- the authority sought: the entry or entries a ceiling binding would
+  create, or the governed request a contextual binding would permit,
+  whose action classes under the deployment's classification drive
+  every floor of this document;
 - the requesting actor; and
 - the session's taint state.
 
@@ -417,18 +430,33 @@ classification cannot assign an action class MUST NOT bind by
 policy: with no class the floors cannot be applied, so the encounter
 routes to a human or is refused.
 
+Adjudication runs in one of two modes, fixed by what the binding
+supplies ({{mission-substrate}}). **Ceiling adjudication** decides
+against a structured, pre-consented ceiling under the subset rule.
+**Contextual adjudication** is the Controller's own judgment that
+the encounter falls within the approved mission context, informed by
+the governance record and the person channel. Contextual
+adjudication is policy in this document's sense: the Controller's
+judgment is not the human's, and every floor of this document
+applies identically in both modes.
+
 The adjudication returns exactly one of:
 
 **Bind.**
-: The encountered resource falls within a consented ceiling entry
-  under the subset rule's resource-narrowing semantics, no floor of
-  this document objects, and concrete authority is created for it:
-  under the OAuth binding, as a progressive in-ceiling drawdown
-  whose successor entry names the resource
+: In ceiling adjudication, the encountered resource falls within a
+  consented ceiling entry under the subset rule's resource-narrowing
+  semantics; in contextual adjudication, the Controller judges it
+  within the approved mission context. No floor of this document
+  objects, and concrete authority is created: under the OAuth
+  binding, as a progressive in-ceiling drawdown whose successor
+  entry names the resource
   ({{I-D.draft-mcguinness-oauth-mission-progressive}}); under the
-  AAuth binding, as the Person Server's token-gate decision. The
-  binding is narrowing-only: nothing an encounter creates may exceed
-  the ceiling entry it draws against.
+  AAuth binding, as the Person Server's contextual decision at its
+  gate, appended to the mission log with the pinned identity and
+  declaration digest. A ceiling binding is narrowing-only: nothing
+  an encounter creates may exceed the ceiling entry it draws
+  against. A contextual binding is request-scoped: it creates no
+  standing entry, and a later request is adjudicated again.
 
 **Route to a human.**
 : The encounter is real but no policy may decide it:
@@ -460,8 +488,11 @@ The adjudication returns exactly one of:
   deployment does not escalate, a prohibited class, an exhausted
   bound) and is recorded as refused.
 
-A Mission with no consented ceiling has no bind outcome: every
-encounter routes to a human or refuses. Discovery is default-closed.
+In ceiling adjudication, a Mission with no consented ceiling has no
+bind outcome: every encounter routes to a human or refuses. In
+contextual adjudication, an encounter the approved context cannot
+support routes the same way. Discovery is default-closed in both
+modes.
 
 On the OAuth binding's drawdown path, the encounter rides the
 expansion request as two additional parameters, `encountered_resource`
@@ -595,8 +626,11 @@ Evidence object:
   ({{lying-resource}}).
 
 `ceiling_entry_digest`:
-: CONDITIONAL. REQUIRED on `bound`: the integrity-anchor encoded
-  digest of the ceiling entry drawn against.
+: CONDITIONAL. REQUIRED on `bound` under ceiling adjudication: the
+  integrity-anchor encoded digest of the ceiling entry drawn
+  against. Absent for a contextual bind, whose record is the
+  governance-record entry carrying the pinned identity and
+  declaration digest.
 
 `actor`:
 : REQUIRED. A string: the authenticated requesting actor.
