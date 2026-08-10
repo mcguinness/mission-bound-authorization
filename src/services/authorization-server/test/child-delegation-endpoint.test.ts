@@ -515,25 +515,13 @@ describe("PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #
     // absent (silently) if the Grant->findByGrant binding is keyed wrong, so this
     // is asserted BEFORE drilling into its members.
     const mission = payload.mission as
-      | {
-          id?: string;
-          authority_hash?: string;
-          parent?: { id?: string; depth?: number };
-          approved_client?: { client_id?: string; iss?: string };
-        }
+      | { id?: string; authority_hash?: string; parent?: { id?: string; depth?: number } }
       | undefined;
     expect(mission, "child mission claim must be present on the token").toBeDefined();
     expect(mission?.id).toBe(missionId);
     // The child hash commits the CHILD set; it differs from the parent's.
     expect(mission?.authority_hash).toBe(child?.authority_hash);
     expect(mission?.authority_hash).not.toBe(as.kernel.get(p.missionId)?.authority_hash);
-    // @spec mission#approved-client (delegate model, P0-2) — the child actor IS
-    // the Child Mission's own approved agent (createChildMission sets
-    // record.client_id to the child actor), so approved_client.client_id equals
-    // the top-level client_id asserted above. This is the flow where the two are
-    // equal BY DESIGN (no delegate redeems on the child's behalf here), not a
-    // sign the field is redundant: the dispatch flow above shows them diverge.
-    expect(mission?.approved_client?.client_id).toBe("subagent-invoice-extractor");
     // The child mission claim carries the parent lineage member.
     expect(mission?.parent?.id).toBe(p.missionId);
     expect(mission?.parent?.depth).toBe(1);

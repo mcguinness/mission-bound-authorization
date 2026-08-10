@@ -399,16 +399,4 @@ export interface MissionClaim {
    * {@link ApprovalBasis} lives on the Mission Record only.
    */
   approval_basis: { type: ApprovalBasisType };
-  /**
-   * @spec mission#approved-client, mission#delegation (delegate model, P0-2) —
-   * the Mission's originally-approved agent (`record.client_id`, immutable since
-   * approval). Distinct from the token's top-level `client_id`, which names the
-   * OAuth client requesting THIS token (the immediate client/delegate, per
-   * RFC 8693 Section 4.3 / RFC 9068 Section 2.2) and MAY therefore differ from
-   * `approved_client.client_id` once a delegate acts. `iss` is OPTIONAL and
-   * included only when the approving issuer differs from the token's own `iss`;
-   * every issuance path in this reference impl signs with `record.issuer`, so
-   * `iss` is never populated here (omitted, not disambiguation-needed).
-   */
-  approved_client: { client_id: string; iss?: string };
 }

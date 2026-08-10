@@ -216,21 +216,14 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     // grantId -> findByGrant -> gateDerivation. This exercises the novel bit of
     // the dispatch flow (the Grant is owned by the dispatcher while the record's
     // client_id is the recipient), and confirms it still resolves to the instance.
-    const missionClaim = payload.mission as
-      | { id?: string; approved_client?: { client_id?: string; iss?: string } }
-      | undefined;
+    const missionClaim = payload.mission as { id?: string } | undefined;
     expect(missionClaim?.id).toBe(body.mission_id);
 
-    // @spec mission#approved-client, mission#delegation (delegate model, P0-2) —
-    // the dispatcher is the party actually redeeming this token (the immediate
-    // client), so the token's top-level client_id names it, NOT the template's
-    // recipient. The recipient (the Mission's originally-approved agent) is
-    // disclosed via mission.approved_client instead. This is a real divergence
-    // (two distinct registered clients), unlike the child-redemption path where
-    // the redeemer IS the approved agent.
+    // @spec mission#delegation (delegate model, P0-2) — the dispatcher is the
+    // party actually redeeming this token (the immediate client), so the
+    // token's top-level client_id names it, NOT the template's recipient
+    // (record.client_id, asserted separately below).
     expect(payload.client_id).toBe("ap-agent");
-    expect(missionClaim?.approved_client?.client_id).toBe("subagent-invoice-extractor");
-    expect(missionClaim?.approved_client?.iss).toBeUndefined();
 
     const record = as.kernel.get(body.mission_id as string);
     expect(record).toBeDefined();

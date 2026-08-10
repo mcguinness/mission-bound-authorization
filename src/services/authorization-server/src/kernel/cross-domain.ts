@@ -5,9 +5,8 @@
  * grant, signed by the Mission issuer, audienced to the target Resource AS,
  * <=300s, exp not exceeding the Mission's expires_at, sender-constrained by
  * cnf, one-time via jti, carrying the mission claim (id/issuer/authority_hash
- * unchanged, plus approved_client per the delegate model, P0-2) and the
- * audience-scoped authorization_details. Gated as a derivation (D26
- * lifecycle). Backs M9.
+ * unchanged) and the audience-scoped authorization_details. Gated as a
+ * derivation (D26 lifecycle). Backs M9.
  */
 
 import { randomBytes } from "node:crypto";
@@ -108,13 +107,6 @@ export async function issueCrossDomainGrant(
       id: record.id,
       issuer: record.issuer,
       authority_hash: record.authority_hash,
-      // @spec mission#approved-client, cross-domain#delegation (delegate model,
-      // P0-2): the originally-approved agent (record.client_id), distinct from
-      // this grant's top-level `client_id` (input.clientId, the requesting
-      // client/current delegate). `iss` omitted: this grant is always signed
-      // with record.issuer as `iss` (below), so the approving issuer never
-      // differs from the token's own `iss` in this reference impl.
-      approved_client: { client_id: record.client_id },
     },
     authorization_details: scoped,
     cnf: { jkt: input.cnfJkt },

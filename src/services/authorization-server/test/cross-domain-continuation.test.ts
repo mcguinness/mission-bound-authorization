@@ -124,7 +124,7 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
     expect(c.client_id).toBe("ap-agent");
   });
 
-  it("@spec mission#approved-client, mission#delegation (delegate model, P0-2) — a genuine delegate's grant names the delegate as client_id, nests the approved agent one level into act, and discloses the approved agent via mission.approved_client", async () => {
+  it("@spec mission#delegation (delegate model, P0-2) — a genuine delegate's grant names the delegate as client_id and nests the approved agent one level into act", async () => {
     // The Mission was approved for "ap-agent"; a DIFFERENT delegate ("delegate-svc")
     // is the one actually presenting and requesting THIS cross-domain grant.
     const record = approve(5);
@@ -147,16 +147,12 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
     // Section 2.2 — NOT the Mission's approved agent.
     expect(c.client_id).toBe("delegate-svc");
     // act: the outermost entry is the current delegate; the approved agent's
-    // prior lineage nests one level inward via act.act.
+    // prior lineage nests one level inward via act.act. (The approved agent's
+    // identity is recoverable via this act chain / the Mission Record, not via
+    // a separate mission claim member; see issue #433.)
     const act = c.act as ActObject;
     expect(act.sub).toBe("delegate-svc");
     expect(act.act?.sub).toBe("ap-agent");
-    // mission.approved_client: the originally-approved agent (record.client_id),
-    // distinct from client_id above. iss omitted (approving issuer == token iss
-    // in this reference impl).
-    const mission = c.mission as { approved_client?: { client_id?: string; iss?: string } };
-    expect(mission.approved_client?.client_id).toBe("ap-agent");
-    expect(mission.approved_client?.iss).toBeUndefined();
   });
 
   it("omits absent auth-envelope sub-fields (partial envelope)", async () => {
