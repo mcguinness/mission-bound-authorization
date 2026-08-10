@@ -66,6 +66,7 @@ normative:
       -
         org: OpenID Foundation
     date: 2026
+  I-D.draft-zehavi-oauth-rar-metadata:
 
 informative:
   RFC9457:
@@ -1479,6 +1480,27 @@ names. `context.action_approval` ({{context-approval}}) is ARAP's
 the `action_approval_required` reason ({{runtime-denial-classification}})
 is ARAP's `context.reason` value `approval_required`. An ARAP implementer
 maps these names to drive an unmodified ARAP request and approval exchange.
+
+The requestable denial just described is one member of a wider
+graduated-challenge family: a denial that also carries how to get past
+it. `insufficient_authorization` and `authorization_remediation`,
+defined by {{I-D.draft-zehavi-oauth-rar-metadata}} and adopted into
+the family's remediation by the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}), are that family's
+RAR-details grain; this binding's composition with {{ARAP}} is its
+AuthZEN grain. The two grains are not competing carriers, and a
+deployment MAY expose both on the same denial. The RAR-details grain
+names what authority to propose: it carries actionable
+`authorization_details` the client proposes back on a fresh Intent
+through `proposed_authority` ({{I-D.draft-mcguinness-oauth-mission}}).
+The AuthZEN grain names how the denial is escalated: it routes an
+`out_of_authority` or `action_approval_required` denial into a
+governed access request that an independent approver or policy
+adjudicates before the PEP re-evaluates. Composed, the actionable
+`authorization_details` tells the client, or the approver reviewing
+the access request, what to grant, while `context.access_request`
+queues the governed step; neither carrier changes the `decision: false`
+result.
 
 ## Failure-condition coverage {#failure-condition-coverage}
 
