@@ -52,7 +52,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-aauth:
-    title: "Mission-Bound Authorization: AAuth Binding"
+    title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
     author:
       -
