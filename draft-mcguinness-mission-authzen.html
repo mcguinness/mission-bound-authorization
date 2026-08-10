@@ -3091,6 +3091,26 @@ names. <code>context.action_approval</code> (<a href="#context-approval" class="
 the <code>action_approval_required</code> reason (<a href="#runtime-denial-classification" class="auto internal xref">Section 6.4</a>)
 is ARAP's <code>context.reason</code> value <code>approval_required</code>. An ARAP implementer
 maps these names to drive an unmodified ARAP request and approval exchange.<a href="#section-6.5-7" class="pilcrow">¶</a></p>
+<p id="section-6.5-8">The requestable denial just described is one member of a wider
+graduated-challenge family: a denial that also carries how to get past
+it. <code>insufficient_authorization</code> and <code>authorization_remediation</code>,
+defined by <span>[<a href="#I-D.draft-zehavi-oauth-rar-metadata" class="cite xref">I-D.draft-zehavi-oauth-rar-metadata</a>]</span> and adopted into
+the family's remediation by the issuance profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), are that family's
+RAR-details grain; this binding's composition with <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span> is its
+AuthZEN grain. The two grains are not competing carriers, and a
+deployment <span class="bcp14">MAY</span> expose both on the same denial. The RAR-details grain
+names what authority to propose: it carries actionable
+<code>authorization_details</code> the client proposes back on a fresh Intent
+through <code>proposed_authority</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).
+The AuthZEN grain names how the denial is escalated: it routes an
+<code>out_of_authority</code> or <code>action_approval_required</code> denial into a
+governed access request that an independent approver or policy
+adjudicates before the PEP re-evaluates. Composed, the actionable
+<code>authorization_details</code> tells the client, or the approver reviewing
+the access request, what to grant, while <code>context.access_request</code>
+queues the governed step; neither carrier changes the <code>decision: false</code>
+result.<a href="#section-6.5-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="failure-condition-coverage">
@@ -5114,6 +5134,10 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-zehavi-oauth-rar-metadata">[I-D.draft-zehavi-oauth-rar-metadata]</dt>
+        <dd>
+<span class="refAuthor">Zehavi, Y.</span>, <span class="refTitle">"OAuth 2.0 RAR Metadata and Error Remediation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-zehavi-oauth-rar-metadata-06</span>, <time datetime="2026-08-09" class="refDate">9 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-rar-metadata-06">https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-rar-metadata-06</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
