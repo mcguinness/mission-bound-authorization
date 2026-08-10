@@ -407,7 +407,8 @@ construction: the substrate contract anchors the **uma**,
 **authority-server**, and **aauth** Statements; **aauth-expiry**
 anchors the AAuth binding and its management companion; and the
 **core** anchors its OAuth companions. The family manifest tracks
-these.
+these. The substrate contract publishes before or with any binding
+that claims conformance to it.
 
 In short: steps 1 through 3 are built entirely on ratified
 dependencies; everything experimental is additive and can wait.
