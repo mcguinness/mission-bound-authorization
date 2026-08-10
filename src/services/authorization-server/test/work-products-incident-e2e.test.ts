@@ -193,6 +193,7 @@ d("work products: information may propagate, authority may not", () => {
       missionId: missionA.id,
       deploymentId: "dep_A1",
       producer: "agent:A1",
+      mediator: { id: "harness:dep_A1", role: "harness" },
       content,
     });
     // Provenance is attribution to the PRODUCING Mission/principal, NOT the reader.
@@ -220,6 +221,7 @@ d("work products: information may propagate, authority may not", () => {
       missionId: missionA.id,
       deploymentId: "dep_A1",
       producer: "agent:A1",
+      mediator: { id: "harness:dep_A1", role: "harness" },
       content: { note: "follow-up derived from the remittance note" },
       parentArtifact: "artifact:remittance-note-v1",
     });

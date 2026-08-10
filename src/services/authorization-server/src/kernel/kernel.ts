@@ -671,6 +671,12 @@ export class MissionKernel {
     const fresh = this.get(record.id);
     if (!fresh) throw new Error(`unknown mission: ${id}`);
     this.emitCommit(fresh, fresh.state);
+    // @spec child-delegation#child-state — containment propagates entry-wise to
+    // existing children justified by the now-contained parent entry, so a child
+    // cannot keep deriving contained authority while the parent stays `active`.
+    // Only the NEWLY removed items (`input.remove`), not the whole merged
+    // overlay: earlier removals were already propagated when THEY were applied.
+    this.propagateContainmentToChildren(fresh, input.remove, input.event, input.policyRule);
     return {
       record: fresh,
       evidence: buildContainmentEvidence({
@@ -682,6 +688,51 @@ export class MissionKernel {
         removed: eventRecord.removed,
       }),
     };
+  }
+
+  /**
+   * @spec child-delegation#child-state — propagate a containment narrowing
+   * entry-wise to PARENT's existing children. A removed item applies to a
+   * child when the child holds an Authority Set entry for that SAME resource:
+   * a Child Mission's `authority_set` is proven (at creation,
+   * {@link createChildMission}) to be a strict subset of the parent's, so any
+   * child entry sharing a resource with a removed item is necessarily justified
+   * by the parent entry that removal narrowed (@spec
+   * child-delegation#fanout-accounting). Matching on the resource key alone
+   * (not a fresh subset probe) mirrors how {@link effectiveAuthoritySet} and
+   * `contain`'s own merge already correlate entries, and fails CLOSED: a
+   * subset re-probe here could spuriously fail on an unrelated malformed
+   * constraint and silently skip propagation, which containment must not do.
+   *
+   * A terminal child cannot derive further and is skipped (mirrors {@link
+   * cascadeChildren}'s active/suspended-only gate; `contain` itself also
+   * refuses a terminal target). Recurses through {@link contain} itself, so a
+   * grandchild justified transitively through the child picks up the same
+   * narrowing (mirrors {@link cascadeChildren}'s re-entry pattern); the
+   * recursive call's own idempotency-by-event_id is scoped to that child's own
+   * containment ledger, so replaying the same `event` is safe at every level.
+   * The parent's own lifecycle state is never touched here: containment only
+   * ever narrows effective authority, never a Mission's state.
+   */
+  private propagateContainmentToChildren(
+    parent: MissionRecord,
+    removed: Array<{ resource: string; actions?: string[] }>,
+    event: { type: string; source: string; observed_at: string; event_id: string },
+    policyRule?: string,
+  ): void {
+    for (const child of this.findChildren(parent.id)) {
+      const fresh = this.applyExpiry(child);
+      if (TERMINAL_STATES.has(fresh.state)) continue;
+      const applicable = removed.filter((r) =>
+        fresh.authority_set.some((ce) => ce.resource === r.resource),
+      );
+      if (applicable.length === 0) continue;
+      this.contain(fresh.id, {
+        event,
+        remove: applicable,
+        ...(policyRule !== undefined ? { policyRule } : {}),
+      });
+    }
   }
 
   /**

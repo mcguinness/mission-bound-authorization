@@ -130,6 +130,9 @@ export {
 export {
   produceWorkProduct,
   ingestWorkProduct,
+  ProvenanceCustodyError,
+  type ProvenanceMediator,
+  type ProvenanceCustodyDenialReason,
   type WorkProduct,
   type ProduceWorkProductInput,
   type IngestWorkProductInput,
