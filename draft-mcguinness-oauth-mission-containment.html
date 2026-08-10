@@ -1833,11 +1833,16 @@ When this profile runs:<a href="#section-13-1" class="pilcrow">¶</a></p>
 <li class="normal" id="section-13-2.1">
           <p id="section-13-2.1.1">the <code>mission</code> object of the Mission Status Response and the token
 introspection Mission projection <span class="bcp14">MUST</span> carry <code>containment_version</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>); and<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>);<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.2">
           <p id="section-13-2.2.1">any surface of those profiles that discloses Mission authority <span class="bcp14">MUST</span>
-omit contained capability or annotate it as contained.<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
+omit contained capability or annotate it as contained; and<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.3">
+          <p id="section-13-2.3.1">a <code>mission.lifecycle-change</code> event <span class="bcp14">MUST</span> carry <code>containment_version</code>,
+and <span class="bcp14">MAY</span> carry <code>authority_hash</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>, <a href="#propagation" class="auto internal xref">Section 14</a>).<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-13-3">A consumer that does not understand <code>containment_version</code> ignores it;
@@ -1874,10 +1879,15 @@ widens what a contained Mission can issue.<a href="#section-14-2.2.1" class="pil
           <p id="section-14-2.3.1"><strong>Push.</strong> Where Signals runs, the commit is emitted as a
 <code>mission.lifecycle-change</code> whose <code>state</code> equals its <code>prior_state</code>,
 that profile's metadata-only shape, incrementing <code>version</code> like any
-other committed change
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>). A dedicated
-containment event type is deferred; the version movement is what
-makes the change observable in the interim.<a href="#section-14-2.3.1" class="pilcrow">¶</a></p>
+other committed change, and carrying the Mission's current
+<code>containment_version</code> and, optionally, its <code>authority_hash</code> as a
+reference to the Authority Set the overlay narrows
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>). This makes an
+active-to-active version bump legible to a containment-aware
+consumer as an authorization change, rather than an opaque version
+increment. A dedicated containment event type is deferred; carrying
+<code>containment_version</code> on the existing event is what keeps that
+change legible in the interim.<a href="#section-14-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-14-3">How quickly a consumer must adopt the narrowed view is bounded by the

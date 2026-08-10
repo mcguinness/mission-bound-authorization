@@ -841,13 +841,17 @@ Table of Contents
    Intent at child creation and is independent of the parent's: the
    attenuation rules above bound a child's authority, expiry, and
    delegation policy against the parent, but not its derivation count.
-   A Parent Mission's own max_derivations caps derivation at the parent
-   alone; it does not by default bound how many derivations the child
-   subtree performs in aggregate, and a deep or wide subtree can derive
-   far more than the parent's own cap suggests.  Where a deployment
-   requires a human approval event for child creation (Section 6), it
-   SHOULD disclose at that consent surface that the child subtree's
-   aggregate derivation volume can exceed the parent's max_derivations.
+   max_derivations is a per-Mission local issuance counter.  A Mission
+   Issuer and a deployment MUST NOT treat it, at any single Mission, as
+   an aggregate, concurrency, spend, or subtree bound.  A Parent
+   Mission's own max_derivations caps derivation at the parent alone; it
+   does not bound how many derivations the child subtree performs in
+   aggregate, and a deep or wide subtree can derive far more than the
+   parent's own cap suggests.  Where an approval interface displays
+   max_derivations, or any per-Mission derivation control, as a limit on
+   child creation, that interface MUST disclose the composed bound
+   reachable through the subtree alongside it, so the Approver sees the
+   real reachable surface rather than one Mission's local counter alone.
    Bounding the aggregate across a subtree is the role of consumption
    metering, not this profile's attenuation rules
    ([I-D.draft-mcguinness-mission-metering]).

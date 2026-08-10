@@ -1534,6 +1534,28 @@ that do.<a href="#section-4-6.16.1" class="pilcrow">¶</a></p>
 <code>superseded</code>, giving the successor that replaced the Mission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-4-6.20.1" class="pilcrow">¶</a></p>
 </dd>
+        <dd class="break"></dd>
+<dt id="section-4-6.21">
+<code>containment_version</code> (integer, conditional):</dt>
+        <dd style="margin-left: 1.5em" id="section-4-6.22">
+          <p id="section-4-6.22.1">the Mission's containment overlay version at this event's commit.
+<span class="bcp14">REQUIRED</span> when the deployment runs the containment profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), which defines
+the overlay and requires this member on every
+<code>mission.lifecycle-change</code> event, so a consumer can tell an
+active-to-active version bump that narrows authority from one that
+does not.<a href="#section-4-6.22.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-6.23">
+<code>authority_hash</code> (string, optional):</dt>
+        <dd style="margin-left: 1.5em" id="section-4-6.24">
+          <p id="section-4-6.24.1">the <code>authority_hash</code> the issuance profile commits at approval
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Present at the containment
+profile's option, as a reference to the Authority Set the current
+containment overlay narrows
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>).<a href="#section-4-6.24.1" class="pilcrow">¶</a></p>
+</dd>
       <dd class="break"></dd>
 </dl>
 <p id="section-4-7">Following the issuance profile's forward-compatibility rule, an event
@@ -1725,7 +1747,21 @@ re-seats gap detection: the consumer sets its last-applied version
 to the returned value and measures the next gap from it.<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-2.6">
-          <p id="section-6-2.6.1">Acknowledge the event per the SSF delivery method in use.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.6.1">Rematerialize its effective authority view for the Mission through
+the Mission Status operation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) before further
+consequential reliance when it is containment-aware
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>) and the event
+carries a <code>containment_version</code> greater than the <code>containment_version</code>
+of the authority view it last materialized for that <code>mission.id</code>,
+even when <code>state</code> equals <code>prior_state</code>. This covers the sequential
+case the version-gap rule above does not: an active-to-active
+containment transition where nothing in <code>state</code> signals that
+authority narrowed. The version-gap rule stays the fallback for the
+coarse case, a missed event.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.7">
+          <p id="section-6-2.7.1">Acknowledge the event per the SSF delivery method in use.<a href="#section-6-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-6-3">A consumer <span class="bcp14">MUST NOT</span> treat the event as authority to change Mission
@@ -2121,6 +2157,10 @@ IETF; Reference this document, <a href="#as-metadata" class="auto internal xref"
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>

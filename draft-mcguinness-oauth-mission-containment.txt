@@ -537,10 +537,14 @@ Table of Contents
 
    *  the mission object of the Mission Status Response and the token
       introspection Mission projection MUST carry containment_version
-      ([I-D.draft-mcguinness-oauth-mission-status]); and
+      ([I-D.draft-mcguinness-oauth-mission-status]);
 
    *  any surface of those profiles that discloses Mission authority
-      MUST omit contained capability or annotate it as contained.
+      MUST omit contained capability or annotate it as contained; and
+
+   *  a mission.lifecycle-change event MUST carry containment_version,
+      and MAY carry authority_hash
+      ([I-D.draft-mcguinness-oauth-mission-signals], Section 14).
 
    A consumer that does not understand containment_version ignores it;
    the state version already makes the change observable (Section 7).  A
@@ -568,9 +572,15 @@ Table of Contents
    *  *Push.* Where Signals runs, the commit is emitted as a
       mission.lifecycle-change whose state equals its prior_state, that
       profile's metadata-only shape, incrementing version like any other
-      committed change ([I-D.draft-mcguinness-oauth-mission-signals]).
-      A dedicated containment event type is deferred; the version
-      movement is what makes the change observable in the interim.
+      committed change, and carrying the Mission's current
+      containment_version and, optionally, its authority_hash as a
+      reference to the Authority Set the overlay narrows
+      ([I-D.draft-mcguinness-oauth-mission-signals]).  This makes an
+      active-to-active version bump legible to a containment-aware
+      consumer as an authorization change, rather than an opaque version
+      increment.  A dedicated containment event type is deferred;
+      carrying containment_version on the existing event is what keeps
+      that change legible in the interim.
 
    How quickly a consumer must adopt the narrowed view is bounded by the
    freshness and staleness rules it already operates under
