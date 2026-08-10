@@ -1,7 +1,7 @@
 ---
 title: "Mission Containment for OAuth 2.0"
 abbrev: "OAuth Mission Containment"
-category: std
+category: exp
 
 docname: draft-mcguinness-oauth-mission-containment-latest
 submissiontype: IETF
@@ -206,9 +206,10 @@ completion status out of the anchor
 ({{I-D.draft-mcguinness-oauth-mission-status}}). The overlay is held
 by the Mission Issuer, versions independently, and only ever grows.
 
-# Status: An Optional Extension {#optional-status}
+# Status: An Experimental Extension {#optional-status}
 
-This document is optional. It is a layered extension to the issuance
+This document is optional and experimental: adopt it for evaluation,
+not as a stable interface. It is a layered extension to the issuance
 profile, not a change to it. A deployment that implements
 {{I-D.draft-mcguinness-oauth-mission}} and never contains a Mission
 is fully conformant to that profile and is unaffected by this

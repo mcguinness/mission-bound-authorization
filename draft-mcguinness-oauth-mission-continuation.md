@@ -2,7 +2,7 @@
 title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
 abbrev: "Mission Continuation"
 docname: draft-mcguinness-oauth-mission-continuation-latest
-category: std
+category: exp
 submissiontype: IETF
 consensus: true
 v: 3
@@ -145,6 +145,25 @@ grant type, or endpoint of its own; it constrains how the transports'
 existing mechanisms carry a Mission's authorization. Its place in the
 family is the Continue verb of the architecture
 ({{I-D.draft-mcguinness-mission-architecture}}).
+
+# Status: An Experimental Extension {#optional-status}
+
+This document is optional and experimental: adopt it for evaluation,
+not as a stable interface. It is a layered binding between the
+issuance profile and an identity-continuity transport, not a change
+to either. A deployment that implements
+{{I-D.draft-mcguinness-oauth-mission}} and never continues a Mission
+across a transport is fully conformant to that profile and is
+unaffected by this document. It defines no new token type, grant
+type, or endpoint of its own. No Standards-Track document depends on
+this one.
+
+A Mission Issuer claims conformance to this document only when it
+continues a Mission across an Identity Continuation, async
+delegation, or cross-domain projection hop under the requirements of
+{{authorization-continuity}}; otherwise it remains a plain
+issuance-profile Mission Issuer. Nothing here places a new
+requirement back on the issuance profile.
 
 # Conventions and Terminology {#conventions}
 
