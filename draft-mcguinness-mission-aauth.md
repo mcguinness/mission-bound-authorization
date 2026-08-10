@@ -280,8 +280,10 @@ request-context checks before relying on a received reference.
 
 The approved mission blob uses the members defined by AAuth, including
 `approver`, `agent`, `approved_at`, and `description`, and optionally
-`approved_tools` and `capabilities`.  This binding defines no additional
-members.
+`approved_tools` and `capabilities`.  Under this binding the blob also
+carries the `expires_at` member, defined by AAuth Mission Expiry
+{{I-D.draft-mcguinness-aauth-mission-expiry}} and required by
+{{lifecycle}}.  This binding itself defines no additional members.
 
 The blob's `agent` value is an AAuth agent identifier.  It MUST NOT be
 described or processed as an OAuth `client_id`.  The two identifiers have

@@ -111,6 +111,16 @@ requires proposing and approving a new mission, which carries a new
 A mission whose approved blob has no `expires_at` member has no expiry
 under this extension.
 
+Extending the blob is consistent with its definition: AAuth enumerates
+the members a blob MUST and MAY include without closing the set, the
+blob is the PS's own approval response body, and a conforming Agent
+stores that body byte-exact whether or not it recognizes a member.
+The existing `capabilities` member already places PS-determined,
+session-specific information inside the committed bytes, and
+`expires_at` follows the same pattern. If a future AAuth revision
+defines `expires_at` or blob-member extensibility rules, that
+definition governs and this document will align with it.
+
 # Proposal and Approval {#approval}
 
 A mission proposal MAY include `expires_at`. The PS or the Person MAY
