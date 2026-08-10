@@ -12,6 +12,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import { getTracer } from "@mission/telemetry";
 import {
+  type AuthorityEntry,
   type Decision,
   evaluate,
   type EvaluationRequest,
@@ -140,6 +141,47 @@ export interface EnforceResult {
    * the RS records it so the later txn-token's `txn` can be checked (draft §6.2).
    */
   access_challenge?: { challenge: string; txn_endpoint: string; txn: string };
+  /**
+   * @spec I-D.draft-zehavi-oauth-rar-metadata §4 — present on a genuine
+   * out_of_authority denial: the requested (resource, action) is absent from
+   * the Mission's Authority Set entirely. One GRAIN of the family's
+   * graduated-challenge remediation (composes with, does not replace,
+   * access_request/access_challenge above and the AuthZEN ARAP requestable
+   * denial): the actionable authorization_details the client could propose
+   * next via mission_intent.proposed_authority.
+   */
+  insufficient_authorization?: InsufficientAuthorization;
+}
+
+/**
+ * @spec I-D.draft-zehavi-oauth-rar-metadata §4 — the insufficient_authorization
+ * WWW-Authenticate error, plus its `authorization_remediation` parameter
+ * (base64url JSON: `{ authorization_details }`). `www_authenticate` is the
+ * header VALUE the RS would set on a raw HTTP response; this RS's tokens are
+ * DPoP-bound (`bearer_methods_supported: ["dpop"]` above), so the auth-scheme
+ * is `DPoP`, not the draft's Bearer example. It travels as a field here (not
+ * a literal header) because a PEP denial rides inside an MCP CallToolResult at
+ * HTTP 200, not a raw per-call HTTP response -- mcp-http-transport.ts's
+ * unauthorized() is the one site that sets a real www-authenticate header, and
+ * it fires only pre-dispatch (missing/invalid credential), before the PEP.
+ */
+export interface InsufficientAuthorization {
+  www_authenticate: string;
+  authorization_remediation: string;
+}
+
+/** Build the insufficient_authorization grain for one or more actionable
+ * authorization_details entries (@spec I-D.draft-zehavi-oauth-rar-metadata §4). */
+export function buildInsufficientAuthorization(authorizationDetails: AuthorityEntry[]): InsufficientAuthorization {
+  const authorization_remediation = Buffer.from(
+    JSON.stringify({ authorization_details: authorizationDetails }),
+    "utf8",
+  ).toString("base64url");
+  const www_authenticate =
+    'DPoP error="insufficient_authorization", ' +
+    'error_description="the requested action is outside the Mission\'s Authority Set", ' +
+    `authorization_remediation=${authorization_remediation}`;
+  return { www_authenticate, authorization_remediation };
 }
 
 export class Pep {
@@ -329,6 +371,24 @@ export class Pep {
           signer.kid,
         );
         result.access_challenge = { challenge, txn_endpoint: signer.txnEndpoint, txn };
+      }
+      // @spec I-D.draft-zehavi-oauth-rar-metadata §4 (insufficient_authorization
+      // grain, additive to the grains above): only on a GENUINE out_of_authority
+      // denial -- the (resource, action) pair is absent from the Mission's
+      // Authority Set entirely, not merely denied for THIS target object
+      // (deriveContextualTuples/FGA can also return out_of_authority when the
+      // entry exists but the specific object is excluded) -- propose the
+      // missing entry back. Deliberately NOT emitted for authority_contained:
+      // that is the family's monotonic trust ratchet (@spec containment);
+      // handing back "here's how to ask again" for a deliberately narrowed
+      // capability would contradict restore-only-via-Expansion.
+      if (
+        decision.context.denial_reason === "out_of_authority" &&
+        !view.authority_set.some((e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action))
+      ) {
+        result.insufficient_authorization = buildInsufficientAuthorization([
+          { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [mapping.action] },
+        ]);
       }
       return result;
     }
