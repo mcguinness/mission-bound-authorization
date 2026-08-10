@@ -15,8 +15,9 @@
 import { randomBytes } from "node:crypto";
 import { openStore, type Database } from "@mission/store";
 import { isSubsetSet } from "./derive.js";
+import { createExpansion } from "./expansion.js";
 import type { MissionKernel } from "./kernel.js";
-import type { AuthorityEntry, MissionClaim } from "./types.js";
+import type { AuthorityEntry, MissionClaim, MissionIntent, MissionRecord } from "./types.js";
 
 export const DEFERRED_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:deferred";
 
@@ -204,5 +205,251 @@ export class DeferralStore {
       authorization_details: parsed.r,
       approved_until: row.approved_until as string,
     };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// @spec expansion (DTR deferred-completion binding) — Mission EXPANSION as an
+// RFC 8693 token exchange whose fresh approval is asynchronous. Distinct from
+// AROP: AROP (DeferralStore above) NEVER widens (D42), so a widening request is
+// refused there. Expansion IS the widening path, so it needs its own deferral
+// store with its own table; the AROP store and its D42 subset invariant stay
+// untouched. On approval the deferred exchange creates the successor Mission via
+// createExpansion (the async Approver DID consent, so the approval_basis is real,
+// never fabricated).
+// ---------------------------------------------------------------------------
+
+const EXPANSION_SCHEMA = `
+CREATE TABLE expansion_deferrals (
+  deferral_code TEXT PRIMARY KEY,
+  state TEXT NOT NULL,
+  predecessor_id TEXT NOT NULL,
+  intent_json TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  jkt TEXT NOT NULL,
+  pred_containment_version INTEGER NOT NULL,
+  approver_json TEXT,
+  approval_event_id TEXT,
+  approved_until TEXT,
+  redeemed INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  last_polled_at INTEGER
+) STRICT;
+`;
+
+/** The Approver's async adjudication payload for a deferred expansion. */
+export interface ExpansionApproval {
+  approver: { iss: string; sub: string };
+  approvalEventId: string;
+  /** Bounds the successor credential; MUST NOT be exceeded (approved_until). */
+  approvedUntil: string;
+}
+
+/** The successful redemption of a deferred expansion: the created successor. */
+export interface ExpansionDeferredResult {
+  successor: MissionRecord;
+  approvedUntil: string;
+}
+
+export class ExpansionDeferralError extends Error {
+  constructor(
+    readonly code: "predecessor_not_active",
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * @spec expansion — the DTR deferred-completion store for Mission Expansion.
+ * Mirrors {@link DeferralStore}'s poll/interval/expiry shape, but its redemption
+ * CREATES a successor Mission (widening) rather than issuing an AROP subset. It
+ * records, AT REQUEST TIME, the predecessor binding, the acting client, the
+ * possession key (`jkt`), and a snapshot of the predecessor containment version.
+ *
+ * Deferred-window checks (@spec expansion#deferred-window):
+ *  (a) predecessor STATE is re-verified AT REDEMPTION (completion): a predecessor
+ *      terminated, superseded, or NEWLY CONTAINED during the deferred window fails
+ *      completion (a deferred approval MUST NOT become a containment bypass). A
+ *      predecessor that was ALREADY contained at request time stays expandable
+ *      (containment#restoration): the check is on whether containment ADVANCED
+ *      during the window (version delta), not on the presence of an overlay.
+ *  (b) the `subject_token` is deliberately NOT stored and NOT re-verified here:
+ *      its expiry MUST NOT gate completion. Possession was evaluated and RECORDED
+ *      (the `jkt`) at request time; re-verification is of Mission STATE only.
+ */
+export class ExpansionDeferralStore {
+  readonly db: Database;
+  constructor(
+    private readonly kernel: MissionKernel,
+    private readonly now: () => Date = () => new Date(),
+  ) {
+    this.db = openStore(EXPANSION_SCHEMA);
+  }
+
+  /**
+   * Open a deferred expansion. The predecessor MUST be active at request time.
+   * Records the possession `jkt` and the predecessor containment-version snapshot
+   * (deferred-window check (a) baseline). Idempotent for the same (predecessor,
+   * intent, client): returns the existing pending handle.
+   */
+  open(input: {
+    predecessorId: string;
+    intent: MissionIntent;
+    clientId: string;
+    jkt: string;
+  }): DeferralPending {
+    const predecessor = this.kernel.get(input.predecessorId);
+    if (!predecessor || this.kernel.applyExpiry(predecessor).state !== "active") {
+      throw new ExpansionDeferralError("predecessor_not_active", "predecessor mission is not active");
+    }
+    const snapshotCv = predecessor.containment?.containment_version ?? 0;
+    const key = JSON.stringify({ p: input.predecessorId, i: input.intent, c: input.clientId });
+    const existing = this.db
+      .prepare(
+        "SELECT deferral_code FROM expansion_deferrals WHERE state = 'authorization_pending' AND intent_json = ?",
+      )
+      .get(key) as { deferral_code: string } | undefined;
+    const code = existing?.deferral_code ?? `xdfr_${randomBytes(18).toString("base64url")}`;
+    if (!existing) {
+      this.db
+        .prepare(
+          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, pred_containment_version, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?)",
+        )
+        .run(
+          code,
+          input.predecessorId,
+          key,
+          input.clientId,
+          input.jkt,
+          snapshotCv,
+          this.now().getTime(),
+        );
+    }
+    return {
+      error: "authorization_pending",
+      deferral_code: code,
+      expires_in: DEFERRAL_EXPIRES_IN,
+      interval: DEFERRAL_INTERVAL,
+    };
+  }
+
+  /** Approver adjudication: records the approver, the approval event, and the expiry. */
+  approve(deferralCode: string, approval: ExpansionApproval): void {
+    this.db
+      .prepare(
+        "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
+      )
+      .run(
+        JSON.stringify(approval.approver),
+        approval.approvalEventId,
+        approval.approvedUntil,
+        deferralCode,
+      );
+  }
+
+  deny(deferralCode: string): void {
+    this.db
+      .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
+      .run(deferralCode);
+  }
+
+  /** The possession key recorded at request time (the handler re-binds the minted token to it). */
+  recordedJkt(deferralCode: string): string | undefined {
+    const row = this.db
+      .prepare("SELECT jkt FROM expansion_deferrals WHERE deferral_code = ?")
+      .get(deferralCode) as { jkt: string } | undefined;
+    return row?.jkt;
+  }
+
+  /** The acting client recorded at request time (the handler re-checks the poller). */
+  recordedClientId(deferralCode: string): string | undefined {
+    const row = this.db
+      .prepare("SELECT client_id FROM expansion_deferrals WHERE deferral_code = ?")
+      .get(deferralCode) as { client_id: string } | undefined;
+    return row?.client_id;
+  }
+
+  /**
+   * Poll/redeem a deferred expansion. Mirrors {@link DeferralStore.redeem}'s
+   * poll/interval/expiry states. On approval it runs the deferred-window check (a)
+   * against Mission STATE (never the expired subject_token, check (b)) and then
+   * CREATES the successor via createExpansion. Single-use.
+   */
+  redeem(
+    deferralCode: string,
+  ):
+    | DeferralPending
+    | DeferralSlowDown
+    | { error: "expired_token" }
+    | { error: "access_denied" }
+    | { error: "invalid_grant" }
+    | ExpansionDeferredResult {
+    const row = this.db
+      .prepare("SELECT * FROM expansion_deferrals WHERE deferral_code = ?")
+      .get(deferralCode) as Record<string, unknown> | undefined;
+    if (!row) return { error: "invalid_grant" };
+    const now = this.now().getTime();
+    if (now > (row.created_at as number) + DEFERRAL_EXPIRES_IN * 1000) {
+      return { error: "expired_token" };
+    }
+    if (row.state === "authorization_pending") {
+      const lastPolled = row.last_polled_at as number | null;
+      if (lastPolled != null && now - lastPolled < DEFERRAL_INTERVAL * 1000) {
+        return {
+          error: "slow_down",
+          deferral_code: deferralCode,
+          expires_in: DEFERRAL_EXPIRES_IN,
+          interval: DEFERRAL_INTERVAL + 5,
+        };
+      }
+      this.db
+        .prepare("UPDATE expansion_deferrals SET last_polled_at = ? WHERE deferral_code = ?")
+        .run(now, deferralCode);
+      return {
+        error: "authorization_pending",
+        deferral_code: deferralCode,
+        expires_in: DEFERRAL_EXPIRES_IN,
+        interval: DEFERRAL_INTERVAL,
+      };
+    }
+    if (row.state === "access_denied") return { error: "access_denied" };
+    if (row.redeemed === 1) return { error: "invalid_grant" };
+
+    // @spec expansion#deferred-window check (a): re-verify predecessor STATE at
+    // completion. A predecessor terminated/superseded during the window fails.
+    const predecessor = this.kernel.get(row.predecessor_id as string);
+    if (!predecessor || this.kernel.applyExpiry(predecessor).state !== "active") {
+      this.db
+        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
+        .run(deferralCode);
+      return { error: "access_denied" };
+    }
+    // @spec expansion#deferred-window check (a): containment that ADVANCED during
+    // the window fails completion (the deferred approval MUST NOT bypass a
+    // containment applied after the request). A predecessor already contained at
+    // request time still expands (containment#restoration) because the version is
+    // unchanged.
+    const currentCv = predecessor.containment?.containment_version ?? 0;
+    if (currentCv !== (row.pred_containment_version as number)) {
+      this.db
+        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
+        .run(deferralCode);
+      return { error: "access_denied" };
+    }
+
+    const intent = JSON.parse(row.intent_json as string).i as MissionIntent;
+    const approver = JSON.parse(row.approver_json as string) as { iss: string; sub: string };
+    const { successor } = createExpansion(this.kernel, {
+      predecessorId: row.predecessor_id as string,
+      intent,
+      approver,
+      approvalEventId: row.approval_event_id as string,
+      approvedUntil: row.approved_until as string,
+    });
+    this.db
+      .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ?")
+      .run(deferralCode);
+    return { successor, approvedUntil: row.approved_until as string };
   }
 }

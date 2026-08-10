@@ -33,6 +33,7 @@ import {
   DeferralError,
   type DeferralStore,
   type DeferredToken,
+  type ExpansionDeferralStore,
 } from "../kernel/deferred.js";
 import {
   ChildDelegationError,
@@ -128,6 +129,14 @@ export interface AdapterOptions {
    * tests/exhibit can drive open/approve/deny headlessly.
    */
   deferrals?: DeferralStore;
+  /**
+   * @spec expansion — the DTR deferred-completion store for Mission EXPANSION.
+   * When set, a widening expansion exchange (fresh approval required) completes via
+   * the Deferred Token Response path (authorization_pending -> poll -> successor).
+   * Distinct from `deferrals` (AROP, which never widens per D42). When unset a
+   * widening exchange replies invalid_request.
+   */
+  expansionDeferrals?: ExpansionDeferralStore;
   /**
    * Mission Status List republisher. When set, GET /statuslist/{id} serves the
    * current whole-list token (@spec status#status-list).
@@ -593,6 +602,15 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // or the token endpoint strips it (the file documents `resource` was
       // empirically stripped for this custom grant); a test asserts its survival.
       "request_refresh_token",
+      // @spec expansion / child-delegation — the possession-fixed delegation
+      // exchanges read these; each MUST be declared here or stripGrantIrrelevantParams
+      // removes it. `mission_intent` (widened/child intent), `child_actor`
+      // (child-creation), `parent` (non-authoritative cross-check), `deferral_code`
+      // (expansion deferred poll).
+      "mission_intent",
+      "child_actor",
+      "parent",
+      "deferral_code",
     ]),
   );
 
@@ -1656,7 +1674,7 @@ async function pollTransaction(
  * `not_strict_subset`/`fanout_exceeded` ride `invalid_request`; `policy_denied`
  * rides `access_denied`.
  */
-function childErrorCode(reason: ChildDenialReason): string {
+export function childErrorCode(reason: ChildDenialReason): string {
   switch (reason) {
     case "parent_not_active":
     case "parent_mismatch":
