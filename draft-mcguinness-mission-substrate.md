@@ -397,8 +397,9 @@ two forms:
 * the artifact carries an expiry, and the binding states how that
   expiry is bounded by or disclosed with the Approved Context.
 
-A decision or artifact with neither bound does not conform.  This
-floor requires no consumer-facing freshness source: a binding whose
+A decision or artifact with neither bound does not conform, and a
+stated bound SHOULD NOT exceed the interval the Mission's purpose
+requires.  This floor requires no consumer-facing freshness source: a binding whose
 credential lifetimes sit inside the Mission's own bound satisfies it
 unmodified, as the OAuth core's stateless baseline does.  The bound
 gives the non-active transition of {{basic-gate}} its force: a party
@@ -775,7 +776,9 @@ state their coverage and residual interval.  Short credential lifetime
 can bound residual authority but is not instantaneous termination.
 The bounded-reliance floor ({{bounded-reliance}}) guarantees that a
 stated bound exists on every conforming path; it does not make any
-bound short.
+bound short.  A bound long enough to be vacuous defeats the floor's
+purpose; consumers evaluate the stated interval, not only its
+presence.
 
 ## Governance Record Integrity
 
