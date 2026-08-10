@@ -172,8 +172,9 @@ Consumption bound:
 # Mission Substrate {#mission-substrate}
 
 This profile is defined against the Mission model rather than against
-OAuth 2.0 mechanics. It consumes these substrate primitives
-({{I-D.draft-mcguinness-mission-substrate}}):
+OAuth 2.0 mechanics. It consumes these primitives, the issuance
+profile's instantiation of the substrate's kernel and Structured
+Authority capability ({{I-D.draft-mcguinness-mission-substrate}}):
 
 - the Mission Identifier and issuer, which key every consumption
   counter;
