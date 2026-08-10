@@ -452,6 +452,36 @@ describe("containment propagates entry-wise to existing children (@spec child-de
     }
   });
 
+  it("leaves a same-family child untouched (no overlay, no version bump) when the containment names a DIFFERENT resource entirely", () => {
+    const { kernel } = makeHarness();
+    const parent = approve(kernel); // holds both RES_PAY and RES_FILE
+    // childPay holds ONLY the RES_PAY entry; it draws nothing from RES_FILE.
+    const { child: childPay } = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: intent({
+        resources: [RES_PAY],
+        proposed_authority: [
+          { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:invoice.read"] },
+        ],
+      }),
+      childActor: { sub: "subagent-pay-only", sub_profile: "ai_agent" },
+    });
+
+    const { record: parentAfter } = kernel.contain(parent.id, {
+      event: ev("evt-cascade-6"),
+      remove: [{ resource: RES_FILE }],
+    });
+    expect(parentAfter.containment?.containment_version).toBe(1);
+
+    // Entry-granularity "unaffected": the child is not written AT ALL (no
+    // overlay, no version bump), because none of its Authority Set entries
+    // share the contained resource. Distinct from the action-granularity case
+    // above, where the child IS written but a specific action survives.
+    const childAfter = kernel.get(childPay.id) as NonNullable<ReturnType<MissionKernel["get"]>>;
+    expect(childAfter.containment).toBeUndefined();
+    expect(childAfter.version).toBe(1);
+  });
+
   it("fully containing a child's only capability refuses its OWN derivation with GateError authority_contained", () => {
     const { kernel } = makeHarness();
     const parent = approve(kernel);
