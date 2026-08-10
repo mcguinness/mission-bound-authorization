@@ -914,6 +914,9 @@ contract was generalized from.  The terms correspond as follows:
 | Ordered governance record | the Mission log, assessment log, or audit record |
 {: title="Family vocabulary mapping"}
 
+A family document that maps its own vocabulary to the kernel's MUST
+use these correspondences.
+
 Precedence is scoped, not global.  For the OAuth-native binding, the
 core's definitions govern that mapping; this document governs the
 kernel and capability vocabulary.  Neither document depends
@@ -921,7 +924,7 @@ normatively on the other.
 
 Ownership migrates by touch, not by relocation.  When a
 binding-neutral definition next changes substantively, the change
-lands in this document and the owning family section becomes a
+MUST land in this document, and the owning family section becomes a
 reference to it; no change is ever made solely to move words.
 
 # Acknowledgments
