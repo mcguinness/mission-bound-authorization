@@ -33,8 +33,10 @@ normative:
   RFC8259:
   RFC8414:
   RFC8693:
+  RFC8705:
   RFC8785:
   RFC9126:
+  RFC9449:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -62,8 +64,25 @@ normative:
 
 informative:
   RFC8126:
+  I-D.draft-gerber-oauth-deferred-token-response:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-mcguinness-mission-authority-server:
+    title: "Mission Authority Server"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-approval:
+    title: "Mission Deferred Approval for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-containment:
     title: "Mission Containment for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
@@ -163,7 +182,7 @@ This document is optional. It is a layered extension to the issuance
 profile, not a change to it. A deployment that implements
 {{I-D.draft-mcguinness-oauth-mission}} and never creates a Child
 Mission is fully conformant to that profile and is unaffected by this
-document: it accepts no `parent` or `parent_token` parameter, records
+document: it accepts no child-creation token exchange, records
 no `parent` member, and applies no cascade revocation. The issuance
 profile's delegated-token mechanism is complete without Child Missions;
 the child machinery defined here is relevant only when a deployment
@@ -320,21 +339,54 @@ in-Mission delegation is in {{child-vs-token}} and {{child-vs-act}}.
 
 # Child Mission Creation {#child-creation}
 
-A Child Mission is created by submitting a Mission Intent through
-Pushed Authorization Requests {{RFC9126}} under the issuance profile,
-with child-specific binding to the parent. The request contains:
+To create a Child Mission, the requester MUST prove possession of the
+Parent Mission's authority through a sender-constrained proof, and a
+reusable bearer refresh credential MUST NOT be the carrier of that
+proof. This is the abstract requirement child creation rests on, stated
+once and independent of any wire binding.
+
+On the OAuth wire this document binds that requirement to an {{RFC8693}}
+token exchange at the token endpoint, under this profile's
+child-creation grant type ({{grant-type}}): the parent's own
+sender-constrained Mission-bound access token is the `subject_token`,
+and possession is proven against that token's confirmation key
+({{request-processing}}). The Mission Authority Server profile
+({{I-D.draft-mcguinness-mission-authority-server}}) binds the same
+abstract requirement to an authenticated-client submission on its
+token-less surface; the two are peer bindings of one requirement.
+
+The child-creation token exchange carries:
+
+`grant_type`:
+: REQUIRED. `urn:ietf:params:oauth:grant-type:mission-child-creation`,
+  this profile's child-creation grant type ({{grant-type}}).
+
+`subject_token`:
+: REQUIRED. The Parent Mission's sender-constrained Mission-bound access
+  token. The Mission Issuer resolves the Parent Mission from this token
+  ({{request-processing}}); this token, not any identifier, selects the
+  parent authoritatively.
+
+`subject_token_type`:
+: REQUIRED. `urn:ietf:params:oauth:token-type:access_token`. The Mission
+  Issuer MUST reject any other value with `invalid_request`. A refresh
+  token MUST NOT be accepted as the `subject_token` for child creation:
+  the possession proof is a sender-constrained access token, never a
+  reusable bearer refresh credential.
+
+`actor_token`:
+: OPTIONAL. A token identifying the acting parent agent, per
+  {{RFC8693}}. Where it is absent, the request's client authentication
+  identifies the acting agent. This document carries the acting-agent
+  identity; it does not restructure any act chain. A Child Mission is a
+  new work-continuity unit whose own `act` chain restarts at the child
+  actor ({{child-vs-act}}).
+
+`actor_token_type`:
+: REQUIRED when `actor_token` is present, per {{RFC8693}}.
 
 `mission_intent`:
 : REQUIRED. The proposed Child Mission Intent.
-
-`parent`:
-: REQUIRED. The `mission_id` of the Parent Mission.
-
-`parent_token`:
-: REQUIRED. A refresh token or other Mission-Issuer-accepted grant
-  bound to the Parent Mission. The Mission Issuer resolves the Parent
-  Mission from this grant. The `parent` parameter is a cross-check and
-  audit value; it does not by itself authorize child creation.
 
 `child_actor`:
 : REQUIRED. An object identifying the child actor that will hold or
@@ -363,34 +415,45 @@ with child-specific binding to the parent. The request contains:
   ({{child-client-identity}}), under which child credentials never
   transit the parent, composes naturally with instance-specific keys.
 
-The parent redeems the pushed request at the token endpoint under the
-grant type this profile defines for child creation ({{grant-type}}).
+`parent`:
+: OPTIONAL. A string. The `mission_id` of the Parent Mission, a
+  non-authoritative cross-check and audit value only. The Mission Issuer
+  resolves and selects the parent from `subject_token`
+  ({{request-processing}}); when `parent` is present it MUST verify it
+  names that same resolved Mission and refuse a mismatch with
+  `invalid_grant`. `parent` does not by itself authorize child creation.
 
-The Mission Issuer MUST resolve the parent from `parent_token`, verify
-that it matches `parent`, verify that the parent is `active`, and verify
-that the applicable parent Authority Set entry's `delegation` member
-carries a `children` object ({{fanout}}) that permits child creation for
-the requested authority.
+The parent redeems this token exchange at the token endpoint under the
+child-creation grant type ({{grant-type}}). The presence of
+`child_actor` marks the exchange as a child creation; an exchange
+carrying both `child_actor` and the expansion profile's `predecessor`
+cross-check ({{I-D.draft-mcguinness-oauth-mission-expansion}}) MUST be
+refused with `invalid_request`, since the operations do not combine.
 
-The Mission Issuer MUST reject a child creation request presented on a
-front channel with `parent_token`. The parent grant is presented only
-on the authenticated back channel.
+The Mission Issuer MUST resolve the parent from `subject_token`, verify
+that the presenter controls the token's own confirmation key ({{RFC9449}}
+DPoP proof `jkt`, or {{RFC8705}} mTLS `x5t#S256`) and, for a DPoP proof,
+that the proof `jti` is single-use per {{RFC9449}}, verify that any
+`parent` cross-check names the resolved Mission, verify that the parent
+is `active`, and verify that the applicable parent Authority Set entry's
+`delegation` member carries a `children` object ({{fanout}}) that
+permits child creation for the requested authority
+({{request-processing}}). Possession is proven against the token's own
+confirmation, a sender-constrained proof; it is not read from any
+Mission-record field. A `subject_token` that is not sender-constrained
+cannot carry this proof, so the Mission Issuer MUST refuse it with
+`invalid_request`.
 
-Presenting the parent's refresh token as `parent_token` MUST follow
-the issuance profile's handling for that token: a sender-constrained
-refresh token MUST be presented in conformance with its sender
-constraint.
+The possession proof is presented only on the token endpoint's
+authenticated back channel and MUST NOT appear on any front channel.
 
-Presenting the token for child creation MUST NOT rotate it and
-MUST NOT register as a replay in the deployment's refresh-token
-replay detection. The token is used here only to bind and resolve the
-parent, not to refresh.
-
-That carve-out would let a stolen bearer refresh token be presented
-repeatedly without detection. The Mission Issuer therefore MUST record
-each child-creation presentation and count it toward the deployment's
-anomaly detection, and MUST rate-limit child creation requests per
-parent when the presented token is not sender-constrained.
+The Mission Issuer MUST record each child-creation presentation and
+count it toward the deployment's anomaly detection, and the
+per-parent fan-out ({{fanout}}) and rate limits apply unconditionally.
+Because the `subject_token` is a short-lived, sender-constrained access
+token rather than a reusable refresh credential, presenting it for
+child creation carries no refresh rotation or replay-detection
+interaction: it is consumed only to resolve and bind the parent.
 
 ## Child Client Identity {#child-client-identity}
 
@@ -409,20 +472,18 @@ names the child actor as the authorized redeemer and the Mission
 Issuer's token endpoint as the audience, and the child actor presents it
 there authenticating with its own client credential.
 
-An authorization code MUST NOT be used to convey the child's grant: a
-code and its
-`request_uri` are redeemable only by the client that pushed the request
-({{RFC9126}}), which is the parent, not the child. The child-bound
-assertion is redeemable only by the child actor it names, so conveying
-it through the parent gives the parent no ability to redeem it. How the
-assertion reaches the child actor remains deployment-defined, subject to
-the rules above.
+An authorization code MUST NOT be used to convey the child's grant: an
+authorization code is redeemable by the client that obtained it, which
+is the parent, not the child. The child-bound assertion is redeemable
+only by the child actor it names, so conveying it through the parent
+gives the parent no ability to redeem it. How the assertion reaches the
+child actor remains deployment-defined, subject to the rules above.
 
-Where creation is adjudicated by policy with no front channel, the
-Mission Issuer completes the authorization without user interaction,
-mints the same child-bound JWT authorization grant, and the child actor
-redeems it as itself under the {{RFC7523}} JWT-bearer grant at the token
-endpoint.
+Where creation is adjudicated by policy as a subset derivation, the
+child-creation token exchange completes synchronously ({{completion}}),
+the Mission Issuer mints the child-bound JWT authorization grant with no
+user interaction, and the child actor redeems it as itself under the
+{{RFC7523}} JWT-bearer grant at the token endpoint.
 
 ## Cross-Issuer Scope {#cross-issuer}
 
@@ -441,19 +502,72 @@ lifecycle transitions such that a terminal parent transition
 it. A Child Mission MUST NOT commit against a parent that became
 non-active after the parent-state check.
 
+Where creation is deferred or interactive ({{completion}}), the same
+rule governs the deferred window between the request and the creation
+commit:
+
+- The parent's Mission state MUST be re-verified at the creation commit,
+  not only at request time. A parent terminated or contained during the
+  window MUST fail the commit, preserving the cascade the parent's
+  terminal state effects ({{cascade}}): a deferred approval MUST NOT
+  become a bypass of it.
+- Expiry of the `subject_token` during the window MUST NOT gate the
+  commit. The parent binding and the possession proof are evaluated and
+  recorded at request time ({{request-processing}}); the short-lived
+  `subject_token` expiring while approval is pending does not invalidate
+  the pending exchange. The re-verification above is of the parent's
+  Mission state, not of the expired token.
+
+## Completion {#completion}
+
+The child-creation token exchange completes in one of three modes,
+mirroring Mission Expansion
+({{I-D.draft-mcguinness-oauth-mission-expansion}}). The deferred token
+response is a completion mode, not a replacement:
+
+Synchronous:
+: When child creation is a subset derivation of already-approved
+  authority that a deployment permits by policy, the Mission Issuer
+  completes the exchange in its response, returning the child grant
+  reference ({{grant-type}}). This is the common case: a Child Mission
+  is a strict subset of its parent ({{strict-subset}}).
+
+Deferred:
+: When a deployment requires a fresh approval for child creation and
+  approval is asynchronous, the Mission Issuer returns the deferred
+  token response of the family's Mission Deferred Approval substrate
+  ({{I-D.draft-gerber-oauth-deferred-token-response}}, profiled for
+  Missions by {{I-D.draft-mcguinness-oauth-mission-approval}}):
+  `authorization_pending` with a polling `interval`. The Approver acts
+  asynchronously; the requester polls; the poll resolves to the child
+  grant reference on approval, or to `access_denied` or `expired_token`.
+  This document references that substrate and does not redefine it.
+
+Interactive:
+: When a deployment requires an interactive fresh approval, the Mission
+  Issuer runs the deployment's existing front-channel approval event,
+  the issuance profile's own approval ceremony via a Pushed
+  Authorization Request {{RFC9126}}
+  ({{I-D.draft-mcguinness-oauth-mission}}), after which the child grant
+  reference is returned. This interactive path is retained.
+
+The child grant reference conveyed at completion is the child-bound JWT
+authorization grant of {{child-client-identity}}, never a child token.
+
 ## Protocol Flow {#protocol-flow}
 
 ~~~
  Parent agent / harness   Mission Issuer (AS)      Child actor
         |                        |                      |
-        | 1. PAR: child Mission  | resolve parent       |
-        |    Intent + grant ---->| verify active;       |
-        |                        | verify children      |
-        |<---- request_uri ------|                      |
+        | 1. token exchange ---->| resolve parent from  |
+        |    subject_token =     | subject_token; verify|
+        |    parent's Mission-   | possession (cnf);    |
+        |    bound access token; | verify active;       |
+        |    child_actor         | verify children      |
         |                        |                      |
-        | 2. approval or policy->| create child Mission |
-        |    adjudication        | record parent member |
-        |<-- grant reference ----|                      |
+        | 2. complete (sync,     | create child Mission |
+        |    deferred, or        | record parent member |
+        |<-- grant reference ----| interactive)         |
         |                        |                      |
         | 3. convey grant reference (deployment-defined) |
         | ---------------------------------------------->|
@@ -464,43 +578,37 @@ non-active after the parent-state check.
         |                        | ----- access token -->|
 ~~~
 
-The approval or policy adjudication in step 2 is deployment-specific.
-A deployment MAY require a human approval event for Child Mission
-creation or MAY allow policy to approve child creation when the parent
-Mission's Authority Set explicitly permits it. Step 2 is the parent's
-redemption of the pushed request at the token endpoint, under the
-grant type of {{grant-type}}. In step 3 the parent
-conveys only a grant reference, never a child token ({{child-client-identity}});
-in step 4 the child actor authenticates itself and redeems its own grant.
+The completion in step 2 is deployment-specific ({{completion}}). A
+deployment MAY require a fresh approval event for Child Mission
+creation, completing via the deferred token response or the interactive
+approval, or MAY allow policy to approve child creation synchronously
+when the parent Mission's Authority Set explicitly permits it. Step 1
+is the parent's child-creation token exchange at the token endpoint,
+under the grant type of {{grant-type}}. In step 3 the parent conveys
+only a grant reference, never a child token ({{child-client-identity}});
+in step 4 the child actor authenticates itself and redeems its own
+grant.
 
 ## Grant Type {#grant-type}
 
 This profile binds child creation to the token endpoint through a
-dedicated grant type, adding no new endpoint. The parent redeems the
-`request_uri` of {{child-creation}} at the token endpoint with:
+dedicated grant type, adding no new endpoint. The parent presents the
+child-creation token exchange ({{child-creation}}) at the token endpoint
+under:
 
 `grant_type`:
 : REQUIRED. `urn:ietf:params:oauth:grant-type:mission-child-creation`.
 
-`request_uri`:
-: REQUIRED. The `request_uri` the PAR endpoint returned for the pushed
-  child-creation request ({{child-creation}}).
-
-No other request parameter is accepted at this grant; every
-child-creation input travels in the pushed request. The parent
-authenticates at the token endpoint with the same client credential it
-used at the PAR endpoint, and the Mission Issuer MUST verify that the
-redeeming client is the client that pushed the request. A malformed or
-unresolvable `request_uri` MUST be refused with `invalid_request`; a
-`request_uri` that resolves but was pushed by a different client MUST
-be refused with `invalid_client`.
-
-Redeeming the `request_uri` runs {{request-processing}} in full and
-performs exactly one child-creation decision: the pushed request is
-consumed on redemption, so a repeated redemption of the same
-`request_uri` MUST be refused and MUST NOT derive a second Child
-Mission. This is the single gated derivation this profile permits per
-pushed child-creation request.
+The exchange follows {{RFC8693}}, carrying `subject_token`,
+`subject_token_type`, `child_actor`, `mission_intent`, and the optional
+`parent` cross-check of {{child-creation}}. The parent proves possession
+of the Parent Mission by controlling the `subject_token`'s confirmation
+key ({{request-processing}}); the Mission Issuer resolves and
+authorizes the parent from that possession, not from client
+registration alone. This is the single gated child-creation decision
+this profile permits per exchange: where the possession proof is a DPoP
+proof, its `jti` is single-use per {{RFC9449}}, so a captured exchange
+cannot be replayed to derive a second Child Mission.
 
 On success the Mission Issuer responds with the {{RFC8693}} token
 response shape:
@@ -534,56 +642,74 @@ parent ({{child-client-identity}}).
 
 ## Request Processing {#request-processing}
 
-The Mission Issuer processes child creation in this order:
+The Mission Issuer MUST process a child-creation token exchange in this
+order, refusing on the first failure:
 
-1. Authenticate the client submitting the PAR request.
-2. Resolve the Parent Mission from `parent_token`.
-3. Verify the resolved Mission matches `parent`.
-4. Verify the Parent Mission is `active` and no ancestor Mission in
-   its lineage chain is non-active.
-5. Verify the parent grant permits the requester to create a child.
-6. Verify `child_actor` satisfies the parent entry's `children`
-   constraints ({{fanout}}).
-7. Derive the child Authority Set and verify strict subset
-   ({{strict-subset}}).
-8. Apply fan-out controls.
-9. Adjudicate approval or policy.
-10. Re-verify parent state and create the Child Mission record with
-    `parent` atomically ({{creation-race}}).
-11. Record Child Evidence.
+1. Parse the exchange and require `subject_token` with
+   `subject_token_type` =
+   `urn:ietf:params:oauth:token-type:access_token`; reject a refresh
+   token ({{child-creation}}).
+2. Resolve the Parent Mission from `subject_token`.
+3. Verify possession: the presenter controls the `subject_token`'s own
+   confirmation key ({{RFC9449}} DPoP proof `jkt`, or {{RFC8705}} mTLS
+   `x5t#S256`), and, for a DPoP proof, the proof `jti` is single-use.
+4. Verify the acting agent (`actor_token`, or the request's client
+   authentication) is authorized to create a child under this parent,
+   and verify that any `parent` cross-check names the resolved Mission.
+5. Verify the Parent Mission is `active` and no ancestor Mission in its
+   lineage chain is non-active.
+6. Verify the applicable parent Authority Set entry's `delegation`
+   carries a `children` object permitting child creation, and that
+   `child_actor` satisfies its constraints ({{fanout}}).
+7. Derive the child Authority Set, verify strict subset
+   ({{strict-subset}}), and apply fan-out controls.
+8. Determine subset derivation versus fresh approval and complete per
+   {{completion}}: synchronous, deferred, or interactive.
+9. At the creation commit, re-verify parent state ({{creation-race}}),
+   create the Child Mission record with `parent` atomically, and record
+   Child Evidence.
 
-The child actor then authenticates at the token endpoint and redeems
-its own grant for the Child Mission's tokens ({{child-client-identity}}).
-Failure at any step MUST prevent child creation.
+On any failure the Mission Issuer MUST refuse with `invalid_request`,
+`invalid_grant`, or `invalid_token` as appropriate, and MUST NOT create
+a child. The child actor then authenticates at the token endpoint and
+redeems its own grant for the Child Mission's tokens
+({{child-client-identity}}).
 
 ## Worked Example {#worked-example}
 
 Under the Q3 reconciliation Mission
 `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`, the approved agent
 `s6BhdRkqt3`, acting for `alice`, spawns a read-only invoice
-extraction sub-agent and submits a child Mission Intent through PAR
-bound to the parent's grant (illustrative; this Mission's Authority
-Set extends the single-domain walkthrough's, its read entry's
-`delegation` carrying a `children` object ({{fanout}}), so its
-anchors differ from that example's):
+extraction sub-agent and presents a child-creation token exchange whose
+`subject_token` is the parent's Mission-bound access token, proving
+possession with a DPoP proof over the token's confirmation key
+(illustrative; this Mission's Authority Set extends the single-domain
+walkthrough's, its read entry's `delegation` carrying a `children`
+object ({{fanout}}), so its anchors differ from that example's):
 
 ~~~ http
-POST /par HTTP/1.1
+POST /token HTTP/1.1
 Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
+  mission-child-creation&
+subject_token=<parent%20Mission-bound%20access%20token>&
+subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3A
+  access_token&
 mission_intent=%7B...read-only%20Q3%20invoice%20extraction...%7D&
 parent=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&
-parent_token=<refresh%20token%20bound%20to%20the%20parent>&
 child_actor=%7B%22sub%22%3A%22subagent-invoice-extractor%22%2C
   %22sub_profile%22%3A%22ai_agent%22%7D&
 client_id=s6BhdRkqt3
 ~~~
 
-The parent then redeems the returned `request_uri` at the token
-endpoint ({{grant-type}}); the Mission Issuer processes the request
-per {{request-processing}} and creates the Child Mission. The
-sub-agent then authenticates as
+The Mission Issuer resolves the parent from `subject_token`, verifies
+the presenter controls the token's confirmation key, processes the
+request per {{request-processing}}, and, as this child is a strict
+subset of the parent, completes synchronously ({{completion}}) and
+creates the Child Mission. The sub-agent then authenticates as
 `subagent-invoice-extractor` at the token endpoint and redeems its own
 grant ({{child-client-identity}}); no child credential transits the
 parent. The decoded child access token:
@@ -638,8 +764,8 @@ This profile defines these symbolic denial reasons:
 : The Parent Mission is not active.
 
 `parent_mismatch`:
-: The caller-supplied `parent` does not match the Mission resolved from
-  `parent_token`.
+: The caller-supplied `parent` cross-check does not match the Mission
+  resolved from `subject_token`.
 
 `delegation_not_permitted`:
 : The applicable parent Authority Set entry's `delegation` member
@@ -669,9 +795,11 @@ and `policy_denied` accompanies `access_denied`. In an error response
 body the symbolic reason rides in the `mission_denial_reason` member,
 the shared adjudication-denial carrier defined and registered by the
 expansion profile ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
-alongside the OAuth `error` member. A child creation request presented
-on the front channel with `parent_token` MUST be rejected with
-`invalid_request` ({{child-creation}}).
+alongside the OAuth `error` member. On a deferred completion
+({{completion}}) a denial surfaces as the deferred substrate's
+`access_denied` resolution. The possession proof is presented only on
+the token endpoint's authenticated back channel and MUST NOT appear on
+any front channel ({{child-creation}}).
 
 For example, a child Mission Intent that drops the parent entry's
 `resource_issued_before` constraint proposes a relaxation, not a
@@ -1310,9 +1438,14 @@ discover child-delegation support before attempting child creation:
 
 A conforming Child-Mission-capable Mission Issuer MUST:
 
-- create Child Missions only through explicit authenticated requests;
-- resolve the Parent Mission from a parent grant, not from the
-  caller-supplied `parent` identifier alone;
+- create Child Missions only through the child-creation token exchange
+  ({{child-creation}}), accepting the parent's Mission-bound access
+  token as `subject_token` with `subject_token_type` of `access_token`
+  and rejecting a refresh token;
+- resolve the Parent Mission from `subject_token` and prove possession
+  against that token's own confirmation key, not from the
+  caller-supplied `parent` identifier alone
+  ({{request-processing}});
 - enforce strict-subset authority and expiry;
 - enforce delegation and fan-out controls;
 - record the `parent` member on child Mission records and tokens;
@@ -1361,26 +1494,34 @@ child-token lifetimes.
 
 An attacker could try to create a child under a parent it does not
 control by naming a `parent` identifier. The Mission Issuer resolves
-the parent from `parent_token`, not from the identifier, and verifies
-the two match.
+the parent from `subject_token`, not from the identifier, proves
+possession against the token's own confirmation key, and verifies any
+`parent` cross-check names the resolved Mission
+({{request-processing}}).
 
-## Parent Grant at Rest in PAR
+## Possession Proof and the Eliminated Parent-Grant-at-Rest Concern
 
-A child creation request carries `parent_token`, a refresh token or
-other parent grant, through PAR {{RFC9126}}, so that credential sits at
-rest in the PAR store until the pushed request is redeemed or expires.
-A deployment MUST protect the PAR store as credential storage:
+Earlier revisions of this profile carried the parent grant as a
+`parent_token` refresh token pushed through PAR {{RFC9126}}, so a
+reusable bearer credential sat at rest in the PAR store until the
+pushed request was redeemed or expired. The child-creation token
+exchange eliminates that concern by construction: the possession proof
+is the parent's short-lived, sender-constrained Mission-bound access
+token presented directly at the token endpoint as `subject_token`
+({{child-creation}}), never a reusable refresh credential and never
+held at rest awaiting redemption. A refresh token MUST NOT be accepted
+as `subject_token`.
 
-- it SHOULD hold `parent_token` only until its `request_uri` is
-  redeemed or expires, and then delete it;
-- it MUST NOT write `parent_token` to request logs, traces, or audit
-  records in the clear; and
-- it MUST redact or hash `parent_token` wherever the pushed request is
-  otherwise recorded.
-
-Child delegation evidence ({{child-evidence}}) records the parent
-Mission by identifier and authority hash, never the parent grant
-itself.
+- A captured `subject_token`, without its DPoP key or mTLS certificate,
+  cannot carry the possession proof.
+- The DPoP proof `jti` is single-use per {{RFC9449}}, so a captured
+  exchange cannot be replayed ({{request-processing}}).
+- Where a deployment records the exchange for audit, it MUST NOT write
+  `subject_token` or the DPoP proof to logs, traces, or audit records
+  in the clear, and MUST redact or hash them wherever the request is
+  otherwise recorded. Child delegation evidence ({{child-evidence}})
+  records the parent by identifier and authority hash, never the
+  credential itself.
 
 ## Subset Bugs
 
@@ -1397,21 +1538,24 @@ restrict child delegation evidence to authorized audit consumers.
 
 # IANA Considerations {#iana}
 
-This document registers three parameters in the "OAuth Parameters"
-registry. For each: Parameter Usage Location authorization request;
-Change Controller IETF; Reference this document, {{child-creation}}.
+This document registers two parameters in the "OAuth Parameters"
+registry. For each: Parameter Usage Location token request; Change
+Controller IETF; Reference this document, {{child-creation}}.
 
 - `parent`
-- `parent_token`
 - `child_actor`
 
-As with `mission_intent` in the issuance profile, PAR {{RFC9126}}
-carries authorization-request parameters without a distinct usage
-location, so the pushed submission of these parameters needs no
-separate registration. `parent_token` carries a refresh token or other
-parent grant and MUST be submitted only through PAR on the
-authenticated back channel, never on a front-channel authorization
-request ({{child-creation}}).
+The child-creation token exchange carries the already-registered
+`mission_intent` request parameter and the already-registered
+{{RFC8693}} token-exchange parameters `subject_token`,
+`subject_token_type`, `actor_token`, and `actor_token_type`; none of
+these needs registration by this document. This document removes the
+earlier revision's registration request for a `parent_token`
+parameter: the parent is resolved from `subject_token`, so no dedicated
+parent-token parameter exists. The `parent` and `child_actor`
+parameters are presented only on the token endpoint's authenticated
+back channel, never on a front-channel authorization request
+({{child-creation}}).
 
 This document registers one member in the existing "OAuth Authorization
 Server Metadata" registry {{RFC8414}}: Change Controller IETF; Reference
