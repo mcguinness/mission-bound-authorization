@@ -762,8 +762,8 @@ authority grain, which leaves runtime enforcement's role unchanged.
 For authors of new bindings. Defines a small, normative
 contextual-governance kernel: a native Mission reference, identified
 Controller, authenticated Actor binding, immutable Approved Context or
-verifiable commitment, approval event, active/non-active gate, context
-propagation, and ordered governance record. Stronger properties are
+verifiable commitment, approval event, active/non-active gate with
+bounded reliance, context propagation, and ordered governance record. Stronger properties are
 declared separately as lifecycle-gated, state-observable,
 structured-authority, monotonic-derivation, credential-bound,
 independently-verifiable, and portable-evidence capabilities. Each

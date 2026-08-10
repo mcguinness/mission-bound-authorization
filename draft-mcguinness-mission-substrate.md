@@ -110,8 +110,8 @@ service and use substrate-native authorization at each resource.
 This document defines a small, substrate-neutral Mission kernel and a
 set of separately claimable capabilities.  The kernel covers a native
 Mission reference, controller and actor binding, approved context, an
-approval event, an active/non-active governance gate, context
-propagation, and an ordered governance record.  Optional capabilities
+approval event, an active/non-active governance gate with bounded
+reliance, context propagation, and an ordered governance record.  Optional capabilities
 cover lifecycle gating, state observation, structured authority,
 monotonic derivation, credential binding, independent verification,
 and portable evidence.  A Mission Substrate Statement declares which
@@ -246,7 +246,8 @@ Every Mission Substrate Binding MUST provide all requirements in this
 section.  Meeting the kernel means only that a substrate carries
 Mission contextual governance.  It does not by itself mean that
 authority is portable, machine-evaluable, monotonically derived,
-credential-bound, or independently verifiable.
+credential-bound, or independently verifiable.  It does mean that no
+reliance derived from a Mission is unbounded ({{bounded-reliance}}).
 
 ## Native Reference and Controller {#reference}
 
@@ -368,6 +369,29 @@ identify the authorized parties and the effect of the transition on
 subsequent Controller decisions.  A binding MAY express completion,
 revocation, expiry, or supersession as reasons without making each a
 distinct protocol state.
+
+## Bounded Reliance {#bounded-reliance}
+
+Authority derived from a Mission MUST NOT be usable indefinitely.
+For every positive decision under {{basic-gate}}, and for every
+credential or other artifact the binding describes as governed by the
+Mission, the binding MUST state a reliance bound in at least one of
+two forms:
+
+* the decision point establishes that the Mission is active when the
+  decision is made, and the binding states the maximum interval during
+  which the result or artifact remains usable after the Mission
+  becomes non-active; or
+* the artifact carries an expiry, and the binding states how that
+  expiry is bounded by or disclosed with the Approved Context.
+
+A decision or artifact with neither bound does not conform.  This
+floor requires no consumer-facing freshness source: a binding whose
+credential lifetimes sit inside the Mission's own bound satisfies it
+unmodified, as the OAuth core's stateless baseline does.  The bound
+gives the non-active transition of {{basic-gate}} its force: a party
+who causes a Mission to become non-active is assured that reliance
+under the Mission ends within the stated interval.
 
 ## Context Propagation {#propagation}
 
@@ -649,9 +673,12 @@ For the kernel, the Statement MUST provide a checkable mapping for:
 5. the native approval ceremony and each step of {{approval}};
 6. the active predicate, non-active outcome, authorized transition
    mechanisms, and effect on subsequent Controller decisions;
-7. every propagation or join surface claimed to establish Mission
+7. the reliance bound of {{bounded-reliance}} for each decision and
+   Mission-governed artifact class: the stated maximum residual
+   interval, the expiry rule, or both;
+8. every propagation or join surface claimed to establish Mission
    governance and the exact property each surface proves; and
-8. governance-record event coverage, ordering, integrity, access, and
+9. governance-record event coverage, ordering, integrity, access, and
    retention.
 
 The Statement MUST then include a capability table with one row for
@@ -734,6 +761,9 @@ artifact previously issued or stop a resource that cannot observe
 state.  Lifecycle-Gated Authorization and State-Observable claims must
 state their coverage and residual interval.  Short credential lifetime
 can bound residual authority but is not instantaneous termination.
+The bounded-reliance floor ({{bounded-reliance}}) guarantees that a
+stated bound exists on every conforming path; it does not make any
+bound short.
 
 ## Governance Record Integrity
 

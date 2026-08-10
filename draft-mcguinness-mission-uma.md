@@ -868,12 +868,17 @@ The contextual-governance kernel maps as follows:
    endpoint and introspection projection. The Subject, Approver, and
    administrator have an authenticated revocation path
    ({{lifecycle}}, {{gating}}).
-7. **Context propagation**: the protected `mission` claim in a
+7. **Reliance bound**: RPT issuance and upgrade establish `active` at
+   the token endpoint. An opaque RPT is bounded by authenticated
+   per-use introspection; a self-contained RPT without a state check
+   remains usable only for its bounded lifetime after a transition
+   ({{gating}}, {{mission-claim}}, {{state-surfaces}}).
+8. **Context propagation**: the protected `mission` claim in a
    self-contained RPT, or the authenticated introspection response for
    an opaque RPT, carries the Mission Reference and credential
    association. The PCT carries continuity only and never establishes
    Mission governance or authority ({{mission-claim}}, {{pct}}).
-8. **Governance record**: the assessment log is the ordered governance
+9. **Governance record**: the assessment log is the ordered governance
    record. The authorization server MUST append approval, positive and
    negative Mission-dependent token decisions, and lifecycle
    transitions in per-Mission append order; MUST protect the log under
