@@ -1821,18 +1821,27 @@ async function handleChildCreationGrant(provider: Provider, opts: AdapterOptions
     { child, tokenEndpoint: `${opts.issuer}/token` },
   );
 
-  // @spec #child-client-identity — the grant reference: an RFC 7523 JWT-bearer
-  // authorization grant redeemable only by the named child actor AS ITSELF,
-  // never a child token. The parent conveys it; it cannot redeem it. `grant_type`
-  // names the grant the CHILD redeems under, not this creation grant. 200 (not the
-  // retired route's 201): this is the /token endpoint's success response.
+  // @spec #child-client-identity, RFC 8693 Section 2.2.1 — the response is a
+  // token-exchange-shaped issuance, not a bespoke shape: `access_token` carries
+  // the child-bound RFC 7523 JWT authorization grant (a grant reference,
+  // redeemable only by the named child actor AS ITSELF, never a child token
+  // itself; the parent conveys it but cannot redeem it), `issued_token_type`
+  // names its RFC 8693 token type, and `token_type` is `N_A` because bearer
+  // semantics do not apply to an unredeemed grant. There is deliberately no
+  // `grant_type` in the response: a token response never carries one, and the
+  // grant type under which the child later redeems this assertion (RFC 7523
+  // jwt-bearer, CHILD_JWT_BEARER_GRANT_TYPE) is already fixed by
+  // #child-client-identity, not something this response needs to restate. 200
+  // (not the retired route's 201): this is the /token endpoint's success
+  // response.
   ctx.status = 200;
   ctx.set("cache-control", "no-store");
   ctx.body = {
+    access_token: assertion,
+    issued_token_type: "urn:ietf:params:oauth:token-type:jwt",
+    token_type: "N_A",
     mission_id: child.id,
     parent: child.parent,
-    grant_type: CHILD_JWT_BEARER_GRANT_TYPE,
-    assertion,
   };
 }
 

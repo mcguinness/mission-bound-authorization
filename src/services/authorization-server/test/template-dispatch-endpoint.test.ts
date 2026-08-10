@@ -219,6 +219,12 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     const missionClaim = payload.mission as { id?: string } | undefined;
     expect(missionClaim?.id).toBe(body.mission_id);
 
+    // @spec mission#delegation (delegate model, P0-2) — the dispatcher is the
+    // party actually redeeming this token (the immediate client), so the
+    // token's top-level client_id names it, NOT the template's recipient
+    // (record.client_id, asserted separately below).
+    expect(payload.client_id).toBe("ap-agent");
+
     const record = as.kernel.get(body.mission_id as string);
     expect(record).toBeDefined();
     expect(body.authorization_details).toEqual(as.kernel.effectiveAuthoritySet(record!));

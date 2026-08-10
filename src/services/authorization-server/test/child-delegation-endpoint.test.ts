@@ -315,13 +315,19 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     });
     const res = await createChild(requestUri);
     const body = (await res.json()) as {
+      access_token?: string;
+      issued_token_type?: string;
+      token_type?: string;
       mission_id?: string;
       parent?: { id: string; depth: number };
-      grant_type?: string;
-      assertion?: string;
     };
     expect(res.status, JSON.stringify(body)).toBe(200);
-    expect(body.grant_type).toBe("urn:ietf:params:oauth:grant-type:jwt-bearer");
+    // @spec #child-creation, RFC 8693 Section 2.2.1 — the response is a
+    // token-exchange-shaped issuance: no `grant_type` (a token response never
+    // carries one).
+    expect(body).not.toHaveProperty("grant_type");
+    expect(body.issued_token_type).toBe("urn:ietf:params:oauth:token-type:jwt");
+    expect(body.token_type).toBe("N_A");
     expect(body.parent?.id).toBe(parent.missionId);
 
     // The Child Mission is committed, active, and lineage-linked.
@@ -333,7 +339,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
 
     // @spec #child-client-identity / #parent-member — the grant reference carries
     // the parent lineage and an authority_hash over the CHILD set (not the parent's).
-    const a = decodeJwt(body.assertion as string) as {
+    const a = decodeJwt(body.access_token as string) as {
       aud: string;
       sub: string;
       client_id: string;
@@ -458,9 +464,9 @@ describe("PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #
       childActor: actor,
     });
     const res = await createChild(requestUri);
-    const body = (await res.json()) as { mission_id?: string; assertion?: string };
+    const body = (await res.json()) as { mission_id?: string; access_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(200);
-    return { missionId: body.mission_id as string, assertion: body.assertion as string };
+    return { missionId: body.mission_id as string, assertion: body.access_token as string };
   }
 
   beforeAll(async () => {
@@ -594,7 +600,7 @@ describe("PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #
       childActor: { sub: "subagent-invoice-extractor", sub_profile: "ai_agent" },
     });
     const created = await createChild(requestUri);
-    const { assertion } = (await created.json()) as { assertion: string };
+    const { access_token: assertion } = (await created.json()) as { access_token: string };
     expect(created.status).toBe(200);
 
     // Revoke the parent BEFORE redemption: the child is cascaded terminal and the
