@@ -25,7 +25,7 @@ with the PEP/PDP boundary are its data plane.
 
 At a glance:
 
-- **32 drafts, deliberately decomposed.** One mandatory core (the
+- **33 drafts, deliberately decomposed.** One mandatory core (the
   OAuth 2.0 issuance profile, [on the
   datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)),
   three further bindings (one an experimental sketch) and normative
@@ -349,7 +349,9 @@ facts are the next subsection.
    (the standalone binding and estate control plane, where the AS
    cannot change or one Mission Issuer governs many systems; its PDP
    join is the family's newest mechanism), **aauth** (where the
-   substrate is AAuth), **issuance-grant** (the issuance join:
+   substrate is AAuth), **aauth-management** (native AAuth status,
+   permanent termination, expiry, and delegation-tree queries),
+   **issuance-grant** (the issuance join:
    estate ASs redeem MAS-minted grants for Mission-bound,
    state-gated tokens), **substrate** (for authors of new bindings).
 5. **Advanced, when the use case arrives**: **approval** (asynchronous
@@ -383,9 +385,10 @@ its one Internet-Draft reference (the OAuth Actor Profile) to its
 OPTIONAL Delegation capability; **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
 working-group document); **audit**'s COSE hash envelope is approved
-and in the RFC Editor queue; **approval**, **attenuation**, and
-**aauth** track unratified individual drafts (OAuth Deferred Token
-Response, Attenuating Agent Tokens, and the AAuth protocol);
+and in the RFC Editor queue; **approval**, **attenuation**, **aauth**,
+and **aauth-management** track unratified individual drafts (OAuth
+Deferred Token Response, Attenuating Agent Tokens, and the AAuth
+protocol);
 **authority-server** confines its Internet-Draft references (client
 instance assertion and the AI agent instance profile) to the
 Enterprise Mission Authority Profile's instance-bound joins, an
@@ -592,6 +595,22 @@ emits its per-Mission events. The highest-blast-radius surface in the
 family, and documented as such.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-management.html)
+
+#### AAuth Mission Management
+
+The AAuth-native companion promised by the AAuth protocol: authenticated
+status, permanent termination, optional immutable expiry, and
+delegation-tree queries at the existing Person Server
+`mission_endpoint`. Operations use only AAuth's native
+`{approver, s256}` mission reference and preserve its two protocol states,
+`active` and `terminated`; completion, revocation, expiry, supersession,
+and administrative action are separate termination reasons. The Person
+Server closes its local decision and issuance paths atomically, attempts
+revocation of tracked Auth Tokens by `(iss, jti)`, and reports honestly
+where already-issued, opaque, identity-based, or off-path access leaves a
+bounded or unknown residual.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth-management.html)
 
 #### Mission Containment for OAuth 2.0
 
