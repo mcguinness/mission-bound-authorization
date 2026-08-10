@@ -43,7 +43,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-aauth:
-    title: "Mission-Bound Authorization for AAuth"
+    title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
     author:
       -
@@ -111,8 +111,9 @@ This document defines a small, substrate-neutral Mission kernel and a
 set of separately claimable capabilities.  The kernel covers a native
 Mission reference, controller and actor binding, approved context, an
 approval event, an active/non-active governance gate with bounded
-reliance, context propagation, and an ordered governance record.  Optional capabilities
-cover lifecycle gating, state observation, structured authority,
+reliance, context propagation, and an ordered governance record.
+Optional capabilities cover lifecycle gating, state observation,
+structured authority,
 monotonic derivation, credential binding, independent verification,
 and portable evidence.  A Mission Substrate Statement declares which
 capabilities a binding supplies and the limits of each claim.
@@ -903,11 +904,11 @@ contract was generalized from.  The terms correspond as follows:
 | --- | --- |
 | Mission Context | Mission |
 | Mission Reference | Mission Identifier |
-| Controller | Mission Issuer, where the binding issues |
+| Controller | Mission Issuer, where the binding issues; natively the AS, MAS, UMA authorization server, or AAuth PS |
 | Actor | the authenticated acting client or agent |
 | Approver | Approver |
 | Approved Context | the Mission Intent and derived Authority Set |
-| Ordered governance record | the Mission log or audit record |
+| Ordered governance record | the Mission log, assessment log, or audit record |
 {: title="Family vocabulary mapping"}
 
 Precedence is scoped, not global.  For the OAuth-native binding, the

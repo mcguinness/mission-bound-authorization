@@ -379,11 +379,13 @@ sit outside the ordering.
 
 ### Dependency stability
 
-Every normative dependency is a ratified RFC, a finalized OpenID
-specification, or (for the **uma** sketch) a final Kantara Initiative
-Recommendation, with these tracked exceptions: the **core** confines
-its one Internet-Draft reference (the OAuth Actor Profile) to its
-OPTIONAL Delegation capability; **cross-domain** depends on OAuth
+Outside the family itself, every normative dependency is a ratified
+RFC, a finalized OpenID specification, or (for the **uma** sketch) a
+final Kantara Initiative Recommendation, with these tracked
+exceptions: the **core**'s one Internet-Draft reference (the OAuth
+Actor Profile) is informative and confined to its OPTIONAL Delegation
+capability; **status** depends on the OAuth Status List (a
+working-group document); **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
 working-group document); **audit**'s COSE hash envelope is approved
 and in the RFC Editor queue; **approval**, **attenuation**, **aauth**,
@@ -399,6 +401,13 @@ optional hardening above the base conformance floor. For
 its Access Request and Approval Profile (ARAP) and Model Context
 Protocol tool-authorization (COAZ) integrations are informative and
 optional.
+
+Family-internal normative dependencies are Internet-Drafts by
+construction: the substrate contract anchors the **uma**,
+**authority-server**, and **aauth** Statements; **aauth-expiry**
+anchors the AAuth binding and its management companion; and the
+**core** anchors its OAuth companions. The family manifest tracks
+these.
 
 In short: steps 1 through 3 are built entirely on ratified
 dependencies; everything experimental is additive and can wait.
