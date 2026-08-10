@@ -770,7 +770,9 @@ independently-verifiable, and portable-evidence capabilities. Each
 binding publishes a Mission Substrate Statement identifying the scope
 and limitations of every claim; the kernel does not require OAuth
 identifiers, RAR, JWT claims, a universal Authority Set, or common
-integrity anchors.
+integrity anchors. The kernel is adoptable outside the family; the
+family vocabulary bridge, scoped precedence, and change-ownership
+rule live in an appendix.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
 

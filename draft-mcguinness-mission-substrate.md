@@ -188,6 +188,14 @@ A binding MAY use any of those mechanisms.  When it does, their
 guarantees arise from the binding and the capabilities it claims, not
 from the kernel.
 
+This document is designed to be adopted on its own.  Conformance
+requires no other document, and the kernel vocabulary is defined
+entirely here.  The Mission-Bound Authorization family uses this
+document as its binding-neutral contract; the family vocabulary
+mapping, the scoped precedence rule for the OAuth-native binding, and
+the change-ownership rule are collected in {{family}} and are not
+needed by an adopter outside that family.
+
 # Conventions and Terminology
 
 {::boilerplate bcp14-tagged}
@@ -239,6 +247,9 @@ Positive governance decision:
   operation specifically by relying on the Mission Context.  It does
   not include an independent resource authorization decision that
   does not rely on that context.
+
+{{family}} maps these terms to the vocabulary of the Mission-Bound
+Authorization family.
 
 # Contextual-Governance Kernel {#kernel}
 
@@ -877,6 +888,37 @@ PS-local log supplies the kernel governance record but not Portable
 Evidence.  State management, signed evidence, and resource-verifiable
 structured decisions are useful AAuth extensions rather than baseline
 kernel requirements.
+
+# Mission-Bound Authorization Family Use {#family}
+
+This appendix is normative for documents of the Mission-Bound
+Authorization family and informative for every other adopter.  An
+adopter outside the family does not need it.
+
+The family's earlier documents, including the published OAuth core
+({{I-D.draft-mcguinness-oauth-mission}}), use the vocabulary this
+contract was generalized from.  The terms correspond as follows:
+
+| This document | Family documents |
+| --- | --- |
+| Mission Context | Mission |
+| Mission Reference | Mission Identifier |
+| Controller | Mission Issuer, where the binding issues |
+| Actor | the authenticated acting client or agent |
+| Approver | Approver |
+| Approved Context | the Mission Intent and derived Authority Set |
+| Ordered governance record | the Mission log or audit record |
+{: title="Family vocabulary mapping"}
+
+Precedence is scoped, not global.  For the OAuth-native binding, the
+core's definitions govern that mapping; this document governs the
+kernel and capability vocabulary.  Neither document depends
+normatively on the other.
+
+Ownership migrates by touch, not by relocation.  When a
+binding-neutral definition next changes substantively, the change
+lands in this document and the owning family section becomes a
+reference to it; no change is ever made solely to move words.
 
 # Acknowledgments
 {:numbered="false"}
