@@ -25,7 +25,7 @@ with the PEP/PDP boundary are its data plane.
 
 At a glance:
 
-- **32 drafts, deliberately decomposed.** One mandatory core (the
+- **33 drafts, deliberately decomposed.** One mandatory core (the
   OAuth 2.0 issuance profile, [on the
   datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)),
   three further bindings (one an experimental sketch) and normative
@@ -349,7 +349,10 @@ facts are the next subsection.
    (the standalone binding and estate control plane, where the AS
    cannot change or one Mission Issuer governs many systems; its PDP
    join is the family's newest mechanism), **aauth** (where the
-   substrate is AAuth), **issuance-grant** (the issuance join:
+   substrate is AAuth), **aauth-management** (native AAuth status,
+   permanent termination, expiry, and delegation-tree queries),
+   **aauth-expiry** (the immutable mission lifetime bound; the
+   **aauth** binding requires it), **issuance-grant** (the issuance join:
    estate ASs redeem MAS-minted grants for Mission-bound,
    state-gated tokens), **substrate** (for authors of new bindings).
 5. **Advanced, when the use case arrives**: **approval** (asynchronous
@@ -361,8 +364,9 @@ facts are the next subsection.
    **approval-revision**, **progressive**, **template** (consent once
    to a ceiling, then dispatch Missions from it at machine speed),
    **metering**, **attenuation**, **orchestration**, **discovery**
-   (open-world encounters adjudicated against a pre-consented ceiling,
-   with the lying-resource and tainted-session floors),
+   (open-world encounters adjudicated against a pre-consented ceiling
+   or by the binding's Controller in context, with the lying-resource
+   and tainted-session floors),
    **work-products** (keeps information from carrying the producing
    Mission's authority across a handoff), **containment** (narrows a
    live Mission's effective authority without ending it),
@@ -376,24 +380,36 @@ sit outside the ordering.
 
 ### Dependency stability
 
-Every normative dependency is a ratified RFC, a finalized OpenID
-specification, or (for the **uma** sketch) a final Kantara Initiative
-Recommendation, with these tracked exceptions: the **core** confines
-its one Internet-Draft reference (the OAuth Actor Profile) to its
-OPTIONAL Delegation capability; **cross-domain** depends on OAuth
+Outside the family itself, every normative dependency is a ratified
+RFC, a finalized OpenID specification, or (for the **uma** sketch) a
+final Kantara Initiative Recommendation, with these tracked
+exceptions: the **core**'s one Internet-Draft reference (the OAuth
+Actor Profile) is informative and confined to its OPTIONAL Delegation
+capability; **status** depends on the OAuth Status List (a
+working-group document); **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
 working-group document); **audit**'s COSE hash envelope is approved
-and in the RFC Editor queue; **approval**, **attenuation**, and
-**aauth** track unratified individual drafts (OAuth Deferred Token
-Response, Attenuating Agent Tokens, and the AAuth protocol);
-**authority-server** confines its Internet-Draft references (client
-instance assertion and the AI agent instance profile) to the
+and in the RFC Editor queue; **approval**, **attenuation**, **aauth**,
+**aauth-expiry**, and **aauth-management** track unratified individual
+drafts (OAuth
+Deferred Token Response, Attenuating Agent Tokens, and the AAuth
+protocol); **authority-server** confines its Internet-Draft
+references (client instance assertion and the AI agent instance
+profile) to the
 Enterprise Mission Authority Profile's instance-bound joins, an
 optional hardening above the base conformance floor. For
 **authzen**, the stable surface is its core AuthZEN decision binding;
 its Access Request and Approval Profile (ARAP) and Model Context
 Protocol tool-authorization (COAZ) integrations are informative and
 optional.
+
+Family-internal normative dependencies are Internet-Drafts by
+construction: the substrate contract anchors the **uma**,
+**authority-server**, and **aauth** Statements; **aauth-expiry**
+anchors the AAuth binding and its management companion; and the
+**core** anchors its OAuth companions. The family manifest tracks
+these. The substrate contract publishes before or with any binding
+that claims conformance to it.
 
 In short: steps 1 through 3 are built entirely on ratified
 dependencies; everything experimental is additive and can wait.
@@ -571,9 +587,11 @@ Under Expansion alone, every widening is human-approved.
 Experimental. Makes discovery a governed operation for agents that
 meet resources their approval could not name. Defines the Encounter,
 resource identity pinning (origin, the RFC 9728 resource-to-AS
-metadata chain, self-declaration digests), Discovery Adjudication
-against a pre-consented ceiling (bind, route to a human, or refuse;
-default-closed), and Discovery Evidence for the transparency log.
+metadata chain, self-declaration digests), Discovery Adjudication in
+two modes (against a pre-consented ceiling, or contextually by the
+binding's Controller as the AAuth Person Server does; bind, route to
+a human, or refuse; default-closed in both), and Discovery Evidence
+for the transparency log.
 Two floors hold regardless of policy: a resource's self-declaration
 never classifies its own consequences, and a tainted session never
 binds egress-capable authority without a human.
@@ -592,6 +610,34 @@ emits its per-Mission events. The highest-blast-radius surface in the
 family, and documented as such.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-management.html)
+
+#### AAuth Mission Management
+
+The AAuth-native companion promised by the AAuth protocol: authenticated
+status, permanent termination, optional immutable expiry, and
+delegation-tree queries at the existing Person Server
+`mission_endpoint`. Operations use only AAuth's native
+`{approver, s256}` mission reference and preserve its two protocol states,
+`active` and `terminated`; completion, revocation, expiry, supersession,
+and administrative action are separate termination reasons. The Person
+Server closes its local decision and issuance paths atomically, attempts
+revocation of tracked Auth Tokens by `(iss, jti)`, and reports honestly
+where already-issued, opaque, identity-based, or off-path access leaves a
+bounded or unknown residual.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth-management.html)
+
+#### AAuth Mission Expiry
+
+An extension to the AAuth protocol, adoptable with or without the rest
+of the family. Defines the OPTIONAL `expires_at` member of the approved
+mission blob: an immutable, consent-bound lifetime covered by the
+native `s256` content address. At or after the deadline the Person
+Server terminates the mission on every decision path and issues no Auth
+Token that outlives it. The Mission Context Binding for AAuth requires
+this extension and approves no mission without an expiry.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-aauth-mission-expiry.html)
 
 #### Mission Containment for OAuth 2.0
 
@@ -696,7 +742,9 @@ actions that bypass per-call permission at the Person Server; they are
 not remote resource authority. Active-state issuance gating is
 structural only in PS-asserted and federated access. Identity-based and
 resource-managed resources may propagate or ignore the reference and
-are not Person-Server-gated.
+are not Person-Server-gated. Its Mission Substrate Statement declares
+the kernel mapping and per-mode capability claims, including the
+capabilities it does not supply.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html)
 
@@ -729,15 +777,17 @@ authority grain, which leaves runtime enforcement's role unchanged.
 For authors of new bindings. Defines a small, normative
 contextual-governance kernel: a native Mission reference, identified
 Controller, authenticated Actor binding, immutable Approved Context or
-verifiable commitment, approval event, active/non-active gate, context
-propagation, and ordered governance record. Stronger properties are
+verifiable commitment, approval event, active/non-active gate with
+bounded reliance, context propagation, and ordered governance record. Stronger properties are
 declared separately as lifecycle-gated, state-observable,
 structured-authority, monotonic-derivation, credential-bound,
 independently-verifiable, and portable-evidence capabilities. Each
 binding publishes a Mission Substrate Statement identifying the scope
 and limitations of every claim; the kernel does not require OAuth
 identifiers, RAR, JWT claims, a universal Authority Set, or common
-integrity anchors.
+integrity anchors. The kernel is adoptable outside the family; the
+family vocabulary bridge, scoped precedence, and change-ownership
+rule live in an appendix.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
 

@@ -114,6 +114,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-aauth-management:
+    title: "AAuth Mission Management"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth-management.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-aauth-mission-expiry:
+    title: "AAuth Mission Expiry"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -1371,7 +1387,7 @@ per-consumer statements of this interface.
 
 ## Error Surfaces {#error-surfaces}
 
-The family has three error surfaces, each owned once. OAuth endpoints
+The OAuth and MAS profiles use three error surfaces, each owned once. OAuth endpoints
 return OAuth error codes, owned by the core
 ({{I-D.draft-mcguinness-oauth-mission}}). Lifecycle surfaces,
 including management, return the status profile's JSON error body
@@ -1384,6 +1400,13 @@ AuthZEN denial reasons are not a fourth surface: they ride the
 decision response ({{I-D.draft-mcguinness-mission-authzen}}). Where
 the same symbol exists as both an OAuth error code and a wire-body
 symbol (`invalid_request`), the envelope it arrives in disambiguates.
+
+The AAuth binding retains AAuth's own error surface.  Its native
+management companion returns `application/problem+json`, preserves the
+base AAuth `mission_terminated` error on ordinary PS operations, and
+makes an absent reference indistinguishable from one the caller is not
+authorized to observe
+({{I-D.draft-mcguinness-mission-aauth-management}}).
 
 Registration posture is likewise deliberate per artifact class:
 OAuth-facing parameters and media types register with IANA, evidence
@@ -2540,10 +2563,14 @@ reclassification, not by a stable document absorbing a dependency.
 
 **Lifecycle:**
 
-Status is the lifecycle suite's root document (state reading,
+Status is the OAuth lifecycle suite's root document (state reading,
 including the swarm-scale Status List, lifecycle verbs, and
 completion), with Signals (the push channel) and Management (the
-operator plane) as its satellites.
+operator plane) as its satellites.  AAuth keeps its native two-state
+lifecycle and uses `mission-aauth-management` for its corresponding
+status, termination, expiry, and delegation-tree surface.  The expiry
+bound itself is an extension to the base AAuth protocol that the AAuth
+binding requires ({{I-D.draft-mcguinness-aauth-mission-expiry}}).
 
 `oauth-mission-status`:
 : The signed pull surface and the lifecycle endpoint, with
@@ -2566,12 +2593,24 @@ operator plane) as its satellites.
 
 `mission-discovery`:
 : Experimental: the open-world encounter as a governed operation:
-  identity pinning, ceiling adjudication with the lying-resource and
-  tainted-session floors, Discovery Evidence.
+  identity pinning, ceiling and contextual adjudication with the
+  lying-resource and tainted-session floors, Discovery Evidence.
 
 `oauth-mission-management`:
 : Fleet enumeration and bulk lifecycle operations for operators and
   incident response; dry-run-first, per-Mission semantics.
+
+`mission-aauth-management`:
+: AAuth-native status, permanent termination, optional expiry, and
+  delegation-tree queries at the Person Server, keyed only by
+  `{approver, s256}` and preserving AAuth's `active` and `terminated`
+  states.
+
+`aauth-mission-expiry`:
+: The immutable `expires_at` bound on an approved AAuth mission,
+  covered by `s256` and enforced on every Person Server decision path;
+  required by the AAuth binding, adoptable by base AAuth deployments
+  independently.
 
 `oauth-mission-cross-domain`:
 : Single-hop projection of a Mission to another trust domain via the

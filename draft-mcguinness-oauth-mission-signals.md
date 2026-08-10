@@ -103,7 +103,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-aauth:
-    title: "Mission-Bound Authorization for AAuth"
+    title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
     author:
       -
@@ -205,8 +205,9 @@ This document uses the terms defined in the issuance profile
 Mission Issuer (the Mission `issuer`: in this document's OAuth binding
 the Authorization Server; a standalone Mission Issuer, the Mission
 Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
-transmits these events with the same semantics, as does the AAuth
-Person Server for its native missions
+transmits these events with the same semantics; the AAuth Person
+Server exposes lifecycle state for its native missions through its
+own management surface rather than these events
 {{I-D.draft-mcguinness-mission-aauth}}), `mission_id`,
 and the Mission lifecycle states. It additionally uses **Security Event
 Token (SET)** {{RFC8417}} and the **Shared Signals Framework (SSF)**
