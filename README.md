@@ -729,7 +729,9 @@ actions that bypass per-call permission at the Person Server; they are
 not remote resource authority. Active-state issuance gating is
 structural only in PS-asserted and federated access. Identity-based and
 resource-managed resources may propagate or ignore the reference and
-are not Person-Server-gated.
+are not Person-Server-gated. Its Mission Substrate Statement declares
+the kernel mapping and per-mode capability claims, including the
+capabilities it does not supply.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html)
 
