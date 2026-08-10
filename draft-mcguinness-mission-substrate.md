@@ -276,7 +276,13 @@ If the native reference is not globally unambiguous, the binding MUST
 define the Controller identifier or other namespace value with which
 it is compared.  A reference can be random, content-addressed,
 sequential within a protected namespace, or a substrate-native tuple.
-The kernel does not impose an entropy floor or a particular syntax.
+The kernel does not impose a particular syntax.  A reference
+disclosed beyond the Controller MUST NOT be guessable by parties
+outside the Mission's authorized set: a binding satisfies this with
+at least 128 bits of reference entropy, with a reference derived from
+content that is not disclosed beyond that set, or by confining a
+predictable reference to a namespace whose every keyed surface
+authenticates the caller and does not disclose existence.
 
 The binding MUST define how a relying component identifies the
 Controller responsible for the reference.  This can be local
@@ -345,6 +351,11 @@ semantics.  The ceremony MUST:
 4. record the approval decision, Approver, Actor binding, Approved
    Context or its commitment, Mission Reference, and Controller; and
 5. initialize the Mission as active only after the approval succeeds.
+
+If the context being approved changes between presentation and the
+approval decision, the ceremony MUST NOT create the Mission Context
+without the Approver's consent to the changed context, and any
+commitment is computed over the context actually approved.
 
 Presentation requirements are substrate-specific.  A binding MUST
 identify security-relevant material supplied by an untrusted proposer
@@ -677,7 +688,8 @@ mode to which the statement applies.
 For the kernel, the Statement MUST provide a checkable mapping for:
 
 1. the Mission Reference, its uniqueness namespace, comparison rules,
-   retention, and non-reassignment rule;
+   retention, non-reassignment rule, and how the unguessability
+   requirement of {{reference}} is met;
 2. the Controller identity and how relying components establish it;
 3. the Actor handle, its authentication at approval, later Actor
    binding, delegation if any, and identifier mappings;
@@ -809,9 +821,9 @@ Independently Verifiable, or Portable Evidence claims.
 Governance records create durable behavioral histories.  Bindings
 need access control, declared retention, deletion policy after the
 retention period, and minimization of Actor and Approver identifiers.
-Integrity commitments can themselves become stable correlation
-values and can enable guessing attacks when the committed context has
-low entropy.
+Integrity commitments and predictable Mission References can
+themselves become stable correlation values, and a commitment can
+enable guessing attacks when the committed context has low entropy.
 
 # IANA Considerations
 

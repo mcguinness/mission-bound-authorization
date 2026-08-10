@@ -664,7 +664,10 @@ be needed for audit and incident response.
 
 Pairwise subject identifiers and other AAuth privacy mechanisms remain
 applicable.  This binding does not replace them with the agent identifier
-or mission reference.
+or mission reference.  Where the deployment uses pairwise or directed
+person identifiers, the PS MUST maintain the mapping from each directed
+identifier to the mission's person, so accountability and the person's
+visibility into the retained history survive the pairwise boundary.
 
 # Operational Considerations
 
@@ -697,9 +700,10 @@ The contextual-governance kernel maps as follows:
 1. **Mission Reference**: the native pair `{approver, s256}`.
    `approver` is the uniqueness namespace, `s256` is compared as the
    exact unpadded base64url digest of the approved bytes, a changed
-   blob is a different mission, a reference is never reassigned, and
-   retention follows the mission log's declared period
-   ({{reference}}, {{mission-log}}).
+   blob is a different mission, a reference is never reassigned,
+   retention follows the mission log's declared period, and the
+   reference is unguessable to parties that do not hold the private
+   blob ({{reference}}, {{mission-log}}).
 2. **Controller**: the PS identified by `approver` controls approval,
    governance state, and the mission log ({{roles}}).  Consumers
    establish its identity and keys from AAuth's published PS metadata

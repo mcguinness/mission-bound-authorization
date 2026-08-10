@@ -455,7 +455,12 @@ For `superseded`, a Person or administrator MAY include:
 ~~~
 
 The replacement is related evidence, not an alternate key for the
-target operation.  It MUST identify an already approved mission.
+target operation.  It MUST identify an already approved mission that
+the caller is authorized to reference.  Replacement validation is
+subject to {{errors}}: a replacement that is absent, unapproved, or
+outside the caller's authorization fails uniformly with
+`invalid_request`, and the failure MUST NOT disclose which condition
+held or anything else about the referenced mission.
 
 ## Atomic Transition
 
