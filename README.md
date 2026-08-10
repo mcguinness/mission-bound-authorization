@@ -39,12 +39,13 @@ At a glance:
   orthogonal set of named assurance claims a deployment lists in its
   Deployment Profile. The first three levels run entirely on ratified
   dependencies.
-- **Three peer bindings, one object, and a sketched fourth.** The
-  OAuth Authorization Server, the standalone Mission Authority Server
-  (the estate control plane where the AS cannot change or governance
-  spans many issuers), and the AAuth Person Server, plus an
-  experimental UMA 2.0 binding: the first written against the
-  substrate contract rather than extracted into it.
+- **Three authorization bindings, an AAuth context binding, and one
+  sketch.** The OAuth Authorization Server and standalone Mission
+  Authority Server carry the family's portable-authority model. The
+  AAuth Person Server supplies the shared approval, reference,
+  lifecycle-gate, and audit capabilities in AAuth's own contextual
+  governance model. The UMA 2.0 binding remains an experimental
+  sketch.
 
 **Start with the
 [Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html)
@@ -61,15 +62,18 @@ chapter by chapter, for readers who want the why before the wire.
 
 This work defines the Mission: a durable object, created by an explicit
 approval event, that expresses an approved task and its lifecycle. The
-Mission does not itself express authority; that is the job of the
-Authority Set. Rich Authorization Requests express authority, a Mission
-expresses the approved task it is bound to. A client proposes a
-**Mission Intent**; the Mission Issuer derives an **Authority Set** (the
-concrete resources, actions, and constraints) for it; and an **approval
-event** commits both as integrity anchors (`intent_hash` and
-`authority_hash`) and records the Mission.
+Mission does not itself express authority. Bindings share an approved
+task, stable reference, lifecycle gate, and governance record; their
+authority representation is binding-dependent. In the OAuth binding,
+Rich Authorization Requests express authority, a client proposes a
+**Mission Intent**, the Mission Issuer derives an **Authority Set**, and
+an **approval event** commits both as `intent_hash` and
+`authority_hash`. AAuth instead keeps the approved natural-language
+context at the Person Server and leaves deterministic resource
+authorization to scopes, resource tokens, Resource and Access Server
+policy, and optionally R3.
 
-The Mission Issuer comes in three bindings. In the **OAuth binding**,
+The Mission control point has three implemented bindings. In the **OAuth binding**,
 the Authorization Server is the Mission Issuer: every derived token
 carries a `mission` claim binding it back to the approved task, and
 token issuance is gated on Mission state, so revoking or expiring the
@@ -80,19 +84,23 @@ the Policy Decision Point: a peer binding with its own architectural
 rationale (governance deliberately decoupled from token issuance, and
 one Mission Issuer can govern across many Authorization Servers) that
 also serves, operationally, as the adoption bridge for deployments
-that cannot yet change their AS. In the **AAuth binding**, the AAuth Person
-Server is the Mission Issuer: it gives AAuth's native mission concept
-the Mission model's structure, lifecycle, and anchors, and because the
-Person Server issues or gates every AAuth auth token, issuance gating
-holds there too. An experimental fourth binding is sketched for the
+that cannot yet change their AS. In the **AAuth binding**, the AAuth
+Person Server is the controlling authority for the native Mission
+Context: AAuth's propose/clarify/approve flow creates an exact-byte
+committed blob identified by `{approver, s256}`, with `active` and
+`terminated` state and an ordered mission log. The Person Server gates
+new authorization only when it is on the path: PS-asserted and federated
+access. Identity-based and resource-managed access remain direct
+resource decisions and may carry or ignore the reference. An
+experimental fourth binding is sketched for the
 **UMA 2.0** Authorization Server: the pushed Mission Intent rides UMA
 claims pushing, the resource owner's decision fills UMA's deliberately
 unspecified authorization assessment, and every RPT issuance is gated
-on Mission state. In all four, authority only narrows as it flows down
-to derived and delegated credentials; widening requires a fresh
-approval. (One carve-out: AAuth call chaining does not impose
-cross-hop subset attenuation; a chained downstream hop is its own
-decision point, governed under its own Mission or per-call permission.)
+on Mission state. The OAuth-shaped bindings preserve monotonic
+narrowing. AAuth deliberately does not impose a universal cross-hop
+subset rule: each chained downstream hop is a fresh resource decision,
+with contextual governance applied by the Person Server when it is on
+the path.
 
 The **core** defines the model and its OAuth 2.0 binding. Everything
 else is an OPTIONAL companion profile that layers on without changing
@@ -104,19 +112,19 @@ it.
  propose      Mission Intent Shaping (client side, untrusted proposal)
                          |
                          v
- approve      Mission Issuer, one of four peer bindings:
+ approve      Mission control point, one of four bindings:
  and record   +-------------+ +-------------+ +-------------+ +-------------+
               | OAuth AS    | | Standalone  | | AAuth PS:   | | UMA 2.0 AS  |
               | (core): PAR | | MAS: async  | | native      | | (sketch):   |
               | -> approval | | approvals,  | | missions,   | | tickets +   |
-              | tokens      | | no tokens,  | | auth tokens | | pushed      |
-              | gated on    | | PDP joins   | | gated on    | | Intent, RPT |
-              | state       | | to Mission  | | state       | | state-gated |
+              | tokens      | | no tokens,  | | context +   | | pushed      |
+              | gated on    | | PDP joins   | | PS-path     | | Intent, RPT |
+              | state       | | to Mission  | | gating      | | state-gated |
               +-------------+ +-------------+ +-------------+ +-------------+
                        \             |             |             /
                         v            v             v            v
-              THE MISSION: durable record committing intent_hash
-              and authority_hash, with a lifecycle state
+              THE MISSION: durable approved context and lifecycle;
+              portable authority commitments are binding-dependent
                          |
  govern       Status (pull)    Signals (push)
               Expansion (widen via a successor)
@@ -242,13 +250,14 @@ citably. The short names in the table are the drafts' nicknames; each
 maps to a document described under "The documents" below (mission is
 the core; the rest are the companion profiles of the same names).
 
-The level is one axis; the binding (OAuth AS, standalone Mission
-Authority Server, AAuth Person Server, or the experimental UMA 2.0
-AS) is orthogonal and described below the table.
+The level is one axis and the authority-bearing binding is another.
+An AAuth deployment reports its native Mission Context capabilities
+and resource access modes separately; choosing AAuth does not by itself
+satisfy the levels' structured-authority or runtime proof obligations.
 
 | Level | Drafts | What you get |
 |---|---|---|
-| **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). The kill switch is binding-dependent: under the standalone MAS there is no issuance gate, and the cutoff arrives with the runtime layer. With token lifetimes sized to the declared staleness bound (lifetime-bounded reliance), revocation takes effect within one lifetime at unmodified Resource Servers; what this level lacks is per-action enforcement and parameter binding, not a cutoff. Day-one AS prerequisites: PAR, RAR, and JWT access tokens; the standalone MAS needs none of them. |
+| **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance where the binding places the Mission authority on the issuance path; a possession-independent kill switch there (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). The cutoff is binding-dependent: the standalone MAS has no issuance gate, and AAuth gates PS-asserted and federated access but not direct identity-based or resource-managed decisions. With token lifetimes sized to the declared staleness bound (lifetime-bounded reliance), revocation takes effect within one lifetime on gated paths; what this level lacks is per-action enforcement and parameter binding. OAuth day-one AS prerequisites are PAR, RAR, and JWT access tokens; the standalone MAS and AAuth binding do not inherit them. |
 | **Runtime-Enforced** | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and every dependency it needs is ratified. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
 | **Governed Agent** (recommended for AI agents) | Runtime-Enforced + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. Add child-delegation for sub-agents and expansion for mid-task growth, orchestration (experimental) for safe unwinding of in-flight work, and discovery (experimental, with progressive) for agents that meet resources their approval could not name. |
 | **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness, agent-isolated approval rendering | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |
@@ -272,15 +281,20 @@ many ASes) can make it the right long-term shape for some
 deployments, and which also serves as the adoption bridge where the
 AS cannot yet change. The issuance grant profile is its middle path:
 estate ASs redeem MAS-minted grants for Mission-bound, state-gated
-tokens without taking on the core's approval surfaces. The AAuth binding hosts AAuth's native missions
-at the Person Server, which issues or gates every AAuth auth token,
-so issuance gating holds there as it does at a Mission-aware AS. The
+tokens without taking on the core's approval surfaces. The AAuth binding
+hosts AAuth's native Mission Context at the Person Server. It gates
+PS-asserted issuance and federated brokering while leaving
+identity-based and resource-managed decisions at the resource. Its
+native `mission` claim carries `{approver, s256}` as context rather than
+the OAuth family claim or a portable Authority Set. The
 UMA 2.0 binding (experimental) fills UMA's deliberately unspecified
 authorization assessment with the Mission: the pushed Intent rides
 claims pushing, `request_submitted` is the native deferred approval,
 and every RPT issuance and upgrade is gated on Mission state. The Mission Mandate makes a Mission portable
-across all of them: a signed, verifiable statement of what was
-approved, checkable by any party without a token exchange.
+across the authority-bearing bindings: a signed, verifiable statement
+of what was approved, checkable by any party without a token exchange.
+It is not a baseline AAuth facility; an AAuth evidence extension would
+bind receipts to the native `{approver, s256}` reference instead.
 
 A deployment states what it claims in a **Mission Deployment
 Profile**, the architecture's publishable manifest of level, binding,
@@ -288,9 +302,10 @@ state sources and staleness bounds, PEP coverage, custody, evidence,
 and residual risks. Two deployments that both "support Mission" but
 publish different profiles provide different security properties.
 
-Mission Intent Shaping is an approval-time, client-side option that
-layers onto any level; it produces the Mission Intent and is not itself
-deployed at the Authorization Server. Mission Deferred Approval is an
+Mission Intent Shaping is an approval-time, client-side option for the
+OAuth-shaped bindings; it produces the Mission Intent and is not itself
+deployed at the Authorization Server. AAuth uses its native mission
+proposal instead. Mission Deferred Approval is an
 approval-time option for deployments whose approvals are asynchronous or
 whose reviewers narrow a proposed Mission; it layers onto the
 OAuth-binding levels (the Mission Authority Server, the AAuth
@@ -667,24 +682,21 @@ surfaces.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-issuance-grant.html)
 
-#### Mission-Bound Authorization for AAuth
+#### Mission Context Binding for AAuth
 
-The AAuth binding, the first to a non-OAuth substrate. AAuth already
-carries a mission reference on every signed request; this binding gives
-that native concept the Mission model's structure: the AAuth Person
-Server is the Mission Issuer, the mission blob carries the Mission
-record natively (profiled blob members, with the integrity anchors
-computed as a projection of AAuth's own `s256` commitment),
-the propose/clarify/approve interaction is the (natively asynchronous)
-approval event, and the family lifecycle rides AAuth's two wire states
-(`active`, `terminated`) with revocation and expiry made normative and
-the only-`active` rule governing. Because the Person Server issues or
-gates every AAuth auth token, this binding provides true issuance
-gating in both modes. In its PS-asserted mode it is full provision:
-the auth token is a Mission-bound credential, so runtime enforcement
-composes credential-carried. Its federated mode is full provision only
-where the Access Server carries the family `mission` members, and
-Reference-only otherwise.
+The thin AAuth-native binding. AAuth already defines an immutable
+mission blob, exact-byte `s256` commitment, `{approver, s256}` reference,
+propose/clarify/approve flow, `active` and `terminated` states, and an
+ordered mission log. The binding uses those elements unchanged and
+defines no new wire members. It treats the Person Server as the
+controlling authority for contextual governance, while scopes, resource
+tokens, Resource and Access Server policy, and optionally R3 carry
+deterministic resource authorization. `approved_tools` are local
+actions that bypass per-call permission at the Person Server; they are
+not remote resource authority. Active-state issuance gating is
+structural only in PS-asserted and federated access. Identity-based and
+resource-managed resources may propagate or ignore the reference and
+are not Person-Server-gated.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html)
 
