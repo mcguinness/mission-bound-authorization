@@ -364,8 +364,9 @@ facts are the next subsection.
    **approval-revision**, **progressive**, **template** (consent once
    to a ceiling, then dispatch Missions from it at machine speed),
    **metering**, **attenuation**, **orchestration**, **discovery**
-   (open-world encounters adjudicated against a pre-consented ceiling,
-   with the lying-resource and tainted-session floors),
+   (open-world encounters adjudicated against a pre-consented ceiling
+   or by the binding's Controller in context, with the lying-resource
+   and tainted-session floors),
    **work-products** (keeps information from carrying the producing
    Mission's authority across a handoff), **containment** (narrows a
    live Mission's effective authority without ending it),
@@ -407,7 +408,8 @@ construction: the substrate contract anchors the **uma**,
 **authority-server**, and **aauth** Statements; **aauth-expiry**
 anchors the AAuth binding and its management companion; and the
 **core** anchors its OAuth companions. The family manifest tracks
-these.
+these. The substrate contract publishes before or with any binding
+that claims conformance to it.
 
 In short: steps 1 through 3 are built entirely on ratified
 dependencies; everything experimental is additive and can wait.
@@ -585,9 +587,11 @@ Under Expansion alone, every widening is human-approved.
 Experimental. Makes discovery a governed operation for agents that
 meet resources their approval could not name. Defines the Encounter,
 resource identity pinning (origin, the RFC 9728 resource-to-AS
-metadata chain, self-declaration digests), Discovery Adjudication
-against a pre-consented ceiling (bind, route to a human, or refuse;
-default-closed), and Discovery Evidence for the transparency log.
+metadata chain, self-declaration digests), Discovery Adjudication in
+two modes (against a pre-consented ceiling, or contextually by the
+binding's Controller as the AAuth Person Server does; bind, route to
+a human, or refuse; default-closed in both), and Discovery Evidence
+for the transparency log.
 Two floors hold regardless of policy: a resource's self-declaration
 never classifies its own consequences, and a tainted session never
 binds egress-capable authority without a human.
