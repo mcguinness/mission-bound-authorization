@@ -62,6 +62,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Mission Child Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
@@ -447,10 +455,31 @@ per the runtime profile's availability posture.
 
 The bounds of this document are Mission-keyed. A deployment MAY
 additionally meter the same bound classes across Missions, keyed by
-the Mission's `subject` or by the approved `client_id`, so a fleet
-operator can cap what an agent identity or a Subject consumes in
-total rather than per task. The counter semantics, reserve/commit
-postures, and refusal behavior are unchanged; only the key differs.
+the Mission's `subject`, by the approved `client_id`, or by a
+lineage-keyed budget identifier shared by a root Mission and every
+Child Mission derived from it, so a fleet operator can cap what an
+agent identity, a Subject, or a Mission's whole derivation lineage
+consumes in total rather than per task. The counter semantics,
+reserve/commit postures, and refusal behavior are unchanged; only the
+key differs.
+
+A lineage-keyed budget identifier and its authoritative shared counter
+are the only mechanism this document defines for a lineage-wide
+aggregate consumption bound: they meter across every Mission a
+derivation lineage contains, not within one Mission alone. A Child
+Mission's own derivation counter is independent of its parent's and
+bounds nothing beyond that Child Mission itself
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}); absent a
+deployed lineage-keyed counter, no per-Mission counter, however many
+Missions in a lineage carry one, adds up to an aggregate bound on the
+lineage.
+This document is experimental ({{optional-status}}), so a deployment
+running only the stable issuance and runtime profiles has no
+lineage-wide aggregate bound in force at all. A deployment MUST NOT
+render, in an Enforcement Scope Statement or at any consent surface,
+a lineage-wide or subtree aggregate bound as in force unless a
+lineage-keyed budget identifier and shared counter meeting this
+section's requirements are actually deployed and metered.
 
 An aggregate bound is deployment policy: it is carried on no single
 Mission Intent, is committed by no `intent_hash`, and is disclosed
@@ -460,9 +489,9 @@ approval event. A refusal under an aggregate bound is carried as
 deployment-defined aggregate key class.
 
 Aggregate keying crosses the family's per-Mission consistency
-domains: a subject-keyed counter is shared by every Mission the
-subject holds, so it cannot be sharded by Mission Identifier and is
-provisioned as its own consistency domain
+domains: a subject-keyed or lineage-keyed counter is shared by every
+Mission the key spans, so it cannot be sharded by Mission Identifier
+and is provisioned as its own consistency domain
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
 # AuthZEN Binding {#authzen-binding}
