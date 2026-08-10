@@ -481,23 +481,29 @@ Table of Contents
    single gated derivation this profile permits per pushed child-
    creation request.
 
-   On success the Mission Issuer responds with:
+   On success the Mission Issuer responds with the [RFC8693] token
+   response shape:
+
+   access_token:  REQUIRED.  The child-bound JWT authorization grant of
+      Section 6.1: the [RFC7523] assertion the child actor redeems next.
+      The issued artifact travels in this member, per [RFC8693].
+
+   issued_token_type:  REQUIRED. urn:ietf:params:oauth:token-type:jwt.
+
+   token_type:  REQUIRED.  N_A, per [RFC8693] Section 2.2.1: bearer
+      semantics do not apply to this artifact.
 
    mission_id:  REQUIRED.  The Child Mission identifier.
 
    parent:  REQUIRED.  The parent member of Section 7.
 
-   grant_type:  REQUIRED. urn:ietf:params:oauth:grant-type:jwt-bearer
-      ([RFC7523]), naming the grant the child actor redeems next
-      (Section 6.1), not this creation grant.
-
-   assertion:  REQUIRED.  The child-bound JWT authorization grant of
-      Section 6.1.
-
-   This grant issues no access token to its redeemer.  The parent
-   receives a grant reference for the child actor, never a Child Mission
-   token, consistent with the rule that child credentials never transit
-   the parent (Section 6.1).
+   A token response carries no grant_type; none appears here.  The
+   access_token is not usable by its redeemer: only the child actor
+   named in the assertion can redeem it, under the [RFC7523] JWT-bearer
+   grant of Section 6.1.  The parent receives it only to convey to the
+   child actor, never to use as its own access token, consistent with
+   the rule that child credentials never transit the parent
+   (Section 6.1).
 
 6.6.  Request Processing
 
@@ -1482,6 +1488,11 @@ Table of Contents
               Authorization Server Metadata", RFC 8414,
               DOI 10.17487/RFC8414, June 2018,
               <https://www.rfc-editor.org/rfc/rfc8414>.
+
+   [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
+              and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
+              DOI 10.17487/RFC8693, January 2020,
+              <https://www.rfc-editor.org/rfc/rfc8693>.
 
    [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
               Canonicalization Scheme (JCS)", RFC 8785,

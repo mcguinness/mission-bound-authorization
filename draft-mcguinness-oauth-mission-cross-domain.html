@@ -1863,12 +1863,16 @@ derives from;<a href="#section-10-2.6.2.2.1" class="pilcrow">¶</a></p>
               <p id="section-10-2.6.2.3.1"><span class="bcp14">MUST NOT</span> be issued as a bearer token; and<a href="#section-10-2.6.2.3.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-10-2.6.2.4">
-              <p id="section-10-2.6.2.4.1">if it preserves the issuer's <code>client_id</code>, does so only as an audit
-reference, not a local identity: that value is in the originating
-AS's namespace, and a partner Resource Server <span class="bcp14">MUST NOT</span> resolve or
-authorize on it as a local client, for the same portability reason
-that applies to a <code>sub</code> matcher in <code>allowed_delegates</code> (see
-below).<a href="#section-10-2.6.2.4.1" class="pilcrow">¶</a></p>
+              <p id="section-10-2.6.2.4.1">sets <code>client_id</code> to the client that requested this local token,
+the party that authenticated at redemption in the Resource AS's
+own namespace, per <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> Section 4.3 and <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>
+Section 2.2. It <span class="bcp14">MUST NOT</span> set <code>client_id</code> to the Mission's
+approved agent from the originating domain. The approved agent is
+not carried directly on this local token: it remains recoverable
+at the originating AS from the Mission Record identified by
+<code>mission.id</code> and <code>mission.issuer</code>. A Resource Server <span class="bcp14">MAY</span> impose
+stronger actor-chain requirements but <span class="bcp14">MUST NOT</span> reinterpret
+<code>client_id</code>.<a href="#section-10-2.6.2.4.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </li>
@@ -1892,7 +1896,14 @@ entry's <code>delegation</code> policy as the issuance profile specifies
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation
 Constraints"); the policy travels on the conveyed entries. The
 cross-domain grant carries no <code>act</code> chain (<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>),
-so the Resource AS's own delegation depth begins at 0.<a href="#section-10-2.8.1" class="pilcrow">¶</a></p>
+so the Resource AS's own delegation depth begins at 0. Such a
+delegated token's <code>client_id</code> is the local delegate, with that
+delegate as the outermost <code>act</code>, per the issuance profile's
+delegate model (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Delegation Within a Mission"); that chain identifies delegates
+within this domain only. The Mission's originating approved agent
+is recoverable from the Mission Record, not from <code>client_id</code> or
+this domain's <code>act</code> chain.<a href="#section-10-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.9">
           <p id="section-10-2.9.1"><span class="bcp14">SHOULD</span> record, per minted local token, both sides of the
@@ -2108,14 +2119,18 @@ sender-constrained and short-lived (<a href="#validation-at-resource-as" class="
 <a href="#cross-domain-revocation" class="auto internal xref">Section 15.1</a>);<a href="#section-14-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-5.3">
-          <p id="section-14-5.3.1">fails redemption with the codes of <a href="#error-responses" class="auto internal xref">Section 11</a>;<a href="#section-14-5.3.1" class="pilcrow">¶</a></p>
+          <p id="section-14-5.3.1">sets each local token's <code>client_id</code> to the redeeming client, never
+the Mission's approved agent (<a href="#validation-at-resource-as" class="auto internal xref">Section 10</a>);<a href="#section-14-5.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-5.4">
-          <p id="section-14-5.4.1">where it offers token introspection for its local tokens, follows
-<a href="#introspection-at-resource-as" class="auto internal xref">Section 12</a>; and<a href="#section-14-5.4.1" class="pilcrow">¶</a></p>
+          <p id="section-14-5.4.1">fails redemption with the codes of <a href="#error-responses" class="auto internal xref">Section 11</a>;<a href="#section-14-5.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-5.5">
-          <p id="section-14-5.5.1">never creates or alters a Mission (<a href="#model" class="auto internal xref">Section 4</a>).<a href="#section-14-5.5.1" class="pilcrow">¶</a></p>
+          <p id="section-14-5.5.1">where it offers token introspection for its local tokens, follows
+<a href="#introspection-at-resource-as" class="auto internal xref">Section 12</a>; and<a href="#section-14-5.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-5.6">
+          <p id="section-14-5.6.1">never creates or alters a Mission (<a href="#model" class="auto internal xref">Section 4</a>).<a href="#section-14-5.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-14-6">A Resource AS is not required to implement the issuance profile's Mission
@@ -2310,6 +2325,10 @@ registered by the issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-m
         <dd>
 <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">T. Lodderstedt</span>, <span class="refTitle">"OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"</span>, <span class="seriesInfo">RFC 8705</span>, <span class="seriesInfo">DOI 10.17487/RFC8705</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8705">https://www.rfc-editor.org/rfc/rfc8705</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC9068">[RFC9068]</dt>
+        <dd>
+<span class="refAuthor">Bertocci, V.</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens"</span>, <span class="seriesInfo">RFC 9068</span>, <span class="seriesInfo">DOI 10.17487/RFC9068</span>, <time datetime="2021-10" class="refDate">October 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9068">https://www.rfc-editor.org/rfc/rfc9068</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC9396">[RFC9396]</dt>
         <dd>
 <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
@@ -2501,7 +2520,11 @@ audience-scoped authority for the ERP:<a href="#appendix-A.1-1" class="pilcrow">
 <p id="appendix-A.1-3">The ID-JAG is short-lived (300 s), explicitly typed
 (<code>oauth-id-jag+jwt</code> in its JWT header), and sender-constrained to the
 agent. Its <code>exp</code> does not exceed the Mission's <code>expires_at</code>
-(<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>).<a href="#appendix-A.1-3" class="pilcrow">¶</a></p>
+(<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>). Only the agent may request a cross-domain
+projection (<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>), so <code>client_id</code> (the requesting
+client) is the approved agent here too; no delegation has occurred,
+and the approved agent remains recoverable at the home AS from the
+Mission Record identified by <code>mission.id</code>.<a href="#appendix-A.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stage-3-the-resource-as-issues-a-local-access-token">
@@ -2515,14 +2538,17 @@ establishes issuer trust in <code>as.example.com</code>, verifies the signature,
 checks that <code>aud</code> is itself, checks the expiry, and verifies the
 sender-constraint proof. It then issues its own access token for the
 ERP, preserving the <code>mission</code> claim unchanged and capping <code>exp</code> at the
-ID-JAG's <code>exp</code>:<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
+ID-JAG's <code>exp</code>. The agent redeems the ID-JAG under its own
+registration with <code>ras.partner.example.com</code>
+(<a href="#pre-established-trust" class="auto internal xref">Section 8</a>), so <code>client_id</code> names that local
+registration, not the agent's home-domain <code>client_id</code>:<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="appendix-A.2-2">
 <pre>
 {
   "iss": "https://ras.partner.example.com",
   "aud": "https://erp.partner.example.com",
   "sub": "partner-user_7Kp4QnZ2vR9s",
-  "client_id": "s6BhdRkqt3",
+  "client_id": "partner-agent-042",
   "iat": 1793606430,
   "exp": 1793606690,
   "jti": "at_7Kp4QnZ2vR9sT1mX8b3N",
@@ -2555,7 +2581,13 @@ the home AS. The token's <code>exp</code> (1793606690) is below the ID-JAG's
 (1793606700) and far below the Mission's <code>expires_at</code>. The Resource
 AS-local <code>sub</code> is illustrative; its value is determined by the
 subject-resolution rules of the ID-JAG and identity chaining profiles,
-not by this document.<a href="#appendix-A.2-3" class="pilcrow">¶</a></p>
+not by this document. <code>client_id</code> (<code>partner-agent-042</code>) is the
+Resource AS's own registration for the presenting client, per
+<span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> Section 4.3 and <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> Section 2.2; it is not the
+Mission's approved agent (<code>s6BhdRkqt3</code>), which this local token does
+not carry. That identity remains recoverable at the home AS from the
+Mission Record identified by <code>mission.id</code>
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 10</a>).<a href="#appendix-A.2-3" class="pilcrow">¶</a></p>
 <p id="appendix-A.2-4">Revoking the Mission now stops new ID-JAGs, but the local token the
 Resource AS minted stays usable until its <code>exp</code> (260 seconds), bounded
 by the 300-second ID-JAG cap (<a href="#cross-domain-revocation" class="auto internal xref">Section 15.1</a>). Tighter

@@ -1778,38 +1778,49 @@ consumed on redemption, so a repeated redemption of the same
 <code>request_uri</code> <span class="bcp14">MUST</span> be refused and <span class="bcp14">MUST NOT</span> derive a second Child
 Mission. This is the single gated derivation this profile permits per
 pushed child-creation request.<a href="#section-6.5-4" class="pilcrow">¶</a></p>
-<p id="section-6.5-5">On success the Mission Issuer responds with:<a href="#section-6.5-5" class="pilcrow">¶</a></p>
+<p id="section-6.5-5">On success the Mission Issuer responds with the <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token
+response shape:<a href="#section-6.5-5" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-6.5-6">
           <dt id="section-6.5-6.1">
-<code>mission_id</code>:</dt>
+<code>access_token</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.5-6.2">
-            <p id="section-6.5-6.2.1"><span class="bcp14">REQUIRED</span>. The Child Mission identifier.<a href="#section-6.5-6.2.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-6.2.1"><span class="bcp14">REQUIRED</span>. The child-bound JWT authorization grant of
+<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>: the <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> assertion the child actor
+redeems next. The issued artifact travels in this member, per
+<span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>.<a href="#section-6.5-6.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.5-6.3">
-<code>parent</code>:</dt>
+<code>issued_token_type</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.5-6.4">
-            <p id="section-6.5-6.4.1"><span class="bcp14">REQUIRED</span>. The <code>parent</code> member of <a href="#parent-member" class="auto internal xref">Section 7</a>.<a href="#section-6.5-6.4.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-6.4.1"><span class="bcp14">REQUIRED</span>. <code>urn:ietf:params:oauth:token-type:jwt</code>.<a href="#section-6.5-6.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.5-6.5">
-<code>grant_type</code>:</dt>
+<code>token_type</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.5-6.6">
-            <p id="section-6.5-6.6.1"><span class="bcp14">REQUIRED</span>. <code>urn:ietf:params:oauth:grant-type:jwt-bearer</code>
-(<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>), naming the grant the child actor redeems next
-(<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>), not this creation grant.<a href="#section-6.5-6.6.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-6.6.1"><span class="bcp14">REQUIRED</span>. <code>N_A</code>, per <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> Section 2.2.1: bearer semantics do
+not apply to this artifact.<a href="#section-6.5-6.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.5-6.7">
-<code>assertion</code>:</dt>
+<code>mission_id</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.5-6.8">
-            <p id="section-6.5-6.8.1"><span class="bcp14">REQUIRED</span>. The child-bound JWT authorization grant of
-<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>.<a href="#section-6.5-6.8.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-6.8.1"><span class="bcp14">REQUIRED</span>. The Child Mission identifier.<a href="#section-6.5-6.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.5-6.9">
+<code>parent</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.5-6.10">
+            <p id="section-6.5-6.10.1"><span class="bcp14">REQUIRED</span>. The <code>parent</code> member of <a href="#parent-member" class="auto internal xref">Section 7</a>.<a href="#section-6.5-6.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-6.5-7">This grant issues no access token to its redeemer. The parent receives
-a grant reference for the child actor, never a Child Mission token,
+<p id="section-6.5-7">A token response carries no <code>grant_type</code>; none appears here. The
+<code>access_token</code> is not usable by its redeemer: only the child actor
+named in the assertion can redeem it, under the <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> JWT-bearer
+grant of <a href="#child-client-identity" class="auto internal xref">Section 6.1</a>. The parent receives it only to
+convey to the child actor, never to use as its own access token,
 consistent with the rule that child credentials never transit the
 parent (<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>).<a href="#section-6.5-7" class="pilcrow">¶</a></p>
 </section>
@@ -3132,6 +3143,10 @@ that names and defines it.<a href="#section-19-10" class="pilcrow">¶</a></p>
 <dt id="RFC8414">[RFC8414]</dt>
         <dd>
 <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8785">[RFC8785]</dt>
         <dd>
