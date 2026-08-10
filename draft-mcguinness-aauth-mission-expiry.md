@@ -100,7 +100,8 @@ proposal, and the `{approver, s256}` mission reference as defined by
 
 This specification defines an OPTIONAL `expires_at` member of the
 approved mission blob. Its value is an RFC 3339 `date-time`
-{{RFC3339}} and MUST identify an instant later than the blob's
+{{RFC3339}}, the internet profile of the ISO 8601 form AAuth uses for
+`approved_at`, and MUST identify an instant later than the blob's
 `approved_at`.
 
 Because `expires_at` is in the approved mission blob, it is covered by
@@ -110,6 +111,17 @@ requires proposing and approving a new mission, which carries a new
 
 A mission whose approved blob has no `expires_at` member has no expiry
 under this extension.
+
+Extending the blob is consistent with its definition: AAuth enumerates
+members the blob MUST include and members it MAY include and states no
+rule that closes the set, the blob is the PS's own approval response
+body, and a conforming Agent stores that body byte-exact whether or
+not it recognizes a member.
+The existing `capabilities` member already places PS-determined,
+session-specific information inside the committed bytes, and
+`expires_at` follows the same pattern. If a future AAuth revision
+defines `expires_at` or blob-member extensibility rules, that
+definition governs and this document will align with it.
 
 # Proposal and Approval {#approval}
 

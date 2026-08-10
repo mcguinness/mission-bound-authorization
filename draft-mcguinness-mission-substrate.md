@@ -43,7 +43,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-aauth:
-    title: "Mission-Bound Authorization for AAuth"
+    title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
     author:
       -
@@ -111,8 +111,9 @@ This document defines a small, substrate-neutral Mission kernel and a
 set of separately claimable capabilities.  The kernel covers a native
 Mission reference, controller and actor binding, approved context, an
 approval event, an active/non-active governance gate with bounded
-reliance, context propagation, and an ordered governance record.  Optional capabilities
-cover lifecycle gating, state observation, structured authority,
+reliance, context propagation, and an ordered governance record.
+Optional capabilities cover lifecycle gating, state observation,
+structured authority,
 monotonic derivation, credential binding, independent verification,
 and portable evidence.  A Mission Substrate Statement declares which
 capabilities a binding supplies and the limits of each claim.
@@ -188,6 +189,14 @@ A binding MAY use any of those mechanisms.  When it does, their
 guarantees arise from the binding and the capabilities it claims, not
 from the kernel.
 
+This document is designed to be adopted on its own.  Conformance
+requires no other document, and the kernel vocabulary is defined
+entirely here.  The Mission-Bound Authorization family uses this
+document as its binding-neutral contract; the family vocabulary
+mapping, the scoped precedence rule for the OAuth-native binding, and
+the change-ownership rule are collected in {{family}} and are not
+needed by an adopter outside that family.
+
 # Conventions and Terminology
 
 {::boilerplate bcp14-tagged}
@@ -239,6 +248,9 @@ Positive governance decision:
   operation specifically by relying on the Mission Context.  It does
   not include an independent resource authorization decision that
   does not rely on that context.
+
+{{family}} maps these terms to the vocabulary of the Mission-Bound
+Authorization family.
 
 # Contextual-Governance Kernel {#kernel}
 
@@ -385,8 +397,9 @@ two forms:
 * the artifact carries an expiry, and the binding states how that
   expiry is bounded by or disclosed with the Approved Context.
 
-A decision or artifact with neither bound does not conform.  This
-floor requires no consumer-facing freshness source: a binding whose
+A decision or artifact with neither bound does not conform, and a
+stated bound SHOULD NOT exceed the interval the Mission's purpose
+requires.  This floor requires no consumer-facing freshness source: a binding whose
 credential lifetimes sit inside the Mission's own bound satisfies it
 unmodified, as the OAuth core's stateless baseline does.  The bound
 gives the non-active transition of {{basic-gate}} its force: a party
@@ -763,7 +776,9 @@ state their coverage and residual interval.  Short credential lifetime
 can bound residual authority but is not instantaneous termination.
 The bounded-reliance floor ({{bounded-reliance}}) guarantees that a
 stated bound exists on every conforming path; it does not make any
-bound short.
+bound short.  A bound long enough to be vacuous defeats the floor's
+purpose; consumers evaluate the stated interval, not only its
+presence.
 
 ## Governance Record Integrity
 
@@ -877,6 +892,40 @@ PS-local log supplies the kernel governance record but not Portable
 Evidence.  State management, signed evidence, and resource-verifiable
 structured decisions are useful AAuth extensions rather than baseline
 kernel requirements.
+
+# Mission-Bound Authorization Family Use {#family}
+
+This appendix is normative for documents of the Mission-Bound
+Authorization family and informative for every other adopter.  An
+adopter outside the family does not need it.
+
+The family's earlier documents, including the published OAuth core
+({{I-D.draft-mcguinness-oauth-mission}}), use the vocabulary this
+contract was generalized from.  The terms correspond as follows:
+
+| This document | Family documents |
+| --- | --- |
+| Mission Context | Mission |
+| Mission Reference | Mission Identifier |
+| Controller | Mission Issuer, where the binding issues; natively the AS, MAS, UMA authorization server, or AAuth PS |
+| Actor | the authenticated acting client or agent |
+| Approver | Approver |
+| Approved Context | the Mission Intent and derived Authority Set |
+| Ordered governance record | the Mission log, assessment log, or audit record |
+{: title="Family vocabulary mapping"}
+
+A family document that maps its own vocabulary to the kernel's MUST
+use these correspondences.
+
+Precedence is scoped, not global.  For the OAuth-native binding, the
+core's definitions govern that mapping; this document governs the
+kernel and capability vocabulary.  Neither document depends
+normatively on the other.
+
+Ownership migrates by touch, not by relocation.  When a
+binding-neutral definition next changes substantively, the change
+MUST land in this document, and the owning family section becomes a
+reference to it; no change is ever made solely to move words.
 
 # Acknowledgments
 {:numbered="false"}
