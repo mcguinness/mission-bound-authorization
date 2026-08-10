@@ -645,9 +645,14 @@ Mission Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}})
 and Mission Child Delegation
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) define their
 request wire over OAuth Pushed Authorization Requests, bound to the
-predecessor or parent by token possession (`predecessor_token`,
-`parent_token`). A MAS issues no tokens, so that binding has no
-carrier here. This section defines the MAS-native wire for both
+predecessor or parent by a Mission relationship assertion
+sender-constrained to that Mission's own recorded `cnf` key
+(`predecessor_assertion`, `parent_assertion`, per the expansion
+profile's relationship-assertion definition,
+{{I-D.draft-mcguinness-oauth-mission-expansion}}). A MAS issues no
+tokens, so no Mission it hosts ever has a recorded `cnf` for such an
+assertion to verify against, and that binding has no carrier here.
+This section defines the MAS-native wire for both
 operations: carriage on the mission submission endpoint
 ({{native-carriage}}) and an authenticated-client binding in place of
 token possession ({{native-binding}}). It defines carriage and binding
@@ -691,9 +696,9 @@ be refused with `invalid_mission_intent`: the operations do not
 combine. A submission carrying `parent` without `child_actor`, or
 `child_actor` without `parent`, MUST be refused the same way.
 
-The `predecessor_token` and `parent_token` parameters of the OAuth
-wire do not exist on this surface; the binding of {{native-binding}}
-replaces them.
+The `predecessor_assertion` and `parent_assertion` parameters of the
+OAuth wire do not exist on this surface; the binding of
+{{native-binding}} replaces them.
 
 The referenced profiles' OAuth error outcomes map onto this endpoint's
 error surface as the issuance profile's do ({{intent-submission}}):
@@ -826,7 +831,7 @@ reference:
 - **Denial reasons.** That profile's closed denial-reason set applies;
   the code rides in `mission_denial_reason` per {{native-carriage}}.
   The `parent_mismatch` reason has no analog on this surface: with no
-  `parent_token` to cross-check, a binding failure is refused per
+  `parent_assertion` to cross-check, a binding failure is refused per
   {{native-carriage}}.
 
 The child client identity rules hold unchanged: the child actor is the
