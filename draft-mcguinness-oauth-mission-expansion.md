@@ -31,6 +31,10 @@ normative:
   RFC9396:
   RFC8705:
   RFC9449:
+  RFC7519:
+  RFC7515:
+  RFC7523:
+  RFC7800:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -43,6 +47,22 @@ normative:
 informative:
   RFC8126:
   RFC9470:
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-id-continuation-assertion:
+    title: "Identity Continuation Assertion for OAuth 2.0 Token Exchange"
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -332,26 +352,177 @@ the `predecessor` request parameter:
   and audit; it does not by itself select or authorize one (the grant
   does, {{request-binding}}).
 
-`predecessor_token`:
-: REQUIRED for an expansion request. A string. The predecessor
-  Mission's refresh token, presented as proof that the client controls
-  the predecessor's grant. The Mission Issuer resolves the predecessor
-  from this token and binds the expansion to it ({{request-binding}});
-  this value, not `predecessor`, selects the predecessor
-  authoritatively.
+`predecessor_assertion`:
+: REQUIRED for an expansion request. A string. A Mission relationship
+  assertion ({{relationship-assertion}}) proving that the requester
+  controls the predecessor's grant, without presenting the
+  predecessor's refresh token. The Mission Issuer resolves the
+  predecessor from the assertion's `mission_id` and binds the expansion
+  to it ({{request-binding}}); this value, not `predecessor`, selects
+  the predecessor authoritatively. A refresh token MUST NOT be accepted
+  in this parameter; an AS MUST refuse a `predecessor_assertion` value
+  that does not parse as the assertion of {{relationship-assertion}}
+  with `invalid_request`.
 
 Both parameters are carried through PAR with `mission_intent`. Like
 `mission_intent`, an AS MUST reject a `predecessor` or
-`predecessor_token` value presented directly on a front-channel
+`predecessor_assertion` value presented directly on a front-channel
 authorization request rather than through a PAR-issued `request_uri`
-with `invalid_request`. Because `predecessor_token` carries a refresh
-token, it MUST be sent only on the PAR back channel and MUST NOT
-appear on any front channel.
+with `invalid_request`. `predecessor_assertion` is short-lived and
+single-use ({{relationship-assertion}}); it is nonetheless restricted
+to the PAR back channel, consistent with `predecessor` and
+`mission_intent`, so no expansion-binding parameter appears on a front
+channel.
 
 The `predecessor` parameter names the predecessor but does not
 by itself authorize expanding it. Authorization comes from the grant
 binding of {{request-binding}}: a client MUST NOT be able to expand a
 Mission merely by naming its `mission_id`.
+
+## The Mission Relationship Assertion {#relationship-assertion}
+
+A Mission relationship assertion proves that the requester holds the
+predecessor Mission's grant and authorizes one relationship operation,
+without presenting the predecessor's refresh token. This is the
+`predecessor_assertion` artifact of {{submission}}. It is a family-native
+artifact, not a foreign mechanism: it composes the JWT-bearer assertion
+already used to redeem a Mission grant ({{RFC7523}}, the Mission
+Issuance Grant of {{I-D.draft-mcguinness-oauth-mission-issuance-grant}})
+with the short-lived, single-use, sender-constrained discipline the
+Identity Continuation Assertion already applies to a subject token
+({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}). It differs
+from both: unlike a Mission Issuance Grant, the Mission Issuer is the
+verifier, not the signer; unlike a DPoP proof ({{RFC9449}}), its claims
+name a Mission and an operation, not an HTTP request.
+
+A Mission relationship assertion is a JWT {{RFC7519}} signed as a JWS
+{{RFC7515}} by the requester, using the same key confirmed by the
+named Mission's `cnf` (below). Claims:
+
+`iss`, `sub`:
+: REQUIRED. Identical values naming the requester: the predecessor or
+  parent Mission's recorded `client_id`, or, where a distinct actor is
+  authorized to act for it, that actor's identifier under the
+  issuance profile's actor vocabulary
+  ({{I-D.draft-mcguinness-oauth-mission}}). A self-issued assertion
+  sets `iss` and `sub` to the same value, as an {{RFC7523}} client
+  assertion does.
+
+`aud`:
+: REQUIRED. The Mission Issuer's PAR endpoint. The Mission Issuer MUST
+  reject an assertion whose `aud` does not name it.
+
+`iat`, `exp`:
+: REQUIRED. The assertion MUST NOT be valid longer than 300 seconds
+  (`exp` minus `iat`), matching the family's other short-lived
+  assertions ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}},
+  {{I-D.draft-mcguinness-oauth-id-continuation-assertion}}).
+
+`jti`:
+: REQUIRED. Unique per assertion; single-use, checked as described
+  below.
+
+`mission_id`:
+: REQUIRED. The `mission_id` of the predecessor Mission (expansion) or
+  parent Mission (child creation). This value, not a request parameter
+  alongside the assertion, selects the Mission authoritatively.
+
+`mission_operation`:
+: REQUIRED. The relationship operation the assertion authorizes: a
+  string from a closed set each consuming profile extends by
+  specification, matching the shared `mission_denial_reason` member's
+  extension pattern ({{denial-reasons}}). This document defines
+  `mission-expansion`. The child delegation profile defines
+  `mission-child-creation` in the same member
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). A Mission
+  Issuer MUST reject an assertion whose `mission_operation` does not
+  match the operation being requested.
+
+An illustrative decoded assertion, for the worked example's
+predecessor:
+
+~~~ json
+{
+  "iss": "s6BhdRkqt3",
+  "sub": "s6BhdRkqt3",
+  "aud": "https://as.example.com",
+  "iat": 1793607000,
+  "exp": 1793607180,
+  "jti": "rla_4mK7pQ2xV9rT6nL1sB",
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "mission_operation": "mission-expansion"
+}
+~~~
+
+### Sender-constraint {#relationship-assertion-cnf}
+
+The assertion MUST be sender-constrained to the key confirmed by the
+named Mission's `cnf`: the sender constraint the issuance profile
+records for the predecessor or parent Mission's refresh token
+({{I-D.draft-mcguinness-oauth-mission}}). No bearer form of the
+assertion exists; a Mission with no sender-constrained credential to
+bind to has no key to verify against and cannot be expanded through
+this binding, exactly as when it has no refresh token to present
+({{request-binding}}).
+
+The requester proves possession of that key according to the
+mechanism the predecessor's or parent's `cnf` names, matching the
+issuance profile's DPoP and mTLS conventions:
+
+- when `cnf` carries `jkt` (DPoP {{RFC9449}}), the assertion's JOSE
+  header MUST embed the confirmed public key as `jwk`, as an
+  {{RFC9449}} DPoP proof does, and the JWS signature MUST verify under
+  that key; the embedded key's thumbprint is the value checked against
+  `cnf.jkt` below;
+- when `cnf` carries `x5t#S256` (mTLS {{RFC8705}}), the assertion MUST
+  be presented over the mutual-TLS connection whose client certificate
+  thumbprint equals `cnf.x5t#S256`; the connection, not the JWS
+  signature, is the possession proof.
+
+Client authentication at the PAR endpoint and the assertion's
+sender-constraint are independent checks: client authentication (where
+the client is confidential) establishes who is asking; the assertion
+establishes that the requester holds the named Mission's own
+credential. Neither substitutes for the other, and a public client's
+expansion or child creation rests solely on the latter.
+
+### AS verification {#relationship-assertion-verification}
+
+On receiving a Mission relationship assertion, the Mission Issuer MUST,
+in order, refusing with `invalid_grant` on any failure below unless
+noted otherwise:
+
+1. Parse the assertion as a JWT; a value that does not parse, or is a
+   refresh token, MUST be refused with `invalid_request`
+   ({{submission}}).
+2. Resolve the named Mission from `mission_id`; an unresolvable
+   `mission_id` MUST be refused with `invalid_grant`.
+3. Verify the JWS signature against the key confirmed by that
+   Mission's own recorded `cnf`, per {{relationship-assertion-cnf}}.
+   The Mission named in `mission_id` fixes which Mission's `cnf`
+   applies; a signature valid under a different Mission's key MUST NOT
+   satisfy this check.
+4. Verify `aud` names this Mission Issuer.
+5. Verify `iat` and `exp` are valid, `exp` follows `iat`, the assertion
+   is unexpired, and its lifetime does not exceed 300 seconds.
+6. Verify `jti` has not been seen for this Mission Issuer; record it as
+   seen until `exp`. A repeated `jti` MUST be refused.
+7. Verify the named Mission is `active`.
+8. Verify `mission_operation` matches the operation requested and that
+   the requester (`iss`/`sub`) is the party authorized for that
+   operation on the named Mission: the Mission's own recorded
+   `client_id`, or an actor the Mission's Authority Set names as
+   authorized to act for it. A requester that is neither MUST be
+   refused with `invalid_grant`.
+
+Steps 3 through 8 mirror the verification already required of the
+Identity Continuation Assertion's subject token
+({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}): signature
+against a confirmed key, audience, lifetime, single-use `jti`, and
+liveness of the named grant, applied here to a Mission instead of an
+identity-continuation handle. A Mission Issuer that already implements
+that verification for another assertion in this family reuses the same
+routine.
 
 ## Binding the request to the predecessor's grant {#request-binding}
 
@@ -367,25 +538,34 @@ the binding is established at the PAR submission, a back-channel
 request. The binding procedure is:
 
 1. In the same PAR request that carries `mission_intent` and
-   `predecessor`, the client MUST present the predecessor Mission's
-   refresh token in the `predecessor_token` parameter
-   ({{submission}}).
-2. The expansion MUST rest on an authenticated proof of control over
-   the predecessor's grant: a confidential client supplies this by
-   authenticating to the PAR endpoint; a public client's proof is a
-   sender-constrained `predecessor_token`, as required below.
-3. The Mission Issuer MUST resolve the predecessor from the presented
-   refresh token, applying the same grant-to-Mission resolution the
-   issuance profile uses for a presented refresh token.
+   `predecessor`, the client MUST present a Mission relationship
+   assertion naming the predecessor and the `mission-expansion`
+   operation in the `predecessor_assertion` parameter ({{submission}},
+   {{relationship-assertion}}).
+2. The expansion MUST rest on the assertion's sender-constraint proof
+   of control over the predecessor's grant ({{relationship-assertion-cnf}}),
+   required unconditionally of every client. A confidential client
+   additionally authenticates to the PAR endpoint; that authentication
+   establishes who is asking and does not substitute for the
+   assertion's proof of what they hold
+   ({{relationship-assertion-cnf}}).
+3. The Mission Issuer MUST resolve the predecessor from the
+   assertion's `mission_id`, then verify the assertion per
+   {{relationship-assertion-verification}}, which checks the signature
+   against that same resolved Mission's own recorded `cnf`: naming one
+   Mission and signing with a different Mission's key MUST NOT
+   satisfy this step.
 4. The Mission Issuer MUST verify that the resolved Mission is the
    Mission named in `predecessor`.
 
 PAR permits a public client to submit without client authentication
 ({{RFC9126}}), so a public client's expansion rests solely on the
-presented `predecessor_token`. That token MUST be sender-constrained
-({{RFC8705}} or {{RFC9449}}) so it is not a bearer proof. The Mission
-Issuer MUST reject a public-client expansion whose `predecessor_token`
-is not sender-constrained with `invalid_request`.
+assertion of {{relationship-assertion}}. Because that assertion's
+sender-constraint is required of every client, not only a public one,
+it is an eligibility precondition rather than a client-type-dependent
+rule: a predecessor with no sender-constrained credential has no key
+to verify an assertion against and cannot be expanded through this
+binding, whatever kind of client asks (below).
 
 Establishing the binding at PAR, before the approval event, is
 deliberate: the Mission Issuer resolves the predecessor from a real
@@ -397,59 +577,62 @@ Mission.
 
 The grant, not the identifier, determines the predecessor. The Mission
 Issuer MUST refuse an expansion request whose `predecessor`
-value does not match the Mission resolved from the presented grant,
-with `invalid_grant`. A client that does not hold a grant for the named
-predecessor cannot present its refresh token and so cannot expand it.
+value does not match the Mission resolved from the assertion's
+`mission_id`, with `invalid_grant`. A client that does not hold a
+grant for the named predecessor cannot produce an assertion that
+verifies against its `cnf` and so cannot expand it.
 
 Stated as the eligibility rule rather than a consequence: this
-profile's expansion requires a refresh-token-bearing grant, and a
-deployment that issues no refresh token for a Mission forgoes it.
-Nothing else is lost. Succession stays reachable through a fresh
-approval, a new Mission whose disclosure references the work it
-continues, since the successor's authority comes only from the fresh
-consent in any case; and the Subject or an administrator acts on the
-predecessor at the management plane regardless, whose standing is
-the authenticated principal, never a token's possession
-({{I-D.draft-mcguinness-oauth-mission-status}}). The grant proof
-gates the proposal channel (who may put an expansion wearing this
-predecessor's name in front of the Approver, and who may trigger the
-atomic supersession), never the authority: no proof failure can
-widen anything.
+profile's expansion requires a refresh-token-bearing grant, because
+that is where the sender-constraint key the assertion verifies
+against is recorded, and a deployment that issues no refresh token for
+a Mission forgoes it. Nothing else is lost. Succession stays reachable
+through a fresh approval, a new Mission whose disclosure references
+the work it continues, since the successor's authority comes only
+from the fresh consent in any case; and the Subject or an
+administrator acts on the predecessor at the management plane
+regardless, whose standing is the authenticated principal, never a
+token's possession ({{I-D.draft-mcguinness-oauth-mission-status}}).
+The grant proof gates the proposal channel (who may put an expansion
+wearing this predecessor's name in front of the Approver, and who may
+trigger the atomic supersession), never the authority: no proof
+failure can widen anything.
 
-Presenting the predecessor's refresh token in the PAR request MUST
-follow the issuance profile's handling for that token:
+Presenting and verifying the relationship assertion in the PAR request
+observes:
 
-1. A sender-constrained refresh token MUST be presented in conformance
-   with its sender constraint. When the token is DPoP-bound
-   {{RFC9449}}, the PAR request MUST carry a DPoP proof bound to the
-   PAR endpoint (its `htu` and `htm`); when it is mTLS-bound
-   {{RFC8705}}, the mutual-TLS connection of the PAR request satisfies
-   the constraint.
-2. Presenting the token for expansion MUST NOT rotate it. It MUST NOT
-   register as a replay in the deployment's refresh-token replay
-   detection. The token is used here only to bind and resolve the
-   predecessor, not to refresh.
+1. The assertion's sender-constraint is satisfied per
+   {{relationship-assertion-cnf}}; no separate DPoP proof or mTLS step
+   applies beyond what that section requires.
+2. The predecessor's refresh token is never presented for this
+   binding, so verifying the assertion neither rotates it nor consumes
+   the deployment's refresh-token replay-detection budget: the
+   assertion has its own single-use `jti` check
+   ({{relationship-assertion-verification}}), entirely separate from
+   the predecessor's own refresh-token lifecycle.
 3. Each expansion presentation MUST be recorded and counted toward the
    deployment's anomaly detection.
 4. The per-predecessor rate limit ({{policy-probing}}) applies
-   unconditionally. A deployment SHOULD apply a tighter bound when the
-   presented token is not sender-constrained.
+   unconditionally.
 
-The record-and-count rule exists because, in a rotation-based
-deployment, the no-rotation and no-replay carve-out would otherwise
-let a stolen bearer refresh token be presented repeatedly without
-detection. The successor's authority still comes only from the fresh
-consent at the approval event, never from authority the binding token
-could itself derive.
+A stolen bearer predecessor refresh token, on its own, can no longer
+bind an expansion at all: with no refresh token in the request, only a
+party that also holds the predecessor's sender-constraint private key
+can produce a verifying assertion. The record-and-count rule remains
+useful against a different threat, a stolen sender-constraint key
+producing repeated assertions, or an authenticated client behaving
+anomalously. The successor's authority still comes only from the
+fresh consent at the approval event, never from authority the binding
+assertion could itself derive.
 
-This binding requires the predecessor to have a refresh token to
-present. A Mission issued without one (for example an
-access-token-only grant) has no `predecessor_token` to carry and so
-cannot be expanded through this binding; a deployment that must expand
-such a Mission defines an alternative grant proof by extension, or the
-task obtains its broadened authority as an ordinary new Mission under
-the issuance profile, linked by the successor's `related_to` member
-({{predecessor-member}}) for lineage.
+This binding requires the predecessor to have a refresh token whose
+`cnf` key the assertion is verified against. A Mission issued without
+one (for example an access-token-only grant) has no key to bind an
+assertion to and so cannot be expanded through this binding; a
+deployment that must expand such a Mission defines an alternative
+grant proof by extension, or the task obtains its broadened authority
+as an ordinary new Mission under the issuance profile, linked by the
+successor's `related_to` member ({{predecessor-member}}) for lineage.
 
 Because expansion reuses the issuance profile's grant binding, it
 needs no opaque expansion ticket or other new bearer: the predecessor
@@ -882,11 +1065,30 @@ Content-Type: application/x-www-form-urlencoded
 
 mission_intent=%7B...journal-entries%20cap%20%242000...%7D&
 predecessor=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&
-predecessor_token=<refresh%20token%20bound%20to%20the%20predecessor>&
+predecessor_assertion=<Mission%20relationship%20assertion%20signed%20
+  against%20the%20predecessor%27s%20cnf%20key>&
 client_id=s6BhdRkqt3
 ~~~
 
-The Mission Issuer resolves the predecessor from the grant, confirms it
+The decoded `predecessor_assertion` (its signature omitted here):
+
+~~~ json
+{
+  "iss": "s6BhdRkqt3",
+  "sub": "s6BhdRkqt3",
+  "aud": "https://as.example.com",
+  "iat": 1793607000,
+  "exp": 1793607180,
+  "jti": "rla_4mK7pQ2xV9rT6nL1sB",
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "mission_operation": "mission-expansion"
+}
+~~~
+
+The Mission Issuer resolves the predecessor from `mission_id`,
+verifies the assertion per {{relationship-assertion-verification}}
+(its signature against that Mission's own recorded `cnf`, `aud`,
+lifetime, and unseen `jti`), confirms it
 matches `predecessor` and is `active`, derives the successor's Authority
 Set, and obtains fresh consent from `alice` for the widened cap,
 issuing an authorization code. When the client redeems that code, the
@@ -919,13 +1121,16 @@ An implementation claims conformance to this document only in the
 Mission Issuer role and only when it adjudicates expansion. A
 conforming **expansion-capable Mission Issuer** MUST:
 
-- accept the `predecessor` and `predecessor_token`
-  request parameters on a Mission creation via PAR and treat the
+- accept the `predecessor` and `predecessor_assertion`
+  request parameters on a Mission creation via PAR, verify the
+  assertion per {{relationship-assertion-verification}}, and treat the
   request as an expansion ({{submission}});
+- refuse a refresh token presented in `predecessor_assertion` with
+  `invalid_request` ({{submission}});
 - bind the expansion request to the predecessor's grant and refuse a
-  request whose `predecessor` does not match the grant-resolved
-  Mission, or whose predecessor is not `active`, with `invalid_grant`
-  ({{request-binding}}, {{predecessor-active}});
+  request whose `predecessor` does not match the Mission resolved from
+  the assertion, or whose predecessor is not `active`, with
+  `invalid_grant` ({{request-binding}}, {{predecessor-active}});
 - adjudicate the expansion as a fresh approval event that obtains new
   consent for the successor's authority ({{adjudication}}), enforcing
   the successor-expiry rule ({{successor-expiry}});
@@ -968,15 +1173,20 @@ example by naming another tenant's or subject's `mission_id` in the
 
 Mitigations:
 
-- The predecessor is resolved from the grant the client presents, not
-  from the `predecessor` value; the Mission Issuer verifies that the
-  resolved Mission matches the named one and refuses a mismatch with
-  `invalid_grant` ({{request-binding}}). A client that holds no grant
-  for the named predecessor cannot expand it.
+- The predecessor is resolved from the assertion's `mission_id`, then
+  the assertion's signature MUST verify against that same resolved
+  Mission's own recorded `cnf`, never a different Mission's key
+  ({{relationship-assertion-verification}}); the Mission Issuer also
+  verifies that the resolved Mission matches the `predecessor` request
+  value and refuses a mismatch with `invalid_grant`
+  ({{request-binding}}). A client that holds no grant for the named
+  predecessor cannot produce an assertion that verifies against its
+  key and so cannot expand it.
 - The issuance profile's integrity anchors are issuer-bound, so a
   Mission's governance state cannot be transplanted across Mission
   Issuers; an expansion is adjudicated only at the predecessor's own
-  `issuer`.
+  `issuer`, which the assertion's `aud` also binds it to
+  ({{relationship-assertion}}).
 
 ## Authority comes only from new consent {#new-consent}
 
@@ -1042,8 +1252,8 @@ Mitigations:
 - The Mission Issuer MUST rate-limit expansion requests per predecessor
   per client. The bound is unconditional: it caps both policy probing
   and the approval prompts a client can drive against an Approver
-  (prompt fatigue). A deployment SHOULD apply a tighter bound when the
-  presented `predecessor_token` is not sender-constrained
+  (prompt fatigue), and applies regardless of client type because the
+  assertion's sender-constraint is itself required unconditionally
   ({{request-binding}}).
 - A denial reason MUST NOT disclose policy boundaries beyond the
   adjudicated request ({{denial-reasons}}); a denial reports whether
@@ -1061,6 +1271,16 @@ and defeats it; the member is therefore mandatory on a successor
 
 General OAuth security guidance applies to the underlying credentials
 through the issuance profile.
+
+## Relationship assertion theft {#assertion-theft}
+
+An intercepted `predecessor_assertion` is a narrower prize than an
+intercepted refresh token was: it is unexpired for at most 300 seconds,
+redeemable exactly once, and useless without the predecessor's own
+sender-constraint private key, since the theft of the assertion alone
+does not convey that key ({{relationship-assertion-cnf}}). A thief who
+also holds the key could already act as the predecessor directly and
+gains nothing from the assertion that key does not already give them.
 
 # Privacy Considerations
 
@@ -1120,10 +1340,10 @@ Parameters" registry:
 - Change Controller: IETF
 - Reference: this document, {{submission}}
 
-- Name: `predecessor_token`
+- Name: `predecessor_assertion`
 - Parameter Usage Location: authorization request
 - Change Controller: IETF
-- Reference: this document, {{submission}}
+- Reference: this document, {{submission}}, {{relationship-assertion}}
 
 - Name: `mission_expansion_status`
 - Parameter Usage Location: authorization response
@@ -1140,9 +1360,10 @@ Parameters" registry:
 As with `mission_intent` in the issuance profile, PAR {{RFC9126}}
 carries authorization-request parameters without a distinct usage
 location, so the pushed submission of these parameters needs no
-separate registration. `predecessor_token` carries a refresh token and
-is submitted only through PAR, never on a front-channel authorization
-request ({{submission}}).
+separate registration. `predecessor_assertion` carries a Mission
+relationship assertion ({{relationship-assertion}}), never a refresh
+token, and is submitted only through PAR, never on a front-channel
+authorization request ({{submission}}).
 
 # Acknowledgments
 {:numbered="false"}

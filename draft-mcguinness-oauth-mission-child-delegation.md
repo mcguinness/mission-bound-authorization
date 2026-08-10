@@ -163,7 +163,7 @@ This document is optional. It is a layered extension to the issuance
 profile, not a change to it. A deployment that implements
 {{I-D.draft-mcguinness-oauth-mission}} and never creates a Child
 Mission is fully conformant to that profile and is unaffected by this
-document: it accepts no `parent` or `parent_token` parameter, records
+document: it accepts no `parent` or `parent_assertion` parameter, records
 no `parent` member, and applies no cascade revocation. The issuance
 profile's delegated-token mechanism is complete without Child Missions;
 the child machinery defined here is relevant only when a deployment
@@ -330,11 +330,19 @@ with child-specific binding to the parent. The request contains:
 `parent`:
 : REQUIRED. The `mission_id` of the Parent Mission.
 
-`parent_token`:
-: REQUIRED. A refresh token or other Mission-Issuer-accepted grant
-  bound to the Parent Mission. The Mission Issuer resolves the Parent
-  Mission from this grant. The `parent` parameter is a cross-check and
-  audit value; it does not by itself authorize child creation.
+`parent_assertion`:
+: REQUIRED. A Mission relationship assertion, the artifact the
+  expansion profile defines
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}), naming the
+  Parent Mission's `mission_id` in the assertion's `mission_id` claim
+  and this profile's `mission-child-creation` value of the assertion's
+  shared `mission_operation` claim. The Mission Issuer resolves the
+  Parent Mission from the assertion and verifies it under the
+  expansion profile's AS verification rules, including the check that
+  the assertion's signature verifies against the resolved Parent
+  Mission's own recorded `cnf`. A refresh token MUST NOT be accepted in
+  this parameter. The `parent` parameter is a cross-check and audit
+  value; it does not by itself authorize child creation.
 
 `child_actor`:
 : REQUIRED. An object identifying the child actor that will hold or
@@ -366,31 +374,39 @@ with child-specific binding to the parent. The request contains:
 The parent redeems the pushed request at the token endpoint under the
 grant type this profile defines for child creation ({{grant-type}}).
 
-The Mission Issuer MUST resolve the parent from `parent_token`, verify
-that it matches `parent`, verify that the parent is `active`, and verify
-that the applicable parent Authority Set entry's `delegation` member
-carries a `children` object ({{fanout}}) that permits child creation for
-the requested authority.
+The Mission Issuer MUST resolve the parent from the assertion's
+`mission_id`, verify the assertion in full under the expansion
+profile's AS verification rules
+({{I-D.draft-mcguinness-oauth-mission-expansion}}), verify that the
+resolved Mission matches `parent`, verify that the parent is `active`,
+and verify that the applicable parent Authority Set entry's
+`delegation` member carries a `children` object ({{fanout}}) that
+permits child creation for the requested authority.
 
 The Mission Issuer MUST reject a child creation request presented on a
-front channel with `parent_token`. The parent grant is presented only
+front channel with `parent_assertion`. The assertion is presented only
 on the authenticated back channel.
 
-Presenting the parent's refresh token as `parent_token` MUST follow
-the issuance profile's handling for that token: a sender-constrained
-refresh token MUST be presented in conformance with its sender
-constraint.
+The assertion's sender-constraint follows the expansion profile's rule
+({{I-D.draft-mcguinness-oauth-mission-expansion}}): its signature MUST
+verify against the key confirmed by the Parent Mission's own recorded
+`cnf`, proving control of the parent's grant without presenting the
+parent's refresh token.
 
-Presenting the token for child creation MUST NOT rotate it and
-MUST NOT register as a replay in the deployment's refresh-token
-replay detection. The token is used here only to bind and resolve the
-parent, not to refresh.
+The parent's refresh token is never presented for child creation, so
+verifying the assertion neither rotates it nor consumes the
+deployment's refresh-token replay-detection budget: the assertion has
+its own single-use `jti` check, entirely separate from the parent's
+own refresh-token lifecycle.
 
-That carve-out would let a stolen bearer refresh token be presented
-repeatedly without detection. The Mission Issuer therefore MUST record
+A stolen bearer parent refresh token, on its own, can no longer bind a
+child creation at all: with no refresh token in the request, only a
+party that also holds the parent's sender-constraint private key can
+produce a verifying assertion. The Mission Issuer MUST still record
 each child-creation presentation and count it toward the deployment's
 anomaly detection, and MUST rate-limit child creation requests per
-parent when the presented token is not sender-constrained.
+parent, unconditionally, now that the assertion's sender-constraint is
+itself required unconditionally.
 
 ## Child Client Identity {#child-client-identity}
 
@@ -537,7 +553,9 @@ parent ({{child-client-identity}}).
 The Mission Issuer processes child creation in this order:
 
 1. Authenticate the client submitting the PAR request.
-2. Resolve the Parent Mission from `parent_token`.
+2. Resolve the Parent Mission from `parent_assertion`'s `mission_id`
+   and verify the assertion under the expansion profile's AS
+   verification rules ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 3. Verify the resolved Mission matches `parent`.
 4. Verify the Parent Mission is `active` and no ancestor Mission in
    its lineage chain is non-active.
@@ -574,10 +592,28 @@ Content-Type: application/x-www-form-urlencoded
 
 mission_intent=%7B...read-only%20Q3%20invoice%20extraction...%7D&
 parent=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&
-parent_token=<refresh%20token%20bound%20to%20the%20parent>&
+parent_assertion=<Mission%20relationship%20assertion%20signed%20
+  against%20the%20parent%27s%20cnf%20key>&
 child_actor=%7B%22sub%22%3A%22subagent-invoice-extractor%22%2C
   %22sub_profile%22%3A%22ai_agent%22%7D&
 client_id=s6BhdRkqt3
+~~~
+
+The decoded `parent_assertion` (its signature omitted here), under the
+expansion profile's Mission relationship assertion shape
+({{I-D.draft-mcguinness-oauth-mission-expansion}}):
+
+~~~ json
+{
+  "iss": "s6BhdRkqt3",
+  "sub": "s6BhdRkqt3",
+  "aud": "https://as.example.com",
+  "iat": 1793607000,
+  "exp": 1793607180,
+  "jti": "rla_9pL3xK6qV2mR7wT4sN",
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "mission_operation": "mission-child-creation"
+}
 ~~~
 
 The parent then redeems the returned `request_uri` at the token
@@ -639,7 +675,7 @@ This profile defines these symbolic denial reasons:
 
 `parent_mismatch`:
 : The caller-supplied `parent` does not match the Mission resolved from
-  `parent_token`.
+  `parent_assertion`.
 
 `delegation_not_permitted`:
 : The applicable parent Authority Set entry's `delegation` member
@@ -670,7 +706,7 @@ body the symbolic reason rides in the `mission_denial_reason` member,
 the shared adjudication-denial carrier defined and registered by the
 expansion profile ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
 alongside the OAuth `error` member. A child creation request presented
-on the front channel with `parent_token` MUST be rejected with
+on the front channel with `parent_assertion` MUST be rejected with
 `invalid_request` ({{child-creation}}).
 
 For example, a child Mission Intent that drops the parent entry's
@@ -1265,7 +1301,11 @@ Mission Expansion
 Mission that replaces a predecessor for a broader task. Mission Child
 Delegation creates a dependent Mission for a child actor with narrower
 authority. Expansion widens by fresh approval; Child Missions attenuate
-within parent authority. The two operations are distinct.
+within parent authority. The two operations are distinct, but bind to
+their upstream Mission the same way: both `predecessor_assertion` and
+`parent_assertion` carry a Mission relationship assertion of the shape
+expansion defines, distinguished by the `mission_operation` value each
+profile names.
 
 A Child Mission MAY be expanded, but only within the parent's authority:
 a successor Child Mission MUST remain a strict subset of the Parent
@@ -1311,8 +1351,12 @@ discover child-delegation support before attempting child creation:
 A conforming Child-Mission-capable Mission Issuer MUST:
 
 - create Child Missions only through explicit authenticated requests;
-- resolve the Parent Mission from a parent grant, not from the
-  caller-supplied `parent` identifier alone;
+- resolve the Parent Mission from a `parent_assertion`, not from the
+  caller-supplied `parent` identifier alone, verify it under the
+  expansion profile's AS verification rules
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and refuse a
+  refresh token presented in that parameter with `invalid_request`
+  ({{child-creation}});
 - enforce strict-subset authority and expiry;
 - enforce delegation and fan-out controls;
 - record the `parent` member on child Mission records and tokens;
@@ -1361,26 +1405,34 @@ child-token lifetimes.
 
 An attacker could try to create a child under a parent it does not
 control by naming a `parent` identifier. The Mission Issuer resolves
-the parent from `parent_token`, not from the identifier, and verifies
-the two match.
+the parent from `parent_assertion`'s `mission_id`, not from the
+`parent` request value, and then requires the assertion's signature to
+verify against that same resolved Parent Mission's own recorded `cnf`,
+never a different Mission's key
+({{I-D.draft-mcguinness-oauth-mission-expansion}}); only then does it
+verify the two match.
 
-## Parent Grant at Rest in PAR
+## Relationship Assertion at Rest in PAR
 
-A child creation request carries `parent_token`, a refresh token or
-other parent grant, through PAR {{RFC9126}}, so that credential sits at
-rest in the PAR store until the pushed request is redeemed or expires.
-A deployment MUST protect the PAR store as credential storage:
+A child creation request carries `parent_assertion` through PAR
+{{RFC9126}}, so it sits at rest in the PAR store until the pushed
+request is redeemed or expires. Unlike the refresh token it replaces,
+the assertion is not by itself a reusable credential: it verifies only
+against the Parent Mission's own sender-constraint key, expires within
+300 seconds, and is single-use, so its exposure window and blast radius
+are already narrow. A deployment SHOULD nonetheless observe ordinary
+log hygiene:
 
-- it SHOULD hold `parent_token` only until its `request_uri` is
+- it SHOULD hold `parent_assertion` only until its `request_uri` is
   redeemed or expires, and then delete it;
-- it MUST NOT write `parent_token` to request logs, traces, or audit
-  records in the clear; and
-- it MUST redact or hash `parent_token` wherever the pushed request is
-  otherwise recorded.
+- it MUST NOT write `parent_assertion` to request logs, traces, or
+  audit records in the clear; and
+- it MUST redact or hash `parent_assertion` wherever the pushed request
+  is otherwise recorded.
 
 Child delegation evidence ({{child-evidence}}) records the parent
-Mission by identifier and authority hash, never the parent grant
-itself.
+Mission by identifier and authority hash, never the parent grant or
+the assertion itself.
 
 ## Subset Bugs
 
@@ -1402,14 +1454,15 @@ registry. For each: Parameter Usage Location authorization request;
 Change Controller IETF; Reference this document, {{child-creation}}.
 
 - `parent`
-- `parent_token`
+- `parent_assertion`
 - `child_actor`
 
 As with `mission_intent` in the issuance profile, PAR {{RFC9126}}
 carries authorization-request parameters without a distinct usage
 location, so the pushed submission of these parameters needs no
-separate registration. `parent_token` carries a refresh token or other
-parent grant and MUST be submitted only through PAR on the
+separate registration. `parent_assertion` carries a Mission
+relationship assertion ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
+never a refresh token, and MUST be submitted only through PAR on the
 authenticated back channel, never on a front-channel authorization
 request ({{child-creation}}).
 
