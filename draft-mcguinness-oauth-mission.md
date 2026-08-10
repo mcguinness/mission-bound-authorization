@@ -2042,8 +2042,9 @@ profile requires, a derived token:
 - sets `sub` to the Mission's Subject `sub`;
 - carries `client_id` per its ordinary {{RFC8693}} Section 4.3 and
   {{RFC9068}} Section 2.2 meaning, the client that requested this
-  particular token, and carries the Mission's originally-approved
-  agent in `mission.approved_client` ({{mission-claim}});
+  particular token; the Mission's originally-approved agent is not
+  carried on the token, and remains recorded in the Mission Record
+  ({{mission-record}});
 - MUST set `aud` to identify the Resource Server(s) authorized to
   consume the carried `authorization_details`, and MUST NOT include an
   audience unrelated to that carried authority (see below);
@@ -2224,38 +2225,6 @@ The `mission` claim is a JSON object:
 : REQUIRED. A string. The Mission's
   `authority_hash`, binding the token to the consented authority.
 
-`approved_client`:
-: REQUIRED. An object identifying the Mission's originally-approved
-  agent, mirroring the Mission Record's `client_id`
-  ({{mission-record}}). It has these members:
-
-  `client_id`:
-  : REQUIRED. A string. The Mission's approved agent.
-
-  `iss`:
-  : OPTIONAL. A string. The issuer that approved the Mission, carried
-    only when it differs from the token's `iss` (for example, a
-    token locally minted for the Mission in another trust domain,
-    {{I-D.draft-mcguinness-oauth-mission-cross-domain}}); when
-    absent, the token's `iss` names the approving issuer.
-
-  The `client_id` value identifying the approved agent is carried
-  unchanged from the Mission's initial access token through every
-  derivation, delegation, and cross-domain projection, so a verifier
-  reads the originally-approved agent from any single Mission-bound
-  token without needing the `act` chain or another domain's records.
-  `iss` is present or absent per the rule above at each hop: the
-  Mission Issuer's own tokens omit it, while a token locally minted
-  for the Mission in another trust domain carries it, since that
-  token's `iss` then differs from the approving issuer
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
-  `client_id` (top-level) keeps its
-  ordinary {{RFC8693}} Section 4.3 and {{RFC9068}} Section 2.2
-  meaning, the client that requested this token
-  ({{client-id-rebinding}}); on a token where no delegation has
-  occurred the two are equal, and `approved_client` remains present
-  for uniform verification.
-
 `expires_at`:
 : OPTIONAL. A string. The Mission's `expires_at`
   ({{mission-record}}), in RFC 3339 {{RFC3339}} date-time form and
@@ -2326,8 +2295,7 @@ Example decoded token payload:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-    "approved_client": { "client_id": "s6BhdRkqt3" }
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   }
 }
 ~~~
@@ -2361,11 +2329,11 @@ required. A Resource Server:
 - MUST treat `client_id` per its ordinary meaning under {{RFC8693}}
   Section 4.3 and {{RFC9068}} Section 2.2: the OAuth client that
   requested this token. This profile does not redefine it, on a
-  delegated token or otherwise ({{client-id-rebinding}}). A Resource
-  Server that needs the Mission's originally-approved agent reads
-  `mission.approved_client` ({{mission-claim}}); it MUST NOT infer
-  that identity from `client_id` on a token that carries an `act`
-  chain.
+  delegated token or otherwise ({{client-id-rebinding}}). The
+  Mission's originally-approved agent is not carried on the token; it
+  is recorded in the Mission Record ({{mission-record}}) at the
+  issuer, and a Resource Server MUST NOT infer that identity from
+  `client_id`.
 - MAY impose stronger actor-chain requirements when it authorizes or
   logs the caller on a token that carries an `act` chain (for
   example, requiring and recording the chain), but MUST NOT
@@ -2406,10 +2374,11 @@ Mission-unaware Resource Server that authorizes or logs the caller on
 binds a Mission-aware RS; a Mission-unaware {{RFC9068}} RS reads
 `client_id` as the immediate client, which is now accurate for that
 single token, but it still cannot see the delegation lineage carried
-in the `act` chain or the originally-approved agent carried in
-`mission.approved_client`, so it cannot apply actor-chain policy or
-join a delegate's action back to the Mission's approval in its own
-audit records. A resource that requires Mission-bound tokens at all
+in the `act` chain, and it has no way to look up the
+originally-approved agent from the Mission Record, so it cannot apply
+actor-chain policy or join a delegate's action back to the Mission's
+approval in its own audit records. A resource that requires
+Mission-bound tokens at all
 advertises that through the `mission_bound_authorization_required`
 protected resource metadata member ({{protected-resource-metadata}}),
 and a Resource Server that serves such a resource is, by that
@@ -2726,7 +2695,6 @@ While the Mission is `active`, the response is the standard
     "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-    "approved_client": { "client_id": "s6BhdRkqt3" },
     "state": "active"
   }
 }
@@ -2743,7 +2711,6 @@ composite-active rule ({{composite-active}}):
     "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-    "approved_client": { "client_id": "s6BhdRkqt3" },
     "state": "revoked"
   }
 }
@@ -2782,10 +2749,8 @@ the following:
   `client_id` is the OAuth client that requested it, per {{RFC8693}}
   Section 4.3 and {{RFC9068}} Section 2.2; this profile does not
   override that definition. The Mission's originally-approved agent
-  is instead carried in `mission.approved_client`
-  ({{mission-claim}}), unchanged from the delegating token, so the
-  approved party stays verifiable regardless of which client
-  requested a given derived token.
+  is no longer named by `client_id` on such a token; it remains
+  recorded in the Mission Record ({{mission-record}}).
 - **The `act` chain identifies the delegates.** The delegated token
   carries an `act` claim per the Actor Profile
   {{I-D.draft-mcguinness-oauth-actor-profile}} and {{RFC8693}}: the
@@ -2801,9 +2766,8 @@ the following:
   Delegation MUST NOT add authority.
 - **The Mission binding rides unchanged.** The delegated token
   carries the same `mission` claim ({{mission-claim}}), its
-  `id`, `issuer`, `authority_hash`, and `approved_client`, so every
-  actor in the chain operates under the one consented authority and
-  the same recorded approved agent.
+  `id`, `issuer`, and `authority_hash`, so every actor in the chain
+  operates under the one consented authority.
 - **Each delegate is bound to its own key.** The delegated token MUST
   be sender-constrained ({{mission-bound-tokens}}) to the **delegate's
   own** key: its `cnf` is the delegate's DPoP or mTLS key, not the
@@ -2839,10 +2803,10 @@ Section 4.3, which {{RFC9068}} Section 2.2 incorporates: the OAuth
 client that requested the token, the immediate client, on every
 issued or derived token, including a delegated one. It does not
 override that definition for delegated tokens. The Mission's
-originally-approved agent is carried separately, in
-`mission.approved_client` ({{mission-claim}}), unchanged hop to hop,
-so the approved party stays verifiable without redefining a
-registered claim. Downstream delegates are carried in the `act` chain
+originally-approved agent is no longer carried in a token claim; it
+remains recorded in the Mission Record ({{mission-record}}), without
+redefining a registered claim. Downstream delegates are carried in
+the `act` chain
 ({{delegation}}), whose outermost entry is the current delegate;
 earlier delegates nest inward through `act.act`.
 
@@ -2861,8 +2825,9 @@ relaxation: it is safe only where every Resource Server processes the
 `act` chain anyway, since that is where the executing party's
 identity then lives, which is exactly the discipline this profile
 already requires of a Mission-aware Resource Server
-({{rs-enforcement}}). `mission.approved_client` gives the same stable
-approved-agent binding without that conformance cost.
+({{rs-enforcement}}). The Mission Record ({{mission-record}}) gives
+the same stable approved-agent binding without that conformance
+cost.
 
 The operational rule of {{rs-enforcement}} holds under the adopted
 model too, for a different reason: a Resource Server that authorizes
@@ -2886,12 +2851,11 @@ forbidden.
 An agent MAY present its own Mission-bound access token as the
 `subject_token` of a Token Exchange ({{RFC8693}}) with no actor, to
 obtain a narrowed token (for example, a single-audience one). The AS
-MUST verify that the client authenticated at a no-actor exchange
-matches the presented token's `mission.approved_client` `client_id`
-({{mission-claim}}), the Mission's approved agent, mirroring the
-Mission Record's `client_id` ({{mission-record}}); any other party's
-no-actor exchange is refused, since a delegate narrows only through a
-delegated exchange that names it in the `act` chain. The
+MUST verify that the client authenticated at a no-actor exchange is
+the Mission's approved agent, per the Mission Record's `client_id`
+({{mission-record}}); any other party's no-actor exchange is
+refused, since a delegate narrows only through a delegated exchange
+that names it in the `act` chain. The
 result MUST be a subset ({{subset}}) of the presented token's
 authority, carries the same `mission` claim ({{mission-claim}}), and
 adds no `act` chain. It is a derivation and is gated on the Mission
@@ -3016,8 +2980,7 @@ narrows out. The decoded delegated access token:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-    "approved_client": { "client_id": "s6BhdRkqt3" }
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   }
 }
 ~~~
@@ -3030,9 +2993,10 @@ itself, not because this profile requires the two to match. A
 deployment where a different, already-authenticated client requests
 the exchange on a delegate's behalf, asserting the delegate only
 through an `actor_token`, would instead show that client's own
-identifier in `client_id`. `mission.approved_client` still names
-`s6BhdRkqt3`, the originally-approved agent, unchanged from the
-delegating token. The `cnf` is `tool-runner-7`'s own key, not the
+identifier in `client_id`. `client_id` no longer names
+`s6BhdRkqt3`, the originally-approved agent; it remains recoverable
+from the Mission Record via `mission_id` ({{mission-record}}). The
+`cnf` is `tool-runner-7`'s own key, not the
 agent's, so this token cannot be replayed as the agent. The
 non-delegable write entry was dropped; the read entry survives,
 carrying its `delegation` member so a further hop can be evaluated: a
@@ -3046,8 +3010,8 @@ expected to extend. Extensions build alongside the stable interface
 below; they MUST NOT redefine it. An extension MAY rely on these
 remaining stable across revisions of this profile:
 
-- the `mission` claim members `id`, `issuer`, `authority_hash`, and
-  `approved_client` ({{mission-claim}});
+- the `mission` claim members `id`, `issuer`, and `authority_hash`
+  ({{mission-claim}});
 - the `mission_resource_access` authorization details shape
   ({{authorization-derivation}}); and
 - the `act` delegation chain ({{delegation}}).
@@ -3520,13 +3484,13 @@ Mission-derived token, delegated or not, to the correct requesting
 client without needing to understand this profile. What such a
 component cannot see is different from misattribution: it has no
 visibility into the delegation lineage carried in the `act` chain
-({{delegation}}), and it does not learn the Mission's
-originally-approved agent, which this profile carries in
-`mission.approved_client` ({{mission-claim}}) rather than in
-`client_id`. A component that authorizes or logs on the approved
-agent's identity, or that must join a delegate's action back to the
-Mission's approval, MUST read `mission.approved_client` and the `act`
-chain and MUST NOT assume `client_id` carries either. A deployment
+({{delegation}}), and it has no way to look up the Mission's
+originally-approved agent, which this profile does not carry in
+`client_id` and instead leaves recorded in the Mission Record
+({{mission-record}}) at the issuer. A component that authorizes or
+logs on the approved agent's identity, or that must join a
+delegate's action back to the Mission's approval, MUST NOT assume
+`client_id` carries it. A deployment
 that delegates MUST route delegated Mission-bound traffic, including
 to logging and audit infrastructure, only through components that
 process the `act` chain ({{rs-enforcement}}), and SHOULD review any
@@ -3994,8 +3958,7 @@ token response ({{mission-bound-tokens}}). The decoded token:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-    "approved_client": { "client_id": "s6BhdRkqt3" }
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   }
 }
 ~~~
