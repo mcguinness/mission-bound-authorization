@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                           9 August 2026
-Expires: 10 February 2027
+Intended status: Experimental                             10 August 2026
+Expires: 11 February 2027
 
 
                    Mission Containment for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 February 2027.
+   This Internet-Draft will expire on 11 February 2027.
 
 Copyright Notice
 
@@ -79,7 +79,7 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Optional Extension
+   2.  Status: An Experimental Extension
    3.  Relationship to the Issuance Profile
    4.  Scope
    5.  Conventions and Terminology
@@ -143,9 +143,10 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-status]).  The overlay is held
    by the Mission Issuer, versions independently, and only ever grows.
 
-2.  Status: An Optional Extension
+2.  Status: An Experimental Extension
 
-   This document is optional.  It is a layered extension to the issuance
+   This document is optional and experimental: adopt it for evaluation,
+   not as a stable interface.  It is a layered extension to the issuance
    profile, not a change to it.  A deployment that implements
    [I-D.draft-mcguinness-oauth-mission] and never contains a Mission is
    fully conformant to that profile and is unaffected by this document:
