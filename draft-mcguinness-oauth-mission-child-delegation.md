@@ -32,6 +32,7 @@ normative:
   RFC7523:
   RFC8259:
   RFC8414:
+  RFC8693:
   RFC8785:
   RFC9126:
   I-D.draft-mcguinness-oauth-mission:
@@ -501,7 +502,21 @@ consumed on redemption, so a repeated redemption of the same
 Mission. This is the single gated derivation this profile permits per
 pushed child-creation request.
 
-On success the Mission Issuer responds with:
+On success the Mission Issuer responds with the {{RFC8693}} token
+response shape:
+
+`access_token`:
+: REQUIRED. The child-bound JWT authorization grant of
+  {{child-client-identity}}: the {{RFC7523}} assertion the child actor
+  redeems next. The issued artifact travels in this member, per
+  {{RFC8693}}.
+
+`issued_token_type`:
+: REQUIRED. `urn:ietf:params:oauth:token-type:jwt`.
+
+`token_type`:
+: REQUIRED. `N_A`, per {{RFC8693}} Section 2.2.1: bearer semantics do
+  not apply to this artifact.
 
 `mission_id`:
 : REQUIRED. The Child Mission identifier.
@@ -509,17 +524,11 @@ On success the Mission Issuer responds with:
 `parent`:
 : REQUIRED. The `parent` member of {{parent-member}}.
 
-`grant_type`:
-: REQUIRED. `urn:ietf:params:oauth:grant-type:jwt-bearer`
-  ({{RFC7523}}), naming the grant the child actor redeems next
-  ({{child-client-identity}}), not this creation grant.
-
-`assertion`:
-: REQUIRED. The child-bound JWT authorization grant of
-  {{child-client-identity}}.
-
-This grant issues no access token to its redeemer. The parent receives
-a grant reference for the child actor, never a Child Mission token,
+A token response carries no `grant_type`; none appears here. The
+`access_token` is not usable by its redeemer: only the child actor
+named in the assertion can redeem it, under the {{RFC7523}} JWT-bearer
+grant of {{child-client-identity}}. The parent receives it only to
+convey to the child actor, never to use as its own access token,
 consistent with the rule that child credentials never transit the
 parent ({{child-client-identity}}).
 

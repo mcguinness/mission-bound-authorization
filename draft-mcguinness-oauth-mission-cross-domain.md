@@ -33,6 +33,7 @@ normative:
   RFC7800:
   RFC8693:
   RFC8705:
+  RFC9068:
   RFC9396:
   RFC9449:
   I-D.draft-ietf-oauth-identity-chaining:
@@ -627,12 +628,16 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   - MUST be sender-constrained ({{RFC7800}}), like the grant it
     derives from;
   - MUST NOT be issued as a bearer token; and
-  - if it preserves the issuer's `client_id`, does so only as an audit
-    reference, not a local identity: that value is in the originating
-    AS's namespace, and a partner Resource Server MUST NOT resolve or
-    authorize on it as a local client, for the same portability reason
-    that applies to a `sub` matcher in `allowed_delegates` (see
-    below).
+  - sets `client_id` to the client that requested this local token,
+    the party that authenticated at redemption in the Resource AS's
+    own namespace, per {{RFC8693}} Section 4.3 and {{RFC9068}}
+    Section 2.2. It MUST NOT set `client_id` to the Mission's
+    approved agent from the originating domain. The approved agent is
+    not carried directly on this local token: it remains recoverable
+    at the originating AS from the Mission Record identified by
+    `mission.id` and `mission.issuer`. A Resource Server MAY impose
+    stronger actor-chain requirements but MUST NOT reinterpret
+    `client_id`.
 - MUST bound the issued `authorization_details` by what the
   cross-domain grant conveyed. It MUST apply its own local
   authorization policy in addition: honoring a Mission does not
@@ -650,7 +655,14 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Delegation
   Constraints"); the policy travels on the conveyed entries. The
   cross-domain grant carries no `act` chain ({{cross-domain-grant}}),
-  so the Resource AS's own delegation depth begins at 0.
+  so the Resource AS's own delegation depth begins at 0. Such a
+  delegated token's `client_id` is the local delegate, with that
+  delegate as the outermost `act`, per the issuance profile's
+  delegate model ({{I-D.draft-mcguinness-oauth-mission}}, Section
+  "Delegation Within a Mission"); that chain identifies delegates
+  within this domain only. The Mission's originating approved agent
+  is recoverable from the Mission Record, not from `client_id` or
+  this domain's `act` chain.
 - SHOULD record, per minted local token, both sides of the
   derivation: the consumed grant's `jti` and conveyed
   `authorization_details`, and the local token's own identifier or
@@ -797,6 +809,8 @@ A **Resource AS**:
 - bounds every local token by the grant that seeded it and issues it
   sender-constrained and short-lived ({{validation-at-resource-as}},
   {{cross-domain-revocation}});
+- sets each local token's `client_id` to the redeeming client, never
+  the Mission's approved agent ({{validation-at-resource-as}});
 - fails redemption with the codes of {{error-responses}};
 - where it offers token introspection for its local tokens, follows
   {{introspection-at-resource-as}}; and
@@ -1023,7 +1037,11 @@ audience-scoped authority for the ERP:
 The ID-JAG is short-lived (300 s), explicitly typed
 (`oauth-id-jag+jwt` in its JWT header), and sender-constrained to the
 agent. Its `exp` does not exceed the Mission's `expires_at`
-({{cross-domain-grant}}).
+({{cross-domain-grant}}). Only the agent may request a cross-domain
+projection ({{cross-domain-grant}}), so `client_id` (the requesting
+client) is the approved agent here too; no delegation has occurred,
+and the approved agent remains recoverable at the home AS from the
+Mission Record identified by `mission.id`.
 
 ## Stage 3: The Resource AS Issues a Local Access Token
 
@@ -1033,14 +1051,17 @@ establishes issuer trust in `as.example.com`, verifies the signature,
 checks that `aud` is itself, checks the expiry, and verifies the
 sender-constraint proof. It then issues its own access token for the
 ERP, preserving the `mission` claim unchanged and capping `exp` at the
-ID-JAG's `exp`:
+ID-JAG's `exp`. The agent redeems the ID-JAG under its own
+registration with `ras.partner.example.com`
+({{pre-established-trust}}), so `client_id` names that local
+registration, not the agent's home-domain `client_id`:
 
 ~~~ json
 {
   "iss": "https://ras.partner.example.com",
   "aud": "https://erp.partner.example.com",
   "sub": "partner-user_7Kp4QnZ2vR9s",
-  "client_id": "s6BhdRkqt3",
+  "client_id": "partner-agent-042",
   "iat": 1793606430,
   "exp": 1793606690,
   "jti": "at_7Kp4QnZ2vR9sT1mX8b3N",
@@ -1073,7 +1094,13 @@ the home AS. The token's `exp` (1793606690) is below the ID-JAG's
 (1793606700) and far below the Mission's `expires_at`. The Resource
 AS-local `sub` is illustrative; its value is determined by the
 subject-resolution rules of the ID-JAG and identity chaining profiles,
-not by this document.
+not by this document. `client_id` (`partner-agent-042`) is the
+Resource AS's own registration for the presenting client, per
+{{RFC8693}} Section 4.3 and {{RFC9068}} Section 2.2; it is not the
+Mission's approved agent (`s6BhdRkqt3`), which this local token does
+not carry. That identity remains recoverable at the home AS from the
+Mission Record identified by `mission.id`
+({{validation-at-resource-as}}).
 
 Revoking the Mission now stops new ID-JAGs, but the local token the
 Resource AS minted stays usable until its `exp` (260 seconds), bounded
