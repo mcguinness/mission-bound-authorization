@@ -59,6 +59,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
@@ -88,14 +96,6 @@ informative:
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-substrate:
-    title: "Mission Substrate Requirements"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
     author:
       -
         ins: K. McGuinness
@@ -317,60 +317,103 @@ Standalone binding:
   Mission family cites this mode by this name; "AS-optional" is its
   informal gloss.
 
-# Mission Substrate {#mission-substrate}
+# Mission Substrate Statement {#mission-substrate}
 
-The companion profiles of the Mission suite are defined against the
-Mission model's substrate primitives rather than against OAuth
-mechanics. The issuance profile provides all of them. A MAS provides
-these:
+This Statement applies to the standalone MAS binding defined by this
+revision and declares conformance to
+{{I-D.draft-mcguinness-mission-substrate}}.
 
-- the Mission identifier and `issuer`;
-- the lifecycle state space with the only-`active` rule and its
-  forward-compatibility treatment of unrecognized states;
-- the Authority Set representation, with the subset rule and Common
-  Constraints;
-- the integrity-anchor envelope, computed with the MAS's issuer URL as
-  the envelope `iss`; and
-- the audit horizon.
+The contextual-governance kernel maps as follows:
 
-Each primitive is the issuance profile's, unchanged
-({{I-D.draft-mcguinness-oauth-mission}}); a MAS re-defines none of
-them.
+1. **Mission Reference**: the tuple (`issuer`, `mission_id`) names one
+   Mission. The MAS issuer URL is the uniqueness namespace;
+   `mission_id` follows the issuance profile's comparison, retention,
+   entropy, and non-reassignment rules.
+2. **Controller**: the MAS controls approval, Mission state, and the
+   governance record. Consumers establish its identity and keys from
+   the MAS discovery document ({{discovery}}).
+3. **Actor binding**: the authenticated submitting client is the
+   Actor and is recorded as `client_id`; the MAS separately establishes
+   the Subject during approval. Later action decisions establish the
+   Actor and Subject through the Mission Join, including the mapping
+   assurance and ambiguity declared by the deployment
+   ({{mission-approval}}, {{mission-join}}).
+4. **Approved Context**: the Mission Intent and derived Authority Set
+   in the immutable Mission record are the Approved Context. The
+   issuance profile's `intent_hash` and `authority_hash`, computed
+   with the MAS issuer URL, are this binding's chosen commitments;
+   they are not substrate-kernel requirements.
+5. **Approval ceremony**: the asynchronous MAS approval surface
+   authenticates the Approver, establishes the Subject and Actor,
+   renders the derived authority, computes the commitments, and
+   creates the record `active` atomically with approval
+   ({{mission-approval}}).
+6. **Governance gate**: only `active` permits a positive MAS decision;
+   every other or unrecognized state fails closed. The lifecycle
+   endpoint supplies authenticated transitions, including revocation
+   by the authorized parties ({{lifecycle-and-state}}).
+7. **Reliance bound**: a positive MAS decision requires current
+   `active` state at decision time. Standing artifacts carry their own
+   bounds: a signed Mission Status is relied on within its declared
+   freshness window ({{lifecycle-and-state}}), and a Join Assertion
+   within the introspected token's lifetime ({{join-assertion}}).
+   Tokens of the unchanged Authorization Server are not represented as
+   Mission-governed artifacts.
+8. **Context propagation**: submission status and signed Mission
+   Status responses carry the Mission Reference. A Mission-joining PDP
+   verifies the reference against the acting credential before using
+   Mission authority. That join establishes correlation, not that the
+   unchanged Authorization Server issued the credential under the
+   Mission ({{mission-reference}}, {{mission-join}}).
+9. **Governance record**: the MAS audit log is the ordered governance
+   record. The MAS MUST append approval, positive and negative
+   Mission-dependent decisions, join decisions it makes, and lifecycle
+   transitions in per-Mission append order; MUST protect the log under
+   the same integrity and access controls as the Mission record; and
+   MUST retain both for the declared audit horizon.
 
-A MAS does NOT provide the Mission-bound credential primitive or
-issuance gating: no token carries the `mission` claim or
-Mission-derived `authorization_details`, and no issuance event is
-gated on Mission state.
+The binding declares these optional capabilities:
 
-The composition consequences follow from that split:
+| Capability | Claim | Scope and defining sections | Limitations |
+| --- | --- | --- | --- |
+| Lifecycle-Gated Authorization | conditional | MAS-native authority operations and, in a Mission-joining PDP deployment, action decisions check current state ({{lifecycle-and-state}}, {{mission-join}}) | The unchanged Authorization Server does not gate token issuance or refresh |
+| State-Observable | supported | Signed Mission Status responses with `mission_max_stale_seconds` ({{lifecycle-and-state}}, {{discovery}}) | Consumers fail closed when the declared freshness bound is exceeded |
+| Structured Authority | supported | The issuance profile's Authority Set and Common Constraints are held at the MAS and evaluated at the joining PDP | Semantics apply only to the declared authority-detail types and mappings |
+| Monotonic Derivation | conditional | Mission-joining PDP action evaluation and optional native child creation apply the defined no-broader-than relation ({{mission-join}}, {{native-child}}) | A separately approved expansion is a new approval, not a monotonic derivation; unchanged AS tokens are outside the claim |
+| Credential-Bound | conditional | A verified mapping join establishes credential-to-Mission correlation; an optional Join Assertion binds one introspected token more strongly ({{mission-join}}, {{join-assertion}}) | Neither form proves that the Authorization Server issued the token under the Mission |
+| Independently Verifiable | supported | Signed Mission Status proves record and state properties as of its freshness window; Join Assertions add token-specific correlation where used | Does not prove AS issuance under the Mission or current state after the observation window |
+| Portable Evidence | conditional | Consent Evidence, a Mission Mandate, or Audit Transparency when adopted | The base MAS audit log is Controller-local and is not portable evidence |
+{: title="Standalone MAS Mission substrate capabilities"}
 
-- The shaping, consent-evidence, audit-transparency, security-model,
-  status (including its completion machinery), and signals profiles
-  consume only the primitives
-  a MAS provides and compose with a MAS unchanged. Where such a
-  profile names the Mission Issuer or the issuer AS, the MAS is that
+The Portable Evidence condition is supplied only when the deployment
+adopts Consent Evidence
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), a Mission
+Mandate ({{I-D.draft-mcguinness-mission-mandate}}), or Audit
+Transparency ({{I-D.draft-mcguinness-mission-audit}}); the referenced
+profile defines the portable artifact and verification procedure.
+
+The composition consequences follow from those claims:
+
+- Shaping, consent evidence, audit transparency, the security model,
+  status, and signals compose with the capabilities they name. Where
+  such a profile names the Mission Issuer or issuer AS, the MAS is that
   party.
 - The runtime profile and its AuthZEN binding, the harness, and
-  orchestration compose through the runtime profile's Mission binding
-  establishment step ({{I-D.draft-mcguinness-mission-runtime}}): their
-  Mission Substrate sections mark the Mission-bound credential
-  binding-dependent, and this document profiles the step's
-  externally established mode as the Mission Join ({{mission-join}}).
-- A profile that requires the Mission-bound credential does not apply
-  in MAS-only mode: offline attenuation
-  ({{I-D.draft-mcguinness-oauth-mission-attenuation}}) attenuates a
-  credential that does not exist here, and the token-carriage aspects
-  of delegation (the `act` chain on Mission-bound tokens) have no
-  carrier.
+  orchestration compose through the runtime profile's externally
+  established binding mode
+  ({{I-D.draft-mcguinness-mission-runtime}}), profiled here as the
+  Mission Join ({{mission-join}}).
+- Offline attenuation does not apply in MAS-only mode because no
+  Mission-bound credential or offline-minting chain exists
+  ({{I-D.draft-mcguinness-oauth-mission-attenuation}}). The
+  token-carriage aspects of delegation likewise have no carrier.
 - Mission Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}})
   and Mission Child Delegation
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) define
   their request wire over OAuth Pushed Authorization Requests; their
-  MAS-native wire is defined by {{native-surfaces}}, which carries
-  both operations on the mission submission endpoint with an
-  authenticated-client binding in place of the OAuth wire's token
-  possession. Their models (supersession, lineage, cascade) apply to
-  MAS-held Missions unchanged.
+  MAS-native wire is defined by {{native-surfaces}}, with an
+  authenticated-client binding in place of OAuth token possession.
+  Their models apply to MAS-held Missions unchanged.
 
 # Mission Submission {#mission-submission}
 
@@ -1393,11 +1436,14 @@ per the family rule that references and binding proofs grant nothing.
 This section states what MAS-only deployment does not provide. These
 are structural properties of the mode, not implementation quality
 issues, and a deployment claiming this profile MUST NOT overstate
-them. The mode is a **partial-provision binding** in the substrate's
-terms ({{I-D.draft-mcguinness-mission-substrate}}): it provides the
-Mission record, anchors, and lifecycle but not the Mission-bound
-credential, so enforcement composes entirely through the runtime join
-and PEP coverage. Among the Mission Assurance Levels this is the Runtime-Enforced level reached
+them. The mode provides the contextual-governance kernel,
+State-Observable, and Structured Authority capabilities, but it does
+not claim that an unchanged Authorization Server's credential was
+issued under the Mission or that its issuance was lifecycle-gated.
+Credential-Bound correlation and action-time lifecycle gating compose
+through the runtime join and PEP coverage, within the conditional scope
+declared by {{mission-substrate}}. Among the Mission Assurance Levels
+this is the Runtime-Enforced level reached
 through the MAS binding, which provides no Mission-bound credential
 and no issuance gating
 ({{I-D.draft-mcguinness-mission-architecture}}).

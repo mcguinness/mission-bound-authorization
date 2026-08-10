@@ -25,20 +25,10 @@ author:
     organization: Independent
     email: public@karlmcguinness.com
 
-normative:
+informative:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-
-informative:
-  I-D.draft-mcguinness-oauth-mission-issuance-grant:
-    title: "Mission Issuance Grant for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
     author:
       -
         ins: K. McGuinness
@@ -53,7 +43,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-aauth:
-    title: "Mission-Bound Authorization for AAuth"
+    title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
     author:
       -
@@ -108,590 +98,720 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-discovery:
-    title: "Mission Open-World Discovery"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-progressive:
-    title: "Mission Progressive Authorization for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
 
 --- abstract
 
-The Mission model's substrate-neutral profiles are written against
-Mission primitives rather than against any one binding, so a binding
-of the model to a further authorization substrate hosts them
-unchanged, provided it supplies the primitives they consume. This
-document states those primitives normatively for the author of such a
-binding: the Mission record, identifier, and issuer; the lifecycle
-state space; the Authority Set representation; the integrity anchors;
-issuer key material; the audit horizon; approval-event fidelity; and
-either a Mission-bound credential or a defined join in its place.
-Each requirement points at the definition that owns it, each is
-checkable against the Mission Substrate Statement a conforming
-binding publishes, and nothing changes for the existing bindings and
-profiles.
+A Mission binds an actor to approved context under the governance of
+an identified controller.  Authorization substrates realize that
+relationship in materially different ways.  Some carry structured
+authority in credentials; others keep contextual policy at an online
+service and use substrate-native authorization at each resource.
+
+This document defines a small, substrate-neutral Mission kernel and a
+set of separately claimable capabilities.  The kernel covers a native
+Mission reference, controller and actor binding, approved context, an
+approval event, an active/non-active governance gate with bounded
+reliance, context propagation, and an ordered governance record.
+Optional capabilities cover lifecycle gating, state observation,
+structured authority,
+monotonic derivation, credential binding, independent verification,
+and portable evidence.  A Mission Substrate Statement declares which
+capabilities a binding supplies and the limits of each claim.
+
+The contract deliberately does not require OAuth identifiers or issuer
+semantics, a particular authorization-details format, a universal
+Authority Set or subset algebra, a JWT claim, or common intent and
+authority hashes.
 
 --- middle
 
 # Introduction
 
-A Mission is a durable governance object created by an explicit
-approval event: the approved task, with a lifecycle, that authority is
-derived for, bound to, and gated on. Mission-Bound Authorization for
-OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance
-profile", here "the core") defines the object and every primitive of
-the model, bound to the OAuth 2.0 Authorization Server. Two further
-bindings exist. The Mission Authority Server (MAS) is a standalone
-Mission Issuer beside an unchanged Authorization Server; it provides
-every primitive except the Mission-bound credential and issuance
-gating, and profiles the join that fills that gap as its Mission Join
-({{I-D.draft-mcguinness-mission-authority-server}}). The AAuth
-binding gives that protocol's native mission concept the model's
-structure; in its PS-asserted mode it provides every primitive, and in
-its federated mode it provides them all only where the Access Server
-carries the family `mission` members, and is Reference-only otherwise
-({{I-D.draft-mcguinness-mission-aauth}}).
+A Mission is a durable contextual-governance relationship created by
+an approval event.  It associates an actor and approved context with
+an identified controller, gives that relationship a stable reference,
+and makes subsequent governance decisions attributable to it.
 
-The family's substrate-neutral profiles (runtime enforcement and its
-decision API bindings, the harness, orchestration, intent shaping,
-consent evidence, consumption metering, open-world discovery, the
-Mandate, audit transparency, and the security model) are written
-against Mission primitives rather than against OAuth mechanics; each names what it consumes in a Mission Substrate
-section of its own, except consent evidence, whose consumption is
-stated by its approval binding. A binding that provides the
-primitives therefore hosts these profiles as written.
+That common relationship does not imply a common authorization model.
+For example, an OAuth deployment can derive a portable, structured
+authority envelope and carry it in an access token
+({{I-D.draft-mcguinness-oauth-mission}}).  A standalone Mission
+Authority Server (MAS) can manage the relationship without issuing the
+resource credential that exercises authority
+({{I-D.draft-mcguinness-mission-authority-server}}).  An AAuth Policy
+Server can keep contextual Mission data private while scopes,
+resource-owned policy, and per-hop authorization decisions provide
+deterministic resource access ({{I-D.draft-mcguinness-mission-aauth}}).
 
-The architecture document consolidates that interface
-informationally, ending in a Binding Checklist
-({{I-D.draft-mcguinness-mission-architecture}}). This document is the
-checklist's normative home, written for the author of a new binding:
-eight requirements ({{requirements}}), a composition table showing
-which profiles consume which primitives ({{composition}}), and a
-conformance role claimed through a published Mission Substrate
-Statement ({{conformance}}). It restates no definition: each
-requirement points at the core section that owns it.
+Treating the first model as the minimum contract would force the other
+models to emulate OAuth mechanics.  It would also make a claim such as
+"Mission substrate" ambiguous: a consumer could not tell whether it
+meant contextual governance, portable authority, current-state
+enforcement, or independently verifiable evidence.
 
-## Status: The Binding Contract {#status}
+This document therefore defines:
 
-This document is the family's binding-neutral contract. A requirement
-stated here binds a new binding that claims conformance
-({{conformance}}). The three existing bindings, the OAuth core, the
-Mission Authority Server, and the AAuth binding, predate this
-document and are its conforming instantiations: the contract was
-extracted from them, and {{crosswalk}} records where each satisfies
-it. Their own texts remain authoritative for their definitions, and
-where this document and the core appear to differ, the core governs.
+* a contextual-governance kernel that every conforming Mission
+  Substrate Binding provides ({{kernel}});
+* optional, independently declared capabilities ({{capabilities}});
+* rules for profiles that consume only the capabilities they need
+  ({{composition}}); and
+* a Mission Substrate Statement that makes each binding's guarantees
+  and limits checkable ({{statement}}).
 
-Ownership migrates by touch, not by relocation. When a
-binding-neutral definition next changes substantively, the change
-lands in this document and the owning binding section becomes a
-reference to it; no change is ever made solely to move words.
+The architectural relationship among Mission specifications is
+described informationally in
+{{I-D.draft-mcguinness-mission-architecture}}.  This document is the
+normative contract for substrate-neutral claims.
+
+## Scope and Non-Goals {#scope}
+
+This document standardizes the semantics a binding exposes, not the
+wire representation used to expose them.  It does not define an
+approval endpoint, credential format, state protocol, authority
+language, evidence format, or identifier syntax.
+
+In particular, the kernel does not require:
+
+* an OAuth `client_id`, Authorization Server, or OAuth issuer
+  identifier;
+* JSON, JWT, or a member named `mission`;
+* `authorization_details` or any other particular structured
+  authorization language;
+* one global Authority Set or a subset relation that applies across
+  administrative or protocol boundaries;
+* `intent_hash`, `authority_hash`, or any pair of common integrity
+  anchors; or
+* disclosure of the approved context to a resource or other
+  downstream consumer.
+
+A binding MAY use any of those mechanisms.  When it does, their
+guarantees arise from the binding and the capabilities it claims, not
+from the kernel.
+
+This document is designed to be adopted on its own.  Conformance
+requires no other document, and the kernel vocabulary is defined
+entirely here.  The Mission-Bound Authorization family uses this
+document as its binding-neutral contract; the family vocabulary
+mapping, the scoped precedence rule for the OAuth-native binding, and
+the change-ownership rule are collected in {{family}} and are not
+needed by an adopter outside that family.
 
 # Conventions and Terminology
 
 {::boilerplate bcp14-tagged}
 
-This document uses Mission, Mission Intent, Mission Issuer, Authority
-Set, Approver, Subject, the Mission Identifier, `issuer`, the
-`mission` claim, the integrity anchors (`intent_hash` and
-`authority_hash`), the subset rule, Common Constraints, the
-only-`active` rule, and the audit horizon as defined by the core. It uses Policy Enforcement Point
-(PEP), Policy Decision Point (PDP), consequential action, and Mission
-binding establishment as defined by
-{{I-D.draft-mcguinness-mission-runtime}}. A **Mission Substrate
-Binding** is a specification that binds the Mission model to an
-authorization substrate and claims conformance to this document
-({{conformance}}). It additionally uses:
+This document uses the following terms:
 
-Full provision:
-: Providing every primitive of {{requirements}}, including the
-  Mission-bound credential ({{credential}}).
+Actor:
+: The agent, service, workload, person, or other entity whose
+  operations are governed in the Mission context.  A binding defines
+  how the Actor is identified and authenticated.  "Actor" is not
+  synonymous with OAuth `client_id`.
 
-Partial provision:
-: Providing every primitive of {{requirements}} except the
-  Mission-bound credential, with a defined join in its place
-  ({{credential}}).
+Approver:
+: The person, policy authority, or other accountable party that makes
+  the approval decision through the binding's native ceremony.
 
-Lifecycle-gated substrate:
-: The floor. Mission state exists at the issuer; reliance MAY be
-  bounded by credential lifetime alone (TTL-first), with no
-  consumer-facing freshness source required. The OAuth core alone
-  satisfies this ({{lifecycle}}).
+Approved Context:
+: The task description, purpose, instructions, boundaries, or other
+  contextual material to which the Approver agreed.  It can be
+  machine-readable, human-readable, opaque to consumers, or a
+  combination.  It is not necessarily an authorization policy.
 
-State-observable substrate:
-: Consumers have an authenticated freshness source with a stated
-  staleness bound (Status pull, introspection, or Signals). A binding
-  MUST provide at least the lifecycle-gated capability;
-  state-observable is the overlay that runtime enforcement builds on
-  ({{lifecycle}}, {{I-D.draft-mcguinness-mission-runtime}}).
+Controller:
+: The identified authority responsible for the Mission's approval,
+  governance state, and governance record.  A binding can distribute
+  these functions, but it identifies the party accountable for them
+  and describes the trust relationships among the components.
+  "Controller" does not imply OAuth token issuance.
+
+Mission Context:
+: The durable relationship among a Controller, Actor, Approved
+  Context, approval event, governance state, and governance record.
+
+Mission Reference:
+: The substrate-native value, or tuple of values, that identifies one
+  Mission Context within a defined Controller namespace.
+
+Mission Substrate Binding:
+: A specification that maps the Mission Context kernel and zero or
+  more optional capabilities onto an authorization substrate and
+  claims conformance to this document.
 
 Mission Substrate Statement:
-: The published section of a Mission Substrate Binding that states,
-  item by item, how the binding provides each primitive
-  ({{statement}}).
+: The section of a Mission Substrate Binding that declares the
+  binding's kernel mapping and optional capabilities ({{statement}}).
 
-# Mission Substrate Requirements {#requirements}
+Positive governance decision:
+: A Controller decision that approves, permits, or continues an
+  operation specifically by relying on the Mission Context.  It does
+  not include an independent resource authorization decision that
+  does not rely on that context.
 
-Each subsection states the requirement on the binding, the home of the
-normative definition (a section of the core), and the consuming
-profiles; a summary here never overrides its home.
+{{family}} maps these terms to the vocabulary of the Mission-Bound
+Authorization family.
 
-## Mission Record, Identifier, and Issuer {#identifier}
+# Contextual-Governance Kernel {#kernel}
 
-A binding MUST require its implementations to maintain the Mission
-record as the core defines it: the durable object created at the
-approval event, immutable after creation except its lifecycle state,
-and retained per the audit horizon ({{audit-horizon}}).
+Every Mission Substrate Binding MUST provide all requirements in this
+section.  Meeting the kernel means only that a substrate carries
+Mission contextual governance.  It does not by itself mean that
+authority is portable, machine-evaluable, monotonically derived,
+credential-bound, or independently verifiable.  It does mean that no
+reliance derived from a Mission is unbounded ({{bounded-reliance}}).
 
-A binding MUST provide, together with an `issuer`, a Mission
-Identifier that:
+## Native Reference and Controller {#reference}
 
-- is opaque and carries no semantic content;
-- has at least 128 bits of entropy; and
-- is never reused.
+A binding MUST define a Mission Reference that is:
 
-The `issuer` is an issuer identifier naming the approving Mission
-Issuer, from which consumers resolve the binding's state and key
-surfaces; together the pair names exactly one Mission.
+* stable for the lifetime and retention period of the Mission
+  Context;
+* unambiguous within the Controller namespace declared by the
+  binding; and
+* never reassigned to a different Mission Context within that
+  namespace.
 
-A binding MAY define a substrate-native reference to the same Mission,
-as the AAuth binding does with its (`approver`, `s256`) pair; the
-Mission record MUST bind both names to the same Mission.
+If the native reference is not globally unambiguous, the binding MUST
+define the Controller identifier or other namespace value with which
+it is compared.  A reference can be random, content-addressed,
+sequential within a protected namespace, or a substrate-native tuple.
+The kernel does not impose an entropy floor or a particular syntax.
 
-Home: the Mission Record and Mission Identifier Format sections of
-{{I-D.draft-mcguinness-oauth-mission}}.
+The binding MUST define how a relying component identifies the
+Controller responsible for the reference.  This can be local
+configuration, a protocol identifier, a trust anchor, or another
+substrate-native mechanism.  A binding MUST NOT describe a bare value
+as globally identifying a Mission when its uniqueness actually
+depends on unstated local context.
 
-Consumers: every substrate-neutral profile keys on the pair, from
-enforcement decisions and evidence through harness work-item bindings
-to the audit statement subject and the Mandate, whose committed
-members assume the record's immutability.
+## Actor Binding {#actor-binding}
 
-## Mission Lifecycle States {#lifecycle}
+At approval, the Controller MUST bind the Mission Context to the
+Actor identity, key, workload identity, authenticated session, or
+other actor handle defined by the binding.  The value MUST be derived
+from authenticated context or verified proof; it MUST NOT be accepted
+solely from an unauthenticated proposal.
 
-A binding MUST provide the core's lifecycle state space, under the
-following rules.
+The binding MUST state:
 
-- The state space is `active`, `revoked`, and `expired` as the
-  minimum, with only `active` permitting issuance, derivation, or
-  continued reliance.
-- Every other state value, including one a consumer does not
-  recognize, is non-active and non-deriving. A binding MUST NOT
-  define a surface that fails open on an unrecognized state.
-- A binding that adopts an extension state MUST surface its value
-  verbatim on the binding's Mission state surfaces (the Mission
-  Status operation and kin), not translated there into a core state
-  or a substrate-native vocabulary, because the fail-safe rule keys
-  on the exact value.
-- On a substrate-native protocol surface a binding MAY project
-  states onto its native vocabulary, provided every non-`active`
-  state projects to a non-active native signal: the projection is
-  fail-safe.
+* what the Actor handle identifies;
+* how the Controller establishes it at approval; and
+* how a later positive governance decision establishes that the
+  acting party is the bound Actor or an authorized delegate.
 
-A binding MUST provide an authenticated means, independent of any
-credential's possession, for the Subject, the Approver, or an
-administrator to transition a Mission to `revoked` by its Mission
-Identifier: the state space is not provided without a way to cause
-its kill-switch state.
+The kernel does not require the same identifier syntax at every hop.
+A binding that maps between identifiers MUST define which component
+performs the mapping and the assurance and ambiguity of that mapping.
 
-A binding MUST provide the lifecycle-gated capability: the state
-space and the revocation transition above are sufficient on their
-own, and a consumer MAY bound its reliance on Mission state by
-credential lifetime alone, with no consumer-facing freshness source
-required. The OAuth core's stateless baseline satisfies this floor
-unmodified.
+## Approved Context and Immutability {#approved-context}
 
-A binding MAY additionally provide the state-observable capability: at
-least one state source from which consumers learn a Mission's current
-state, with a stated staleness bound, so deployments can meet the
-runtime profile's freshness rules for enforcement that needs it. Each
-state source MUST be authenticated and integrity-protected, so a
-consumer verifies a state report's origin and detects tampering before
-relying on it. In consequence, state whose origin or integrity a
-consumer cannot verify is treated as unavailable and fails closed.
-Verifying a signed state report consumes the issuer key material of
-{{keys}}. A lifecycle-gated-only substrate supports issuance gating
-but not action-time state enforcement inside the credential lifetime
-({{I-D.draft-mcguinness-mission-runtime}}).
+The binding MUST maintain either the Approved Context itself or a
+verifiable commitment to it.  After approval, the approved value MUST
+be immutable.  Mutable operational fields, including current state
+and log entries, MUST be distinguishable from the approved value.
 
-Home: the Mission Lifecycle and Gating section of
-{{I-D.draft-mcguinness-oauth-mission}}; the freshness rules are the
-runtime profile's ({{I-D.draft-mcguinness-mission-runtime}}), and the
-Mission Status profile defines a canonical observation surface
-({{I-D.draft-mcguinness-oauth-mission-status}}).
+Changing the Approved Context requires a new approval event and a new
+Mission Reference, unless a binding defines the change as approval of
+a new immutable version with its own unambiguous reference.  A binding
+MUST NOT silently replace the approved value behind an existing
+reference.
 
-Consumers: the runtime layer (per-class state re-check, fail closed on
-staleness), the harness (pause, suppress, terminate), orchestration
-(the unwind trigger), and the Mandate (state only as of minting).
+When a binding uses a commitment instead of retaining or disclosing
+the value, it MUST define:
 
-## Mission Authority Representation {#authority}
+* the exact committed bytes or canonicalization procedure;
+* algorithm identification and algorithm-agility behavior;
+* domain separation sufficient to prevent cross-type substitution;
+  and
+* how a party that possesses the value verifies the commitment.
 
-- A binding MUST represent the Authority Set as an array of entries
-  in the core's authorization-details shape: each entry names a
-  resource, its actions, and its constraints.
-- The binding MUST require its implementations to apply the subset
-  rule at every narrowing they perform: no derivation, delegation,
-  or attenuation under a Mission yields authority broader than the
-  Mission's Authority Set.
-- The binding MUST require its implementations to interpret Common
-  Constraint names per their definitions and compare their values in
-  value space under each definition's subset and intersection rules,
-  so independent implementations compute the same result for the
-  same values.
+The commitment can be a native content address, a digest, a signed
+object, or another binding-defined construction.  The kernel does not
+require two distinct commitments for descriptive context and
+structured authority.
 
-Where a binding or its enforcement surface admits a delegate, the
-surface that admits the delegate MUST evaluate per-entry `delegation`
-policy: the issuance gate where tokens are derived, the join where
-they are not.
+## Approval Event {#approval}
 
-Home: the Mission Authority section of
-{{I-D.draft-mcguinness-oauth-mission}}, with its Subset Rule and
-Common Constraints subsections.
+A binding MUST define a native approval ceremony that atomically
+creates an active Mission Context or has equivalent transactional
+semantics.  The ceremony MUST:
 
-Consumers: the runtime layer and its decision API bindings
-(evaluation), consent evidence (rendering), and the Mandate (optional
-carriage).
+1. authenticate the Approver at the assurance level required by the
+   deployment;
+2. establish the Actor as specified in {{actor-binding}};
+3. present or otherwise make available to the Approver a faithful
+   representation of the context being approved;
+4. record the approval decision, Approver, Actor binding, Approved
+   Context or its commitment, Mission Reference, and Controller; and
+5. initialize the Mission as active only after the approval succeeds.
 
-## Mission Integrity Anchors {#anchors}
+Presentation requirements are substrate-specific.  A binding MUST
+identify security-relevant material supplied by an untrusted proposer
+and describe how the approval ceremony prevents it from being
+mistaken for Controller-derived policy or trusted explanation.
 
-A binding MUST require its implementations to compute `intent_hash`
-and `authority_hash` over the core's domain-separated, issuer-bound
-envelope (`typ` names the committed object, `iss` carries the binding's
-issuer identifier, `value` is the committed object), under the core's
-canonicalization rules. The computation is the core's byte for byte:
-the core's test vectors verify a binding's implementation, and only the
-envelope `iss` is the binding's own. A binding MUST require verifiers
-of its anchors to reject an anchor whose algorithm prefix they do not
-recognize and never to treat an unrecognized prefix as `sha-256`. A new committed object uses the same
-envelope with a new `typ` under the core's extension rule.
+The kernel does not require the Approved Context to enumerate every
+resource operation.  If the ceremony approves structured authority,
+the binding claims and follows the Structured Authority capability
+({{structured-authority}}).
 
-A binding MAY additionally commit to its native artifact with a
-mechanism of its own, as the AAuth binding's `s256` commits the
-mission blob. It MUST state that commitment's relationship to the
-anchors, including whether either substitutes for the other.
+## Basic Governance Gate {#basic-gate}
 
-Home: the Integrity Anchors and Canonicalization Rules sections of
-{{I-D.draft-mcguinness-oauth-mission}}, with the `typ` extension rule
-in its Extensibility section.
+Every binding MUST define an active predicate and a non-active
+outcome.  The underlying state vocabulary can be as small as
+`active` and `terminated`, or can contain additional native states
+and reasons.
 
-Consumers: consent evidence (`consent_rendering_hash`), intent shaping
-(Shaping Evidence), the runtime layer (the materialized policy view),
-orchestration (`unwind_plan_hash`), the Mandate (the encoded digest
-form), and audit transparency (the committed evidence types).
+The Controller MUST make a positive governance decision only while
+the Mission is active.  Every value or condition not recognized as
+active MUST fail closed for that decision.  A non-active Mission can
+remain available for audit and can be the subject of denial or cleanup
+decisions.
 
-## Mission-Bound Credential {#credential}
+This rule governs decisions made by relying on the Mission Context. It
+does not assert that every downstream authorization decision is a
+derivation from the Mission, nor that every resource can observe
+current Mission state.  Those stronger properties require optional
+capabilities.
 
-This primitive is OPTIONAL, and it is where provision levels split.
+The binding MUST define at least one authenticated means by which an
+authorized party can cause the Mission to become non-active.  It MUST
+identify the authorized parties and the effect of the transition on
+subsequent Controller decisions.  A binding MAY express completion,
+revocation, expiry, or supersession as reasons without making each a
+distinct protocol state.
 
-Under full provision, the binding issues a Mission-bound credential:
+## Bounded Reliance {#bounded-reliance}
 
-- a credential under the binding's own proof-of-possession
-  discipline;
-- naming exactly one Mission, through the `mission` claim (`id`,
-  `issuer`, `authority_hash`) or a substrate-native reference the
-  Mission record binds ({{identifier}}), with the `mission` claim
-  shape as the interoperable default; and
-- issued only while the referenced Mission is `active`: credential
-  issuance is gated on Mission state.
+Authority derived from a Mission MUST NOT be usable indefinitely.
+For every positive decision under {{basic-gate}}, and for every
+credential or other artifact the binding describes as governed by the
+Mission, the binding MUST state a reliance bound in at least one of
+two forms:
 
-Provision may be composite: the standalone MAS binding
-together with Authorization Servers consuming its issuance grants
-({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) provides
-this credential jointly.
+* the decision point establishes that the Mission is active when the
+  decision is made, and the binding states the maximum interval during
+  which the result or artifact remains usable after the Mission
+  becomes non-active; or
+* the artifact carries an expiry, and the binding states how that
+  expiry is bounded by or disclosed with the Approved Context.
 
-Under partial provision, the binding issues no such credential. It
-MUST define a join per the externally established mode of the runtime
-profile's Mission binding establishment step: how a PDP verifies a
-supplied Mission reference against the acting credential before any
-authority is evaluated. The definition MUST state what the join
-proves, what it cannot prove, and the residuals that remain; an
-unverified reference never establishes the Mission. The MAS's
-Mission Join is the profiled example
-({{I-D.draft-mcguinness-mission-authority-server}}).
+A decision or artifact with neither bound does not conform, and a
+stated bound SHOULD NOT exceed the interval the Mission's purpose
+requires.  This floor requires no consumer-facing freshness source: a binding whose
+credential lifetimes sit inside the Mission's own bound satisfies it
+unmodified, as the OAuth core's stateless baseline does.  The bound
+gives the non-active transition of {{basic-gate}} its force: a party
+who causes a Mission to become non-active is assured that reliance
+under the Mission ends within the stated interval.
 
-Profiles that ride the credential itself (offline attenuation, and the
-token-carriage aspects of delegation) apply only under full provision.
-Of the substrate-neutral profiles, those that need a
-credential-to-Mission association (the runtime layer and the harness)
-route through the binding establishment step, which is what makes
-partial provision possible; the rest consume no credential at all
-(the composition table's credential column).
+## Context Propagation {#propagation}
 
-Home: the Mission-Bound Access Tokens and The Mission Claim sections
-of {{I-D.draft-mcguinness-oauth-mission}}; the seam is the Mission
-binding establishment section of the runtime profile
-({{I-D.draft-mcguinness-mission-runtime}}).
+Each positive governance decision and each artifact that a binding
+claims is Mission-governed MUST carry, or be unambiguously joinable
+to, the Mission Reference and Controller namespace.  The binding MUST
+define the join and the party that performs it.
 
-## Mission Key Material {#keys}
+Propagation can occur in a credential, a decision response, a
+protected protocol exchange, a local execution context, or an audit
+record.  Merely accepting an unverified reference supplied by the
+Actor does not establish Mission governance.
 
-A binding MUST publish the Mission Issuer's signing keys, resolvable
-from the `issuer` by verifiers of its signed artifacts. Across a
-rotation, the verification key for each key identifier SHOULD remain
-resolvable while artifacts signed under it remain within the audit
-horizon ({{audit-horizon}}).
+The binding MUST state what the propagation mechanism proves.  In
+particular, it MUST distinguish among:
 
-Home: the Signing and Key Rotation section of
-{{I-D.draft-mcguinness-oauth-mission}}; the discovery surface is the
-binding's own metadata.
+* correlation with a Mission Context;
+* proof that the Controller made a particular decision;
+* proof that a credential was issued under that Mission; and
+* proof that a requested operation is within approved structured
+  authority.
 
-Consumers: verifiers of Mission-bound credentials under full
-provision, consent evidence (its JWS verifies under the Issuer's
-published keys), the Mandate
-({{I-D.draft-mcguinness-mission-mandate}}), signed state surfaces
-({{I-D.draft-mcguinness-oauth-mission-status}}), and audit statements
-({{I-D.draft-mcguinness-mission-audit}}).
+The kernel requires only the first property with authenticated or
+integrity-protected provenance from the Controller.  The remaining
+properties require binding-specific mechanisms and, where applicable,
+optional capabilities.
 
-## Mission Audit Horizon {#audit-horizon}
+## Ordered Governance Record {#governance-record}
 
-A binding MUST declare an audit horizon: the retention window for the
-Mission record and its evidence, at least the Mission's lifetime plus
-a declared post-expiry period. After a Mission reaches a terminal
-state, the binding MUST require its record to be retained for the
-audit horizon.
+The Controller MUST maintain an integrity-protected, ordered record of
+governance events for the Mission.  At minimum, the record MUST cover
+approval, positive and negative Controller decisions that rely on the
+Mission Context, and transition to a non-active outcome.  Events MUST
+be attributable to their source and correlated with the Mission
+Reference.
 
-Home: the Mission Record section of
-{{I-D.draft-mcguinness-oauth-mission}}.
+The ordering mechanism can be a sequence, trusted timestamp plus a
+defined tie-break rule, append position, or another unambiguous native
+mechanism.  The binding MUST state its ordering semantics, integrity
+protection, authorized readers, and retention period.  The retention
+period MUST include the active lifetime and a declared post-termination
+period.
 
-Consumers: consent evidence, runtime enforcement evidence, and audit
-transparency size their retention to it; the security model's
-retention analysis assumes it.
+This record need not be portable or independently verifiable.  A
+binding that makes either claim also supplies the corresponding
+capability in {{capabilities}}.
 
-## Mission Approval Fidelity {#approval-fidelity}
+# Optional Capabilities {#capabilities}
 
-A binding's approval surface MUST realize the core's approval-event
-steps, whatever its native ceremony:
+Capabilities are additive claims.  A binding MUST NOT claim a
+capability unless it meets every requirement in that capability's
+subsection.  A capability can be scoped to particular modes, roles,
+operations, or deployments; such scope is part of the claim and MUST
+appear in the Mission Substrate Statement.
 
-1. authenticate the Approver, at the deployment's authentication floor
-   and satisfying the Intent's `controls.acr` where present;
-2. establish the Subject, never from unauthenticated client input;
-3. derive the Authority Set and render the derived authority for
-   consent, not the goal or the Intent, with the core's display
-   hardening (inert client strings, direction-override and confusable
-   mitigation, derived authority visually distinct from client text);
-4. compute the integrity anchors over the consented Authority Set and
-   the approved Intent ({{anchors}}); and
-5. create the Mission record in the `active` state atomically with the
-   approval decision.
+Absence of a capability is not partial conformance.  It means that a
+consumer requiring that property does not compose with the binding in
+that mode.
 
-The binding MUST provide a Mission Intent submission channel through
-which a client proposes the Intent that step 1 authenticates against
-and step 3 derives from, preserving the core's Intent semantics (its
-`resources`, `controls`, and inert fields carried intact); a binding
-without such a channel cannot run the approval event, and the
-intent-shaping profile consumes this channel ({{composition}}).
+## Lifecycle-Gated Authorization {#lifecycle-gated}
 
-Derivation in step 3 MUST be bounded by the approved Mission Intent
-per the core's Mission Authority rules: each derived entry's resource
-is among the Intent's `resources`, the Intent's `controls` are
-respected, and `proposed_authority` is only narrowed, so
-`intent_hash` and `authority_hash` commit a task and its authority
-with a defined relationship.
+A binding claiming **Lifecycle-Gated Authorization** extends the
+basic governance gate to named authorization operations.  Its
+Statement MUST enumerate those operations, such as authority
+derivation, delegation, credential issuance, credential refresh,
+permission decisions, or continued reliance.
 
-If the derived Authority Set changes between rendering and consent,
-the binding MUST require its implementations to recompute the anchors,
-and not to create the Mission without the Approver's consent to the
-changed set.
+For every operation in the claim, the decision point MUST establish
+that the Mission is currently active before returning a positive
+result.  It MUST fail closed when current state cannot be established
+within the binding's stated freshness bound.  The binding MUST state
+the maximum interval during which a previously issued positive result
+can remain usable after the Mission becomes non-active.
 
-Home: the Mission Approval section of
-{{I-D.draft-mcguinness-oauth-mission}}. The MAS shows the steps
-re-shaped for an asynchronous surface, approval bound to the
-submission rather than an authorization code; the AAuth binding shows them
-profiled onto a propose-clarify-approve interaction.
+A binding can therefore claim this capability for Controller-issued
+permission decisions while not claiming it for independently issued
+resource tokens.  It MUST NOT generalize the narrower claim to the
+uncovered path.
 
-Consumers: consent evidence binds to this event; every downstream
-guarantee (the anchors, the gating, the record) assumes it.
+## State-Observable {#state-observable}
 
-# Mission Composition {#composition}
+A binding claiming **State-Observable** MUST expose at least one
+authenticated, integrity-protected source from which a named consumer
+can determine whether a Mission is active.  For each source, the
+Statement MUST identify:
 
-The table shows which substrate-neutral profiles consume which
-primitives, so a binding author reads off what a provision level
-hosts; each row mirrors the profile's own Mission Substrate statement
-(for consent evidence, its approval binding) and adds nothing. Marks:
-`X` consumed; `B` consumed through the Mission binding establishment
-step (the credential under full provision, the join under partial
-provision); `.` not consumed. Notes follow the table.
+* the authorized consumers;
+* the state vocabulary and active predicate;
+* authentication and integrity protection;
+* the freshness or maximum staleness bound; and
+* fail-closed behavior for unavailable, invalid, or unknown state.
 
-| Profile | Id | State | Auth | Anchor | Cred | Keys | Horizon | Appr |
-|---|---|---|---|---|---|---|---|---|
-| Runtime and its decision API bindings | X | X | X | X | B | X | X | . |
-| Harness | X | X | . | . | B | . | . | . |
-| Orchestration | X | X | . | X | . | . | . | . |
-| Intent Shaping | . | . | . | X | . | . | . | . |
-| Consent Evidence | X | . | X | X | . | X | X | X |
-| Mandate | X | X | X | X | . | X | X | . |
-| Audit Transparency | X | . | . | X | . | X | X | . |
-| Consumption Metering | X | . | X | X | . | . | . | . |
-| Open-World Discovery | X | X | X | X | . | . | . | . |
-{: title="Primitives consumed per substrate-neutral profile"}
+The source MAY return native state names.  A projection onto another
+protocol's vocabulary MUST preserve the active/non-active distinction;
+an unknown or non-active native value MUST NOT project to active.
 
-- The credential column is the split. Under partial provision, every
-  `B` composes through the join and no other cell changes.
-- State verification consumes Keys: the runtime row reads a signed
-  state surface and verifies it under the Issuer's published keys
-  ({{lifecycle}}, {{keys}}), so its Keys cell is `X`; a binding whose
-  harness or orchestration verifies state itself consumes Keys
-  likewise.
-- The Mandate consumes the audit horizon: an absent `mandate_exp`
-  binds the Mandate's evidence validity to the Mission's audit horizon
-  ({{I-D.draft-mcguinness-mission-mandate}}), so its Horizon cell is
-  `X`; its Authority Set carriage is optional.
-- Open-World Discovery is experimental: it keys on the identifier and
-  the only-`active` rule, adjudicates encountered resources against the
-  Authority Set under the subset rule, and commits Discovery Evidence
-  through the anchor envelope
-  ({{I-D.draft-mcguinness-mission-discovery}}); where the Progressive
-  companion supplies a pre-consented ceiling
-  ({{I-D.draft-mcguinness-oauth-mission-progressive}}), that ceiling is
-  a further adjudication input, as intent shaping takes the Intent
-  structure as a further input.
-- Consumption Metering defines no binding of its own: its counters key
-  on the identifier, its `call_class` draws on the Authority Set
-  representation, and its bounds are committed through the anchor
-  envelope; enforcement composes through the runtime row's binding.
-- The security model is not a row: it is informational, analyzes every
-  primitive, and applies to any binding
-  ({{I-D.draft-mcguinness-mission-security-model}}).
-- Some profiles name further inputs in their own Mission Substrate
-  sections, which remain the authoritative per-consumer statements:
-  intent shaping consumes the Mission Intent structure and a
-  submission channel; audit transparency consumes the evidence types
-  and their canonical bytes; the harness and orchestration import the
-  runtime profile's evidence conventions.
-- Profiles bound to OAuth wire mechanics (expansion, child delegation,
-  offline attenuation, cross-domain projection) are not
-  substrate-neutral and are not rows; a binding wanting those
-  capabilities defines its own surfaces. The documents behind these
-  profile names are mapped by the architecture
-  ({{I-D.draft-mcguinness-mission-architecture}}).
+State-Observable does not by itself require a consumer to check state.
+That enforcement property is claimed by Lifecycle-Gated Authorization
+or by a consuming runtime profile such as
+{{I-D.draft-mcguinness-mission-runtime}}.
+
+## Structured Authority {#structured-authority}
+
+A binding claiming **Structured Authority** MUST define a
+machine-evaluable representation of authority associated with the
+Mission and MUST identify the authority that owns the representation's
+semantics.  The Statement MUST specify:
+
+* the representation and its version or type-identification rules;
+* how resources, operations, and constraints are interpreted;
+* which decision points consume it;
+* whether it is approved context, Controller-derived policy, a
+  resource-owned policy input, or a decision result; and
+* the scope in which two values can be compared.
+
+Different resources or administrative domains MAY use different
+authority languages.  This capability does not create a universal
+Authority Set, require RFC 9396 authorization details, or imply that
+arbitrary values have a meaningful subset relation.
+
+Where constraints admit comparison, the binding MUST define
+comparison in the constraint's value space.  Unknown types or
+constraints MUST fail closed at a decision point that requires their
+semantics.
+
+## Monotonic Derivation {#monotonic-derivation}
+
+A binding claiming **Monotonic Derivation** MUST also claim Structured
+Authority for the values covered by the derivation.  It MUST define a
+no-broader-than relation for those values and the protocol boundary
+within which that relation is valid.
+
+Every derivation, delegation, or attenuation operation included in
+the claim MUST verify that its result is no broader than its declared
+parent under that relation.  Unsupported or incomparable values MUST
+fail closed.  The Statement MUST identify each narrowing point and
+the component that performs the comparison.
+
+The claim can cover a single authorization language or delegation
+chain.  It MUST NOT be presented as constraining fresh authorization
+decisions made under a different resource-owned policy or at an
+uncovered protocol hop.  A binding can correlate those decisions with
+the same Mission while leaving them outside this capability.
+
+## Credential-Bound {#credential-bound}
+
+A binding claiming **Credential-Bound** MUST define an
+integrity-protected association between a credential or authorization
+artifact and exactly one Mission Reference and Controller namespace.
+It MUST identify:
+
+* the protected fields or join inputs that establish the association;
+* the credential or artifact issuer and verifier trust relationship;
+* how the credential is bound to the Actor or authorized delegate;
+* substitution and replay protections; and
+* whether issuance or refresh is covered by Lifecycle-Gated
+  Authorization.
+
+The association MAY be a JWT claim, another credential field, a
+protected protocol parameter, or a verified join.  A reference copied
+from Actor-controlled input without Controller or credential-issuer
+validation does not satisfy this capability.
+
+The Statement MUST distinguish a credential cryptographically issued
+under the Mission from a credential merely correlated with a Mission
+by an external join.  Either can be useful, but they provide different
+assurance and MUST NOT share an unqualified claim.
+
+## Independently Verifiable {#independently-verifiable}
+
+A binding claiming **Independently Verifiable** MUST let the named
+consumer verify a specified Mission property without an online query
+to the Controller.  The Statement MUST enumerate the properties, for
+example Controller approval, context commitment, credential binding,
+structured authority, or state as of a signed observation.
+
+For every property, the binding MUST define the verification artifact,
+canonical input, trust anchor or key discovery mechanism, algorithm
+agility, validity interval, and revocation or freshness limitations.
+Verification failure or an unsupported algorithm MUST fail closed.
+
+Independent verification of a signature does not establish current
+state unless the artifact and its validity rules provide that
+property.  It also does not make private Approved Context available or
+turn contextual governance into a machine-evaluable policy language.
+
+## Portable Evidence {#portable-evidence}
+
+A binding claiming **Portable Evidence** MUST define evidence that can
+be transferred across the administrative boundary stated in the
+claim and verified there.  The Statement MUST identify:
+
+* each evidence type and the event or decision it represents;
+* its binding to the Mission Reference, Controller, Actor where
+  appropriate, and relevant decision or artifact;
+* canonical bytes, integrity protection, and verification procedure;
+* ordering, duplicate handling, and correlation semantics;
+* retention and key-availability periods; and
+* disclosure, minimization, and unlinkability considerations.
+
+Portable Evidence MAY reveal only a commitment to Approved Context.
+The capability does not require disclosure of the context itself.
+Signed receipts, Mandates, or transparency statements can supply this
+capability when their profiles meet these requirements
+({{I-D.draft-mcguinness-mission-mandate}},
+{{I-D.draft-mcguinness-mission-audit}}).
+
+# Composition by Capability {#composition}
+
+A substrate-neutral profile MUST declare the kernel functions and
+optional capabilities it consumes.  It MUST NOT infer an undeclared
+capability from the generic statement that a binding supports
+Missions.
+
+Examples include:
+
+* a profile that only correlates Controller decisions and log entries
+  can consume the kernel;
+* action-time termination enforcement consumes State-Observable and
+  a lifecycle-gating rule at the relevant enforcement point;
+* offline attenuation consumes Structured Authority, Monotonic
+  Derivation, Credential-Bound, and usually Independently Verifiable;
+* cross-domain audit consumes Portable Evidence and whatever
+  underlying property the evidence proves; and
+* resource-side policy evaluation consumes Structured Authority only
+  when that representation is defined for the resource.  A Mission
+  reference alone is not structured authority.
+
+Where a binding lacks a required capability, a profile can define an
+explicit adapter or join.  The adapter's specification MUST state the
+new trust assumptions, what it proves, what it cannot prove, and its
+failure behavior.  The adapter then supplies the capability; the
+kernel does not acquire it retroactively.
+
+Capability claims compose only over their declared scope.  For
+example, an online Controller decision can be lifecycle-gated while a
+previously issued resource token remains valid until expiry, and one
+authority language can support monotonic delegation while a later
+resource-owned decision is independent.  Specifications MUST preserve
+those boundaries rather than describe the whole deployment with the
+stronger local property.
 
 # Mission Substrate Conformance {#conformance}
 
-This document defines one conformance role, claimed by a
-specification, not an implementation; implementations conform to the
-binding's own conformance clauses.
+This document defines conformance for a specification.  An
+implementation conforms to the binding specification it implements.
 
-A **Mission Substrate Binding**:
+A conforming Mission Substrate Binding:
 
-1. maintains the Mission record, immutable except its state, and
-   provides the Mission Identifier and `issuer` ({{identifier}});
-2. provides the lifecycle state space with the only-`active` rule,
-   fail-safe treatment of unrecognized states, verbatim extension
-   states, and an authenticated, possession-independent means to
-   transition a Mission to `revoked` by its Mission Identifier: the
-   lifecycle-gated capability ({{lifecycle}});
-3. represents the Authority Set in the core's shape and applies the
-   subset rule and Common Constraint value-space semantics at every
-   narrowing ({{authority}});
-4. computes the integrity anchors over the core's envelope and
-   canonicalization, rejects unrecognized algorithm prefixes, and
-   states the relationship of any native commitment to the anchors
-   ({{anchors}});
-5. either provides the Mission-bound credential with issuance gating,
-   or defines a join stating what it proves and what it cannot prove
-   ({{credential}});
-6. publishes resolvable issuer key material with rotation retention
-   ({{keys}});
-7. declares an audit horizon over the record and its evidence
-   ({{audit-horizon}}); and
-8. realizes the approval-event steps on its approval surface
-   ({{approval-fidelity}}).
+1. defines every element of the contextual-governance kernel in
+   {{kernel}};
+2. publishes a Mission Substrate Statement as specified in
+   {{statement}};
+3. claims only optional capabilities whose complete requirements it
+   satisfies in the claimed scope; and
+4. defines fail-closed behavior when a required reference, binding,
+   state, authority value, commitment, proof, or capability cannot be
+   established.
 
-A binding MAY additionally claim the state-observable capability
-({{lifecycle}}); this document's conformance role does not require
-it, but a binding that claims it states its state source and
-staleness bound in the Mission Substrate Statement ({{statement}}).
+There are no "full" and "partial" provision levels.  Those labels
+hide which guarantees are actually present.  The capability list and
+scope in the Mission Substrate Statement are the conformance result.
 
 ## Mission Substrate Statement {#statement}
 
-A Mission Substrate Binding MUST publish a Mission Substrate
-Statement: a section of the binding, following the existing bindings'
-pattern, that states how the binding provides each primitive of
-{{requirements}}. The statement names:
+A Mission Substrate Binding MUST contain a section titled "Mission
+Substrate Statement".  It MUST identify the specification version and
+mode to which the statement applies.
 
-1. the provision level: full provision, or partial provision with the
-   section defining its join and the profiles that consequently do
-   not apply ({{credential}});
-2. the identifier mapping and any substrate-native Mission reference
-   ({{identifier}});
-3. whether the binding claims the state-observable capability and,
-   if so, each state source and its staleness bound ({{lifecycle}});
-4. how the binding carries the Authority Set (token payload,
-   status-served view, or native artifact) and where each narrowing
-   occurs ({{authority}});
-5. the value its anchors bind as the envelope `iss`, and the
-   relationship of any native commitment to the anchors
-   ({{anchors}});
-6. the discovery surface for issuer key material ({{keys}});
-7. the audit horizon ({{audit-horizon}}); and
-8. the surface that realizes each approval-event step
-   ({{approval-fidelity}}).
+For the kernel, the Statement MUST provide a checkable mapping for:
 
-Each item is checkable against the binding's own text; a claim its
-text does not support is a conformance failure.
+1. the Mission Reference, its uniqueness namespace, comparison rules,
+   retention, and non-reassignment rule;
+2. the Controller identity and how relying components establish it;
+3. the Actor handle, its authentication at approval, later Actor
+   binding, delegation if any, and identifier mappings;
+4. the Approved Context, its immutable boundary, and any commitment
+   and verification procedure;
+5. the native approval ceremony and each step of {{approval}};
+6. the active predicate, non-active outcome, authorized transition
+   mechanisms, and effect on subsequent Controller decisions;
+7. the reliance bound of {{bounded-reliance}} for each decision and
+   Mission-governed artifact class: the stated maximum residual
+   interval, the expiry rule, or both;
+8. every propagation or join surface claimed to establish Mission
+   governance and the exact property each surface proves; and
+9. governance-record event coverage, ordering, integrity, access, and
+   retention.
+
+The Statement MUST then include a capability table with one row for
+each capability in {{capabilities}}.  Each row MUST say `supported`,
+`not supported`, or `conditional`.  A supported or conditional row
+MUST cite the binding sections that satisfy the capability, state its
+mode and operational scope, and list material limitations.  A
+conditional row MUST state the extension, deployment property, or
+cooperating component that supplies the condition.
+
+The following is a non-normative skeleton:
+
+| Capability | Claim | Scope and defining sections | Limitations |
+| --- | --- | --- | --- |
+| Lifecycle-Gated Authorization | supported | Controller permission decisions | Previously issued resource credentials expire independently |
+| State-Observable | conditional | Status extension | Maximum staleness is deployment-configured |
+| Structured Authority | not supported | -- | Approved Context is descriptive |
+| Monotonic Derivation | not supported | -- | No authority comparison relation is defined |
+| Credential-Bound | supported | Native authorization artifact | Covers correlation, not context disclosure |
+| Independently Verifiable | conditional | Signed receipt profile | Proves approval as of issuance, not current state |
+| Portable Evidence | not supported | -- | Governance record is Controller-local |
+{: title="Illustrative Mission Substrate Statement capability table"}
+
+Text outside the Statement cannot silently broaden a capability claim.
+If another specification adds a capability, that specification MUST
+publish an updated Statement or a Statement extension that identifies
+the base binding and precise added scope.
 
 # Security Considerations
 
-This document defines no mechanism; its security posture is the core's
-plus the binding's own. Two considerations are specific to binding.
+## Capability Confusion {#capability-confusion}
 
-## The Binding as Trust Root
+The principal risk this document addresses is capability confusion:
+treating Mission correlation as proof of authority, an approval as
+proof of current state, a local narrowing relation as a universal
+subset rule, or a signed artifact as proof of facts it does not carry.
+Consumers need to match every required property to an explicit
+capability claim and its scope.
 
-A Mission Substrate Binding implements the Mission Issuer, the root of
-trust of the security model's trusted base: it derives authority, runs
-the approval event, commits the anchors, and gates or joins. Mission
-Issuer compromise semantics apply to any binding: a compromised issuer
-mints or attributes arbitrary authority, forges approvals, and reports
-false state; consent evidence and audit transparency make that
-detectable after the fact, not preventable
-({{I-D.draft-mcguinness-mission-security-model}}). A new binding
-re-derives only the substrate-specific entries of that model.
+A secure implementation fails closed when a required capability is
+absent, conditional but unavailable, or outside its declared scope.
+It does not upgrade a kernel-only reference because its syntax
+resembles a credential claim or content digest.
 
-## Mission Join Assurance
+## Reference and Context Substitution
 
-Partial provision moves the credential-to-Mission binding from
-cryptographic carriage to the join, so the join's assurance bounds
-every downstream guarantee that names "this credential under this
-Mission". The statement duty of {{credential}}, what the join proves,
-what it cannot prove, and the residuals that remain, is what keeps
-that assurance honest. The MAS's Join Spoofing analysis is the
-pattern ({{I-D.draft-mcguinness-mission-authority-server}}): the join
-proves the credential belongs to the subject and client the Mission
-names, no mechanism in that mode proves the credential was derived
-under the Mission, and mapping coarseness and same-party
-misattribution remain as residuals.
+The Controller namespace is part of Mission identity whenever a
+reference is not globally unique.  Omitting it permits references from
+one Controller to be substituted at another.  A content-addressed
+reference additionally depends on correct canonicalization, domain
+separation, and algorithm identification; a random or sequential
+reference depends on the Controller's protected lookup.
 
-## State Source Fidelity
+Actor, context, credential, and decision bindings need to cover the
+same Mission Reference and Controller namespace.  An implementation
+that joins values from different namespaces or accepts an Actor-supplied
+reference without authentication can attribute unrelated authority or
+activity to a Mission.
 
-This consideration applies to a binding that claims the
-state-observable capability ({{lifecycle}}); a lifecycle-gated-only
-binding provides no state source, and its exposure is bounded by
-credential lifetime instead. Revocation reaches such a binding's
-consumer only through a state source, so the
-staleness bound stated for each source ({{lifecycle}}) is what the
-runtime profile computes its freshness rules and permit lifetimes
-from ({{I-D.draft-mcguinness-mission-runtime}}). A source that
-cannot meet its stated bound turns those fail-closed rules into
-fail-open in effect: consumers rely on state the binding reports as
-fresher than it is. The bound is a fidelity claim about the binding's
-infrastructure, of the same kind as the join's assurance statement,
-and the Mission Substrate Statement names it with the same honesty
-({{statement}}).
+## Controller Compromise
+
+The Controller is trusted for the kernel properties it asserts.  A
+compromised Controller can approve false context, bind the wrong Actor,
+make false decisions, suppress governance events, or report false
+state.  Independently Verifiable and Portable Evidence can make some
+misbehavior detectable or attributable, but do not prevent a trusted
+Controller from making a malicious decision.  The broader threat
+model is analyzed by {{I-D.draft-mcguinness-mission-security-model}}.
+
+Where Controller functions are distributed, the binding's Statement
+needs to expose the trust and authentication between approval, state,
+decision, logging, and credential components.  Naming one logical
+Controller does not eliminate those internal trust boundaries.
+
+## State and Residual Authority
+
+The kernel's non-active outcome stops new positive Controller
+governance decisions.  It does not automatically invalidate every
+artifact previously issued or stop a resource that cannot observe
+state.  Lifecycle-Gated Authorization and State-Observable claims must
+state their coverage and residual interval.  Short credential lifetime
+can bound residual authority but is not instantaneous termination.
+The bounded-reliance floor ({{bounded-reliance}}) guarantees that a
+stated bound exists on every conforming path; it does not make any
+bound short.  A bound long enough to be vacuous defeats the floor's
+purpose; consumers evaluate the stated interval, not only its
+presence.
+
+## Governance Record Integrity
+
+An ordered record that is not externally witnessed can still be
+truncated or rewritten by a compromised Controller.  The kernel
+requires integrity protection against unauthorized modification, not
+public transparency.  Deployments needing third-party detection of
+equivocation or truncation require Portable Evidence or a separate
+transparency profile.
 
 # Privacy Considerations
 
-This document introduces no data element. The core's privacy
-considerations apply to any binding: the Mission identifier is a
-correlation handle, and the Mission record concentrates task data at
-the Mission Issuer; each hosted profile's own apply unchanged.
+Mission References are correlation handles.  Reusing them across
+resources or administrative domains can reveal that otherwise
+unrelated actions belong to one task.  Bindings SHOULD disclose a
+reference only to components that require Mission correlation and
+SHOULD prefer audience-specific derived handles where cross-context
+correlation is unnecessary.
+
+Approved Context can contain sensitive instructions, resource names,
+personal data, and business purpose.  The kernel allows it to remain
+at the Controller and allows downstream surfaces to carry only a
+reference or commitment.  A binding SHOULD minimize context in
+credentials, state responses, and evidence and MUST document the
+additional disclosure introduced by Structured Authority,
+Independently Verifiable, or Portable Evidence claims.
+
+Governance records create durable behavioral histories.  Bindings
+need access control, declared retention, deletion policy after the
+retention period, and minimization of Actor and Approver identifiers.
+Integrity commitments can themselves become stable correlation
+values and can enable guessing attacks when the committed context has
+low entropy.
 
 # IANA Considerations
 
@@ -699,24 +819,117 @@ This document has no IANA actions.
 
 --- back
 
-# Binding Crosswalk {#crosswalk}
+# Binding Mapping Guidance {#crosswalk}
 
-This appendix is informative. The three existing bindings are
-conforming instantiations of this contract, recorded here rather
-than through the Mission Substrate Statement ({{statement}}), which
-they predate; each binding's own Mission Substrate section is its
-authoritative statement.
+This appendix is informative.  It illustrates how existing Mission
+architectures map to the capability model.  It is not a substitute for
+the normative Mission Substrate Statement published by each binding,
+and an extension or deployment can change a row.
 
-| Binding | Where the contract is satisfied |
+| Capability | OAuth Mission | Standalone MAS | AAuth Mission |
+| --- | --- | --- | --- |
+| Contextual-governance kernel | Native Mission record, AS controller, OAuth client/subject mappings | Native Mission record, MAS controller, explicit join boundary | Native Mission reference and PS-controlled contextual Mission |
+| Lifecycle-Gated Authorization | AS gates covered token issuance and derivation | MAS gates its own decisions; OAuth credential issuance requires a cooperating credential issuer | PS gates covered permission or token decisions; coverage depends on the AAuth access mode |
+| State-Observable | Conditional on Status, introspection, or signal support | Conditional on the exposed MAS status mechanism | Not implied by the private Mission blob; requires a management or state extension for other consumers |
+| Structured Authority | OAuth authorization details and their type-specific semantics | Can use the OAuth Mission authority representation | Not inherent in the Mission description; scopes or a resource-owned structured language can supply it for their own decision boundary |
+| Monotonic Derivation | Applies where the OAuth profile defines and checks its no-broader-than relation | Applies to MAS-governed authority operations; not automatically to an unchanged AS | Not a baseline cross-hop property; a structured resource policy can define monotonicity within its own vocabulary |
+| Credential-Bound | Mission-bound OAuth credential | Not supplied by the MAS alone; conditional on a verified join or cooperating credential issuer | Native Mission reference can be credential-bound where the PS or federated AS carries and validates it; not every access mode does |
+| Independently Verifiable | Possible where signed credentials expose the property and verification material | Conditional on signed artifacts and the property they expose | A resource can verify a credential, but cannot thereby independently verify private contextual Mission content or the PS's full reasoning |
+| Portable Evidence | Supplied only by evidence, Mandate, or audit profiles that define portable artifacts | Likewise conditional on an evidence profile | A PS-local Mission log is not portable evidence; signed receipts or checkpoints would be an extension |
+{: title="Illustrative capability mapping for existing architectures"}
+
+## OAuth-Native Mapping
+
+OAuth Mission can intentionally claim a broad set of capabilities.
+Its Authorization Server can act as Controller, OAuth identifiers can
+instantiate Actor and subject mappings, Rich Authorization Requests
+can supply Structured Authority, and protected access-token fields can
+supply Credential-Bound.  Its defined subset relation can support
+Monotonic Derivation within the authorization-detail types and
+operations covered by that relation.
+
+Those are strengths of the OAuth binding, not kernel requirements.
+State observation remains conditional on a status, introspection, or
+signals mechanism such as
+{{I-D.draft-mcguinness-oauth-mission-status}}.  Independent
+verification is limited to the properties actually present in a
+verifiable credential; current state and undisclosed context do not
+follow from a Mission identifier or hash alone.
+
+## Standalone MAS Mapping
+
+The MAS separates Mission governance from an otherwise unchanged
+Authorization Server.  It can satisfy the kernel and can provide
+Structured Authority and Monotonic Derivation for operations it owns.
+It does not, by itself, prove that an OAuth access token was issued
+under a Mission.  A verified join can establish correlation, and a
+cooperating credential issuer can add stronger lifecycle and
+credential-binding properties.  The MAS Statement needs to describe
+those as conditional capabilities and preserve the boundary between
+MAS assertions and Authorization Server behavior.
+
+## AAuth-Native Mapping
+
+An AAuth Mission naturally implements the contextual-governance
+kernel: the Policy Server controls approval and contextual decisions,
+the native Mission reference identifies the approved blob, and the
+Mission log records governance interactions.  The private mission
+description need not be a machine-evaluable authorization policy.
+
+Deterministic access can remain with scopes, Access Server policy, or
+a resource-owned structured policy language.  Such a language can
+claim Structured Authority, and possibly Monotonic Derivation, only
+inside the boundary where its semantics and comparison relation are
+defined.  A fresh downstream authorization decision is not required
+to be a subset of a single upstream Mission Authority Set.
+
+Credential-Bound and Lifecycle-Gated Authorization claims need to be
+made per AAuth access mode.  A PS-issued authorization artifact can
+carry a protected native Mission reference and be gated at issuance;
+an independently issued resource credential does not acquire those
+properties merely because the agent also has a Mission.  Similarly, a
+PS-local log supplies the kernel governance record but not Portable
+Evidence.  State management, signed evidence, and resource-verifiable
+structured decisions are useful AAuth extensions rather than baseline
+kernel requirements.
+
+# Mission-Bound Authorization Family Use {#family}
+
+This appendix is normative for documents of the Mission-Bound
+Authorization family and informative for every other adopter.  An
+adopter outside the family does not need it.
+
+The family's earlier documents, including the published OAuth core
+({{I-D.draft-mcguinness-oauth-mission}}), use the vocabulary this
+contract was generalized from.  The terms correspond as follows:
+
+| This document | Family documents |
 | --- | --- |
-| OAuth core ({{I-D.draft-mcguinness-oauth-mission}}) | Full provision. Each requirement of {{requirements}} points at the core section that defines it; the core's definitions are this contract's source text. |
-| Mission Authority Server ({{I-D.draft-mcguinness-mission-authority-server}}) | Partial provision by design. Its Mission Substrate section provides the identifier, lifecycle, Authority Set, anchors, and audit horizon (each the core's, unchanged), forgoes the Mission-bound credential and issuance gating, satisfies the credential requirement's join alternative with the Mission Join, and realizes approval and key publication on its own surfaces. |
-| AAuth binding ({{I-D.draft-mcguinness-mission-aauth}}) | Full provision in PS-asserted mode. Its Mission Substrate section enumerates all eight requirements point by point; federated mode is Reference-only where Access Servers do not carry the `mission` members. |
+| Mission Context | Mission |
+| Mission Reference | Mission Identifier |
+| Controller | Mission Issuer, where the binding issues; natively the AS, MAS, UMA authorization server, or AAuth PS |
+| Actor | the authenticated acting client or agent |
+| Approver | Approver |
+| Approved Context | the Mission Intent and derived Authority Set |
+| Ordered governance record | the Mission log, assessment log, or audit record |
+{: title="Family vocabulary mapping"}
+
+A family document that maps its own vocabulary to the kernel's MUST
+use these correspondences.
+
+Precedence is scoped, not global.  For the OAuth-native binding, the
+core's definitions govern that mapping; this document governs the
+kernel and capability vocabulary.  Neither document depends
+normatively on the other.
+
+Ownership migrates by touch, not by relocation.  When a
+binding-neutral definition next changes substantively, the change
+MUST land in this document, and the owning family section becomes a
+reference to it; no change is ever made solely to move words.
 
 # Acknowledgments
 {:numbered="false"}
 
-This document gives a normative home to the substrate interface first
-consolidated informationally by the architecture document. The author
-thanks the Mission-Bound Authorization implementer community for
-feedback.
+This document refines the substrate interface first consolidated
+informationally by the architecture document.  The author thanks the
+Mission-Bound Authorization implementer community for feedback.
