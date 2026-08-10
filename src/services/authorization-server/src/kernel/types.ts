@@ -385,6 +385,16 @@ export interface LifecycleCommit {
   committed_at: string;
   expires_at: string;
   successor?: string;
+  /**
+   * @spec containment#propagation — the Mission's current
+   * {@link MissionContainment.containment_version}, present whenever
+   * containment has ever been applied (absent-means-none, mirroring
+   * `introspectionMission` and `signedStatus`). A contain commit is
+   * metadata-only (`state` equals `prior_state`); carrying the containment
+   * version here is what makes an active-to-active authorization change
+   * legible to a subscriber that only compares `state`.
+   */
+  containment_version?: number;
 }
 
 /** @spec mission#the-mission-claim — the token projection of the record. */

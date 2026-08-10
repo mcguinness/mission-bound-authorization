@@ -20,10 +20,11 @@ import {
   validateMissionIntent,
   verifyStatusListToken,
 } from "@mission/authorization-server";
-import { exportJWK, generateKeyPair } from "jose";
+import { decodeJwt, exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import {
   type ApplyResult,
+  LIFECYCLE_CHANGE_EVENT_URI,
   MissionSignalEmitter,
   MissionSignalReceiver,
   signLifecycleEvent,
@@ -162,5 +163,86 @@ describe("contain commit propagated by Mission Signals (metadata-only)", () => {
     }
     expect(results[0]).toMatchObject({ status: "applied", state: "active", version: 1 });
     expect(results[1]).toMatchObject({ status: "applied", state: "active", version: 2 });
+  });
+
+  it("carries the changed containment_version on the emitted SET across a contained-then-still-active sequence", async () => {
+    // @spec containment#propagation, signals#lifecycle-event — a contain
+    // commit is metadata-only (state === prior_state), so a consumer that
+    // only compares `state` sees nothing move. containment_version on the
+    // emitted event is what makes the narrowing legible without a state
+    // change or a version gap.
+    const statusKeys = await generateKeyPair("ES256", { extractable: true });
+    const commits: LifecycleCommit[] = [];
+    const kernel = new MissionKernel({
+      issuer: ISS,
+      policy: POLICY as never,
+      statusKey: statusKeys.privateKey,
+      statusKid: "as-status",
+      now: () => NOW,
+      onLifecycleCommit: (c) => commits.push(c),
+    });
+
+    const mission = kernel.approve({
+      intent: intent(),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-contain-signal-2",
+    });
+
+    // First contain: active -> active, containment_version 0 -> 1.
+    kernel.contain(mission.id, {
+      event: {
+        type: "anomaly.detected",
+        source: "svc:soc",
+        observed_at: NOW.toISOString(),
+        event_id: "evt-signal-2a",
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:payment.execute"] }],
+    });
+    // Second contain: STILL active -> active (same as the first transition's
+    // state pair), containment_version 1 -> 2.
+    kernel.contain(mission.id, {
+      event: {
+        type: "anomaly.detected",
+        source: "svc:soc",
+        observed_at: NOW.toISOString(),
+        event_id: "evt-signal-2b",
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }],
+    });
+
+    const missionCommits = commits.filter((c) => c.id === mission.id);
+    // Activating commit: containment never applied yet, so the field is
+    // absent (absent-means-none), not 0.
+    expect(missionCommits[0]?.containment_version).toBeUndefined();
+
+    const sets = await Promise.all(
+      missionCommits.map((c) =>
+        signLifecycleEvent(c, {
+          audience: CONSUMER_AUD,
+          key: statusKeys.privateKey,
+          kid: "as-status",
+        }),
+      ),
+    );
+    const events = sets.map(
+      (set) =>
+        (decodeJwt(set).events as Record<string, Record<string, unknown>>)[
+          LIFECYCLE_CHANGE_EVENT_URI
+        ],
+    );
+
+    // The activating event carries no containment_version.
+    expect(events[0]?.containment_version).toBeUndefined();
+    // Both contain events keep `state` unchanged (active -> active)...
+    expect(events[1]).toMatchObject({ state: "active", prior_state: "active" });
+    expect(events[2]).toMatchObject({ state: "active", prior_state: "active" });
+    // ...but containment_version on the emitted event moves forward each
+    // time, which is exactly the authorization-change signal a consumer
+    // watching only `state` (or only the version-gap rule) would miss.
+    expect(events[1]?.containment_version).toBe(1);
+    expect(events[2]?.containment_version).toBe(2);
+    expect(events[2]?.containment_version).not.toBe(events[1]?.containment_version);
   });
 });

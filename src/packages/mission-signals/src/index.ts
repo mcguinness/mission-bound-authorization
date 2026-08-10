@@ -62,7 +62,15 @@ export interface SignLifecycleOptions {
  * `aud` (the consumer), `iat`, `jti`, and a `sub_id` opaque Subject Identifier
  * whose `id` is the Mission Identifier; body carries the event under the
  * event-type URI with the Mission identity, `state`, optional `prior_state`,
- * `version`, `committed_at`, `expires_at`, and optional `successor`.
+ * `version`, `committed_at`, `expires_at`, optional `successor`, and optional
+ * `containment_version`.
+ *
+ * @spec containment#propagation — `containment_version` rides the same
+ * event (no dedicated containment event type): when the kernel commit carries
+ * it (containment has ever been applied to the Mission), it is copied
+ * through unchanged, so an active-to-active commit whose `state` equals
+ * `prior_state` is still legible as an authorization change to a consumer
+ * that inspects this field.
  */
 export async function signLifecycleEvent(
   commit: LifecycleCommit,
@@ -76,6 +84,9 @@ export async function signLifecycleEvent(
     committed_at: commit.committed_at,
     expires_at: commit.expires_at,
     ...(commit.successor ? { successor: commit.successor } : {}),
+    ...(commit.containment_version !== undefined
+      ? { containment_version: commit.containment_version }
+      : {}),
   };
   return new SignJWT({
     sub_id: { format: "opaque", id: commit.id },

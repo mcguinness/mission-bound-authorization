@@ -210,6 +210,10 @@ describe("the metadata-only commit rides the lifecycle fan-out", () => {
       prior_state: "active",
       version: 2,
       expires_at: EXPIRES_AT,
+      // @spec containment#propagation — the metadata-only commit carries the
+      // new containment_version, so an active-to-active narrowing is legible
+      // to a subscriber comparing only `state`.
+      containment_version: 1,
     });
     // The commit marked the publisher dirty: the next fetch is a regeneration.
     expect(dirtyMarks()).toBe(marksBefore + 1);
@@ -219,6 +223,39 @@ describe("the metadata-only commit rides the lifecycle fan-out", () => {
     });
     // Containment does not change lifecycle state: the bit stays VALID.
     expect(readStatusBit(tok, idx)).toBe(STATUS_VALID);
+  });
+
+  it("surfaces the changed containment_version across a contained-then-still-active sequence", () => {
+    // The activating commit precedes any containment: containment_version is
+    // absent (absent-means-none), not 0, mirroring introspectionMission.
+    const { kernel, commits } = makeHarness();
+    const m = approve(kernel);
+    expect(commits.at(-1)).toMatchObject({ state: "active", version: 1 });
+    expect(commits.at(-1)?.containment_version).toBeUndefined();
+
+    // First contain: state stays active (metadata-only), containment_version
+    // moves 0 -> 1 on the emitted commit.
+    kernel.contain(m.id, {
+      event: ev("evt-seq-1"),
+      remove: [{ resource: RES_FILE }],
+    });
+    const afterFirst = commits.at(-1);
+    expect(afterFirst).toMatchObject({ state: "active", prior_state: "active" });
+    expect(afterFirst?.containment_version).toBe(1);
+
+    // Second contain: state is STILL active (prior_state === state again), so
+    // a consumer watching `state` alone sees no change between these two
+    // commits -- but containment_version moved 1 -> 2, which is exactly the
+    // authorization-change signal a version-gap-only consumer would miss on a
+    // sequential (non-gapped) delivery.
+    kernel.contain(m.id, {
+      event: ev("evt-seq-2"),
+      remove: [{ resource: RES_PAY, actions: ["payments:payment.execute"] }],
+    });
+    const afterSecond = commits.at(-1);
+    expect(afterSecond).toMatchObject({ state: "active", prior_state: "active" });
+    expect(afterSecond?.containment_version).toBe(2);
+    expect(afterSecond?.containment_version).not.toBe(afterFirst?.containment_version);
   });
 });
 
