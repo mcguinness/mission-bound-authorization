@@ -351,7 +351,8 @@ facts are the next subsection.
    join is the family's newest mechanism), **aauth** (where the
    substrate is AAuth), **aauth-management** (native AAuth status,
    permanent termination, expiry, and delegation-tree queries),
-   **issuance-grant** (the issuance join:
+   **aauth-expiry** (the immutable mission lifetime bound; the
+   **aauth** binding requires it), **issuance-grant** (the issuance join:
    estate ASs redeem MAS-minted grants for Mission-bound,
    state-gated tokens), **substrate** (for authors of new bindings).
 5. **Advanced, when the use case arrives**: **approval** (asynchronous
@@ -386,7 +387,8 @@ OPTIONAL Delegation capability; **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
 working-group document); **audit**'s COSE hash envelope is approved
 and in the RFC Editor queue; **approval**, **attenuation**, **aauth**,
-and **aauth-management** track unratified individual drafts (OAuth
+**aauth-expiry**, and **aauth-management** track unratified individual
+drafts (OAuth
 Deferred Token Response, Attenuating Agent Tokens, and the AAuth
 protocol); **authority-server** confines its Internet-Draft
 references (client instance assertion and the AI agent instance
@@ -611,6 +613,18 @@ where already-issued, opaque, identity-based, or off-path access leaves a
 bounded or unknown residual.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth-management.html)
+
+#### AAuth Mission Expiry
+
+An extension to the AAuth protocol, adoptable with or without the rest
+of the family. Defines the OPTIONAL `expires_at` member of the approved
+mission blob: an immutable, consent-bound lifetime covered by the
+native `s256` content address. At or after the deadline the Person
+Server terminates the mission on every decision path and issues no Auth
+Token that outlives it. The Mission Context Binding for AAuth requires
+this extension and approves no mission without an expiry.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-aauth-mission-expiry.html)
 
 #### Mission Containment for OAuth 2.0
 

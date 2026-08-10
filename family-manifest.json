@@ -1,5 +1,5 @@
 {
-  "$comment": "Machine-readable inventory of the Mission-Bound Authorization family (33 draft-*.md files at repo root). Single source of truth for README's document catalog, adoption order, and the architecture document map. Validate with scripts/check-family-manifest.mjs.",
+  "$comment": "Machine-readable inventory of the Mission-Bound Authorization family (34 draft-*.md files at repo root). Single source of truth for README's document catalog, adoption order, and the architecture document map. Validate with scripts/check-family-manifest.mjs.",
   "generated_note": "Hand-curated; regenerate by re-deriving group/maturity/adoption_rung from README.md and each draft's front matter/Status section when drafts are added, renamed, or reclassified.",
   "known_non_family_refs": "draft-mcguinness-mission-architecture.md's Mission Document Map also names oauth-id-continuation-assertion. That is an adjacent, non-family draft (no draft-*.md file in this repo) and is intentionally absent from drafts[] below; do not add a phantom manifest entry for it.",
   "groups": [
@@ -24,8 +24,20 @@
     "Experimental",
     "outside-ordering"
   ],
-  "count": 33,
+  "count": 34,
   "drafts": [
+    {
+      "file": "draft-mcguinness-aauth-mission-expiry.md",
+      "slug": "draft-mcguinness-aauth-mission-expiry",
+      "title": "AAuth Mission Expiry",
+      "category": "std",
+      "maturity": "stable",
+      "group": "lifecycle",
+      "adoption_rung": "By binding",
+      "adoption_alias": "aauth-expiry",
+      "is_published_core": false,
+      "deps": []
+    },
     {
       "file": "draft-mcguinness-mission-aauth.md",
       "slug": "draft-mcguinness-mission-aauth",
@@ -36,6 +48,7 @@
       "adoption_rung": "By binding",
       "is_published_core": false,
       "deps": [
+        "draft-mcguinness-aauth-mission-expiry",
         "draft-mcguinness-mission-substrate"
       ]
     },
@@ -49,6 +62,8 @@
       "adoption_rung": "By binding",
       "is_published_core": false,
       "deps": [
+        "draft-mcguinness-aauth-mission-expiry",
+        "draft-mcguinness-mission-aauth",
         "draft-mcguinness-mission-architecture",
         "draft-mcguinness-mission-security-model"
       ]
@@ -63,6 +78,7 @@
       "adoption_rung": "outside-ordering",
       "is_published_core": false,
       "deps": [
+        "draft-mcguinness-aauth-mission-expiry",
         "draft-mcguinness-mission-aauth",
         "draft-mcguinness-mission-aauth-management",
         "draft-mcguinness-mission-audit",

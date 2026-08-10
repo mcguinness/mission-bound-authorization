@@ -37,6 +37,14 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-hardt-oauth-aauth-protocol-10
+  I-D.draft-mcguinness-aauth-mission-expiry:
+    title: "AAuth Mission Expiry"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-hardt-aauth-r3:
@@ -445,6 +453,14 @@ and administrative mechanisms are left to AAuth mission-management work.
 A deployment can record a termination reason in its private log without
 creating another protocol state.
 
+Every mission approved under this binding MUST carry the `expires_at`
+member defined by AAuth Mission Expiry
+{{I-D.draft-mcguinness-aauth-mission-expiry}}, and the PS MUST enforce
+it as that extension specifies.  When a proposal omits an expiry, the
+PS MUST set one at approval under deployment policy.  Expiry
+transitions the mission to `terminated`; it adds no third state, and
+no auth token issued under the mission outlives it.
+
 There is no suspended state in this binding.  A short wait uses AAuth's
 deferred-response mechanism.  A long or materially changed pause is
 handled by terminating the old mission and approving a new, appropriately
@@ -478,6 +494,9 @@ if it:
   log;
 - applies the active-state gate to every PS operation that references a
   mission;
+- approves no mission without `expires_at` and enforces it as AAuth
+  Mission Expiry {{I-D.draft-mcguinness-aauth-mission-expiry}}
+  specifies;
 - evaluates resource-token requests in mission context when it issues or
   brokers auth tokens; and
 - does not expose the private mission blob to Resources or Access Servers.

@@ -122,6 +122,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-aauth-mission-expiry:
+    title: "AAuth Mission Expiry"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -2560,7 +2568,9 @@ including the swarm-scale Status List, lifecycle verbs, and
 completion), with Signals (the push channel) and Management (the
 operator plane) as its satellites.  AAuth keeps its native two-state
 lifecycle and uses `mission-aauth-management` for its corresponding
-status, termination, expiry, and delegation-tree surface.
+status, termination, expiry, and delegation-tree surface.  The expiry
+bound itself is an extension to the base AAuth protocol that the AAuth
+binding requires ({{I-D.draft-mcguinness-aauth-mission-expiry}}).
 
 `oauth-mission-status`:
 : The signed pull surface and the lifecycle endpoint, with
@@ -2595,6 +2605,12 @@ status, termination, expiry, and delegation-tree surface.
   delegation-tree queries at the Person Server, keyed only by
   `{approver, s256}` and preserving AAuth's `active` and `terminated`
   states.
+
+`aauth-mission-expiry`:
+: The immutable `expires_at` bound on an approved AAuth mission,
+  covered by `s256` and enforced on every Person Server decision path;
+  required by the AAuth binding, adoptable by base AAuth deployments
+  independently.
 
 `oauth-mission-cross-domain`:
 : Single-hop projection of a Mission to another trust domain via the
