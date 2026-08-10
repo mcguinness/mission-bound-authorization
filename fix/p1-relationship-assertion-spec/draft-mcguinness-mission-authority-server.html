@@ -2002,9 +2002,14 @@ define for the members of the same names.<a href="#section-7-4" class="pilcrow">
 and Mission Child Delegation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) define their
 request wire over OAuth Pushed Authorization Requests, bound to the
-predecessor or parent by token possession (<code>predecessor_token</code>,
-<code>parent_token</code>). A MAS issues no tokens, so that binding has no
-carrier here. This section defines the MAS-native wire for both
+predecessor or parent by a Mission relationship assertion
+sender-constrained to that Mission's own recorded <code>cnf</code> key
+(<code>predecessor_assertion</code>, <code>parent_assertion</code>, per the expansion
+profile's relationship-assertion definition,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>). A MAS issues no
+tokens, so no Mission it hosts ever has a recorded <code>cnf</code> for such an
+assertion to verify against, and that binding has no carrier here.
+This section defines the MAS-native wire for both
 operations: carriage on the mission submission endpoint
 (<a href="#native-carriage" class="auto internal xref">Section 8.1</a>) and an authenticated-client binding in place of
 token possession (<a href="#native-binding" class="auto internal xref">Section 8.2</a>). It defines carriage and binding
@@ -2058,9 +2063,9 @@ operation.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
 be refused with <code>invalid_mission_intent</code>: the operations do not
 combine. A submission carrying <code>parent</code> without <code>child_actor</code>, or
 <code>child_actor</code> without <code>parent</code>, <span class="bcp14">MUST</span> be refused the same way.<a href="#section-8.1-4" class="pilcrow">¶</a></p>
-<p id="section-8.1-5">The <code>predecessor_token</code> and <code>parent_token</code> parameters of the OAuth
-wire do not exist on this surface; the binding of <a href="#native-binding" class="auto internal xref">Section 8.2</a>
-replaces them.<a href="#section-8.1-5" class="pilcrow">¶</a></p>
+<p id="section-8.1-5">The <code>predecessor_assertion</code> and <code>parent_assertion</code> parameters of the
+OAuth wire do not exist on this surface; the binding of
+<a href="#native-binding" class="auto internal xref">Section 8.2</a> replaces them.<a href="#section-8.1-5" class="pilcrow">¶</a></p>
 <p id="section-8.1-6">The referenced profiles' OAuth error outcomes map onto this endpoint's
 error surface as the issuance profile's do (<a href="#intent-submission" class="auto internal xref">Section 4.1</a>):
 <code>invalid_request</code> outcomes map to <code>invalid_mission_intent</code>, and
@@ -2230,7 +2235,7 @@ Status (<a href="#lifecycle-and-state" class="auto internal xref">Section 7</a>)
             <p id="section-8.4-2.6.1"><strong>Denial reasons.</strong> That profile's closed denial-reason set applies;
 the code rides in <code>mission_denial_reason</code> per <a href="#native-carriage" class="auto internal xref">Section 8.1</a>.
 The <code>parent_mismatch</code> reason has no analog on this surface: with no
-<code>parent_token</code> to cross-check, a binding failure is refused per
+<code>parent_assertion</code> to cross-check, a binding failure is refused per
 <a href="#native-carriage" class="auto internal xref">Section 8.1</a>.<a href="#section-8.4-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
