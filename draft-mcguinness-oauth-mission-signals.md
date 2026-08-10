@@ -94,6 +94,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -376,6 +384,22 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   `superseded`, giving the successor that replaced the Mission
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
+`containment_version` (integer, conditional):
+: the Mission's containment overlay version at this event's commit.
+  REQUIRED when the deployment runs the containment profile
+  ({{I-D.draft-mcguinness-oauth-mission-containment}}), which defines
+  the overlay and requires this member on every
+  `mission.lifecycle-change` event, so a consumer can tell an
+  active-to-active version bump that narrows authority from one that
+  does not.
+
+`authority_hash` (string, optional):
+: the `authority_hash` the issuance profile commits at approval
+  ({{I-D.draft-mcguinness-oauth-mission}}). Present at the containment
+  profile's option, as a reference to the Authority Set the current
+  containment overlay narrows
+  ({{I-D.draft-mcguinness-oauth-mission-containment}}).
+
 Following the issuance profile's forward-compatibility rule, an event
 consumer MUST treat every `state` value other than `active` as
 non-deriving, including a value it does not recognize.
@@ -541,6 +565,18 @@ On receiving and verifying ({{set-protection}}) a
   state that spans the gap. The Status response's `version` member
   re-seats gap detection: the consumer sets its last-applied version
   to the returned value and measures the next gap from it.
+- Rematerialize its effective authority view for the Mission through
+  the Mission Status operation
+  ({{I-D.draft-mcguinness-oauth-mission-status}}) before further
+  consequential reliance when it is containment-aware
+  ({{I-D.draft-mcguinness-oauth-mission-containment}}) and the event
+  carries a `containment_version` greater than the `containment_version`
+  of the authority view it last materialized for that `mission.id`,
+  even when `state` equals `prior_state`. This covers the sequential
+  case the version-gap rule above does not: an active-to-active
+  containment transition where nothing in `state` signals that
+  authority narrowed. The version-gap rule stays the fallback for the
+  coarse case, a missed event.
 - Acknowledge the event per the SSF delivery method in use.
 
 A consumer MUST NOT treat the event as authority to change Mission
