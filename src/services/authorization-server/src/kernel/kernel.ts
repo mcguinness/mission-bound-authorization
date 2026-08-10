@@ -850,6 +850,13 @@ export class MissionKernel {
       // @spec mission#approval-basis: the read-only wire signal. MUST NOT be
       // relied on to grant authority.
       approval_basis: { type: record.approval_basis.type },
+      // @spec mission#approved-client, mission#delegation (delegate model, P0-2):
+      // the originally-approved agent, immutable since approval. The token's
+      // top-level `client_id` (set by the caller/oidc-provider from the
+      // authenticated requester) is the immediate client and MAY differ from this
+      // once a delegate acts. `iss` omitted: this record's issuer is always the
+      // token's `iss` in this reference impl (no disambiguation needed).
+      approved_client: { client_id: record.client_id },
     };
   }
 

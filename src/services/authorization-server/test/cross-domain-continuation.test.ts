@@ -9,7 +9,7 @@
  * byte-identical to the legacy ID-JAG. Self-contained: no RAS/SaaS on any path.
  */
 
-import { type ActObject, extendChainCollapsing } from "@mission/actor-chain";
+import { type ActObject, extendChain, extendChainCollapsing } from "@mission/actor-chain";
 import {
   calculateJwkThumbprint,
   type CryptoKey,
@@ -122,6 +122,41 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
     expect(Array.isArray(c.authorization_details)).toBe(true);
     expect((c.authorization_details as unknown[]).length).toBeGreaterThan(0);
     expect(c.client_id).toBe("ap-agent");
+  });
+
+  it("@spec mission#approved-client, mission#delegation (delegate model, P0-2) — a genuine delegate's grant names the delegate as client_id, nests the approved agent one level into act, and discloses the approved agent via mission.approved_client", async () => {
+    // The Mission was approved for "ap-agent"; a DIFFERENT delegate ("delegate-svc")
+    // is the one actually presenting and requesting THIS cross-domain grant.
+    const record = approve(5);
+    // Outermost act = the current delegate (the immediate/requesting client);
+    // prior lineage (the approved agent) nests inward via act.act.
+    const delegateAct = extendChain({ iss: AS_ISS, sub: "delegate-svc" }, { iss: AS_ISS, sub: "ap-agent" });
+
+    const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+      missionId: record.id,
+      targetAs: RAS_ISS,
+      clientId: "delegate-svc", // the requesting client, NOT the approved agent
+      cnfJkt: agentJkt,
+      resourceToAs: RESOURCE_TO_AS,
+      act: delegateAct,
+    });
+    const c = decodeJwt(grant);
+
+    // client_id (top-level) is the OAuth client requesting THIS token (the
+    // immediate client/current delegate), per RFC 8693 Section 4.3 / RFC 9068
+    // Section 2.2 — NOT the Mission's approved agent.
+    expect(c.client_id).toBe("delegate-svc");
+    // act: the outermost entry is the current delegate; the approved agent's
+    // prior lineage nests one level inward via act.act.
+    const act = c.act as ActObject;
+    expect(act.sub).toBe("delegate-svc");
+    expect(act.act?.sub).toBe("ap-agent");
+    // mission.approved_client: the originally-approved agent (record.client_id),
+    // distinct from client_id above. iss omitted (approving issuer == token iss
+    // in this reference impl).
+    const mission = c.mission as { approved_client?: { client_id?: string; iss?: string } };
+    expect(mission.approved_client?.client_id).toBe("ap-agent");
+    expect(mission.approved_client?.iss).toBeUndefined();
   });
 
   it("omits absent auth-envelope sub-fields (partial envelope)", async () => {
