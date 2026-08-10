@@ -45,6 +45,15 @@ export {
 export type { ProtectedEventSource } from "./adapters/provider.js";
 export { validateMissionIntent, IntentError } from "./kernel/intent.js";
 export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
+export {
+  authorizationDetailsTypesMetadata,
+  AUTHORIZATION_DETAILS_TYPES_METADATA,
+  MISSION_RESOURCE_ACCESS_SCHEMA,
+  MISSION_RESOURCE_ACCESS_TYPE,
+  SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
+  validateMissionResourceAccessSchema,
+  type AuthorizationDetailsTypeMetadata,
+} from "./kernel/authorization-details-metadata.js";
 export * from "./kernel/types.js";
 export {
   issueCrossDomainGrant,

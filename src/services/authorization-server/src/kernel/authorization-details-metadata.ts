@@ -1,0 +1,187 @@
+/**
+ * @spec mission#authorization-derivation, mission#other-types
+ * @spec I-D.draft-zehavi-oauth-rar-metadata (authorization_details_types_metadata_endpoint)
+ *
+ * The AS's single source of truth for which `authorization_details` types it
+ * advertises/supports, each with its published JSON Schema. Both the AS
+ * metadata endpoint (provider.ts) and the proposed_authority type check
+ * (intent.ts) consult the SAME key set exported here, so "an entry whose type
+ * is not an advertised type" (@spec mission#other-types) cannot drift out of
+ * sync with what the metadata endpoint actually publishes.
+ */
+
+import type { JsonValue } from "@mission/core";
+
+/** @spec mission#authorization-derivation — the sole type this AS derives. */
+export const MISSION_RESOURCE_ACCESS_TYPE = "mission_resource_access" as const;
+
+/** draft-zehavi-oauth-rar-metadata §5 — one type's published metadata entry. */
+export interface AuthorizationDetailsTypeMetadata {
+  version?: string;
+  description?: string;
+  documentation_uri?: string;
+  /** Mutually exclusive with schema_uri (draft-zehavi §5); this AS always inlines `schema`. */
+  schema: Record<string, JsonValue>;
+  examples?: JsonValue[];
+}
+
+/**
+ * @spec mission#authorization-derivation — the JSON Schema for one
+ * `mission_resource_access` authorization_details object (the type's
+ * normative definition remains {{type-registration}}; this is its
+ * machine-readable form). `constraints` covers the Common Constraints
+ * structure (@spec mission#common-constraints): `max_amount`/`vendors` are
+ * shaped explicitly (the two this derivation engine narrows, see derive.ts);
+ * other registered Common Constraint keys are left open
+ * (`additionalProperties: true`) since the schema describes wire SHAPE, not
+ * which keys this engine implements narrowing for. draft-zehavi §5: the
+ * schema "MUST restrict the `type` attribute" — done via `const` below.
+ */
+export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: "urn:ietf:params:oauth:authorization-details-type:mission_resource_access",
+  title: "Mission Resource Access",
+  type: "object",
+  properties: {
+    type: { const: MISSION_RESOURCE_ACCESS_TYPE },
+    resource: { type: "string", format: "uri" },
+    actions: { type: "array", items: { type: "string" }, minItems: 1 },
+    constraints: {
+      type: "object",
+      description: "Common Constraints (@spec mission#common-constraints)",
+      properties: {
+        max_amount: {
+          type: "object",
+          properties: { amount: { type: "string" }, currency: { type: "string" } },
+          required: ["amount", "currency"],
+          additionalProperties: false,
+        },
+        vendors: { type: "array", items: { type: "string" } },
+      },
+      additionalProperties: true,
+    },
+    delegation: {
+      type: "object",
+      description: "@spec attenuation#delegation, child-delegation#fanout",
+      properties: {
+        max_depth: { type: "integer", minimum: 0 },
+        allowed_delegates: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { sub: { type: "string" }, sub_profile: { type: "string" } },
+            additionalProperties: true,
+          },
+        },
+      },
+      required: ["max_depth"],
+      additionalProperties: true,
+    },
+  },
+  required: ["type", "resource", "actions"],
+  additionalProperties: true,
+};
+
+/**
+ * draft-zehavi-oauth-rar-metadata §5 response body: a JSON object keyed by
+ * authorization_details type identifier. The key set here IS
+ * `authorization_details_types_supported` (@spec mission#other-types) — the
+ * endpoint enriches that list with schemas, it does not add to it.
+ */
+export const AUTHORIZATION_DETAILS_TYPES_METADATA: Readonly<Record<string, AuthorizationDetailsTypeMetadata>> = {
+  [MISSION_RESOURCE_ACCESS_TYPE]: {
+    version: "1",
+    description:
+      "A Mission's Authority Set entry: one (resource, actions[]) grant plus its Common Constraints and delegation policy. Issuer-derived (@spec mission#authorization-derivation); a client MAY propose one via mission_intent.proposed_authority but MUST NOT submit it directly on an authorization request.",
+    documentation_uri: "https://github.com/mcguinness/mission-bound-authorization",
+    schema: MISSION_RESOURCE_ACCESS_SCHEMA,
+    examples: [
+      {
+        type: MISSION_RESOURCE_ACCESS_TYPE,
+        resource: "https://payments.example/mcp",
+        actions: ["payments:invoice.read"],
+      },
+    ],
+  },
+};
+
+/**
+ * The advertised/supported authorization_details type identifiers — the SAME
+ * set the metadata endpoint publishes and the proposed_authority type check
+ * (intent.ts) consults. Single source of truth (@spec mission#other-types):
+ * an entry of a type not in this set is refused, never silently carried.
+ */
+export const SUPPORTED_AUTHORIZATION_DETAILS_TYPES: ReadonlySet<string> = new Set(
+  Object.keys(AUTHORIZATION_DETAILS_TYPES_METADATA),
+);
+
+/** The full endpoint response body (draft-zehavi §5). */
+export function authorizationDetailsTypesMetadata(): Record<string, AuthorizationDetailsTypeMetadata> {
+  return AUTHORIZATION_DETAILS_TYPES_METADATA;
+}
+
+/**
+ * Schema-conformance check for one `mission_resource_access` object
+ * (draft-zehavi §5: the published schema "MUST validate exactly one
+ * authorization details object"). Hand-rolled (no JSON Schema engine is a
+ * dependency of this workspace) but mirrors MISSION_RESOURCE_ACCESS_SCHEMA
+ * structurally member-for-member; returns a violation description on the
+ * first mismatch, else undefined. Callers MUST check the type is advertised
+ * (SUPPORTED_AUTHORIZATION_DETAILS_TYPES) before calling this — it assumes
+ * `type` is already `mission_resource_access` and does not re-check it.
+ */
+export function validateMissionResourceAccessSchema(entry: unknown): string | undefined {
+  if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+    return "authorization_details entry must be an object";
+  }
+  const e = entry as Record<string, unknown>;
+  if (typeof e.resource !== "string") return "resource must be a string";
+  if (!Array.isArray(e.actions) || e.actions.length === 0 || !e.actions.every((a) => typeof a === "string")) {
+    return "actions must be a non-empty array of strings";
+  }
+  if (e.constraints !== undefined) {
+    if (e.constraints === null || typeof e.constraints !== "object" || Array.isArray(e.constraints)) {
+      return "constraints must be an object";
+    }
+    const c = e.constraints as Record<string, unknown>;
+    if (c.max_amount !== undefined) {
+      if (
+        c.max_amount === null ||
+        typeof c.max_amount !== "object" ||
+        Array.isArray(c.max_amount) ||
+        typeof (c.max_amount as Record<string, unknown>).amount !== "string" ||
+        typeof (c.max_amount as Record<string, unknown>).currency !== "string"
+      ) {
+        return "constraints.max_amount must be an object with string amount and currency";
+      }
+    }
+    if (c.vendors !== undefined) {
+      if (!Array.isArray(c.vendors) || !c.vendors.every((v) => typeof v === "string")) {
+        return "constraints.vendors must be an array of strings";
+      }
+    }
+  }
+  if (e.delegation !== undefined) {
+    if (e.delegation === null || typeof e.delegation !== "object" || Array.isArray(e.delegation)) {
+      return "delegation must be an object";
+    }
+    const d = e.delegation as Record<string, unknown>;
+    if (typeof d.max_depth !== "number" || !Number.isInteger(d.max_depth) || d.max_depth < 0) {
+      return "delegation.max_depth must be a non-negative integer";
+    }
+    if (d.allowed_delegates !== undefined) {
+      if (!Array.isArray(d.allowed_delegates)) return "delegation.allowed_delegates must be an array";
+      for (const m of d.allowed_delegates) {
+        if (m === null || typeof m !== "object" || Array.isArray(m)) {
+          return "delegation.allowed_delegates entries must be objects";
+        }
+        const mm = m as Record<string, unknown>;
+        if (mm.sub !== undefined && typeof mm.sub !== "string") return "allowed_delegates.sub must be a string";
+        if (mm.sub_profile !== undefined && typeof mm.sub_profile !== "string") {
+          return "allowed_delegates.sub_profile must be a string";
+        }
+      }
+    }
+  }
+  return undefined;
+}

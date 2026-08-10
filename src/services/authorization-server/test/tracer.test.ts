@@ -339,4 +339,32 @@ describe("M1 tracer slice", () => {
     expect(meta.introspection_endpoint).toBe(`${ISSUER}/introspect`);
     expect(meta.pushed_authorization_request_endpoint).toBe(`${ISSUER}/request`);
   });
+
+  it("publishes authorization_details_types_metadata_endpoint (@spec mission#other-types, I-D.draft-zehavi-oauth-rar-metadata)", async () => {
+    const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Record<
+      string,
+      unknown
+    >;
+    expect(meta.authorization_details_types_metadata_endpoint).toBe(`${ISSUER}/authorization-details-types`);
+    // @spec mission#other-types: the metadata endpoint's key set IS
+    // authorization_details_types_supported -- verified empirically (oidc-provider
+    // publishes the latter from the configured richAuthorizationRequests `types`),
+    // not merely assumed.
+    expect(meta.authorization_details_types_supported).toEqual(["mission_resource_access"]);
+
+    const res = await fetch(`${ISSUER}/authorization-details-types`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("application/json");
+    const body = (await res.json()) as Record<
+      string,
+      { schema?: Record<string, unknown>; schema_uri?: string; version?: string }
+    >;
+    expect(Object.keys(body)).toEqual(meta.authorization_details_types_supported);
+    const entry = body.mission_resource_access;
+    expect(entry?.schema).toBeDefined();
+    expect(entry?.schema_uri).toBeUndefined(); // mutually exclusive with `schema`
+    expect((entry?.schema as Record<string, unknown>)?.properties).toMatchObject({
+      type: { const: "mission_resource_access" },
+    });
+  });
 });

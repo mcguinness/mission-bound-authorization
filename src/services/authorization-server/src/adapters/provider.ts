@@ -40,6 +40,7 @@ import {
   childMissionClaim,
   createChildMission,
 } from "../kernel/child-delegation.js";
+import { authorizationDetailsTypesMetadata } from "../kernel/authorization-details-metadata.js";
 import { UnknownProtectedEventError } from "../kernel/containment.js";
 import { isSubsetSet } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
@@ -1021,6 +1022,18 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       return;
     }
 
+    // --- Authorization Details Types Metadata (@spec mission#other-types,
+    // I-D.draft-zehavi-oauth-rar-metadata) ---
+    // Public discovery, like the endpoints above: no consent or per-mission
+    // state is disclosed, only the AS's published authorization_details type
+    // registry (schema/version/description/examples per type).
+    if (ctx.path === "/authorization-details-types" && ctx.method === "GET") {
+      ctx.status = 200;
+      ctx.set("content-type", "application/json");
+      ctx.body = authorizationDetailsTypesMetadata();
+      return;
+    }
+
     // --- Lifecycle operations (@spec status#legal-transitions) ---
     const lifecycleMatch = ctx.path.match(/^\/missions\/([^/]+)\/lifecycle$/);
     if (lifecycleMatch && ctx.method === "POST") {
@@ -1368,6 +1381,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       meta.service_catalog_endpoint = `${opts.issuer}/service-catalog`;
       meta.introspection_endpoint = `${opts.issuer}/introspect`;
       meta.transaction_authorization_endpoint = `${opts.issuer}/transaction`;
+      // @spec mission#other-types, I-D.draft-zehavi-oauth-rar-metadata — the
+      // metadata endpoint is the source of truth for "AS-supported types"; its
+      // key set is authorization_details_types_supported (below, already
+      // published by the richAuthorizationRequests feature from `types`).
+      meta.authorization_details_types_metadata_endpoint = `${opts.issuer}/authorization-details-types`;
     }
   };
 }

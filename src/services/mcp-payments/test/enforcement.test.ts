@@ -163,6 +163,81 @@ d("M4 core enforcement tier", () => {
     const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-3" }, TOKEN);
     expect(res.ok).toBe(false);
     expect(res.denial_reason).toBe("out_of_authority");
+    // @spec I-D.draft-zehavi-oauth-rar-metadata §4: this out_of_authority is NOT
+    // a genuine absence -- payments:payment.schedule IS in the Authority Set,
+    // only this vendor is excluded by the constraint -- so the remediation
+    // grain must NOT fire (proposing the same entry back would be a false hint).
+    expect(res.insufficient_authorization).toBeUndefined();
+  });
+
+  // @spec I-D.draft-zehavi-oauth-rar-metadata §4 — the insufficient_authorization
+  // remediation grain: a GENUINE absence (the action is nowhere in the
+  // Mission's Authority Set, unlike the vendor-constraint case above) carries
+  // actionable authorization_details the client could propose next.
+  it("action absent from the Authority Set entirely denied out_of_authority WITH the insufficient_authorization grain", async () => {
+    build();
+    const res = await server.callWriteTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("out_of_authority");
+    expect(res.insufficient_authorization).toBeDefined();
+    const ia = res.insufficient_authorization!;
+    expect(ia.www_authenticate).toMatch(/^DPoP /); // this RS's tokens are DPoP-bound, not Bearer
+    expect(ia.www_authenticate).toContain('error="insufficient_authorization"');
+    expect(ia.www_authenticate).toContain(`authorization_remediation=${ia.authorization_remediation}`);
+    const decoded = JSON.parse(Buffer.from(ia.authorization_remediation, "base64url").toString("utf8")) as {
+      authorization_details: Array<{ type: string; resource: string; actions: string[] }>;
+    };
+    expect(decoded.authorization_details).toEqual([
+      { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:payment.execute"] },
+    ]);
+  });
+
+  // @spec containment#restoration — containment is the family's monotonic
+  // trust ratchet; restoration goes through an Expansion successor with
+  // disclosed history, never through "here's how to ask again". The
+  // remediation grain must NOT fire for authority_contained.
+  it("contained authority denied authority_contained WITHOUT the insufficient_authorization grain", async () => {
+    const containedView: MissionView = {
+      ...VIEW,
+      containment: { version: 1, contained: [{ resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }] },
+    };
+    payments = new PaymentsStore();
+    payments.seed(
+      [{ id: "acme", name: "Acme", status: "approved" }],
+      [
+        {
+          id: "inv-1",
+          vendor_id: "acme",
+          amount: "125.00",
+          currency: "USD",
+          payee_account: "acct-acme",
+          status: "payable",
+        },
+      ],
+    );
+    evidence = new EvidenceStore();
+    const card = { name: "payments", tools: ["get_invoice"] };
+    const pep = new Pep({
+      payments,
+      evidence,
+      fga,
+      modelId,
+      loadView: (id) => (id === containedView.id ? containedView : undefined),
+      instanceEpoch: "epoch-1",
+      sourceDigest: sourceDigestOf(card),
+    });
+    const containedServer = new McpPaymentsServer({
+      pep,
+      payments,
+      loadView: (id) => (id === containedView.id ? containedView : undefined),
+      jwks: { keys: [] },
+      issuer: ISSUER,
+      serverCard: card,
+    });
+    const res = await containedServer.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("authority_contained");
+    expect(res.insufficient_authorization).toBeUndefined();
   });
 
   it("mission-scoped tools/list shows only in-authority tools (least exposure)", () => {

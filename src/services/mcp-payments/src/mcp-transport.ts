@@ -33,7 +33,7 @@ import {
   type ListToolsResult,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { TOOL_ACTIONS, type TokenFacts } from "./pep.js";
+import { type InsufficientAuthorization, TOOL_ACTIONS, type TokenFacts } from "./pep.js";
 import type { McpPaymentsServer, ToolDef } from "./server.js";
 
 /**
@@ -50,6 +50,9 @@ export interface MediatedToolResult {
   denial_reason?: string;
   refusal_reason?: string;
   deduped?: boolean;
+  /** @spec I-D.draft-zehavi-oauth-rar-metadata §4 — present on a genuine
+   * out_of_authority denial; see pep.ts's InsufficientAuthorization. */
+  insufficient_authorization?: InsufficientAuthorization;
 }
 
 /** Map an internal ToolDef to an MCP `Tool` (least-exposure list entry). */

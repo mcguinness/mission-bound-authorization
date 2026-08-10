@@ -7,6 +7,10 @@
  */
 
 import { DuplicateMemberError, type JsonValue, parseStrictJson } from "@mission/core";
+import {
+  SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
+  validateMissionResourceAccessSchema,
+} from "./authorization-details-metadata.js";
 import type { AuthorityEntry, MissionIntent } from "./types.js";
 
 const TOP_LEVEL = new Set([
@@ -114,7 +118,12 @@ function validateProposedEntry(entry: JsonValue, resources: string[]): void {
     throw new IntentError("invalid_request", "proposed_authority entries must be objects");
   }
   const e = entry as Record<string, JsonValue>;
-  if (e.type !== "mission_resource_access") {
+  // @spec mission#other-types, I-D.draft-zehavi-oauth-rar-metadata — the type
+  // MUST be one this AS advertises via authorization_details_types_metadata_endpoint;
+  // SUPPORTED_AUTHORIZATION_DETAILS_TYPES is that SAME key set (single source of
+  // truth), so this can never drift from what the metadata endpoint publishes. An
+  // unadvertised type is refused here, never silently carried into derivation.
+  if (typeof e.type !== "string" || !SUPPORTED_AUTHORIZATION_DETAILS_TYPES.has(e.type)) {
     throw new IntentError("invalid_authorization_details", `unsupported authorization details type: ${String(e.type)}`);
   }
   if (typeof e.resource !== "string") {
@@ -126,6 +135,18 @@ function validateProposedEntry(entry: JsonValue, resources: string[]): void {
   }
   if (!isStringArray(e.actions) || e.actions.length === 0) {
     throw new IntentError("invalid_request", "proposed_authority entry requires actions");
+  }
+  // @spec mission#other-types, I-D.draft-zehavi-oauth-rar-metadata — the entry
+  // MUST also validate against that type's published JSON Schema. Only
+  // mission_resource_access is implemented (the type check above already
+  // refused anything else), so this checks the mission_resource_access shape
+  // (constraints/delegation) the resource/actions checks above do not cover.
+  const schemaError = validateMissionResourceAccessSchema(e);
+  if (schemaError) {
+    throw new IntentError(
+      "invalid_authorization_details",
+      `proposed_authority entry fails its published schema: ${schemaError}`,
+    );
   }
 }
 
