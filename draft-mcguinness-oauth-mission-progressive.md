@@ -63,7 +63,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-aauth:
-    title: "Mission-Bound Authorization for AAuth"
+    title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
     author:
       -
@@ -502,8 +502,8 @@ drawdown was within the consented envelope.
 
 Where a drawdown is triggered by the agent encountering a resource
 not named at approval, and the resource self-declares its operations
-and consequences in a content-addressed form (the AAuth binding
-composes one such substrate,
+and consequences in a content-addressed form (an AAuth deployment
+adopting Rich Resource Requests composes one such substrate,
 {{I-D.draft-mcguinness-mission-aauth}}), the adjudication MUST
 evaluate the declaration against the ceiling. The record of such a
 drawdown MUST carry the declaration's digest as

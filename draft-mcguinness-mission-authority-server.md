@@ -352,13 +352,20 @@ The contextual-governance kernel maps as follows:
    every other or unrecognized state fails closed. The lifecycle
    endpoint supplies authenticated transitions, including revocation
    by the authorized parties ({{lifecycle-and-state}}).
-7. **Context propagation**: submission status and signed Mission
+7. **Reliance bound**: a positive MAS decision requires current
+   `active` state at decision time. Standing artifacts carry their own
+   bounds: a signed Mission Status is relied on within its declared
+   freshness window ({{lifecycle-and-state}}), and a Join Assertion
+   within the introspected token's lifetime ({{join-assertion}}).
+   Tokens of the unchanged Authorization Server are not represented as
+   Mission-governed artifacts.
+8. **Context propagation**: submission status and signed Mission
    Status responses carry the Mission Reference. A Mission-joining PDP
    verifies the reference against the acting credential before using
    Mission authority. That join establishes correlation, not that the
    unchanged Authorization Server issued the credential under the
    Mission ({{mission-reference}}, {{mission-join}}).
-8. **Governance record**: the MAS audit log is the ordered governance
+9. **Governance record**: the MAS audit log is the ordered governance
    record. The MAS MUST append approval, positive and negative
    Mission-dependent decisions, join decisions it makes, and lifecycle
    transitions in per-Mission append order; MUST protect the log under

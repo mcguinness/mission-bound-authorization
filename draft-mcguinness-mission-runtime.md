@@ -158,7 +158,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-aauth:
-    title: "Mission-Bound Authorization for AAuth"
+    title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
     author:
       -
@@ -1336,7 +1336,8 @@ deployment establishes it in one of two modes:
   unverified reference MUST NOT establish the Mission. The Mission
   Authority Server profile defines the concrete join for this mode
   ({{I-D.draft-mcguinness-mission-authority-server}}), and the AAuth
-  binding defines it as its Reference-only verification mode
+  binding's reference propagation supplies the externally carried
+  reference for such a join
   ({{I-D.draft-mcguinness-mission-aauth}}).
 
 The mode each enforcement scope uses is part of its Enforcement

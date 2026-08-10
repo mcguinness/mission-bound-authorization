@@ -43,6 +43,14 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-hardt-oauth-aauth-protocol-10
+  I-D.draft-mcguinness-aauth-mission-expiry:
+    title: "AAuth Mission Expiry"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-mission-architecture:
@@ -72,9 +80,9 @@ This document defines that companion.
 
 An authenticated caller can read status, permanently terminate an
 authorized mission, and inspect the AAuth agent and token delegation
-tree recorded for it.  An optional immutable expiry ends a mission
-automatically.  Termination reasons are audit facts and never protocol
-states.  The operations extend the existing AAuth `mission_endpoint`,
+tree recorded for it.  An immutable expiry defined by the AAuth
+Mission Expiry extension ends a mission automatically.  Termination
+reasons are audit facts and never protocol states.  The operations extend the existing AAuth `mission_endpoint`,
 use AAuth HTTP Message Signatures for agent calls, preserve the privacy
 of the mission blob, and record their results in the mission log.
 
@@ -110,6 +118,11 @@ keyed by the exact native `{approver, s256}` pair.  Authorization to a
 remote resource remains a decision of that resource, its Access Server,
 and, where involved, the PS; this endpoint manages the contextual
 governance envelope held by the PS.
+
+The family architecture situates this surface among the lifecycle
+companions ({{I-D.draft-mcguinness-mission-architecture}}), and the
+family security model's analysis applies to it
+({{I-D.draft-mcguinness-mission-security-model}}).
 
 This specification reuses the existing `mission_endpoint`.  A mission
 proposal in the base protocol has no `operation` member.  A management
@@ -213,30 +226,19 @@ opaque audit value.
 
 ## Optional Expiry {#expiry}
 
-This specification defines an OPTIONAL `expires_at` member of the
-approved mission blob.  Its value is an RFC 3339 `date-time`
-{{RFC3339}} and MUST
-identify an instant later than `approved_at`.
+Mission expiry is defined by AAuth Mission Expiry
+{{I-D.draft-mcguinness-aauth-mission-expiry}}: an OPTIONAL `expires_at`
+member of the approved mission blob, covered by `s256`, immutable in
+place, and enforced by the PS on every decision path.  This profile
+does not redefine that mechanism.
 
-Because `expires_at` is in the approved mission blob, it is covered by
-`s256` and cannot be changed in place.  A proposal MAY suggest an
-expiry, and the PS or Person MAY add or change it before approval.  The
-Agent verifies and stores the approved response bytes exactly as
-required by AAuth.  Changing an approved expiry requires a new mission.
-
-At or after `expires_at`, the PS MUST atomically transition an active
-mission to `terminated` with reason `expired` before it processes any
-further request under that reference.  A missed scheduler callback does
-not extend authority: every PS decision path MUST compare the current
-time with `expires_at` before treating the mission as active.
-
-The PS SHOULD terminate promptly at the deadline for useful status and
-logging.  Clock synchronization, comparison precision, and tolerated
-clock skew MUST be documented by the deployment.  A PS MUST NOT issue an
-Auth Token whose `exp` is later than the mission's `expires_at` when the
-PS controls that expiry.  In federation, the PS MUST request or enforce
-that bound where the AS supports it; inability to obtain the bound is a
-documented residual risk and MAY be grounds to deny issuance.
+This profile adds the observable consequences.  The transition that
+extension requires at or after `expires_at` is committed with
+termination reason `expired` and attributed to the PS scheduler
+({{logging}}).  The status operation exposes the approved expiry
+({{status}}).  An explicit terminate that races automatic expiry
+resolves as {{idempotency}} specifies: the first committed transition
+wins, and the losing operation observes an idempotent outcome.
 
 # Endpoint and Discovery {#endpoint}
 
@@ -267,7 +269,21 @@ covered components and content integrity requirements are those of the
 base AAuth profile.  A management request is never authorized from the
 Mission Reference alone.
 
-## Metadata
+This placement follows the base protocol's own definition of
+`mission_endpoint` as the URL for mission lifecycle operations, of
+which mission creation is one; the operations here are additional
+lifecycle operations at that surface.  A native mission proposal
+carries no `operation` member, so the discrimination is unambiguous.
+The base protocol does not reserve the `operation` member: if a future
+AAuth revision defines its own operation discrimination or
+request-shape rules at `mission_endpoint`, that definition governs and
+this profile will align with it.  A caller SHOULD confirm that an
+operation appears in `mission_management_operations_supported`
+({{metadata}}) before sending it, because the base protocol does not
+define how a PS without this profile processes an operation-shaped
+request.
+
+## Metadata {#metadata}
 
 A PS supporting this specification adds the following member to its
 `/.well-known/aauth-person.json` metadata:
@@ -391,9 +407,11 @@ After authenticating and authorizing the caller, the PS returns:
 ~~~
 
 `mission`, `state`, and `approved_at` are REQUIRED.  `expires_at` is
-present only if it is in the mission blob.  `terminated_at` and
-`termination_reason` are REQUIRED when `state` is `terminated` and MUST
-be absent while it is `active`.
+present only if it is in the mission blob
+({{I-D.draft-mcguinness-aauth-mission-expiry}}).  `terminated_at` is an
+RFC 3339 `date-time` {{RFC3339}}; it and `termination_reason` are
+REQUIRED when `state` is `terminated` and MUST be absent while it is
+`active`.
 
 The response is current at the instant the PS evaluates the request.
 It is not a promise that the state will remain active.  An Agent MUST
@@ -847,7 +865,6 @@ This specification does define new wire elements:
 
 * the `mission_management_operations_supported` Person Server metadata
   member;
-* the optional `expires_at` approved mission-blob member;
 * the `status`, `terminate`, and `delegation_tree` operation values;
 * the JSON request and response members defined by {{endpoint}},
   {{status}}, {{terminate}}, and {{delegation-tree}}, including the
@@ -857,9 +874,9 @@ This specification does define new wire elements:
 * the error values in {{errors}}.
 
 The AAuth Protocol does not currently establish an IANA registry for
-Person Server metadata members, mission-blob members, mission-endpoint
-operations or JSON members, termination reasons, delegation
-relationships, or AAuth error values.  Consequently, there is no
+Person Server metadata members, mission-endpoint operations or JSON
+members, termination reasons, delegation relationships, or AAuth error
+values.  Consequently, there is no
 applicable registry in which to register any of the wire elements above.
 They are defined by this document and compared as specified here.
 
@@ -895,7 +912,8 @@ it:
    document and the base AAuth Protocol.
 
 Expiry support is OPTIONAL.  If implemented, the PS conforms to
-{{expiry}} in full.  Delegation-tree support is OPTIONAL.  If
+{{I-D.draft-mcguinness-aauth-mission-expiry}} and to {{expiry}} in
+full.  Delegation-tree support is OPTIONAL.  If
 advertised, the PS conforms to {{delegation-tree}} in full.
 
 A deployment claiming conformance MUST publish or otherwise make
