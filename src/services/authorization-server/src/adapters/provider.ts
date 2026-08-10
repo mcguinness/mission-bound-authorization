@@ -39,6 +39,7 @@ import {
   type ChildDenialReason,
   childMissionClaim,
 } from "../kernel/child-delegation.js";
+import { successorMissionClaim } from "../kernel/expansion.js";
 import { authorizationDetailsTypesMetadata } from "../kernel/authorization-details-metadata.js";
 import { UnknownProtectedEventError } from "../kernel/containment.js";
 import { isSubsetSet } from "../kernel/derive.js";
@@ -415,12 +416,21 @@ export function buildProvider(opts: AdapterOptions): Provider {
       }
       try {
         const gated = kernel.gateDerivation(record.id);
-        // @spec child-delegation#parent-member — a Child Mission projects the
-        // `parent` lineage member; a root Mission (no parent) projects the base
-        // claim. gateDerivation already ran the child active-state + ancestor-active
-        // gate and incremented derivation_count EXACTLY ONCE (the child-redemption
-        // handler deliberately does not gate, so there is no double-increment).
-        const claim = gated.parent ? childMissionClaim(kernel, gated) : kernel.missionClaim(gated);
+        // @spec child-delegation#parent-member + expansion#predecessor-member — a
+        // Child Mission projects the `parent` lineage member; a successor Mission
+        // projects the `predecessor` lineage member (its predecessor's mission_id),
+        // so a resource server sees expansion lineage on the wire WITHOUT
+        // introspecting; a root Mission (neither) projects the base claim. The two
+        // lineage kinds are mutually exclusive on a record (a successor never carries
+        // `parent`, a child never carries `predecessor`). gateDerivation already ran
+        // the child active-state + ancestor-active gate and incremented
+        // derivation_count EXACTLY ONCE (the child-redemption handler deliberately
+        // does not gate, so there is no double-increment).
+        const claim = gated.parent
+          ? childMissionClaim(kernel, gated)
+          : gated.predecessor
+            ? successorMissionClaim(kernel, gated)
+            : kernel.missionClaim(gated);
         return { mission: claim };
       } catch (e) {
         if (e instanceof GateError) throw new errors.InvalidGrant(e.message);

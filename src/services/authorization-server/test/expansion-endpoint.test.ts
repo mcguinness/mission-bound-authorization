@@ -283,7 +283,13 @@ describe("expansion wire: SYNCHRONOUS subset derivation (@spec expansion#expansi
     });
     const jkt = await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey));
     expect((payload.cnf as { jkt?: string })?.jkt).toBe(jkt);
-    expect((payload.mission as { id?: string })?.id).toBe(pred.missionId);
+    const mission = payload.mission as { id?: string; predecessor?: string };
+    expect(mission?.id).toBe(pred.missionId);
+    // A subset derivation issues on the predecessor itself (NO successor), so the
+    // claim MUST NOT carry a `predecessor` member (@spec expansion#predecessor-member:
+    // set on a successor Mission only). Pins "successor only" against the claim
+    // selection in extraTokenClaims.
+    expect(mission?.predecessor).toBeUndefined();
     // The predecessor is NOT superseded: a subset derivation creates no successor.
     expect(as.kernel.get(pred.missionId)?.state).toBe("active");
   });
@@ -321,11 +327,15 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(pb.authorization_details?.some((e) => e.actions.includes("payments:remittance.send"))).toBe(true);
 
     const { payload } = await jwtVerify(pb.access_token as string, remoteJwks, { issuer: ISSUER, audience: RESOURCE });
-    const successorId = (payload.mission as { id?: string }).id as string;
-    // A NEW successor Mission whose RECORD is lineage-linked to the predecessor
-    // (the record is authoritative for lineage; the access-token mission claim
-    // carries the successor's own id).
+    const mission = payload.mission as { id?: string; predecessor?: string };
+    const successorId = mission.id as string;
+    // A NEW successor Mission whose RECORD is lineage-linked to the predecessor,
+    // and whose ISSUED access-token `mission` claim carries the same lineage: the
+    // claim's own id is the successor, and its `predecessor` member is the
+    // predecessor's mission_id (@spec expansion#predecessor-member) — so a resource
+    // server sees lineage on the wire WITHOUT introspecting.
     expect(successorId).not.toBe(pred.missionId);
+    expect(mission.predecessor).toBe(pred.missionId);
     expect(as.kernel.get(successorId)?.predecessor).toBe(pred.missionId);
     // The predecessor is superseded on the successor's first redemption.
     expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
