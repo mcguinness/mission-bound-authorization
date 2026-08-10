@@ -388,9 +388,9 @@ working-group document); **audit**'s COSE hash envelope is approved
 and in the RFC Editor queue; **approval**, **attenuation**, **aauth**,
 and **aauth-management** track unratified individual drafts (OAuth
 Deferred Token Response, Attenuating Agent Tokens, and the AAuth
-protocol);
-**authority-server** confines its Internet-Draft references (client
-instance assertion and the AI agent instance profile) to the
+protocol); **authority-server** confines its Internet-Draft
+references (client instance assertion and the AI agent instance
+profile) to the
 Enterprise Mission Authority Profile's instance-bound joins, an
 optional hardening above the base conformance floor. For
 **authzen**, the stable surface is its core AuthZEN decision binding;

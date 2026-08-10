@@ -35,7 +35,7 @@ normative:
   RFC9457:
   I-D.draft-hardt-oauth-aauth-protocol:
     title: "AAuth Protocol"
-    target: https://datatracker.ietf.org/doc/draft-hardt-oauth-aauth-protocol/
+    target: https://datatracker.ietf.org/doc/draft-hardt-oauth-aauth-protocol/10/
     author:
       -
         ins: D. Hardt
@@ -514,7 +514,7 @@ AAuth does not create child Mission objects for sub-agents or chained
 calls.  It records agent relationships in `parent_agent`, `act`, and the
 Auth Tokens issued or provided under the same Mission Reference.  The
 tree operation reports those native relationships; it MUST NOT invent a
-child `mission_id` or imply algebraic scope inheritance.
+second child mission identifier or imply algebraic scope inheritance.
 
 An authorized caller sends:
 
@@ -843,18 +843,33 @@ sending references or credentials.
 
 This document requests no IANA registrations.
 
-The `mission_management_operations_supported` Person Server metadata
-member and its operation strings are defined in the AAuth metadata
-extension namespace.  The AAuth Protocol does not currently establish
-an IANA registry for Person Server metadata or capability values.  If
-such a registry is created before publication, this document will
-request registration of the metadata member and the `status`,
-`terminate`, and `delegation_tree` operation values in that registry.
+This specification does define new wire elements:
 
-Termination reasons are not protocol states and are intentionally not
-registered as lifecycle states.  Extension specifications defining new
-reasons need to specify their authorization, audit, and privacy
-semantics.
+* the `mission_management_operations_supported` Person Server metadata
+  member;
+* the optional `expires_at` approved mission-blob member;
+* the `status`, `terminate`, and `delegation_tree` operation values;
+* the JSON request and response members defined by {{endpoint}},
+  {{status}}, {{terminate}}, and {{delegation-tree}}, including the
+  token-residual and pagination members;
+* the termination-reason values in {{state}} and the `root`,
+  `sub_agent`, and `call_chain` relationship values; and
+* the error values in {{errors}}.
+
+The AAuth Protocol does not currently establish an IANA registry for
+Person Server metadata members, mission-blob members, mission-endpoint
+operations or JSON members, termination reasons, delegation
+relationships, or AAuth error values.  Consequently, there is no
+applicable registry in which to register any of the wire elements above.
+They are defined by this document and compared as specified here.
+
+If AAuth creates applicable registries before publication, this document
+will request registration of every corresponding element above rather
+than relying on this no-action section.  Termination reasons remain
+audit facts rather than lifecycle states; creating a reason registry
+would not turn them into protocol states.  Extension specifications
+defining new reasons need to specify their authorization, audit, and
+privacy semantics.
 
 # Conformance {#conformance}
 
