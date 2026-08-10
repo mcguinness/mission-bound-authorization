@@ -275,6 +275,7 @@ async function createChildViaExchange(fields: {
   childActor: Record<string, unknown>;
   parent?: string;
   intent?: unknown;
+  actorToken?: string;
 }): Promise<Response> {
   const params: Record<string, string> = {
     grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
@@ -292,6 +293,7 @@ async function createChildViaExchange(fields: {
     child_actor: JSON.stringify(fields.childActor),
   };
   if (fields.parent !== undefined) params.parent = fields.parent;
+  if (fields.actorToken !== undefined) params.actor_token = fields.actorToken;
   return tokenRequest(params);
 }
 
@@ -484,6 +486,55 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     const body = (await res.json()) as { error?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_dpop_proof");
+  });
+
+  it("actor_token (verification step 4): a presenter-key-signed actor_token whose cnf matches the presenter key is carried and the child is created", async () => {
+    // Phase 1 CARRIES actor_token; it does NOT restructure the act chain (#433).
+    // The actor_token MUST be signed by the presenter's DPoP key and its cnf.jkt
+    // MUST equal the presenter key. The acting agent itself is identified by client
+    // auth (ap-agent); actor_token is an additional sender-constraint on the key.
+    const p = await issueParentMission();
+    const jkt = await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey));
+    const actorToken = await new SignJWT({ cnf: { jkt } })
+      .setProtectedHeader({ alg: "ES256" })
+      .setIssuer("ap-agent")
+      .setSubject("ap-agent")
+      .setIssuedAt()
+      .setExpirationTime("2m")
+      .sign(dpopKeys.privateKey);
+    const res = await createChildViaExchange({
+      subjectToken: p.accessToken,
+      parent: p.missionId,
+      childActor: { sub: "subagent-actor-ok", sub_profile: "ai_agent" },
+      actorToken,
+    });
+    const body = (await res.json()) as { mission_id?: string; error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.mission_id).toBeTruthy();
+  });
+
+  it("actor_token (verification step 4): an actor_token whose cnf is NOT the presenter key is refused (invalid_grant)", async () => {
+    const otherKey = await generateKeyPair("ES256", { extractable: true });
+    const otherJkt = await calculateJwkThumbprint(await exportJWK(otherKey.publicKey));
+    // Signed with the PRESENTER key (so verification against the DPoP key succeeds),
+    // but naming a DIFFERENT key in cnf -> the sender-constraint check fails.
+    const actorToken = await new SignJWT({ cnf: { jkt: otherJkt } })
+      .setProtectedHeader({ alg: "ES256" })
+      .setIssuer("ap-agent")
+      .setSubject("ap-agent")
+      .setIssuedAt()
+      .setExpirationTime("2m")
+      .sign(dpopKeys.privateKey);
+    const res = await createChildViaExchange({
+      subjectToken: parent.accessToken,
+      parent: parent.missionId,
+      childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+      actorToken,
+    });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("not sender-constrained to the presenter key");
   });
 
   it("discovery advertises mission_child_delegation_supported (@spec #discovery)", async () => {

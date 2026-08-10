@@ -73,24 +73,11 @@ import {
 import type { TemplateStore } from "../kernel/template-store.js";
 
 /**
- * IMPL-LOCAL grant type for Child Mission CREATION on the real /token endpoint.
- * The child-delegation draft does NOT register a creation grant type (its IANA
- * section registers only the PAR params `parent`/`parent_token`/`child_actor`,
- * the discovery flag, and the denial reasons); the draft models creation as PAR +
- * adjudication. Relocating creation onto /token is the house rule "no new
- * endpoints when an existing surface carries it" applied on top of the draft, so
- * this URN is an implementation choice, mirroring DEFERRED_GRANT_TYPE's shape for
- * in-repo consistency. It is DISTINCT from CHILD_JWT_BEARER_GRANT_TYPE (the grant
- * the child redeems AS ITSELF).
- */
-export const CHILD_CREATION_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-child-creation";
-
-/**
  * @spec mission-template#dispatch — the impl-local grant type a dispatcher
  * redeems at /token to instantiate an ordinary Mission from a Mission
- * Template (dispatchFromTemplate). Mirrors CHILD_CREATION_GRANT_TYPE's shape
- * (an implementation choice on top of "no new endpoints when /token carries
- * it"); distinct from both child-creation and child-redemption grant types.
+ * Template (dispatchFromTemplate). Mirrors DEFERRED_GRANT_TYPE's shape (an
+ * implementation choice on top of "no new endpoints when /token carries it");
+ * distinct from the child-redemption grant type.
  */
 export const MISSION_DISPATCH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-dispatch";
 
@@ -819,7 +806,7 @@ async function handleChildJwtBearerGrant(
   //    renderer replaces any thrown error_description with the generic "grant
   //    request is invalid", but this gate MUST be distinguishable from the several
   //    other invalid_grant returns, so the DISTINCT error_description is emitted
-  //    directly (same technique handleChildCreationGrant uses for mission_denial_reason).
+  //    directly (same technique handleChildCreationExchange uses for mission_denial_reason).
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   if (typeof assertedClientId !== "string" || assertedClientId !== client.clientId) {
     ctx.status = 400;
@@ -1271,10 +1258,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     }
 
     // @spec child-delegation#child-creation, #request-processing — Child Mission
-    // CREATION now lives on the real /token endpoint as the CHILD_CREATION_GRANT_TYPE
-    // grant (registered above), authenticated by the parent's private_key_jwt. The
-    // bespoke back-channel POST /child-missions route was retired in favour of that
-    // existing OAuth surface; see handleChildCreationGrant.
+    // CREATION lives on the real /token endpoint as an RFC 8693 token exchange
+    // (grant_type=token-exchange, requested_token_type=jwt; see
+    // handleChildCreationExchange), authenticated by the parent's private_key_jwt
+    // with possession proven via DPoP over the parent access token's cnf. The
+    // bespoke back-channel POST /child-missions route and the earlier PAR +
+    // refresh-token creation grant were both retired in favour of that surface.
 
     // --- Mission Template admin plane (@spec mission-template) ---
     // POST /templates -- create a Mission Template (service-token admin plane).
@@ -1673,7 +1662,7 @@ function dispatchErrorCode(reason: DispatchReason): "invalid_request" | "access_
  * oidc-provider's same-client invariant holds. Denials set ctx.status/body
  * DIRECTLY (status before body) so `mission_denial_reason` survives —
  * oidc-provider's err_out renderer would otherwise strip any member other
- * than error/error_description (same technique as handleChildCreationGrant).
+ * than error/error_description (same technique as handleChildCreationExchange).
  */
 async function handleMissionDispatchGrant(
   provider: Provider,
