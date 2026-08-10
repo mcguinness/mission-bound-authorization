@@ -338,12 +338,10 @@ facts are the next subsection.
    estate ASs redeem MAS-minted grants for Mission-bound,
    state-gated tokens), **substrate** (for authors of new bindings).
 5. **Advanced, when the use case arrives**: **approval** (asynchronous
-   approvals), **expansion**, **containment** (narrows a live
-   Mission's effective authority without ending it), **child-delegation**,
-   **cross-domain**, **mission-continuation** (authorization
-   continuity over ICA / async-delegation / cross-domain transports),
-   **management**, **mandate**, **audit**, **shaping**, **signals**
-   (push latency optimization over correctly sized status polling).
+   approvals), **expansion**, **child-delegation**,
+   **cross-domain**, **management**, **mandate**, **audit**,
+   **shaping**, **signals** (push latency optimization over correctly
+   sized status polling).
 6. **Experimental, adopt for evaluation only**:
    **approval-revision**, **progressive**, **template** (consent once
    to a ceiling, then dispatch Missions from it at machine speed),
@@ -351,9 +349,12 @@ facts are the next subsection.
    (open-world encounters adjudicated against a pre-consented ceiling,
    with the lying-resource and tainted-session floors),
    **work-products** (keeps information from carrying the producing
-   Mission's authority across a handoff), **uma** (the UMA 2.0 binding
-   sketch, the first written against the substrate contract). Each
-   names a stable path to prefer where one exists.
+   Mission's authority across a handoff), **containment** (narrows a
+   live Mission's effective authority without ending it),
+   **mission-continuation** (authorization continuity over ICA /
+   async-delegation / cross-domain transports), **uma** (the UMA 2.0
+   binding sketch, the first written against the substrate contract).
+   Each names a stable path to prefer where one exists.
 
 The architecture and security model are Informational companions and
 sit outside the ordering.
