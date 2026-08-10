@@ -2593,8 +2593,8 @@ binding requires ({{I-D.draft-mcguinness-aauth-mission-expiry}}).
 
 `mission-discovery`:
 : Experimental: the open-world encounter as a governed operation:
-  identity pinning, ceiling adjudication with the lying-resource and
-  tainted-session floors, Discovery Evidence.
+  identity pinning, ceiling and contextual adjudication with the
+  lying-resource and tainted-session floors, Discovery Evidence.
 
 `oauth-mission-management`:
 : Fleet enumeration and bulk lifecycle operations for operators and

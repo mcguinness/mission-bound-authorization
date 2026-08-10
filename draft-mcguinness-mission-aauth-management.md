@@ -81,8 +81,8 @@ This document defines that companion.
 An authenticated caller can read status, permanently terminate an
 authorized mission, and inspect the AAuth agent and token delegation
 tree recorded for it.  An immutable expiry defined by the AAuth
-Mission Expiry extension ends a mission automatically.  Termination reasons are audit facts and never protocol
-states.  The operations extend the existing AAuth `mission_endpoint`,
+Mission Expiry extension ends a mission automatically.  Termination
+reasons are audit facts and never protocol states.  The operations extend the existing AAuth `mission_endpoint`,
 use AAuth HTTP Message Signatures for agent calls, preserve the privacy
 of the mission blob, and record their results in the mission log.
 
@@ -118,6 +118,11 @@ keyed by the exact native `{approver, s256}` pair.  Authorization to a
 remote resource remains a decision of that resource, its Access Server,
 and, where involved, the PS; this endpoint manages the contextual
 governance envelope held by the PS.
+
+The family architecture situates this surface among the lifecycle
+companions ({{I-D.draft-mcguinness-mission-architecture}}), and the
+family security model's analysis applies to it
+({{I-D.draft-mcguinness-mission-security-model}}).
 
 This specification reuses the existing `mission_endpoint`.  A mission
 proposal in the base protocol has no `operation` member.  A management
@@ -264,7 +269,21 @@ covered components and content integrity requirements are those of the
 base AAuth profile.  A management request is never authorized from the
 Mission Reference alone.
 
-## Metadata
+This placement follows the base protocol's own definition of
+`mission_endpoint` as the URL for mission lifecycle operations, of
+which mission creation is one; the operations here are additional
+lifecycle operations at that surface.  A native mission proposal
+carries no `operation` member, so the discrimination is unambiguous.
+The base protocol does not reserve the `operation` member: if a future
+AAuth revision defines its own operation discrimination or
+request-shape rules at `mission_endpoint`, that definition governs and
+this profile will align with it.  A caller SHOULD confirm that an
+operation appears in `mission_management_operations_supported`
+({{metadata}}) before sending it, because the base protocol does not
+define how a PS without this profile processes an operation-shaped
+request.
+
+## Metadata {#metadata}
 
 A PS supporting this specification adds the following member to its
 `/.well-known/aauth-person.json` metadata:
