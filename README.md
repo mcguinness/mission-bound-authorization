@@ -702,23 +702,30 @@ pushing at the token endpoint, the resource owner's decision is the
 approval event, the lifecycle gates every RPT issuance and upgrade,
 the RPT is the Mission-bound credential (token-carried or
 introspection-carried via the core's registered `mission` member),
-and the PCT is Mission continuity that is never authority. Full
-provision on ratified substrate machinery end to end; the trades are
-UMA's thin deployed base and its scope-coarse authority grain, which
-leaves runtime enforcement's role unchanged.
+and the PCT is Mission continuity that is never authority. It claims
+the contextual-governance kernel plus lifecycle-gated, state-observable,
+structured-authority, monotonic-derivation, and credential-bound
+capabilities on ratified substrate machinery; independent verification
+and portable evidence depend on the selected carriage and companion
+profiles. The trades are UMA's thin deployed base and its scope-coarse
+authority grain, which leaves runtime enforcement's role unchanged.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-uma.html)
 
 #### Mission Substrate Requirements
 
-For authors of new bindings. Consolidates, normatively, what any
-further binding of the Mission model must provide (identifier and
-issuer, the lifecycle state space with the only-`active` rule, the
-Authority Set with the subset rule, the integrity anchors, key
-material, the audit horizon, approval-event fidelity, and either a
-Mission-bound credential or a defined join). Changes nothing for the
-three existing bindings, which remain authoritative for themselves;
-the core remains the model's definitional home.
+For authors of new bindings. Defines a small, normative
+contextual-governance kernel: a native Mission reference, identified
+Controller, authenticated Actor binding, immutable Approved Context or
+verifiable commitment, approval event, active/non-active gate, context
+propagation, and ordered governance record. Stronger properties are
+declared separately as lifecycle-gated, state-observable,
+structured-authority, monotonic-derivation, credential-bound,
+independently-verifiable, and portable-evidence capabilities. Each
+binding publishes a Mission Substrate Statement identifying the scope
+and limitations of every claim; the kernel does not require OAuth
+identifiers, RAR, JWT claims, a universal Authority Set, or common
+integrity anchors.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
 
