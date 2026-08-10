@@ -11,16 +11,19 @@
 meets resources the approval could not name. This document defines
 discovery as a governed operation: the Encounter, the Discovery
 Adjudication that evaluates a newly met resource against a
-pre-consented ceiling, the identity a discovered resource must pin
+pre-consented ceiling or, where the binding's Controller natively
+adjudicates each governed request, against the approved mission
+context, the identity a discovered resource must pin
 before any binding, and the Discovery Evidence that makes each
 binding reproducible in audit. Two floors hold regardless of policy:
 a resource's self-declaration is accountability material and never
 classification authority, and in a session that has ingested
 untrusted content nothing newly discovered binds by policy, because
 a request to a new origin is itself egress. A Mission without a
-ceiling binds nothing discovered: the open world is reachable only
-through consent given in advance, narrowed at every step, and
-evidenced at every binding. 
+ceiling or an adjudicating Controller binds nothing discovered: the
+open world is reachable only through consent given in advance,
+exercised by ceiling policy or contextual judgment, narrowed at
+every step, and evidenced at every binding. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
@@ -1098,16 +1101,19 @@ svg {
 meets resources the approval could not name. This document defines
 discovery as a governed operation: the Encounter, the Discovery
 Adjudication that evaluates a newly met resource against a
-pre-consented ceiling, the identity a discovered resource must pin
+pre-consented ceiling or, where the binding's Controller natively
+adjudicates each governed request, against the approved mission
+context, the identity a discovered resource must pin
 before any binding, and the Discovery Evidence that makes each
 binding reproducible in audit. Two floors hold regardless of policy:
 a resource's self-declaration is accountability material and never
 classification authority, and in a session that has ingested
 untrusted content nothing newly discovered binds by policy, because
 a request to a new origin is itself egress. A Mission without a
-ceiling binds nothing discovered: the open world is reachable only
-through consent given in advance, narrowed at every step, and
-evidenced at every binding.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+ceiling or an adjudicating Controller binds nothing discovered: the
+open world is reachable only through consent given in advance,
+exercised by ceiling policy or contextual judgment, narrowed at
+every step, and evidenced at every binding.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1275,8 +1281,9 @@ sessions never bind a newly discovered resource by policy alone.<a href="#sectio
       </h2>
 <p id="section-2-1">This document is Experimental. It extends stable interfaces only
 through their declared seams: the progressive profile's drawdown
-path, the runtime profile's decision context, and the evidence
-objects' coordinated-extension rules. A deployment that does not
+path, the runtime profile's decision context, the AAuth binding's
+Person Server decision gate, and the evidence objects'
+coordinated-extension rules. A deployment that does not
 adopt it is unaffected; a Mission whose Authority Set and ceiling
 name every resource it touches never encounters this document. The
 stable path for a resource outside every envelope is a fresh
@@ -1329,18 +1336,20 @@ architecture defines
         <dd style="margin-left: 1.5em" id="section-3-5.2">
           <p id="section-3-5.2.1">The event of an agent meeting, during execution, a resource,
 capability catalog, or service that no entry of its Mission's
-Authority Set names.<a href="#section-3-5.2.1" class="pilcrow">¶</a></p>
+consented ceiling names or, under contextual adjudication, for
+which the Mission's governance record holds no prior binding.<a href="#section-3-5.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-3-5.3">Discovery Adjudicator:</dt>
         <dd style="margin-left: 1.5em" id="section-3-5.4">
           <p id="section-3-5.4.1">The component that decides an encounter. It is always the Mission
-Issuer: the issuer of the Mission on the drawdown path, or the
-AAuth Person Server at its token gate
-(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), which is that binding's
-Mission Issuer. A binding creates authority, and authority is
-created only at the Mission Issuer; a PDP enforces bindings and
-refuses the unbound, and never adjudicates one.<a href="#section-3-5.4.1" class="pilcrow">¶</a></p>
+Issuer: on the ceiling path, the issuer of the Mission; on the
+contextual path, the binding's Controller at its native decision
+gate, under the AAuth binding the Person Server
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>). A binding creates
+authority, and authority is created only at the Mission Issuer; a
+PDP enforces bindings and refuses the unbound, and never
+adjudicates one.<a href="#section-3-5.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-3-5.5">Egress-capable:</dt>
@@ -1373,27 +1382,30 @@ to the Mission.<a href="#section-3-5.10.1" class="pilcrow">¶</a></p>
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
       </h2>
 <p id="section-4-1">This profile is defined against the Mission model rather than OAuth
-mechanics. It consumes:<a href="#section-4-1" class="pilcrow">¶</a></p>
+mechanics. Both adjudication modes (<a href="#adjudication" class="auto internal xref">Section 7</a>) consume the
+Mission record's committed members and the only-<code>active</code> rule.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">Ceiling adjudication additionally consumes:<a href="#section-4-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-4-2.1">
-          <p id="section-4-2.1.1">the Mission record's committed members and the only-<code>active</code> rule;<a href="#section-4-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-4-3.1">
+          <p id="section-4-3.1.1">the issuance profile's Authority Set representation with the
+subset rule's resource-narrowing semantics, the substrate's
+Structured Authority capability;<a href="#section-4-3.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-4-2.2">
-          <p id="section-4-2.2.1">the Authority Set representation with the subset rule's
-resource-narrowing semantics;<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-4-3.2">
+          <p id="section-4-3.2.1">the integrity-anchor envelope for the digests its evidence
+carries; and<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-4-2.3">
-          <p id="section-4-2.3.1">the integrity-anchor envelope for the digests its evidence
-carries; and<a href="#section-4-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-2.4">
-          <p id="section-4-2.4.1">the progressive profile's consented ceiling, which is the only
-object a discovery binding may draw against.<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-4-3.3">
+          <p id="section-4-3.3.1">the progressive profile's consented ceiling, which is the only
+object a policy binding may draw against.<a href="#section-4-3.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-4-3">Where these exist under another binding, this profile composes
-unchanged; the AAuth binding hosts the adjudication at its Person
-Server token gate.<a href="#section-4-3" class="pilcrow">¶</a></p>
+<p id="section-4-4">Contextual adjudication consumes the approved context and the
+ordered governance record in their place, and its evidence digests
+ride the binding's native commitment. It exists only where the
+binding's Controller natively adjudicates each governed request; the
+AAuth binding hosts it at the Person Server's decision gate
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="encounter">
@@ -1539,10 +1551,11 @@ Server: the issuer identifier it names.<a href="#section-6-8.6.1" class="pilcrow
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-6-9">Under the AAuth binding, the Person Server performs the equivalent
-pinning with the substrate's own material: the Access Server
-association and the R3 document's <code>r3_s256</code>
-(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-6-9" class="pilcrow">¶</a></p>
+<p id="section-6-9">In an AAuth deployment, the Person Server performs the equivalent
+pinning with native material: the Access Server association and,
+where the deployment adopts Rich Resource Requests, the R3 document's
+<code>r3_s256</code> (<span>[<a href="#I-D.draft-hardt-aauth-r3" class="cite xref">I-D.draft-hardt-aauth-r3</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-6-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="adjudication">
@@ -1563,9 +1576,10 @@ association and the R3 document's <code>r3_s256</code>
           <p id="section-7-2.3.1">the self-declaration digest where one exists;<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.4">
-          <p id="section-7-2.4.1">the authority sought: the entry or entries the binding would
-create, whose action classes under the deployment's classification
-drive every floor of this document;<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.4.1">the authority sought: the entry or entries a ceiling binding would
+create, or the governed request a contextual binding would permit,
+whose action classes under the deployment's classification drive
+every floor of this document;<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.5">
           <p id="section-7-2.5.1">the requesting actor; and<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
@@ -1584,71 +1598,88 @@ report is not an untainted one. An operation the deployment's
 classification cannot assign an action class <span class="bcp14">MUST NOT</span> bind by
 policy: with no class the floors cannot be applied, so the encounter
 routes to a human or is refused.<a href="#section-7-3" class="pilcrow">¶</a></p>
-<p id="section-7-4">The adjudication returns exactly one of:<a href="#section-7-4" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-7-5">
-        <dt id="section-7-5.1"><strong>Bind.</strong></dt>
-        <dd style="margin-left: 1.5em" id="section-7-5.2">
-          <p id="section-7-5.2.1">The encountered resource falls within a consented ceiling entry
-under the subset rule's resource-narrowing semantics, no floor of
-this document objects, and concrete authority is created for it:
-under the OAuth binding, as a progressive in-ceiling drawdown
-whose successor entry names the resource
+<p id="section-7-4">Adjudication runs in one of two modes, fixed by what the binding
+supplies (<a href="#mission-substrate" class="auto internal xref">Section 4</a>). <strong>Ceiling adjudication</strong> decides
+against a structured, pre-consented ceiling under the subset rule.
+<strong>Contextual adjudication</strong> is the Controller's own judgment that
+the encounter falls within the approved mission context, informed by
+the governance record and the person channel. Contextual
+adjudication is policy in this document's sense: the Controller's
+judgment is not the human's, and every floor of this document
+applies identically in both modes.<a href="#section-7-4" class="pilcrow">¶</a></p>
+<p id="section-7-5">The adjudication returns exactly one of:<a href="#section-7-5" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7-6">
+        <dt id="section-7-6.1"><strong>Bind.</strong></dt>
+        <dd style="margin-left: 1.5em" id="section-7-6.2">
+          <p id="section-7-6.2.1">In ceiling adjudication, the encountered resource falls within a
+consented ceiling entry under the subset rule's resource-narrowing
+semantics; in contextual adjudication, the Controller judges it
+within the approved mission context. No floor of this document
+objects, and concrete authority is created: under the OAuth
+binding, as a progressive in-ceiling drawdown whose successor
+entry names the resource
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>); under the
-AAuth binding, as the Person Server's token-gate decision. The
-binding is narrowing-only: nothing an encounter creates may exceed
-the ceiling entry it draws against.<a href="#section-7-5.2.1" class="pilcrow">¶</a></p>
+AAuth binding, as the Person Server's contextual decision at its
+gate, appended to the mission log with the pinned identity and
+declaration digest. A ceiling binding is narrowing-only: nothing
+an encounter creates may exceed the ceiling entry it draws
+against. A contextual binding is request-scoped: it creates no
+standing entry, and a later request is adjudicated again.<a href="#section-7-6.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-7-5.3"><strong>Route to a human.</strong></dt>
-        <dd style="margin-left: 1.5em" id="section-7-5.4">
-          <p id="section-7-5.4.1">The encounter is real but no policy may decide it:<a href="#section-7-5.4.1" class="pilcrow">¶</a></p>
+<dt id="section-7-6.3"><strong>Route to a human.</strong></dt>
+        <dd style="margin-left: 1.5em" id="section-7-6.4">
+          <p id="section-7-6.4.1">The encounter is real but no policy may decide it:<a href="#section-7-6.4.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-7-5.4.2.1">
-              <p id="section-7-5.4.2.1.1">it falls outside every ceiling entry;<a href="#section-7-5.4.2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-7-6.4.2.1">
+              <p id="section-7-6.4.2.1.1">it falls outside every ceiling entry;<a href="#section-7-6.4.2.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-7-5.4.2.2">
-              <p id="section-7-5.4.2.2.1">a floor of this document requires a human (<a href="#lying-resource" class="auto internal xref">Section 8</a>,
-<a href="#injection-discovery" class="auto internal xref">Section 9</a>); or<a href="#section-7-5.4.2.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-7-6.4.2.2">
+              <p id="section-7-6.4.2.2.1">a floor of this document requires a human (<a href="#lying-resource" class="auto internal xref">Section 8</a>,
+<a href="#injection-discovery" class="auto internal xref">Section 9</a>); or<a href="#section-7-6.4.2.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-7-5.4.2.3">
-              <p id="section-7-5.4.2.3.1">identity could not be fully pinned.<a href="#section-7-5.4.2.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-7-6.4.2.3">
+              <p id="section-7-6.4.2.3.1">identity could not be fully pinned.<a href="#section-7-6.4.2.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-7-5.4.3">The encounter becomes an expansion proposal carrying the pinned
+<p id="section-7-6.4.3">The encounter becomes an expansion proposal carrying the pinned
 identity and declaration digest, so the Approver decides with the
 same facts the policy saw. The proposal travels the deployment's
 approval surface: the deferred-approval companion where deployed
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>), whose
 queue-pressure bounds apply to encounter-driven proposals
 unchanged, or the MAS's and Person Server's natively asynchronous
-approval otherwise. The disclosure renders:<a href="#section-7-5.4.3" class="pilcrow">¶</a></p>
+approval otherwise. The disclosure renders:<a href="#section-7-6.4.3" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-7-5.4.4.1">
-              <p id="section-7-5.4.4.1.1">the Encountered Resource object;<a href="#section-7-5.4.4.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-7-6.4.4.1">
+              <p id="section-7-6.4.4.1.1">the Encountered Resource object;<a href="#section-7-6.4.4.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-7-5.4.4.2">
-              <p id="section-7-5.4.4.2.1">the declaration, as the resource's claim and not as fact; and<a href="#section-7-5.4.4.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-7-6.4.4.2">
+              <p id="section-7-6.4.4.2.1">the declaration, as the resource's claim and not as fact; and<a href="#section-7-6.4.4.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-7-5.4.4.3">
-              <p id="section-7-5.4.4.3.1">the session's taint status.<a href="#section-7-5.4.4.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-7-6.4.4.3">
+              <p id="section-7-6.4.4.3.1">the session's taint status.<a href="#section-7-6.4.4.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-7-5.4.5">The resulting approval or expansion evidence carries the
+<p id="section-7-6.4.5">The resulting approval or expansion evidence carries the
 <code>encounter_id</code> (<a href="#discovery-evidence" class="auto internal xref">Section 10</a>), so the encounter and its
-human resolution correlate.<a href="#section-7-5.4.5" class="pilcrow">¶</a></p>
+human resolution correlate.<a href="#section-7-6.4.5" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-7-5.5"><strong>Refuse.</strong></dt>
-        <dd style="margin-left: 1.5em" id="section-7-5.6">
-          <p id="section-7-5.6.1">The encounter violates a hard rule (unpinnable identity the
+<dt id="section-7-6.5"><strong>Refuse.</strong></dt>
+        <dd style="margin-left: 1.5em" id="section-7-6.6">
+          <p id="section-7-6.6.1">The encounter violates a hard rule (unpinnable identity the
 deployment does not escalate, a prohibited class, an exhausted
-bound) and is recorded as refused.<a href="#section-7-5.6.1" class="pilcrow">¶</a></p>
+bound) and is recorded as refused.<a href="#section-7-6.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-7-6">A Mission with no consented ceiling has no bind outcome: every
-encounter routes to a human or refuses. Discovery is default-closed.<a href="#section-7-6" class="pilcrow">¶</a></p>
-<p id="section-7-7">On the OAuth binding's drawdown path, the encounter rides the
+<p id="section-7-7">In ceiling adjudication, a Mission with no consented ceiling has no
+bind outcome: every encounter routes to a human or refuses. In
+contextual adjudication, an encounter the approved context cannot
+support routes the same way. Discovery is default-closed in both
+modes.<a href="#section-7-7" class="pilcrow">¶</a></p>
+<p id="section-7-8">On the OAuth binding's drawdown path, the encounter rides the
 expansion request as two additional parameters, <code>encountered_resource</code>
 (the Encountered Resource object of <a href="#resource-identity" class="auto internal xref">Section 6</a>) and
 <code>resource_declaration_digest</code>; the progressive profile's rate bound,
@@ -1658,7 +1689,7 @@ additionally bound the rate of encounter adjudications per Mission
 across all three outcomes. It <span class="bcp14">MUST</span> publish the concrete bound in the
 Mission Deployment Profile. Routed and refused encounters consume
 adjudicator and Approver attention, and are the probing surface of
-<a href="#security-considerations" class="auto internal xref">Section 12</a>.<a href="#section-7-7" class="pilcrow">¶</a></p>
+<a href="#security-considerations" class="auto internal xref">Section 12</a>.<a href="#section-7-8" class="pilcrow">¶</a></p>
 <div id="re-encounter">
 <section id="section-7.1">
         <h3 id="name-re-encounter-and-drift">
@@ -1825,8 +1856,11 @@ sought, under the deployment's classification
 <dt id="section-10-2.13">
 <code>ceiling_entry_digest</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-10-2.14">
-          <p id="section-10-2.14.1">CONDITIONAL. <span class="bcp14">REQUIRED</span> on <code>bound</code>: the integrity-anchor encoded
-digest of the ceiling entry drawn against.<a href="#section-10-2.14.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.14.1">CONDITIONAL. <span class="bcp14">REQUIRED</span> on <code>bound</code> under ceiling adjudication: the
+integrity-anchor encoded digest of the ceiling entry drawn
+against. Absent for a contextual bind, whose record is the
+governance-record entry carrying the pinned identity and
+declaration digest.<a href="#section-10-2.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-10-2.15">
@@ -2061,7 +2095,7 @@ digest commitment keeps that content out of the log.<a href="#section-13-1" clas
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-aauth">[I-D.draft-mcguinness-mission-aauth]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Context Binding for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
         <dd>

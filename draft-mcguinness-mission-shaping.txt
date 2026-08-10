@@ -1317,9 +1317,9 @@ Table of Contents
 21.2.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
-              McGuinness, K., "Mission-Bound Authorization for AAuth",
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-mission-aauth.html>.
+              McGuinness, K., "Mission Context Binding for AAuth", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-aauth.html>.
 
    [I-D.draft-mcguinness-mission-architecture]
               McGuinness, K., "An Architecture for Mission-Bound

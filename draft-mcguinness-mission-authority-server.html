@@ -1200,7 +1200,7 @@ Mission Authority Profile for that role.<a href="#section-abstract-1" class="pil
             <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
-            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-mission-substrate" class="internal xref">Mission Substrate</a></p>
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-mission-substrate-statement" class="internal xref">Mission Substrate Statement</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
             <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-mission-submission" class="internal xref">Mission Submission</a></p>
@@ -1502,76 +1502,173 @@ informal gloss.<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
 </div>
 <div id="mission-substrate">
 <section id="section-3">
-      <h2 id="name-mission-substrate">
-<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
+      <h2 id="name-mission-substrate-statement">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-mission-substrate-statement" class="section-name selfRef">Mission Substrate Statement</a>
       </h2>
-<p id="section-3-1">The companion profiles of the Mission suite are defined against the
-Mission model's substrate primitives rather than against OAuth
-mechanics. The issuance profile provides all of them. A MAS provides
-these:<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-1">This Statement applies to the standalone MAS binding defined by this
+revision and declares conformance to
+<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">The contextual-governance kernel maps as follows:<a href="#section-3-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3-3">
+<li id="section-3-3.1">
+          <p id="section-3-3.1.1"><strong>Mission Reference</strong>: the tuple (<code>issuer</code>, <code>mission_id</code>) names one
+Mission. The MAS issuer URL is the uniqueness namespace;
+<code>mission_id</code> follows the issuance profile's comparison, retention,
+entropy, and non-reassignment rules.<a href="#section-3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-3.2">
+          <p id="section-3-3.2.1"><strong>Controller</strong>: the MAS controls approval, Mission state, and the
+governance record. Consumers establish its identity and keys from
+the MAS discovery document (<a href="#discovery" class="auto internal xref">Section 9</a>).<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-3.3">
+          <p id="section-3-3.3.1"><strong>Actor binding</strong>: the authenticated submitting client is the
+Actor and is recorded as <code>client_id</code>; the MAS separately establishes
+the Subject during approval. Later action decisions establish the
+Actor and Subject through the Mission Join, including the mapping
+assurance and ambiguity declared by the deployment
+(<a href="#mission-approval" class="auto internal xref">Section 5</a>, <a href="#mission-join" class="auto internal xref">Section 10</a>).<a href="#section-3-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-3.4">
+          <p id="section-3-3.4.1"><strong>Approved Context</strong>: the Mission Intent and derived Authority Set
+in the immutable Mission record are the Approved Context. The
+issuance profile's <code>intent_hash</code> and <code>authority_hash</code>, computed
+with the MAS issuer URL, are this binding's chosen commitments;
+they are not substrate-kernel requirements.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-3.5">
+          <p id="section-3-3.5.1"><strong>Approval ceremony</strong>: the asynchronous MAS approval surface
+authenticates the Approver, establishes the Subject and Actor,
+renders the derived authority, computes the commitments, and
+creates the record <code>active</code> atomically with approval
+(<a href="#mission-approval" class="auto internal xref">Section 5</a>).<a href="#section-3-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-3.6">
+          <p id="section-3-3.6.1"><strong>Governance gate</strong>: only <code>active</code> permits a positive MAS decision;
+every other or unrecognized state fails closed. The lifecycle
+endpoint supplies authenticated transitions, including revocation
+by the authorized parties (<a href="#lifecycle-and-state" class="auto internal xref">Section 7</a>).<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-3.7">
+          <p id="section-3-3.7.1"><strong>Reliance bound</strong>: a positive MAS decision requires current
+<code>active</code> state at decision time. Standing artifacts carry their own
+bounds: a signed Mission Status is relied on within its declared
+freshness window (<a href="#lifecycle-and-state" class="auto internal xref">Section 7</a>), and a Join Assertion
+within the introspected token's lifetime (<a href="#join-assertion" class="auto internal xref">Section 11</a>).
+Tokens of the unchanged Authorization Server are not represented as
+Mission-governed artifacts.<a href="#section-3-3.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-3.8">
+          <p id="section-3-3.8.1"><strong>Context propagation</strong>: submission status and signed Mission
+Status responses carry the Mission Reference. A Mission-joining PDP
+verifies the reference against the acting credential before using
+Mission authority. That join establishes correlation, not that the
+unchanged Authorization Server issued the credential under the
+Mission (<a href="#mission-reference" class="auto internal xref">Section 6</a>, <a href="#mission-join" class="auto internal xref">Section 10</a>).<a href="#section-3-3.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-3.9">
+          <p id="section-3-3.9.1"><strong>Governance record</strong>: the MAS audit log is the ordered governance
+record. The MAS <span class="bcp14">MUST</span> append approval, positive and negative
+Mission-dependent decisions, join decisions it makes, and lifecycle
+transitions in per-Mission append order; <span class="bcp14">MUST</span> protect the log under
+the same integrity and access controls as the Mission record; and
+<span class="bcp14">MUST</span> retain both for the declared audit horizon.<a href="#section-3-3.9.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-3-4">The binding declares these optional capabilities:<a href="#section-3-4" class="pilcrow">¶</a></p>
+<span id="name-standalone-mas-mission-subs"></span><table class="center" id="table-1">
+        <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-standalone-mas-mission-subs" class="selfRef">Standalone MAS Mission substrate capabilities</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Capability</th>
+            <th class="text-left" rowspan="1" colspan="1">Claim</th>
+            <th class="text-left" rowspan="1" colspan="1">Scope and defining sections</th>
+            <th class="text-left" rowspan="1" colspan="1">Limitations</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
+            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">MAS-native authority operations and, in a Mission-joining PDP deployment, action decisions check current state (<a href="#lifecycle-and-state" class="auto internal xref">Section 7</a>, <a href="#mission-join" class="auto internal xref">Section 10</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">The unchanged Authorization Server does not gate token issuance or refresh</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
+            <td class="text-left" rowspan="1" colspan="1">supported</td>
+            <td class="text-left" rowspan="1" colspan="1">Signed Mission Status responses with <code>mission_max_stale_seconds</code> (<a href="#lifecycle-and-state" class="auto internal xref">Section 7</a>, <a href="#discovery" class="auto internal xref">Section 9</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Consumers fail closed when the declared freshness bound is exceeded</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
+            <td class="text-left" rowspan="1" colspan="1">supported</td>
+            <td class="text-left" rowspan="1" colspan="1">The issuance profile's Authority Set and Common Constraints are held at the MAS and evaluated at the joining PDP</td>
+            <td class="text-left" rowspan="1" colspan="1">Semantics apply only to the declared authority-detail types and mappings</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
+            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">Mission-joining PDP action evaluation and optional native child creation apply the defined no-broader-than relation (<a href="#mission-join" class="auto internal xref">Section 10</a>, <a href="#native-child" class="auto internal xref">Section 8.4</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">A separately approved expansion is a new approval, not a monotonic derivation; unchanged AS tokens are outside the claim</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
+            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">A verified mapping join establishes credential-to-Mission correlation; an optional Join Assertion binds one introspected token more strongly (<a href="#mission-join" class="auto internal xref">Section 10</a>, <a href="#join-assertion" class="auto internal xref">Section 11</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Neither form proves that the Authorization Server issued the token under the Mission</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>
+            <td class="text-left" rowspan="1" colspan="1">supported</td>
+            <td class="text-left" rowspan="1" colspan="1">Signed Mission Status proves record and state properties as of its freshness window; Join Assertions add token-specific correlation where used</td>
+            <td class="text-left" rowspan="1" colspan="1">Does not prove AS issuance under the Mission or current state after the observation window</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Portable Evidence</td>
+            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">Consent Evidence, a Mission Mandate, or Audit Transparency when adopted</td>
+            <td class="text-left" rowspan="1" colspan="1">The base MAS audit log is Controller-local and is not portable evidence</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-3-6">The Portable Evidence condition is supplied only when the deployment
+adopts Consent Evidence
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>), a Mission
+Mandate (<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), or Audit
+Transparency (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>); the referenced
+profile defines the portable artifact and verification procedure.<a href="#section-3-6" class="pilcrow">¶</a></p>
+<p id="section-3-7">The composition consequences follow from those claims:<a href="#section-3-7" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-3-2.1">
-          <p id="section-3-2.1.1">the Mission identifier and <code>issuer</code>;<a href="#section-3-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-3-8.1">
+          <p id="section-3-8.1.1">Shaping, consent evidence, audit transparency, the security model,
+status, and signals compose with the capabilities they name. Where
+such a profile names the Mission Issuer or issuer AS, the MAS is that
+party.<a href="#section-3-8.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-3-2.2">
-          <p id="section-3-2.2.1">the lifecycle state space with the only-<code>active</code> rule and its
-forward-compatibility treatment of unrecognized states;<a href="#section-3-2.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-3-8.2">
+          <p id="section-3-8.2.1">The runtime profile and its AuthZEN binding, the harness, and
+orchestration compose through the runtime profile's externally
+established binding mode
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), profiled here as the
+Mission Join (<a href="#mission-join" class="auto internal xref">Section 10</a>).<a href="#section-3-8.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-3-2.3">
-          <p id="section-3-2.3.1">the Authority Set representation, with the subset rule and Common
-Constraints;<a href="#section-3-2.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-3-8.3">
+          <p id="section-3-8.3.1">Offline attenuation does not apply in MAS-only mode because no
+Mission-bound credential or offline-minting chain exists
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>). The
+token-carriage aspects of delegation likewise have no carrier.<a href="#section-3-8.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-3-2.4">
-          <p id="section-3-2.4.1">the integrity-anchor envelope, computed with the MAS's issuer URL as
-the envelope <code>iss</code>; and<a href="#section-3-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-3-2.5">
-          <p id="section-3-2.5.1">the audit horizon.<a href="#section-3-2.5.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-3-3">Each primitive is the issuance profile's, unchanged
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); a MAS re-defines none of
-them.<a href="#section-3-3" class="pilcrow">¶</a></p>
-<p id="section-3-4">A MAS does NOT provide the Mission-bound credential primitive or
-issuance gating: no token carries the <code>mission</code> claim or
-Mission-derived <code>authorization_details</code>, and no issuance event is
-gated on Mission state.<a href="#section-3-4" class="pilcrow">¶</a></p>
-<p id="section-3-5">The composition consequences follow from that split:<a href="#section-3-5" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-3-6.1">
-          <p id="section-3-6.1.1">The shaping, consent-evidence, audit-transparency, security-model,
-status (including its completion machinery), and signals profiles
-consume only the primitives
-a MAS provides and compose with a MAS unchanged. Where such a
-profile names the Mission Issuer or the issuer AS, the MAS is that
-party.<a href="#section-3-6.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-3-6.2">
-          <p id="section-3-6.2.1">The runtime profile and its AuthZEN binding, the harness, and
-orchestration compose through the runtime profile's Mission binding
-establishment step (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>): their
-Mission Substrate sections mark the Mission-bound credential
-binding-dependent, and this document profiles the step's
-externally established mode as the Mission Join (<a href="#mission-join" class="auto internal xref">Section 10</a>).<a href="#section-3-6.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-3-6.3">
-          <p id="section-3-6.3.1">A profile that requires the Mission-bound credential does not apply
-in MAS-only mode: offline attenuation
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>) attenuates a
-credential that does not exist here, and the token-carriage aspects
-of delegation (the <code>act</code> chain on Mission-bound tokens) have no
-carrier.<a href="#section-3-6.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-3-6.4">
-          <p id="section-3-6.4.1">Mission Expansion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>)
+        <li class="normal" id="section-3-8.4">
+          <p id="section-3-8.4.1">Mission Expansion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>)
 and Mission Child Delegation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) define
 their request wire over OAuth Pushed Authorization Requests; their
-MAS-native wire is defined by <a href="#native-surfaces" class="auto internal xref">Section 8</a>, which carries
-both operations on the mission submission endpoint with an
-authenticated-client binding in place of the OAuth wire's token
-possession. Their models (supersession, lineage, cascade) apply to
-MAS-held Missions unchanged.<a href="#section-3-6.4.1" class="pilcrow">¶</a></p>
+MAS-native wire is defined by <a href="#native-surfaces" class="auto internal xref">Section 8</a>, with an
+authenticated-client binding in place of OAuth token possession.
+Their models apply to MAS-held Missions unchanged.<a href="#section-3-8.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -1714,8 +1811,8 @@ Cache-Control: no-store
         <dd class="break"></dd>
 </dl>
 <p id="section-4.2-3">A submission is in one of four states:<a href="#section-4.2-3" class="pilcrow">¶</a></p>
-<table class="center" id="table-1">
-          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<table class="center" id="table-2">
+          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">status</th>
@@ -1793,8 +1890,8 @@ could be derived for. It reflects the client's own input and <span class="bcp14"
         <dd class="break"></dd>
 </dl>
 <p id="section-4.3-3">A consumer <span class="bcp14">MUST</span> ignore members it does not recognize.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
-<table class="center" id="table-2">
-          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<table class="center" id="table-3">
+          <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">error</th>
@@ -2914,11 +3011,14 @@ per the family rule that references and binding proofs grant nothing.<a href="#s
 <p id="section-12-1">This section states what MAS-only deployment does not provide. These
 are structural properties of the mode, not implementation quality
 issues, and a deployment claiming this profile <span class="bcp14">MUST NOT</span> overstate
-them. The mode is a <strong>partial-provision binding</strong> in the substrate's
-terms (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>): it provides the
-Mission record, anchors, and lifecycle but not the Mission-bound
-credential, so enforcement composes entirely through the runtime join
-and PEP coverage. Among the Mission Assurance Levels this is the Runtime-Enforced level reached
+them. The mode provides the contextual-governance kernel,
+State-Observable, and Structured Authority capabilities, but it does
+not claim that an unchanged Authorization Server's credential was
+issued under the Mission or that its issuance was lifecycle-gated.
+Credential-Bound correlation and action-time lifecycle gating compose
+through the runtime join and PEP coverage, within the conditional scope
+declared by <a href="#mission-substrate" class="auto internal xref">Section 3</a>. Among the Mission Assurance Levels
+this is the Runtime-Enforced level reached
 through the MAS binding, which provides no Mission-bound credential
 and no issuance gating
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-12-1" class="pilcrow">¶</a></p>
@@ -3731,6 +3831,10 @@ document requests no IANA action for it.<a href="#section-18.3-1" class="pilcrow
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
@@ -3815,10 +3919,6 @@ document requests no IANA action for it.<a href="#section-18.3-1" class="pilcrow
 <dt id="I-D.draft-mcguinness-mission-security-model">[I-D.draft-mcguinness-mission-security-model]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Security Model"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-ai-agent-instance">[I-D.draft-mcguinness-oauth-ai-agent-instance]</dt>
         <dd>

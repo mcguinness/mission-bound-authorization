@@ -1243,7 +1243,7 @@ fixed here, and wire-level completeness is deferred.<a href="#section-abstract-1
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-mission-substrate" class="internal xref">Mission Substrate</a></p>
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-mission-substrate-statement" class="internal xref">Mission Substrate Statement</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
             <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-limitations" class="internal xref">Limitations</a></p>
@@ -2002,106 +2002,191 @@ it, and it binds at the runtime layer instead (<a href="#subset" class="auto int
 </div>
 <div id="mission-substrate">
 <section id="section-9">
-      <h2 id="name-mission-substrate">
-<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
+      <h2 id="name-mission-substrate-statement">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-mission-substrate-statement" class="section-name selfRef">Mission Substrate Statement</a>
       </h2>
 <p id="section-9-1">This section is this binding's Mission Substrate Statement
-(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-9-1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-9-2">
-<li id="section-9-2.1">
-          <p id="section-9-2.1.1"><strong>Provision level</strong>: full provision. The RPT is the Mission-bound
-credential, and issuance gating is structural at the token
-endpoint (<a href="#gating" class="auto internal xref">Section 7.1</a>); no join is defined or needed.<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>). It applies to this
+revision of the binding in both token-carried and
+introspection-carried RPT modes.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">The contextual-governance kernel maps as follows:<a href="#section-9-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-9-3">
+<li id="section-9-3.1">
+          <p id="section-9-3.1.1"><strong>Mission Reference</strong>: the tuple (<code>issuer</code>, <code>mission_id</code>) names
+one record. <code>issuer</code> is the authorization server issuer from UMA
+discovery; <code>mission_id</code> follows the issuance profile's uniqueness,
+retention, comparison, and non-reassignment rules
+(<a href="#mission-record" class="auto internal xref">Section 6</a>).<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-9-2.2">
-          <p id="section-9-2.2.1"><strong>Identifier and issuer</strong>: <code>mission_id</code> on the record; <code>issuer</code>
-the <code>issuer</code> of the authorization server's UMA discovery
-document. No substrate-native Mission reference exists; the
-<code>mission</code> claim and introspection member carry the family
-reference (<a href="#mission-record" class="auto internal xref">Section 6</a>, <a href="#mission-claim" class="auto internal xref">Section 8.1</a>).<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+        <li id="section-9-3.2">
+          <p id="section-9-3.2.1"><strong>Controller</strong>: the UMA authorization server controls approval,
+state, assessment, and RPT issuance. Consumers establish it from
+the UMA discovery document and its configured trust relationship;
+<code>jwks_uri</code> publishes verification keys for signed artifacts
+(<a href="#state-surfaces" class="auto internal xref">Section 7.2</a>).<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-9-2.3">
-          <p id="section-9-2.3.1"><strong>Lifecycle and state sources</strong>: the issuance profile's states
-with the only-<code>active</code> rule, fail-safe unrecognized states, and
-fail-safe projection onto UMA's token-endpoint outcomes
-(<a href="#lifecycle" class="auto internal xref">Section 7</a>). State sources: per-use introspection, with the
-deployment's declared cache bound as its staleness bound; the
-Mission Status operation where served; and RPT lifetime as the
-floor for self-contained validation (<a href="#state-surfaces" class="auto internal xref">Section 7.2</a>).<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
+        <li id="section-9-3.3">
+          <p id="section-9-3.3.1"><strong>Actor binding</strong>: the UMA client is the Actor and its authenticated
+OAuth client identifier is recorded as <code>client_id</code>. The token
+endpoint establishes it from client authentication, not the pushed
+Intent. Later RPT issuance and validation use UMA's ordinary client
+binding; the separately established requesting party is the Mission
+Subject (<a href="#roles" class="auto internal xref">Section 2</a>, <a href="#approval" class="auto internal xref">Section 5</a>, <a href="#credential" class="auto internal xref">Section 8</a>).<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-9-2.4">
-          <p id="section-9-2.4.1"><strong>Authority Set carriage</strong>: the record at the authorization
-server; RPT permissions are its coarse projection, with every
-narrowing at the token endpoint (<a href="#subset" class="auto internal xref">Section 8.2</a>, <a href="#drawdown" class="auto internal xref">Section 8.3</a>); the
-full set is served to consumers that need it through the Status
-operation or a Mission Mandate
-(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>).<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+        <li id="section-9-3.4">
+          <p id="section-9-3.4.1"><strong>Approved Context</strong>: the immutable Mission Intent and derived
+Authority Set in the Mission record are the Approved Context. The
+family <code>intent_hash</code> and <code>authority_hash</code> commit them under the
+issuance profile's canonicalization; they are this binding's chosen
+mechanism, not a substrate-kernel requirement
+(<a href="#mission-record" class="auto internal xref">Section 6</a>).<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-9-2.5">
-          <p id="section-9-2.5.1"><strong>Integrity anchors</strong>: the family envelope and canonicalization
-with the authorization server's issuer identifier as the envelope
-<code>iss</code>; no native commitment exists beside the anchors, and
-nothing substitutes for them (<a href="#mission-record" class="auto internal xref">Section 6</a>).<a href="#section-9-2.5.1" class="pilcrow">¶</a></p>
+        <li id="section-9-3.5">
+          <p id="section-9-3.5.1"><strong>Approval ceremony</strong>: UMA authorization assessment performs the
+five approval steps in either the deferred owner-decision or
+pre-registered-policy mode and creates the record <code>active</code>
+atomically with approval (<a href="#approval" class="auto internal xref">Section 5</a>).<a href="#section-9-3.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-9-2.6">
-          <p id="section-9-2.6.1"><strong>Key material</strong>: the <code>jwks_uri</code> of the UMA discovery document
-(<a href="#state-surfaces" class="auto internal xref">Section 7.2</a>).<a href="#section-9-2.6.1" class="pilcrow">¶</a></p>
+        <li id="section-9-3.6">
+          <p id="section-9-3.6.1"><strong>Governance gate</strong>: only the issuance profile's <code>active</code> state is
+active. Every other or unrecognized value fails closed at the token
+endpoint and introspection projection. The Subject, Approver, and
+administrator have an authenticated revocation path
+(<a href="#lifecycle" class="auto internal xref">Section 7</a>, <a href="#gating" class="auto internal xref">Section 7.1</a>).<a href="#section-9-3.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-9-2.7">
-          <p id="section-9-2.7.1"><strong>Audit horizon</strong>: deployment-declared; the Mission record, the
-assessment log, and consent evidence are retained for it.<a href="#section-9-2.7.1" class="pilcrow">¶</a></p>
+        <li id="section-9-3.7">
+          <p id="section-9-3.7.1"><strong>Reliance bound</strong>: RPT issuance and upgrade establish <code>active</code> at
+the token endpoint. An opaque RPT is bounded by authenticated
+per-use introspection; a self-contained RPT without a state check
+remains usable only for its bounded lifetime after a transition
+(<a href="#gating" class="auto internal xref">Section 7.1</a>, <a href="#mission-claim" class="auto internal xref">Section 8.1</a>, <a href="#state-surfaces" class="auto internal xref">Section 7.2</a>).<a href="#section-9-3.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-9-2.8">
-          <p id="section-9-2.8.1"><strong>Approval fidelity</strong>: the assessment surface executes the five
-approval steps across UMA's two native decision modes
-(<a href="#approval" class="auto internal xref">Section 5</a>).<a href="#section-9-2.8.1" class="pilcrow">¶</a></p>
+        <li id="section-9-3.8">
+          <p id="section-9-3.8.1"><strong>Context propagation</strong>: the protected <code>mission</code> claim in a
+self-contained RPT, or the authenticated introspection response for
+an opaque RPT, carries the Mission Reference and credential
+association. The PCT carries continuity only and never establishes
+Mission governance or authority (<a href="#mission-claim" class="auto internal xref">Section 8.1</a>, <a href="#pct" class="auto internal xref">Section 8.4</a>).<a href="#section-9-3.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-3.9">
+          <p id="section-9-3.9.1"><strong>Governance record</strong>: the assessment log is the ordered governance
+record. The authorization server <span class="bcp14">MUST</span> append approval, positive and
+negative Mission-dependent token decisions, and lifecycle
+transitions in per-Mission append order; <span class="bcp14">MUST</span> protect the log under
+the same integrity and access controls as the Mission record; and
+<span class="bcp14">MUST</span> retain both for the deployment-declared audit horizon.<a href="#section-9-3.9.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-9-3">The composition consequences:<a href="#section-9-3" class="pilcrow">¶</a></p>
+<p id="section-9-4">The binding declares these optional capabilities:<a href="#section-9-4" class="pilcrow">¶</a></p>
+<span id="name-uma-mission-substrate-capab"></span><table class="center" id="table-3">
+        <caption>
+<a href="#table-3" class="selfRef">Table 3</a>:
+<a href="#name-uma-mission-substrate-capab" class="selfRef">UMA Mission substrate capabilities</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Capability</th>
+            <th class="text-left" rowspan="1" colspan="1">Claim</th>
+            <th class="text-left" rowspan="1" colspan="1">Scope and defining sections</th>
+            <th class="text-left" rowspan="1" colspan="1">Limitations</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
+            <td class="text-left" rowspan="1" colspan="1">supported</td>
+            <td class="text-left" rowspan="1" colspan="1">RPT issuance and upgrade are state-gated; introspection gates continued reliance (<a href="#gating" class="auto internal xref">Section 7.1</a>, <a href="#state-surfaces" class="auto internal xref">Section 7.2</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">A self-contained RPT without a state check remains usable only for its bounded lifetime</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
+            <td class="text-left" rowspan="1" colspan="1">supported</td>
+            <td class="text-left" rowspan="1" colspan="1">Authenticated per-use introspection with a deployment-declared cache bound (<a href="#state-surfaces" class="auto internal xref">Section 7.2</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Mission Status is an additional conditional source; token lifetime alone is not observation</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
+            <td class="text-left" rowspan="1" colspan="1">supported</td>
+            <td class="text-left" rowspan="1" colspan="1">The Authority Set is the approved representation; UMA permissions are its resource/scope projection (<a href="#subset" class="auto internal xref">Section 8.2</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">UMA permissions cannot carry parameter or consumption constraints</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
+            <td class="text-left" rowspan="1" colspan="1">supported</td>
+            <td class="text-left" rowspan="1" colspan="1">The token endpoint applies the issuance profile's no-broader-than relation at RPT issuance and upgrade (<a href="#subset" class="auto internal xref">Section 8.2</a>, <a href="#drawdown" class="auto internal xref">Section 8.3</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Applies to the declared Authority Set projection, not arbitrary UMA policy values</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
+            <td class="text-left" rowspan="1" colspan="1">supported</td>
+            <td class="text-left" rowspan="1" colspan="1">A protected RPT claim or authenticated introspection response associates one RPT, Actor, and Mission Reference (<a href="#mission-claim" class="auto internal xref">Section 8.1</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Introspection carriage is an online issuer assertion, not offline proof</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>
+            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">Self-contained signed RPTs and signed Mission Status responses (<a href="#mission-claim" class="auto internal xref">Section 8.1</a>, <a href="#state-surfaces" class="auto internal xref">Section 7.2</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Opaque RPT introspection is online; a signed observation proves state only as of its freshness window</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Portable Evidence</td>
+            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">Consent Evidence, a Mission Mandate, or Audit Transparency when adopted</td>
+            <td class="text-left" rowspan="1" colspan="1">The base assessment log is Controller-local and is not portable evidence</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-9-6">The Portable Evidence condition is supplied only when the deployment
+adopts Consent Evidence
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>), a Mission
+Mandate (<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), or Audit
+Transparency (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>); the referenced
+profile defines the portable artifact and verification procedure.<a href="#section-9-6" class="pilcrow">¶</a></p>
+<p id="section-9-7">The composition consequences:<a href="#section-9-7" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-9-4.1">
-          <p id="section-9-4.1.1">The runtime profile and its AuthZEN binding compose against either
+<li class="normal" id="section-9-8.1">
+          <p id="section-9-8.1.1">The runtime profile and its AuthZEN binding compose against either
 carriage surface: the Mission reference arrives through token
 validation (JWT claims, or the issuer's introspection response
 that validates the opaque RPT), so binding establishment is
 credential-carried in both (<a href="#mission-claim" class="auto internal xref">Section 8.1</a>). The constraint
-grain UMA cannot carry is exactly what they enforce (<a href="#subset" class="auto internal xref">Section 8.2</a>).<a href="#section-9-4.1.1" class="pilcrow">¶</a></p>
+grain UMA cannot carry is exactly what they enforce (<a href="#subset" class="auto internal xref">Section 8.2</a>).<a href="#section-9-8.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-4.2">
-          <p id="section-9-4.2.1">Shaping, consent evidence, status and signals, the Mandate, and
+        <li class="normal" id="section-9-8.2">
+          <p id="section-9-8.2.1">Shaping, consent evidence, status and signals, the Mandate, and
 audit transparency (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>)
 compose unchanged, with the authorization server as the Mission
 Issuer, committing issuer, minter, and transmitter those profiles
-name.<a href="#section-9-4.2.1" class="pilcrow">¶</a></p>
+name.<a href="#section-9-8.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-4.3">
-          <p id="section-9-4.3.1">Child delegation does not apply as profiled: its request wire is
+        <li class="normal" id="section-9-8.3">
+          <p id="section-9-8.3.1">Child delegation does not apply as profiled: its request wire is
 OAuth-bound
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), and UMA
 has no actor chain. A sub-agent operates as its own UMA client
 under its own ticket exchanges; UMA-native Child Mission creation
-is deferred work.<a href="#section-9-4.3.1" class="pilcrow">¶</a></p>
+is deferred work.<a href="#section-9-8.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-4.4">
-          <p id="section-9-4.4.1">Offline attenuation does not apply: every RPT is issuer-minted,
+        <li class="normal" id="section-9-8.4">
+          <p id="section-9-8.4.1">Offline attenuation does not apply: every RPT is issuer-minted,
 and UMA defines no offline mint
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>).<a href="#section-9-4.4.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>).<a href="#section-9-8.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-4.5">
-          <p id="section-9-4.5.1">Cross-domain projection is not provided: FedAuthz federates a
+        <li class="normal" id="section-9-8.5">
+          <p id="section-9-8.5.1">Cross-domain projection is not provided: FedAuthz federates a
 resource server to an authorization server, not one Mission Issuer
 to another, so projecting a Mission into a foreign issuer remains
 the cross-domain companion's OAuth-bound mechanism
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). FedAuthz's
 federation does mean one Mission natively governs many resource
 servers within the authorization server's own trust domain, the
-multi-resource-server case the flow shows (<a href="#flow" class="auto internal xref">Section 3</a>).<a href="#section-9-4.5.1" class="pilcrow">¶</a></p>
+multi-resource-server case the flow shows (<a href="#flow" class="auto internal xref">Section 3</a>).<a href="#section-9-8.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-4.6">
-          <p id="section-9-4.6.1">The family's Mission Assurance Levels layer on top unchanged
+        <li class="normal" id="section-9-8.6">
+          <p id="section-9-8.6.1">The family's Mission Assurance Levels layer on top unchanged
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>); a deployment
 states its level, binding, state sources, and staleness bounds in
-its Mission Deployment Profile.<a href="#section-9-4.6.1" class="pilcrow">¶</a></p>
+its Mission Deployment Profile.<a href="#section-9-8.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2383,7 +2468,7 @@ document's control.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <dl class="references">
 <dt id="I-D.draft-mcguinness-mission-aauth">[I-D.draft-mcguinness-mission-aauth]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Context Binding for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
         <dd>

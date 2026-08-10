@@ -99,7 +99,7 @@ Table of Contents
      8.3.  Drawdown and Upgrade
      8.4.  Mission Continuity: the PCT
      8.5.  Worked Example
-   9.  Mission Substrate
+   9.  Mission Substrate Statement
    10. Limitations
    11. Conformance
    12. Security Considerations
@@ -697,49 +697,143 @@ Table of Contents
    adjustments.post does not appear, because UMA's grain cannot carry
    it, and it binds at the runtime layer instead (Section 8.2).
 
-9.  Mission Substrate
+9.  Mission Substrate Statement
 
    This section is this binding's Mission Substrate Statement
-   ([I-D.draft-mcguinness-mission-substrate]).
+   ([I-D.draft-mcguinness-mission-substrate]).  It applies to this
+   revision of the binding in both token-carried and introspection-
+   carried RPT modes.
 
-   1.  *Provision level*: full provision.  The RPT is the Mission-bound
-       credential, and issuance gating is structural at the token
-       endpoint (Section 7.1); no join is defined or needed.
+   The contextual-governance kernel maps as follows:
 
-   2.  *Identifier and issuer*: mission_id on the record; issuer the
-       issuer of the authorization server's UMA discovery document.  No
-       substrate-native Mission reference exists; the mission claim and
-       introspection member carry the family reference (Section 6,
-       Section 8.1).
+   1.  *Mission Reference*: the tuple (issuer, mission_id) names one
+       record. issuer is the authorization server issuer from UMA
+       discovery; mission_id follows the issuance profile's uniqueness,
+       retention, comparison, and non-reassignment rules (Section 6).
 
-   3.  *Lifecycle and state sources*: the issuance profile's states with
-       the only-active rule, fail-safe unrecognized states, and fail-
-       safe projection onto UMA's token-endpoint outcomes (Section 7).
-       State sources: per-use introspection, with the deployment's
-       declared cache bound as its staleness bound; the Mission Status
-       operation where served; and RPT lifetime as the floor for self-
-       contained validation (Section 7.2).
-
-   4.  *Authority Set carriage*: the record at the authorization server;
-       RPT permissions are its coarse projection, with every narrowing
-       at the token endpoint (Section 8.2, Section 8.3); the full set is
-       served to consumers that need it through the Status operation or
-       a Mission Mandate ([I-D.draft-mcguinness-mission-mandate]).
-
-   5.  *Integrity anchors*: the family envelope and canonicalization
-       with the authorization server's issuer identifier as the envelope
-       iss; no native commitment exists beside the anchors, and nothing
-       substitutes for them (Section 6).
-
-   6.  *Key material*: the jwks_uri of the UMA discovery document
+   2.  *Controller*: the UMA authorization server controls approval,
+       state, assessment, and RPT issuance.  Consumers establish it from
+       the UMA discovery document and its configured trust relationship;
+       jwks_uri publishes verification keys for signed artifacts
        (Section 7.2).
 
-   7.  *Audit horizon*: deployment-declared; the Mission record, the
-       assessment log, and consent evidence are retained for it.
+   3.  *Actor binding*: the UMA client is the Actor and its
+       authenticated OAuth client identifier is recorded as client_id.
+       The token endpoint establishes it from client authentication, not
+       the pushed Intent.  Later RPT issuance and validation use UMA's
+       ordinary client binding; the separately established requesting
+       party is the Mission Subject (Section 2, Section 5, Section 8).
 
-   8.  *Approval fidelity*: the assessment surface executes the five
-       approval steps across UMA's two native decision modes
-       (Section 5).
+   4.  *Approved Context*: the immutable Mission Intent and derived
+       Authority Set in the Mission record are the Approved Context.
+       The family intent_hash and authority_hash commit them under the
+       issuance profile's canonicalization; they are this binding's
+       chosen mechanism, not a substrate-kernel requirement (Section 6).
+
+   5.  *Approval ceremony*: UMA authorization assessment performs the
+       five approval steps in either the deferred owner-decision or pre-
+       registered-policy mode and creates the record active atomically
+       with approval (Section 5).
+
+   6.  *Governance gate*: only the issuance profile's active state is
+       active.  Every other or unrecognized value fails closed at the
+       token endpoint and introspection projection.  The Subject,
+       Approver, and administrator have an authenticated revocation path
+       (Section 7, Section 7.1).
+
+   7.  *Reliance bound*: RPT issuance and upgrade establish active at
+       the token endpoint.  An opaque RPT is bounded by authenticated
+       per-use introspection; a self-contained RPT without a state check
+       remains usable only for its bounded lifetime after a transition
+       (Section 7.1, Section 8.1, Section 7.2).
+
+   8.  *Context propagation*: the protected mission claim in a self-
+       contained RPT, or the authenticated introspection response for an
+       opaque RPT, carries the Mission Reference and credential
+       association.  The PCT carries continuity only and never
+       establishes Mission governance or authority (Section 8.1,
+       Section 8.4).
+
+   9.  *Governance record*: the assessment log is the ordered governance
+       record.  The authorization server MUST append approval, positive
+       and negative Mission-dependent token decisions, and lifecycle
+       transitions in per-Mission append order; MUST protect the log
+       under the same integrity and access controls as the Mission
+       record; and MUST retain both for the deployment-declared audit
+       horizon.
+
+   The binding declares these optional capabilities:
+
+   +================+===========+=====================+================+
+   |Capability      |Claim      |Scope and defining   |Limitations     |
+   |                |           |sections             |                |
+   +================+===========+=====================+================+
+   |Lifecycle-Gated |supported  |RPT issuance and     |A self-contained|
+   |Authorization   |           |upgrade are state-   |RPT without a   |
+   |                |           |gated; introspection |state check     |
+   |                |           |gates continued      |remains usable  |
+   |                |           |reliance             |only for its    |
+   |                |           |(Section 7.1,        |bounded lifetime|
+   |                |           |Section 7.2)         |                |
+   +----------------+-----------+---------------------+----------------+
+   |State-Observable|supported  |Authenticated per-   |Mission Status  |
+   |                |           |use introspection    |is an additional|
+   |                |           |with a deployment-   |conditional     |
+   |                |           |declared cache bound |source; token   |
+   |                |           |(Section 7.2)        |lifetime alone  |
+   |                |           |                     |is not          |
+   |                |           |                     |observation     |
+   +----------------+-----------+---------------------+----------------+
+   |Structured      |supported  |The Authority Set is |UMA permissions |
+   |Authority       |           |the approved         |cannot carry    |
+   |                |           |representation; UMA  |parameter or    |
+   |                |           |permissions are its  |consumption     |
+   |                |           |resource/scope       |constraints     |
+   |                |           |projection           |                |
+   |                |           |(Section 8.2)        |                |
+   +----------------+-----------+---------------------+----------------+
+   |Monotonic       |supported  |The token endpoint   |Applies to the  |
+   |Derivation      |           |applies the issuance |declared        |
+   |                |           |profile's no-        |Authority Set   |
+   |                |           |broader-than         |projection, not |
+   |                |           |relation at RPT      |arbitrary UMA   |
+   |                |           |issuance and upgrade |policy values   |
+   |                |           |(Section 8.2,        |                |
+   |                |           |Section 8.3)         |                |
+   +----------------+-----------+---------------------+----------------+
+   |Credential-Bound|supported  |A protected RPT      |Introspection   |
+   |                |           |claim or             |carriage is an  |
+   |                |           |authenticated        |online issuer   |
+   |                |           |introspection        |assertion, not  |
+   |                |           |response associates  |offline proof   |
+   |                |           |one RPT, Actor, and  |                |
+   |                |           |Mission Reference    |                |
+   |                |           |(Section 8.1)        |                |
+   +----------------+-----------+---------------------+----------------+
+   |Independently   |conditional|Self-contained       |Opaque RPT      |
+   |Verifiable      |           |signed RPTs and      |introspection is|
+   |                |           |signed Mission       |online; a signed|
+   |                |           |Status responses     |observation     |
+   |                |           |(Section 8.1,        |proves state    |
+   |                |           |Section 7.2)         |only as of its  |
+   |                |           |                     |freshness window|
+   +----------------+-----------+---------------------+----------------+
+   |Portable        |conditional|Consent Evidence, a  |The base        |
+   |Evidence        |           |Mission Mandate, or  |assessment log  |
+   |                |           |Audit Transparency   |is Controller-  |
+   |                |           |when adopted         |local and is not|
+   |                |           |                     |portable        |
+   |                |           |                     |evidence        |
+   +----------------+-----------+---------------------+----------------+
+
+                Table 3: UMA Mission substrate capabilities
+
+   The Portable Evidence condition is supplied only when the deployment
+   adopts Consent Evidence
+   ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), a Mission
+   Mandate ([I-D.draft-mcguinness-mission-mandate]), or Audit
+   Transparency ([I-D.draft-mcguinness-mission-audit]); the referenced
+   profile defines the portable artifact and verification procedure.
 
    The composition consequences:
 
@@ -1000,9 +1094,9 @@ Table of Contents
 15.2.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
-              McGuinness, K., "Mission-Bound Authorization for AAuth",
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-mission-aauth.html>.
+              McGuinness, K., "Mission Context Binding for AAuth", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-aauth.html>.
 
    [I-D.draft-mcguinness-mission-architecture]
               McGuinness, K., "An Architecture for Mission-Bound

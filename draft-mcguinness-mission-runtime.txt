@@ -1306,8 +1306,8 @@ Table of Contents
       unverified reference MUST NOT establish the Mission.  The Mission
       Authority Server profile defines the concrete join for this mode
       ([I-D.draft-mcguinness-mission-authority-server]), and the AAuth
-      binding defines it as its Reference-only verification mode
-      ([I-D.draft-mcguinness-mission-aauth]).
+      binding's reference propagation supplies the externally carried
+      reference for such a join ([I-D.draft-mcguinness-mission-aauth]).
 
    The mode each enforcement scope uses is part of its Enforcement Scope
    Statement (Section 4.2).  In either mode, the established Mission is
@@ -2767,9 +2767,9 @@ Table of Contents
               intent-admission-00>.
 
    [I-D.draft-mcguinness-mission-aauth]
-              McGuinness, K., "Mission-Bound Authorization for AAuth",
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-mission-aauth.html>.
+              McGuinness, K., "Mission Context Binding for AAuth", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-aauth.html>.
 
    [I-D.draft-mcguinness-mission-architecture]
               McGuinness, K., "An Architecture for Mission-Bound

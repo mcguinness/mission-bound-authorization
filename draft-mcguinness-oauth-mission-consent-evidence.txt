@@ -1355,9 +1355,9 @@ Table of Contents
 14.2.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
-              McGuinness, K., "Mission-Bound Authorization for AAuth",
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-mission-aauth.html>.
+              McGuinness, K., "Mission Context Binding for AAuth", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-aauth.html>.
 
    [I-D.draft-mcguinness-mission-audit]
               McGuinness, K., "Mission Audit Transparency", 2026,

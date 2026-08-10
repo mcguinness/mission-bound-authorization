@@ -2000,11 +2000,11 @@ coexist per resource and per AS.<a href="#section-7-4" class="pilcrow">¶</a></p
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-composite-provision" class="section-name selfRef">Composite Provision</a>
       </h2>
 <p id="section-8-1">In the substrate's terms (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>)
-the MAS alone is a partial-provision binding: everything but the
-Mission-bound credential and issuance gating. A MAS composed with
-its consuming Authorization Servers under this profile provides
-both, jointly: a composite full provision for the resources those
-ASs serve. In the Mission Assurance Levels
+the MAS alone claims neither Credential-Bound nor Lifecycle-Gated
+Authorization for the tokens its unchanged Authorization Servers
+issue. A MAS composed with its consuming Authorization Servers under
+this profile supplies both capabilities, jointly, for the resources
+those ASs serve. In the Mission Assurance Levels
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), Baseline Issuance
 and its issuance-gate kill switch become reachable under the
 standalone binding through this profile, and the state-aware
