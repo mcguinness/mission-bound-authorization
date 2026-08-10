@@ -280,8 +280,10 @@ request-context checks before relying on a received reference.
 
 The approved mission blob uses the members defined by AAuth, including
 `approver`, `agent`, `approved_at`, and `description`, and optionally
-`approved_tools` and `capabilities`.  This binding defines no additional
-members.
+`approved_tools` and `capabilities`.  Under this binding the blob also
+carries the `expires_at` member, defined by AAuth Mission Expiry
+{{I-D.draft-mcguinness-aauth-mission-expiry}} and required by
+{{lifecycle}}.  This binding itself defines no additional members.
 
 The blob's `agent` value is an AAuth agent identifier.  It MUST NOT be
 described or processed as an OAuth `client_id`.  The two identifiers have
@@ -359,6 +361,10 @@ that:
 - the authenticated agent is entitled to act in the referenced context;
   and
 - the mission is `active`.
+
+If any of these checks cannot be completed, including establishing the
+mission's current state, the PS MUST fail closed and reject the
+request.
 
 The PS then evaluates the request using the approved description, the
 request's justification and other inputs, applicable person or
@@ -480,7 +486,9 @@ Every mission approved under this binding MUST carry the `expires_at`
 member defined by AAuth Mission Expiry
 {{I-D.draft-mcguinness-aauth-mission-expiry}}, and the PS MUST enforce
 it as that extension specifies.  When a proposal omits an expiry, the
-PS MUST set one at approval under deployment policy.  Expiry
+PS MUST set one at approval under deployment policy, and that policy
+SHOULD prefer the shortest expiry consistent with the mission's
+purpose.  Expiry
 transitions the mission to `terminated`; it adds no third state, and
 no auth token issued under the mission outlives it.
 
@@ -689,15 +697,18 @@ The contextual-governance kernel maps as follows:
 1. **Mission Reference**: the native pair `{approver, s256}`.
    `approver` is the uniqueness namespace, `s256` is compared as the
    exact unpadded base64url digest of the approved bytes, a changed
-   blob is a different mission, and a reference is never reassigned
-   ({{reference}}).
+   blob is a different mission, a reference is never reassigned, and
+   retention follows the mission log's declared period
+   ({{reference}}, {{mission-log}}).
 2. **Controller**: the PS identified by `approver` controls approval,
-   governance state, and the mission log.  Consumers establish its
-   identity and keys from AAuth PS metadata ({{roles}}).
+   governance state, and the mission log ({{roles}}).  Consumers
+   establish its identity and keys from AAuth's published PS metadata
+   and key set ({{I-D.draft-hardt-oauth-aauth-protocol}}).
 3. **Actor binding**: the blob's `agent` member names the AAuth agent
    identifier, authenticated by its agent token and HTTP message
    signatures; parent-mediated and call-chaining relationships are
-   the only delegations ({{blob}}, {{roles}}).
+   the only delegations, and the identifier maps to no OAuth
+   `client_id` ({{blob}}, {{roles}}).
 4. **Approved Context**: the private approved mission blob, immutable
    under the exact-byte `s256` commitment; it is never disclosed to
    Resources or Access Servers ({{blob}}, {{reference}}).
@@ -726,11 +737,11 @@ The binding declares these optional capabilities:
 
 | Capability | Claim | Scope and defining sections | Limitations |
 | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supported | PS-gated operations: mission-endpoint processing, permission decisions, and auth-token issuance the PS performs or brokers ({{lifecycle}}, {{access-modes}}) | Independently issued resource credentials are outside the claim; the post-transition residual is bounded by auth-token lifetime and `expires_at` |
-| State-Observable | conditional | The AAuth Mission Management status operation where deployed ({{I-D.draft-mcguinness-mission-aauth-management}}) | The base binding exposes no consumer-facing state source; token acceptance is not observation |
+| Lifecycle-Gated Authorization | supported | PS-gated operations: mission-endpoint processing, permission decisions, and auth-token issuance the PS performs or brokers; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials are outside the claim; the post-transition residual is bounded by auth-token lifetime and `expires_at` |
+| State-Observable | conditional | The AAuth Mission Management status operation where deployed: authenticated per-role callers, the `active` and `terminated` vocabulary, responses current at the evaluation instant, absent and unauthorized references indistinguishable ({{I-D.draft-mcguinness-mission-aauth-management}}) | The base binding exposes no consumer-facing state source; token acceptance is not observation |
 | Structured Authority | not supported | The mission description is private prose; `approved_tools` is PS-local | Scopes or a resource-owned policy language can supply structure inside its own boundary |
 | Monotonic Derivation | not supported | No cross-boundary subset relation is defined | A resource policy language can define monotonicity within its own vocabulary |
-| Credential-Bound | conditional | PS-asserted and federated modes carry and validate the signed native reference ({{access-modes}}) | Identity-based and resource-managed modes convey no mission binding |
+| Credential-Bound | conditional | PS-asserted and federated modes carry and validate the signed native reference in PS-issued artifacts, a binding established at issuance rather than by an external join ({{access-modes}}) | Identity-based and resource-managed modes convey no mission binding |
 | Independently Verifiable | not supported | `s256` proves byte identity to parties holding the blob | It does not prove record properties or current state to third parties |
 | Portable Evidence | not supported | The mission log is PS-local | Signed receipts or checkpoints would be an extension |
 {: title="AAuth Mission substrate capabilities"}

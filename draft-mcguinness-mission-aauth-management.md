@@ -81,8 +81,8 @@ This document defines that companion.
 An authenticated caller can read status, permanently terminate an
 authorized mission, and inspect the AAuth agent and token delegation
 tree recorded for it.  An immutable expiry defined by the AAuth
-Mission Expiry extension ends a mission automatically.  Termination reasons are audit facts and never protocol
-states.  The operations extend the existing AAuth `mission_endpoint`,
+Mission Expiry extension ends a mission automatically.  Termination
+reasons are audit facts and never protocol states.  The operations extend the existing AAuth `mission_endpoint`,
 use AAuth HTTP Message Signatures for agent calls, preserve the privacy
 of the mission blob, and record their results in the mission log.
 
@@ -118,6 +118,11 @@ keyed by the exact native `{approver, s256}` pair.  Authorization to a
 remote resource remains a decision of that resource, its Access Server,
 and, where involved, the PS; this endpoint manages the contextual
 governance envelope held by the PS.
+
+The family architecture situates this surface among the lifecycle
+companions ({{I-D.draft-mcguinness-mission-architecture}}), and the
+family security model's analysis applies to it
+({{I-D.draft-mcguinness-mission-security-model}}).
 
 This specification reuses the existing `mission_endpoint`.  A mission
 proposal in the base protocol has no `operation` member.  A management
