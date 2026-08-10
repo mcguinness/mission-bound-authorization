@@ -45,6 +45,7 @@ normative:
   RFC9126:
   RFC9207:
   RFC9396:
+  I-D.draft-zehavi-oauth-rar-metadata:
   RFC9449:
   RFC9700:
   RFC7662:
@@ -157,6 +158,14 @@ informative:
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-authzen:
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
     author:
       -
         ins: K. McGuinness
@@ -740,13 +749,33 @@ has the following members:
   `authorization_details` entry. The client's concrete authority
   proposal for the task. It is untrusted input like the rest of the
   Intent and is committed by `intent_hash` with it
-  ({{integrity-anchors}}). When present, the AS MUST derive each
-  Authority Set entry as a subset ({{subset}}) of some
-  `proposed_authority` entry ({{authorization-derivation}}); `goal`
-  and `constraints` then serve
-  as rendering and bounding context over the proposed authority.
-  Each entry's `resource` MUST be among the Intent's `resources`;
-  the AS refuses an Intent violating this with `invalid_request`.
+  ({{integrity-anchors}}). Each entry MUST be of a type the AS
+  advertises and MUST validate against that type's published JSON
+  Schema ({{other-types}}, {{discovery}}); where a deployment
+  arranges Mission-bound authorization out of band rather than
+  advertising the metadata endpoint, the supported types and their
+  schemas are established out of band, and this rule applies over
+  that knowledge the same way. An entry of an unadvertised type, or
+  one that fails its schema, MUST NOT be carried into the Authority
+  Set unexamined: the AS refuses the Intent with
+  `invalid_authorization_details`, or omits the entry and signals
+  partial derivation with the `mission_derivation` token-response
+  parameter ({{authorization-derivation}}); it MUST NOT keep the
+  entry silently.
+
+  When present, the AS MUST derive each Authority Set entry as a
+  subset ({{subset}}) of some `proposed_authority` entry of the
+  *same type*: a `mission_resource_access` entry derives only from a
+  `mission_resource_access` proposal, under the subset rule of
+  {{subset}}; an entry of another AS-supported type derives only
+  from a same-type proposal, narrowed under that type's own subset
+  rule where it defines one, or carried through unchanged where it
+  defines none ({{other-types}}). No entry derives from a proposed
+  entry of a different type. `goal` and `constraints` then serve as
+  rendering and bounding context over the proposed authority. Each
+  entry that carries a `resource` member MUST have it among the
+  Intent's `resources`; the AS refuses an Intent violating this with
+  `invalid_request`.
 
 `success_criteria`:
 : OPTIONAL. An array of strings. Human-readable
@@ -951,8 +980,10 @@ derivation policy then in force, in one of two modes:
 - **Narrowing mode** (RECOMMENDED): the Intent carries
   `proposed_authority` ({{mission-intent}}), and the Authority Set is
   the proposal narrowed to policy. Each derived entry MUST be a
-  subset ({{subset}}) of some `proposed_authority` entry; a proposed
-  entry policy cannot accept is narrowed or omitted.
+  subset ({{subset}}) of some `proposed_authority` entry of the same
+  type ({{mission-intent}}); a proposed entry of an unadvertised
+  type, one that fails its schema, or one policy otherwise cannot
+  accept, is narrowed or omitted ({{mission-intent}}).
 - **Template mode**: the Intent carries no `proposed_authority`, and
   a deployment-configured mapping, keyed on the Intent's `purpose` or
   `resources`, yields the candidate entries, which are then narrowed
@@ -1383,11 +1414,14 @@ rather than a JSON number.
 
 `mission_resource_access` is the only type this document defines, but
 the Authority Set MAY include other AS-supported {{RFC9396}}
-`authorization_details` types when an audience consumes them. ("Supported"
-here means the AS recognizes and documents the type, as advertised by
-`authorization_details_types_supported` ({{discovery}}); RFC 9396
-establishes no IANA registry of type identifiers.) The Mission apparatus
-is type-agnostic toward such entries:
+`authorization_details` types when an audience consumes them.
+("Supported" here means the AS recognizes and documents the type: it
+appears as a key in the AS's `authorization_details_types_metadata_endpoint`
+response, the source of truth for the supported set
+({{discovery}}); `authorization_details_types_supported`, where the
+AS also advertises it, mirrors that key set. RFC 9396 establishes no
+IANA registry of type identifiers.) The Mission apparatus is
+type-agnostic toward such entries:
 
 - they are committed by `authority_hash` and gated on Mission state
   exactly as `mission_resource_access` entries are;
@@ -2421,6 +2455,41 @@ those constraints MUST route the protected operation through a
 Resource Server that enforces `authorization_details` (or the runtime
 layer that evaluates them).
 
+## Remediation Grains {#remediation-grains}
+
+A denial is not the end of the exchange. The family treats "how to
+ask again" as a graduated challenge assembled from independent
+grains, each naming a next step without granting anything itself.
+This document's own grain is `mission_denial` above: which path a
+denial leads into.
+
+A Resource Server MAY compose a second grain with it: the
+`insufficient_authorization` `WWW-Authenticate` error code and its
+`authorization_remediation` parameter, defined by
+{{I-D.draft-zehavi-oauth-rar-metadata}}. `authorization_remediation`
+is a base64url-encoded JSON object naming the actionable
+`authorization_details` the caller lacks, with an OPTIONAL
+`authorization_reference` letting the client match a previously
+issued token to that same gap. It names what
+`mission_denial: insufficient_authority` only points at. This
+document does not fold that grain into `mission_denial`'s carriage,
+nor redefine either grain's response status: each rides the wire
+shape its own defining document gives it. A client that decodes
+`authorization_remediation` proposes the carried entries back as
+`proposed_authority` ({{mission-intent}}), where they derive under
+this document's ordinary rules ({{authorization-derivation}}): of an
+advertised, schema-valid type ({{discovery}}), narrowed same-type
+({{subset}}, {{other-types}}) like any other proposal.
+
+A third grain routes the same denial into a governed access request
+rather than a fresh derivation: the AuthZEN Access Request and
+Approval Profile's requestable denial over {{AuthZEN.ARAP}}, adopted
+by the AuthZEN binding companion
+({{I-D.draft-mcguinness-mission-authzen}}). The three grains compose
+rather than replace one another: a deployment MAY offer any subset,
+and none widens authority beyond what {{authorization-derivation}}
+would derive from the same proposal unremediated.
+
 # Mission Lifecycle and Gating {#lifecycle}
 
 A Mission is in one of three states:
@@ -3106,6 +3175,27 @@ An AS that advertises `mission_bound_authorization_supported: true`
 MUST also publish `pushed_authorization_request_endpoint`
 ({{RFC9126}}), since a Mission Intent is accepted only through PAR
 ({{submission-via-par}}).
+
+An AS that advertises `mission_bound_authorization_supported: true`
+MUST also advertise `authorization_details_types_metadata_endpoint`
+{{I-D.draft-zehavi-oauth-rar-metadata}}. That endpoint's response is a
+JSON object keyed by `authorization_details` type identifier, each
+value carrying, per {{I-D.draft-zehavi-oauth-rar-metadata}}, a JSON
+Schema for exactly one `authorization_details` object of that type
+(`schema` or `schema_uri`) and optionally `version`, `description`,
+`documentation_uri`, and `examples`. That response's key set is the
+source of truth for which types the AS supports:
+`authorization_details_types_supported` ({{RFC9396}}), where the AS
+also advertises it, mirrors those keys and MUST NOT list a type
+absent from them. The AS MUST publish, within that response, an entry
+for `mission_resource_access` whose schema validates the object shape
+{{type-registration}} defines, including the Common Constraints
+structure ({{common-constraints}}); {{type-registration}} remains the
+normative definition, and the published schema is its machine-readable
+form. Where a deployment arranges Mission-bound authorization out of
+band rather than advertising `mission_bound_authorization_supported`,
+the supported types and their schemas are likewise established out of
+band.
 
 This member and the `mission_bound_authorization_required` member of
 {{protected-resource-metadata}} are unauthenticated discovery data:
