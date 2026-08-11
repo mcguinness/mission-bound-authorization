@@ -120,6 +120,33 @@ describe("work-product binding: sign and verify", () => {
     }
   });
 
+  it("accepts a role-issuer binding whose mediator.id legitimately equals iss", async () => {
+    // Now that iss is a URL, a Mission Issuer mediator's own id IS that URL, so
+    // mediator.id === iss is the NATURAL case. The removed shape-check must NOT
+    // reject it: this proves signer/iss independence in BOTH directions and
+    // guards against reinstating a mediator.id === iss equation.
+    const { key, kid, jwks } = await mediatorKeys();
+    const wp = workProduct({ note: "issuer-signed" });
+    const jws = await bindWorkProduct({
+      workProduct: wp,
+      mediator: { id: ISSUER, role: "issuer" },
+      iss: ISSUER,
+      key,
+      kid,
+    });
+    const res = await verifyWorkProductBinding({
+      jws,
+      provenance: wp.provenance,
+      content: wp.content,
+      jwks,
+    });
+    expect(res.valid, JSON.stringify(res)).toBe(true);
+    if (res.valid) {
+      expect(res.mediator).toEqual({ id: ISSUER, role: "issuer" });
+      expect(res.iss).toBe(ISSUER);
+    }
+  });
+
   it("a derived provenance keeps parent_artifact and binding adds no member", async () => {
     const { key, kid, jwks } = await mediatorKeys();
     const wp = workProduct({ note: "derived" }, "artifact:v1");
