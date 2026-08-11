@@ -1271,7 +1271,12 @@ resource surface it does so through RFC 9470 step-up authentication
 in this profile. The core's `mission_denial` value `step_up_required`
 remains the Resource Server's own challenge-surface signal
 ({{I-D.draft-mcguinness-oauth-mission}}) and composes with, but is
-not, this obligation.
+not, this obligation. The requirement is Resource policy, never a
+Mission constraint: the issuance profile's `acr` is an approval-time
+requirement on the Approver, recorded on the Mission and neither
+carried on derived tokens nor evaluated per action, and the issuance
+profile defines no per-action `amr` constraint
+({{I-D.draft-mcguinness-oauth-mission}}).
 
 This profile defines one composite obligation for permit enforcement,
 the mission-execution obligation:
