@@ -398,10 +398,11 @@ references (client instance assertion and the AI agent instance
 profile) to the
 Enterprise Mission Authority Profile's instance-bound joins, an
 optional hardening above the base conformance floor. For
-**authzen**, the stable surface is its core AuthZEN decision binding;
-its Access Request and Approval Profile (ARAP) and Model Context
-Protocol tool-authorization (COAZ) integrations are informative and
-optional.
+**authzen**, the decision binding tracks the AuthZEN working group:
+the core evaluation API, and normatively the Access Request and
+Approval Profile (ARAP) and the Obligations Profile, both
+working-group drafts; the Model Context Protocol tool-authorization
+(COAZ) integration remains informative and optional.
 
 Family-internal normative dependencies are Internet-Drafts by
 construction: the substrate contract anchors the **uma**,
