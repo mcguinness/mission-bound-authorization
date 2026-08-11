@@ -195,11 +195,12 @@ Issuance gating:
 
 ## Capability Model {#capability-model}
 
-An AAuth mission natively supplies every element of the
-contextual-governance kernel of
-{{I-D.draft-mcguinness-mission-substrate}}; the element-by-element
-mapping and the formal capability claims are this binding's Mission
-Substrate Statement ({{mission-substrate}}).  In AAuth's own terms:
+An AAuth mission, as this binding profiles it with AAuth Mission
+Expiry, supplies every element of the contextual-governance kernel of
+{{I-D.draft-mcguinness-mission-substrate}}; base AAuth alone supplies
+all but the reliance bound.  The element-by-element mapping and the
+formal capability claims are this binding's Mission Substrate
+Statement ({{mission-substrate}}).  In AAuth's own terms:
 
 Stable native reference:
 : The pair `{approver, s256}` identifies the approved context.  No
@@ -298,10 +299,13 @@ review; the approved blob returned by the PS is the authoritative result.
 
 ### Approved Tools
 
-`approved_tools` identifies local actions that the agent can take without
-calling the PS permission endpoint for every invocation.  Examples
-include a local tool call, a file write, or sending a message.  The PS
-still uses the mission context and mission log for governance.
+`approved_tools` identifies agent tool invocations that do not require
+a per-call decision at the PS permission endpoint.  Examples include a
+tool call, a file write, or sending a message; a tool can invoke
+remote infrastructure, so the exemption is from the per-call
+permission request, not a locality claim.  The PS still uses the
+mission context and mission log for governance: `approved_tools` is
+structured PS-governance input, not portable resource authority.
 
 An approved tool is not, by that fact alone, authority at a remote
 resource.  This binding therefore does not map an approved tool name or
@@ -393,7 +397,7 @@ that extends beyond termination.
 
 The mission log is complete only for PS-observed operations.
 `approved_tools` activity the agent performs without a per-call PS
-decision, and any other agent-local action, enters the log only as
+decision, and any other agent-side action, enters the log only as
 agent-reported audit records; the PS MUST distinguish agent-reported
 entries from PS-observed ones and MUST NOT represent the former as
 the latter.  A counter or hash chain alone does not prove
@@ -438,8 +442,8 @@ the authorization path.
 |---|---|
 | Identity-based | The resource authorizes the signed agent identity directly.  A mission reference can be sent to a mission-aware resource, but the PS does not gate that resource decision and the resource can ignore the reference. |
 | Resource-managed | The resource manages authorization directly.  A mission reference can provide context, but the PS does not gate the resource's issuance or decision and the resource can ignore the reference. |
-| PS-asserted | The resource token is presented to the PS, which evaluates the active Mission Context before it issues an auth token.  PS issuance gating is structural.  The resource still applies its own resource policy. |
-| Federated | The PS evaluates the active Mission Context before it federates the request to the resource's Access Server and before returning the resulting auth token.  PS broker gating is structural; the Access Server independently applies resource policy. |
+| PS-asserted | The resource token is presented to the PS, which evaluates the active Mission Context before it issues an auth token.  PS issuance gating is structural for a request whose resource token carries the validated Mission Reference ({{ref-propagation}}).  The resource still applies its own resource policy. |
+| Federated | The PS evaluates the active Mission Context before it federates the request to the resource's Access Server and before returning the resulting auth token.  PS broker gating is structural under the same condition; the Access Server independently applies resource policy. |
 
 In every mode, the PS MUST apply the active-state gate to its own
 permission, audit, interaction, mission, and token operations when they
@@ -480,6 +484,20 @@ The presence of a reference establishes correlation, not authorization.
 Authorization still depends on the issuer's decision, the token's scopes
 and other claims, proof of possession, resource policy, and, where the PS
 is on path, the PS's current contextual governance decision.
+
+Mission propagation is downgradable by an intermediate that does not
+echo the reference: AAuth's token request carries the mission only
+inside the presented resource token, so a resource that ignores
+`AAuth-Mission` yields a missionless token request at the PS.  Three
+rules bound that downgrade.  An agent that sent `AAuth-Mission` MUST
+verify that the returned resource token carries the exact reference;
+if it is absent or different, the agent MUST NOT continue that
+authorization as part of the mission.  A PS whose policy places an
+agent under mission governance MUST reject a token request from that
+agent that carries no mission reference.  The Lifecycle-Gated
+Authorization and Credential-Bound claims of {{mission-substrate}}
+cover only requests whose resource token carries the protected,
+validated reference.
 
 ## Lifecycle {#lifecycle}
 
@@ -536,7 +554,9 @@ An implementation conforms as an **AAuth Mission Context Agent** if it:
 - verifies and preserves the exact approved blob bytes;
 - uses only the native `{approver, s256}` reference;
 - carries and signs that reference as AAuth requires;
-- stops using a mission after `mission_terminated`; and
+- stops using a mission after `mission_terminated`;
+- initiates no new governed work at or after the mission's
+  `expires_at`; and
 - does not treat mission approval or `approved_tools` as remote resource
   authority.
 
@@ -624,7 +644,7 @@ authorized administrators through applicable AAuth mechanisms.
 ## Person Server Compromise
 
 The PS is the controlling authority and holds the private mission blob,
-the person relationship, and the complete governance log.  A compromised
+the person relationship, and the PS-observed governance log.  A compromised
 PS can approve false missions, misrepresent state, disclose sensitive
 context, issue PS-asserted auth tokens, or broker requests to Access
 Servers.  AAuth signature verification does not protect against a
@@ -771,11 +791,11 @@ The binding declares these optional capabilities:
 
 | Capability | Claim | Scope and defining sections | Limitations |
 | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supported | PS-gated operations: mission-endpoint processing, permission decisions, and auth-token issuance the PS performs or brokers; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials are outside the claim; the post-transition residual is bounded by auth-token lifetime and `expires_at` |
-| State-Observable | conditional | The AAuth Mission Management status operation where deployed: authenticated per-role callers, the `active` and `terminated` vocabulary, responses current at the evaluation instant under a zero-cache per-reliance consumer contract that fails closed on failed or unrecognized responses, absent and unauthorized references indistinguishable ({{I-D.draft-mcguinness-mission-aauth-management}}) | The base binding exposes no consumer-facing state source; token acceptance is not observation |
-| Structured Authority | not supported | The mission description is private prose; `approved_tools` is PS-local | Scopes or a resource-owned policy language can supply structure inside its own boundary |
+| Lifecycle-Gated Authorization | supported | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, and auth-token issuance the PS performs or brokers for requests carrying the validated Mission Reference; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and missionless token requests are outside the claim ({{ref-propagation}}); the post-transition residual is bounded by auth-token lifetime and `expires_at` |
+| State-Observable | conditional | The AAuth Mission Management status operation where deployed: authenticated per-role callers, the `active` and `terminated` vocabulary, responses stamped `observed_at` with a declared `fresh_until` reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable ({{I-D.draft-mcguinness-mission-aauth-management}}) | The base binding exposes no consumer-facing state source; token acceptance is not observation |
+| Structured Authority | not supported | The mission description is private prose; `approved_tools` is PS-governance input | Scopes or a resource-owned policy language can supply structure inside its own boundary |
 | Monotonic Derivation | not supported | No cross-boundary subset relation is defined | A resource policy language can define monotonicity within its own vocabulary |
-| Credential-Bound | conditional | PS-asserted and federated modes carry and validate the signed native reference in PS-issued or PS-brokered artifacts, a binding established at issuance rather than by an external join ({{access-modes}}) | Identity-based and resource-managed modes convey no mission binding; federated artifacts are AS-issued under the PS's brokering |
+| Credential-Bound | conditional | PS-asserted and federated modes carry and validate the signed native reference in PS-issued or PS-brokered artifacts, a binding established at issuance rather than by an external join, for requests whose resource token carries the validated reference ({{access-modes}}, {{ref-propagation}}) | Identity-based and resource-managed modes convey no mission binding; federated artifacts are AS-issued under the PS's brokering |
 | Independently Verifiable | not supported | `s256` proves byte identity to parties holding the blob | It does not prove record properties or current state to third parties |
 | Portable Evidence | not supported | The mission log is PS-local | Signed receipts or checkpoints would be an extension |
 {: title="AAuth Mission substrate capabilities"}
