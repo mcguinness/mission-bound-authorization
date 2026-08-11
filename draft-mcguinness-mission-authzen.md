@@ -1297,7 +1297,8 @@ MUST NOT be used; `use_limit` is an integer consumption bound on
 `decision_id` (for an action in the high-consequence classes
 ({{I-D.draft-mcguinness-mission-runtime}}) the PDP MUST set
 `use_limit: 1` and the PEP MUST treat a high-consequence permit
-lacking it as invalid; this replaces the former `single_use` boolean);
+lacking it as invalid; absent, the permit carries no PDP-enforced use
+limit; this replaces the former `single_use` boolean);
 `execution_evidence: "required"` obliges the PEP to emit the Execution
 Evidence Object. This obligation MUST NOT carry human approval, role
 or relationship creation, Mission expansion, a task handle, residual
@@ -1654,7 +1655,8 @@ governed by each carrier's extensibility rule.
 | PDP unreachable | Refusal Record | `pdp_unreachable` |
 | Mission state not establishable at the PEP | Refusal Record | `state_unavailable` |
 | Action outside the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it | PDP denial | `out_of_authority` |
-| Resource policy requires a stronger authentication context | Obligation on permit | step-up obligation ({{AUTHZEN-OBL}}) |
+| Resource policy requires a stronger authentication context, satisfiable via step-up | Obligation on permit | step-up obligation ({{AUTHZEN-OBL}}) |
+| Resource policy requires a stronger authentication context and refuses outright (not expressible as a permit-plus-obligation) | PDP denial | `resource_policy` |
 | Required action-bound approval absent, stale, or parameter-mismatched | PDP denial | `approval_required` |
 | Mission state stale (freshness-window violation) | PDP denial | `stale_state` |
 | Request Mission `id`, `authority_hash`, or `policy_view_id` inconsistent with the loaded view | PDP denial | `view_inconsistent` |
