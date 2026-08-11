@@ -413,7 +413,10 @@ Integrity Anchors, and Canonicalization Rules sections). The record
 is immutable except for its state (the Mission Record section).
 
 The core lifecycle states are `active`, `revoked`, and `expired`, and
-only `active` permits issuance or continued reliance.
+only `active` permits issuance or continued reliance. A non-active
+state stops new derivation at once; authority already issued ends at
+the earliest of delivered revocation, a runtime or state-aware
+re-check, or the credential's own expiry ({{validity-model}}).
 
 Companions add states (`suspended`, `completed`, `superseded`,
 `cascaded`), and one rule keeps that safe without a registry: a
@@ -507,7 +510,10 @@ actually take, and the second is the reference:
   freshness source (the Runtime-Enforced level,
   {{assurance-levels}}). This is the architecture this document
   means when it says a Mission is enforced, and the one an
-  evaluation should picture by default.
+  evaluation should picture by default. It presumes an
+  authority-bearing binding; under AAuth the analogous per-action
+  control is the Person Server's contextual gate on PS-mediated
+  paths ({{I-D.draft-mcguinness-mission-aauth}}).
 
 **Recommended agent architecture**:
 : the reference architecture plus Consent Evidence and the harness
@@ -731,7 +737,10 @@ Access Server, with contextual PS governance when the PS is on path.
   core's Mission Lifecycle and Gating section). In AAuth, only PS
   operations and the PS-asserted and federated authorization paths are
   structurally gated; identity-based and resource-managed decisions do
-  not pass through the PS.
+  not pass through the PS. On the gated paths the gate covers requests
+  whose resource token carries the validated Mission Reference; a
+  stripped reference yields a missionless request, bounded by the
+  binding's downgrade rules ({{I-D.draft-mcguinness-mission-aauth}}).
 
 **Authority only narrows**:
 : Derived tokens, delegated child Missions, attenuated tokens, and
@@ -974,7 +983,11 @@ surface crossing all of them:
 
 One material action splits across these roles, and the family keeps
 each distinct and attributable rather than collapsing them into one
-"agent" identity:
+"agent" identity. The identifiers below are the issuance profile's
+instantiation; AAuth carries the same distinctions natively with its
+`agent` identifier, the Person at the PS, `parent_agent` for a
+parent-mediated sub-agent, and the call chain for a service hop
+({{I-D.draft-mcguinness-mission-aauth}}):
 
 Principal:
 : the Subject, the token `sub` (the core).
@@ -1052,8 +1065,8 @@ Agent Deployment (what is running):
   estate's published claims manifest, not a property of an agent.
 
 Mission (why the authority exists):
-: This family's object: the approved task, its Authority Set, and
-  its lifecycle.
+: This family's object: the approved task, its lifecycle, and, where
+  the binding derives one, its Authority Set.
 
 An agent registry is a complementary dependency, not part of the
 Mission system. Where one exists, the Mission Issuer and the PDP
@@ -1500,7 +1513,11 @@ consuming contract is equally short: meaning binds at approval, is
 enforced at the point of use, and any translation between the
 resource's vocabulary and another party's is trusted, verified, or
 separately approved, never a place where authority widens
-({{approval-fidelity}}).
+({{approval-fidelity}}). One boundary is shared by agreement: the
+resource owns its operation semantics and consequences, while the
+family owns the registered cross-resource constraint vocabulary,
+which a resource explicitly advertises and adopts before it binds
+({{I-D.draft-mcguinness-oauth-mission}}).
 
 Resource-owned meaning reaches the three consuming layers through
 five mechanisms, each normative in its own home and composing as one
@@ -1711,7 +1728,12 @@ Management,
 fleet enumeration and bulk lifecycle for operators
 ({{I-D.draft-mcguinness-oauth-mission-management}}); and Discovery,
 experimental, binding encountered resources within a pre-consented
-ceiling ({{I-D.draft-mcguinness-mission-discovery}}).
+ceiling ({{I-D.draft-mcguinness-mission-discovery}}). The AAuth
+binding carries this verb natively: its management companion for
+status, termination, and delegation-tree queries
+({{I-D.draft-mcguinness-mission-aauth-management}}), and its expiry
+extension for the approved lifetime bound
+({{I-D.draft-mcguinness-aauth-mission-expiry}}).
 
 ## Enforce Each Action
 
@@ -1749,7 +1771,10 @@ section. The chooser: the core's token-exchange delegation for an
 execution hop living and dying with the parent's lifecycle; a Child
 Mission when the delegate needs its own lifecycle, approval, or
 audit identity; attenuation, experimental, only where offline
-minting is the constraint.
+minting is the constraint. AAuth delegates natively: a
+parent-mediated sub-agent under `parent_agent`, distinct from the
+call chain of a service hop, with no Authority Set machinery imported
+({{I-D.draft-mcguinness-mission-aauth}}).
 
 ## Project
 
@@ -2111,10 +2136,12 @@ The levels, cumulative:
   gated issuance at each consuming Authorization Server, and
   Baseline with it.
 
-  Under AAuth, Baseline means native approval, exact-byte commitment,
-  active or terminated state, and the ordered mission log. The
-  possession-independent issuance cutoff applies only to PS-asserted
-  and federated paths; no Authority Set or subset proof is implied.
+  The nearest AAuth comparison, stated as capabilities rather than a
+  level: native approval, exact-byte commitment, active or terminated
+  state, and the ordered mission log. The possession-independent
+  issuance cutoff applies only to PS-asserted and federated requests
+  whose resource token carries the validated Mission Reference; no
+  Authority Set or subset proof is implied.
 
   Proof obligations: the anchored approval and, where credentials
   are issued, the subset rule. A deployment that adds only a
@@ -2386,7 +2413,7 @@ needs the whole matrix:
 | Control | Stops | Home |
 |---|---|---|
 | Capability kill | one capability within one Mission, with the body of work still running | the issuer-held containment overlay ({{I-D.draft-mcguinness-oauth-mission-containment}}) |
-| Mission kill | one body of work, across every resource and derived credential | the core's revocation; cascades to Child Missions ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) |
+| Mission kill | one body of work: new derivation at once, and residual credentials at the earliest of revocation, re-check, or their own expiry ({{validity-model}}) | the core's revocation; cascades to Child Missions ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) |
 | Agent kill | all work by one agent, across its Missions | the deployment's agent IAM ({{three-objects}}) |
 | Agent Deployment kill | every instance running a compromised version | the deployment's change governance ({{three-objects}}) |
 | Credential kill | credentials already issued | the binding's substrate, where it supports revocation; otherwise expiry ({{validity-model}}) |
@@ -2423,15 +2450,20 @@ layered rather than measured by resemblance to the OAuth wire model
 ({{I-D.draft-mcguinness-mission-substrate}}).
 
 A design provides the shared **Mission Context** capabilities when the
-first four properties hold:
+first four properties, a compact restatement of the substrate
+contract's kernel ({{I-D.draft-mcguinness-mission-substrate}}), hold:
 
 1. **An approved task context**: the task is durable and explicitly
    approved rather than only a session or token.
 2. **Stable binding and integrity**: a native reference binds the
    controlling authority, acting actor, and immutable approved context,
-   or a verifiable commitment to that context.
-3. **Lifecycle gate**: only an active context supports new governed
-   decisions at the binding's declared control point.
+   or a verifiable commitment to that context, and propagation or
+   correlation rules carry the reference across parties without
+   conferring authority.
+3. **Lifecycle gate with a reliance bound**: only an active context
+   supports new governed decisions at the binding's declared control
+   point, and no decision or artifact outlives both its stated bound
+   and the transition that ends the context.
 4. **Governance history**: decisions and interactions are correlated to
    the stable reference in an ordered audit or governance record.
 
@@ -2452,8 +2484,10 @@ further properties hold:
 8. **Evidence that joins**: what was approved, shown, decided, and done
    is reconstructible from evidence joined on the object's identity.
 
-AAuth supplies the first four natively, with its lifecycle gate scoped
-to PS endpoints and PS-mediated authorization paths. The OAuth core
+AAuth as its binding profiles it, including AAuth Mission Expiry for
+the reliance bound, supplies the first four, with its lifecycle gate
+scoped to PS endpoints and PS-mediated paths carrying the validated
+reference. The OAuth core
 supplies the structured-authority layer as well. Runtime and portable
 evidence remain separately claimed capabilities; the requirements below
 unpack the family mechanisms without implying every binding implements
@@ -2734,6 +2768,14 @@ transparency-side mechanism
 ({{I-D.draft-mcguinness-mission-audit}}). The status profile's
 anti-oracle property bounds what its status surfaces disclose
 ({{I-D.draft-mcguinness-oauth-mission-status}}).
+
+The AAuth binding's privacy posture is its own
+({{I-D.draft-mcguinness-mission-aauth}}): the private mission blob
+never leaves the agent and the Person Server, the stable
+`{approver, s256}` reference is a correlation handle across every
+resource that sees it, and the mission log concentrates a detailed
+activity history at the Person Server, with the binding's
+minimization and retention duties applying there.
 
 # IANA Considerations {#iana}
 
