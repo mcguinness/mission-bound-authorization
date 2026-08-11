@@ -785,8 +785,8 @@ rubber-stamped approval binds like a considered one (the
 consent-fatigue residual of
 {{I-D.draft-mcguinness-mission-security-model}}).
 
-An action-bound approval is an approval event under the issuance profile
-bound to the action: it is obtained from an independent Approver or
+An action-bound approval is a governed approval bound to the action:
+it is obtained from an independent Approver or
 policy authority, never self-issued by the agent or asserted from the
 agent's own context, and its rendered disclosure MAY be committed as
 Consent Evidence ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}})
@@ -826,7 +826,9 @@ with the AuthZEN Access Request and Approval Profile for exactly this
 ({{authzen}}). However obtained, the approval is decision input, not a
 bearer grant: the runtime decision of {{decision}} remains
 authoritative, and a persisted grant beyond the single action is a
-Mission expansion, not a property of the approval itself.
+governance state change the fresh decision observes (a Mission
+expansion, a role or relationship grant, or another authority
+update), never a property of the approval itself.
 
 Two proposed OAuth-native transports are converging on this same
 per-action moment, and both compose here rather than compete. The
@@ -1134,11 +1136,26 @@ attempted action.
 
 A deny need not end the task, however: a decision-API binding MAY
 mark a denial requestable and route it through an access-request and
-approval workflow, and an approved request MAY be realized as a
-durable Mission expansion ({{action-approval}}, {{authzen}}). This
-profile defines the runtime decision; it leaves that request-approval
-loop, and the expansion that persists an approved request, to the
-decision-API binding and the issuance profile's expansion mechanism.
+approval workflow ({{action-approval}}, {{authzen}}). An approved
+request completes in one of two ways. An in-authority approval gate
+is satisfied by the approval attribute alone on the fresh decision;
+nothing persists beyond it. Missing authority is realized as a
+governance state change the fresh decision observes: a durable
+Mission expansion, a role or relationship grant, or another authority
+update. This profile defines the runtime decision; it leaves the
+request-approval loop, and any realization that persists authority,
+to the decision-API binding, the issuance profile's expansion
+mechanism, and the deployment's own governance.
+
+A decision separates three response lanes, and a binding maps each
+lane to its wire. Mandatory enforcement duties ride the permit and
+bind the PEP: request binding, permit expiry, use limits, evidence
+emission; failing one makes the effective result deny. Governance
+state creation rides the request-approval loop, never the permit. A
+transient condition is a denial expected to clear with time: it
+carries a retry signal and calls for neither remediation nor a
+request. The AuthZEN binding realizes these lanes as obligations,
+ARAP composition, and its transient-denial members ({{authzen}}).
 
 The PDP's placement is a deployment choice (co-located with the
 Mission's `issuer`, embedded in the Resource Server, a tenant-scoped
@@ -1548,10 +1565,11 @@ evaluator; it fixes how one composes:
   record is ordinary deployment policy, not a Mission check.
 - **Composition.** The verdict enters the decision as Resource
   policy, carried as deployment-defined context. It can deny, or
-  route the action to the existing step-up affordances: an
-  action-bound human approval ({{action-approval}}, the decision
-  API binding's `action_approval_required`) or an authentication
-  step-up (`step_up_required`). It MUST NOT widen authority and
+  route the action to the existing affordances: an action-bound
+  human approval ({{action-approval}}, the decision API binding's
+  `approval_required`) or an authentication step-up, which the
+  decision API binding carries as an obligation on the permit
+  ({{authzen}}). It MUST NOT widen authority and
   MUST NOT substitute for a structural check this profile requires.
 - **Evidence.** When a verdict contributes to a decision, the
   decision evidence SHOULD record the evaluator's identity or
