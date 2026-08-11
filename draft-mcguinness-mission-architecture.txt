@@ -956,22 +956,45 @@ Table of Contents
 
 11.  The Mission Substrate
 
+   The binding-neutral contract is Mission Substrate Requirements
+   ([I-D.draft-mcguinness-mission-substrate]): a contextual-governance
+   kernel every binding provides (native reference and controller, actor
+   binding, approved context, approval event, governance gate, bounded
+   reliance, context propagation, and an ordered governance record) and
+   seven optional capabilities each binding claims through its Mission
+   Substrate Statement (Lifecycle-Gated Authorization, State-Observable,
+   Structured Authority, Monotonic Derivation, Credential-Bound,
+   Independently Verifiable, and Portable Evidence).
+
    The companion profiles named without "oauth" are defined against the
-   Mission model's substrate primitives rather than against OAuth
-   mechanics; each names what it consumes in a Mission Substrate section
-   of its own.  This section consolidates that interface: eight
+   binding-neutral contract and declare, each in a Mission Substrate
+   section of its own, the kernel functions and optional capabilities
+   they consume.  Where a companion consumes a concrete representation,
+   it is today the issuance profile's.
+
+   The remainder of this section documents that instantiation: eight
    primitives, each with its normative home and its consumers.  Every
-   sentence mirrors a rule the named profile states normatively.
+   sentence mirrors a rule the named profile states normatively.  None
+   of these issuance-profile representations or stronger semantics is
+   required verbatim by the binding-neutral kernel, although several
+   instantiate mandatory kernel functions: the identifier and issuer
+   realize the Mission Reference and Controller, the lifecycle realizes
+   the governance gate, token validity participates in bounded reliance,
+   and the audit horizon participates in the governance record.
 
 11.1.  The Mission Identifier and Issuer
 
    An opaque, non-reused Mission Identifier with at least 128 bits of
    entropy and no semantic content, plus issuer, the issuer URL of the
    approving Mission Issuer; together they name exactly one Mission.
-   Home: the core's Mission Record and Mission Identifier Format
-   sections.  Consumed by every companion: enforcement decisions,
-   evidence, harness bindings, the state surfaces, the audit statement
-   subject, and the Mandate all key on it.
+   This is the issuance profile's form of the contract's Mission
+   Reference; the kernel itself requires stability, non-reassignment,
+   and unguessability rather than this syntax
+   ([I-D.draft-mcguinness-mission-substrate]).  Home: the core's Mission
+   Record and Mission Identifier Format sections.  Consumed by every
+   companion: enforcement decisions, evidence, harness bindings, the
+   state surfaces, the audit statement subject, and the Mandate all key
+   on it.
 
 11.2.  The Lifecycle State Space
 
@@ -1035,12 +1058,16 @@ Table of Contents
       Mission; and
 
    *  a *Mission-bound token* is Mission-derived and additionally
-      active-state gated, subset-constrained, and refresh-gated, the
-      properties the core's conformance rule requires.
+      active-state gated, subset-constrained, and refresh-gated: in the
+      contract's vocabulary, a credential covered by the binding's
+      Lifecycle-Gated Authorization, Monotonic Derivation, and
+      Credential-Bound claims, which the core's conformance rule
+      requires of the OAuth binding.
 
    Only the third earns the term: a mission claim alone is a reference,
    not Mission-bound authorization.  The family reserves "Mission-bound"
-   for that class.
+   for that class, and a binding earns it through the capability claims
+   of its Mission Substrate Statement, not by protocol lineage.
 
 11.6.  The Mission-Bound Credential
 
@@ -1170,7 +1197,7 @@ Table of Contents
    residue the Mission's state carries and which the *state-observable*
    capability reaches: an authenticated freshness source with a stated
    staleness bound, a named substrate capability a binding MAY provide
-   on top of the lifecycle-gated floor
+   beyond the kernel's bounded-reliance floor
    ([I-D.draft-mcguinness-mission-substrate]), and the one runtime
    enforcement requires ([I-D.draft-mcguinness-mission-runtime]).  The
    two ends are one mechanism seen from opposite sides: a lifetime
@@ -1203,6 +1230,8 @@ Table of Contents
    *  an explicit approval event;
 
    *  an active-state gate at declared control points;
+
+   *  a stated reliance bound on every governed decision and artifact;
 
    *  context propagation or decision correlation; and
 

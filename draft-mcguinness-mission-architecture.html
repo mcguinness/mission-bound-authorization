@@ -2382,12 +2382,29 @@ identity is a Child Mission
       <h2 id="name-the-mission-substrate">
 <a href="#section-11" class="section-number selfRef">11. </a><a href="#name-the-mission-substrate" class="section-name selfRef">The Mission Substrate</a>
       </h2>
-<p id="section-11-1">The companion profiles named without "oauth" are defined against the
-Mission model's substrate primitives rather than against OAuth
-mechanics; each names what it consumes in a Mission Substrate section
-of its own. This section consolidates that interface: eight primitives,
-each with its normative home and its consumers. Every sentence
-mirrors a rule the named profile states normatively.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-1">The binding-neutral contract is Mission Substrate Requirements
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>): a contextual-governance
+kernel every binding provides (native reference and controller, actor
+binding, approved context, approval event, governance gate, bounded
+reliance, context propagation, and an ordered governance record) and
+seven optional capabilities each binding claims through its Mission
+Substrate Statement (Lifecycle-Gated Authorization, State-Observable,
+Structured Authority, Monotonic Derivation, Credential-Bound,
+Independently Verifiable, and Portable Evidence).<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2">The companion profiles named without "oauth" are defined against the
+binding-neutral contract and declare, each in a Mission Substrate
+section of its own, the kernel functions and optional capabilities
+they consume. Where a companion consumes a concrete representation,
+it is today the issuance profile's.<a href="#section-11-2" class="pilcrow">¶</a></p>
+<p id="section-11-3">The remainder of this section documents that instantiation: eight
+primitives, each with its normative home and its consumers. Every
+sentence mirrors a rule the named profile states normatively. None of
+these issuance-profile representations or stronger semantics is
+required verbatim by the binding-neutral kernel, although several
+instantiate mandatory kernel functions: the identifier and issuer
+realize the Mission Reference and Controller, the lifecycle realizes
+the governance gate, token validity participates in bounded reliance,
+and the audit horizon participates in the governance record.<a href="#section-11-3" class="pilcrow">¶</a></p>
 <div id="the-mission-identifier-and-issuer">
 <section id="section-11.1">
         <h3 id="name-the-mission-identifier-and-">
@@ -2396,6 +2413,10 @@ mirrors a rule the named profile states normatively.<a href="#section-11-1" clas
 <p id="section-11.1-1">An opaque, non-reused Mission Identifier with at least 128 bits of
 entropy and no semantic content, plus <code>issuer</code>, the issuer URL of the
 approving Mission Issuer; together they name exactly one Mission.
+This is the issuance profile's form of the contract's Mission
+Reference; the kernel itself requires stability, non-reassignment,
+and unguessability rather than this syntax
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).
 Home: the core's Mission Record and Mission Identifier Format
 sections. Consumed by every companion: enforcement decisions,
 evidence, harness bindings, the state surfaces, the audit statement
@@ -2479,13 +2500,17 @@ active Mission; and<a href="#section-11.5-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.5-2.3">
             <p id="section-11.5-2.3.1">a <strong>Mission-bound token</strong> is Mission-derived and additionally
-active-state gated, subset-constrained, and refresh-gated, the
-properties the core's conformance rule requires.<a href="#section-11.5-2.3.1" class="pilcrow">¶</a></p>
+active-state gated, subset-constrained, and refresh-gated: in the
+contract's vocabulary, a credential covered by the binding's
+Lifecycle-Gated Authorization, Monotonic Derivation, and
+Credential-Bound claims, which the core's conformance rule requires
+of the OAuth binding.<a href="#section-11.5-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-11.5-3">Only the third earns the term: a <code>mission</code> claim alone is a reference,
 not Mission-bound authorization. The family reserves "Mission-bound"
-for that class.<a href="#section-11.5-3" class="pilcrow">¶</a></p>
+for that class, and a binding earns it through the capability claims
+of its Mission Substrate Statement, not by protocol lineage.<a href="#section-11.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="the-mission-bound-credential">
@@ -2641,8 +2666,9 @@ Assertion) already sit at this end. What a lifetime cannot do is
 suspend, complete, or kill now, which is the task-grain residue the
 Mission's state carries and which the <strong>state-observable</strong> capability
 reaches: an authenticated freshness source with a stated staleness
-bound, a named substrate capability a binding MAY provide on top of
-the lifecycle-gated floor (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>),
+bound, a named substrate capability a binding MAY provide beyond the
+kernel's bounded-reliance floor
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>),
 and the one runtime enforcement requires
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The two ends are one
 mechanism seen from opposite sides: a lifetime relocates the freshness
@@ -2685,10 +2711,13 @@ the following native capabilities explicitly:<a href="#section-11.11-2" class="p
             <p id="section-11.11-3.5.1">an active-state gate at declared control points;<a href="#section-11.11-3.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.11-3.6">
-            <p id="section-11.11-3.6.1">context propagation or decision correlation; and<a href="#section-11.11-3.6.1" class="pilcrow">¶</a></p>
+            <p id="section-11.11-3.6.1">a stated reliance bound on every governed decision and artifact;<a href="#section-11.11-3.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.11-3.7">
-            <p id="section-11.11-3.7.1">an ordered governance or audit record.<a href="#section-11.11-3.7.1" class="pilcrow">¶</a></p>
+            <p id="section-11.11-3.7.1">context propagation or decision correlation; and<a href="#section-11.11-3.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.11-3.8">
+            <p id="section-11.11-3.8.1">an ordered governance or audit record.<a href="#section-11.11-3.8.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-11.11-4">Structured authority, monotonic derivation, credential carriage,
