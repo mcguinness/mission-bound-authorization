@@ -335,7 +335,11 @@ the value, it MUST define:
 The commitment can be a native content address, a digest, a signed
 object, or another binding-defined construction.  The kernel does not
 require two distinct commitments for descriptive context and
-structured authority.
+structured authority.  A binding that retains the Approved Context at
+every governance party satisfies this section through the maintained
+value; a native content address it also uses as the Mission Reference
+is then verification material for parties holding the value, not a
+commitment in place of it.
 
 ## Approval Event {#approval}
 
