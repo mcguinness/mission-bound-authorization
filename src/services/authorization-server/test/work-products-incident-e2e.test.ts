@@ -340,6 +340,7 @@ d("work products: information may propagate, authority may not", () => {
       bindWorkProduct({
         workProduct: wp,
         mediator: { id: "agent:A1", role: "harness" },
+        iss: ISSUER,
         key: kp.privateKey,
         kid,
       }),
@@ -349,6 +350,7 @@ d("work products: information may propagate, authority may not", () => {
     const binding = await bindWorkProduct({
       workProduct: wp,
       mediator: { id: "harness:dep_A1", role: "harness" },
+      iss: ISSUER,
       key: kp.privateKey,
       kid,
     });
@@ -361,6 +363,11 @@ d("work products: information may propagate, authority may not", () => {
       jwks,
     });
     expect(ok.valid, JSON.stringify(ok)).toBe(true);
+    if (ok.valid) {
+      // The signer is the harness mediator; iss is the Mission Issuer URL.
+      expect(ok.mediator).toEqual({ id: "harness:dep_A1", role: "harness" });
+      expect(ok.iss).toBe(ISSUER);
+    }
 
     // A provenance re-attached to a DIFFERENT artifact FAILS: the subject digest
     // no longer matches, so the binding cannot be lifted onto other content.

@@ -3,6 +3,11 @@
  * the signed provenance -> artifact binding: digest encodings, sign, and verify,
  * plus the two custody refusals (a tampered artifact and a binding whose signer
  * is the producer). Pure crypto and custody, so no OpenFGA and nothing skipped.
+ *
+ * `iss` is the Issuer / deployment URL under which the mediator publishes its
+ * key set; it is INDEPENDENT of `mediator.id` (which names the signer). The
+ * provenance digest uses that same URL as its anchor `iss`, so it reproduces
+ * from the record.
  */
 
 import { buildArtifactEvidence } from "@mission/mcp-payments";
@@ -22,6 +27,8 @@ import {
 
 const PRODUCER = "agent:A1";
 const HARNESS: ProvenanceMediator = { id: "harness:dep_A1", role: "harness" };
+/** The Issuer / deployment URL under which the mediator publishes its key set. */
+const ISSUER = "https://issuer.example";
 
 async function mediatorKeys(kid = "mediator-1") {
   const kp = await generateKeyPair("ES256", { extractable: true });
@@ -55,9 +62,25 @@ describe("work-product binding: digests", () => {
     );
   });
 
-  it("pins the exact encoding (SHA-256 of empty bytes) for spec coordination", () => {
+  it("pins the artifact_digest encoding (SHA-256 of empty bytes)", () => {
     expect(computeArtifactDigest("")).toBe(
       "sha-256:47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU",
+    );
+  });
+
+  it("pins the provenance_digest anchor with iss = Issuer/deployment URL", () => {
+    const provenance = buildArtifactEvidence({
+      mission_id: "mission:A",
+      deployment_id: "dep_A1",
+      producer: "agent:A1",
+      created_at: "2026-01-01T00:00:00Z",
+    });
+    expect(computeProvenanceDigest(ISSUER, provenance)).toBe(
+      "sha-256:OjtCG7IPBZxSHbMhL_LpOonSsva_gFEjznXdXC3Ps0I",
+    );
+    // iss is committed: a different issuer URL yields a different digest.
+    expect(computeProvenanceDigest("https://other.example", provenance)).not.toBe(
+      computeProvenanceDigest(ISSUER, provenance),
     );
   });
 
@@ -71,7 +94,7 @@ describe("work-product binding: sign and verify", () => {
     const { key, kid, jwks } = await mediatorKeys();
     const wp = workProduct({ note: "remittance worked", n: 1 });
     const before = Object.keys(wp.provenance).sort();
-    const jws = await bindWorkProduct({ workProduct: wp, mediator: HARNESS, key, kid });
+    const jws = await bindWorkProduct({ workProduct: wp, mediator: HARNESS, iss: ISSUER, key, kid });
 
     // Sealed: binding added NO member to the five-member provenance object.
     expect(Object.keys(wp.provenance).sort()).toEqual([
@@ -91,15 +114,16 @@ describe("work-product binding: sign and verify", () => {
     });
     expect(res.valid).toBe(true);
     if (res.valid) {
+      // The signer (mediator) is INDEPENDENT of iss (the Issuer/deployment URL).
       expect(res.mediator).toEqual({ id: "harness:dep_A1", role: "harness" });
-      expect(res.iss).toBe("harness:dep_A1");
+      expect(res.iss).toBe(ISSUER);
     }
   });
 
   it("a derived provenance keeps parent_artifact and binding adds no member", async () => {
     const { key, kid, jwks } = await mediatorKeys();
     const wp = workProduct({ note: "derived" }, "artifact:v1");
-    const jws = await bindWorkProduct({ workProduct: wp, mediator: HARNESS, key, kid });
+    const jws = await bindWorkProduct({ workProduct: wp, mediator: HARNESS, iss: ISSUER, key, kid });
     expect(Object.keys(wp.provenance).sort()).toEqual([
       "created_at",
       "deployment_id",
@@ -120,7 +144,7 @@ describe("work-product binding: sign and verify", () => {
   it("a tampered artifact fails the artifact_digest match", async () => {
     const { key, kid, jwks } = await mediatorKeys();
     const wp = workProduct({ note: "original", amount: 100 });
-    const jws = await bindWorkProduct({ workProduct: wp, mediator: HARNESS, key, kid });
+    const jws = await bindWorkProduct({ workProduct: wp, mediator: HARNESS, iss: ISSUER, key, kid });
     const res = await verifyWorkProductBinding({
       jws,
       provenance: wp.provenance,
@@ -133,7 +157,7 @@ describe("work-product binding: sign and verify", () => {
   it("a mutated provenance object fails the provenance_digest match", async () => {
     const { key, kid, jwks } = await mediatorKeys();
     const wp = workProduct({ note: "x" });
-    const jws = await bindWorkProduct({ workProduct: wp, mediator: HARNESS, key, kid });
+    const jws = await bindWorkProduct({ workProduct: wp, mediator: HARNESS, iss: ISSUER, key, kid });
     const res = await verifyWorkProductBinding({
       jws,
       provenance: { ...wp.provenance, mission_id: "mission:OTHER" },
@@ -150,6 +174,7 @@ describe("work-product binding: sign and verify", () => {
     const jws = await bindWorkProduct({
       workProduct: wp,
       mediator: HARNESS,
+      iss: ISSUER,
       key: signer.key,
       kid: signer.kid,
     });
@@ -164,15 +189,14 @@ describe("work-product binding: sign and verify", () => {
 
   it("rejects an unrecognized digest algorithm prefix before any compare", async () => {
     const { key, kid, jwks } = await mediatorKeys();
-    const iss = HARNESS.id;
     const wp = workProduct({ note: "x" });
     const jws = await new SignJWT({
       artifact_digest: "md5:deadbeef",
-      provenance_digest: computeProvenanceDigest(iss, wp.provenance),
+      provenance_digest: computeProvenanceDigest(ISSUER, wp.provenance),
       mediator: HARNESS,
     })
       .setProtectedHeader({ alg: "ES256", kid, typ: WORK_PRODUCT_BINDING_TYP })
-      .setIssuer(iss)
+      .setIssuer(ISSUER)
       .setIssuedAt()
       .sign(key);
     const res = await verifyWorkProductBinding({
@@ -190,10 +214,22 @@ describe("work-product binding: custody boundary", () => {
     const { key, kid } = await mediatorKeys();
     const wp = workProduct({ note: "x" });
     await expect(
-      bindWorkProduct({ workProduct: wp, mediator: { id: PRODUCER, role: "harness" }, key, kid }),
+      bindWorkProduct({
+        workProduct: wp,
+        mediator: { id: PRODUCER, role: "harness" },
+        iss: ISSUER,
+        key,
+        kid,
+      }),
     ).rejects.toBeInstanceOf(ProvenanceCustodyError);
     try {
-      await bindWorkProduct({ workProduct: wp, mediator: { id: PRODUCER, role: "harness" }, key, kid });
+      await bindWorkProduct({
+        workProduct: wp,
+        mediator: { id: PRODUCER, role: "harness" },
+        iss: ISSUER,
+        key,
+        kid,
+      });
       expect.unreachable("producer signed its own binding");
     } catch (e) {
       expect((e as ProvenanceCustodyError).reason).toBe("self_asserted");
@@ -205,7 +241,7 @@ describe("work-product binding: custody boundary", () => {
     const wp = workProduct({ note: "x" });
     const badRole = { id: "pep:1", role: "pep" } as unknown as ProvenanceMediator;
     try {
-      await bindWorkProduct({ workProduct: wp, mediator: badRole, key, kid });
+      await bindWorkProduct({ workProduct: wp, mediator: badRole, iss: ISSUER, key, kid });
       expect.unreachable("untrusted role bound");
     } catch (e) {
       expect(e).toBeInstanceOf(ProvenanceCustodyError);
@@ -217,11 +253,14 @@ describe("work-product binding: custody boundary", () => {
     const { key, kid, jwks } = await mediatorKeys();
     const wp = workProduct({ note: "x" });
     // The low-level primitive does NOT enforce custody; a hostile signer could
-    // emit this. Verify is the receiver-side backstop.
+    // emit this. iss is still the Issuer/deployment URL (independent of the
+    // signer), so this is not caught as malformed; verify is the receiver-side
+    // backstop that rejects signer == producer.
     const jws = await signWorkProductBinding({
       provenance: wp.provenance,
       content: wp.content,
       mediator: { id: PRODUCER, role: "harness" },
+      iss: ISSUER,
       key,
       kid,
     });

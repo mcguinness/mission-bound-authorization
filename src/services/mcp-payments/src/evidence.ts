@@ -240,10 +240,11 @@ export const WORK_PRODUCT_PROVENANCE_TYP = "mission-work-product-provenance";
  * opaque content (a file, message, memory entry, queue event), so its digest is
  * over RAW BYTES, NOT a JCS canonicalization (JCS is for the JSON objects the
  * family commits to, never for opaque payloads). A caller holding the true wire
- * bytes SHOULD pass a Uint8Array or string directly. For structured content the
- * derivation is `JSON.stringify` in UTF-8: insertion order is PRESERVED and the
- * result is deliberately NOT JCS-canonicalized, so the digest binds the exact
- * bytes as produced.
+ * bytes SHOULD pass a Uint8Array or string directly. The `JSON.stringify` (in
+ * UTF-8, insertion order PRESERVED, deliberately NOT JCS-canonicalized)
+ * derivation for structured content is a DOCUMENTED CONVENIENCE, not normative:
+ * the digest is over the octets ACTUALLY EXCHANGED, and producer and consumer
+ * MUST agree on that byte form.
  */
 export function workProductBytes(content: unknown): Uint8Array {
   if (content instanceof Uint8Array) return content;
@@ -266,7 +267,8 @@ export function computeArtifactDigest(content: unknown): string {
  * the sealed five-member provenance object under {@link
  * WORK_PRODUCT_PROVENANCE_TYP}, computed with the SAME {@link computeAnchor}
  * helper used for intent_hash / authority_hash. It binds the attribution object
- * WITHOUT modifying it; `iss` is the mediator's own identity (the JWS signer).
+ * WITHOUT modifying it; `iss` is the Issuer / deployment URL (the same value as
+ * the binding's JWS `iss`), so the digest reproduces from the record.
  */
 export function computeProvenanceDigest(iss: string, provenance: ArtifactEvidence): string {
   return computeAnchor(WORK_PRODUCT_PROVENANCE_TYP, iss, provenance as unknown as JsonValue);
@@ -276,7 +278,9 @@ export function computeProvenanceDigest(iss: string, provenance: ArtifactEvidenc
  * @spec work-products#binding — the JWS payload members. The PREDICATE analog
  * (the sealed provenance object) is referenced by `provenance_digest` and
  * carried ALONGSIDE the binding, never copied in, so there is one source of
- * truth. `mediator.id` is the signer and equals the JWS `iss`.
+ * truth. `mediator {id, role}` names the SIGNER (a harness or issuer
+ * mediator); it is INDEPENDENT of the JWS `iss`, which is the Issuer /
+ * deployment URL under which the signer publishes its key set.
  */
 export interface WorkProductBindingPayload {
   artifact_digest: string;
@@ -292,11 +296,18 @@ export interface SignWorkProductBindingOptions {
   content: unknown;
   /** The true wire bytes of the artifact; wins over `content` derivation when present. */
   artifactBytes?: Uint8Array | string;
-  /** The trusted mediator (`harness` | `issuer`); its `id` becomes the JWS `iss`. */
+  /** The trusted mediator (`harness` | `issuer`) that SIGNS; names the signer only. */
   mediator: { id: string; role: "harness" | "issuer" };
+  /**
+   * The Issuer / deployment URL under which the mediator publishes its key
+   * set (the JWS `iss` AND the provenance-digest anchor `iss`, one value). It
+   * is INDEPENDENT of `mediator.id`; a harness mediator MUST NOT place a bare
+   * non-URL id here.
+   */
+  iss: string;
   /** The mediator's ES256 signing key. */
   key: Parameters<SignJWT["sign"]>[0];
-  /** The `kid` identifying that key in the mediator's published keys. */
+  /** The `kid` identifying that key in the deployment's published key set. */
   kid: string;
 }
 
@@ -306,12 +317,13 @@ export interface SignWorkProductBindingOptions {
  * custody rule. That rule lives in the kernel `bindWorkProduct` (which refuses
  * before signing) and in {@link verifyWorkProductBinding} (which refuses on
  * receipt), one throw or reason per layer. The JWS `iss` and the provenance
- * digest envelope `iss` are both the mediator identity, a single source of
- * truth. Payload members: `artifact_digest`, `provenance_digest`, `mediator`,
- * plus the envelope `iss` and `iat`.
+ * digest envelope `iss` are both the caller-supplied Issuer / deployment URL
+ * (`opts.iss`), NOT the mediator id, so a verifier reproduces the provenance
+ * digest from the record. Payload members: `artifact_digest`,
+ * `provenance_digest`, `mediator`, plus the envelope `iss` and `iat`.
  */
 export async function signWorkProductBinding(opts: SignWorkProductBindingOptions): Promise<string> {
-  const iss = opts.mediator.id;
+  const iss = opts.iss;
   return new SignJWT({
     artifact_digest: computeArtifactDigest(opts.artifactBytes ?? opts.content),
     provenance_digest: computeProvenanceDigest(iss, opts.provenance),
@@ -387,8 +399,7 @@ export async function verifyWorkProductBinding(
     typeof provenanceDigest !== "string" ||
     !mediator ||
     typeof mediator.id !== "string" ||
-    (mediator.role !== "harness" && mediator.role !== "issuer") ||
-    mediator.id !== iss
+    (mediator.role !== "harness" && mediator.role !== "issuer")
   ) {
     return { valid: false, reason: "malformed" };
   }

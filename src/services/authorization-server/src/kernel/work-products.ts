@@ -231,6 +231,12 @@ export interface BindWorkProductInput<C = JsonValue> {
    * Mission Issuer). Its `id` MUST differ from the provenance `producer`.
    */
   mediator: ProvenanceMediator;
+  /**
+   * The Issuer / deployment URL under which the mediator publishes its key set
+   * (the binding's JWS `iss` and provenance-digest anchor `iss`). INDEPENDENT of
+   * `mediator.id`, so a verifier reproduces the provenance digest from the record.
+   */
+  iss: string;
   /** The mediator's ES256 signing key. */
   key: SignWorkProductBindingOptions["key"];
   /** The `kid` identifying that key in the mediator's published keys. */
@@ -286,6 +292,7 @@ export async function bindWorkProduct<C = JsonValue>(
     content: workProduct.content,
     ...(input.artifactBytes !== undefined ? { artifactBytes: input.artifactBytes } : {}),
     mediator: { id: mediator.id, role: mediator.role },
+    iss: input.iss,
     key: input.key,
     kid: input.kid,
   });
