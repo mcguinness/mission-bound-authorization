@@ -78,8 +78,8 @@ This document defines that companion.
 
 An authenticated caller can read status, permanently terminate an
 authorized mission, and inspect the AAuth agent and token delegation
-tree recorded for it.  An immutable expiry, now defined natively by
-AAuth, ends a mission automatically.  Termination
+tree recorded for it.  An immutable expiry, AAuth's `expires_at`,
+ends a mission automatically.  Termination
 reasons are audit facts and never protocol states.  The operations extend the existing AAuth `mission_endpoint`,
 use AAuth HTTP Message Signatures for agent calls, preserve the privacy
 of the mission blob, and record their results in the mission log.
@@ -122,13 +122,18 @@ companions ({{I-D.draft-mcguinness-mission-architecture}}), and the
 family security model's analysis applies to it
 ({{I-D.draft-mcguinness-mission-security-model}}).
 
-This specification reuses the existing `mission_endpoint`.  A mission
-proposal in the base protocol has no `operation` member.  A management
-request defined here has an `operation` member and a `mission_s256`
-member, so the two request forms are unambiguous.  A separate management
-endpoint would create another discovery, authentication, and policy
-surface without changing the trust boundary: the approving PS remains
-the only server that can interpret the reference and change its state.
+This specification currently extends the existing `mission_endpoint`
+with an `operation` member, unambiguous against base requests, which
+carry none at that URL.  The base protocol splits the surfaces:
+`mission_endpoint` is the owning agent's,
+and parties other than the owning agent read and manage missions at
+the `mission_control_endpoint`, whose operations AAuth charters to a
+companion specification with exactly this document's scope.  A future
+revision relocates these operations to that endpoint and adopts the
+base protocol's per-mission URL and `action` discriminator
+conventions; the operation semantics defined here are
+endpoint-independent, and the approving PS remains the only server
+that can interpret the reference and change its state.
 
 # Conventions and Terminology {#conventions}
 
@@ -227,7 +232,7 @@ opaque audit value.
 
 ## Optional Expiry {#expiry}
 
-Mission expiry is now defined natively by AAuth
+Mission expiry is defined by AAuth
 {{I-D.draft-hardt-oauth-aauth-protocol}}: an OPTIONAL `expires_at`
 member of the approved mission blob, covered by `s256`, immutable in
 place, and enforced by the PS on every decision path.  This profile
@@ -271,19 +276,16 @@ covered components and content integrity requirements are those of the
 base AAuth profile.  A management request is never authorized from the
 Mission Reference alone.
 
-This placement follows the base protocol's own definition of
-`mission_endpoint` as the URL for mission lifecycle operations, of
-which mission creation is one; the operations here are additional
-lifecycle operations at that surface.  A native mission proposal
-carries no `operation` member, so the discrimination is unambiguous.
-The base protocol does not reserve the `operation` member: if a future
-AAuth revision defines its own operation discrimination or
-request-shape rules at `mission_endpoint`, that definition governs and
-this profile will align with it.  A caller SHOULD confirm that an
-operation appears in `mission_management_operations_supported`
-({{metadata}}) before sending it, because the base protocol does not
-define how a PS without this profile processes an operation-shaped
-request.
+The base protocol defines its own discrimination (a REQUIRED `action`
+member at per-mission URLs) and assigns operations for parties other
+than the owning agent to the `mission_control_endpoint` control
+plane.  This profile aligns by relocation in a future revision, as
+the Introduction describes.
+Until then, a native request at the bare `mission_endpoint` carries no
+`operation` member, so the discrimination here remains unambiguous,
+and a caller SHOULD confirm that an operation appears in
+`mission_management_operations_supported` ({{metadata}}) before
+sending it.
 
 ## Metadata {#metadata}
 
@@ -305,11 +307,13 @@ operation strings.  The array MUST contain `status` and `terminate` for
 conformance to this specification.  It contains `delegation_tree` when
 the PS implements {{delegation-tree}}.  Unknown values MUST be ignored.
 
-The base AAuth `mission_endpoint` member remains the only endpoint
-advertised by this profile.  The base protocol also defines a
-`mission_control_endpoint` metadata member; a PS MAY retain it for a
-deployment-specific administrative user interface, but it MUST NOT use
-that member to advertise the interoperable operations defined here.
+The base protocol defines `mission_control_endpoint` as the PS's
+mission control plane for parties other than the owning agent and
+leaves its operations to a companion specification.  Pending the
+relocation described in the Introduction, this profile advertises its
+operations at the existing `mission_endpoint`; a PS MAY additionally
+use `mission_control_endpoint` for a deployment's human-facing
+administrative interface, as the base protocol permits.
 
 # Authentication and Authorization {#authorization}
 

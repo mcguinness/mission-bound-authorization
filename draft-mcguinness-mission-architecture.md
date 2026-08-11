@@ -1731,9 +1731,9 @@ experimental, binding encountered resources within a pre-consented
 ceiling ({{I-D.draft-mcguinness-mission-discovery}}). The AAuth
 binding carries this verb natively: its management companion for
 status, termination, and delegation-tree queries
-({{I-D.draft-mcguinness-mission-aauth-management}}), and its expiry
-extension for the approved lifetime bound
-({{I-D.draft-mcguinness-aauth-mission-expiry}}).
+({{I-D.draft-mcguinness-mission-aauth-management}}); the approved
+lifetime bound is AAuth's own `expires_at`, profiled by the expiry
+document ({{I-D.draft-mcguinness-aauth-mission-expiry}}).
 
 ## Enforce Each Action
 
@@ -2484,10 +2484,9 @@ further properties hold:
 8. **Evidence that joins**: what was approved, shown, decided, and done
    is reconstructible from evidence joined on the object's identity.
 
-AAuth as its binding profiles it, including AAuth Mission Expiry for
-the reliance bound, supplies the first four, with its lifecycle gate
-scoped to PS endpoints and PS-mediated paths carrying the validated
-reference. The OAuth core
+AAuth supplies the first four natively (its `expires_at` member
+carries the reliance bound), with its lifecycle gate scoped to PS
+endpoints and PS-mediated paths carrying the validated reference. The OAuth core
 supplies the structured-authority layer as well. Runtime and portable
 evidence remain separately claimed capabilities; the requirements below
 unpack the family mechanisms without implying every binding implements
@@ -2632,8 +2631,8 @@ completion), with Signals (the push channel) and Management (the
 operator plane) as its satellites.  AAuth keeps its native two-state
 lifecycle and uses `mission-aauth-management` for its corresponding
 status, termination, expiry, and delegation-tree surface.  The expiry
-bound itself is an extension to the base AAuth protocol that the AAuth
-binding requires ({{I-D.draft-mcguinness-aauth-mission-expiry}}).
+bound is AAuth's own `expires_at`, profiled by the expiry document
+({{I-D.draft-mcguinness-aauth-mission-expiry}}).
 
 `oauth-mission-status`:
 : The signed pull surface and the lifecycle endpoint, with
@@ -2670,10 +2669,11 @@ binding requires ({{I-D.draft-mcguinness-aauth-mission-expiry}}).
   states.
 
 `aauth-mission-expiry`:
-: The immutable `expires_at` bound on an approved AAuth mission,
-  covered by `s256` and enforced on every Person Server decision path;
-  required by the AAuth binding, adoptable by base AAuth deployments
-  independently.
+: Profile of AAuth's `expires_at` mission lifetime bound (RFC 3339
+  precision, skew documentation, prompt termination).  The base
+  protocol enforces the bound on every Person Server decision path
+  and caps every token carrying `mission_s256`; the AAuth binding
+  requires the member on every mission.
 
 `oauth-mission-cross-domain`:
 : Single-hop projection of a Mission to another trust domain via the

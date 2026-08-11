@@ -56,26 +56,23 @@ informative:
 
 --- abstract
 
-AAuth adopted this extension's mechanism natively in its person-token
-revision: the approved mission blob's OPTIONAL `expires_at` member,
-decision-path enforcement at the Person Server, and lifetime caps on
-every token carrying `mission_s256` are now the base protocol's. This
-document remains as the pre-adoption record and profiles the native
-member with the deltas that follow: RFC 3339 date-time precision,
-clock-skew documentation, and prompt termination at the deadline.
+AAuth's approved mission blob MAY carry `expires_at`: an immutable,
+consent-bound lifetime the Person Server enforces on every decision
+path, capping every token carrying `mission_s256`. This document
+profiles that member: values are RFC 3339 date-times, deployments
+document their clock-skew posture, and the Person Server terminates
+promptly at the deadline.
 
 --- middle
 
 # Introduction
 
-AAuth's person-token revision adopted this extension's mechanism into
-the base protocol: the approved mission blob MAY carry `expires_at`,
-every Person Server (PS) decision path MUST compare the current time
-to it and treat a mission past it as terminated, and no token carrying
-`mission_s256` may outlive it {{I-D.draft-hardt-oauth-aauth-protocol}}.
-This document is no longer the definition. It remains as the
-pre-adoption record for deployments that cite it, and profiles the
-native member with the deltas in {{member}} and {{enforcement}}.
+AAuth defines `expires_at` as an OPTIONAL member of the approved
+mission blob: every Person Server (PS) decision path MUST compare the
+current time to it and treat a mission past it as terminated, and no
+token carrying `mission_s256` may outlive it
+{{I-D.draft-hardt-oauth-aauth-protocol}}. This document profiles the
+member with the deltas in {{member}} and {{enforcement}}.
 
 An AAuth mission is approved once and then relied on for as long as it
 stays `active`. Absent an expiry, an approval remains usable
@@ -95,8 +92,8 @@ proposal, and the `{approver, s256}` mission reference as defined by
 
 # The expires_at Member {#member}
 
-AAuth now defines `expires_at` natively as an OPTIONAL member of the
-approved mission blob {{I-D.draft-hardt-oauth-aauth-protocol}}. This
+AAuth defines `expires_at` as an OPTIONAL member of the approved
+mission blob {{I-D.draft-hardt-oauth-aauth-protocol}}. This
 profile adds one requirement of its own: under this profile,
 `expires_at` MUST be an RFC 3339 `date-time` {{RFC3339}}, the internet
 profile of the ISO 8601 form AAuth's own text uses, and MUST identify
@@ -139,8 +136,8 @@ guarantee that the approved blob will carry the bound.
 The Mission Context Binding for AAuth
 {{I-D.draft-mcguinness-mission-aauth}} requires AAuth's native
 `expires_at` member and approves no mission without it. Base AAuth
-deployments get enforcement regardless of that binding, since it is
-now part of the base protocol.
+deployments get enforcement regardless of that binding: it is the
+base protocol's.
 
 A PS that also implements AAuth Mission Management
 {{I-D.draft-mcguinness-mission-aauth-management}} records the

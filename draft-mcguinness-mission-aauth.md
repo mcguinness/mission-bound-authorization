@@ -113,7 +113,7 @@ Context:
 - a mission is either `active` or permanently `terminated`.
 
 This document is a thin binding over those facilities.  AAuth's own
-`expires_at` mission-blob member now carries the expiry this binding
+`expires_at` mission-blob member carries the expiry this binding
 requires on every mission ({{lifecycle}}); this document defines no new
 AAuth endpoint, header field, token claim, mission-blob member, or
 lifecycle state at all.  Its purpose is to make the security and
@@ -485,7 +485,7 @@ an auth token is issued in the mission context, it carries the same
 flat `mission_s256` claim, copied onward from the resource token.
 
 This binding adds no member alongside that claim.  The namespace once
-carried by `approver` is now carried by the person token's `iss` and
+carried by `approver` is carried by the person token's `iss` and
 the resource token's `ps`.  Receivers MUST NOT require `mission_id`,
 `issuer`, `policy_version`, `intent_hash`, `authority_hash`, or embedded
 authorization details for conformance to this binding.
@@ -805,8 +805,8 @@ The contextual-governance kernel maps as follows:
    no token carrying `mission_s256` exceeds the mission's `expires_at`,
    and the residual after a transition is bounded by outstanding token
    lifetime.  AAuth Mission Expiry
-   {{I-D.draft-mcguinness-aauth-mission-expiry}} remains this binding's
-   pre-adoption profile of the same requirement.
+   {{I-D.draft-mcguinness-aauth-mission-expiry}} profiles the member
+   this binding relies on.
 8. **Context propagation**: the signed `mission_s256` claim, carried
    by person, resource, and auth tokens, carries governance context;
    the blob itself never propagates; coverage varies by access mode
