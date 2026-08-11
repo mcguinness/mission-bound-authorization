@@ -158,9 +158,9 @@ request under the reference.
 
 The PS MUST NOT issue an Auth Token whose `exp` is later than the
 mission's `expires_at` when the PS controls that expiry. In
-federation, the PS MUST request or enforce that bound where the AS
-supports it; inability to obtain the bound is a documented residual
-risk and MAY be grounds to deny issuance.
+federation, the PS MUST enforce that bound: where the AS cannot
+constrain the token's `exp` to the mission's `expires_at`, the PS
+MUST NOT broker or approve the issuance.
 
 # Relationship to Other Specifications {#relationships}
 

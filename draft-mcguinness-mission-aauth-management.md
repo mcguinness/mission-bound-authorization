@@ -398,7 +398,7 @@ After authenticating and authorizing the caller, the PS returns:
     "approver": "https://ps.example",
     "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
   },
-  "state": "terminated",
+  "mission_status": "terminated",
   "approved_at": "2026-04-07T14:30:00Z",
   "expires_at": "2026-04-14T14:30:00Z",
   "terminated_at": "2026-04-10T09:12:43Z",
@@ -406,12 +406,14 @@ After authenticating and authorizing the caller, the PS returns:
 }
 ~~~
 
-`mission`, `state`, and `approved_at` are REQUIRED.  `expires_at` is
+`mission`, `mission_status`, and `approved_at` are REQUIRED.  The
+`mission_status` member reuses the name and values the base protocol
+carries in its `mission_terminated` error body.  `expires_at` is
 present only if it is in the mission blob
 ({{I-D.draft-mcguinness-aauth-mission-expiry}}).  `terminated_at` is an
 RFC 3339 `date-time` {{RFC3339}}; it and `termination_reason` are
-REQUIRED when `state` is `terminated` and MUST be absent while it is
-`active`.
+REQUIRED when `mission_status` is `terminated` and MUST be absent
+while it is `active`.
 
 The response is current at the instant the PS evaluates the request.
 It is not a promise that the state will remain active.  An Agent MUST
@@ -492,7 +494,7 @@ summary:
     "approver": "https://ps.example",
     "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
   },
-  "state": "terminated",
+  "mission_status": "terminated",
   "terminated_at": "2026-04-10T09:12:43Z",
   "termination_reason": "revoked",
   "token_residual": {
