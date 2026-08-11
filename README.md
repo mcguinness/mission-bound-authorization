@@ -89,9 +89,11 @@ Person Server is the controlling authority for the native Mission
 Context: AAuth's propose/clarify/approve flow creates an exact-byte
 committed blob identified by `{approver, s256}`, with `active` and
 `terminated` state and an ordered mission log. The Person Server gates
-new authorization only when it is on the path: PS-asserted and federated
-access. Identity-based and resource-managed access remain direct
-resource decisions and may carry or ignore the reference. An
+new authorization only when it is on the path: person-token issuance,
+PS-asserted, and federated access. Identity-based and resource-managed
+access remain direct resource decisions; a mission travels as
+`mission_s256` inside PS-issued person tokens, and a resource must
+copy it into the resource tokens it issues. An
 experimental fourth binding is sketched for the
 **UMA 2.0** Authorization Server: the pushed Mission Intent rides UMA
 claims pushing, the resource owner's decision fills UMA's deliberately
@@ -351,7 +353,8 @@ facts are the next subsection.
    join is the family's newest mechanism), **aauth** (where the
    substrate is AAuth), **aauth-management** (native AAuth status,
    permanent termination, expiry, and delegation-tree queries),
-   **aauth-expiry** (the immutable mission lifetime bound; the
+   **aauth-expiry** (profiles AAuth's native `expires_at` mission
+   lifetime bound; the
    **aauth** binding requires it), **issuance-grant** (the issuance join:
    estate ASs redeem MAS-minted grants for Mission-bound,
    state-gated tokens), **substrate** (for authors of new bindings).
@@ -630,13 +633,13 @@ bounded or unknown residual.
 
 #### AAuth Mission Expiry
 
-An extension to the AAuth protocol, adoptable with or without the rest
-of the family. Defines the OPTIONAL `expires_at` member of the approved
-mission blob: an immutable, consent-bound lifetime covered by the
-native `s256` content address. At or after the deadline the Person
-Server terminates the mission on every decision path and issues no Auth
-Token that outlives it. The Mission Context Binding for AAuth requires
-this extension and approves no mission without an expiry.
+Profiles AAuth's `expires_at` mission-blob member: an immutable,
+consent-bound lifetime the base protocol enforces on every Person
+Server decision path, with lifetime caps on every token carrying
+`mission_s256`. This profile adds RFC 3339 date-time precision,
+clock-skew documentation duties, and prompt termination at the
+deadline. The Mission Context Binding for AAuth requires the member
+on every mission.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-aauth-mission-expiry.html)
 
@@ -733,19 +736,21 @@ surfaces.
 
 The thin AAuth-native binding. AAuth already defines an immutable
 mission blob, exact-byte `s256` commitment, `{approver, s256}` reference,
-propose/clarify/approve flow, `active` and `terminated` states, and an
-ordered mission log. The binding uses those elements unchanged and
-defines no new wire members. It treats the Person Server as the
-controlling authority for contextual governance, while scopes, resource
-tokens, Resource and Access Server policy, and optionally R3 carry
-deterministic resource authorization. `approved_tools` are tool
-invocations exempt from per-call permission at the Person Server; they
-are not remote resource authority. Active-state issuance gating is
-structural only in PS-asserted and federated access. Identity-based and
-resource-managed resources may propagate or ignore the reference and
-are not Person-Server-gated. Its Mission Substrate Statement declares
-the kernel mapping and per-mode capability claims, including the
-capabilities it does not supply.
+propose/clarify/approve flow, native `expires_at`, `active` and
+`terminated` states, and an ordered mission log. The binding uses those
+elements unchanged and defines no new wire members. It treats the
+Person Server as the controlling authority for contextual governance,
+while scopes, resource tokens, Resource and Access Server policy, and
+optionally R3 carry deterministic resource authorization.
+`approved_tools` are tool invocations exempt from per-call permission
+at the Person Server; they are not remote resource authority. A
+mission travels as `mission_s256` in PS-issued person tokens; resources
+must copy it into the resource tokens they issue. Active-state
+issuance gating is structural in PS-asserted and federated access, and
+person-token issuance is itself a PS control point; identity-based and
+resource-managed decisions are not Person-Server-gated. Its Mission
+Substrate Statement declares the kernel mapping and per-mode
+capability claims, including the capabilities it does not supply.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html)
 

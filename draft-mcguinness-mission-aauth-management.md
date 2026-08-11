@@ -35,14 +35,14 @@ normative:
   RFC9457:
   I-D.draft-hardt-oauth-aauth-protocol:
     title: "AAuth Protocol"
-    target: https://datatracker.ietf.org/doc/draft-hardt-oauth-aauth-protocol/10/
+    target: https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-hardt-oauth-aauth-protocol-10
+
+informative:
   I-D.draft-mcguinness-aauth-mission-expiry:
     title: "AAuth Mission Expiry"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html
@@ -51,8 +51,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
@@ -80,8 +78,8 @@ This document defines that companion.
 
 An authenticated caller can read status, permanently terminate an
 authorized mission, and inspect the AAuth agent and token delegation
-tree recorded for it.  An immutable expiry defined by the AAuth
-Mission Expiry extension ends a mission automatically.  Termination
+tree recorded for it.  An immutable expiry, AAuth's `expires_at`,
+ends a mission automatically.  Termination
 reasons are audit facts and never protocol states.  The operations extend the existing AAuth `mission_endpoint`,
 use AAuth HTTP Message Signatures for agent calls, preserve the privacy
 of the mission blob, and record their results in the mission log.
@@ -97,7 +95,7 @@ to report and bound the residual window honestly.
 # Introduction
 
 The AAuth Protocol {{I-D.draft-hardt-oauth-aauth-protocol}} makes agent
-governance orthogonal to its four resource-access modes.  An agent and
+governance orthogonal to its five resource-access modes.  An agent and
 its Person Server (PS) hold the exact bytes of an approved mission blob.
 The SHA-256 digest of those bytes, paired with the approving PS URL,
 forms the native Mission Reference.  Resources and Access Servers see
@@ -124,13 +122,18 @@ companions ({{I-D.draft-mcguinness-mission-architecture}}), and the
 family security model's analysis applies to it
 ({{I-D.draft-mcguinness-mission-security-model}}).
 
-This specification reuses the existing `mission_endpoint`.  A mission
-proposal in the base protocol has no `operation` member.  A management
-request defined here has an `operation` member and a `mission` member,
-so the two request forms are unambiguous.  A separate management
-endpoint would create another discovery, authentication, and policy
-surface without changing the trust boundary: the approving PS remains
-the only server that can interpret the reference and change its state.
+This specification currently extends the existing `mission_endpoint`
+with an `operation` member, unambiguous against base requests, which
+carry none at that URL.  The base protocol splits the surfaces:
+`mission_endpoint` is the owning agent's,
+and parties other than the owning agent read and manage missions at
+the `mission_control_endpoint`, whose operations AAuth charters to a
+companion specification with exactly this document's scope.  A future
+revision relocates these operations to that endpoint and adopts the
+base protocol's per-mission URL and `action` discriminator
+conventions; the operation semantics defined here are
+endpoint-independent, and the approving PS remains the only server
+that can interpret the reference and change its state.
 
 # Conventions and Terminology {#conventions}
 
@@ -170,21 +173,24 @@ Residual Window:
 
 ## Mission Identity
 
-All requests in this specification identify exactly one target mission
-using:
+The Mission Reference `{approver, s256}` remains the management key
+for every mission this specification governs.  On the wire, a request
+identifies its target with the flat `mission_s256` member, matching
+the base protocol's own parameter convention at PS endpoints:
 
 ~~~ json
 {
-  "approver": "https://ps.example",
-  "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+  "operation": "status",
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 }
 ~~~
 
 The syntax, comparison, and digest rules are those of the AAuth Mission
-Reference.  The `approver` value MUST exactly equal the `issuer` in the
-metadata of the PS receiving the request.  A PS MUST NOT forward a
-management operation to another approver and MUST NOT accept an alias
-for either member.
+Reference.  `approver` is not a request member: it is fixed to the
+identity of the PS endpoint that receives the request.  A PS MUST
+resolve `mission_s256` only among the missions it itself approved,
+MUST NOT forward a management operation to another approver, and MUST
+NOT accept an alias for either half of the reference.
 
 The pair is the sole protocol key.  Implementations MAY use internal
 database keys, but those keys MUST NOT appear in this protocol.  The PS
@@ -226,19 +232,23 @@ opaque audit value.
 
 ## Optional Expiry {#expiry}
 
-Mission expiry is defined by AAuth Mission Expiry
-{{I-D.draft-mcguinness-aauth-mission-expiry}}: an OPTIONAL `expires_at`
+Mission expiry is defined by AAuth
+{{I-D.draft-hardt-oauth-aauth-protocol}}: an OPTIONAL `expires_at`
 member of the approved mission blob, covered by `s256`, immutable in
 place, and enforced by the PS on every decision path.  This profile
-does not redefine that mechanism.
+does not redefine that mechanism.  AAuth Mission Expiry
+{{I-D.draft-mcguinness-aauth-mission-expiry}} remains an informative
+profile of the same native member for deployments that cite it.
 
-This profile adds the observable consequences.  The transition that
-extension requires at or after `expires_at` is committed with
-termination reason `expired` and attributed to the PS scheduler
-({{logging}}).  The status operation exposes the approved expiry
-({{status}}).  An explicit terminate that races automatic expiry
-resolves as {{idempotency}} specifies: the first committed transition
-wins, and the losing operation observes an idempotent outcome.
+This profile adds the observable consequences.  The transition AAuth
+requires at or after `expires_at` is committed with termination reason
+`expired` and attributed to the PS scheduler ({{logging}}), surfaced
+through AAuth's `mission_terminated` error and `mission_status` rather
+than a separate status value.  The status operation exposes the
+approved expiry ({{status}}).  An explicit terminate that races
+automatic expiry resolves as {{idempotency}} specifies: the first
+committed transition wins, and the losing operation observes an
+idempotent outcome.
 
 # Endpoint and Discovery {#endpoint}
 
@@ -251,10 +261,7 @@ requests have this common shape:
 ~~~ json
 {
   "operation": "status",
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  }
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 }
 ~~~
 
@@ -269,19 +276,16 @@ covered components and content integrity requirements are those of the
 base AAuth profile.  A management request is never authorized from the
 Mission Reference alone.
 
-This placement follows the base protocol's own definition of
-`mission_endpoint` as the URL for mission lifecycle operations, of
-which mission creation is one; the operations here are additional
-lifecycle operations at that surface.  A native mission proposal
-carries no `operation` member, so the discrimination is unambiguous.
-The base protocol does not reserve the `operation` member: if a future
-AAuth revision defines its own operation discrimination or
-request-shape rules at `mission_endpoint`, that definition governs and
-this profile will align with it.  A caller SHOULD confirm that an
-operation appears in `mission_management_operations_supported`
-({{metadata}}) before sending it, because the base protocol does not
-define how a PS without this profile processes an operation-shaped
-request.
+The base protocol defines its own discrimination (a REQUIRED `action`
+member at per-mission URLs) and assigns operations for parties other
+than the owning agent to the `mission_control_endpoint` control
+plane.  This profile aligns by relocation in a future revision, as
+the Introduction describes.
+Until then, a native request at the bare `mission_endpoint` carries no
+`operation` member, so the discrimination here remains unambiguous,
+and a caller SHOULD confirm that an operation appears in
+`mission_management_operations_supported` ({{metadata}}) before
+sending it.
 
 ## Metadata {#metadata}
 
@@ -303,11 +307,13 @@ operation strings.  The array MUST contain `status` and `terminate` for
 conformance to this specification.  It contains `delegation_tree` when
 the PS implements {{delegation-tree}}.  Unknown values MUST be ignored.
 
-The base AAuth `mission_endpoint` member remains the only endpoint
-advertised by this profile.  The base protocol also defines a
-`mission_control_endpoint` metadata member; a PS MAY retain it for a
-deployment-specific administrative user interface, but it MUST NOT use
-that member to advertise the interoperable operations defined here.
+The base protocol defines `mission_control_endpoint` as the PS's
+mission control plane for parties other than the owning agent and
+leaves its operations to a companion specification.  Pending the
+relocation described in the Introduction, this profile advertises its
+operations at the existing `mission_endpoint`; a PS MAY additionally
+use `mission_control_endpoint` for a deployment's human-facing
+administrative interface, as the base protocol permits.
 
 # Authentication and Authorization {#authorization}
 
@@ -344,7 +350,7 @@ selection from being supplied solely by the request body.
 
 The Person MAY read status and delegation data, and MAY terminate with
 reason `completed`, `revoked`, or `superseded`.  For `superseded`, the PS
-SHOULD require the replacement Mission Reference and verify that the
+SHOULD require the replacement's `mission_s256` and verify that the
 same Person authorized both missions before recording the relationship.
 
 ## Administrator and Management Service
@@ -383,10 +389,7 @@ Content-Digest: sha-256=:...:
 
 {
   "operation": "status",
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  }
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 }
 ~~~
 
@@ -394,10 +397,7 @@ After authenticating and authorizing the caller, the PS returns:
 
 ~~~ json
 {
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  },
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
   "mission_status": "terminated",
   "approved_at": "2026-04-07T14:30:00Z",
   "expires_at": "2026-04-14T14:30:00Z",
@@ -414,11 +414,11 @@ and the latest instant a consumer may rely on this response.  The
 interval between them is deployment policy and MAY follow a published
 maximum staleness.
 
-`mission`, `mission_status`, and `approved_at` are REQUIRED.  The
+`mission_s256`, `mission_status`, and `approved_at` are REQUIRED.  The
 `mission_status` member reuses the name and values the base protocol
 carries in its `mission_terminated` error body.  `expires_at` is
 present only if it is in the mission blob
-({{I-D.draft-mcguinness-aauth-mission-expiry}}).  `terminated_at` is an
+({{I-D.draft-hardt-oauth-aauth-protocol}}).  `terminated_at` is an
 RFC 3339 `date-time` {{RFC3339}}; it and `termination_reason` are
 REQUIRED when `mission_status` is `terminated` and MUST be absent
 while it is `active`.
@@ -444,10 +444,7 @@ collision-resistant entropy encoded as a string.
 ~~~ json
 {
   "operation": "terminate",
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  },
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
   "reason": "revoked",
   "request_id": "t-4f52f8d70a514703b54ca0c677f82d67",
   "purpose": "User withdrew authorization"
@@ -462,10 +459,7 @@ untrusted text.
 For `superseded`, a Person or administrator MAY include:
 
 ~~~ json
-"replacement": {
-  "approver": "https://ps.example",
-  "s256": "QmV0dGVyTWlzc2lvbkRpZ2VzdFZhbHVlMTIzNDU2Nzg5MDE"
-}
+"replacement_s256": "QmV0dGVyTWlzc2lvbkRpZ2VzdFZhbHVlMTIzNDU2Nzg5MDE"
 ~~~
 
 The replacement is related evidence, not an alternate key for the
@@ -502,10 +496,7 @@ summary:
 
 ~~~ json
 {
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  },
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
   "mission_status": "terminated",
   "terminated_at": "2026-04-10T09:12:43Z",
   "termination_reason": "revoked",
@@ -548,20 +539,19 @@ termination obey the same rule.
 # Delegation-Tree Operation {#delegation-tree}
 
 AAuth does not create child Mission objects for sub-agents or chained
-calls.  It records agent relationships in `parent_agent`, `act`, and the
-Auth Tokens issued or provided under the same Mission Reference.  The
-tree operation reports those native relationships; it MUST NOT invent a
-second child mission identifier or imply algebraic scope inheritance.
+calls.  It records agent relationships in `parent_agent` and in the
+Auth Tokens issued or provided under the same Mission Reference; auth
+and resource tokens carry no chain claim, so the PS itself holds the
+call-chain state.  The tree operation reports those native
+relationships; it MUST NOT invent a second child mission identifier or
+imply algebraic scope inheritance.
 
 An authorized caller sends:
 
 ~~~ json
 {
   "operation": "delegation_tree",
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  },
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
   "max_results": 100,
   "cursor": "opaque-next-page-value"
 }
@@ -577,10 +567,7 @@ processing the mission:
 
 ~~~ json
 {
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  },
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
   "as_of": "2026-04-10T09:15:00Z",
   "nodes": [
     {
@@ -600,7 +587,7 @@ processing the mission:
 }
 ~~~
 
-`mission`, `as_of`, `nodes`, and `complete` are REQUIRED.  When another
+`mission_s256`, `as_of`, `nodes`, and `complete` are REQUIRED.  When another
 page exists, `next_cursor` is REQUIRED and `complete` is false.  A node
 contains an `agent` and one of `root`, `sub_agent`, or `call_chain` as
 `relationship`.  A non-root node contains `parent_agent`.  `tokens` MAY
@@ -753,7 +740,7 @@ The PS has no general visibility or control over:
 
 * identity-based access where a Resource authorizes the Agent directly;
 * an opaque `AAuth-Access` token issued in resource-managed access;
-* a Resource that ignored `AAuth-Mission`;
+* a Resource that violated the base protocol's `mission_s256` copy rule;
 * credentials or side effects acquired outside AAuth; or
 * a downstream call made without returning through this PS.
 
@@ -800,11 +787,12 @@ terminal status.  The management surface defines no push channel.
 
 ## Reference Substitution and Cross-PS Confusion
 
-An attacker can substitute a known `s256` or send a reference for a
-different PS.  Exact pair comparison, the local `approver` check,
+An attacker can substitute a known `mission_s256` value, including one
+issued by a different PS.  Exact digest comparison, resolving
+`mission_s256` only within this PS's own approved-mission store,
 signature verification, and authorization against the resolved mission
-are all mandatory.  Neither member is interpreted as a fetch URL.  The
-PS never retrieves a mission from a caller-selected location.
+are all mandatory.  `mission_s256` is not interpreted as a fetch URL.
+The PS never retrieves a mission from a caller-selected location.
 
 ## Request Replay
 
@@ -864,9 +852,10 @@ add tamper-evident storage or signed checkpoints.
 The returned tree is based on PS observations, not global execution.
 Treating it as complete evidence can hide identity-based, opaque-token,
 or off-path activity.  Consumers MUST preserve the distinction between
-page completeness and observational completeness.  Token `act` claims
-and `parent_agent` values are accepted only after their normal AAuth
-verification; unverified caller assertions never create edges.
+page completeness and observational completeness.  `parent_agent`
+values and the PS's own issuance-linked chain state are accepted only
+after their normal AAuth verification; unverified caller assertions
+never create edges.
 
 ## Transport
 
@@ -914,8 +903,9 @@ it:
 
 1. implements `status` and `terminate` at the existing
    `mission_endpoint` and advertises both operations;
-2. keys every operation solely by the exact `{approver, s256}` Mission
-   Reference and requires `approver` to equal its metadata issuer;
+2. keys every operation solely by the flat `mission_s256` member,
+   resolving it only among missions for which it is itself the
+   `approver`;
 3. preserves exactly the `active` and `terminated` states, makes
    termination permanent, and records reasons separately;
 4. authenticates and authorizes every request according to caller role,
@@ -931,8 +921,9 @@ it:
    document and the base AAuth Protocol.
 
 Expiry support is OPTIONAL.  If implemented, the PS conforms to
-{{I-D.draft-mcguinness-aauth-mission-expiry}} and to {{expiry}} in
-full.  Delegation-tree support is OPTIONAL.  If
+AAuth's native `expires_at` definition and enforcement, to the
+retained deltas of {{I-D.draft-mcguinness-aauth-mission-expiry}}, and
+to {{expiry}} in full.  Delegation-tree support is OPTIONAL.  If
 advertised, the PS conforms to {{delegation-tree}} in full.
 
 A deployment claiming conformance MUST publish or otherwise make
