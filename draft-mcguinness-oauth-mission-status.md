@@ -38,10 +38,13 @@ normative:
   RFC7662:
   RFC8259:
   RFC8414:
+  RFC8693:
   RFC8705:
+  RFC9068:
   RFC9325:
   RFC9449:
   RFC9701:
+  RFC9728:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -50,6 +53,10 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+
+informative:
+  RFC9110:
+  RFC9700:
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -66,10 +73,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
-  RFC9110:
-  RFC9700:
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
@@ -304,17 +307,44 @@ per request:
    client's X.509 certificate against its configured trust anchors and
    the client's registered `tls_client_auth` metadata.
 2. **DPoP-bound bearer token** {{RFC9449}}. The client presents a
-   Mission-Status-scoped DPoP-bound token in the `Authorization`
-   header with a `DPoP` proof header; the token's `cnf.jkt` MUST match
-   the proof key thumbprint.
+   `mission_status`-scoped DPoP-bound access token (see the
+   authorization requirement below) in the `Authorization` header with
+   a `DPoP` proof header; the token's `cnf.jkt` MUST match the proof
+   key thumbprint.
 3. **Private-key-JWT client authentication** {{RFC7523}}. The client
    presents a signed JWT assertion as `client_assertion`.
 
 Plain Basic or POST client authentication MUST NOT be used for this
 endpoint. The AS MUST refuse a request not authenticated by one of the
-three mechanisms with `unauthorized` (HTTP 401). Which mechanisms the
-AS accepts is discovered through the AS's existing OAuth client-
-authentication metadata {{RFC8414}}.
+three mechanisms with `unauthorized` (HTTP 401).
+
+An authenticated caller MUST additionally carry an explicit read
+authorization: a `mission_status` scope on the presented access token,
+or a deployment-defined equivalent grant bound to the authenticated
+client. The `mission_status` scope authorizes the Mission Status read
+operation and mirrors the `mission_lifecycle` scope of the Mission
+Lifecycle endpoint ({{mission-lifecycle-endpoint}}). The token-less
+path is preserved: a consumer that holds only a `mission_id` and
+authenticates directly as a client (mechanism 1 or 3) carries the
+deployment-defined equivalent grant, not a scope, and so resolves
+Mission state without holding an access token the AS issued. A caller
+carrying no such authorization is refused with the not-found response
+of {{mission-status-errors}} ({{mission-status-anti-oracle}}).
+
+Which mechanisms and authorization this endpoint accepts are
+discoverable per endpoint, not inferred from the token endpoint's
+client-authentication metadata. For the audience-restricted
+access-token path (the `mission_status`-scoped DPoP-bound token above),
+this endpoint is an OAuth protected resource: the AS publishes, in its
+Protected Resource Metadata for this resource {{RFC9728}}, the
+access-token presentation it accepts (`bearer_methods_supported`,
+`dpop_bound_access_tokens_required`) and the `mission_status` scope it
+requires (`scopes_supported`). For the retained
+direct-client-authentication path (mTLS {{RFC8705}} or private-key JWT
+{{RFC7523}}), the accepted client-authentication methods are the AS's
+registered client-authentication methods, discoverable through its
+existing OAuth client-authentication metadata {{RFC8414}}. Both paths
+are therefore discoverable.
 
 ## Worked Request Example
 
@@ -421,12 +451,15 @@ The members are:
     profile's `suspended` and `completed` when the Mission Lifecycle
     endpoint ({{mission-lifecycle-endpoint}}) is deployed, and any
     further state a companion profile defines and the deployment runs
-    (`superseded` for an expanded predecessor
-    ({{I-D.draft-mcguinness-oauth-mission-expansion}}); `cascaded` for a
-    cascade-terminated Child Mission
-    ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})). A consumer applies the issuance
-    profile's forward-compatibility rule: only `active` permits reliance,
-    and every other value, recognized or not, is non-active.
+    (for example `superseded`, defined by the Mission Expansion profile
+    ({{I-D.draft-mcguinness-oauth-mission-expansion}}) for an expanded
+    predecessor, or `cascaded`, defined by the Mission Child Delegation
+    profile ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
+    for a cascade-terminated Child Mission). A consumer applies the
+    issuance profile's forward-compatibility rule: only `active` permits
+    reliance, and every other value, recognized or not, is non-active.
+    This profile's reliance behavior does not depend on recognizing
+    these companion-defined states; the fail-safe rule above governs.
   - `expires_at`: the point at which the Mission itself expires, the
     Mission record's `expires_at`
     ({{I-D.draft-mcguinness-oauth-mission}}).
@@ -551,15 +584,18 @@ Success outcomes (HTTP 200, signed Mission Status Response, described by
 
 This document uses "terminated" in prose for any terminal
 non-`active` state; it is not itself a `mission.state` value, and the
-terminal set is not closed: a deployment reports the companion-defined
-terminal states it runs. The terminal states currently defined across
-this suite are `revoked` and `expired`
-({{I-D.draft-mcguinness-oauth-mission}}), `completed` (this document),
-`superseded` ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and
-`cascaded` ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). A
-consumer applies the issuance profile's forward-compatibility rule:
-every value other than `active` is non-active, whether or not the
-consumer recognizes it.
+terminal set is not closed. The terminal row above and the list that
+follows enumerate the companion-defined states this suite currently
+runs, for the reader's reference; a deployment reports whichever it
+runs, and a consumer's reliance decision never depends on recognizing
+them. The terminal states currently defined across this suite are
+`revoked` and `expired` ({{I-D.draft-mcguinness-oauth-mission}}),
+`completed` (this document), `superseded`
+({{I-D.draft-mcguinness-oauth-mission-expansion}}), and `cascaded`
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). The binding
+rule is the issuance profile's forward-compatibility rule: every value
+other than `active` is non-active, whether or not the consumer
+recognizes it.
 
 Wire error codes (carried in the `error` member of a JSON body):
 
@@ -869,7 +905,8 @@ every other state is non-deriving.
 
 `revoke` and the Mission's `expires_at` both apply in `suspended` as
 well as `active`, so a suspended Mission can still be terminated or
-expire. The `superseded` and `cascaded` rows are companion-defined:
+expire. The `superseded` and `cascaded` rows are companion-defined and
+shown here for reference:
 `superseded` is committed by the expansion profile and requires an
 `active` predecessor
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}); `cascaded` is
@@ -883,8 +920,11 @@ companion state is produced by this profile's endpoint.
 
 The lifecycle endpoint uses the same authentication mechanisms as the
 Mission Status endpoint ({{mission-status-authentication}}): mTLS,
-DPoP-bound bearer, or private-key JWT, discovered through the AS's
-existing OAuth client-authentication metadata {{RFC8414}}.
+DPoP-bound bearer, or private-key JWT. It is discoverable per endpoint
+by the same split ({{mission-status-authentication}}): the access-token
+path through this endpoint's OAuth Protected Resource Metadata
+{{RFC9728}}, and the direct-client-authentication path through the AS's
+OAuth client-authentication metadata {{RFC8414}}.
 
 ## Authorization
 
@@ -900,17 +940,27 @@ such authorization.
 The acting party, and where the AS checks the lifecycle
 authorization, follow from the authentication case:
 
-1. When a sender-constrained access token (DPoP-bound {{RFC9449}} or
-   mTLS-bound {{RFC8705}}) authenticates the call, the token's `sub`
-   is the acting party. The token MUST carry that authorization.
+1. When an access token authenticates the call, the token identifies
+   the parties per the issuance profile's access-token model
+   ({{I-D.draft-mcguinness-oauth-mission}}): for a delegated access
+   token its `sub` denotes the resource owner (the represented party),
+   matching the {{RFC9068}} access-token `sub` model; the calling party
+   is identified by `client_id`; and, where a delegation chain is
+   present, the immediate actor is identified by the `act` claim
+   ({{I-D.draft-mcguinness-oauth-mission}}). A DPoP {{RFC9449}} or mTLS
+   {{RFC8705}} sender constraint binds the presenter to a key; it does
+   not change what `sub` denotes. The acting party is the calling party
+   so identified, and the presented token MUST carry the lifecycle
+   authorization the AS checks against it.
 2. When the caller authenticates directly as a client (mTLS client
    authentication {{RFC8705}} or private-key JWT {{RFC7523}}), the
    authenticated client is the acting party. The AS MUST check the
    deployment-defined lifecycle grant bound to that client.
 
 In every case the AS MUST record the acting party and SHOULD reflect
-it in the signed response's audit surface (for example in `sub` or a
-deployment-defined audit member of the Mission Status Response).
+it in the signed response's audit surface: the response envelope's
+`sub`, distinct from any access token's `sub`, or a deployment-defined
+audit member of the Mission Status Response.
 
 Which parties may perform which operation is deployment-defined. Typical
 deployments authorize `revoke` to the Mission's Subject or Approver and
@@ -949,9 +999,11 @@ Mission Status Response ({{mission-status-response}}). Because the
 Lifecycle request carries no `audience`, the response is state-only: the
 AS sets `aud` to the authenticated requester and omits
 `authorization_details` (a lifecycle confirmation reports `state`, not
-audience-scoped authority). Here `sub` is the acting party, the
-authenticated requesting client; the AS records the acting party and
-reflects it in this signed response as well as in its audit log.
+audience-scoped authority). Here the response envelope's `sub`,
+distinct from any access token's `sub`, carries the acting party: the
+calling client identified by `client_id`. The AS records that acting
+party and reflects it in this signed response as well as in its audit
+log.
 
 ~~~ http-message
 HTTP/1.1 200 OK
@@ -1624,8 +1676,9 @@ An implementation claiming an extension MUST meet its requirements:
 
 - **Mission Status**: serve the dedicated Mission Status operation
   ({{mission-status}}) with JWS-signed responses
-  (`application/mission-status-response+jwt`), the authentication of
-  {{mission-status-authentication}}, the anti-oracle property
+  (`application/mission-status-response+jwt`), the authentication and
+  read authorization of {{mission-status-authentication}}, the
+  anti-oracle property
   ({{mission-status-anti-oracle}}), and the error shape of
   {{mission-status-errors}}; and advertise `mission_status_endpoint`.
 - **Introspection projection**: carry the Mission projection on the
