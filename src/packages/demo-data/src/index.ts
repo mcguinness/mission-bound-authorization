@@ -380,6 +380,34 @@ const POLICY = loadPolicy();
 export const WRITE_ACTIONS = new Set(POLICY.write_actions);
 
 /**
+ * @spec draft-mcguinness-oauth-mission#per-entry-enforcement (allowed_delegates)
+ * @spec draft-mcguinness-oauth-mission-child-delegation#fanout (allowed_child_actors)
+ *
+ * The AS's actor-type ASSERTION registry: the reference deployment's map from an
+ * actor (delegate / child) client identifier to the `sub_profile` the AS asserts
+ * for it. A `{ "sub_profile": ... }` matcher is satisfied ONLY against this
+ * AS-asserted value, never a request-supplied claim (a self-asserted `sub_profile`
+ * MUST NOT satisfy a matcher). An actor absent from this map has no asserted
+ * class, so only a `{ "sub": ... }` matcher can admit it. Config-driven (D25);
+ * a real deployment resolves this from its client registry / instance attestation.
+ */
+function loadActorProfiles(): Record<string, string> {
+  const file = "actor-profiles.json";
+  const root = asObject(file, readJson(file), "actor-profiles");
+  const out: Record<string, string> = {};
+  for (const [sub, profile] of Object.entries(root)) {
+    if (typeof profile !== "string") {
+      throw new ConfigError(file, `actor-profiles["${sub}"] must be a string sub_profile`);
+    }
+    out[sub] = profile;
+  }
+  return out;
+}
+
+/** The AS-asserted actor-type profiles (@see loadActorProfiles). */
+export const ACTOR_PROFILES: Readonly<Record<string, string>> = loadActorProfiles();
+
+/**
  * @spec mission-template#prohibited-class — high-consequence actions that no
  * Mission Template dispatch may confer, even within both ceilings. The demo
  * prohibits the irreversible `payments:payment.execute`. The wire PR and the

@@ -1,6 +1,7 @@
 /** Assembly: kernel + adapters + keys. Used by server.ts and tests. */
 
 import {
+  ACTOR_PROFILES,
   CANONICAL_RESOURCE,
   CONTAINMENT_POLICY,
   demoReconciliationTemplate,
@@ -45,6 +46,7 @@ export {
 export type { ProtectedEventSource } from "./adapters/provider.js";
 export { validateMissionIntent, IntentError } from "./kernel/intent.js";
 export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
+export { delegatePermitted, type DelegateCandidate } from "./kernel/delegate-matcher.js";
 export {
   authorizationDetailsTypesMetadata,
   AUTHORIZATION_DETAILS_TYPES_METADATA,
@@ -327,6 +329,14 @@ export async function buildAuthorizationServer(opts: {
   resourceToAs?: (resource: string) => string;
   /** Deterministic audience-local subject resolver. Defaults to a stable digest. */
   subjectResolver?: SubjectResolver;
+  /**
+   * @spec draft-mcguinness-oauth-mission#per-entry-enforcement — override/extend
+   * the AS's actor-type ASSERTION registry (delegate/child-actor client id ->
+   * asserted `sub_profile`). Merged OVER the config-shipped {@link ACTOR_PROFILES}
+   * (D25). Tests inject the actor identities their child/delegation flows use;
+   * production leaves this undefined and relies on config.
+   */
+  actorProfiles?: Record<string, string>;
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
@@ -398,6 +408,9 @@ export async function buildAuthorizationServer(opts: {
     // @spec containment#containment-policy — the issuer-held ContainmentPolicy;
     // only containOnEvent reads it (the manual contain path is unaffected).
     containmentPolicy: CONTAINMENT_POLICY as never,
+    // @spec draft-mcguinness-oauth-mission#per-entry-enforcement — the AS-asserted
+    // actor-type registry, config-shipped and optionally extended by the caller.
+    actorProfiles: { ...ACTOR_PROFILES, ...(opts.actorProfiles ?? {}) },
     statusKey: statusKeys.privateKey,
     statusKid: asStatus.kid,
     // Fan the committed transition out to the Status List republisher (PULL), the

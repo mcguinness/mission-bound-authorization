@@ -73,6 +73,28 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
             additionalProperties: true,
           },
         },
+        // @spec child-delegation#fanout — the per-entry child-creation controls.
+        // `allowed_child_actors` is the same matcher shape as `allowed_delegates`
+        // (shared vocabulary); both are now schema-covered so neither rides on
+        // additionalProperties.
+        children: {
+          type: "object",
+          description: "@spec child-delegation#fanout — per-entry child-creation controls",
+          properties: {
+            max_children: { type: "integer", minimum: 0 },
+            max_child_depth: { type: "integer", minimum: 1 },
+            allowed_child_actors: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: { sub: { type: "string" }, sub_profile: { type: "string" } },
+                additionalProperties: true,
+              },
+            },
+            child_creation_policy: { type: "string" },
+          },
+          additionalProperties: true,
+        },
       },
       required: ["max_depth"],
       additionalProperties: true,
@@ -170,17 +192,58 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
       return "delegation.max_depth must be a non-negative integer";
     }
     if (d.allowed_delegates !== undefined) {
-      if (!Array.isArray(d.allowed_delegates)) return "delegation.allowed_delegates must be an array";
-      for (const m of d.allowed_delegates) {
-        if (m === null || typeof m !== "object" || Array.isArray(m)) {
-          return "delegation.allowed_delegates entries must be objects";
-        }
-        const mm = m as Record<string, unknown>;
-        if (mm.sub !== undefined && typeof mm.sub !== "string") return "allowed_delegates.sub must be a string";
-        if (mm.sub_profile !== undefined && typeof mm.sub_profile !== "string") {
-          return "allowed_delegates.sub_profile must be a string";
-        }
+      const err = validateMatcherList(d.allowed_delegates, "delegation.allowed_delegates");
+      if (err) return err;
+    }
+    // @spec child-delegation#fanout — the per-entry `children` controls, including
+    // the `allowed_child_actors` matcher list (same shape as allowed_delegates).
+    if (d.children !== undefined) {
+      if (d.children === null || typeof d.children !== "object" || Array.isArray(d.children)) {
+        return "delegation.children must be an object";
       }
+      const ch = d.children as Record<string, unknown>;
+      if (
+        ch.max_children !== undefined &&
+        (typeof ch.max_children !== "number" || !Number.isInteger(ch.max_children) || ch.max_children < 0)
+      ) {
+        return "delegation.children.max_children must be a non-negative integer";
+      }
+      if (
+        ch.max_child_depth !== undefined &&
+        (typeof ch.max_child_depth !== "number" ||
+          !Number.isInteger(ch.max_child_depth) ||
+          ch.max_child_depth < 1)
+      ) {
+        return "delegation.children.max_child_depth must be a positive integer";
+      }
+      if (ch.child_creation_policy !== undefined && typeof ch.child_creation_policy !== "string") {
+        return "delegation.children.child_creation_policy must be a string";
+      }
+      if (ch.allowed_child_actors !== undefined) {
+        const err = validateMatcherList(ch.allowed_child_actors, "delegation.children.allowed_child_actors");
+        if (err) return err;
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Shared structural check for a delegate-matcher list (`allowed_delegates` /
+ * `allowed_child_actors`): an array of objects each with optional string `sub` /
+ * `sub_profile`. Returns a violation description or undefined. Mirrors the
+ * runtime matcher's shape ({@link DelegateMatcher}).
+ */
+function validateMatcherList(value: unknown, path: string): string | undefined {
+  if (!Array.isArray(value)) return `${path} must be an array`;
+  for (const m of value) {
+    if (m === null || typeof m !== "object" || Array.isArray(m)) {
+      return `${path} entries must be objects`;
+    }
+    const mm = m as Record<string, unknown>;
+    if (mm.sub !== undefined && typeof mm.sub !== "string") return `${path}.sub must be a string`;
+    if (mm.sub_profile !== undefined && typeof mm.sub_profile !== "string") {
+      return `${path}.sub_profile must be a string`;
     }
   }
   return undefined;

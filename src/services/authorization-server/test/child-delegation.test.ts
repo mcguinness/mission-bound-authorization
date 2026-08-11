@@ -17,8 +17,27 @@ import {
   type MissionRecord,
   validateMissionIntent,
 } from "../src/index.js";
+import { aiAgents } from "./actor-profiles.helper.js";
 
 const ISS = "https://as.test";
+// The AS asserts these child actors as `ai_agent` (config-driven in production;
+// declared here for the suite). A sub NOT listed (e.g. `human-user`) has no
+// asserted class and is denied by a `{ sub_profile }` matcher — the conformant,
+// self-asserted-safe behaviour these tests exercise.
+const CHILD_ACTORS = aiAgents(
+  "subagent-extractor",
+  "child-agent",
+  "grandchild-agent",
+  "ggc-agent",
+  "subagent-ledger",
+  "subagent-0",
+  "subagent-1",
+  "subagent-2",
+  "subagent-3",
+  "subagent-4",
+  "subagent-6",
+  "subagent-7",
+);
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 // The ledger ceiling entry carries NO delegation (used by the on-switch test).
 const LEDGER = DERIVATION_POLICY.ceiling[1].resource;
@@ -61,6 +80,7 @@ beforeEach(() => {
     statusKey: key,
     statusKid: "as-status",
     now,
+    actorProfiles: CHILD_ACTORS,
     // The lifecycle-commit spy: proves Status List / Signals propagate on cascade.
     onLifecycleCommit: (c) => commits.push(c),
   });
@@ -335,7 +355,8 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
     const parent = approveParent();
     try {
       // The demo payments entry's allowed_child_actors is [{ sub_profile: ai_agent }];
-      // a human actor matches no matcher.
+      // `human-user` has no AS-asserted class (absent from actorProfiles), so no
+      // matcher admits it.
       createChild(parent.id, ["payments:invoice.read"], {
         childActor: { sub: "human-user", sub_profile: "human" },
       });
@@ -345,6 +366,85 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       expect((e as ChildDelegationError).reason).toBe("child_actor_not_allowed");
       expect((e as ChildDelegationError).evidence?.decision).toBe("denied");
       expect((e as ChildDelegationError).evidence?.denial_reason).toBe("child_actor_not_allowed");
+    }
+  });
+
+  it("(b') a SELF-ASSERTED sub_profile does NOT satisfy allowed_child_actors (must be AS-asserted)", () => {
+    // @spec oauth-mission 2989-2991 (inherited by child-delegation#fanout): the
+    // request CLAIMS `ai_agent`, but the AS asserts no class for `impostor` (it is
+    // absent from actorProfiles). A self-asserted sub_profile MUST NOT satisfy a
+    // { sub_profile } matcher — otherwise a client could claim any actor type to
+    // bypass the constraint — so creation is refused.
+    const parent = approveParent();
+    try {
+      createChild(parent.id, ["payments:invoice.read"], {
+        childActor: { sub: "impostor", sub_profile: "ai_agent" },
+      });
+      expect.unreachable();
+    } catch (e) {
+      expect((e as ChildDelegationError).reason).toBe("child_actor_not_allowed");
+    }
+  });
+
+  it("(b'') an ABSENT allowed_child_actors list DENIES (fail-closed), even an AS-asserted ai_agent", () => {
+    // @spec oauth-mission 2964-2968: an absent matcher list is a decision deferred
+    // to policy, never a blanket grant. The on-switch (children) is present but
+    // carries NO allowed_child_actors; the reference impl's policy is fail-closed,
+    // so even an AS-asserted ai_agent is refused.
+    const R = "https://noactors.example/mcp";
+    const openPolicy = {
+      policy_version: "open-policy",
+      ceiling: [
+        {
+          type: "mission_resource_access",
+          resource: R,
+          actions: ["res.read"],
+          constraints: { max_amount: { amount: "100.00", currency: "USD" } },
+          delegation: { max_depth: 2, children: { max_children: 5 } },
+        },
+      ],
+    };
+    const k = new MissionKernel({
+      issuer: ISS,
+      policy: openPolicy as never,
+      statusKey: key,
+      statusKid: "as-status",
+      now,
+      actorProfiles: aiAgents("some-agent"),
+    });
+    const intentFor = (goal: string) =>
+      validateMissionIntent(
+        JSON.stringify({
+          goal,
+          resources: [R],
+          expires_at: PARENT_EXP,
+          proposed_authority: [
+            {
+              type: "mission_resource_access",
+              resource: R,
+              actions: ["res.read"],
+              constraints: { max_amount: { amount: "100.00", currency: "USD" } },
+            },
+          ],
+        }),
+      );
+    const parent = k.approve({
+      intent: intentFor("parent"),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "parent-agent",
+      approvalEventId: `apev-${seq++}`,
+    });
+    try {
+      createChildMission(k, {
+        parentId: parent.id,
+        intent: intentFor("child"),
+        childActor: { sub: "some-agent", sub_profile: "ai_agent" },
+      });
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(ChildDelegationError);
+      expect((e as ChildDelegationError).reason).toBe("child_actor_not_allowed");
     }
   });
 
@@ -410,6 +510,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       statusKey: key,
       statusKid: "as-status",
       now,
+      actorProfiles: aiAgents("d-agent-0", "d-agent-1"),
     });
     // Hand-built parent whose Authority Set is TWO same-resource entries:
     // A (index 0, cap 1) then B (index 1, cap 5). The child subsets both.
@@ -665,7 +766,11 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
           actions: ["res.read"],
           delegation: {
             max_depth: 1,
-            children: { max_children: 5, child_creation_policy: "urn:policy:child-drawdown:v1" },
+            children: {
+              max_children: 5,
+              child_creation_policy: "urn:policy:child-drawdown:v1",
+              allowed_child_actors: [{ sub_profile: "ai_agent" }],
+            },
           },
         },
       ],
@@ -676,6 +781,7 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
       statusKey: key,
       statusKid: "as-status",
       now,
+      actorProfiles: aiAgents("basis-child"),
     });
     const parent = basisKernel.approve({
       intent: validateMissionIntent(

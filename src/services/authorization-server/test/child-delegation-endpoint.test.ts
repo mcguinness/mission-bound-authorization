@@ -45,6 +45,7 @@ import {
   TOKEN_EXCHANGE_GRANT_TYPE,
 } from "../src/adapters/continuation-grant.js";
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import { aiAgents } from "./actor-profiles.helper.js";
 
 const PORT = 14470;
 const ISSUER = `http://localhost:${PORT}`;
@@ -300,7 +301,13 @@ async function createChildViaExchange(fields: {
 let parent: { missionId: string; refreshToken: string };
 
 beforeAll(async () => {
-  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true });
+  as = await buildAuthorizationServer({
+    issuer: ISSUER,
+    allowHeadlessAdjudication: true,
+    // subagent-extractor / subagent-invoice-extractor are shipped in config;
+    // these are the endpoint suite's additional child actors.
+    actorProfiles: aiAgents("subagent-actor-ok", "subagent-other", "subagent-a", "subagent-b"),
+  });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   dpopKeys = await generateKeyPair("ES256", { extractable: true });

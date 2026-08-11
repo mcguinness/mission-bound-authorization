@@ -129,6 +129,16 @@ export interface KernelOptions {
    * republisher subscribes today; Mission Signals subscribes next.
    */
   onLifecycleCommit?: (commit: LifecycleCommit) => void;
+  /**
+   * @spec draft-mcguinness-oauth-mission#per-entry-enforcement,
+   * child-delegation#fanout — the AS's actor-type ASSERTION registry: a map from
+   * a delegate / child-actor client identifier to the `sub_profile` the AS
+   * asserts for it. Consulted ONLY by the actor-eligibility matcher
+   * ({@link delegatePermitted}); a request-supplied (self-asserted) profile is
+   * never matched against a `sub_profile` matcher. Absent means the AS asserts no
+   * class for any actor, so only `{ "sub": ... }` matchers can admit a delegate.
+   */
+  actorProfiles?: Record<string, string>;
 }
 
 export class MissionKernel {
@@ -148,6 +158,17 @@ export class MissionKernel {
 
   derive(intent: MissionIntent): AuthorityEntry[] {
     return deriveAuthoritySet(intent, this.opts.policy);
+  }
+
+  /**
+   * @spec draft-mcguinness-oauth-mission#per-entry-enforcement — the `sub_profile`
+   * the AS ASSERTS for an actor (delegate / child-actor) client identifier, from
+   * deployment config (D25), or undefined when the AS asserts no class. A
+   * request-supplied profile is NEVER consulted here: only this AS-asserted value
+   * can satisfy a `{ "sub_profile": ... }` matcher ({@link delegatePermitted}).
+   */
+  actorProfile(sub: string): string | undefined {
+    return this.opts.actorProfiles?.[sub];
   }
 
   /**

@@ -48,6 +48,7 @@ import {
   validateMissionIntent,
   verifyStatusListToken,
 } from "../src/index.js";
+import { aiAgents } from "./actor-profiles.helper.js";
 
 const ISS = "https://as.containment.test";
 const RES_PAY = "https://payments.test/mcp";
@@ -63,7 +64,12 @@ const POLICY = {
       type: "mission_resource_access",
       resource: RES_PAY,
       actions: ["payments:invoice.read", "payments:payment.execute"],
-      delegation: { max_depth: 2, children: { max_children: 5, max_child_depth: 2 } },
+      delegation: {
+        max_depth: 2,
+        // Explicit child-actor eligibility (fail-closed matcher): this suite's
+        // children are AS-asserted ai_agents (see makeHarness actorProfiles).
+        children: { max_children: 5, max_child_depth: 2, allowed_child_actors: [{ sub_profile: "ai_agent" }] },
+      },
     },
     { type: "mission_resource_access", resource: RES_FILE, actions: ["files:doc.read"] },
   ],
@@ -103,6 +109,17 @@ function makeHarness(containmentPolicy?: ContainmentPolicy): Harness {
     issuer: ISS,
     policy: POLICY as never,
     ...(containmentPolicy ? { containmentPolicy } : {}),
+    actorProfiles: aiAgents(
+      "child-agent",
+      "grandchild-agent",
+      "subagent",
+      "subagent-a",
+      "subagent-b",
+      "subagent-both",
+      "subagent-exec",
+      "subagent-pay-only",
+      "subagent-term",
+    ),
     statusKey: statusKeys.privateKey,
     statusKid: "as-status",
     now: () => NOW,
