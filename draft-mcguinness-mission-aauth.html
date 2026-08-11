@@ -1317,8 +1317,10 @@ mission log; and<a href="#section-1-3.5.1" class="pilcrow">¶</a></p>
           <p id="section-1-3.6.1">a mission is either <code>active</code> or permanently <code>terminated</code>.<a href="#section-1-3.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-1-4">This document is a thin binding over those facilities.  It defines no
-new AAuth endpoint, header field, token claim, mission-blob member, or
+<p id="section-1-4">This document is a thin binding over those facilities.  Beyond
+requiring the <code>expires_at</code> member of AAuth Mission Expiry
+(<span>[<a href="#I-D.draft-mcguinness-aauth-mission-expiry" class="cite xref">I-D.draft-mcguinness-aauth-mission-expiry</a>]</span>), it defines no new
+AAuth endpoint, header field, token claim, mission-blob member, or
 lifecycle state.  Its purpose is to make the security and composition
 properties of AAuth missions explicit and to prevent an OAuth-specific
 authority model from being imposed on them.<a href="#section-1-4" class="pilcrow">¶</a></p>
@@ -1435,11 +1437,12 @@ mission is not active.<a href="#section-2-4.8.1" class="pilcrow">¶</a></p>
         <h3 id="name-capability-model">
 <a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-capability-model" class="section-name selfRef">Capability Model</a>
         </h3>
-<p id="section-3.1-1">An AAuth mission natively supplies every element of the
-contextual-governance kernel of
-<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>; the element-by-element
-mapping and the formal capability claims are this binding's Mission
-Substrate Statement (<a href="#mission-substrate" class="auto internal xref">Section 9</a>).  In AAuth's own terms:<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-1">An AAuth mission, as this binding profiles it with AAuth Mission
+Expiry, supplies every element of the contextual-governance kernel of
+<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>; base AAuth alone supplies
+all but the reliance bound.  The element-by-element mapping and the
+formal capability claims are this binding's Mission Substrate
+Statement (<a href="#mission-substrate" class="auto internal xref">Section 9</a>).  In AAuth's own terms:<a href="#section-3.1-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-3.1-2">
           <dt id="section-3.1-2.1">Stable native reference:</dt>
           <dd style="margin-left: 1.5em" id="section-3.1-2.2">
@@ -1483,8 +1486,8 @@ approved blob and reference.<a href="#section-3.1-2.10.1" class="pilcrow">¶</a>
 <dt id="section-3.1-2.13">Bounded reliance:</dt>
           <dd style="margin-left: 1.5em" id="section-3.1-2.14">
             <p id="section-3.1-2.14.1">Every mission carries <code>expires_at</code> (<a href="#lifecycle" class="auto internal xref">Section 4.7</a>), the PS
-establishes <code>active</code> at decision time, and no auth token issued
-under the mission outlives it.<a href="#section-3.1-2.14.1" class="pilcrow">¶</a></p>
+establishes <code>active</code> at decision time, and no auth token's <code>exp</code>
+exceeds the mission's <code>expires_at</code>.<a href="#section-3.1-2.14.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-3.1-2.15">Context propagation:</dt>
@@ -1563,10 +1566,13 @@ review; the approved blob returned by the PS is the authoritative result.<a href
           <h4 id="name-approved-tools">
 <a href="#section-3.3.1" class="section-number selfRef">3.3.1. </a><a href="#name-approved-tools" class="section-name selfRef">Approved Tools</a>
           </h4>
-<p id="section-3.3.1-1"><code>approved_tools</code> identifies local actions that the agent can take without
-calling the PS permission endpoint for every invocation.  Examples
-include a local tool call, a file write, or sending a message.  The PS
-still uses the mission context and mission log for governance.<a href="#section-3.3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.3.1-1"><code>approved_tools</code> identifies agent tool invocations that do not require
+a per-call decision at the PS permission endpoint.  Examples include a
+tool call, a file write, or sending a message; a tool can invoke
+remote infrastructure, so the exemption is from the per-call
+permission request, not a locality claim.  The PS still uses the
+mission context and mission log for governance: <code>approved_tools</code> is
+structured PS-governance input, not portable resource authority.<a href="#section-3.3.1-1" class="pilcrow">¶</a></p>
 <p id="section-3.3.1-2">An approved tool is not, by that fact alone, authority at a remote
 resource.  This binding therefore does not map an approved tool name or
 description to a resource identifier, scope, authorization detail, or
@@ -1668,8 +1674,8 @@ operate under the resulting reference.<a href="#section-4.2-5" class="pilcrow">�
         <h3 id="name-governed-requests-and-missi">
 <a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-governed-requests-and-missi" class="section-name selfRef">Governed Requests and Mission Log</a>
         </h3>
-<p id="section-4.3-1">For every PS request carrying a mission reference, the PS MUST verify
-that:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3-1">For every PS request seeking a positive governance decision under a
+mission reference, the PS MUST verify that:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-4.3-2.1">
             <p id="section-4.3-2.1.1">it is the identified <code>approver</code>;<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
@@ -1688,23 +1694,36 @@ and<a href="#section-4.3-2.3.1" class="pilcrow">¶</a></p>
 <p id="section-4.3-3">If any of these checks cannot be completed, including establishing the
 mission's current state, the PS MUST fail closed and reject the
 request.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
-<p id="section-4.3-4">The PS then evaluates the request using the approved description, the
+<p id="section-4.3-4">Authenticated status, termination, denial, cleanup, and audit
+operations defined by this binding's companions are not positive
+governance decisions; they answer on a non-active mission as their
+specifications define.<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+<p id="section-4.3-5">The PS then evaluates the request using the approved description, the
 request's justification and other inputs, applicable person or
 organization policy, and relevant prior entries in the mission log.  A
 valid reference means that the context is identified and intact; it does
-not require the PS to approve the request.<a href="#section-4.3-4" class="pilcrow">¶</a></p>
-<p id="section-4.3-5">The PS MUST maintain the mission log as an ordered record of the AAuth
+not require the PS to approve the request.<a href="#section-4.3-5" class="pilcrow">¶</a></p>
+<p id="section-4.3-6">The PS MUST maintain the mission log as an ordered record of the AAuth
 interactions defined to belong to the mission, including token requests,
 permission decisions, audit records, interaction requests, and
 clarification chats.  Log records SHOULD preserve sufficient correlation
 data to associate each decision with its authenticated request and any
-issued token without recording raw credentials.<a href="#section-4.3-5" class="pilcrow">¶</a></p>
-<p id="section-4.3-6">The PS MUST protect the mission log's integrity, MUST restrict read
+issued token without recording raw credentials.<a href="#section-4.3-6" class="pilcrow">¶</a></p>
+<p id="section-4.3-7">The PS MUST protect the mission log's integrity, MUST restrict read
 access to the person, the PS itself, and parties authorized under its
 administrative policy, and MUST retain the log for a declared period
-that extends beyond termination.<a href="#section-4.3-6" class="pilcrow">¶</a></p>
-<p id="section-4.3-7">The approved blob is immutable.  New facts, decisions, and actions are
-appended to the log; they do not mutate or replace the committed blob.<a href="#section-4.3-7" class="pilcrow">¶</a></p>
+that extends beyond termination.<a href="#section-4.3-7" class="pilcrow">¶</a></p>
+<p id="section-4.3-8">The mission log is complete only for PS-observed operations.
+<code>approved_tools</code> activity the agent performs without a per-call PS
+decision, and any other agent-side action, enters the log only as
+agent-reported audit records; the PS MUST distinguish agent-reported
+entries from PS-observed ones and MUST NOT represent the former as
+the latter.  A counter or hash chain alone does not prove
+completeness for activity that can occur without consuming it; a
+deployment needing stronger completeness for local activity requires
+a non-bypassable observation point.<a href="#section-4.3-8" class="pilcrow">¶</a></p>
+<p id="section-4.3-9">The approved blob is immutable.  New facts, decisions, and actions are
+appended to the log; they do not mutate or replace the committed blob.<a href="#section-4.3-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="deterministic-resource-authorization">
@@ -1773,17 +1792,19 @@ the authorization path.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">PS-asserted</td>
-              <td class="text-left" rowspan="1" colspan="1">The resource token is presented to the PS, which evaluates the active Mission Context before it issues an auth token.  PS issuance gating is structural.  The resource still applies its own resource policy.</td>
+              <td class="text-left" rowspan="1" colspan="1">The resource token is presented to the PS, which evaluates the active Mission Context before it issues an auth token.  PS issuance gating is structural for a request whose resource token carries the validated Mission Reference (<a href="#ref-propagation" class="auto internal xref">Section 4.6</a>).  The resource still applies its own resource policy.</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Federated</td>
-              <td class="text-left" rowspan="1" colspan="1">The PS evaluates the active Mission Context before it federates the request to the resource's Access Server and before returning the resulting auth token.  PS broker gating is structural; the Access Server independently applies resource policy.</td>
+              <td class="text-left" rowspan="1" colspan="1">The PS evaluates the active Mission Context before it federates the request to the resource's Access Server and before returning the resulting auth token.  PS broker gating is structural under the same condition; the Access Server independently applies resource policy.</td>
             </tr>
           </tbody>
         </table>
 <p id="section-4.5-3">In every mode, the PS MUST apply the active-state gate to its own
 permission, audit, interaction, mission, and token operations when they
-reference a mission, as required by AAuth.  In identity-based and
+reference a mission, as required by AAuth, except that an
+authenticated status or termination operation defined by a companion
+returns terminal state instead.  In identity-based and
 resource-managed access, that PS-local gate does not stop an agent from
 making requests directly to a resource.  Deployments MUST NOT claim PS
 issuance gating for those direct resource decisions.<a href="#section-4.5-3" class="pilcrow">¶</a></p>
@@ -1818,6 +1839,19 @@ request-binding checks in addition to comparing the reference.<a href="#section-
 Authorization still depends on the issuer's decision, the token's scopes
 and other claims, proof of possession, resource policy, and, where the PS
 is on path, the PS's current contextual governance decision.<a href="#section-4.6-4" class="pilcrow">¶</a></p>
+<p id="section-4.6-5">Mission propagation is downgradable by an intermediate that does not
+echo the reference: AAuth's token request carries the mission only
+inside the presented resource token, so a resource that ignores
+<code>AAuth-Mission</code> yields a missionless token request at the PS.  Three
+rules bound that downgrade.  An agent that sent <code>AAuth-Mission</code> MUST
+verify that the returned resource token carries the exact reference;
+if it is absent or different, the agent MUST NOT continue that
+authorization as part of the mission.  A PS whose policy places an
+agent under mission governance MUST reject a token request from that
+agent that carries no mission reference.  The Lifecycle-Gated
+Authorization and Credential-Bound claims of <a href="#mission-substrate" class="auto internal xref">Section 9</a>
+cover only requests whose resource token carries the protected,
+validated reference.<a href="#section-4.6-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="lifecycle">
@@ -1835,9 +1869,11 @@ remains subject to a fresh PS decision and any resource policy.<a href="#section
           <dd class="break"></dd>
 <dt id="section-4.7-2.3">terminated:</dt>
           <dd style="margin-left: 1.5em" id="section-4.7-2.4">
-            <p id="section-4.7-2.4.1">The mission is permanently ended.  The PS MUST reject requests that
-reference it with AAuth's <code>mission_terminated</code> error, and the agent
-MUST stop acting under it.<a href="#section-4.7-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-4.7-2.4.1">The mission is permanently ended.  The PS MUST reject governed
+requests that reference it with AAuth's <code>mission_terminated</code> error,
+and the agent MUST stop acting under it.  An authenticated status
+or termination operation defined by a companion returns terminal
+state instead (<a href="#mission-log" class="auto internal xref">Section 4.3</a>).<a href="#section-4.7-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -1855,7 +1891,10 @@ PS MUST set one at approval under deployment policy, and that policy
 SHOULD prefer the shortest expiry consistent with the mission's
 purpose.  Expiry
 transitions the mission to <code>terminated</code>; it adds no third state, and
-no auth token issued under the mission outlives it.<a href="#section-4.7-4" class="pilcrow">¶</a></p>
+no auth token's <code>exp</code> exceeds the mission's approved <code>expires_at</code>.
+An early completion, revocation, or administrative termination
+prevents new governed issuance; an outstanding token remains usable
+until revocation or its own expiry, inside that approved bound.<a href="#section-4.7-4" class="pilcrow">¶</a></p>
 <p id="section-4.7-5">There is no suspended state in this binding.  A short wait uses AAuth's
 deferred-response mechanism.  A long or materially changed pause is
 handled by terminating the old mission and approving a new, appropriately
@@ -1890,11 +1929,15 @@ requires an additional revocation or event mechanism.<a href="#section-4.7-6" cl
           <p id="section-5-2.4.1">carries and signs that reference as AAuth requires;<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-2.5">
-          <p id="section-5-2.5.1">stops using a mission after <code>mission_terminated</code>; and<a href="#section-5-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.5.1">stops using a mission after <code>mission_terminated</code>;<a href="#section-5-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-2.6">
-          <p id="section-5-2.6.1">does not treat mission approval or <code>approved_tools</code> as remote resource
-authority.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.6.1">initiates no new governed work at or after the mission's
+<code>expires_at</code>; and<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.7">
+          <p id="section-5-2.7.1">does not treat mission approval or <code>approved_tools</code> as remote resource
+authority.<a href="#section-5-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-5-3">An implementation conforms as an <strong>AAuth Mission Context Person Server</strong>
@@ -1911,8 +1954,9 @@ if it:<a href="#section-5-3" class="pilcrow">¶</a></p>
 log;<a href="#section-5-4.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-4.4">
-          <p id="section-5-4.4.1">applies the active-state gate to every PS operation that references a
-mission;<a href="#section-5-4.4.1" class="pilcrow">¶</a></p>
+          <p id="section-5-4.4.1">applies the active-state gate to every governed PS operation that
+references a mission, while an authenticated status or termination
+surface defined by a companion returns terminal state instead;<a href="#section-5-4.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-4.5">
           <p id="section-5-4.5.1">approves no mission without <code>expires_at</code> and enforces it as AAuth
@@ -2007,7 +2051,7 @@ authorized administrators through applicable AAuth mechanisms.<a href="#section-
 <a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-person-server-compromise" class="section-name selfRef">Person Server Compromise</a>
         </h3>
 <p id="section-6.4-1">The PS is the controlling authority and holds the private mission blob,
-the person relationship, and the complete governance log.  A compromised
+the person relationship, and the PS-observed governance log.  A compromised
 PS can approve false missions, misrepresent state, disclose sensitive
 context, issue PS-asserted auth tokens, or broker requests to Access
 Servers.  AAuth signature verification does not protect against a
@@ -2143,7 +2187,10 @@ the only delegations, and the identifier maps to no OAuth
         <li id="section-9-3.4">
           <p id="section-9-3.4.1"><strong>Approved Context</strong>: the private approved mission blob, immutable
 under the exact-byte <code>s256</code> commitment; it is never disclosed to
-Resources or Access Servers (<a href="#blob" class="auto internal xref">Section 3.3</a>, <a href="#reference" class="auto internal xref">Section 3.2</a>).<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+Resources or Access Servers.  Both governance parties retain the
+blob, satisfying the kernel's maintained-value branch; <code>s256</code> is
+verification material for holders, and algorithm migration follows
+AAuth (<a href="#blob" class="auto internal xref">Section 3.3</a>, <a href="#reference" class="auto internal xref">Section 3.2</a>).<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-9-3.5">
           <p id="section-9-3.5.1"><strong>Approval ceremony</strong>: the AAuth propose, clarify, and approve
@@ -2160,8 +2207,8 @@ by AAuth Mission Management where deployed (<a href="#lifecycle" class="auto int
         <li id="section-9-3.7">
           <p id="section-9-3.7.1"><strong>Reliance bound</strong>: every mission carries <code>expires_at</code>
 (<a href="#lifecycle" class="auto internal xref">Section 4.7</a>, <span>[<a href="#I-D.draft-mcguinness-aauth-mission-expiry" class="cite xref">I-D.draft-mcguinness-aauth-mission-expiry</a>]</span>);
-PS decisions establish <code>active</code> at decision time, no auth token
-issued under the mission outlives it, and the residual after a
+PS decisions establish <code>active</code> at decision time, no auth token's
+<code>exp</code> exceeds the mission's <code>expires_at</code>, and the residual after a
 transition is bounded by outstanding token lifetime.<a href="#section-9-3.7.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-9-3.8">
@@ -2172,8 +2219,10 @@ never propagates; coverage varies by access mode
 </li>
         <li id="section-9-3.9">
           <p id="section-9-3.9.1"><strong>Governance record</strong>: the PS mission log is the ordered
-governance record, with the coverage, ordering, integrity, access,
-and retention requirements of <a href="#mission-log" class="auto internal xref">Section 4.3</a>.<a href="#section-9-3.9.1" class="pilcrow">¶</a></p>
+governance record, scoped to PS-observed operations with
+agent-reported local activity distinguished, and with the
+coverage, ordering, integrity, access, and retention requirements
+of <a href="#mission-log" class="auto internal xref">Section 4.3</a>.<a href="#section-9-3.9.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
 <p id="section-9-4">The binding declares these optional capabilities:<a href="#section-9-4" class="pilcrow">¶</a></p>
@@ -2194,20 +2243,20 @@ and retention requirements of <a href="#mission-log" class="auto internal xref">
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
             <td class="text-left" rowspan="1" colspan="1">supported</td>
-            <td class="text-left" rowspan="1" colspan="1">PS-gated operations: mission-endpoint processing, permission decisions, and auth-token issuance the PS performs or brokers; decisions fail closed when current state cannot be established (<a href="#lifecycle" class="auto internal xref">Section 4.7</a>, <a href="#access-modes" class="auto internal xref">Section 4.5</a>, <a href="#mission-log" class="auto internal xref">Section 4.3</a>)</td>
-            <td class="text-left" rowspan="1" colspan="1">Independently issued resource credentials are outside the claim; the post-transition residual is bounded by auth-token lifetime and <code>expires_at</code>
+            <td class="text-left" rowspan="1" colspan="1">Mission approval and other positive governance decisions at the mission endpoint, permission decisions, and auth-token issuance the PS performs or brokers for requests carrying the validated Mission Reference; decisions fail closed when current state cannot be established (<a href="#lifecycle" class="auto internal xref">Section 4.7</a>, <a href="#access-modes" class="auto internal xref">Section 4.5</a>, <a href="#mission-log" class="auto internal xref">Section 4.3</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Independently issued resource credentials and missionless token requests are outside the claim (<a href="#ref-propagation" class="auto internal xref">Section 4.6</a>); the post-transition residual is bounded by auth-token lifetime and <code>expires_at</code>
 </td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
             <td class="text-left" rowspan="1" colspan="1">conditional</td>
-            <td class="text-left" rowspan="1" colspan="1">The AAuth Mission Management status operation where deployed: authenticated per-role callers, the <code>active</code> and <code>terminated</code> vocabulary, responses current at the evaluation instant, absent and unauthorized references indistinguishable (<span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">The AAuth Mission Management status operation where deployed: authenticated per-role callers, the <code>active</code> and <code>terminated</code> vocabulary, responses stamped <code>observed_at</code> with a declared <code>fresh_until</code> reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable (<span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span>)</td>
             <td class="text-left" rowspan="1" colspan="1">The base binding exposes no consumer-facing state source; token acceptance is not observation</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
             <td class="text-left" rowspan="1" colspan="1">not supported</td>
-            <td class="text-left" rowspan="1" colspan="1">The mission description is private prose; <code>approved_tools</code> is PS-local</td>
+            <td class="text-left" rowspan="1" colspan="1">The mission description is private prose; <code>approved_tools</code> is PS-governance input</td>
             <td class="text-left" rowspan="1" colspan="1">Scopes or a resource-owned policy language can supply structure inside its own boundary</td>
           </tr>
           <tr>
@@ -2219,8 +2268,8 @@ and retention requirements of <a href="#mission-log" class="auto internal xref">
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
             <td class="text-left" rowspan="1" colspan="1">conditional</td>
-            <td class="text-left" rowspan="1" colspan="1">PS-asserted and federated modes carry and validate the signed native reference in PS-issued artifacts, a binding established at issuance rather than by an external join (<a href="#access-modes" class="auto internal xref">Section 4.5</a>)</td>
-            <td class="text-left" rowspan="1" colspan="1">Identity-based and resource-managed modes convey no mission binding</td>
+            <td class="text-left" rowspan="1" colspan="1">PS-asserted and federated modes carry and validate the signed native reference in PS-issued or PS-brokered artifacts, a binding established at issuance rather than by an external join, for requests whose resource token carries the validated reference (<a href="#access-modes" class="auto internal xref">Section 4.5</a>, <a href="#ref-propagation" class="auto internal xref">Section 4.6</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Identity-based and resource-managed modes convey no mission binding; federated artifacts are AS-issued under the PS's brokering</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>

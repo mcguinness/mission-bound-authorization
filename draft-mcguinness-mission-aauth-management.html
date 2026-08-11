@@ -1722,25 +1722,38 @@ Content-Digest: sha-256=:...:
     "approver": "https://ps.example",
     "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
   },
-  "state": "terminated",
+  "mission_status": "terminated",
   "approved_at": "2026-04-07T14:30:00Z",
   "expires_at": "2026-04-14T14:30:00Z",
   "terminated_at": "2026-04-10T09:12:43Z",
-  "termination_reason": "revoked"
+  "termination_reason": "revoked",
+  "observed_at": "2026-04-10T09:15:02Z",
+  "fresh_until": "2026-04-10T09:15:32Z"
 }
 </pre><a href="#section-6-4" class="pilcrow">¶</a>
 </div>
-<p id="section-6-5"><code>mission</code>, <code>state</code>, and <code>approved_at</code> are <span class="bcp14">REQUIRED</span>.  <code>expires_at</code> is
+<p id="section-6-5"><code>observed_at</code> and <code>fresh_until</code> are <span class="bcp14">REQUIRED</span> RFC 3339 <code>date-time</code>
+values <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>: the instant the PS evaluated the mission's state,
+and the latest instant a consumer may rely on this response.  The
+interval between them is deployment policy and <span class="bcp14">MAY</span> follow a published
+maximum staleness.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6"><code>mission</code>, <code>mission_status</code>, and <code>approved_at</code> are <span class="bcp14">REQUIRED</span>.  The
+<code>mission_status</code> member reuses the name and values the base protocol
+carries in its <code>mission_terminated</code> error body.  <code>expires_at</code> is
 present only if it is in the mission blob
 (<span>[<a href="#I-D.draft-mcguinness-aauth-mission-expiry" class="cite xref">I-D.draft-mcguinness-aauth-mission-expiry</a>]</span>).  <code>terminated_at</code> is an
 RFC 3339 <code>date-time</code> <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>; it and <code>termination_reason</code> are
-<span class="bcp14">REQUIRED</span> when <code>state</code> is <code>terminated</code> and <span class="bcp14">MUST</span> be absent while it is
-<code>active</code>.<a href="#section-6-5" class="pilcrow">¶</a></p>
-<p id="section-6-6">The response is current at the instant the PS evaluates the request.
-It is not a promise that the state will remain active.  An Agent <span class="bcp14">MUST</span>
+<span class="bcp14">REQUIRED</span> when <code>mission_status</code> is <code>terminated</code> and <span class="bcp14">MUST</span> be absent
+while it is <code>active</code>.<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-7">The response reports state as of <code>observed_at</code> and is reliable until
+<code>fresh_until</code>; it is not a promise that the state will remain active.
+A consumer <span class="bcp14">MUST NOT</span> rely on a response after its <code>fresh_until</code>, and a
+failed, invalid, unrecognized, or stale response establishes nothing:
+the consumer <span class="bcp14">MUST</span> fail closed and <span class="bcp14">MUST NOT</span> treat the mission as
+<code>active</code> on its basis.  An Agent <span class="bcp14">MUST</span>
 stop initiating work when it receives <code>terminated</code>.  Polling is a
 freshness mechanism, not the safety floor: every PS endpoint still
-enforces mission state itself.<a href="#section-6-6" class="pilcrow">¶</a></p>
+enforces mission state itself.<a href="#section-6-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="terminate">
@@ -1836,7 +1849,7 @@ summary:<a href="#section-7.2-4" class="pilcrow">¶</a></p>
     "approver": "https://ps.example",
     "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
   },
-  "state": "terminated",
+  "mission_status": "terminated",
   "terminated_at": "2026-04-10T09:12:43Z",
   "termination_reason": "revoked",
   "token_residual": {

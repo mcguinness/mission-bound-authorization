@@ -1304,9 +1304,11 @@ logging reflect the transition, rather than waiting for the next
 request under the reference.<a href="#section-5-2" class="pilcrow">¶</a></p>
 <p id="section-5-3">The PS <span class="bcp14">MUST NOT</span> issue an Auth Token whose <code>exp</code> is later than the
 mission's <code>expires_at</code> when the PS controls that expiry. In
-federation, the PS <span class="bcp14">MUST</span> request or enforce that bound where the AS
-supports it; inability to obtain the bound is a documented residual
-risk and <span class="bcp14">MAY</span> be grounds to deny issuance.<a href="#section-5-3" class="pilcrow">¶</a></p>
+federation, the PS <span class="bcp14">MUST</span> verify that the returned Auth Token's <code>exp</code>
+is no later than the mission's <code>expires_at</code>; if it is later, absent,
+or cannot be verified, the PS <span class="bcp14">MUST NOT</span> return or otherwise make the
+token available to the Agent.  The PS <span class="bcp14">SHOULD NOT</span> initiate federation
+when it already knows the AS cannot meet the bound.<a href="#section-5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="relationships">
