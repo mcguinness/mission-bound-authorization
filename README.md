@@ -383,8 +383,12 @@ sit outside the ordering.
 Outside the family itself, every normative dependency is a ratified
 RFC, a finalized OpenID specification, or (for the **uma** sketch) a
 final Kantara Initiative Recommendation, with these tracked
-exceptions: the **core**'s one Internet-Draft reference (the OAuth
-Actor Profile) is informative and confined to its OPTIONAL Delegation
+exceptions: the **core** has a normative dependency on an
+unratified individual draft (OAuth 2.0 RAR Metadata and Error
+Remediation): an AS that advertises Mission-bound authorization
+support MUST advertise the authorization-details type-metadata
+endpoint that draft defines, and its reference to the OAuth Actor
+Profile is informative and confined to its OPTIONAL Delegation
 capability; **status** depends on the OAuth Status List (a
 working-group document); **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
