@@ -394,8 +394,9 @@ supply-chain tooling is possible but out of scope here
 
 A Work Product Binding is a JWT {{RFC7519}} in JWS Compact Serialization
 {{RFC7515}}, signed by the trusted mediator that attached the provenance
-object (an Agent Deployment's execution environment, or the Mission
-Issuer; {{provenance}}). The producing agent MUST NOT sign it: a binding
+object, an Agent Deployment's execution environment (`harness`) or the
+Mission Issuer (`issuer`; {{provenance}}), with that mediator's own
+signing key. The producing agent MUST NOT sign it: a binding
 an agent signs over its own work is the same self-authored,
 authority-bearing forgery the custody boundary of {{provenance}}
 prevents.
@@ -413,15 +414,24 @@ alg:
 : REQUIRED. An asymmetric JWS algorithm. `none` MUST NOT be used.
 
 kid:
-: REQUIRED. A key identifier that resolves in the signing mediator's
-  published key material, the Mission Issuer's `jwks_uri`.
+: REQUIRED. A key identifier that selects the signing mediator's key
+  within the deployment's published key set. A relying party resolves it
+  by the mediator's `role`, reusing the family's existing role-keyed
+  resolution path ({{I-D.draft-mcguinness-mission-audit}}): the Mission
+  Issuer key through the Authorization Server metadata `jwks_uri` when
+  `role` is `issuer`, and the harness signing key published in the
+  deployment key set when `role` is `harness`. This document defines no
+  new key-resolution path.
 
 The JWS payload is a JSON object {{RFC8259}} carrying:
 
 iss:
-: REQUIRED. The Mission Issuer URL under which the signing mediator's
-  `kid` resolves. It binds the object to that issuer and is the `iss`
-  used when recomputing `provenance_digest` below.
+: REQUIRED. The Mission Issuer or deployment URL under which the key set
+  that publishes the signing mediator's key is discoverable. It is the
+  stable, discoverable identifier of that published key material, not the
+  mediator's own `id`. It binds the object to that deployment and is the
+  `iss` used when recomputing `provenance_digest` below, so that digest
+  reproduces from the recorded object.
 
 mediator:
 : REQUIRED. The trusted mediator that attached the provenance object and
@@ -435,12 +445,12 @@ mediator:
 artifact_digest:
 : REQUIRED. The subject. `sha-256:` followed by the unpadded base64url
   encoding of the SHA-256 {{RFC6234}} digest of the artifact's octets.
-  The octets are the artifact exactly as stored or transferred (a file,
-  a message, a memory entry, a queue event); where an implementation
-  holds the artifact as a JSON value, the octets are the serialization
-  it actually exchanges, not a re-canonicalization. This digest is over
-  opaque content and is NOT computed with JCS. Producer and consumer
-  MUST agree on those octets.
+  The octets are those the artifact is actually exchanged as: a file, a
+  message, a memory entry, a queue event, or any other opaque content.
+  How an artifact is serialized to those octets is the producer's
+  concern; this document defines no artifact serialization and does not
+  canonicalize the artifact. The producer and consumer MUST agree on the
+  exact bytes so that both compute the same digest.
 
 provenance_digest:
 : REQUIRED. The predicate anchor. It binds the sealed provenance object
@@ -475,9 +485,9 @@ and the binding verifies in this order:
 
 1. Reject the binding unless its protected `typ` is
    `mission-work-product-binding+jwt`.
-2. Resolve the `kid` in the Mission Issuer's published key material for
-   the binding's `iss` and verify the JWS signature. Reject a binding
-   signed with `none` or with a symmetric algorithm.
+2. Resolve the `kid` in the key set discoverable at the binding's `iss`,
+   by the `mediator.role` as above, and verify the JWS signature. Reject
+   a binding signed with `none` or with a symmetric algorithm.
 3. Confirm the signer is a trusted mediator for this type: the
    `mediator` member MUST correspond to the key that produced the
    signature, its `role` MUST be `harness` or `issuer`, and
