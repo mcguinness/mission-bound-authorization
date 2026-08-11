@@ -2391,14 +2391,20 @@ seven optional capabilities each binding claims through its Mission
 Substrate Statement (Lifecycle-Gated Authorization, State-Observable,
 Structured Authority, Monotonic Derivation, Credential-Bound,
 Independently Verifiable, and Portable Evidence).<a href="#section-11-1" class="pilcrow">¶</a></p>
-<p id="section-11-2">The companion profiles named without "oauth" are defined against that
-contract as the issuance profile instantiates it; each names what it
-consumes in a Mission Substrate section of its own. This section
-consolidates the issuance profile's instantiation: eight primitives,
-each with its normative home and its consumers. Every sentence
-mirrors a rule the named profile states normatively, and none of the
-eight is, by itself, a kernel requirement of the binding-neutral
-contract.<a href="#section-11-2" class="pilcrow">¶</a></p>
+<p id="section-11-2">The companion profiles named without "oauth" are defined against the
+binding-neutral contract and declare, each in a Mission Substrate
+section of its own, the kernel functions and optional capabilities
+they consume. Where a companion consumes a concrete representation,
+it is today the issuance profile's.<a href="#section-11-2" class="pilcrow">¶</a></p>
+<p id="section-11-3">The remainder of this section documents that instantiation: eight
+primitives, each with its normative home and its consumers. Every
+sentence mirrors a rule the named profile states normatively. None of
+these issuance-profile representations or stronger semantics is
+required verbatim by the binding-neutral kernel, although several
+instantiate mandatory kernel functions: the identifier and issuer
+realize the Mission Reference and Controller, the lifecycle realizes
+the governance gate, token validity participates in bounded reliance,
+and the audit horizon participates in the governance record.<a href="#section-11-3" class="pilcrow">¶</a></p>
 <div id="the-mission-identifier-and-issuer">
 <section id="section-11.1">
         <h3 id="name-the-mission-identifier-and-">
