@@ -1591,7 +1591,11 @@ At the approval event the AS MUST, in order:
    Subject from unauthenticated client input. This document defines no
    wire parameter for the Subject; how the AS establishes it
    (administrative selection, a directory, an authenticated reference)
-   is a deployment matter.
+   is a deployment matter. When the Subject's home issuer
+   (`subject.iss`) differs from the AS, the AS MUST ensure the `sub`
+   it adopts is unique within its own issuer namespace and does not
+   collide with a different principal's `sub`, so a derived token's
+   (`iss`, `sub`) pair unambiguously denotes the Subject.
 3. Render for consent the derived Authority Set in human-meaningful
    terms, with the `goal`, `constraints`, `expires_at`, and any
    `controls` bounds (notably `max_derivations`) as context:
@@ -2347,6 +2351,18 @@ required. A Resource Server:
   request is permitted if at least one carried entry permits it:
   entries are alternative grants of authority, not conjunctive
   filters.
+- MUST, when it matches a concrete request URI against a `prefix`
+  entry ({{authorization-derivation}}), apply the same RFC 3986
+  {{RFC3986}} syntax-based normalization the AS uses for containment
+  ({{subset}}), and MUST apply it before the prefix comparison rather
+  than after. That normalization decodes only unreserved octets, so
+  reserved octets stay encoded: an encoded slash (`%2F`) remains
+  `%2F` and MUST NOT be treated as a path-segment separator when
+  matching. An intermediary that percent-decodes `%2F`, or a
+  downstream component that decodes and removes dot-segments after
+  the Resource Server's check (for example collapsing a decoded
+  `%2e%2e`), moves the enforced boundary, so a deployment MUST
+  prevent such rewriting or account for it in what it authorizes.
 - MUST fail closed on any `constraints` key it does not understand, or
   understands but cannot enforce, in an entry whose `resource` it
   serves: it MUST refuse the request (for example, a `403` with
@@ -3497,7 +3513,59 @@ against the Mission and records evidence; such a layer composes with
 this profile and is out of scope here. Which party enforces each
 Mission-carried bound is summarized in the enforcement table
 ({{mission-intent}}). Short token lifetimes and
-narrow authority bound, but do not eliminate, this exposure.
+narrow authority bound, but do not eliminate, this exposure. Where
+the Resource Server or a composing runtime layer does match a
+concrete request URI against a `prefix` entry, that match MUST apply
+the same RFC 3986 {{RFC3986}} normalization the AS uses for
+containment ({{subset}}, {{rs-enforcement}}), so the boundary
+enforced at the point of use is the one the AS derived, not a
+divergent one.
+
+## Resource Boundary Canonicalization {#resource-boundary-canonicalization}
+
+A `prefix` entry ({{authorization-derivation}}) draws an authority
+boundary in URI space. The AS's containment test ({{subset}}) and the
+Resource Server's request matching ({{rs-enforcement}}) MUST apply the
+single RFC 3986 {{RFC3986}} normalization defined in {{subset}}, so
+issuance and enforcement draw the same boundary. A matcher that
+normalizes differently from the party that derived the entry can admit
+a request the Approver never authorized, or deny one it did. The
+normalization MUST run before the prefix comparison, never after, and
+the boundary MUST be evaluated on the same normalized form a
+downstream component will act on. The following vectors each turn on
+such a difference:
+
+- **Encoded slash (`%2F`).** A reserved octet, left encoded by this
+  normalization (which decodes only unreserved octets) and never a
+  path-segment separator when matching. An intermediary that decodes
+  it before the Resource Server enforces shifts the boundary; a
+  deployment MUST prevent that rewriting or account for it.
+- **Encoded dot (`%2e`, `%2e%2e`).** The `.` octet is unreserved, so
+  this normalization decodes it and then removes dot-segments. The
+  hazard is order: normalizing before the comparison collapses a
+  decoded `%2e%2e` out of the path and draws the boundary correctly,
+  while matching the raw string first and letting a downstream
+  component decode and collapse afterward can escape the prefix.
+- **Double or empty path segments.** An empty path and `/` denote the
+  same base ({{authorization-derivation}}); a matcher MUST NOT coalesce
+  `//` or trailing-slash differences of its own, since the {{subset}}
+  normalization does not.
+- **Default-port presence.** `https://a.example:443` and
+  `https://a.example` are one authority only after the default-port
+  removal {{subset}} performs; a matcher that skips it splits one
+  boundary into two.
+- **Unicode and IDNA host.** The {{subset}} normalization lowercases
+  the host but does not define Unicode to A-label (IDNA) conversion, so
+  a deployment that accepts non-ASCII hosts MUST ensure both sides
+  compare the same form.
+- **Percent-decoding order.** This normalization decodes only
+  unreserved octets and runs before comparison; decoding reserved
+  octets, or decoding after the comparison, changes which characters
+  count as separators and can move the boundary.
+
+A deployment MAY agree out of band on the canonicalization profile its
+AS and Resource Servers apply; this document defines one rule
+({{subset}}), so no profile identifier is required for interoperation.
 
 ## Denial Detail Disclosure {#denial-disclosure}
 
