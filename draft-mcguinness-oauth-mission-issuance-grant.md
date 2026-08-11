@@ -608,11 +608,11 @@ coexist per resource and per AS.
 # Composite Provision {#composite}
 
 In the substrate's terms ({{I-D.draft-mcguinness-mission-substrate}})
-the MAS alone is a partial-provision binding: everything but the
-Mission-bound credential and issuance gating. A MAS composed with
-its consuming Authorization Servers under this profile provides
-both, jointly: a composite full provision for the resources those
-ASs serve. In the Mission Assurance Levels
+the MAS alone claims neither Credential-Bound nor Lifecycle-Gated
+Authorization for the tokens its unchanged Authorization Servers
+issue. A MAS composed with its consuming Authorization Servers under
+this profile supplies both capabilities, jointly, for the resources
+those ASs serve. In the Mission Assurance Levels
 ({{I-D.draft-mcguinness-mission-architecture}}), Baseline Issuance
 and its issuance-gate kill switch become reachable under the
 standalone binding through this profile, and the state-aware
