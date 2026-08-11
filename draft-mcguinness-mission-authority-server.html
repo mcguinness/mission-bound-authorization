@@ -1073,7 +1073,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 11 February 2027</td>
+<td class="center">Expires 12 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1086,12 +1086,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-authority-server-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-10" class="published">10 August 2026</time>
+<time datetime="2026-08-11" class="published">11 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-11">11 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-12">12 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1159,7 +1159,7 @@ Mission Authority Profile for that role.<a href="#section-abstract-1" class="pil
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 11 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 12 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1664,11 +1664,14 @@ token-carriage aspects of delegation likewise have no carrier.<a href="#section-
         <li class="normal" id="section-3-8.4">
           <p id="section-3-8.4.1">Mission Expansion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>)
 and Mission Child Delegation
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) define
-their request wire over OAuth Pushed Authorization Requests; their
-MAS-native wire is defined by <a href="#native-surfaces" class="auto internal xref">Section 8</a>, with an
-authenticated-client binding in place of OAuth token possession.
-Their models apply to MAS-held Missions unchanged.<a href="#section-3-8.4.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) bind their
+request, on the OAuth wire, to an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange whose
+<code>subject_token</code> is the predecessor or parent Mission-bound access
+token; their MAS-native wire is defined by <a href="#native-surfaces" class="auto internal xref">Section 8</a>, which
+carries both operations on the mission submission endpoint with an
+authenticated-client binding in place of that token-exchange
+possession proof. Their models (supersession, lineage, cascade) apply
+to MAS-held Missions unchanged.<a href="#section-3-8.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2097,18 +2100,27 @@ define for the members of the same names.<a href="#section-7-4" class="pilcrow">
       </h2>
 <p id="section-8-1">Mission Expansion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>)
 and Mission Child Delegation
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) define their
-request wire over OAuth Pushed Authorization Requests, bound to the
-predecessor or parent by token possession (<code>predecessor_token</code>,
-<code>parent_token</code>). A MAS issues no tokens, so that binding has no
-carrier here. This section defines the MAS-native wire for both
-operations: carriage on the mission submission endpoint
-(<a href="#native-carriage" class="auto internal xref">Section 8.1</a>) and an authenticated-client binding in place of
-token possession (<a href="#native-binding" class="auto internal xref">Section 8.2</a>). It defines carriage and binding
-only; every mechanism (supersession, reconciliation, lineage, strict
-subset, fan-out, cascade, and the closed code sets) remains owned by
-its profile and applies here by reference (<a href="#native-expansion" class="auto internal xref">Section 8.3</a>,
-<a href="#native-child" class="auto internal xref">Section 8.4</a>). The capability is <span class="bcp14">OPTIONAL</span> (<a href="#conformance" class="auto internal xref">Section 15</a>).<a href="#section-8-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) each rest on
+one abstract requirement, stated normatively by each of those profiles:
+that the requester prove possession of the predecessor or parent
+Mission's authority through a sender-constrained proof rather than a
+reusable bearer refresh credential. Those profiles bind that
+requirement on the OAuth wire to an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange whose
+<code>subject_token</code> is the predecessor or parent Mission-bound access token,
+with possession proven against that token's own confirmation key. A MAS
+issues no tokens, so that token-exchange binding has no carrier here.
+This section defines the peer MAS binding of the same requirement, an
+authenticated-client submission on the mission submission endpoint, and
+names it as the other binding of that requirement without restating the
+requirement itself.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">This section defines the MAS-native wire for both operations: carriage
+on the mission submission endpoint (<a href="#native-carriage" class="auto internal xref">Section 8.1</a>) and the
+authenticated-client binding in place of the token-exchange possession
+proof (<a href="#native-binding" class="auto internal xref">Section 8.2</a>). It defines carriage and binding only; every
+mechanism (supersession, reconciliation, lineage, strict subset,
+fan-out, cascade, and the closed code sets) remains owned by its profile
+and applies here by reference (<a href="#native-expansion" class="auto internal xref">Section 8.3</a>, <a href="#native-child" class="auto internal xref">Section 8.4</a>).
+The capability is <span class="bcp14">OPTIONAL</span> (<a href="#conformance" class="auto internal xref">Section 15</a>).<a href="#section-8-2" class="pilcrow">¶</a></p>
 <div id="native-carriage">
 <section id="section-8.1">
         <h3 id="name-submission-carriage">
@@ -2155,9 +2167,10 @@ operation.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
 be refused with <code>invalid_mission_intent</code>: the operations do not
 combine. A submission carrying <code>parent</code> without <code>child_actor</code>, or
 <code>child_actor</code> without <code>parent</code>, <span class="bcp14">MUST</span> be refused the same way.<a href="#section-8.1-4" class="pilcrow">¶</a></p>
-<p id="section-8.1-5">The <code>predecessor_token</code> and <code>parent_token</code> parameters of the OAuth
-wire do not exist on this surface; the binding of <a href="#native-binding" class="auto internal xref">Section 8.2</a>
-replaces them.<a href="#section-8.1-5" class="pilcrow">¶</a></p>
+<p id="section-8.1-5">The OAuth wire's token-exchange possession proof, the predecessor or
+parent Mission-bound access token presented as <code>subject_token</code>, does
+not exist on this surface; the binding of <a href="#native-binding" class="auto internal xref">Section 8.2</a> replaces
+it.<a href="#section-8.1-5" class="pilcrow">¶</a></p>
 <p id="section-8.1-6">The referenced profiles' OAuth error outcomes map onto this endpoint's
 error surface as the issuance profile's do (<a href="#intent-submission" class="auto internal xref">Section 4.1</a>):
 <code>invalid_request</code> outcomes map to <code>invalid_mission_intent</code>, and
@@ -2197,10 +2210,12 @@ denial at adjudication, of the <code>denied</code> submission-status response
         <h3 id="name-request-binding">
 <a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-request-binding" class="section-name selfRef">Request Binding</a>
         </h3>
-<p id="section-8.2-1">The OAuth wire resolves the predecessor or parent from a presented
-grant and cross-checks it against the named identifier. A MAS holds no
-grants, so the named identifier is itself the reference, and the MAS
-binds the request to it as follows:<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-1">The OAuth wire resolves the predecessor or parent from the Mission-bound
+access token presented as the token exchange's <code>subject_token</code>, proving
+possession against that token's confirmation key, and treats any named
+identifier only as a cross-check. A MAS holds no such tokens, so the
+named identifier is itself the reference, and the MAS binds the request
+to it as follows:<a href="#section-8.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8.2-2.1">
             <p id="section-8.2-2.1.1">The MAS <span class="bcp14">MUST</span> verify that the authenticated submitting client is the
@@ -2221,11 +2236,13 @@ Subject.<a href="#section-8.2-2.2.1" class="pilcrow">¶</a></p>
         </ul>
 <p id="section-8.2-3">This is an authentication-based binding, not a possession-based one:
 it proves the requester is the same registered client the predecessor
-or parent was recorded for, not that it holds that Mission's grant.
-The delta from the OAuth wire is exactly that: a party able to
-authenticate as the registered client can request these operations for
-any of that client's Missions, where token possession would limit it
-to the grants it actually holds (<a href="#sec-native-binding" class="auto internal xref">Section 16.3</a>).<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+or parent was recorded for, not that it holds and can prove possession
+of that Mission's access token. The delta from the OAuth wire is
+exactly that: a party able to authenticate as the registered client can
+request these operations for any of that client's Missions, where the
+token-exchange possession proof would limit it to the Missions whose
+Mission-bound access token it holds and can prove control of
+(<a href="#sec-native-binding" class="auto internal xref">Section 16.3</a>).<a href="#section-8.2-3" class="pilcrow">¶</a></p>
 <p id="section-8.2-4">Where the deployment authenticates client instances
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>), the MAS
 <span class="bcp14">SHOULD</span> bind at instance granularity rather than at the bare
@@ -2327,8 +2344,8 @@ Status (<a href="#lifecycle-and-state" class="auto internal xref">Section 7</a>)
             <p id="section-8.4-2.6.1"><strong>Denial reasons.</strong> That profile's closed denial-reason set applies;
 the code rides in <code>mission_denial_reason</code> per <a href="#native-carriage" class="auto internal xref">Section 8.1</a>.
 The <code>parent_mismatch</code> reason has no analog on this surface: with no
-<code>parent_token</code> to cross-check, a binding failure is refused per
-<a href="#native-carriage" class="auto internal xref">Section 8.1</a>.<a href="#section-8.4-2.6.1" class="pilcrow">¶</a></p>
+<code>subject_token</code> to resolve the parent against a cross-check, a binding
+failure is refused per <a href="#native-carriage" class="auto internal xref">Section 8.1</a>.<a href="#section-8.4-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-8.4-3">The child client identity rules hold unchanged: the child actor is the
@@ -3074,9 +3091,10 @@ it.<a href="#section-12-7" class="pilcrow">¶</a></p>
 and Child Delegation are carried natively in this mode
 (<a href="#native-surfaces" class="auto internal xref">Section 8</a>), so a standalone deployment can widen authority
 and delegate to sub-agents; what the mode does not provide is the
-OAuth wire's possession binding. Requests are bound to the predecessor
-or parent by authenticated client identity (<a href="#native-binding" class="auto internal xref">Section 8.2</a>), which
-proves the same registered client, not a held grant
+OAuth wire's token-exchange possession proof. Requests are bound to the
+predecessor or parent by authenticated client identity
+(<a href="#native-binding" class="auto internal xref">Section 8.2</a>), which proves the same registered client, not
+possession of a held Mission-bound access token
 (<a href="#sec-native-binding" class="auto internal xref">Section 16.3</a>). Offline attenuation remains inapplicable in
 this mode because it requires the Mission-bound credential
 (<a href="#mission-substrate" class="auto internal xref">Section 3</a>).<a href="#section-12-8" class="pilcrow">¶</a></p>
@@ -3595,12 +3613,13 @@ widening.<a href="#section-16.2-1" class="pilcrow">¶</a></p>
 <a href="#section-16.3" class="section-number selfRef">16.3. </a><a href="#name-expansion-and-child-creatio" class="section-name selfRef">Expansion and Child-Creation Binding</a>
         </h3>
 <p id="section-16.3-1">The native surfaces of <a href="#native-surfaces" class="auto internal xref">Section 8</a> bind a request to its
-predecessor or parent by authenticated client identity, not by grant
-possession, and the residual is exactly that difference: a compromised
-or impersonated registered client can request expansion or child
-creation for any Mission recorded under its <code>client_id</code>, where token
-possession would have limited it to the grants it actually holds. The
-mitigations:<a href="#section-16.3-1" class="pilcrow">¶</a></p>
+predecessor or parent by authenticated client identity, not by the
+token-exchange possession proof of the OAuth wire, and the residual is
+exactly that difference: a compromised or impersonated registered
+client can request expansion or child creation for any Mission recorded
+under its <code>client_id</code>, where proving possession of the Mission-bound
+access token would have limited it to the Missions whose token it holds
+and can prove control of. The mitigations:<a href="#section-16.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-16.3-2.1">
             <p id="section-16.3-2.1.1">Instance-grade binding
@@ -3963,6 +3982,10 @@ document requests no IANA action for it.<a href="#section-18.3-1" class="pilcrow
 <dt id="RFC8414">[RFC8414]</dt>
         <dd>
 <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9635">[RFC9635]</dt>
       <dd>
