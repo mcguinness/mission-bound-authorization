@@ -197,7 +197,16 @@ this matrix and the `@spec` tags to the affected code and tests.
   `mission` claim carries the `parent` lineage and the CHILD `authority_hash`) as the
   grant reference the parent conveys; the pushed request is destroyed after read so
   `parent_token` never sits at rest. `mission_child_delegation_supported` is advertised
-  in AS metadata. Deferred to PR4b: the child redeeming that assertion AS ITSELF at
+  in AS metadata. (SUPERSEDED 2026-08-11 by D62 / PR #451: child creation is now an
+  RFC 8693 token exchange at `/token` (`grant_type=token-exchange`,
+  `requested_token_type=urn:ietf:params:oauth:token-type:jwt`, `subject_token` = the
+  parent Mission-bound access token, `subject_token_type=access_token`, possession
+  proven against the token's OWN cnf, refresh token rejected); the dedicated
+  `mission-child-creation` grant and the `parent_token`/PAR carrier are removed,
+  dispatched by `handleChildCreationExchange` in `adapters/continuation-grant.ts`. The
+  response stays RFC 8693-shaped and the two-grant flow is kept. Expansion likewise
+  gains a token-exchange wire (`requested_token_type=access_token`) where it had no
+  wire code before.) Deferred to PR4b: the child redeeming that assertion AS ITSELF at
   `/token` (RFC 7523 JWT-bearer), which needs the child actor registered as an OAuth
   client (a `config/clients.json` + demo-data change outside this PR's surface).
   (`services/authorization-server/test/child-delegation-endpoint.test.ts`.)
