@@ -13,6 +13,17 @@ export {
   type ArtifactEvidence,
   type ArtifactEvidenceInput,
   buildArtifactEvidence,
+  WORK_PRODUCT_BINDING_TYP,
+  WORK_PRODUCT_PROVENANCE_TYP,
+  workProductBytes,
+  computeArtifactDigest,
+  computeProvenanceDigest,
+  signWorkProductBinding,
+  verifyWorkProductBinding,
+  type WorkProductBindingPayload,
+  type SignWorkProductBindingOptions,
+  type VerifyWorkProductBindingOptions,
+  type BindingVerifyResult,
 } from "./evidence.js";
 export {
   Pep,

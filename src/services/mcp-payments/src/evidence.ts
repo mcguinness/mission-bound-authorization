@@ -7,7 +7,10 @@
  * the members the operation profile fixes.
  */
 
+import { createHash } from "node:crypto";
+import { computeAnchor, type JsonValue } from "@mission/core";
 import { currentTraceId } from "@mission/telemetry";
+import { createLocalJWKSet, type JWK, type JWTPayload, jwtVerify, SignJWT } from "jose";
 
 /**
  * @spec authzen `emitter.role`: the coordinated set of enforcement-point roles
@@ -193,6 +196,215 @@ export function buildArtifactEvidence(input: ArtifactEvidenceInput): ArtifactEvi
     created_at: input.created_at ?? new Date().toISOString(),
     ...(input.parent_artifact !== undefined ? { parent_artifact: input.parent_artifact } : {}),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Work Product Provenance -> artifact binding (@spec work-products#binding)
+// ---------------------------------------------------------------------------
+//
+// A tamper-evident binding proving a Work Product Provenance object describes a
+// SPECIFIC artifact and was attached by a TRUSTED MEDIATOR, WITHOUT making
+// provenance authority-bearing. The binding is a SEPARATE signed object beside
+// the sealed provenance object above: the five-member ArtifactEvidence object is
+// NEVER modified, and no sixth member is ever added to it to carry a digest.
+//
+// Envelope: the family's own JWS Compact idiom (as used by signed SETs in
+// mission-signals and by the child-grant / txn tokens), ES256 with a `kid` and a
+// domain-separating `typ`. It profiles in-toto's subject / digest / predicate
+// MODEL only (subject = artifact_digest, predicate = the referenced provenance
+// object); it is NOT native in-toto DSSE. A byte-compatible DSSE or SLSA-tooling
+// translation is future, out-of-scope interop work.
+
+/**
+ * @spec work-products#binding — the JOSE `typ` header for a Work Product
+ * Provenance binding, the short media-type form the family uses for its own
+ * invented token types (compare `oauth-mission-child-grant+jwt`,
+ * `txn-token+jwt`). The IANA-registered media type is
+ * `application/mission-work-product-binding+jwt`; the `typ` header carries the
+ * short form. Domain separation means a binding digest can NEVER be mistaken for
+ * an authority artifact.
+ */
+export const WORK_PRODUCT_BINDING_TYP = "mission-work-product-binding+jwt";
+
+/**
+ * @spec work-products#binding — the integrity-anchor `typ` domain separator for
+ * the provenance digest. The sealed five-member provenance object is hashed
+ * WITHOUT modification under the core integrity-anchor envelope
+ * `{ typ, iss, value }` (core's documented extension point for additional
+ * committed objects), so the digest transitively binds attribution to artifact.
+ */
+export const WORK_PRODUCT_PROVENANCE_TYP = "mission-work-product-provenance";
+
+/**
+ * @spec work-products#binding — the artifact's opaque byte form. An artifact is
+ * opaque content (a file, message, memory entry, queue event), so its digest is
+ * over RAW BYTES, NOT a JCS canonicalization (JCS is for the JSON objects the
+ * family commits to, never for opaque payloads). A caller holding the true wire
+ * bytes SHOULD pass a Uint8Array or string directly. For structured content the
+ * derivation is `JSON.stringify` in UTF-8: insertion order is PRESERVED and the
+ * result is deliberately NOT JCS-canonicalized, so the digest binds the exact
+ * bytes as produced.
+ */
+export function workProductBytes(content: unknown): Uint8Array {
+  if (content instanceof Uint8Array) return content;
+  if (typeof content === "string") return new TextEncoder().encode(content);
+  return new TextEncoder().encode(JSON.stringify(content));
+}
+
+/**
+ * @spec work-products#binding — the SUBJECT digest: `sha-256:` + base64url (no
+ * padding) of SHA-256 over the artifact's raw bytes ({@link workProductBytes}).
+ * Matches the family's integrity-anchor encoding.
+ */
+export function computeArtifactDigest(content: unknown): string {
+  const digest = createHash("sha256").update(workProductBytes(content)).digest();
+  return `sha-256:${digest.toString("base64url")}`;
+}
+
+/**
+ * @spec work-products#binding — the provenance digest: the integrity anchor of
+ * the sealed five-member provenance object under {@link
+ * WORK_PRODUCT_PROVENANCE_TYP}, computed with the SAME {@link computeAnchor}
+ * helper used for intent_hash / authority_hash. It binds the attribution object
+ * WITHOUT modifying it; `iss` is the mediator's own identity (the JWS signer).
+ */
+export function computeProvenanceDigest(iss: string, provenance: ArtifactEvidence): string {
+  return computeAnchor(WORK_PRODUCT_PROVENANCE_TYP, iss, provenance as unknown as JsonValue);
+}
+
+/**
+ * @spec work-products#binding — the JWS payload members. The PREDICATE analog
+ * (the sealed provenance object) is referenced by `provenance_digest` and
+ * carried ALONGSIDE the binding, never copied in, so there is one source of
+ * truth. `mediator.id` is the signer and equals the JWS `iss`.
+ */
+export interface WorkProductBindingPayload {
+  artifact_digest: string;
+  provenance_digest: string;
+  mediator: { id: string; role: "harness" | "issuer" };
+}
+
+/** Options for {@link signWorkProductBinding}. */
+export interface SignWorkProductBindingOptions {
+  /** The sealed provenance object the binding attests to (referenced, not copied). */
+  provenance: ArtifactEvidence;
+  /** The artifact whose raw bytes are the SUBJECT (unless `artifactBytes` is given). */
+  content: unknown;
+  /** The true wire bytes of the artifact; wins over `content` derivation when present. */
+  artifactBytes?: Uint8Array | string;
+  /** The trusted mediator (`harness` | `issuer`); its `id` becomes the JWS `iss`. */
+  mediator: { id: string; role: "harness" | "issuer" };
+  /** The mediator's ES256 signing key. */
+  key: Parameters<SignJWT["sign"]>[0];
+  /** The `kid` identifying that key in the mediator's published keys. */
+  kid: string;
+}
+
+/**
+ * @spec work-products#binding — sign the binding with the MEDIATOR's key. This
+ * is the low-level PRIMITIVE: it does NOT enforce the producer-is-not-signer
+ * custody rule. That rule lives in the kernel `bindWorkProduct` (which refuses
+ * before signing) and in {@link verifyWorkProductBinding} (which refuses on
+ * receipt), one throw or reason per layer. The JWS `iss` and the provenance
+ * digest envelope `iss` are both the mediator identity, a single source of
+ * truth. Payload members: `artifact_digest`, `provenance_digest`, `mediator`,
+ * plus the envelope `iss` and `iat`.
+ */
+export async function signWorkProductBinding(opts: SignWorkProductBindingOptions): Promise<string> {
+  const iss = opts.mediator.id;
+  return new SignJWT({
+    artifact_digest: computeArtifactDigest(opts.artifactBytes ?? opts.content),
+    provenance_digest: computeProvenanceDigest(iss, opts.provenance),
+    mediator: opts.mediator,
+  })
+    .setProtectedHeader({ alg: "ES256", kid: opts.kid, typ: WORK_PRODUCT_BINDING_TYP })
+    .setIssuer(iss)
+    .setIssuedAt()
+    .sign(opts.key);
+}
+
+/** The result of {@link verifyWorkProductBinding}. */
+export type BindingVerifyResult =
+  | { valid: true; mediator: { id: string; role: "harness" | "issuer" }; iss: string }
+  | {
+      valid: false;
+      reason:
+        | "signature"
+        | "malformed"
+        | "unrecognized_algorithm"
+        | "artifact_digest"
+        | "provenance_digest"
+        | "self_asserted";
+    };
+
+/** Options for {@link verifyWorkProductBinding}. */
+export interface VerifyWorkProductBindingOptions {
+  /** The JWS Compact binding. */
+  jws: string;
+  /** The provenance object AS RECEIVED (possibly re-attached to a different artifact). */
+  provenance: ArtifactEvidence;
+  /** The artifact AS RECEIVED. */
+  content: unknown;
+  /** The true wire bytes of the received artifact; wins over `content` when present. */
+  artifactBytes?: Uint8Array | string;
+  /** The mediator's published verification keys. */
+  jwks: { keys: JWK[] };
+}
+
+/**
+ * @spec work-products#binding — verify a binding (receiver order): (1) verify
+ * the JWS signature against the mediator's keys with the binding `typ`; (2)
+ * shape-check the payload; (3) reject an unrecognized digest algorithm prefix
+ * BEFORE any compare (core integrity-anchor rule); (4) recompute the artifact
+ * digest over the RECEIVED bytes and match; (5) recompute the provenance digest
+ * over the RECEIVED provenance object and match; (6) reject a binding whose
+ * signer equals the provenance `producer` (self-attestation defeats the custody
+ * boundary regardless of what a local sign path refuses).
+ *
+ * A valid binding is a PRECONDITION to trusting the attribution, NEVER a PDP
+ * permit input: the Receiving Mission MUST still re-evaluate any proposed action
+ * under its OWN Authority Set. Attribution integrity narrows what the object can
+ * be re-attached to; it never widens what a reader may do.
+ */
+export async function verifyWorkProductBinding(
+  opts: VerifyWorkProductBindingOptions,
+): Promise<BindingVerifyResult> {
+  let payload: JWTPayload;
+  try {
+    ({ payload } = await jwtVerify(opts.jws, createLocalJWKSet({ keys: opts.jwks.keys } as never), {
+      typ: WORK_PRODUCT_BINDING_TYP,
+    }));
+  } catch {
+    return { valid: false, reason: "signature" };
+  }
+  const iss = payload.iss;
+  const artifactDigest = payload.artifact_digest;
+  const provenanceDigest = payload.provenance_digest;
+  const mediator = payload.mediator as { id?: unknown; role?: unknown } | undefined;
+  if (
+    typeof iss !== "string" ||
+    typeof artifactDigest !== "string" ||
+    typeof provenanceDigest !== "string" ||
+    !mediator ||
+    typeof mediator.id !== "string" ||
+    (mediator.role !== "harness" && mediator.role !== "issuer") ||
+    mediator.id !== iss
+  ) {
+    return { valid: false, reason: "malformed" };
+  }
+  if (!artifactDigest.startsWith("sha-256:") || !provenanceDigest.startsWith("sha-256:")) {
+    return { valid: false, reason: "unrecognized_algorithm" };
+  }
+  if (computeArtifactDigest(opts.artifactBytes ?? opts.content) !== artifactDigest) {
+    return { valid: false, reason: "artifact_digest" };
+  }
+  if (computeProvenanceDigest(iss, opts.provenance) !== provenanceDigest) {
+    return { valid: false, reason: "provenance_digest" };
+  }
+  if (opts.provenance.producer === mediator.id) {
+    return { valid: false, reason: "self_asserted" };
+  }
+  return { valid: true, mediator: { id: mediator.id, role: mediator.role }, iss };
 }
 
 export type Evidence =

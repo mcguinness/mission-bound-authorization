@@ -46,7 +46,12 @@
  */
 
 import type { JsonValue } from "@mission/core";
-import { type ArtifactEvidence, buildArtifactEvidence } from "@mission/mcp-payments";
+import {
+  type ArtifactEvidence,
+  buildArtifactEvidence,
+  signWorkProductBinding,
+  type SignWorkProductBindingOptions,
+} from "@mission/mcp-payments";
 import type { MissionKernel } from "./kernel.js";
 
 /**
@@ -213,4 +218,75 @@ export function ingestWorkProduct<C = JsonValue>(
     provenance: input.workProduct.provenance,
     content: input.workProduct.content,
   };
+}
+
+/** The members {@link bindWorkProduct} accepts. */
+export interface BindWorkProductInput<C = JsonValue> {
+  /** The produced work product whose provenance is being bound to its artifact. */
+  workProduct: WorkProduct<C>;
+  /**
+   * @spec work-products#binding, #conformance — the trusted mediator SIGNING the
+   * binding: the SAME two competent attachers {@link produceWorkProduct} allows
+   * (`harness` = the Agent Deployment's execution environment, or `issuer` = the
+   * Mission Issuer). Its `id` MUST differ from the provenance `producer`.
+   */
+  mediator: ProvenanceMediator;
+  /** The mediator's ES256 signing key. */
+  key: SignWorkProductBindingOptions["key"];
+  /** The `kid` identifying that key in the mediator's published keys. */
+  kid: string;
+  /** The true wire bytes of the artifact; wins over the content derivation when present. */
+  artifactBytes?: Uint8Array | string;
+}
+
+/**
+ * @spec work-products#binding — attach a TRUSTED-MEDIATOR-signed binding to a
+ * produced work product, proving the provenance object describes THIS specific
+ * artifact. The binding is a SEPARATE signed object beside the sealed five-member
+ * provenance object; the provenance object is never modified, and this function
+ * carries NO authority (a valid binding is a precondition to trusting the
+ * attribution, never a PDP permit input; the Receiving Mission still re-evaluates
+ * under its OWN Authority Set).
+ *
+ * The custody boundary mirrors {@link produceWorkProduct}: two independent,
+ * MUST-level guards precede the signature, and both reuse {@link
+ * ProvenanceCustodyError} and its existing reason vocabulary rather than
+ * inventing a parallel one:
+ *   - `mediator.role` MUST be a trusted attacher (`harness` | `issuer`); anything
+ *     else is refused `untrusted_mediator_role`.
+ *   - `mediator.id` MUST differ from the provenance `producer`: a producing agent
+ *     signing its own binding is the self-attestation the custody boundary
+ *     prevents, refused `self_asserted`.
+ *
+ * Unlike {@link produceWorkProduct} / {@link ingestWorkProduct}, this function
+ * takes NO kernel and performs NO gateActive check: liveness belongs at
+ * PRODUCTION (an artifact cannot be produced under a non-live Mission), while
+ * binding is a custody SIGNATURE over an already-produced provenance object. A
+ * mediator (e.g. the Mission Issuer) may legitimately bind after production, so
+ * gating here would assert a rule the profile does not state.
+ */
+export async function bindWorkProduct<C = JsonValue>(
+  input: BindWorkProductInput<C>,
+): Promise<string> {
+  const { workProduct, mediator } = input;
+  if (mediator.role !== "harness" && mediator.role !== "issuer") {
+    throw new ProvenanceCustodyError(
+      "untrusted_mediator_role",
+      `binding mediator role '${mediator.role}' is not a trusted attacher (harness|issuer)`,
+    );
+  }
+  if (mediator.id === workProduct.provenance.producer) {
+    throw new ProvenanceCustodyError(
+      "self_asserted",
+      "a producing agent MUST NOT sign its own Work Product Provenance binding",
+    );
+  }
+  return signWorkProductBinding({
+    provenance: workProduct.provenance,
+    content: workProduct.content,
+    ...(input.artifactBytes !== undefined ? { artifactBytes: input.artifactBytes } : {}),
+    mediator: { id: mediator.id, role: mediator.role },
+    key: input.key,
+    kid: input.kid,
+  });
 }
