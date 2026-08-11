@@ -1148,20 +1148,55 @@ to the decision-API binding, the issuance profile's expansion
 mechanism, and the deployment's own governance.
 
 A decision separates three response lanes, and a binding maps each
-lane to its wire. Mandatory enforcement duties ride the permit and
-bind the PEP: request binding, permit expiry, use limits, evidence
-emission; failing one makes the effective result deny. Governance
-state creation rides the request-approval loop, never the permit. A
-transient condition is a denial expected to clear with time: it
-carries a retry signal and calls for neither remediation nor a
-request. The AuthZEN binding realizes these lanes as obligations,
-ARAP composition, and its transient-denial members ({{authzen}}).
+lane to its wire. Obligations and advice are PEP work under the
+existing decision: obligations bind (request binding, permit expiry,
+use limits, evidence emission; failing one makes the effective result
+deny), and advice, where a binding defines it, is safely ignorable
+and never carries a mandatory control. Governance rides the
+request-approval loop, never the permit: an access request tracked by
+a task handle, resolved by an approval or another authority-state
+change. Partial evaluation, residual policy the PEP completes
+locally, is the third lane; this profile reserves it and defines no
+residual form. Two things are not lanes: a description of
+requestable authority is payload a request may carry, and a
+transient condition is a denial outcome carrying a retry signal,
+calling for neither remediation nor a request. The AuthZEN binding
+realizes the first two lanes and the transient outcome as
+obligations, ARAP composition, and its transient-denial members
+({{authzen}}).
 
 The PDP's placement is a deployment choice (co-located with the
 Mission's `issuer`, embedded in the Resource Server, a tenant-scoped
 service, or a shared service); this document does not mandate one. The
 requirement is only that a PEP at each consequential boundary can
 reach an applicable PDP.
+
+## Decision Output {#decision-output}
+
+Whatever the wire, a runtime decision presents one abstract output,
+and a binding maps each member onto its protocol rather than
+inventing parallel semantics:
+
+- an outcome: permit or deny;
+- an evaluation identifier and evaluation time, correlating the
+  decision with its evidence;
+- on a deny, a reason from the binding's failure classification;
+- zero or more obligations: mandatory enforcement duties the PEP
+  completes under the existing decision, where an unfulfilled or
+  unrecognized obligation is an effective deny;
+- zero or more advice items, where the binding defines them: safely
+  ignorable hints that never carry a mandatory control;
+- optionally, an access-request signal marking a denial requestable
+  through a governance workflow;
+- optionally, a retry signal marking a denial transient, with a wait
+  interval; and
+- a reserved residual-policy member for a future partial-evaluation
+  composition, which this profile does not define.
+
+An approval produced by the governance workflow returns as decision
+input on a fresh evaluation ({{action-approval}}), never as output
+state. The AuthZEN binding maps this output onto its response
+context, the obligations profile, and ARAP ({{authzen}}).
 
 ## Decision Inputs {#decision-inputs}
 
@@ -1247,9 +1282,13 @@ invariants, and risk policy.
 ### Parameters {#input-parameters}
 
 Every `constraints` value on the applicable entry MUST be evaluated
-against the concrete action parameters. A constraint the PDP does
-not understand or cannot enforce or meter MUST cause refusal; it
-MUST NOT be ignored or reduced to disclosure-only treatment.
+against its declared input domain: the concrete action parameters
+for parameter constraints, and, where the constraint's definition
+declares them, the resource, the subject, Mission state, time,
+history, or metered consumption. A constraint the PDP does not
+understand, cannot supply the declared inputs for, or cannot enforce
+or meter MUST cause refusal; it MUST NOT be ignored or reduced to
+disclosure-only treatment.
 
 ### Actor {#input-actor}
 
@@ -1319,6 +1358,10 @@ names ({{I-D.draft-mcguinness-mission-architecture}}): the resource
 prices "delete database" the same in isolation and inside an
 approved migration whose copy steps completed, and only the layer
 where the undertaking's history accumulates can tell the two apart.
+The policy side selects: the deployment's policy or materialized
+view names the predicates a decision requires, and the requesting
+component supplies facts or an evidence reference, never the choice
+of predicate.
 
 History is a decision input, never a grant. A history predicate
 MUST NOT expand authority beyond the issued
@@ -1534,19 +1577,26 @@ SHA-256(JCS({
 ~~~
 
 The committed materialized view payload MUST carry the Mission's
-`mission_id` and `authority_hash` as members, and the Mission's state
-version current at materialization
-({{I-D.draft-mcguinness-oauth-mission-status}}) where the deployment
-serves one, so a consumer can tell a fresh-but-obsolete view from
-current state. A consistency check
-between a decision request's Mission reference and the loaded view is
-therefore an equality test: the request's Mission `id` and
-`authority_hash` either equal the committed values or the view does
-not apply. Because `policy_view_id` is a content hash, any change to
-the view yields a new `policy_view_id`, so equality on
-`policy_view_id` is the cache identity and freshness test. This
-document defines no second canonicalization and no policy-language
-wire form for the view.
+`mission_id` and `authority_hash` as members. It MUST NOT embed
+Mission lifecycle state: three independent values govern reliance,
+and conflating them is the common implementation error.
+`policy_view_id` is the content identity of the compiled authority
+and the cache key. A `mission_state_version`, where the deployment
+serves one ({{I-D.draft-mcguinness-oauth-mission-status}}), versions
+the mutable lifecycle state the decision consulted. The state
+observation's freshness or lease bounds how long that consultation
+stands ({{state-freshness}}). A state transition invalidates
+reliance through the version and freshness values without
+re-identifying the compiled authority; the view acquires a new
+`policy_view_id` only when the authority it compiles changes. A
+consistency check between a decision request's Mission reference and
+the loaded view is therefore an equality test: the request's Mission
+`id` and `authority_hash` either equal the committed values or the
+view does not apply. Because `policy_view_id` is a content hash, any
+change to the view yields a new `policy_view_id`, so equality on
+`policy_view_id` is the cache identity; it is never the freshness
+test. This document defines no second canonicalization and no
+policy-language wire form for the view.
 
 ## Semantic Evaluators {#semantic-evaluators}
 
