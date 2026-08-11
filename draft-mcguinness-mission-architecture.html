@@ -1476,7 +1476,10 @@ either digest from the record alone (the core's Mission Approval,
 Integrity Anchors, and Canonicalization Rules sections). The record
 is immutable except for its state (the Mission Record section).<a href="#section-4-5" class="pilcrow">¶</a></p>
 <p id="section-4-6">The core lifecycle states are <code>active</code>, <code>revoked</code>, and <code>expired</code>, and
-only <code>active</code> permits issuance or continued reliance.<a href="#section-4-6" class="pilcrow">¶</a></p>
+only <code>active</code> permits issuance or continued reliance. A non-active
+state stops new derivation at once; authority already issued ends at
+the earliest of delivered revocation, a runtime or state-aware
+re-check, or the credential's own expiry (<a href="#validity-model" class="auto internal xref">Section 11.10</a>).<a href="#section-4-6" class="pilcrow">¶</a></p>
 <p id="section-4-7">Companions add states (<code>suspended</code>, <code>completed</code>, <code>superseded</code>,
 <code>cascaded</code>), and one rule keeps that safe without a registry: a
 consumer treats every state other than the exact value <code>active</code>,
@@ -1600,7 +1603,10 @@ conformance (<a href="#requirements" class="auto internal xref">Section 19</a>),
 freshness source (the Runtime-Enforced level,
 <a href="#assurance-levels" class="auto internal xref">Section 16</a>). This is the architecture this document
 means when it says a Mission is enforced, and the one an
-evaluation should picture by default.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+evaluation should picture by default. It presumes an
+authority-bearing binding; under AAuth the analogous per-action
+control is the Person Server's contextual gate on PS-mediated
+paths (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.5">
@@ -1883,7 +1889,10 @@ every other state, including an unrecognized one, fails safe (the
 core's Mission Lifecycle and Gating section). In AAuth, only PS
 operations and the PS-asserted and federated authorization paths are
 structurally gated; identity-based and resource-managed decisions do
-not pass through the PS.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+not pass through the PS. On the gated paths the gate covers requests
+whose resource token carries the validated Mission Reference; a
+stripped reference yields a missionless request, bounded by the
+binding's downgrade rules (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-9-3.5">
@@ -2174,7 +2183,11 @@ surface crossing all of them:<a href="#section-10-5" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-10.1-1">One material action splits across these roles, and the family keeps
 each distinct and attributable rather than collapsing them into one
-"agent" identity:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+"agent" identity. The identifiers below are the issuance profile's
+instantiation; AAuth carries the same distinctions natively with its
+<code>agent</code> identifier, the Person at the PS, <code>parent_agent</code> for a
+parent-mediated sub-agent, and the call chain for a service hop
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>):<a href="#section-10.1-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-10.1-2">
           <dt id="section-10.1-2.1">Principal:</dt>
           <dd style="margin-left: 1.5em" id="section-10.1-2.2">
@@ -2278,8 +2291,8 @@ estate's published claims manifest, not a property of an agent.<a href="#section
           <dd class="break"></dd>
 <dt id="section-10.2-2.5">Mission (why the authority exists):</dt>
           <dd style="margin-left: 1.5em" id="section-10.2-2.6">
-            <p id="section-10.2-2.6.1">This family's object: the approved task, its Authority Set, and
-its lifecycle.<a href="#section-10.2-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-10.2-2.6.1">This family's object: the approved task, its lifecycle, and, where
+the binding derives one, its Authority Set.<a href="#section-10.2-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2843,7 +2856,11 @@ consuming contract is equally short: meaning binds at approval, is
 enforced at the point of use, and any translation between the
 resource's vocabulary and another party's is trusted, verified, or
 separately approved, never a place where authority widens
-(<a href="#approval-fidelity" class="auto internal xref">Section 11.9</a>).<a href="#section-13-1" class="pilcrow">¶</a></p>
+(<a href="#approval-fidelity" class="auto internal xref">Section 11.9</a>). One boundary is shared by agreement: the
+resource owns its operation semantics and consequences, while the
+family owns the registered cross-resource constraint vocabulary,
+which a resource explicitly advertises and adopts before it binds
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-13-1" class="pilcrow">¶</a></p>
 <p id="section-13-2">Resource-owned meaning reaches the three consuming layers through
 five mechanisms, each normative in its own home and composing as one
 contract:<a href="#section-13-2" class="pilcrow">¶</a></p>
@@ -3074,7 +3091,12 @@ Management,
 fleet enumeration and bulk lifecycle for operators
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>); and Discovery,
 experimental, binding encountered resources within a pre-consented
-ceiling (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>).<a href="#section-14.3-1" class="pilcrow">¶</a></p>
+ceiling (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>). The AAuth
+binding carries this verb natively: its management companion for
+status, termination, and delegation-tree queries
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span>), and its expiry
+extension for the approved lifetime bound
+(<span>[<a href="#I-D.draft-mcguinness-aauth-mission-expiry" class="cite xref">I-D.draft-mcguinness-aauth-mission-expiry</a>]</span>).<a href="#section-14.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="enforce-each-action">
@@ -3124,7 +3146,10 @@ section. The chooser: the core's token-exchange delegation for an
 execution hop living and dying with the parent's lifecycle; a Child
 Mission when the delegate needs its own lifecycle, approval, or
 audit identity; attenuation, experimental, only where offline
-minting is the constraint.<a href="#section-14.6-1" class="pilcrow">¶</a></p>
+minting is the constraint. AAuth delegates natively: a
+parent-mediated sub-agent under <code>parent_agent</code>, distinct from the
+call chain of a service hop, with no Authority Set machinery imported
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-14.6-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="project">
@@ -3584,10 +3609,12 @@ issuance join
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>) restores
 gated issuance at each consuming Authorization Server, and
 Baseline with it.<a href="#section-16-9.2.4" class="pilcrow">¶</a></p>
-<p id="section-16-9.2.5">Under AAuth, Baseline means native approval, exact-byte commitment,
-active or terminated state, and the ordered mission log. The
-possession-independent issuance cutoff applies only to PS-asserted
-and federated paths; no Authority Set or subset proof is implied.<a href="#section-16-9.2.5" class="pilcrow">¶</a></p>
+<p id="section-16-9.2.5">The nearest AAuth comparison, stated as capabilities rather than a
+level: native approval, exact-byte commitment, active or terminated
+state, and the ordered mission log. The possession-independent
+issuance cutoff applies only to PS-asserted and federated requests
+whose resource token carries the validated Mission Reference; no
+Authority Set or subset proof is implied.<a href="#section-16-9.2.5" class="pilcrow">¶</a></p>
 <p id="section-16-9.2.6">Proof obligations: the anchored approval and, where credentials
 are issued, the subset rule. A deployment that adds only a
 freshness surface, Mission Status or introspection with a
@@ -3960,7 +3987,7 @@ needs the whole matrix:<a href="#section-18.1-1" class="pilcrow">¶</a></p>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Mission kill</td>
-              <td class="text-left" rowspan="1" colspan="1">one body of work, across every resource and derived credential</td>
+              <td class="text-left" rowspan="1" colspan="1">one body of work: new derivation at once, and residual credentials at the earliest of revocation, re-check, or their own expiry (<a href="#validity-model" class="auto internal xref">Section 11.10</a>)</td>
               <td class="text-left" rowspan="1" colspan="1">the core's revocation; cascades to Child Missions (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)</td>
             </tr>
             <tr>
@@ -4025,7 +4052,8 @@ They stand on their own as a checklist, but conformance is capability-
 layered rather than measured by resemblance to the OAuth wire model
 (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-19-1" class="pilcrow">¶</a></p>
 <p id="section-19-2">A design provides the shared <strong>Mission Context</strong> capabilities when the
-first four properties hold:<a href="#section-19-2" class="pilcrow">¶</a></p>
+first four properties, a compact restatement of the substrate
+contract's kernel (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>), hold:<a href="#section-19-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-19-3">
 <li id="section-19-3.1">
           <p id="section-19-3.1.1"><strong>An approved task context</strong>: the task is durable and explicitly
@@ -4034,11 +4062,15 @@ approved rather than only a session or token.<a href="#section-19-3.1.1" class="
         <li id="section-19-3.2">
           <p id="section-19-3.2.1"><strong>Stable binding and integrity</strong>: a native reference binds the
 controlling authority, acting actor, and immutable approved context,
-or a verifiable commitment to that context.<a href="#section-19-3.2.1" class="pilcrow">¶</a></p>
+or a verifiable commitment to that context, and propagation or
+correlation rules carry the reference across parties without
+conferring authority.<a href="#section-19-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-19-3.3">
-          <p id="section-19-3.3.1"><strong>Lifecycle gate</strong>: only an active context supports new governed
-decisions at the binding's declared control point.<a href="#section-19-3.3.1" class="pilcrow">¶</a></p>
+          <p id="section-19-3.3.1"><strong>Lifecycle gate with a reliance bound</strong>: only an active context
+supports new governed decisions at the binding's declared control
+point, and no decision or artifact outlives both its stated bound
+and the transition that ends the context.<a href="#section-19-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-19-3.4">
           <p id="section-19-3.4.1"><strong>Governance history</strong>: decisions and interactions are correlated to
@@ -4070,8 +4102,10 @@ checkable against the object at the point of use.<a href="#section-19-7.1.1" cla
 is reconstructible from evidence joined on the object's identity.<a href="#section-19-7.2.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-19-8">AAuth supplies the first four natively, with its lifecycle gate scoped
-to PS endpoints and PS-mediated authorization paths. The OAuth core
+<p id="section-19-8">AAuth as its binding profiles it, including AAuth Mission Expiry for
+the reliance bound, supplies the first four, with its lifecycle gate
+scoped to PS endpoints and PS-mediated paths carrying the validated
+reference. The OAuth core
 supplies the structured-authority layer as well. Runtime and portable
 evidence remain separately claimed capabilities; the requirements below
 unpack the family mechanisms without implying every binding implements
@@ -4533,6 +4567,13 @@ transparency-side mechanism
 (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). The status profile's
 anti-oracle property bounds what its status surfaces disclose
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-22-1" class="pilcrow">¶</a></p>
+<p id="section-22-2">The AAuth binding's privacy posture is its own
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>): the private mission blob
+never leaves the agent and the Person Server, the stable
+<code>{approver, s256}</code> reference is a correlation handle across every
+resource that sees it, and the mission log concentrates a detailed
+activity history at the Person Server, with the binding's
+minimization and retention duties applying there.<a href="#section-22-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">
