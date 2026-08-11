@@ -758,10 +758,11 @@ has the following members:
   that knowledge the same way. An entry of an unadvertised type, or
   one that fails its schema, MUST NOT be carried into the Authority
   Set unexamined: the AS refuses the Intent with
-  `invalid_authorization_details`, or omits the entry and signals
-  partial derivation with the `mission_derivation` token-response
-  parameter ({{authorization-derivation}}); it MUST NOT keep the
-  entry silently.
+  `invalid_authorization_details`, or omits the entry; it MUST NOT
+  keep the entry silently, and where the AS omits the entry the
+  granted `authorization_details` echo ({{mission-bound-tokens}})
+  MUST reflect the omission, so no entry is ever represented as
+  granted when it was not.
 
   When present, the AS MUST derive each Authority Set entry as a
   subset ({{subset}}) of some `proposed_authority` entry of the
@@ -1015,14 +1016,12 @@ A `resources` entry the deployment does not recognize either causes
 refusal with `invalid_authorization_details` ({{submission-via-par}})
 or is omitted from the Authority Set, by deployment policy. When an
 omission or a narrowing leaves the Authority Set short of what the
-Intent proposed, derivation is partial, and the AS signals it
-machine-readably: a token response under a partially derived Mission
-MUST include the `mission_derivation` token-response parameter
-({{iana}}) with the value `partial`, and MAY carry it with the value
-`full` otherwise, so a client learns of omission without diffing the
-`authorization_details` echo ({{mission-bound-tokens}}) against its
-proposal. The echo remains the authoritative statement of what was
-granted.
+Intent proposed, derivation is partial. The granted
+`authorization_details` echo ({{mission-bound-tokens}}) MUST reflect
+every omission and narrowing and remains the authoritative statement
+of what was granted; a client learns of any shortfall by comparing
+the echo against its proposal. No omitted or narrowed entry is ever
+represented as granted.
 
 The derived Authority Set, not the Mission Intent, is the authority the
 Approver consents to: the AS renders the Authority Set for approval and
@@ -1295,8 +1294,8 @@ registered Common Constraint key present in the ceiling entry that the
 AS does not implement narrowing for MUST NOT be dropped while the
 entry survives. The AS MUST instead fail closed: refuse the whole
 derivation, or omit the entry from the result, exactly as an
-unrecognized `resources` value already may be, signaling a partial
-derivation through `mission_derivation` where that applies
+unrecognized `resources` value already may be; the granted
+`authorization_details` echo reflects any such omission
 ({{authorization-derivation}}). Carrying the entry forward with the
 key dropped would widen effective authority past the ceiling exactly
 as an unenforced key would at the Resource Server
@@ -3781,12 +3780,6 @@ registry:
 - Change Controller: IESG
 - Specification Document(s): this document, {{grant-binding}}
 
-- Name: `mission_derivation`
-- Parameter Usage Location: token response
-- Change Controller: IESG
-- Specification Document(s): this document,
-  {{authorization-derivation}}
-
 - Name: `mission_error`
 - Parameter Usage Location: token response
 - Change Controller: IESG
@@ -4236,8 +4229,7 @@ resolve before interoperating.
   portable Intent semantics) is stated. Template mode publishes its
   mapping space as deployment documentation and distinguishes
   no-mapping from policy refusals.
-- New wire surface: the `mission_derivation` token-response
-  parameter, the `mission_error` and `derivations_remaining`
+- New wire surface: the `mission_error` and `derivations_remaining`
   introspection members, the `mission_denial` WWW-Authenticate
   attribute, and the `mission_constraints_supported`
   protected-resource metadata member. The `mission` claim gains an
