@@ -402,9 +402,17 @@ After authenticating and authorizing the caller, the PS returns:
   "approved_at": "2026-04-07T14:30:00Z",
   "expires_at": "2026-04-14T14:30:00Z",
   "terminated_at": "2026-04-10T09:12:43Z",
-  "termination_reason": "revoked"
+  "termination_reason": "revoked",
+  "observed_at": "2026-04-10T09:15:02Z",
+  "fresh_until": "2026-04-10T09:15:32Z"
 }
 ~~~
+
+`observed_at` and `fresh_until` are REQUIRED RFC 3339 `date-time`
+values {{RFC3339}}: the instant the PS evaluated the mission's state,
+and the latest instant a consumer may rely on this response.  The
+interval between them is deployment policy and MAY follow a published
+maximum staleness.
 
 `mission`, `mission_status`, and `approved_at` are REQUIRED.  The
 `mission_status` member reuses the name and values the base protocol
@@ -415,14 +423,12 @@ RFC 3339 `date-time` {{RFC3339}}; it and `termination_reason` are
 REQUIRED when `mission_status` is `terminated` and MUST be absent
 while it is `active`.
 
-The response is current at the instant the PS evaluates the request.
-It is not a promise that the state will remain active.  For a
-consumer that relies on a status response for a covered decision of
-its own, the contract is zero-cache: each reliance requires a fresh
-query, and a response has no reliance lifetime beyond its evaluation
-instant.  A failed, invalid, or unrecognized status response
-establishes nothing; the consumer MUST fail closed and MUST NOT treat
-the mission as `active` on its basis.  An Agent MUST
+The response reports state as of `observed_at` and is reliable until
+`fresh_until`; it is not a promise that the state will remain active.
+A consumer MUST NOT rely on a response after its `fresh_until`, and a
+failed, invalid, unrecognized, or stale response establishes nothing:
+the consumer MUST fail closed and MUST NOT treat the mission as
+`active` on its basis.  An Agent MUST
 stop initiating work when it receives `terminated`.  Polling is a
 freshness mechanism, not the safety floor: every PS endpoint still
 enforces mission state itself.

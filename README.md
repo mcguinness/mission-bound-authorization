@@ -737,9 +737,9 @@ ordered mission log. The binding uses those elements unchanged and
 defines no new wire members. It treats the Person Server as the
 controlling authority for contextual governance, while scopes, resource
 tokens, Resource and Access Server policy, and optionally R3 carry
-deterministic resource authorization. `approved_tools` are local
-actions that bypass per-call permission at the Person Server; they are
-not remote resource authority. Active-state issuance gating is
+deterministic resource authorization. `approved_tools` are tool
+invocations exempt from per-call permission at the Person Server; they
+are not remote resource authority. Active-state issuance gating is
 structural only in PS-asserted and federated access. Identity-based and
 resource-managed resources may propagate or ignore the reference and
 are not Person-Server-gated. Its Mission Substrate Statement declares
