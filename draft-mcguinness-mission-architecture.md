@@ -1139,14 +1139,21 @@ Substrate Statement (Lifecycle-Gated Authorization, State-Observable,
 Structured Authority, Monotonic Derivation, Credential-Bound,
 Independently Verifiable, and Portable Evidence).
 
-The companion profiles named without "oauth" are defined against that
-contract as the issuance profile instantiates it; each names what it
-consumes in a Mission Substrate section of its own. This section
-consolidates the issuance profile's instantiation: eight primitives,
-each with its normative home and its consumers. Every sentence
-mirrors a rule the named profile states normatively, and none of the
-eight is, by itself, a kernel requirement of the binding-neutral
-contract.
+The companion profiles named without "oauth" are defined against the
+binding-neutral contract and declare, each in a Mission Substrate
+section of its own, the kernel functions and optional capabilities
+they consume. Where a companion consumes a concrete representation,
+it is today the issuance profile's.
+
+The remainder of this section documents that instantiation: eight
+primitives, each with its normative home and its consumers. Every
+sentence mirrors a rule the named profile states normatively. None of
+these issuance-profile representations or stronger semantics is
+required verbatim by the binding-neutral kernel, although several
+instantiate mandatory kernel functions: the identifier and issuer
+realize the Mission Reference and Controller, the lifecycle realizes
+the governance gate, token validity participates in bounded reliance,
+and the audit horizon participates in the governance record.
 
 ## The Mission Identifier and Issuer
 
