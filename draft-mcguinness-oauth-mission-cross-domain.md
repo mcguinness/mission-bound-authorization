@@ -266,8 +266,10 @@ for the pattern this profile attaches Mission context to.
 This document is a thin Mission-bound profile of the cross-domain
 grant, not merely `mission`-claim carriage: beyond attaching and
 validating Mission context, it imposes two security requirements on the
-grant for Mission-bound use, proof-of-possession and single use
-({{cross-domain-grant}}, {{validation-at-resource-as}}). The grant's
+grant for Mission-bound use, proof-of-possession (by requiring the
+grant profile's own mechanism, which the ID-JAG profile leaves
+OPTIONAL) and single use ({{cross-domain-grant}},
+{{validation-at-resource-as}}). The grant's
 own format, signing, and token-exchange envelope remain defined by the
 cross-domain grant profile (ID-JAG in the recommended case) and its
 underlying {{RFC8693}} and {{RFC7523}}; this document does not redefine
