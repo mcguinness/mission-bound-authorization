@@ -141,6 +141,8 @@ export {
 export {
   produceWorkProduct,
   ingestWorkProduct,
+  bindWorkProduct,
+  type BindWorkProductInput,
   ProvenanceCustodyError,
   type ProvenanceMediator,
   type ProvenanceCustodyDenialReason,
@@ -149,6 +151,19 @@ export {
   type IngestWorkProductInput,
   type IngestedWorkProduct,
 } from "./kernel/work-products.js";
+export {
+  verifyWorkProductBinding,
+  signWorkProductBinding,
+  computeArtifactDigest,
+  computeProvenanceDigest,
+  workProductBytes,
+  WORK_PRODUCT_BINDING_TYP,
+  WORK_PRODUCT_PROVENANCE_TYP,
+  type WorkProductBindingPayload,
+  type SignWorkProductBindingOptions,
+  type VerifyWorkProductBindingOptions,
+  type BindingVerifyResult,
+} from "@mission/mcp-payments";
 export {
   mintChildGrant,
   CHILD_GRANT_TYP,

@@ -32,6 +32,7 @@ import {
 } from "@mission/pdp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  bindWorkProduct,
   type BuiltAs,
   buildAuthorizationServer,
   ChildDelegationError,
@@ -39,8 +40,11 @@ import {
   ingestWorkProduct,
   isSubsetSet,
   produceWorkProduct,
+  ProvenanceCustodyError,
   validateMissionIntent,
+  verifyWorkProductBinding,
 } from "../src/index.js";
+import { exportJWK, generateKeyPair } from "jose";
 import { aiAgents } from "./actor-profiles.helper.js";
 
 const PORT = 14498;
@@ -296,5 +300,111 @@ d("work products: information may propagate, authority may not", () => {
     const stillDenied = await evalAction(missionB.id, ARTIFACT_ACTION);
     expect(stillDenied.decision).toBe(false);
     expect(stillDenied.context.denial_reason).toBe("out_of_authority");
+  });
+
+  it("a mediator-signed binding proves attribution integrity for THIS artifact", async () => {
+    // A trusted-mediator (harness) key: in the stack the Agent Deployment's
+    // execution environment holds this. It is NOT the producing agent's key.
+    const kp = await generateKeyPair("ES256", { extractable: true });
+    const kid = "harness-dep-A1";
+    const jwks = {
+      keys: [{ ...(await exportJWK(kp.publicKey)), kid, alg: "ES256", use: "sig" }],
+    };
+
+    const missionA = as.kernel.approve({
+      intent: intent("Pay Acme and send remittance", [
+        "payments:invoice.read",
+        "payments:remittance.send",
+      ]),
+      subject: { iss: ISSUER, sub: "alice" },
+      approver: { iss: ISSUER, sub: "bob" },
+      clientId: "agent-A1",
+      approvalEventId: "apev-wp-bind-A",
+    });
+
+    const content = {
+      note: "remittance approach worked end to end for Acme",
+      credential: "svc:remittance-signing-key",
+      endpoint: "https://payments.example/remittance/send",
+    };
+    const wp = produceWorkProduct(as.kernel, {
+      missionId: missionA.id,
+      deploymentId: "dep_A1",
+      producer: "agent:A1",
+      mediator: { id: "harness:dep_A1", role: "harness" },
+      content,
+    });
+
+    // Custody boundary: the PRODUCING agent MUST NOT sign its own binding.
+    await expect(
+      bindWorkProduct({
+        workProduct: wp,
+        mediator: { id: "agent:A1", role: "harness" },
+        iss: ISSUER,
+        key: kp.privateKey,
+        kid,
+      }),
+    ).rejects.toBeInstanceOf(ProvenanceCustodyError);
+
+    // The harness binds the provenance to THIS artifact.
+    const binding = await bindWorkProduct({
+      workProduct: wp,
+      mediator: { id: "harness:dep_A1", role: "harness" },
+      iss: ISSUER,
+      key: kp.privateKey,
+      kid,
+    });
+
+    // The bound artifact verifies: signature plus both recomputed digests match.
+    const ok = await verifyWorkProductBinding({
+      jws: binding,
+      provenance: wp.provenance,
+      content: wp.content,
+      jwks,
+    });
+    expect(ok.valid, JSON.stringify(ok)).toBe(true);
+    if (ok.valid) {
+      // The signer is the harness mediator; iss is the Mission Issuer URL.
+      expect(ok.mediator).toEqual({ id: "harness:dep_A1", role: "harness" });
+      expect(ok.iss).toBe(ISSUER);
+    }
+
+    // A provenance re-attached to a DIFFERENT artifact FAILS: the subject digest
+    // no longer matches, so the binding cannot be lifted onto other content.
+    const different = { ...content, credential: "svc:some-other-key" };
+    const reattached = await verifyWorkProductBinding({
+      jws: binding,
+      provenance: wp.provenance,
+      content: different,
+      jwks,
+    });
+    expect(reattached).toEqual({ valid: false, reason: "artifact_digest" });
+
+    // Symmetrically, a DIFFERENT attribution cannot claim this binding: the
+    // provenance digest no longer matches.
+    const wp2 = produceWorkProduct(as.kernel, {
+      missionId: missionA.id,
+      deploymentId: "dep_A1",
+      producer: "agent:other",
+      mediator: { id: "harness:dep_A1", role: "harness" },
+      content,
+    });
+    const swapped = await verifyWorkProductBinding({
+      jws: binding,
+      provenance: wp2.provenance,
+      content: wp.content,
+      jwks,
+    });
+    expect(swapped).toEqual({ valid: false, reason: "provenance_digest" });
+
+    // The binding is attribution integrity, NEVER authority, and it added no
+    // member to the sealed five-member provenance object.
+    expect(Object.keys(wp.provenance).sort()).toEqual([
+      "created_at",
+      "deployment_id",
+      "kind",
+      "mission_id",
+      "producer",
+    ]);
   });
 });
