@@ -46,7 +46,16 @@ const POLICY = {
       type: "mission_resource_access",
       resource: RESOURCE,
       actions: ["payments:invoice.read", "payments:payment.execute"],
-      delegation: { max_depth: 2, children: { max_children: 5, max_child_depth: 2 } },
+      delegation: {
+        max_depth: 2,
+        // Explicit child-actor eligibility (fail-closed matcher): the child actor
+        // below is an AS-asserted ai_agent (kernel actorProfiles).
+        children: {
+          max_children: 5,
+          max_child_depth: 2,
+          allowed_child_actors: [{ sub_profile: "ai_agent" }],
+        },
+      },
     },
   ],
 };
@@ -90,6 +99,8 @@ describe("suspend->resume lift accepted by the Signal receiver (@spec child-dele
       statusKey: statusKeys.privateKey,
       statusKid: "as-status",
       now: () => NOW,
+      // The child actor is an AS-asserted ai_agent (config-driven in production).
+      actorProfiles: { subagent: "ai_agent" },
       onLifecycleCommit: (c) => {
         commits.push(c);
         emitter.onCommit(c);

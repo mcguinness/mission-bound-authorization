@@ -29,6 +29,7 @@
 import { randomBytes } from "node:crypto";
 import { type ActObject, ActorChainError, extendChain, validateActChain } from "@mission/actor-chain";
 import { authorityHash, canonicalize, intentHash, type JsonValue } from "@mission/core";
+import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
 import { isSubsetEntry, isSubsetSet } from "./derive.js";
 import type { MissionKernel } from "./kernel.js";
 import {
@@ -146,23 +147,6 @@ function childrenOf(entry: AuthorityEntry): ChildFanoutControls | undefined {
  */
 function justifyingIndex(childEntry: AuthorityEntry, parentSet: AuthorityEntry[]): number {
   return parentSet.findIndex((p) => isSubsetEntry(childEntry, p));
-}
-
-/**
- * @spec child-delegation#fanout — an `allowed_child_actors` list is satisfied
- * when SOME matcher matches: a matcher matches when every field it carries
- * (`sub` and/or `sub_profile`) equals the child actor's. An absent list is
- * unconstrained. Mirrors the core `allowed_delegates` matching direction.
- */
-function actorAllowed(actor: ChildActor, matchers: unknown): boolean {
-  if (!Array.isArray(matchers)) return true; // no allowed_child_actors -> any actor
-  return matchers.some((m) => {
-    if (m === null || typeof m !== "object" || Array.isArray(m)) return false;
-    const mm = m as { sub?: unknown; sub_profile?: unknown };
-    if (mm.sub !== undefined && mm.sub !== actor.sub) return false;
-    if (mm.sub_profile !== undefined && mm.sub_profile !== actor.sub_profile) return false;
-    return true;
-  });
 }
 
 /**
@@ -326,9 +310,19 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   }
 
   // @spec child-delegation#fanout — allowed_child_actors: the child actor MUST be
-  // permitted by every justifying entry that constrains it.
+  // permitted by every justifying entry, under the SAME shared matcher as the
+  // core's allowed_delegates ({@link delegatePermitted}). The child actor's
+  // `sub_profile` is matched ONLY against the profile the AS asserts for its `sub`
+  // (kernel.actorProfile, from deployment config); the request-supplied
+  // `input.childActor.sub_profile` is self-asserted and is used ONLY for the act
+  // chain and Child Evidence, never to satisfy a `sub_profile` matcher. An absent
+  // allowed_child_actors list DENIES (fail-closed), never blanket-allows.
+  const childCandidate: DelegateCandidate = {
+    sub: input.childActor.sub,
+    assertedProfile: kernel.actorProfile(input.childActor.sub),
+  };
   for (const pi of drawnOn) {
-    if (!actorAllowed(input.childActor, childrenOf(parentEntry(pi))?.allowed_child_actors)) {
+    if (!delegatePermitted(childCandidate, childrenOf(parentEntry(pi))?.allowed_child_actors)) {
       throw new ChildDelegationError(
         "child_actor_not_allowed",
         "child actor is not permitted by a justifying entry's allowed_child_actors",

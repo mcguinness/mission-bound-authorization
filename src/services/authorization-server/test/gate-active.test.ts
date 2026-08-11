@@ -15,6 +15,7 @@ import {
   MissionKernel,
   validateMissionIntent,
 } from "../src/index.js";
+import { aiAgents } from "./actor-profiles.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -46,6 +47,7 @@ beforeEach(() => {
     statusKey: key,
     statusKid: "as-status",
     now,
+    actorProfiles: aiAgents("subagent-reader"),
   });
 });
 

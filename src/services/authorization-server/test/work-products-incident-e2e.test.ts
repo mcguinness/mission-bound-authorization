@@ -41,6 +41,7 @@ import {
   produceWorkProduct,
   validateMissionIntent,
 } from "../src/index.js";
+import { aiAgents } from "./actor-profiles.helper.js";
 
 const PORT = 14498;
 const ISSUER = `http://localhost:${PORT}`;
@@ -122,7 +123,11 @@ const evalAction = async (missionId: string, action: string) => {
 
 d("work products: information may propagate, authority may not", () => {
   beforeAll(async () => {
-    as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true });
+    as = await buildAuthorizationServer({
+      issuer: ISSUER,
+      allowHeadlessAdjudication: true,
+      actorProfiles: aiAgents("agent-B1"),
+    });
     server = as.provider.listen(PORT);
     const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;

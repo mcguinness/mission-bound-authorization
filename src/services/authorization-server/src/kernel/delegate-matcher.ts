@@ -56,7 +56,7 @@ export interface DelegateCandidate {
    * a self-asserted profile MUST NOT be passed here. Absent/empty means the AS
    * asserts no class for the candidate, so no `sub_profile` matcher is satisfied.
    */
-  assertedProfile?: string;
+  assertedProfile?: string | undefined;
 }
 
 /**
