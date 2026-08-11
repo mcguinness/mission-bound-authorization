@@ -101,6 +101,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
@@ -583,8 +591,8 @@ architecture defines ({{I-D.draft-mcguinness-mission-architecture}}). It MUST in
 - the runtime enforcement evidence mechanism and retention window
   ({{evidence}});
 - the locations of the deployment-published evidence signing key sets
-  (the AuthZEN profile's PDP and PEP key sets,
-  {{I-D.draft-mcguinness-mission-authzen}}, resolve here);
+  (the runtime evidence companion's PDP and PEP key sets,
+  {{I-D.draft-mcguinness-mission-runtime-evidence}}, resolve here);
 - the reconciliation window for matching execution-outcome evidence to
   decisions, the component responsible for orphaned-evidence and
   sequence-gap detection, and that component's alerting obligation
@@ -1974,7 +1982,8 @@ The following requirements apply to every record:
   scope MUST name the mechanism (a hash-linked log, signed segments, a
   transparency anchor, or equivalent). Where a JSON record is
   individually signed, the `evidence_envelope` JWS convention of the
-  AuthZEN profile ({{I-D.draft-mcguinness-mission-authzen}}) is the
+  runtime evidence companion
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}) is the
   suite's one signing convention for evidence objects and SHOULD be
   used, with a `typ` that names the record's own media type, rather
   than a record-specific signing scheme.
@@ -2245,7 +2254,7 @@ matter.
 single-use identifier store and idempotency match
 ({{parameter-binding}}), the metering counters and exclusivity latch
 ({{I-D.draft-mcguinness-mission-metering}}), and the per-Mission
-evidence sequence ({{I-D.draft-mcguinness-mission-authzen}}) are
+evidence sequence ({{I-D.draft-mcguinness-mission-runtime-evidence}}) are
 strongly consistent state scoped to one Mission. An embedded PDP
 evaluating an action that consults any of them pays the round trip
 to the Mission's consistency domain wherever the decision runs, so
@@ -2665,8 +2674,9 @@ These non-normative records illustrate the minimum record content of
 {{evidence}} for the operation of {{parameter-digest-example}}. They
 show substrate-level record content only: the concrete schema,
 serialization, and integrity mechanism are the deployment's
-({{record-integrity}}), and a decision-API binding defines concrete
-evidence objects ({{I-D.draft-mcguinness-mission-authzen}}). In this
+({{record-integrity}}), and the runtime evidence companion defines
+concrete evidence objects
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). In this
 deployment, the Resource Server runtime profile classifies
 `journal-entries.write` as an irreversible action (a posted entry is
 corrected only by a compensating entry), so the permit is single-use

@@ -25,7 +25,7 @@ with the PEP/PDP boundary are its data plane.
 
 At a glance:
 
-- **33 drafts, deliberately decomposed.** One mandatory core (the
+- **35 drafts, deliberately decomposed.** One mandatory core (the
   OAuth 2.0 issuance profile, [on the
   datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)),
   three further bindings (one an experimental sketch) and normative
@@ -344,7 +344,8 @@ facts are the next subsection.
    architecture's entry-ramp table maps estate starting conditions
    to the right ramp.
 2. **Implementation minimum** for agents that act: **status**,
-   **runtime**, **authzen** (the Runtime-Enforced level).
+   **runtime**, **runtime-evidence**, **authzen** (the
+   Runtime-Enforced level).
 3. **Recommended for AI agents**: **consent-evidence** and **harness**
    (the Governed Agent level).
 4. **By binding, where the estate calls for it**: **authority-server**
@@ -682,15 +683,30 @@ portable.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html)
 
+#### Mission Runtime Evidence
+
+The binding-neutral Decision Evidence, Execution Evidence, and
+Refusal Record objects a decision-API binding's PDP and PEP emit:
+their members, canonicalization, integrity envelope, media types,
+and retention. Defined against the runtime profile's abstract
+decision output and failure classification, so any decision-API
+binding produces the same records; the AuthZEN binding is one such
+producer and emits them unchanged. Correlation across records and
+wire artifacts of one evaluation is by `evaluation_id`; each record
+additionally carries its own record identifier.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-evidence.html)
+
 #### Mission-Bound Runtime Enforcement: AuthZEN Profile
 
 The concrete OpenID AuthZEN binding of the runtime decision contract. It
 maps the runtime profile's abstract decision inputs onto the AuthZEN
-Authorization API request and response, defines the Decision Evidence,
-Execution Evidence, and Refusal Record objects, and maps every runtime
-failure condition onto a wire-visible identifier. It binds the
-contract; it does not restate the enforcement semantics the runtime
-profile owns.
+Authorization API request and response, emits the Decision Evidence,
+Execution Evidence, and Refusal Record of the runtime evidence
+companion, and maps every runtime failure condition onto a
+wire-visible identifier. It binds the contract; it does not restate
+the enforcement semantics the runtime profile owns or the record
+formats the runtime evidence companion owns.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.html)
 

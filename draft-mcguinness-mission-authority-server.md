@@ -75,6 +75,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -1827,8 +1835,8 @@ A **Mission-joining PDP**:
 - evaluates joined actions under the runtime profile's decision
   contract, drawing authority from the Mission; and
 - when the AuthZEN binding is in use, emits Decision Evidence per
-  {{I-D.draft-mcguinness-mission-authzen}}, recording the Mission
-  reference the join was verified against.
+  {{I-D.draft-mcguinness-mission-runtime-evidence}}, recording the
+  Mission reference the join was verified against.
 
 # Security Considerations
 
@@ -2125,7 +2133,8 @@ verifies the subject and client joins ({{mission-join}}).
 The join holds and the action is within the Mission's Authority Set,
 so the PDP permits; the PEP executes the call to
 `https://erp.example.com`, and both record their evidence
-({{I-D.draft-mcguinness-mission-authzen}}). A revocation at the MAS
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). A revocation at
+the MAS
 stops the next such action at this step, through the runtime state
 re-check.
 

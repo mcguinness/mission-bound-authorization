@@ -28,9 +28,6 @@ author:
 normative:
   RFC3339:
   RFC6234:
-  RFC6838:
-  RFC7515:
-  RFC7518:
   RFC7519:
   RFC8259:
   RFC8785:
@@ -46,6 +43,14 @@ normative:
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
     author:
       -
         ins: K. McGuinness
@@ -135,22 +140,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-continuation:
-    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-audit:
-    title: "Mission Audit Transparency"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
 
 --- abstract
 
@@ -160,14 +149,16 @@ Enforcement Point (PEP) obtains a permit from a Policy Decision Point
 (PDP) that evaluates the action against the established Mission. This
 document is the concrete OpenID AuthZEN binding of that contract. It
 maps the contract's decision inputs onto the AuthZEN Authorization API
-request, shapes the permit and denial responses, defines the Decision
-Evidence, Execution Evidence, and Refusal Record objects a deployment
-emits and their integrity, binds every runtime failure condition to a
-wire-visible identifier, composes requestable denials with the AuthZEN
-Access Request and Approval Profile, and binds a Mission's approved
-authority to the capability source it was derived from, so a drifted
-capability definition is refused. It does not restate the enforcement
-semantics the runtime profile owns.
+request, shapes the permit and denial responses, maps decisions and
+refusals into the Decision Evidence, Execution Evidence, and Refusal
+Record of a binding-neutral evidence companion, binds every runtime
+failure condition to a wire-visible identifier, composes requestable
+denials with the AuthZEN Access Request and Approval Profile, and
+binds a Mission's approved authority to the capability source it was
+derived from, so a drifted capability definition is refused. It does
+not restate the enforcement semantics the runtime profile owns, and it
+does not restate the evidence formats the runtime evidence companion
+owns.
 
 --- middle
 
@@ -202,10 +193,10 @@ AuthZEN-binding deltas:
 - how the PDP's permit and denial responses are shaped, and the rules
   that keep a permit bound to the PEP, channel, and inputs it was
   issued for ({{pdp-response}});
-- the Decision Evidence, Execution Evidence, and Refusal Record
-  objects, their integrity, and worked examples
-  ({{decision-evidence-object}}, {{execution-evidence-object}},
-  {{pre-decision-refusal}});
+- how the PDP and PEP emit the Decision Evidence, Execution
+  Evidence, and Refusal Record of the runtime evidence companion,
+  and which response members this binding echoes into them
+  ({{evidence}});
 - the runtime denial classification and the complete mapping of the
   runtime profile's failure conditions onto wire-visible identifiers
   ({{runtime-denial-classification}}, {{failure-condition-coverage}});
@@ -306,27 +297,16 @@ Validating server:
   issuance profile this is the Mission Issuer; this profile uses the
   term where the recording role is what matters.
 
-Decision Evidence:
-: The runtime enforcement evidence record emitted by the PDP, in the
-  concrete object form of {{decision-evidence-object}}.
-
-Execution Evidence:
-: The record emitted by the PEP or executor after the authorized
-  action's outcome is determined ({{execution-evidence-object}}).
-
-Refusal Record:
-: The record a PEP emits for a refusal that occurs before any PDP
-  decision ({{pre-decision-refusal}}).
+Decision Evidence, Execution Evidence, Refusal Record:
+: The records the PDP and PEP emit for a decision, an execution
+  outcome, or a pre-decision refusal, defined by the runtime evidence
+  companion ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 Executor:
-: The component that carries out a permitted action and emits Execution
-  Evidence. It is the PEP in the common case, or a distinct component
-  where the requesting PEP and the executing component differ
-  ({{execution-evidence-object}}).
-
-Audit consumer:
-: A component or role that reads Decision Evidence and Execution
-  Evidence to reconstruct or verify a decision after the fact.
+: The component that carries out a permitted action and emits
+  Execution Evidence. It is the PEP in the common case, or a distinct
+  component where the requesting PEP and the executing component
+  differ ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 HTTP message examples follow the AuthZEN specification {{AUTHZEN}} for
 the decision request and response, and {{RFC9457}} for problem-details
@@ -556,7 +536,8 @@ following action-scoped members:
   `parameter_digest` is computed over, so the PDP's recomputation
   matches. The shape is action-specific. The PEP MAY omit `parameters`
   and supply only `parameter_digest` where the raw values are sensitive
-  ({{privacy-considerations}}), but only when the PDP can still enforce
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}), but only when
+  the PDP can still enforce
   the applicable parameter policy from the digest, the supplied
   `parameter_attributes`, or local state. If the PDP needs raw parameter
   values to evaluate an applicable constraint and they are supplied
@@ -589,7 +570,8 @@ following action-scoped members:
 `parameter_attributes`:
 : OPTIONAL. An object. Privacy-preserving attributes derived from the
   action parameters that the PEP supplies for constraint evaluation when
-  it withholds raw `parameters` ({{privacy-considerations}}). It is the
+  it withholds raw `parameters`
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}). It is the
   wire carriage of the derived attributes the runtime profile's privacy
   carve-out relies on ({{I-D.draft-mcguinness-mission-runtime}}); each
   member is a deployment-defined attribute the applicable constraints
@@ -769,14 +751,15 @@ predicate type policy MAY name, `action_class_completed`: satisfied
 when the PDP's evidence store holds, for the established Mission, at
 least one Decision Evidence record with `decision` `permit` and a
 named `action_class`, and every such record has a linked Execution
-Evidence record ({{execution-evidence-object}}) whose `outcome` is
-`completed`. An extension predicate type MUST be either a
+Evidence record ({{I-D.draft-mcguinness-mission-runtime-evidence}})
+whose `outcome` is `completed`. An extension predicate type MUST be either a
 collision-resistant name or a name coordinated within this document
 family, under the same rule as denial reasons
 ({{runtime-denial-classification}}). A policy-selected predicate
 naming `action_class_completed` carries an `action_class`: a runtime
 action class name, from the same value space as the Decision Evidence
-`action_class` member ({{decision-evidence-object}}). For a migration
+`action_class` member
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). For a migration
 Mission whose copy steps are consequential writes, policy names the
 delete step's precondition this way:
 
@@ -823,7 +806,7 @@ runtime profile fixes the fail-closed posture and the evidence
 store's freshness discipline
 ({{I-D.draft-mcguinness-mission-runtime}}). The PDP MUST record the
 evaluated predicates and their outcomes in Decision Evidence
-({{decision-evidence-object}}).
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 ## Capability Source Context {#context-capability-source}
 
@@ -1012,7 +995,8 @@ optimization and changes none of the per-item enforcement semantics:
 each item is evaluated independently and on the same terms as a single
 request.
 
-- Each item yields its own Decision Evidence Object with its own
+- Each item yields its own Decision Evidence Object
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}) with its own
   `evidence_id` and `sequence`, assigned in request order.
 - Any metered bounds apply per item in request order
   ({{I-D.draft-mcguinness-mission-metering}}).
@@ -1185,8 +1169,9 @@ so its transport behavior is specified, not assumed:
 
 - A PEP MUST bound each evaluation call with a timeout inside the
   action class's staleness budget and treat expiry as
-  `pdp_unreachable` ({{pre-decision-refusal}}): fail closed, never a
-  permit.
+  `pdp_unreachable`
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}): fail closed,
+  never a permit.
 - A PEP MAY retry an evaluation whose response was lost, carrying
   the same normalized parameters and idempotency key. The runtime
   profile's retransmission rule then returns the prior decision
@@ -1229,7 +1214,7 @@ This profile defines the following AuthZEN response `context` members:
   `1*64( ALPHA / DIGIT / "-" / "_" )`. At least 128 bits of entropy.
   Decision Evidence records this same value as its own `evaluation_id`
   member, alongside the evidence record's distinct `evidence_id`
-  ({{decision-evidence-object}}).
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 `evaluated_at`:
 : OPTIONAL. An RFC 3339 {{RFC3339}} timestamp of the evaluation,
@@ -1249,7 +1234,8 @@ This profile defines the following AuthZEN response `context` members:
 
 `action_class`:
 : REQUIRED. A string. The runtime action class the PDP applied, from
-  the value set of {{decision-evidence-object}}, so the PEP can verify
+  the value set of {{I-D.draft-mcguinness-mission-runtime-evidence}},
+  so the PEP can verify
   it is enforcing that class's permit controls. When the PEP has itself
   established a stricter class for the action, from its deployment
   classification or a resource floor it knows
@@ -1260,7 +1246,8 @@ This profile defines the following AuthZEN response `context` members:
 
 `class_source`:
 : REQUIRED when `action_class` is present. A string. One of `default`,
-  `resource_floor`, or `deployment` ({{decision-evidence-object}}).
+  `resource_floor`, or `deployment`
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 `parameter_digest`:
 : REQUIRED when the request was parameter-bound. A string. The digest
@@ -1335,7 +1322,7 @@ PEP MUST still deny the action and MUST additionally execute every
 returned obligation. Failure to fulfill an obligation, or an
 unrecognized obligation type, makes the effective result deny, and
 for an already-released action the failure MUST be recorded in
-Execution Evidence ({{execution-evidence-object}}).
+Execution Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 A PDP supporting this profile advertises `step-up` and
 `mission-execution` in its metadata `supported_obligations` array,
@@ -1398,8 +1385,9 @@ NOT release the action's effect while any precondition above is
 unsatisfied.
 
 Postcondition: `execution_evidence: "required"` obliges the PEP to
-emit the Execution Evidence Object once, and only once, the action's
-outcome exists. If evidence emission fails after an irreversible
+emit the Execution Evidence Object
+({{I-D.draft-mcguinness-mission-runtime-evidence}}) once, and only
+once, the action's outcome exists. If evidence emission fails after an irreversible
 effect, the effect stands: nothing retroactively permits or denies
 it. The PEP MUST record the emission failure durably and surface it
 on its operational alarm path, and the deployment's audit posture
@@ -1587,8 +1575,9 @@ carried in Decision Evidence:
   its evidence store within the declared staleness bound, or does
   not recognize the presented `predicate` value. The per-predicate
   outcomes are in Decision Evidence
-  ({{decision-evidence-object}}), so the unsatisfied and
-  unavailable cases stay distinguishable after the fact.
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}), so the
+  unsatisfied and unavailable cases stay distinguishable after the
+  fact.
 
 Authentication step-up is not a denial reason under this profile; it
 is the step-up obligation on a permit ({{obligations}}). A
@@ -1610,8 +1599,8 @@ be either a collision-resistant name (following the Collision-Resistant
 Name guidance of {{RFC7519}} Section 4.2) or a name coordinated within
 this document family, so values cannot collide. A consumer of a denial
 reason, wherever it is carried (the Decision Evidence `denial_reason`,
-{{decision-evidence-object}}, or the response `context.reason`,
-{{response-context}}), MUST treat an unrecognized value as
+{{I-D.draft-mcguinness-mission-runtime-evidence}}, or the response
+`context.reason`, {{response-context}}), MUST treat an unrecognized value as
 a deny and MUST NOT attach any other semantics to it, mirroring the
 issuance profile's open lifecycle state space
 ({{I-D.draft-mcguinness-oauth-mission}}).
@@ -1760,12 +1749,14 @@ Every runtime failure condition, whether named in the runtime profile's
 failure-mode table or in its other normative requirements
 ({{I-D.draft-mcguinness-mission-runtime}}), surfaces through exactly
 one of four carriers in this binding: a Refusal Record for a PEP
-refusal before any PDP decision ({{pre-decision-refusal}}), a PDP
+refusal before any PDP decision
+({{I-D.draft-mcguinness-mission-runtime-evidence}}), a PDP
 denial (`reason` in the decision context, `denial_reason` in Decision
 Evidence), a permit obligation ({{obligations}}), or an Execution
 Evidence `error` for a failure after a permit
-({{execution-evidence-object}}). The table below is the normative
-mapping for the conditions it names; extension identifiers remain
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). The table below
+is the normative mapping for the conditions it names; extension
+identifiers remain
 governed by each carrier's extensibility rule.
 
 | Runtime failure condition | Carrier | Identifier |
@@ -1804,7 +1795,8 @@ The requesting component and the executing PEP MUST be the same
 enforcement identity, on the same mutually authenticated channel that
 requested the permit. A permit is valid only on that channel and
 identity, and MUST NOT be relayed to another component as a bearer
-grant. Signed Decision Evidence ({{decision-evidence-object}}) MUST
+grant. Signed Decision Evidence
+({{I-D.draft-mcguinness-mission-runtime-evidence}}) MUST
 NOT be accepted as authorization to act: it is retrospective evidence
 of what the PDP decided, never a live credential a distinct component
 presents to execute.
@@ -1868,717 +1860,35 @@ value grants nothing, the Resource Server's token validation and PEP
 obligations are unchanged, and a Resource Server MUST NOT treat it as a
 permit; the permit-binding rules above govern.
 
-# Decision Evidence Object {#decision-evidence-object}
-
-The runtime profile requires a decision evidence record for every PDP
-decision on a consequential action and fixes the minimum content and
-local integrity requirements. This section gives the concrete object,
-canonicalization, and integrity envelope an AuthZEN deployment emits.
-
-## Members
-
-`evidence_id`:
-: REQUIRED. A string. Unique record identifier for this Decision
-  Evidence Object. ABNF: `1*64( ALPHA / DIGIT / "-" / "_" )`. At
-  least 128 bits of entropy.
-
-`evaluation_id`:
-: REQUIRED. A string. The correlation identifier for the evaluation
-  this record documents, equal to the value the PDP returned as the
-  response context's `evaluation_id` ({{response-context}}). Distinct
-  from `evidence_id`: `evaluation_id` correlates this record with the
-  evaluation and with every other record and wire artifact of the same
-  evaluation; `evidence_id` names this evidence record alone.
-
-`mission`:
-: REQUIRED. An object. The PDP request's `context.mission` object,
-  extended with the facts below, so the evidence chains back to the
-  exact approved Mission. Sub-members:
-
-    `id`, `issuer`, `authority_hash`:
-    : REQUIRED. From the request's `context.mission`.
-
-    `policy_view_id`:
-    : REQUIRED. The PDP's own view identifier; the PDP always knows
-      and populates it, whatever the request carried.
-
-    `intent_hash`:
-    : OPTIONAL. It is carried in neither the `mission` claim nor
-      introspection, so only a PDP with direct Mission-record access
-      can record it.
-
-    `policy_version`:
-    : OPTIONAL. From the request's `context.mission`, when known.
-
-    Consent-disclosure commitment:
-    : OPTIONAL. Recorded when known.
-
-  These hashes are the issuing AS's
-  commitments cited as anchors; the PDP does not recompute them.
-
-`subject`:
-: REQUIRED. An object. PDP inputs as supplied, after PDP-side
-  normalization.
-
-`resource`:
-: REQUIRED. An object. PDP inputs as supplied, after PDP-side
-  normalization.
-
-`action`:
-: REQUIRED. An object. PDP inputs as supplied, after PDP-side
-  normalization.
-
-`audience`:
-: REQUIRED. A string. The audience the PDP evaluated, sourced from
-  the request's `resource.properties.audience`
-  ({{context-audience-freshness}}).
-
-`mission_state_version`:
-: OPTIONAL. An integer. Mirrors the response context member of the
-  same name ({{response-context}}), recorded when the PDP tracks
-  Mission state version. Distinct from the `mission` sub-member
-  `policy_view_id`, which commits to authority only
-  ({{mission-to-policy-materialization}}).
-
-`action_class`:
-: REQUIRED. A string. The runtime action class the PDP applied to the
-  action: one of `consequential_read`, `consequential_write`,
-  `irreversible_action`, `external_commitment`, or
-  `privileged_administration`, naming the classes of
-  {{I-D.draft-mcguinness-mission-runtime}}. Every decision this
-  binding records is on a consequential action, so the member is always
-  present.
-
-`class_source`:
-: REQUIRED when `action_class` is present. A string. How the applied
-  class was assigned: `default` (the runtime profile's default
-  classification), `resource_floor` (the resource's published
-  `mission_action_class_floors` floor set or raised it,
-  {{I-D.draft-mcguinness-mission-runtime}}), or `deployment`
-  (deployment policy assigned it).
-
-`actor`:
-: OPTIONAL. An object. PDP inputs as supplied, after PDP-side
-  normalization.
-
-`credential`:
-: OPTIONAL. An object. Token-derived inputs as supplied, after
-  PDP-side normalization. This member MUST contain only claims the PEP
-  verified before invoking the PDP.
-
-`parameter_digest`:
-: OPTIONAL. A string. PDP inputs as supplied, after PDP-side
-  normalization.
-
-`obligations`:
-: REQUIRED when `decision` is `permit` for a consequential action. An
-  array of obligation objects, recorded as returned to the PEP
-  ({{obligations}}). The permit-lease expiry and any use-limit control
-  the decision was bound to are recorded in the mission-execution
-  obligation's `expires_at` and `use_limit` properties; the PDP MUST
-  set `use_limit: 1` for a permit in the high-consequence classes.
-
-`request_digest`:
-: CONDITIONAL. A string. A privacy-preserving digest of the evaluation
-  request, in the integrity-anchor encoded form
-  ({{I-D.draft-mcguinness-oauth-mission}}). REQUIRED when
-  `parameter_digest` is absent for a consequential action, so the closed
-  object still carries the request digest the runtime profile requires
-  of every decision record ({{I-D.draft-mcguinness-mission-runtime}}).
-
-`capability_source`:
-: OPTIONAL. An object. The catalog-source binding the PDP evaluated
-  for catalog-sourced actions.
-
-`compensates_evaluation_id`:
-: OPTIONAL. A string. The `evaluation_id` of the action this decision
-  compensates, carrying the runtime profile's compensation link
-  ({{I-D.draft-mcguinness-mission-runtime}}) so a compensating
-  action reconciles against the action it reverses.
-
-`decision`:
-: REQUIRED. A string. One of `permit` or `deny`.
-
-`contributing_constraints`:
-: REQUIRED when the decision turned on one or more authority or
-  constraint entries. An array of strings: the identifiers of the
-  constraints and entries the PDP evaluated (`constraints` keys,
-  `authorization_details` entry types). For a permit it records every
-  constraint key and entry type the decision relied on; for a deny it
-  MUST list every entry that failed. Omitting an entry the decision
-  turned on is non-conforming, so the array can be relied on to
-  reconstruct the decision basis.
-
-`sequence`:
-: REQUIRED. An integer. The per-Mission sequence indicator
-  the runtime profile requires, so the decision stream has a
-  verifiable order and gaps are detectable. MUST be zero or greater.
-  The sequence is scoped to the emitter identified by `emitter`: each
-  emitter maintains its own monotonically increasing per-Mission
-  sequence, and a verifier detects gaps per (Mission, emitter) rather
-  than expecting one ordering across emitters.
-
-`emitter`:
-: REQUIRED. An object. The identity of the component that emitted and
-  signed this record, with members `id` (REQUIRED, a string identifying
-  the emitting component) and `role` (REQUIRED, one of `pdp`, `pep`, or
-  `executor`). For Decision Evidence `role` is `pdp`. A companion
-  profile MAY register coordinated additional roles (`harness`,
-  `egress`, `issuer`) for records emitted under these conventions at
-  other enforcement points, or by the Mission Issuer's own retained
-  producers (for example, protected-event ingestion,
-  {{I-D.draft-mcguinness-oauth-mission-containment}}). A verifier MUST
-  bind the emitter's signing key to the enforcement scope and audience
-  the record serves ({{decision-evidence-integrity}}).
-
-`hop_reference`:
-: OPTIONAL. An object. Present when the action this record concerns
-  was authorized under a continuation profile's continued credential
-  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), attributing
-  the record to the specific hop that carried the authorization.
-  Sub-members: `jti` (REQUIRED, a string, the authorizing token's
-  identifier) and `mission_id` (REQUIRED, a string, the Mission the
-  continued credential carries); `continuation_handle` (OPTIONAL, a
-  string, the hop's identity-continuation handle, when present).
-  Absent for a decision not taken under a continuation. This member
-  formalizes, as a coordinated Decision Evidence member, the
-  continuation profile's requirement that execution-time evidence
-  record the continuation hop reference
-  ({{I-D.draft-mcguinness-oauth-mission-continuation}}).
-
-`denial_reason`:
-: CONDITIONAL. A string. Present when `decision` is `deny`. A value from
-  the set of {{runtime-denial-classification}}, including any
-  specification-defined extension under that section's extensibility
-  rule; a consumer MUST treat an unrecognized value as a deny and MUST
-  NOT attach any other semantics to it. When the denial
-  is a constraint violation, the value is `parameter_violation` and the
-  specific failing `constraints` keys are carried in
-  `contributing_constraints`, not in `denial_reason`, so the reason
-  enum and the open constraint-key space never mix in one field.
-
-`evaluated_at`:
-: REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
-
-`authorizing_entry`:
-: OPTIONAL. An object. The `authorization_details` entry the decision
-  was evaluated against.
-
-`entry_digest`:
-: OPTIONAL. A string. The integrity-anchor encoded digest
-  ({{I-D.draft-mcguinness-oauth-mission}}) of that entry, for a
-  deployment that does not record the entry in full. A record of a
-  permit MUST carry `authorizing_entry` or `entry_digest`, per the
-  runtime record requirements
-  ({{I-D.draft-mcguinness-mission-runtime}}).
-
-`taint`:
-: OPTIONAL. An object. The presented taint context
-  ({{context-taint}}), recorded as supplied. REQUIRED when the
-  decision request carried `context.taint`.
-
-`mission_history`:
-: OPTIONAL. An array of objects. The policy-selected history
-  predicates ({{context-history}}) the PDP evaluated, each recorded
-  with its `predicate` (and `action_class`, where applicable) and
-  extended with an `outcome` member (REQUIRED, a string): `satisfied`,
-  `not_satisfied` (established false), or `unavailable` (not
-  establishable, including an unrecognized `predicate` value or an
-  evidence store that could not be consulted within its bound).
-  REQUIRED when policy selected any history predicate for this
-  decision, whether or not the request carried
-  `context.mission_history`.
-
-`evidence_envelope`:
-: REQUIRED. An object. Integrity protection
-  ({{decision-evidence-integrity}}), carrying a `format` (string,
-  required) and a `value` (string, required).
-
-A Decision Evidence Object is closed to uncoordinated extension: a
-companion profile of the runtime contract MAY add members with short
-names coordinated with this profile (for example, the metering
-companion's consumption and settlement members, or a discovery
-adjudication's `resource_declaration_digest`), any other extension
-MUST use a collision-resistant name, and a consumer MUST ignore
-members it does not understand and MUST NOT derive authority from any
-member.
-
-## Refusal Record {#pre-decision-refusal}
-
-The Decision Evidence Object records a PDP decision, which is why its
-PDP-derived members are REQUIRED. The runtime profile also requires an
-evidence record for a PEP refusal that occurs before any PDP decision:
-token validation failure, a missing `mission` claim, PEP-PDP channel
-failure, PDP unreachability, or the PEP being unable to establish
-Mission state ({{I-D.draft-mcguinness-mission-runtime}}). Such a
-refusal has no PDP decision and cannot populate the PDP-derived members
-above. An AuthZEN deployment records it as a Refusal Record, carrying
-only facts the PEP verified:
-
-`refusal_id`:
-: REQUIRED. A string. Unique refusal identifier. ABNF:
-  `1*64( ALPHA / DIGIT / "-" / "_" )`. At least 128 bits of entropy.
-
-`audience`:
-: REQUIRED. A string. The PEP's audience or protected-resource
-  identifier.
-
-`action`:
-: REQUIRED. An object. The requested action descriptor, as the PEP
-  established it.
-
-`resource`:
-: OPTIONAL. An object. The target object identity, when the PEP
-  established one.
-
-`decision`:
-: REQUIRED. A string. Always `deny`.
-
-`denial_reason`:
-: REQUIRED. A string. One of `token_invalid`,
-  `mission_claim_missing`, `channel_failure`, `pdp_unreachable`, or
-  `state_unavailable` (where the deployment's state-source placement
-  has the PEP supply state, and it cannot establish it). These name PEP-side conditions and are disjoint from
-  the PDP denial reasons of {{runtime-denial-classification}}; a
-  record that can populate the PDP-derived members is a Decision
-  Evidence Object instead.
-
-`evaluated_at`:
-: REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
-
-`first_evaluated_at`:
-: OPTIONAL. An RFC 3339 timestamp. Present on an aggregated record:
-  the earliest refusal the record covers, with `evaluated_at` the
-  latest.
-
-`attempt_count`:
-: OPTIONAL. An integer. Present on an aggregated record: the number
-  of refusals the record covers.
-
-`parameter_digest`:
-: CONDITIONAL. A string. REQUIRED for a parameter-bound action class.
-
-`request_digest`:
-: CONDITIONAL. A string. A privacy-preserving digest of the refused
-  request, in the form of {{request-digest-worked}}. REQUIRED when
-  `parameter_digest` is absent, so the record meets the runtime
-  profile's record minimum
-  ({{I-D.draft-mcguinness-mission-runtime}}).
-
-`mission`:
-: OPTIONAL. An object. The Mission reference (`id`, `issuer`,
-  `authority_hash`), present only when the PEP verified the `mission`
-  claim before the failure (for example, on `pdp_unreachable`).
-
-`subject`, `actor`, `credential`:
-: OPTIONAL. Objects. Verified facts only, in the request forms of
-  {{pdp-request}}. For a token-validation failure, the record MUST NOT
-  describe unverified token claims as authenticated facts
-  ({{I-D.draft-mcguinness-mission-runtime}}).
-
-`sequence`:
-: CONDITIONAL. An integer. REQUIRED when the record carries a verified
-  `mission` reference, continuing that emitter's per-Mission sequence
-  for that Mission ({{decision-evidence-object}}); absent when no
-  Mission was established.
-
-`emitter`:
-: REQUIRED. An object. The identity of the refusing PEP that emitted and
-  signed this record, in the form Decision Evidence defines
-  ({{decision-evidence-object}}), with `role` `pep`. A verifier MUST
-  bind the emitter's signing key to the enforcement scope and audience
-  the record serves ({{decision-evidence-integrity}}).
-
-`hop_reference`:
-: OPTIONAL. An object, in the form Decision Evidence defines
-  ({{decision-evidence-object}}). Present only when the PEP verified
-  enough of the presented credential, before the failure, to establish
-  it was a continued credential.
-
-`evidence_envelope`:
-: REQUIRED. An object. Integrity protection in the form of
-  {{decision-evidence-integrity}}, emitted by the refusing PEP, whose
-  JWS protected `typ` is `application/mission-refusal-record+json`
-  ({{iana}}).
-
-A Refusal Record is closed to uncoordinated extension under the same
-rule as Decision Evidence.
-
-A sustained failure condition with a retrying agent otherwise yields
-one signed record per attempt. A PEP MAY aggregate consecutive
-refusals sharing `denial_reason`, `audience`, `action`, and the
-parameter or request digest into one Refusal Record, carrying
-`first_evaluated_at`, `evaluated_at`, and `attempt_count`.
-Aggregation applies only to the PEP-side conditions of this section;
-PDP denials remain one Decision Evidence Object per evaluation.
-
-When the deployment establishes the Mission binding externally under
-the runtime profile's binding-establishment step
-({{I-D.draft-mcguinness-mission-runtime}}), absence of the `mission`
-claim is not a pre-decision refusal and `mission_claim_missing` does
-not apply; the external join's verification governs instead.
-
-A PDP outage on the ERP reconciliation Mission, recorded by the PEP
-that failed closed:
-
-~~~ json
-{
-  "refusal_id": "ref_3VtM9kQ2xN7rB4sL8eP1jY5wZc",
-  "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
-  },
-  "audience": "https://erp.example.com",
-  "action": { "name": "journal-entries.write" },
-  "resource":
-    { "type": "journal-entry", "id": "je_2026Q3_inv_8421" },
-  "parameter_digest":
-    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-  "decision": "deny",
-  "denial_reason": "pdp_unreachable",
-  "sequence": 44,
-  "emitter": { "id": "pep.example.com", "role": "pep" },
-  "evaluated_at": "2026-11-02T08:16:11Z",
-  "evidence_envelope": {
-    "format": "jws-compact",
-    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXkt..."
-  }
-}
-~~~
-
-## Integrity {#decision-evidence-integrity}
-
-The `evidence_envelope` carries the integrity protection over the
-Decision Evidence content. This AuthZEN profile defines the concrete
-serialization required by {{I-D.draft-mcguinness-mission-runtime}}:
-the Decision Evidence object is serialized as JCS {{RFC8785}} canonical
-JSON before integrity protection. The default `format` is
-`jws-compact`, a JWS Compact Serialization {{RFC7515}} whose payload is
-the JCS canonical bytes of the Decision Evidence object with the
-`evidence_envelope` member removed during signing. Verification
-re-removes `evidence_envelope` and verifies the JWS against the
-emitter's published signing key. For Decision Evidence emitted by a
-PDP, the emitter is the PDP. For Execution Evidence emitted by a PEP or
-executor, the emitter is that PEP or executor. For a Refusal Record,
-the emitter is the refusing PEP.
-
-A verifier MUST confirm that the signing key selected by the JWS `kid`
-is the published key of the component named in the record's `emitter`
-member, and that this key is bound to the enforcement scope and audience
-the record serves ({{context-audience-freshness}}, the record's
-`audience`). A verifier MUST reject a record whose signing key is not
-published for that scope, so one component's key cannot sign evidence
-for a resource, audience, or scope it does not serve.
-
-The JWS protected header MUST carry:
-
-- `kid`: a key identifier resolvable in the emitter's published JWKS
-  ({{evidence-integrity-signing-keys}}), so a verifier can select the
-  emitter's signing key independently.
-- `alg`: `ES256` {{RFC7518}} is mandatory to implement; an
-  implementation MAY offer other JOSE algorithms but MUST implement
-  `ES256`.
-- `typ`: the registered media type of the evidence object being signed
-  (`application/mission-decision-evidence+json` for Decision Evidence,
-  `application/mission-execution-evidence+json` for Execution Evidence,
-  `application/mission-refusal-record+json` for Refusal Records,
-  {{iana}}). A verifier MUST reject a JWS whose protected `typ` is not
-  the media type of the object it is verifying, so signatures over one
-  record kind cannot be cross-used for another.
-
-This rule is unaffected by the members Decision Evidence, Execution
-Evidence, and Refusal Records share with each other and with other
-evidence types, named once as a base shape
-({{I-D.draft-mcguinness-mission-audit}}). Shared member names describe
-a common shape for readability; they carry no exemption, and the `typ`
-check above remains the sole authority for which kind a signature
-covers.
-
-~~~ json
-{
-  "evidence_envelope": {
-    "format": "jws-compact",
-    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
-  }
-}
-~~~
-
-This profile defines only the `jws-compact` format. Additional formats
-MAY be defined by future specifications; implementations MUST reject
-envelopes with unsupported formats.
-
-## Worked example
-
-~~~ json
-{
-  "evidence_id": "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA",
-  "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
-  "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-    "intent_hash":
-      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
-    "policy_version": "deploy-policy:v17",
-    "policy_view_id":
-      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
-  },
-  "subject": {
-    "type": "user",
-    "id": "user_3p2q8mN1a0kV7tR",
-    "properties": {
-      "iss": "https://idp.example.com"
-    }
-  },
-  "actor": {
-    "client_id": "s6BhdRkqt3",
-    "client_instance_id": "inst_macbook_7f3a",
-    "act": [
-      {
-        "iss": "https://as.example.com",
-        "sub": "s6BhdRkqt3"
-      }
-    ]
-  },
-  "credential": {
-    "issuer": "https://as.example.com",
-    "expires_at": "2026-11-02T09:14:00Z"
-  },
-  "resource": {
-    "type": "journal-entry",
-    "id": "je_2026Q3_inv_8421"
-  },
-  "action": { "name": "journal-entries.write" },
-  "parameter_digest":
-    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-  "audience": "https://erp.example.com",
-  "action_class": "irreversible_action",
-  "class_source": "deployment",
-  "obligations": [
-    {
-      "id": "obl_execution",
-      "type": "mission-execution",
-      "properties": {
-        "request_digest":
-          "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-        "expires_at": "2026-11-02T08:15:00Z",
-        "use_limit": 1,
-        "execution_evidence": "required"
-      }
-    }
-  ],
-  "decision": "permit",
-  "contributing_constraints": [
-    "mission_resource_access", "max_amount"
-  ],
-  "sequence": 42,
-  "emitter": { "id": "pdp.example.com", "role": "pdp" },
-  "evaluated_at": "2026-11-02T08:14:03Z",
-  "evidence_envelope": {
-    "format": "jws-compact",
-    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
-  }
-}
-~~~
-
-Decision Evidence is durable and integrity-protected. It is the
-authoritative record of what the PDP evaluated, not proof that the
-action occurred.
-
-## Request digest worked value {#request-digest-worked}
-
-For a consequential action that is not parameter-bound (here a
-consequential read), the record carries `request_digest` in place of
-`parameter_digest`. The runtime profile does not standardize the
-digested request form, so the emitting deployment states the exact
-input; this non-normative example digests exactly the following
-evaluation-request summary object:
-
-~~~ json
-{
-  "action": "journal-entries.read",
-  "audience": "https://erp.example.com",
-  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "resource": "je_2026Q3_inv_8421",
-  "subject": "user_3p2q8mN1a0kV7tR"
-}
-~~~
-
-The value is the integrity-anchor encoded form of the SHA-256 of the
-JCS {{RFC8785}} canonical bytes of that object (one line, sorted
-member names, no whitespace, shown here wrapped for layout only;
-remove the layout line breaks, adding no characters, to recover the
-canonical form):
-
-~~~ text
-{"action":"journal-entries.read","audience":"https://erp.example.com
-","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","resource":
-"je_2026Q3_inv_8421","subject":"user_3p2q8mN1a0kV7tR"}
-~~~
-
-~~~ text
-request_digest = sha-256:sK12VE_g01AHD2v-O1vsf1Gf_xT_htjX0UN0Oe0dDRU
-~~~
-
-# Execution Evidence Object {#execution-evidence-object}
-
-The PEP or executor emits an Execution Evidence Object after the
-authorized action's outcome is determined. It records whether the
-permitted action was attempted, completed, failed, or suppressed,
-linked to the Decision Evidence by `evaluation_id`. Emission follows
-the runtime profile's class rule: Execution Evidence is required for
-the high-consequence classes and for every further class the
-deployment claims under the runtime profile's transaction-assurance
-tier ({{I-D.draft-mcguinness-mission-runtime}}).
-
-## Members
-
-`execution_id`:
-: REQUIRED. A string. Unique execution identifier.
-  ABNF: `1*64( ALPHA / DIGIT / "-" / "_" )`. At least 128 bits of
-  entropy.
-
-`evaluation_id`:
-: REQUIRED. A string. Correlates this record with the linked Decision
-  Evidence's own `evaluation_id` ({{decision-evidence-object}}), and
-  with every other record and wire artifact of the same evaluation.
-
-`mission_id`:
-: REQUIRED. A string. The Mission `id`, mirrored from the
-  linked Decision Evidence for join-key convenience.
-
-`parameter_digest`:
-: CONDITIONAL. A string. MUST be present when the
-  linked Decision Evidence carries one, and MUST match it.
-
-`outcome`:
-: REQUIRED. A string. One of `attempted`, `completed`,
-  `failed`, or `suppressed`. `suppressed` means the action was
-  permitted but the executor chose not to attempt it (for example, a
-  kill-switch or a secondary deny).
-
-`outcome_at`:
-: REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
-
-`error`:
-: CONDITIONAL. A string. Error identifier when `outcome` is `failed` or
-  `suppressed`, from this closed set: `parameter_mismatch` (the
-  executing PEP found the effective parameters differ from those the
-  permit bound), `permit_expired` (the permit's validity window had
-  passed at execution), `permit_consumed` (re-presentation of an
-  already-consumed single-use evaluation identifier), and `kill_switch`
-  (execution suppressed by an operator or safety control). A deployment
-  MAY define additional values, which MUST be collision-resistant names
-  (a short name within a namespace the deployment controls, following
-  the Collision-Resistant Name guidance of {{RFC7519}} Section 4.2) so
-  they cannot collide with this set or another deployment's.
-
-`sequence`:
-: REQUIRED. An integer. The per-Mission sequence indicator the runtime
-  profile requires of every record, so the execution stream has a
-  verifiable order and gaps are detectable. MUST be zero or greater. It
-  is scoped to `emitter` per (Mission, emitter) as Decision Evidence
-  defines ({{decision-evidence-object}}).
-
-`emitter`:
-: REQUIRED. An object. The identity of the PEP or executor that emitted
-  and signed this record, in the form Decision Evidence defines
-  ({{decision-evidence-object}}), with `role` `pep` or `executor`. A
-  verifier MUST bind the emitter's signing key to the enforcement scope
-  and audience the record serves ({{decision-evidence-integrity}}).
-
-`hop_reference`:
-: OPTIONAL. An object, in the form Decision Evidence defines
-  ({{decision-evidence-object}}). Present when the linked Decision
-  Evidence carries one.
-
-`attempted_at`:
-: OPTIONAL. An RFC 3339 timestamp. Timing context.
-
-`completed_at`:
-: OPTIONAL. An RFC 3339 timestamp. Timing context.
-
-`result_summary`:
-: OPTIONAL. An object. Minimal action result metadata
-  (for example, affected resource counts). MUST NOT carry user-content
-  payloads.
-
-`evidence_envelope`:
-: REQUIRED. An object. Integrity protection in the
-  same form as Decision Evidence ({{decision-evidence-integrity}}),
-  carrying a `format` (string, required) and a `value` (string,
-  required).
-
-An Execution Evidence Object is closed to uncoordinated extension
-under the same rule as Decision Evidence: coordinated companion
-members (for example, the metering companion's `measured_duration`)
-are permitted, any other extension MUST use a collision-resistant
-name, and a consumer MUST ignore members it does not understand.
-
-## Worked example
-
-~~~ json
-{
-  "execution_id":  "exe_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
-  "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
-  "mission_id":    "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "parameter_digest":
-    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-  "outcome":      "completed",
-  "sequence":     43,
-  "emitter":      { "id": "pep.example.com", "role": "executor" },
-  "attempted_at": "2026-11-02T08:14:04Z",
-  "completed_at": "2026-11-02T08:14:05Z",
-  "outcome_at":   "2026-11-02T08:14:05Z",
-  "result_summary": {
-    "rows_affected": 1
-  },
-  "evidence_envelope": {
-    "format": "jws-compact",
-    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXkt..."
-  }
-}
-~~~
-
-Decision Evidence and Execution Evidence are linked but distinct.
-Authorization is not proof that an action occurred; a Decision
-Evidence record with no corresponding Execution Evidence record
-indicates the action was not attempted, or that the executor failed to
-emit evidence.
-
-## TOCTOU and parameter binding
-
-The semantics of parameter binding and the time-of-check to
-time-of-use gap are defined by the runtime profile
-({{I-D.draft-mcguinness-mission-runtime}}). In this binding, the
-`parameter_digest` chain runs from the PDP request through Decision
-Evidence to Execution Evidence: if the executed action's effective
-parameters differ from those the PDP evaluated, the digest mismatch is
-detectable in audit.
-
-The PEP MUST NOT emit Execution Evidence that claims an attempted or
-completed execution under a `parameter_digest` that does not match the
-linked Decision Evidence. When the executing PEP detects a mismatch
-before acting, it MUST refuse the action and emit Execution Evidence
-with `outcome` set to `suppressed` and `error` set to
-`parameter_mismatch`, or emit an equivalent PEP-refusal evidence record
-under the deployment's runtime evidence mechanism. When values
-nonetheless diverge across the chain, the audit consumer MUST classify
-the action as parameter-mismatch and treat it as equivalent to an
-unauthorized action for compliance purposes.
-
-## Retention
-
-Decision Evidence, Execution Evidence, and Refusal Records MUST be
-retained for at least
-the deployment's audit retention window, which the runtime profile
-requires to be no shorter than the Mission's audit horizon, the term
-defined in the Mission Record section of
-{{I-D.draft-mcguinness-oauth-mission}}. Regulated deployments MAY
-require longer retention.
+# Runtime Evidence {#evidence}
+
+The PDP and PEP emit the Decision Evidence, Execution Evidence, and
+Refusal Records of the runtime evidence companion
+{{I-D.draft-mcguinness-mission-runtime-evidence}} (normative
+reference) for every decision, execution outcome, and pre-decision
+refusal this binding produces. The response's `evaluation_id`
+({{response-context}}) is the correlation key; each record carries
+its own record identifier (`evidence_id`, `execution_id`, or
+`refusal_id`). This binding adds no record members: every Decision
+Evidence and Execution Evidence member is defined by the runtime
+evidence companion.
+
+This binding's own contribution is the mapping: which decision
+request and response members the PDP and PEP echo into a record.
+The Decision Evidence `mission`, `subject`, `resource`, `action`,
+`audience`, `mission_state_version`, `action_class`, `class_source`,
+`credential`, `parameter_digest`, `obligations`, `taint`, and
+`mission_history` members are populated from the correspondingly
+named members of this binding's PDP request and response
+({{pdp-request}}, {{pdp-response}}); the `denial_reason` member
+carries the value returned in `context.reason`
+({{runtime-denial-classification}}).
+
+The runtime evidence companion's integrity envelope is this binding's
+one signing convention for evidence objects: the default envelope
+format is `jws-compact`, and the protected `typ` names the record's
+own registered media type
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 # Capability Source Binding {#capability-source-binding}
 
@@ -2809,12 +2119,12 @@ A PEP conforming to this binding MUST:
   ({{permit-binding-split}});
 - key permit caches on the permit's bound fields
   ({{permit-binding-split}}); and
-- emit pre-decision Refusal Records as {{pre-decision-refusal}}
-  requires, and Execution Evidence for the classes its emission rule
-  covers, as {{execution-evidence-object}} requires.
+- emit the records of {{I-D.draft-mcguinness-mission-runtime-evidence}}
+  for a pre-decision refusal and, for the classes its emission rule
+  covers, an execution outcome.
 
-Of these, the mission-execution obligation and Execution Evidence
-items are the machinery of the runtime profile's transaction-assurance
+Of these, the mission-execution obligation and execution-outcome
+evidence are the machinery of the runtime profile's transaction-assurance
 tier ({{I-D.draft-mcguinness-mission-runtime}}): a PEP carries them for
 the classes that tier covers.
 
@@ -2830,19 +2140,17 @@ A PDP conforming to this binding MUST:
 - classify every denial per {{runtime-denial-classification}};
 - return the decision context of {{response-context}}, including the
   obligations array on a permit or denial ({{obligations}}); and
-- emit Decision Evidence per {{decision-evidence-object}} and
-  {{decision-evidence-integrity}}.
+- emit the records of {{I-D.draft-mcguinness-mission-runtime-evidence}}
+  for every decision.
 
 A deployment whose requesting component and executing component
 differ is out of scope for conformance to this profile
 ({{permit-binding-split}}).
 
-An audit consumer conforming to this binding MUST verify each
-evidence envelope against the emitter's published keys
-({{evidence-integrity-signing-keys}}) and classify orphaned Decision
-Evidence and cross-record digest divergence as
-{{security-considerations}} and {{execution-evidence-object}}
-require, never as proof of action.
+Record producer and consumer conformance, including evidence
+signing-key verification and the classification of orphaned Decision
+Evidence, is defined by the runtime evidence companion
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 # Security Considerations {#security-considerations}
 
@@ -2851,7 +2159,9 @@ The runtime profile's Security Considerations
 placement and bypass, classification integrity, freshness and
 consumption honesty, Resource policy authority, TOCTOU and replay, and
 the limits of a compromised PEP or PDP. This section addresses only
-threats specific to the AuthZEN binding and the evidence objects.
+threats specific to the AuthZEN binding; threats specific to the
+evidence records are the runtime evidence companion's
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 ## Unbound-evaluation downgrade
 
@@ -2887,43 +2197,6 @@ rate-limit access requests per Mission and surface request provenance to
 Approvers, so a compromised agent driving repeated requestable denials
 is visible to the humans adjudicating them.
 
-## Decision Evidence versus Execution Evidence
-
-Decision Evidence is not proof an action occurred. Implementations MUST
-emit Execution Evidence to record outcomes, and auditors MUST NOT treat
-Decision Evidence alone as evidence of action. An audit consumer MUST
-classify orphaned Decision Evidence (no matching Execution Evidence
-within the deployment's reconciliation window) as undetermined-outcome
-or, per deployment policy, as action-attempted; it MUST NOT treat it as
-proof of action.
-
-## Evidence integrity and signing keys {#evidence-integrity-signing-keys}
-
-The `evidence_envelope` binds each record to the emitting PDP or PEP.
-The PDP's `jws-compact` signing key MUST be resolvable, by the JWS
-protected `kid`, in the PDP's published JWKS so a verifier can check
-Decision Evidence independently. The PEP or executor signing key used
-for Execution Evidence and Refusal Records MUST be resolvable the same
-way through a
-deployment-published key set.
-
-This profile fixes one concrete discovery convention: the PDP publishes
-its JWKS at a deployment-published location named in the enforcement
-scope statement ({{I-D.draft-mcguinness-mission-runtime}}), and
-the PEP or executor key set is published and named there likewise.
-The retired-key rule of the issuance profile's key management
-({{I-D.draft-mcguinness-oauth-mission}}) extends to evidence signing
-keys: a retired signing key MUST remain resolvable in the published
-key set for at least the evidence retention window, so records signed
-before a rotation stay verifiable after it. The compromise exception
-carries over with it: a key known or suspected compromised is
-published as revoked or marked with a compromise time, per the core
-rule, and evidence signed under it after that time is unverifiable
-rather than verified.
-
-Implementations MUST reject evidence whose `format` is unsupported
-rather than accepting it unverified.
-
 ## Materialized view fidelity
 
 A PDP that evaluates against a materialized view enlarging the
@@ -2935,137 +2208,33 @@ does not match the Mission the PEP referenced and deny with
 
 ## Transport
 
-The PDP endpoint and the audit channels carrying Decision Evidence and
-Execution Evidence MUST be served over TLS 1.2 or later (TLS 1.3
+The PDP endpoint MUST be served over TLS 1.2 or later (TLS 1.3
 RECOMMENDED). PEP-to-PDP authentication MUST be mutual, satisfying the
 integrity and mutual-authentication requirement the runtime profile
 places on the PEP-PDP channel
-({{I-D.draft-mcguinness-mission-runtime}}). Evidence at rest
-MUST be encrypted per the deployment's data-protection posture.
+({{I-D.draft-mcguinness-mission-runtime}}). Evidence transport and
+storage requirements are the runtime evidence companion's
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 # Privacy Considerations {#privacy-considerations}
 
 The runtime profile's evidence-privacy guidance
-({{I-D.draft-mcguinness-mission-runtime}}) applies in full. This
-section addresses the concrete evidence objects.
-
-## Evidence as PII sinks
-
-Decision Evidence, Execution Evidence, and Refusal Records carry the
-authenticated
-`subject`, actor chain, resource and action identifiers,
-credential-derived correlators, capability-source identifiers,
-`parameter_digest`, and timing. These records are PII sinks and SHOULD
-be access-controlled to audit consumers with a legitimate need,
-encrypted at rest, and retained per the window of
-{{execution-evidence-object}}.
-
-## Parameter exposure
-
-The durable Decision Evidence record MUST NOT contain the raw
-`parameters` object; it carries only `parameter_digest` and, at most,
-parameter-class metadata, consistent with the runtime profile's rule
-that raw parameters never appear in the record. Where raw parameters
-must be retained for audit, they are held in a separately
-access-controlled store keyed by `evaluation_id`. When the parameters
-are themselves PII, the PEP SHOULD supply only
-`action.properties.parameter_digest` to the PDP, omitting
-`action.properties.parameters`, so the PDP evaluates against
-parameter-class policy without observing the raw values. The Execution
-Evidence `result_summary` MUST NOT carry user-content payloads.
-
-## Actor chain and Mission correlation
-
-The `actor` member carries the delegation chain, which MAY reveal
-service accounts, client instances, and organizational structure.
-Evidence carrying the same Mission `id` and `authority_hash` across
-resource boundaries can correlate a subject's activity; this is
-inherent to the Mission's role as a governance handle. Deployments that
-require unlinkability need an additional privacy design outside this
-profile.
+({{I-D.draft-mcguinness-mission-runtime}}) applies in full. The
+privacy properties of the Decision Evidence, Execution Evidence, and
+Refusal Record objects, including their status as PII sinks,
+parameter exposure, and actor-chain correlation, are the runtime
+evidence companion's ({{I-D.draft-mcguinness-mission-runtime-evidence}});
+this binding defines no additional record content and no exemption
+from that guidance.
 
 # IANA Considerations {#iana}
 
 This document requests the following IANA actions.
 
-## Media Type Registry
-
-This document registers three media types per {{RFC6838}}.
-
-### Decision Evidence Media Type
-
-- Type name: application
-- Subtype name: mission-decision-evidence+json
-- Required parameters: none
-- Optional parameters: none
-- Encoding considerations: binary; JSON encoded in UTF-8
-- Security considerations: see {{security-considerations}}
-- Interoperability considerations: see this document
-- Published specification: this document
-- Applications that use this media type: Mission-bound runtime
-  enforcement deployments
-- Fragment identifier considerations: same as for `application/json`
-- Additional information:
-  - Deprecated alias names for this type: none
-  - Magic number(s): none
-  - File extension(s): `.json`
-  - Macintosh file type code(s): TEXT
-- Person & email address to contact for further information:
-  Karl McGuinness <public@karlmcguinness.com>
-- Intended usage: COMMON
-- Restrictions on usage: none
-- Author: IETF
-- Change controller: IETF
-
-### Execution Evidence Media Type
-
-- Type name: application
-- Subtype name: mission-execution-evidence+json
-- Required parameters: none
-- Optional parameters: none
-- Encoding considerations: binary; JSON encoded in UTF-8
-- Security considerations: see {{security-considerations}}
-- Interoperability considerations: see this document
-- Published specification: this document
-- Applications that use this media type: Mission-bound runtime
-  enforcement deployments
-- Fragment identifier considerations: same as for `application/json`
-- Additional information:
-  - Deprecated alias names for this type: none
-  - Magic number(s): none
-  - File extension(s): `.json`
-  - Macintosh file type code(s): TEXT
-- Person & email address to contact for further information:
-  Karl McGuinness <public@karlmcguinness.com>
-- Intended usage: COMMON
-- Restrictions on usage: none
-- Author: IETF
-- Change controller: IETF
-
-### Refusal Record Media Type
-
-- Type name: application
-- Subtype name: mission-refusal-record+json
-- Required parameters: none
-- Optional parameters: none
-- Encoding considerations: binary; JSON encoded in UTF-8
-- Security considerations: see {{security-considerations}}
-- Interoperability considerations: see this document
-- Published specification: this document
-- Applications that use this media type: Mission-bound runtime
-  enforcement deployments
-- Fragment identifier considerations: same as for `application/json`
-- Additional information:
-  - Deprecated alias names for this type: none
-  - Magic number(s): none
-  - File extension(s): `.json`
-  - Macintosh file type code(s): TEXT
-- Person & email address to contact for further information:
-  Karl McGuinness <public@karlmcguinness.com>
-- Intended usage: COMMON
-- Restrictions on usage: none
-- Author: IETF
-- Change controller: IETF
+The Decision Evidence, Execution Evidence, and Refusal Record media
+types are registered by the runtime evidence companion
+({{I-D.draft-mcguinness-mission-runtime-evidence}}), not by this
+document.
 
 ## AuthZEN Obligation Types Registration
 

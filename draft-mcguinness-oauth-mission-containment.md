@@ -129,6 +129,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
@@ -808,7 +816,8 @@ A Protected Event Receipt is a JSON object {{RFC8259}} with:
 
 `emitter`:
 : REQUIRED. An object, in the form Decision Evidence defines
-  ({{I-D.draft-mcguinness-mission-authzen}}), with `role` `issuer`.
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}), with `role`
+  `issuer`.
 
 `created_at`:
 : REQUIRED. RFC 3339 {{RFC3339}} timestamp of the ingestion decision.

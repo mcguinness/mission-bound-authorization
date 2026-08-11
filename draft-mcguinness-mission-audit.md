@@ -41,9 +41,9 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-authzen:
-    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
     author:
       -
         ins: K. McGuinness
@@ -330,18 +330,19 @@ canonical bytes are rehashed and checked against the committed digest
 
 ## The Mission Evidence Base {#evidence-base}
 
-Several registrable evidence types, defined across the runtime,
-AuthZEN, harness, and containment profiles, record an enforcement or
+Several registrable evidence types, defined across the runtime
+evidence, harness, and containment profiles, record an enforcement or
 issuer decision under a shared shape: a reference to the Mission the
 record concerns, an `emitter` object naming the component that
 produced it (`id`, a string; `role`, one of `pdp`, `pep`, `executor`,
 `harness`, `egress`, or `issuer`), and, where the defining profile
 fixes it, an `entry_digest` naming the Authority Set entry the record
-concerns ({{I-D.draft-mcguinness-mission-authzen}}). Two further
-members carry correlation a record MAY need: `hop_reference`,
-attributing a record to the continuation hop that authorized it,
-defined as a coordinated Decision Evidence member by the AuthZEN
-binding ({{I-D.draft-mcguinness-mission-authzen}}), and
+concerns ({{I-D.draft-mcguinness-mission-runtime-evidence}}). Two
+further members carry correlation a record MAY need:
+`hop_reference`, attributing a record to the continuation hop that
+authorized it, defined as a coordinated Decision Evidence member by
+the runtime evidence companion
+({{I-D.draft-mcguinness-mission-runtime-evidence}}), and
 `scope_statement_digest`, binding a record to the published
 Enforcement Scope Statement in effect when it was made, defined by the
 harness profile ({{I-D.draft-mcguinness-mission-harness}}).
@@ -402,9 +403,10 @@ The producer identifiers are principals the suite already names. For
 every record whose producer is the Mission `issuer`, the Signed
 Statement's `iss` MUST equal that `issuer`
 ({{I-D.draft-mcguinness-oauth-mission}}). The PDP and PEP keys are those
-in the deployment-published key sets the runtime and AuthZEN profiles
-require ({{I-D.draft-mcguinness-mission-runtime}},
-{{I-D.draft-mcguinness-mission-authzen}}).
+in the deployment-published key sets the runtime profile and its
+runtime evidence companion require
+({{I-D.draft-mcguinness-mission-runtime}},
+{{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 The approval event, the lifecycle-transition object, and the
 derivation record are canonicalized
@@ -421,7 +423,7 @@ The media types and type identifiers are defined as follows:
 - the consent, decision, execution, and refusal evidence types are
   registered by the profiles that define those objects
   ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}},
-  {{I-D.draft-mcguinness-mission-authzen}});
+  {{I-D.draft-mcguinness-mission-runtime-evidence}});
 - the Signals SET media type by the Signals profile it is carried in
   ({{I-D.draft-mcguinness-oauth-mission-signals}});
 - the Mandate media type by the Mandate profile
@@ -670,10 +672,10 @@ A relying party discovers a producer's key by the producer's role. The
   ({{I-D.draft-mcguinness-mission-aauth}}).
 
 A PDP, PEP, or harness key is resolved through the
-deployment-published key sets the runtime and AuthZEN
-profiles require ({{I-D.draft-mcguinness-mission-runtime}},
-{{I-D.draft-mcguinness-mission-authzen}}); the harness profile
-requires the same publication of a harness that registers its
+deployment-published key sets the runtime profile and its runtime
+evidence companion require ({{I-D.draft-mcguinness-mission-runtime}},
+{{I-D.draft-mcguinness-mission-runtime-evidence}}); the harness
+profile requires the same publication of a harness that registers its
 evidence ({{I-D.draft-mcguinness-mission-harness}}).
 
 ## Registration Availability {#availability}
@@ -1229,7 +1231,8 @@ The other evidence media types this profile registers into a Transparency
 Service are defined elsewhere:
 
 - the runtime decision, execution, and refusal evidence types by the
-  AuthZEN profile ({{I-D.draft-mcguinness-mission-authzen}});
+  runtime evidence companion
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}});
 - the consent evidence type by the consent evidence profile
   ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}});
 - the Mission Mandate media type by the Mandate profile
