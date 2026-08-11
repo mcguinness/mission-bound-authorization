@@ -32,6 +32,7 @@ normative:
   RFC7662:
   RFC7800:
   RFC8693:
+  RFC8705:
   RFC9068:
   RFC9396:
   RFC9449:
@@ -468,10 +469,13 @@ A Mission-bound cross-domain grant:
   RECOMMENDED profile that mechanism is the ID-JAG's own
   proof-of-possession
   ({{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}): a `cnf`
-  claim ({{RFC7800}}) carrying the `jkt` thumbprint ({{RFC9449}}) of
-  the presenting client's DPoP key. That `cnf` is OPTIONAL in the
-  ID-JAG profile; for Mission-bound cross-domain use it is REQUIRED, so
-  the grant is never a bearer credential at the trust boundary
+  claim ({{RFC7800}}) confirming the presenting client's key, control
+  of which the client proves either with a DPoP proof (`jkt`
+  thumbprint, {{RFC9449}}) or over an mTLS session (`x5t#S256`
+  certificate thumbprint, {{RFC8705}}); ID-JAG's `cnf` supports both
+  key-confirmation methods. That `cnf` is OPTIONAL in the ID-JAG
+  profile; for Mission-bound cross-domain use it is REQUIRED, so the
+  grant is never a bearer credential at the trust boundary
   ({{grant-at-boundary}}). Binding and verification MUST use the same
   mechanism;
 - MUST carry a `jti` for one-time use, so the bound party cannot
@@ -595,9 +599,11 @@ A Resource AS consuming a Mission-bound cross-domain grant:
     active at issuance; the short grant lifetime bounds the staleness.
 - MUST verify the grant's sender-constraint by the proof-of-possession
   mechanism the cross-domain grant profile defines. For the ID-JAG
-  profile this is a DPoP proof ({{RFC9449}}) for the Resource AS's own
-  token endpoint, presenting the key whose `jkt` thumbprint the grant's
-  `cnf` claim ({{RFC7800}}) carries
+  profile the Resource AS accepts either a DPoP proof ({{RFC9449}}) for
+  its own token endpoint, presenting the key whose `jkt` thumbprint the
+  grant's `cnf` claim ({{RFC7800}}) carries, or an mTLS connection
+  ({{RFC8705}}) presenting the certificate whose `x5t#S256` thumbprint
+  that `cnf` carries
   ({{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}). It MUST
   reject with `invalid_grant` a cross-domain grant that is not
   sender-constrained or whose proof-of-possession does not verify. A
