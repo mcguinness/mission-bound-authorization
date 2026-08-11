@@ -14,8 +14,8 @@ queries, and administrative interfaces to a companion specification.
 This document defines that companion. 
        An authenticated caller can read status, permanently terminate an
 authorized mission, and inspect the AAuth agent and token delegation
-tree recorded for it.  An immutable expiry defined by the AAuth
-Mission Expiry extension ends a mission automatically.  Termination
+tree recorded for it.  An immutable expiry, AAuth's  expires_at ,
+ends a mission automatically.  Termination
 reasons are audit facts and never protocol states.  The operations extend the existing AAuth  mission_endpoint ,
 use AAuth HTTP Message Signatures for agent calls, preserve the privacy
 of the mission blob, and record their results in the mission log. 
@@ -1104,8 +1104,8 @@ queries, and administrative interfaces to a companion specification.
 This document defines that companion.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 <p id="section-abstract-2">An authenticated caller can read status, permanently terminate an
 authorized mission, and inspect the AAuth agent and token delegation
-tree recorded for it.  An immutable expiry defined by the AAuth
-Mission Expiry extension ends a mission automatically.  Termination
+tree recorded for it.  An immutable expiry, AAuth's <code>expires_at</code>,
+ends a mission automatically.  Termination
 reasons are audit facts and never protocol states.  The operations extend the existing AAuth <code>mission_endpoint</code>,
 use AAuth HTTP Message Signatures for agent calls, preserve the privacy
 of the mission blob, and record their results in the mission log.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
@@ -1327,7 +1327,7 @@ to report and bound the residual window honestly.<a href="#section-abstract-3" c
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
 <p id="section-1-1">The AAuth Protocol <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span> makes agent
-governance orthogonal to its four resource-access modes.  An agent and
+governance orthogonal to its five resource-access modes.  An agent and
 its Person Server (PS) hold the exact bytes of an approved mission blob.
 The SHA-256 digest of those bytes, paired with the approving PS URL,
 forms the native Mission Reference.  Resources and Access Servers see
@@ -1350,13 +1350,18 @@ governance envelope held by the PS.<a href="#section-1-3" class="pilcrow">¶</a>
 companions (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), and the
 family security model's analysis applies to it
 (<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5">This specification reuses the existing <code>mission_endpoint</code>.  A mission
-proposal in the base protocol has no <code>operation</code> member.  A management
-request defined here has an <code>operation</code> member and a <code>mission</code> member,
-so the two request forms are unambiguous.  A separate management
-endpoint would create another discovery, authentication, and policy
-surface without changing the trust boundary: the approving PS remains
-the only server that can interpret the reference and change its state.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-5">This specification currently extends the existing <code>mission_endpoint</code>
+with an <code>operation</code> member, unambiguous against base requests, which
+carry none at that URL.  The base protocol splits the surfaces:
+<code>mission_endpoint</code> is the owning agent's,
+and parties other than the owning agent read and manage missions at
+the <code>mission_control_endpoint</code>, whose operations AAuth charters to a
+companion specification with exactly this document's scope.  A future
+revision relocates these operations to that endpoint and adopts the
+base protocol's per-mission URL and <code>action</code> discriminator
+conventions; the operation semantics defined here are
+endpoint-independent, and the approving PS remains the only server
+that can interpret the reference and change its state.<a href="#section-1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions">
@@ -1420,21 +1425,23 @@ the PS's control.<a href="#section-2-4.10.1" class="pilcrow">¶</a></p>
         <h3 id="name-mission-identity">
 <a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-mission-identity" class="section-name selfRef">Mission Identity</a>
         </h3>
-<p id="section-3.1-1">All requests in this specification identify exactly one target mission
-using:<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-1">The Mission Reference <code>{approver, s256}</code> remains the management key
+for every mission this specification governs.  On the wire, a request
+identifies its target with the flat <code>mission_s256</code> member, matching
+the base protocol's own parameter convention at PS endpoints:<a href="#section-3.1-1" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-3.1-2">
 <pre>
 {
-  "approver": "https://ps.example",
-  "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+  "operation": "status",
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 }
 </pre><a href="#section-3.1-2" class="pilcrow">¶</a>
 </div>
 <p id="section-3.1-3">The syntax, comparison, and digest rules are those of the AAuth Mission
-Reference.  The <code>approver</code> value <span class="bcp14">MUST</span> exactly equal the <code>issuer</code> in the
-metadata of the PS receiving the request.  A PS <span class="bcp14">MUST NOT</span> forward a
-management operation to another approver and <span class="bcp14">MUST NOT</span> accept an alias
-for either member.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+Reference.  <code>approver</code> is not a request member: it is fixed to the
+identity of the PS endpoint that receives the request.  A PS <span class="bcp14">MUST</span>
+resolve <code>mission_s256</code> only among the missions it itself approved,
+<span class="bcp14">MUST NOT</span> forward a management operation to another approver, and <span class="bcp14">MUST NOT</span> accept an alias for either half of the reference.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
 <p id="section-3.1-4">The pair is the sole protocol key.  Implementations <span class="bcp14">MAY</span> use internal
 database keys, but those keys <span class="bcp14">MUST NOT</span> appear in this protocol.  The PS
 <span class="bcp14">MUST NOT</span> require the caller to send the mission blob, and a status or
@@ -1517,18 +1524,22 @@ opaque audit value.<a href="#section-3.2-6" class="pilcrow">¶</a></p>
         <h3 id="name-optional-expiry">
 <a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-optional-expiry" class="section-name selfRef">Optional Expiry</a>
         </h3>
-<p id="section-3.3-1">Mission expiry is defined by AAuth Mission Expiry
-<span>[<a href="#I-D.draft-mcguinness-aauth-mission-expiry" class="cite xref">I-D.draft-mcguinness-aauth-mission-expiry</a>]</span>: an <span class="bcp14">OPTIONAL</span> <code>expires_at</code>
+<p id="section-3.3-1">Mission expiry is defined by AAuth
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>: an <span class="bcp14">OPTIONAL</span> <code>expires_at</code>
 member of the approved mission blob, covered by <code>s256</code>, immutable in
 place, and enforced by the PS on every decision path.  This profile
-does not redefine that mechanism.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
-<p id="section-3.3-2">This profile adds the observable consequences.  The transition that
-extension requires at or after <code>expires_at</code> is committed with
-termination reason <code>expired</code> and attributed to the PS scheduler
-(<a href="#logging" class="auto internal xref">Section 10</a>).  The status operation exposes the approved expiry
-(<a href="#status" class="auto internal xref">Section 6</a>).  An explicit terminate that races automatic expiry
-resolves as <a href="#idempotency" class="auto internal xref">Section 7.3</a> specifies: the first committed transition
-wins, and the losing operation observes an idempotent outcome.<a href="#section-3.3-2" class="pilcrow">¶</a></p>
+does not redefine that mechanism.  AAuth Mission Expiry
+<span>[<a href="#I-D.draft-mcguinness-aauth-mission-expiry" class="cite xref">I-D.draft-mcguinness-aauth-mission-expiry</a>]</span> remains an informative
+profile of the same native member for deployments that cite it.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<p id="section-3.3-2">This profile adds the observable consequences.  The transition AAuth
+requires at or after <code>expires_at</code> is committed with termination reason
+<code>expired</code> and attributed to the PS scheduler (<a href="#logging" class="auto internal xref">Section 10</a>), surfaced
+through AAuth's <code>mission_terminated</code> error and <code>mission_status</code> rather
+than a separate status value.  The status operation exposes the
+approved expiry (<a href="#status" class="auto internal xref">Section 6</a>).  An explicit terminate that races
+automatic expiry resolves as <a href="#idempotency" class="auto internal xref">Section 7.3</a> specifies: the first
+committed transition wins, and the losing operation observes an
+idempotent outcome.<a href="#section-3.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1550,10 +1561,7 @@ requests have this common shape:<a href="#section-4.1-1" class="pilcrow">¶</a><
 <pre>
 {
   "operation": "status",
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  }
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 }
 </pre><a href="#section-4.1-2" class="pilcrow">¶</a>
 </div>
@@ -1566,19 +1574,16 @@ profile <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span> and <spa
 covered components and content integrity requirements are those of the
 base AAuth profile.  A management request is never authorized from the
 Mission Reference alone.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
-<p id="section-4.1-5">This placement follows the base protocol's own definition of
-<code>mission_endpoint</code> as the URL for mission lifecycle operations, of
-which mission creation is one; the operations here are additional
-lifecycle operations at that surface.  A native mission proposal
-carries no <code>operation</code> member, so the discrimination is unambiguous.
-The base protocol does not reserve the <code>operation</code> member: if a future
-AAuth revision defines its own operation discrimination or
-request-shape rules at <code>mission_endpoint</code>, that definition governs and
-this profile will align with it.  A caller <span class="bcp14">SHOULD</span> confirm that an
-operation appears in <code>mission_management_operations_supported</code>
-(<a href="#metadata" class="auto internal xref">Section 4.2</a>) before sending it, because the base protocol does not
-define how a PS without this profile processes an operation-shaped
-request.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+<p id="section-4.1-5">The base protocol defines its own discrimination (a <span class="bcp14">REQUIRED</span> <code>action</code>
+member at per-mission URLs) and assigns operations for parties other
+than the owning agent to the <code>mission_control_endpoint</code> control
+plane.  This profile aligns by relocation in a future revision, as
+the Introduction describes.
+Until then, a native request at the bare <code>mission_endpoint</code> carries no
+<code>operation</code> member, so the discrimination here remains unambiguous,
+and a caller <span class="bcp14">SHOULD</span> confirm that an operation appears in
+<code>mission_management_operations_supported</code> (<a href="#metadata" class="auto internal xref">Section 4.2</a>) before
+sending it.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="metadata">
@@ -1603,11 +1608,13 @@ request.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
 operation strings.  The array <span class="bcp14">MUST</span> contain <code>status</code> and <code>terminate</code> for
 conformance to this specification.  It contains <code>delegation_tree</code> when
 the PS implements <a href="#delegation-tree" class="auto internal xref">Section 8</a>.  Unknown values <span class="bcp14">MUST</span> be ignored.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
-<p id="section-4.2-4">The base AAuth <code>mission_endpoint</code> member remains the only endpoint
-advertised by this profile.  The base protocol also defines a
-<code>mission_control_endpoint</code> metadata member; a PS <span class="bcp14">MAY</span> retain it for a
-deployment-specific administrative user interface, but it <span class="bcp14">MUST NOT</span> use
-that member to advertise the interoperable operations defined here.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+<p id="section-4.2-4">The base protocol defines <code>mission_control_endpoint</code> as the PS's
+mission control plane for parties other than the owning agent and
+leaves its operations to a companion specification.  Pending the
+relocation described in the Introduction, this profile advertises its
+operations at the existing <code>mission_endpoint</code>; a PS <span class="bcp14">MAY</span> additionally
+use <code>mission_control_endpoint</code> for a deployment's human-facing
+administrative interface, as the base protocol permits.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1660,7 +1667,7 @@ person represented by the mission and <span class="bcp14">MUST</span> prevent te
 selection from being supplied solely by the request body.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
 <p id="section-5.2-2">The Person <span class="bcp14">MAY</span> read status and delegation data, and <span class="bcp14">MAY</span> terminate with
 reason <code>completed</code>, <code>revoked</code>, or <code>superseded</code>.  For <code>superseded</code>, the PS
-<span class="bcp14">SHOULD</span> require the replacement Mission Reference and verify that the
+<span class="bcp14">SHOULD</span> require the replacement's <code>mission_s256</code> and verify that the
 same Person authorized both missions before recording the relationship.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1707,10 +1714,7 @@ Content-Digest: sha-256=:...:
 
 {
   "operation": "status",
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  }
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 }
 </pre><a href="#section-6-2" class="pilcrow">¶</a>
 </div>
@@ -1718,10 +1722,7 @@ Content-Digest: sha-256=:...:
 <div class="lang-json sourcecode" id="section-6-4">
 <pre>
 {
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  },
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
   "mission_status": "terminated",
   "approved_at": "2026-04-07T14:30:00Z",
   "expires_at": "2026-04-14T14:30:00Z",
@@ -1737,11 +1738,11 @@ values <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>: the inst
 and the latest instant a consumer may rely on this response.  The
 interval between them is deployment policy and <span class="bcp14">MAY</span> follow a published
 maximum staleness.<a href="#section-6-5" class="pilcrow">¶</a></p>
-<p id="section-6-6"><code>mission</code>, <code>mission_status</code>, and <code>approved_at</code> are <span class="bcp14">REQUIRED</span>.  The
+<p id="section-6-6"><code>mission_s256</code>, <code>mission_status</code>, and <code>approved_at</code> are <span class="bcp14">REQUIRED</span>.  The
 <code>mission_status</code> member reuses the name and values the base protocol
 carries in its <code>mission_terminated</code> error body.  <code>expires_at</code> is
 present only if it is in the mission blob
-(<span>[<a href="#I-D.draft-mcguinness-aauth-mission-expiry" class="cite xref">I-D.draft-mcguinness-aauth-mission-expiry</a>]</span>).  <code>terminated_at</code> is an
+(<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  <code>terminated_at</code> is an
 RFC 3339 <code>date-time</code> <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>; it and <code>termination_reason</code> are
 <span class="bcp14">REQUIRED</span> when <code>mission_status</code> is <code>terminated</code> and <span class="bcp14">MUST</span> be absent
 while it is <code>active</code>.<a href="#section-6-6" class="pilcrow">¶</a></p>
@@ -1773,10 +1774,7 @@ collision-resistant entropy encoded as a string.<a href="#section-7.1-1" class="
 <pre>
 {
   "operation": "terminate",
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  },
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
   "reason": "revoked",
   "request_id": "t-4f52f8d70a514703b54ca0c677f82d67",
   "purpose": "User withdrew authorization"
@@ -1790,10 +1788,7 @@ untrusted text.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
 <p id="section-7.1-4">For <code>superseded</code>, a Person or administrator <span class="bcp14">MAY</span> include:<a href="#section-7.1-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-7.1-5">
 <pre>
-"replacement": {
-  "approver": "https://ps.example",
-  "s256": "QmV0dGVyTWlzc2lvbkRpZ2VzdFZhbHVlMTIzNDU2Nzg5MDE"
-}
+"replacement_s256": "QmV0dGVyTWlzc2lvbkRpZ2VzdFZhbHVlMTIzNDU2Nzg5MDE"
 </pre><a href="#section-7.1-5" class="pilcrow">¶</a>
 </div>
 <p id="section-7.1-6">The replacement is related evidence, not an alternate key for the
@@ -1845,10 +1840,7 @@ summary:<a href="#section-7.2-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-7.2-5">
 <pre>
 {
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  },
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
   "mission_status": "terminated",
   "terminated_at": "2026-04-10T09:12:43Z",
   "termination_reason": "revoked",
@@ -1899,19 +1891,18 @@ termination obey the same rule.<a href="#section-7.3-3" class="pilcrow">¶</a></
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-delegation-tree-operation" class="section-name selfRef">Delegation-Tree Operation</a>
       </h2>
 <p id="section-8-1">AAuth does not create child Mission objects for sub-agents or chained
-calls.  It records agent relationships in <code>parent_agent</code>, <code>act</code>, and the
-Auth Tokens issued or provided under the same Mission Reference.  The
-tree operation reports those native relationships; it <span class="bcp14">MUST NOT</span> invent a
-second child mission identifier or imply algebraic scope inheritance.<a href="#section-8-1" class="pilcrow">¶</a></p>
+calls.  It records agent relationships in <code>parent_agent</code> and in the
+Auth Tokens issued or provided under the same Mission Reference; auth
+and resource tokens carry no chain claim, so the PS itself holds the
+call-chain state.  The tree operation reports those native
+relationships; it <span class="bcp14">MUST NOT</span> invent a second child mission identifier or
+imply algebraic scope inheritance.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">An authorized caller sends:<a href="#section-8-2" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-8-3">
 <pre>
 {
   "operation": "delegation_tree",
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  },
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
   "max_results": 100,
   "cursor": "opaque-next-page-value"
 }
@@ -1926,10 +1917,7 @@ processing the mission:<a href="#section-8-5" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-8-6">
 <pre>
 {
-  "mission": {
-    "approver": "https://ps.example",
-    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-  },
+  "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
   "as_of": "2026-04-10T09:15:00Z",
   "nodes": [
     {
@@ -1949,7 +1937,7 @@ processing the mission:<a href="#section-8-5" class="pilcrow">¶</a></p>
 }
 </pre><a href="#section-8-6" class="pilcrow">¶</a>
 </div>
-<p id="section-8-7"><code>mission</code>, <code>as_of</code>, <code>nodes</code>, and <code>complete</code> are <span class="bcp14">REQUIRED</span>.  When another
+<p id="section-8-7"><code>mission_s256</code>, <code>as_of</code>, <code>nodes</code>, and <code>complete</code> are <span class="bcp14">REQUIRED</span>.  When another
 page exists, <code>next_cursor</code> is <span class="bcp14">REQUIRED</span> and <code>complete</code> is false.  A node
 contains an <code>agent</code> and one of <code>root</code>, <code>sub_agent</code>, or <code>call_chain</code> as
 <code>relationship</code>.  A non-root node contains <code>parent_agent</code>.  <code>tokens</code> <span class="bcp14">MAY</span>
@@ -2194,7 +2182,7 @@ inventing a deadline.<a href="#section-11.4-2" class="pilcrow">¶</a></p>
             <p id="section-11.4-4.2.1">an opaque <code>AAuth-Access</code> token issued in resource-managed access;<a href="#section-11.4-4.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.4-4.3">
-            <p id="section-11.4-4.3.1">a Resource that ignored <code>AAuth-Mission</code>;<a href="#section-11.4-4.3.1" class="pilcrow">¶</a></p>
+            <p id="section-11.4-4.3.1">a Resource that violated the base protocol's <code>mission_s256</code> copy rule;<a href="#section-11.4-4.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.4-4.4">
             <p id="section-11.4-4.4.1">credentials or side effects acquired outside AAuth; or<a href="#section-11.4-4.4.1" class="pilcrow">¶</a></p>
@@ -2255,11 +2243,12 @@ terminal status.  The management surface defines no push channel.<a href="#secti
         <h3 id="name-reference-substitution-and-">
 <a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-reference-substitution-and-" class="section-name selfRef">Reference Substitution and Cross-PS Confusion</a>
         </h3>
-<p id="section-13.1-1">An attacker can substitute a known <code>s256</code> or send a reference for a
-different PS.  Exact pair comparison, the local <code>approver</code> check,
+<p id="section-13.1-1">An attacker can substitute a known <code>mission_s256</code> value, including one
+issued by a different PS.  Exact digest comparison, resolving
+<code>mission_s256</code> only within this PS's own approved-mission store,
 signature verification, and authorization against the resolved mission
-are all mandatory.  Neither member is interpreted as a fetch URL.  The
-PS never retrieves a mission from a caller-selected location.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+are all mandatory.  <code>mission_s256</code> is not interpreted as a fetch URL.
+The PS never retrieves a mission from a caller-selected location.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="request-replay">
@@ -2342,9 +2331,10 @@ add tamper-evident storage or signed checkpoints.<a href="#section-13.6-1" class
 <p id="section-13.7-1">The returned tree is based on PS observations, not global execution.
 Treating it as complete evidence can hide identity-based, opaque-token,
 or off-path activity.  Consumers <span class="bcp14">MUST</span> preserve the distinction between
-page completeness and observational completeness.  Token <code>act</code> claims
-and <code>parent_agent</code> values are accepted only after their normal AAuth
-verification; unverified caller assertions never create edges.<a href="#section-13.7-1" class="pilcrow">¶</a></p>
+page completeness and observational completeness.  <code>parent_agent</code>
+values and the PS's own issuance-linked chain state are accepted only
+after their normal AAuth verification; unverified caller assertions
+never create edges.<a href="#section-13.7-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transport">
@@ -2417,8 +2407,9 @@ it:<a href="#section-15-1" class="pilcrow">¶</a></p>
 <code>mission_endpoint</code> and advertises both operations;<a href="#section-15-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-15-2.2">
-          <p id="section-15-2.2.1">keys every operation solely by the exact <code>{approver, s256}</code> Mission
-Reference and requires <code>approver</code> to equal its metadata issuer;<a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-15-2.2.1">keys every operation solely by the flat <code>mission_s256</code> member,
+resolving it only among missions for which it is itself the
+<code>approver</code>;<a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-15-2.3">
           <p id="section-15-2.3.1">preserves exactly the <code>active</code> and <code>terminated</code> states, makes
@@ -2447,8 +2438,9 @@ document and the base AAuth Protocol.<a href="#section-15-2.8.1" class="pilcrow"
 </li>
       </ol>
 <p id="section-15-3">Expiry support is <span class="bcp14">OPTIONAL</span>.  If implemented, the PS conforms to
-<span>[<a href="#I-D.draft-mcguinness-aauth-mission-expiry" class="cite xref">I-D.draft-mcguinness-aauth-mission-expiry</a>]</span> and to <a href="#expiry" class="auto internal xref">Section 3.3</a> in
-full.  Delegation-tree support is <span class="bcp14">OPTIONAL</span>.  If
+AAuth's native <code>expires_at</code> definition and enforcement, to the
+retained deltas of <span>[<a href="#I-D.draft-mcguinness-aauth-mission-expiry" class="cite xref">I-D.draft-mcguinness-aauth-mission-expiry</a>]</span>, and
+to <a href="#expiry" class="auto internal xref">Section 3.3</a> in full.  Delegation-tree support is <span class="bcp14">OPTIONAL</span>.  If
 advertised, the PS conforms to <a href="#delegation-tree" class="auto internal xref">Section 8</a> in full.<a href="#section-15-3" class="pilcrow">¶</a></p>
 <p id="section-15-4">A deployment claiming conformance <span class="bcp14">MUST</span> publish or otherwise make
 available its caller-role authorization policy, Auth Token retention
@@ -2471,11 +2463,7 @@ identity-based, opaque resource-managed, or otherwise untracked access.<a href="
 <dl class="references">
 <dt id="I-D.draft-hardt-oauth-aauth-protocol">[I-D.draft-hardt-oauth-aauth-protocol]</dt>
         <dd>
-<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-oauth-aauth-protocol-10</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-hardt-oauth-aauth-protocol/10/">https://datatracker.ietf.org/doc/draft-hardt-oauth-aauth-protocol/10/</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-aauth-mission-expiry">[I-D.draft-mcguinness-aauth-mission-expiry]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"AAuth Mission Expiry"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html</a>&gt;</span>. </dd>
+<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html">https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
@@ -2518,6 +2506,10 @@ identity-based, opaque resource-managed, or otherwise untracked access.<a href="
 <a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-aauth-mission-expiry">[I-D.draft-mcguinness-aauth-mission-expiry]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"AAuth Mission Expiry"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
