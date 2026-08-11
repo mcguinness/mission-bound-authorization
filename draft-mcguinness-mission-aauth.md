@@ -230,8 +230,8 @@ Lifecycle gate:
 
 Bounded reliance:
 : Every mission carries `expires_at` ({{lifecycle}}), the PS
-  establishes `active` at decision time, and no auth token issued
-  under the mission outlives it.
+  establishes `active` at decision time, and no auth token's `exp`
+  exceeds the mission's `expires_at`.
 
 Context propagation:
 : AAuth's `AAuth-Mission` header and native `mission` claims carry only
@@ -355,8 +355,8 @@ operate under the resulting reference.
 
 ## Governed Requests and Mission Log {#mission-log}
 
-For every PS request carrying a mission reference, the PS MUST verify
-that:
+For every PS request seeking a positive governance decision under a
+mission reference, the PS MUST verify that:
 
 - it is the identified `approver`;
 - the `s256` identifies a mission blob it approved;
@@ -367,6 +367,11 @@ that:
 If any of these checks cannot be completed, including establishing the
 mission's current state, the PS MUST fail closed and reject the
 request.
+
+Authenticated status, termination, denial, cleanup, and audit
+operations defined by this binding's companions are not positive
+governance decisions; they answer on a non-active mission as their
+specifications define.
 
 The PS then evaluates the request using the approved description, the
 request's justification and other inputs, applicable person or
@@ -438,7 +443,9 @@ the authorization path.
 
 In every mode, the PS MUST apply the active-state gate to its own
 permission, audit, interaction, mission, and token operations when they
-reference a mission, as required by AAuth.  In identity-based and
+reference a mission, as required by AAuth, except that an
+authenticated status or termination operation defined by a companion
+returns terminal state instead.  In identity-based and
 resource-managed access, that PS-local gate does not stop an agent from
 making requests directly to a resource.  Deployments MUST NOT claim PS
 issuance gating for those direct resource decisions.
@@ -483,9 +490,11 @@ active:
   remains subject to a fresh PS decision and any resource policy.
 
 terminated:
-: The mission is permanently ended.  The PS MUST reject requests that
-  reference it with AAuth's `mission_terminated` error, and the agent
-  MUST stop acting under it.
+: The mission is permanently ended.  The PS MUST reject governed
+  requests that reference it with AAuth's `mission_terminated` error,
+  and the agent MUST stop acting under it.  An authenticated status
+  or termination operation defined by a companion returns terminal
+  state instead ({{mission-log}}).
 
 Completion follows AAuth's interaction flow: the agent proposes
 completion with a summary, the PS presents it to the person, and the
@@ -502,7 +511,10 @@ PS MUST set one at approval under deployment policy, and that policy
 SHOULD prefer the shortest expiry consistent with the mission's
 purpose.  Expiry
 transitions the mission to `terminated`; it adds no third state, and
-no auth token issued under the mission outlives it.
+no auth token's `exp` exceeds the mission's approved `expires_at`.
+An early completion, revocation, or administrative termination
+prevents new governed issuance; an outstanding token remains usable
+until revocation or its own expiry, inside that approved bound.
 
 There is no suspended state in this binding.  A short wait uses AAuth's
 deferred-response mechanism.  A long or materially changed pause is
@@ -742,8 +754,8 @@ The contextual-governance kernel maps as follows:
    by AAuth Mission Management where deployed ({{lifecycle}}).
 7. **Reliance bound**: every mission carries `expires_at`
    ({{lifecycle}}, {{I-D.draft-mcguinness-aauth-mission-expiry}});
-   PS decisions establish `active` at decision time, no auth token
-   issued under the mission outlives it, and the residual after a
+   PS decisions establish `active` at decision time, no auth token's
+   `exp` exceeds the mission's `expires_at`, and the residual after a
    transition is bounded by outstanding token lifetime.
 8. **Context propagation**: the signed native reference in AAuth
    headers and claims carries governance context; the blob itself
@@ -760,7 +772,7 @@ The binding declares these optional capabilities:
 | Capability | Claim | Scope and defining sections | Limitations |
 | --- | --- | --- | --- |
 | Lifecycle-Gated Authorization | supported | PS-gated operations: mission-endpoint processing, permission decisions, and auth-token issuance the PS performs or brokers; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials are outside the claim; the post-transition residual is bounded by auth-token lifetime and `expires_at` |
-| State-Observable | conditional | The AAuth Mission Management status operation where deployed: authenticated per-role callers, the `active` and `terminated` vocabulary, responses current at the evaluation instant, absent and unauthorized references indistinguishable ({{I-D.draft-mcguinness-mission-aauth-management}}) | The base binding exposes no consumer-facing state source; token acceptance is not observation |
+| State-Observable | conditional | The AAuth Mission Management status operation where deployed: authenticated per-role callers, the `active` and `terminated` vocabulary, responses current at the evaluation instant under a zero-cache per-reliance consumer contract that fails closed on failed or unrecognized responses, absent and unauthorized references indistinguishable ({{I-D.draft-mcguinness-mission-aauth-management}}) | The base binding exposes no consumer-facing state source; token acceptance is not observation |
 | Structured Authority | not supported | The mission description is private prose; `approved_tools` is PS-local | Scopes or a resource-owned policy language can supply structure inside its own boundary |
 | Monotonic Derivation | not supported | No cross-boundary subset relation is defined | A resource policy language can define monotonicity within its own vocabulary |
 | Credential-Bound | conditional | PS-asserted and federated modes carry and validate the signed native reference in PS-issued or PS-brokered artifacts, a binding established at issuance rather than by an external join ({{access-modes}}) | Identity-based and resource-managed modes convey no mission binding; federated artifacts are AS-issued under the PS's brokering |

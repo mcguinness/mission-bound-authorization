@@ -416,7 +416,13 @@ REQUIRED when `mission_status` is `terminated` and MUST be absent
 while it is `active`.
 
 The response is current at the instant the PS evaluates the request.
-It is not a promise that the state will remain active.  An Agent MUST
+It is not a promise that the state will remain active.  For a
+consumer that relies on a status response for a covered decision of
+its own, the contract is zero-cache: each reliance requires a fresh
+query, and a response has no reliance lifetime beyond its evaluation
+instant.  A failed, invalid, or unrecognized status response
+establishes nothing; the consumer MUST fail closed and MUST NOT treat
+the mission as `active` on its basis.  An Agent MUST
 stop initiating work when it receives `terminated`.  Polling is a
 freshness mechanism, not the safety floor: every PS endpoint still
 enforces mission state itself.

@@ -158,9 +158,11 @@ request under the reference.
 
 The PS MUST NOT issue an Auth Token whose `exp` is later than the
 mission's `expires_at` when the PS controls that expiry. In
-federation, the PS MUST enforce that bound: where the AS cannot
-constrain the token's `exp` to the mission's `expires_at`, the PS
-MUST NOT broker or approve the issuance.
+federation, the PS MUST verify that the returned Auth Token's `exp`
+is no later than the mission's `expires_at`; if it is later, absent,
+or cannot be verified, the PS MUST NOT return or otherwise make the
+token available to the Agent.  The PS SHOULD NOT initiate federation
+when it already knows the AS cannot meet the bound.
 
 # Relationship to Other Specifications {#relationships}
 
