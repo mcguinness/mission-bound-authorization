@@ -945,9 +945,10 @@ authorization, follow from the authentication case:
    ({{I-D.draft-mcguinness-oauth-mission}}): for a delegated access
    token its `sub` denotes the resource owner (the represented party),
    matching the {{RFC9068}} access-token `sub` model; the calling party
-   is identified by `client_id`; and, where a delegation chain is
-   present, the immediate actor is identified by the `act` claim
-   ({{I-D.draft-mcguinness-oauth-mission}}). A DPoP {{RFC9449}} or mTLS
+   is identified by `client_id` ({{RFC8693}} Section 4.3); and, where a
+   delegation chain is present, the immediate actor is identified by the
+   `act` claim ({{RFC8693}}, {{I-D.draft-mcguinness-oauth-mission}}). A
+   DPoP {{RFC9449}} or mTLS
    {{RFC8705}} sender constraint binds the presenter to a key; it does
    not change what `sub` denotes. The acting party is the calling party
    so identified, and the presented token MUST carry the lifecycle
