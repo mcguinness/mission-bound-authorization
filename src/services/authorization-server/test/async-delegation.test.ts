@@ -37,8 +37,7 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE } from "../src/adapters/continuation-grant.js";
-import { CHILD_CREATION_GRANT_TYPE } from "../src/adapters/provider.js";
+import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE } from "../src/adapters/continuation-grant.js";
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 
 const PORT = 14480;
@@ -266,51 +265,27 @@ async function refreshFamily(refreshToken: string, keys: Keys = actingDpop): Pro
   return res;
 }
 
-/** Push the child-creation params via PAR; returns the request_uri. */
-async function pushChildPar(parentId: string, parentToken: string): Promise<string> {
-  const challenge = Buffer.from(
-    await crypto.subtle.digest("SHA-256", new TextEncoder().encode("async-child-verifier-0123456789-0123456789-01")),
-  ).toString("base64url");
-  const res = await fetch(`${ISSUER}/request`, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: "ap-agent",
-      response_type: "code",
-      redirect_uri: REDIRECT_URI,
-      scope: "payments",
-      resource: RESOURCE,
-      code_challenge: challenge,
-      code_challenge_method: "S256",
-      mission_intent: JSON.stringify({
-        goal: "Extract Acme invoices",
-        resources: [RESOURCE],
-        expires_at: FAR_EXP,
-        proposed_authority: confinedAuthority(),
-      }),
-      parent: parentId,
-      parent_token: parentToken,
-      child_actor: JSON.stringify({ sub: "subagent-invoice-extractor", sub_profile: "ai_agent" }),
-      client_assertion: await clientAssertion(),
-      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-    }).toString(),
-  });
-  const body = (await res.json()) as { request_uri?: string };
-  expect(res.status, JSON.stringify(body)).toBe(201);
-  return body.request_uri as string;
-}
-
-/** Redeem a pushed child request AS THE PARENT (ap-agent) via private_key_jwt. */
-async function createChild(requestUri: string): Promise<Response> {
-  return fetch(`${ISSUER}/token`, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: CHILD_CREATION_GRANT_TYPE,
-      request_uri: requestUri,
-      client_assertion: await clientAssertion(),
-      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-    }).toString(),
+/**
+ * Create a Child Mission via the RFC 8693 token exchange (request side of #448's
+ * possession fix). subject_token is the parent Mission's code-flow ACCESS token
+ * (bound to `codeDpop`); possession is proven by a DPoP proof over that SAME key
+ * (codeTokenRequest signs with codeDpop). The parent is resolved FROM subject_token;
+ * `parent` is a non-authoritative cross-check. No refresh token is involved.
+ */
+async function createChildViaExchange(subjectToken: string, parentId: string): Promise<Response> {
+  return codeTokenRequest({
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    subject_token: subjectToken,
+    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    requested_token_type: JWT_TOKEN_TYPE,
+    parent: parentId,
+    mission_intent: JSON.stringify({
+      goal: "Extract Acme invoices",
+      resources: [RESOURCE],
+      expires_at: FAR_EXP,
+      proposed_authority: confinedAuthority(),
+    }),
+    child_actor: JSON.stringify({ sub: "subagent-invoice-extractor", sub_profile: "ai_agent" }),
   });
 }
 
@@ -631,10 +606,9 @@ describe("async-delegation blast-radius isolation (@spec async-delegation)", () 
     expect(codeRefresh.status, JSON.stringify(codeBody)).toBe(200);
     expect(codeBody.access_token).toBeTruthy();
 
-    // ISOLATION (2): child-creation under the SAME Mission still succeeds -> parent_token
-    // (the Mission code-flow RT) still resolves and the Mission grant is intact.
-    const requestUri = await pushChildPar(missionId, missionRefreshToken);
-    const created = await createChild(requestUri);
+    // ISOLATION (2): child-creation under the SAME Mission still succeeds -> the
+    // base Mission access token still resolves the parent and the grant is intact.
+    const created = await createChildViaExchange(baseAccessToken, missionId);
     const createdBody = (await created.json()) as { mission_id?: string; error?: string; mission_denial_reason?: string };
     expect(created.status, JSON.stringify(createdBody)).toBe(200);
     expect(createdBody.mission_id).toBeTruthy();

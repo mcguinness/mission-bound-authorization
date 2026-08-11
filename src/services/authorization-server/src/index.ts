@@ -20,7 +20,7 @@ import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continu
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
 import { ContinuationStore } from "./kernel/continuation-store.js";
 import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
-import { DeferralStore } from "./kernel/deferred.js";
+import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
@@ -172,6 +172,10 @@ export {
   DeferralStore,
   DeferralError,
   DEFERRED_GRANT_TYPE,
+  ExpansionDeferralStore,
+  ExpansionDeferralError,
+  type ExpansionApproval,
+  type ExpansionDeferredResult,
   type DeferralPending,
   type DeferralSlowDown,
   type DeferredToken,
@@ -249,6 +253,11 @@ export interface BuiltAs {
   kernel: MissionKernel;
   /** AROP Deferred Token Response store (drive open/approve/deny headlessly). */
   deferrals: DeferralStore;
+  /**
+   * @spec expansion — the DTR deferred-completion store for Mission EXPANSION
+   * (drive open/approve/deny headlessly, mirroring `deferrals`).
+   */
+  expansionDeferrals: ExpansionDeferralStore;
   issuer: string;
   agentClientJwk: Record<string, unknown>;
   /**
@@ -440,6 +449,9 @@ export async function buildAuthorizationServer(opts: {
   statusListPublisher = new StatusListPublisher(() => kernel.publishStatusList());
   // AROP DTR store, wired onto the real /token deferred grant (D42).
   const deferrals = new DeferralStore(kernel);
+  // @spec expansion — the DTR deferred-completion store for Mission EXPANSION
+  // (widening; distinct from AROP, which never widens).
+  const expansionDeferrals = new ExpansionDeferralStore(kernel);
 
   // @spec id-continuation-assertion — continuation-grant defaults. The AS is its
   // OWN Chain Authority in the demo (ICAs trusted when signed by a key on its
@@ -457,6 +469,7 @@ export async function buildAuthorizationServer(opts: {
     issuer: opts.issuer,
     kernel,
     deferrals,
+    expansionDeferrals,
     statusListPublisher,
     clients: [agent.metadata, child.metadata],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
@@ -502,6 +515,7 @@ export async function buildAuthorizationServer(opts: {
     provider,
     kernel,
     deferrals,
+    expansionDeferrals,
     issuer: opts.issuer,
     agentClientJwk: agent.privateJwk,
     childClientJwk: child.privateJwk,

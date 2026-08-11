@@ -36,9 +36,12 @@ import {
 } from "../kernel/continuation-assertion.js";
 import { ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain.js";
 import { isSubsetSet } from "../kernel/derive.js";
+import { ExpansionDeferralError } from "../kernel/deferred.js";
+import { ChildDelegationError, createChildMission } from "../kernel/child-delegation.js";
 import { GateError } from "../kernel/kernel.js";
-import type { AuthorityEntry } from "../kernel/types.js";
-import { newResourceServer, resourceServerInfoFor } from "./provider.js";
+import type { AuthorityEntry, MissionIntent, MissionRecord } from "../kernel/types.js";
+import { mintChildGrant } from "./child-grant.js";
+import { childErrorCode, newResourceServer, resourceServerInfoFor } from "./provider.js";
 import type { AdapterOptions } from "./provider.js";
 
 /** @spec RFC 8693 §2.1 — the token-exchange grant type. */
@@ -46,6 +49,16 @@ export const TOKEN_EXCHANGE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token
 
 /** @spec RFC 8693 §3 — the access-token token type (the async-delegation subject_token). */
 export const ACCESS_TOKEN_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token";
+
+/** @spec RFC 8693 §3 — the JWT token type. The `requested_token_type` that selects
+ *  the CHILD-CREATION exchange (a child-bound RFC 7523 JWT authorization grant is
+ *  issued); it also matches the response `issued_token_type`. */
+export const JWT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
+
+/** @spec RFC 8693 §3 — the refresh-token token type. NEVER acceptable as
+ *  `subject_token` for expansion/child-creation (#448: a reusable bearer refresh
+ *  credential MUST NOT be the possession carrier). */
+export const REFRESH_TOKEN_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:refresh_token";
 
 /** The (iss, jti) replay cache shape (from `newReplayCache()`). */
 export type ContinuationReplay = {
@@ -104,6 +117,23 @@ export async function handleTokenExchangeGrant(
   const requestRefresh = params.request_refresh_token;
   if (requestRefresh === "true" || requestRefresh === true) {
     await handleAsyncDelegationExchange(opts, provider, ctx);
+    return;
+  }
+
+  // @spec expansion / child-delegation — the possession-fixed delegation exchanges
+  // (#448 supersession). `requested_token_type` selects the operation and is
+  // checked BEFORE the ICA hard-checks below, so the ICA continuation path is
+  // byte-for-byte unchanged whenever neither value is present:
+  //   - child-creation issues a child-bound RFC 7523 JWT authorization grant (jwt);
+  //   - expansion issues (synchronously) or defers a Mission access token.
+  // The subject_token possession rule (control the subject_token's OWN cnf) is the
+  // inverse of the async transport's deliberate re-binding; see verifySubjectPossession.
+  if (params.requested_token_type === JWT_TOKEN_TYPE) {
+    await handleChildCreationExchange(opts, provider, ctx);
+    return;
+  }
+  if (params.requested_token_type === ACCESS_TOKEN_TOKEN_TYPE) {
+    await handleExpansionExchange(opts, provider, ctx);
     return;
   }
 
@@ -560,4 +590,494 @@ export async function handleAsyncDelegationExchange(
     authorization_details: confinedSubset,
   };
   ctx.set("cache-control", "no-store");
+}
+
+// ===========================================================================
+// @spec expansion / child-delegation — the possession-fixed delegation exchanges.
+//
+// Abstract requirement (binding-independent): to expand a predecessor Mission or
+// create a child Mission, the requester MUST prove possession of the
+// predecessor/parent's authority via a SENDER-CONSTRAINED proof; a reusable bearer
+// refresh credential MUST NOT be the carrier (#448). The AS binding of that
+// requirement is an RFC 8693 token exchange whose `subject_token` is the
+// predecessor/parent's Mission-bound ACCESS token; possession is control of that
+// token's OWN confirmation key (RFC 9449 DPoP jkt). The predecessor/parent is
+// resolved FROM `subject_token` (the token is the selector, not a `predecessor`/
+// `parent` param).
+// ===========================================================================
+
+/** A resolved, possession-verified subject Mission (verification order steps 1-3). */
+interface ResolvedSubject {
+  record: MissionRecord;
+  /** The verified presenter jkt (== the subject_token's own cnf.jkt). */
+  jkt: string;
+  /** The presenter DPoP public key (for verifying a carried actor_token). */
+  dpopJwk: JWK;
+  claims: Record<string, unknown>;
+}
+
+/**
+ * @spec expansion / child-delegation — AS verification order steps 1-3, shared by
+ * BOTH exchanges. (1) require an access-token `subject_token` and REJECT a refresh
+ * token; verify the token on the AS jwks. (2) resolve the Mission FROM it. (3)
+ * verify POSSESSION: the presenter's DPoP proof key MUST equal the subject_token's
+ * OWN cnf.jkt. This is the inverse of {@link handleAsyncDelegationExchange}, which
+ * deliberately re-binds to the acting client's key. The DPoP `jti` is single-use
+ * per RFC 9449; NOTE the token endpoint does not maintain a proof-jti replay cache
+ * for custom grants (the same limitation as every other manual DPoP block here).
+ * Returns null after setting the ctx error body; the caller returns immediately.
+ */
+async function verifySubjectPossession(
+  opts: AdapterOptions,
+  ctx: KoaContextWithOIDC,
+): Promise<ResolvedSubject | null> {
+  const params = ctx.oidc.params as Record<string, unknown>;
+  // Step 1: subject_token type. A refresh token MUST NOT be the carrier (#448).
+  if (params.subject_token_type === REFRESH_TOKEN_TOKEN_TYPE) {
+    txError(
+      ctx,
+      400,
+      "invalid_request",
+      "a refresh token MUST NOT be accepted as subject_token; present the Mission access token",
+    );
+    return null;
+  }
+  if (params.subject_token_type !== ACCESS_TOKEN_TOKEN_TYPE) {
+    txError(ctx, 400, "invalid_request", "subject_token_type MUST be the access_token token type");
+    return null;
+  }
+  const subjectToken = params.subject_token;
+  if (typeof subjectToken !== "string" || !subjectToken) {
+    txError(ctx, 400, "invalid_request", "subject_token (the Mission access token) required");
+    return null;
+  }
+  // Step 1: verify subject_token on the AS jwks.
+  let claims: Record<string, unknown>;
+  try {
+    const { payload } = await jwtVerify(subjectToken, createLocalJWKSet(opts.publicJwks as never), {
+      issuer: opts.issuer,
+    });
+    claims = payload as Record<string, unknown>;
+  } catch {
+    txError(ctx, 400, "invalid_grant", "subject_token verification failed");
+    return null;
+  }
+  // Step 2: the Mission is selected BY subject_token (replaces predecessor_token/parent_token).
+  const missionRef = claims.mission as { id?: string } | undefined;
+  const missionId = missionRef?.id;
+  if (typeof missionId !== "string") {
+    txError(ctx, 400, "invalid_grant", "subject_token is missing the mission claim");
+    return null;
+  }
+  const cnfJkt = (claims.cnf as { jkt?: unknown } | undefined)?.jkt;
+  if (typeof cnfJkt !== "string" || !cnfJkt) {
+    txError(ctx, 400, "invalid_grant", "subject_token is not sender-constrained (no cnf.jkt)");
+    return null;
+  }
+  // Step 3: POSSESSION — the presenter controls the subject_token's OWN cnf key.
+  const proofJws = ctx.get("DPoP");
+  if (!proofJws) {
+    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
+    return null;
+  }
+  let jkt: string;
+  let dpopJwk: JWK;
+  try {
+    const header = decodeProtectedHeader(proofJws);
+    dpopJwk = header.jwk as JWK;
+    jkt = await calculateJwkThumbprint(dpopJwk);
+    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
+    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
+      throw new Error("DPoP htu/htm mismatch");
+    }
+  } catch {
+    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+    return null;
+  }
+  if (jkt !== cnfJkt) {
+    txError(ctx, 400, "invalid_grant", "possession proof does not match the subject_token confirmation key");
+    return null;
+  }
+  const record = opts.kernel.get(missionId);
+  if (!record) {
+    txError(ctx, 400, "invalid_grant", "subject_token mission not found");
+    return null;
+  }
+  return { record, jkt, dpopJwk, claims };
+}
+
+/**
+ * @spec expansion / child-delegation — AS verification order step 4: identify the
+ * acting agent. The acting agent is the authenticated client (client auth ran
+ * before this handler). Phase 1 CARRIES `actor_token`; it does NOT restructure the
+ * act chain (that is #433, out of scope). When an actor_token is present it MUST be
+ * sender-constrained to the presenter key (cnf.jkt === jkt). Returns the acting
+ * agent, or null after setting the error body.
+ */
+async function carryActingAgent(
+  opts: AdapterOptions,
+  ctx: KoaContextWithOIDC,
+  dpopJwk: JWK,
+  jkt: string,
+): Promise<{ iss: string; sub: string } | null> {
+  const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+  const acting = { iss: opts.issuer, sub: client.clientId };
+  const actorTokenRaw = (ctx.oidc.params as Record<string, unknown>).actor_token;
+  if (actorTokenRaw === undefined) return acting; // client auth identifies the actor
+  if (typeof actorTokenRaw !== "string" || !actorTokenRaw) {
+    txError(ctx, 400, "invalid_request", "actor_token must be a JWT");
+    return null;
+  }
+  try {
+    const { payload } = await jwtVerify(actorTokenRaw, dpopJwk, { algorithms: ["ES256"] });
+    if ((payload.cnf as { jkt?: unknown } | undefined)?.jkt !== jkt) {
+      txError(ctx, 400, "invalid_grant", "actor_token is not sender-constrained to the presenter key");
+      return null;
+    }
+  } catch {
+    txError(ctx, 400, "invalid_grant", "actor_token verification failed");
+    return null;
+  }
+  return acting; // carried, not restructured (#433).
+}
+
+/** Seconds until an ISO instant, floored at 1 (absolute-lifetime clamp). */
+function secondsUntil(iso: string): number {
+  return Math.max(1, Math.floor((Date.parse(iso) - Date.now()) / 1000));
+}
+
+/**
+ * Mint a DPoP-bound, resource-bound Mission access token for `mission`, single-
+ * gated through `extraTokenClaims`. The token is bound to the mission's OWN
+ * approval grant (created + bound lazily), so `findByGrant` resolves the Mission
+ * inside the hook and the `mission` claim is attached + the derivation gated
+ * EXACTLY ONCE (never hand-set, never double-gated). Because oidc-provider requires
+ * the AccessToken and its Grant to name the same client, the acting client MUST be
+ * the mission's own client_id (a Mission derivation is performed by the Mission's
+ * own agent); a mismatch refuses. `tokenRar` is the authorization the token
+ * carries (a confined subset for a subset-derivation, the full effective set for a
+ * successor). Sets the RFC 8693-shaped success body on ctx.
+ */
+async function mintMissionAccessToken(
+  opts: AdapterOptions,
+  provider: Provider,
+  ctx: KoaContextWithOIDC,
+  mission: MissionRecord,
+  tokenRar: AuthorityEntry[],
+  jkt: string,
+): Promise<boolean> {
+  const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+  if (client.clientId !== mission.client_id) {
+    txError(ctx, 400, "invalid_grant", "acting client is not the mission client");
+    return false;
+  }
+  const effective = opts.kernel.effectiveAuthoritySet(mission);
+  const resource = tokenRar[0]?.resource ?? effective[0]?.resource ?? opts.issuer;
+  let grantId: string;
+  if (mission.grant_id) {
+    grantId = mission.grant_id;
+  } else {
+    const grant = new provider.Grant({ accountId: mission.subject.sub, clientId: mission.client_id });
+    grant.addOIDCScope("payments");
+    grant.addResourceScope(resource, "payments");
+    for (const entry of effective) (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
+    grantId = await grant.save();
+    opts.kernel.bindGrant(mission.id, grantId);
+  }
+  const info = resourceServerInfoFor(resource, opts.accessTokenTTL ?? 300);
+  info.accessTokenTTL = Math.min(info.accessTokenTTL, secondsUntil(mission.expires_at));
+  const at = new provider.AccessToken({
+    accountId: mission.subject.sub,
+    client,
+    grantId,
+    gty: TOKEN_EXCHANGE_GRANT_TYPE,
+    rar: tokenRar,
+    scope: "payments",
+  });
+  at.resourceServer = newResourceServer(provider, resource, info);
+  at.jkt = jkt; // sender-constrain to the possession key (tokenType -> DPoP)
+  ctx.oidc.entity("AccessToken", at);
+  const jwt = await at.save();
+  ctx.status = 200;
+  ctx.body = {
+    access_token: jwt,
+    token_type: "DPoP",
+    expires_in: (at as unknown as { expiration: number }).expiration,
+    scope: "payments",
+    authorization_details: tokenRar,
+  };
+  ctx.set("cache-control", "no-store");
+  return true;
+}
+
+/**
+ * @spec child-delegation#child-creation — the CHILD-CREATION exchange (request
+ * side migrated from PAR + refresh-token `parent_token` to this RFC 8693 exchange).
+ * The parent is resolved FROM `subject_token` (its Mission-bound ACCESS token);
+ * possession is control of that token's cnf key. Child-creation stays a
+ * NON-derivation subset creation (it creates a NEW Mission, not a token within the
+ * parent's derivation counter): createChildMission uses the active-state check, NOT
+ * gateDerivation, so it MUST NOT consume the parent's cap. The RESPONSE is already
+ * RFC 8693-shaped and the two-grant flow is KEPT: a child-bound RFC 7523 JWT
+ * authorization grant is returned, redeemable only by the named child actor AS
+ * ITSELF (handleChildJwtBearerGrant), so conveying it through the parent is safe.
+ */
+export async function handleChildCreationExchange(
+  opts: AdapterOptions,
+  _provider: Provider,
+  ctx: KoaContextWithOIDC,
+): Promise<void> {
+  const params = ctx.oidc.params as Record<string, unknown>;
+  // Steps 1-3: possession — the parent is selected by subject_token.
+  const resolved = await verifySubjectPossession(opts, ctx);
+  if (!resolved) return;
+  const parent = resolved.record;
+  // Step 4: acting agent (the authenticated parent client; carry actor_token).
+  const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt);
+  if (!acting) return;
+
+  // Non-authoritative `parent` cross-check (audit only): subject_token is the
+  // selector, but a supplied `parent` that disagrees is refused (parent_mismatch).
+  const parentParam = params.parent;
+  if (typeof parentParam === "string" && parentParam && parentParam !== parent.id) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_grant", mission_denial_reason: "parent_mismatch" };
+    ctx.set("cache-control", "no-store");
+    return;
+  }
+
+  // The child Intent + child actor (untrusted request input; parsed + validated here).
+  const missionIntentRaw = params.mission_intent;
+  if (typeof missionIntentRaw !== "string" || !missionIntentRaw) {
+    throw new errors.InvalidRequest("mission_intent (the child intent) required");
+  }
+  let intent: MissionIntent;
+  try {
+    intent = opts.kernel.validateIntent(missionIntentRaw);
+  } catch (e) {
+    throw new errors.InvalidRequest(e instanceof Error ? e.message : "invalid mission_intent");
+  }
+  const childActorRaw = params.child_actor;
+  if (typeof childActorRaw !== "string" || !childActorRaw) {
+    throw new errors.InvalidRequest("child_actor required");
+  }
+  let childActor: { sub: string; iss?: string; sub_profile?: string };
+  try {
+    const parsed = JSON.parse(childActorRaw) as unknown;
+    if (parsed === null || typeof parsed !== "object" || typeof (parsed as { sub?: unknown }).sub !== "string") {
+      throw new Error("shape");
+    }
+    childActor = parsed as { sub: string; iss?: string; sub_profile?: string };
+  } catch {
+    throw new errors.InvalidRequest("child_actor must be a JSON object with a string sub");
+  }
+
+  // Steps 5-6: SYNCHRONOUS, NON-derivation subset creation. Denials map through the
+  // shared childErrorCode + mission_denial_reason (set on ctx directly so err_out
+  // does not strip the reason).
+  let child: MissionRecord;
+  try {
+    ({ child } = createChildMission(opts.kernel, { parentId: parent.id, intent, childActor }));
+  } catch (e) {
+    if (e instanceof ChildDelegationError) {
+      const code = childErrorCode(e.reason);
+      ctx.status = code === "access_denied" ? 403 : 400;
+      ctx.body = { error: code, mission_denial_reason: e.reason };
+      ctx.set("cache-control", "no-store");
+      return;
+    }
+    throw e;
+  }
+
+  if (!opts.childGrantKey || !opts.childGrantKid || !opts.childGrantAlg) {
+    ctx.status = 501;
+    ctx.body = { error: "child_delegation_unsupported" };
+    return;
+  }
+  const { assertion } = await mintChildGrant(
+    opts.kernel,
+    { key: opts.childGrantKey, kid: opts.childGrantKid, alg: opts.childGrantAlg },
+    { child, tokenEndpoint: `${opts.issuer}/token` },
+  );
+  // @spec RFC 8693 §2.2.1 — the (unchanged) child response: a grant reference, not
+  // a token; token_type N_A because bearer semantics do not apply to an unredeemed grant.
+  ctx.status = 200;
+  ctx.set("cache-control", "no-store");
+  ctx.body = {
+    access_token: assertion,
+    issued_token_type: JWT_TOKEN_TYPE,
+    token_type: "N_A",
+    mission_id: child.id,
+    parent: child.parent,
+  };
+}
+
+/**
+ * @spec expansion — the EXPANSION exchange (a real back-channel wire path; expansion
+ * previously had none). The predecessor is resolved FROM `subject_token`; possession
+ * is control of that token's cnf key. Completion modes:
+ *   - SYNCHRONOUS when the requested authority is a pure subset of the predecessor's
+ *     EFFECTIVE set (an ordinary confined derivation, no fresh consent, NO successor);
+ *   - DEFERRED via the DTR substrate ({@link ExpansionDeferralStore}) when the
+ *     request WIDENS (a fresh approval is required and is asynchronous);
+ *   - INTERACTIVE (the deployment's existing front-channel approval) is RETAINED as
+ *     an alternative for the widening case and is untouched here.
+ * A poll (deferral_code, no subject_token) completes a deferred expansion.
+ */
+export async function handleExpansionExchange(
+  opts: AdapterOptions,
+  provider: Provider,
+  ctx: KoaContextWithOIDC,
+): Promise<void> {
+  const params = ctx.oidc.params as Record<string, unknown>;
+
+  // Deferred completion (poll): a deferral_code, no subject_token. Possession and
+  // the predecessor binding were RECORDED at request time (@spec deferred-window
+  // check (b): the subject_token's expiry does NOT gate this completion).
+  const deferralCode = params.deferral_code;
+  if (typeof deferralCode === "string" && deferralCode) {
+    await pollDeferredExpansion(opts, provider, ctx, deferralCode);
+    return;
+  }
+
+  // Steps 1-3: possession — the predecessor is selected by subject_token.
+  const resolved = await verifySubjectPossession(opts, ctx);
+  if (!resolved) return;
+  // Step 4: acting agent.
+  const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt);
+  if (!acting) return;
+
+  // The widened Intent (the fresh-approval basis).
+  const missionIntentRaw = params.mission_intent;
+  if (typeof missionIntentRaw !== "string" || !missionIntentRaw) {
+    throw new errors.InvalidRequest("mission_intent (the widened intent) required for expansion");
+  }
+  let intent: MissionIntent;
+  try {
+    intent = opts.kernel.validateIntent(missionIntentRaw);
+  } catch (e) {
+    throw new errors.InvalidRequest(e instanceof Error ? e.message : "invalid mission_intent");
+  }
+
+  // The predecessor MUST be active at request time.
+  const active = opts.kernel.applyExpiry(resolved.record);
+  if (active.state !== "active") {
+    txError(ctx, 400, "invalid_grant", `predecessor mission is ${active.state}`);
+    return;
+  }
+
+  // Step 5: subset-derivation vs fresh-approval-required.
+  const requested = opts.kernel.derive(intent);
+  const effective = opts.kernel.effectiveAuthoritySet(active);
+  if (isSubsetSet(requested, effective)) {
+    // Step 6 (synchronous): a pure subset is an ordinary confined derivation on the
+    // predecessor (no fresh consent, no successor). gate + claim run in extraTokenClaims.
+    await mintMissionAccessToken(opts, provider, ctx, active, requested, resolved.jkt);
+    return;
+  }
+
+  // Widening: a FRESH approval is required. Complete via the DTR deferred path.
+  const store = opts.expansionDeferrals;
+  if (!store) {
+    throw new errors.InvalidRequest("deferred expansion approval is not configured");
+  }
+  let pending: ReturnType<typeof store.open>;
+  try {
+    pending = store.open({ predecessorId: active.id, intent, clientId: acting.sub, jkt: resolved.jkt });
+  } catch (e) {
+    if (e instanceof ExpansionDeferralError) {
+      txError(ctx, 400, "invalid_grant", e.message);
+      return;
+    }
+    throw e;
+  }
+  // Step 6 (deferred): the DTR initiation body (HTTP 400 authorization_pending). Set
+  // on ctx directly (err_out would strip deferral_code/expires_in/interval).
+  ctx.status = 400;
+  ctx.body = {
+    error: pending.error,
+    deferral_code: pending.deferral_code,
+    expires_in: pending.expires_in,
+    interval: pending.interval,
+  };
+  ctx.set("cache-control", "no-store");
+}
+
+/**
+ * @spec expansion — poll/complete a deferred expansion. Re-establishes KEY
+ * possession at completion (the poller's DPoP key MUST equal the key recorded at
+ * request time; @spec deferred-window check (b) re-verifies the KEY, never the
+ * expired subject_token) and requires the poller to be the acting client that
+ * opened the deferral. redeem() runs deferred-window check (a) (predecessor STATE +
+ * containment-version delta) and CREATES the successor on approval; this handler
+ * mints the successor's first token and supersedes the predecessor on that first
+ * redemption.
+ */
+async function pollDeferredExpansion(
+  opts: AdapterOptions,
+  provider: Provider,
+  ctx: KoaContextWithOIDC,
+  deferralCode: string,
+): Promise<void> {
+  const store = opts.expansionDeferrals;
+  if (!store) {
+    throw new errors.InvalidRequest("deferred expansion approval is not configured");
+  }
+  const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+  const recordedClient = store.recordedClientId(deferralCode);
+  if (recordedClient !== undefined && recordedClient !== client.clientId) {
+    txError(ctx, 400, "invalid_grant", "deferral was not opened by the polling client");
+    return;
+  }
+  // KEY possession at completion (only the KEY, never the expired subject_token).
+  const proofJws = ctx.get("DPoP");
+  if (!proofJws) {
+    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
+    return;
+  }
+  let jkt: string;
+  try {
+    const header = decodeProtectedHeader(proofJws);
+    const dpopJwk = header.jwk as JWK;
+    jkt = await calculateJwkThumbprint(dpopJwk);
+    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
+    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
+      throw new Error("DPoP htu/htm mismatch");
+    }
+  } catch {
+    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+    return;
+  }
+  const recordedJkt = store.recordedJkt(deferralCode);
+  if (recordedJkt !== undefined && recordedJkt !== jkt) {
+    txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");
+    return;
+  }
+
+  const r = store.redeem(deferralCode);
+  if ("error" in r) {
+    switch (r.error) {
+      case "authorization_pending":
+        throw new errors.AuthorizationPending();
+      case "slow_down":
+        throw new errors.SlowDown();
+      case "expired_token":
+        throw new errors.ExpiredToken();
+      case "access_denied":
+        throw new errors.AccessDenied();
+      default:
+        throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
+    }
+  }
+  // The successor exists (check (a) passed in redeem). Mint its first token (bound
+  // to the possession key) and supersede the predecessor on this first redemption.
+  const minted = await mintMissionAccessToken(
+    opts,
+    provider,
+    ctx,
+    r.successor,
+    opts.kernel.effectiveAuthoritySet(r.successor),
+    jkt,
+  );
+  if (minted) opts.kernel.supersedeOnRedemption(r.successor.id);
 }

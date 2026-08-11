@@ -1,0 +1,442 @@
+/**
+ * @spec draft-mcguinness-oauth-mission-expansion (#expansion, #deferred-window),
+ * containment#restoration
+ *
+ * Mission EXPANSION wired onto the real OAuth surface as an RFC 8693 token
+ * exchange (before this, expansion had NO wire path). The requester presents the
+ * predecessor's Mission-bound ACCESS token as `subject_token`
+ * (`subject_token_type` = access_token) at /token under grant_type=token-exchange
+ * with requested_token_type=access_token, authenticating with private_key_jwt and
+ * proving possession with a DPoP proof over that token's OWN confirmation key. The
+ * predecessor is resolved FROM `subject_token`. Completion modes:
+ *   - SYNCHRONOUS when the requested authority is a pure subset of the
+ *     predecessor's effective set (an ordinary confined derivation, no successor);
+ *   - DEFERRED via the DTR substrate when the request WIDENS (fresh async
+ *     approval): authorization_pending + deferral_code, poll, then a successor.
+ * Deferred-window checks proven here (@spec #deferred-window):
+ *   (a) the predecessor STATE is re-verified AT completion: a predecessor revoked
+ *       during the window fails; containment that ADVANCED during the window
+ *       fails; a predecessor ALREADY contained at request time still completes
+ *       (the check is a containment-version DELTA, not a presence test);
+ *   (b) the poll completes with only deferral_code + DPoP and NO subject_token:
+ *       the short-lived subject_token's expiry MUST NOT gate completion.
+ * Possession negatives: a refresh token as subject_token and a wrong-key DPoP
+ * proof are both refused (#448).
+ */
+
+import { type Server } from "node:http";
+import { CANONICAL_RESOURCE } from "@mission/demo-data";
+import {
+  calculateJwkThumbprint,
+  createRemoteJWKSet,
+  decodeJwt,
+  type CryptoKey,
+  exportJWK,
+  generateKeyPair,
+  importJWK,
+  jwtVerify,
+  SignJWT,
+} from "jose";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  ACCESS_TOKEN_TOKEN_TYPE,
+  REFRESH_TOKEN_TOKEN_TYPE,
+  TOKEN_EXCHANGE_GRANT_TYPE,
+} from "../src/adapters/continuation-grant.js";
+import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+
+const PORT = 14485;
+const ISSUER = `http://localhost:${PORT}`;
+const REDIRECT_URI = "http://localhost:9999/cb";
+const RESOURCE = CANONICAL_RESOURCE;
+const FAR_EXP = "2027-01-01T00:00:00Z";
+
+type DpopKeys = { privateKey: CryptoKey; publicKey: CryptoKey };
+
+let as: BuiltAs;
+let asServer: Server;
+let clientKey: CryptoKey;
+let dpopKeys: DpopKeys;
+let remoteJwks: ReturnType<typeof createRemoteJWKSet>;
+let apev = 0;
+
+async function clientAssertion(): Promise<string> {
+  return new SignJWT({})
+    .setProtectedHeader({ alg: "ES256", kid: "ap-agent-auth" })
+    .setIssuer("ap-agent")
+    .setSubject("ap-agent")
+    .setAudience(ISSUER)
+    .setIssuedAt()
+    .setExpirationTime("2m")
+    .setJti(crypto.randomUUID())
+    .sign(clientKey);
+}
+
+async function dpopProof(htu: string, htm: string, extra: Record<string, unknown> = {}): Promise<string> {
+  return new SignJWT({ htu, htm, ...extra })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(dpopKeys.publicKey) })
+    .setIssuedAt()
+    .setJti(crypto.randomUUID())
+    .sign(dpopKeys.privateKey);
+}
+
+/** POST /token with ap-agent private_key_jwt + DPoP (dpopKeys), with the dpop-nonce retry. */
+async function tokenRequest(params: Record<string, string>): Promise<Response> {
+  const htu = `${ISSUER}/token`;
+  const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
+    fetch(htu, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST", extra) },
+      body: new URLSearchParams({
+        ...params,
+        client_assertion: await clientAssertion(),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+  let res = await send();
+  const nonce = res.headers.get("dpop-nonce");
+  if (res.status === 400 && nonce) res = await send({ nonce });
+  return res;
+}
+
+/** POST /token token-exchange with a DPoP proof signed by an ARBITRARY key (nonce retry). */
+async function tokenRequestWithDpop(dpop: DpopKeys, params: Record<string, string>): Promise<Response> {
+  const htu = `${ISSUER}/token`;
+  const proof = async (extra: Record<string, unknown>): Promise<string> =>
+    new SignJWT({ htu, htm: "POST", ...extra })
+      .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(dpop.publicKey) })
+      .setIssuedAt()
+      .setJti(crypto.randomUUID())
+      .sign(dpop.privateKey);
+  const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
+    fetch(htu, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(extra) },
+      body: new URLSearchParams({
+        ...params,
+        client_assertion: await clientAssertion(),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+  let res = await send();
+  const nonce = res.headers.get("dpop-nonce");
+  if (res.status === 400 && nonce) res = await send({ nonce });
+  return res;
+}
+
+function cookieHeader(jar: Map<string, string>): string {
+  return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+}
+function storeCookies(res: Response, jar: Map<string, string>): void {
+  for (const line of res.headers.getSetCookie()) {
+    const [pair] = line.split(";");
+    const eq = (pair as string).indexOf("=");
+    jar.set((pair as string).slice(0, eq), (pair as string).slice(eq + 1));
+  }
+}
+
+const authority = (actions: string[]) => [
+  {
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions,
+    constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+  },
+];
+
+const intentJson = (goal: string, actions: string[]): string =>
+  JSON.stringify({ goal, resources: [RESOURCE], expires_at: FAR_EXP, proposed_authority: authority(actions) });
+
+/**
+ * Full PAR -> interactive approval -> code -> token dance yielding an ACTIVE
+ * predecessor Mission and its DPoP-bound (dpopKeys) Mission ACCESS token. The
+ * approved actions parametrize whether a later expansion is a subset or a widen.
+ */
+async function issuePredecessor(actions: string[]): Promise<{ missionId: string; accessToken: string }> {
+  const jar = new Map<string, string>();
+  const verifier = "expansion-endpoint-verifier-0123456789-0123456789";
+  const challenge = Buffer.from(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
+  ).toString("base64url");
+  const par = await fetch(`${ISSUER}/request`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: "ap-agent",
+      response_type: "code",
+      redirect_uri: REDIRECT_URI,
+      scope: "payments",
+      resource: RESOURCE,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      mission_intent: intentJson("Pay Acme invoices", actions),
+      client_assertion: await clientAssertion(),
+      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    }).toString(),
+  });
+  const { request_uri } = (await par.json()) as { request_uri: string };
+
+  let res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri })}`, {
+    redirect: "manual",
+  });
+  storeCookies(res, jar);
+  let location = res.headers.get("location") as string;
+  const uid = location.split("/interaction/")[1] as string;
+
+  res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+    method: "POST",
+    redirect: "manual",
+    headers: { "content-type": "application/json", cookie: cookieHeader(jar) },
+    body: JSON.stringify({ decision: "approve", approver: "bob", subject: "alice" }),
+  });
+  storeCookies(res, jar);
+  location = res.headers.get("location") as string;
+  while (location?.startsWith(ISSUER)) {
+    res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader(jar) } });
+    storeCookies(res, jar);
+    location = res.headers.get("location") as string;
+  }
+  const code = new URL(location).searchParams.get("code") as string;
+
+  const tok = await tokenRequest({
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: REDIRECT_URI,
+    code_verifier: verifier,
+    resource: RESOURCE,
+  });
+  const body = (await tok.json()) as { access_token: string };
+  expect(tok.status, JSON.stringify(body)).toBe(200);
+  const claims = decodeJwt(body.access_token) as { mission: { id: string } };
+  return { missionId: claims.mission.id, accessToken: body.access_token };
+}
+
+/** Open an expansion exchange (requested_token_type=access_token). */
+async function expandViaExchange(subjectToken: string, goal: string, actions: string[]): Promise<Response> {
+  return tokenRequest({
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    subject_token: subjectToken,
+    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    mission_intent: intentJson(goal, actions),
+  });
+}
+
+/** Poll a deferred expansion: deferral_code + DPoP only, NO subject_token (check (b)). */
+async function pollExpansion(deferralCode: string): Promise<Response> {
+  return tokenRequest({
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    deferral_code: deferralCode,
+  });
+}
+
+function approveDeferral(deferralCode: string): void {
+  as.expansionDeferrals.approve(deferralCode, {
+    approver: { iss: ISSUER, sub: "bob" },
+    approvalEventId: `apev-exp-${apev++}`,
+    approvedUntil: FAR_EXP,
+  });
+}
+
+const containEvent = (id: string) => ({
+  type: "tainted_read" as const,
+  source: "https://siem.example/detections",
+  observed_at: "2026-07-02T00:00:00Z",
+  event_id: id,
+});
+
+beforeAll(async () => {
+  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true });
+  asServer = as.provider.listen(PORT);
+  clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
+  dpopKeys = await generateKeyPair("ES256", { extractable: true });
+  remoteJwks = createRemoteJWKSet(new URL(`${ISSUER}/jwks`));
+});
+
+afterAll(() => {
+  asServer?.close();
+});
+
+describe("expansion wire: SYNCHRONOUS subset derivation (@spec expansion#expansion)", () => {
+  it("a pure subset request completes synchronously with a DPoP-bound Mission access token on the predecessor", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read", "payments:remittance.send"]);
+    const res = await expandViaExchange(pred.accessToken, "Read invoices only", ["payments:invoice.read"]);
+    const body = (await res.json()) as {
+      access_token?: string;
+      token_type?: string;
+      scope?: string;
+      authorization_details?: Array<{ actions: string[] }>;
+      error?: string;
+    };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.token_type).toBe("DPoP");
+    expect(body.scope).toBe("payments");
+    // The confined subset: exactly the requested single action (no successor).
+    expect(body.authorization_details?.[0].actions).toEqual(["payments:invoice.read"]);
+
+    // A real, resource-bound JWT that verifies on the AS jwks_uri and binds to the
+    // possession key and the PREDECESSOR mission (a subset derivation, not a successor).
+    const { payload } = await jwtVerify(body.access_token as string, remoteJwks, {
+      issuer: ISSUER,
+      audience: RESOURCE,
+    });
+    const jkt = await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey));
+    expect((payload.cnf as { jkt?: string })?.jkt).toBe(jkt);
+    const mission = payload.mission as { id?: string; predecessor?: string };
+    expect(mission?.id).toBe(pred.missionId);
+    // A subset derivation issues on the predecessor itself (NO successor), so the
+    // claim MUST NOT carry a `predecessor` member (@spec expansion#predecessor-member:
+    // set on a successor Mission only). Pins "successor only" against the claim
+    // selection in extraTokenClaims.
+    expect(mission?.predecessor).toBeUndefined();
+    // The predecessor is NOT superseded: a subset derivation creates no successor.
+    expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+  });
+});
+
+describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window)", () => {
+  it("a widening request defers (authorization_pending + deferral_code); after async approval a poll (no subject_token) mints the successor and supersedes the predecessor", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string; interval?: number; expires_in?: number };
+    expect(opened.status, JSON.stringify(ob)).toBe(400);
+    expect(ob.error).toBe("authorization_pending");
+    expect(ob.deferral_code).toBeTruthy();
+    expect(ob.interval).toBeGreaterThan(0);
+    expect(ob.expires_in).toBeGreaterThan(0);
+
+    // The Approver acts asynchronously (headless adjudication).
+    approveDeferral(ob.deferral_code as string);
+
+    // @spec #deferred-window check (b): the poll carries ONLY deferral_code + DPoP,
+    // NO subject_token; the short-lived subject_token's expiry does not gate this.
+    const poll = await pollExpansion(ob.deferral_code as string);
+    const pb = (await poll.json()) as {
+      access_token?: string;
+      token_type?: string;
+      authorization_details?: Array<{ actions: string[] }>;
+      error?: string;
+    };
+    expect(poll.status, JSON.stringify(pb)).toBe(200);
+    expect(pb.token_type).toBe("DPoP");
+    // The successor's widened set includes the newly-approved capability.
+    expect(pb.authorization_details?.some((e) => e.actions.includes("payments:remittance.send"))).toBe(true);
+
+    const { payload } = await jwtVerify(pb.access_token as string, remoteJwks, { issuer: ISSUER, audience: RESOURCE });
+    const mission = payload.mission as { id?: string; predecessor?: string };
+    const successorId = mission.id as string;
+    // A NEW successor Mission whose RECORD is lineage-linked to the predecessor,
+    // and whose ISSUED access-token `mission` claim carries the same lineage: the
+    // claim's own id is the successor, and its `predecessor` member is the
+    // predecessor's mission_id (@spec expansion#predecessor-member) — so a resource
+    // server sees lineage on the wire WITHOUT introspecting.
+    expect(successorId).not.toBe(pred.missionId);
+    expect(mission.predecessor).toBe(pred.missionId);
+    expect(as.kernel.get(successorId)?.predecessor).toBe(pred.missionId);
+    // The predecessor is superseded on the successor's first redemption.
+    expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
+  });
+
+  it("check (a): a predecessor REVOKED during the deferred window fails completion (access_denied) — a deferred approval MUST NOT bypass termination", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(opened.status, JSON.stringify(ob)).toBe(400);
+    expect(ob.error).toBe("authorization_pending");
+    approveDeferral(ob.deferral_code as string);
+
+    // The predecessor is terminated DURING the window (after approval, before poll).
+    as.kernel.transition(pred.missionId, "revoke");
+
+    const poll = await pollExpansion(ob.deferral_code as string);
+    const pb = (await poll.json()) as { error?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(400);
+    expect(pb.error).toBe("access_denied");
+  });
+
+  it("check (a): containment that ADVANCED during the window fails completion (version delta), a deferred approval MUST NOT bypass a later containment", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(opened.status, JSON.stringify(ob)).toBe(400);
+    approveDeferral(ob.deferral_code as string);
+
+    // Containment ADVANCES during the window (version 0 -> 1 after the request).
+    as.kernel.contain(pred.missionId, {
+      event: containEvent("taint-exp-window"),
+      remove: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }],
+    });
+
+    const poll = await pollExpansion(ob.deferral_code as string);
+    const pb = (await poll.json()) as { error?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(400);
+    expect(pb.error).toBe("access_denied");
+  });
+
+  it("check (a) is a version DELTA, not presence: a predecessor ALREADY contained at request time (version unchanged during the window) still completes (containment#restoration)", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read", "payments:remittance.send"]);
+    // Contain remittance.send BEFORE the widening request: effective becomes {invoice.read}.
+    as.kernel.contain(pred.missionId, {
+      event: containEvent("taint-exp-pre"),
+      remove: [{ resource: RESOURCE, actions: ["payments:remittance.send"] }],
+    });
+
+    // Restoring remittance.send is now a WIDEN relative to the contained effective set.
+    const opened = await expandViaExchange(pred.accessToken, "Restore remittance after review", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(opened.status, JSON.stringify(ob)).toBe(400);
+    expect(ob.error).toBe("authorization_pending");
+    approveDeferral(ob.deferral_code as string);
+
+    // No further containment during the window -> version unchanged -> completes.
+    const poll = await pollExpansion(ob.deferral_code as string);
+    const pb = (await poll.json()) as { access_token?: string; error?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(200);
+    expect(pb.access_token).toBeTruthy();
+  });
+});
+
+describe("expansion wire: possession (@spec expansion, #448)", () => {
+  it("a refresh token as subject_token is rejected (#448: a reusable bearer refresh credential MUST NOT carry possession)", async () => {
+    const res = await tokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: "not-an-access-token",
+      subject_token_type: REFRESH_TOKEN_TOKEN_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      mission_intent: intentJson("Widen", ["payments:invoice.read"]),
+    });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("refresh token");
+  });
+
+  it("possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read", "payments:remittance.send"]);
+    const wrongDpop = await generateKeyPair("ES256", { extractable: true });
+    const res = await tokenRequestWithDpop(wrongDpop, {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: pred.accessToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      mission_intent: intentJson("Read invoices only", ["payments:invoice.read"]),
+    });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("confirmation key");
+  });
+});
