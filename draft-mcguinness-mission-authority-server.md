@@ -104,6 +104,7 @@ informative:
   RFC6749:
   RFC8126:
   RFC8414:
+  RFC8693:
   RFC9635:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-oauth-ai-agent-instance:
@@ -409,11 +410,14 @@ The composition consequences follow from those claims:
   token-carriage aspects of delegation likewise have no carrier.
 - Mission Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}})
   and Mission Child Delegation
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) define
-  their request wire over OAuth Pushed Authorization Requests; their
-  MAS-native wire is defined by {{native-surfaces}}, with an
-  authenticated-client binding in place of OAuth token possession.
-  Their models apply to MAS-held Missions unchanged.
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) bind their
+  request, on the OAuth wire, to an {{RFC8693}} token exchange whose
+  `subject_token` is the predecessor or parent Mission-bound access
+  token; their MAS-native wire is defined by {{native-surfaces}}, which
+  carries both operations on the mission submission endpoint with an
+  authenticated-client binding in place of that token-exchange
+  possession proof. Their models (supersession, lineage, cascade) apply
+  to MAS-held Missions unchanged.
 
 # Mission Submission {#mission-submission}
 
@@ -686,18 +690,28 @@ define for the members of the same names.
 
 Mission Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}})
 and Mission Child Delegation
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) define their
-request wire over OAuth Pushed Authorization Requests, bound to the
-predecessor or parent by token possession (`predecessor_token`,
-`parent_token`). A MAS issues no tokens, so that binding has no
-carrier here. This section defines the MAS-native wire for both
-operations: carriage on the mission submission endpoint
-({{native-carriage}}) and an authenticated-client binding in place of
-token possession ({{native-binding}}). It defines carriage and binding
-only; every mechanism (supersession, reconciliation, lineage, strict
-subset, fan-out, cascade, and the closed code sets) remains owned by
-its profile and applies here by reference ({{native-expansion}},
-{{native-child}}). The capability is OPTIONAL ({{conformance}}).
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) each rest on
+one abstract requirement, stated normatively by each of those profiles:
+that the requester prove possession of the predecessor or parent
+Mission's authority through a sender-constrained proof rather than a
+reusable bearer refresh credential. Those profiles bind that
+requirement on the OAuth wire to an {{RFC8693}} token exchange whose
+`subject_token` is the predecessor or parent Mission-bound access token,
+with possession proven against that token's own confirmation key. A MAS
+issues no tokens, so that token-exchange binding has no carrier here.
+This section defines the peer MAS binding of the same requirement, an
+authenticated-client submission on the mission submission endpoint, and
+names it as the other binding of that requirement without restating the
+requirement itself.
+
+This section defines the MAS-native wire for both operations: carriage
+on the mission submission endpoint ({{native-carriage}}) and the
+authenticated-client binding in place of the token-exchange possession
+proof ({{native-binding}}). It defines carriage and binding only; every
+mechanism (supersession, reconciliation, lineage, strict subset,
+fan-out, cascade, and the closed code sets) remains owned by its profile
+and applies here by reference ({{native-expansion}}, {{native-child}}).
+The capability is OPTIONAL ({{conformance}}).
 
 ## Submission Carriage {#native-carriage}
 
@@ -734,9 +748,10 @@ be refused with `invalid_mission_intent`: the operations do not
 combine. A submission carrying `parent` without `child_actor`, or
 `child_actor` without `parent`, MUST be refused the same way.
 
-The `predecessor_token` and `parent_token` parameters of the OAuth
-wire do not exist on this surface; the binding of {{native-binding}}
-replaces them.
+The OAuth wire's token-exchange possession proof, the predecessor or
+parent Mission-bound access token presented as `subject_token`, does
+not exist on this surface; the binding of {{native-binding}} replaces
+it.
 
 The referenced profiles' OAuth error outcomes map onto this endpoint's
 error surface as the issuance profile's do ({{intent-submission}}):
@@ -769,10 +784,12 @@ denial at adjudication, of the `denied` submission-status response
 
 ## Request Binding {#native-binding}
 
-The OAuth wire resolves the predecessor or parent from a presented
-grant and cross-checks it against the named identifier. A MAS holds no
-grants, so the named identifier is itself the reference, and the MAS
-binds the request to it as follows:
+The OAuth wire resolves the predecessor or parent from the Mission-bound
+access token presented as the token exchange's `subject_token`, proving
+possession against that token's confirmation key, and treats any named
+identifier only as a cross-check. A MAS holds no such tokens, so the
+named identifier is itself the reference, and the MAS binds the request
+to it as follows:
 
 - The MAS MUST verify that the authenticated submitting client is the
   client recorded as the predecessor Mission's `client_id` (for
@@ -789,11 +806,13 @@ binds the request to it as follows:
 
 This is an authentication-based binding, not a possession-based one:
 it proves the requester is the same registered client the predecessor
-or parent was recorded for, not that it holds that Mission's grant.
-The delta from the OAuth wire is exactly that: a party able to
-authenticate as the registered client can request these operations for
-any of that client's Missions, where token possession would limit it
-to the grants it actually holds ({{sec-native-binding}}).
+or parent was recorded for, not that it holds and can prove possession
+of that Mission's access token. The delta from the OAuth wire is
+exactly that: a party able to authenticate as the registered client can
+request these operations for any of that client's Missions, where the
+token-exchange possession proof would limit it to the Missions whose
+Mission-bound access token it holds and can prove control of
+({{sec-native-binding}}).
 
 Where the deployment authenticates client instances
 ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), the MAS
@@ -869,8 +888,8 @@ reference:
 - **Denial reasons.** That profile's closed denial-reason set applies;
   the code rides in `mission_denial_reason` per {{native-carriage}}.
   The `parent_mismatch` reason has no analog on this surface: with no
-  `parent_token` to cross-check, a binding failure is refused per
-  {{native-carriage}}.
+  `subject_token` to resolve the parent against a cross-check, a binding
+  failure is refused per {{native-carriage}}.
 
 The child client identity rules hold unchanged: the child actor is the
 Child Mission's client, recorded as its `client_id`; it authenticates
@@ -1496,9 +1515,10 @@ it.
 and Child Delegation are carried natively in this mode
 ({{native-surfaces}}), so a standalone deployment can widen authority
 and delegate to sub-agents; what the mode does not provide is the
-OAuth wire's possession binding. Requests are bound to the predecessor
-or parent by authenticated client identity ({{native-binding}}), which
-proves the same registered client, not a held grant
+OAuth wire's token-exchange possession proof. Requests are bound to the
+predecessor or parent by authenticated client identity
+({{native-binding}}), which proves the same registered client, not
+possession of a held Mission-bound access token
 ({{sec-native-binding}}). Offline attenuation remains inapplicable in
 this mode because it requires the Mission-bound credential
 ({{mission-substrate}}).
@@ -1868,12 +1888,13 @@ widening.
 ## Expansion and Child-Creation Binding {#sec-native-binding}
 
 The native surfaces of {{native-surfaces}} bind a request to its
-predecessor or parent by authenticated client identity, not by grant
-possession, and the residual is exactly that difference: a compromised
-or impersonated registered client can request expansion or child
-creation for any Mission recorded under its `client_id`, where token
-possession would have limited it to the grants it actually holds. The
-mitigations:
+predecessor or parent by authenticated client identity, not by the
+token-exchange possession proof of the OAuth wire, and the residual is
+exactly that difference: a compromised or impersonated registered
+client can request expansion or child creation for any Mission recorded
+under its `client_id`, where proving possession of the Mission-bound
+access token would have limited it to the Missions whose token it holds
+and can prove control of. The mitigations:
 
 - Instance-grade binding
   ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}) shrinks
