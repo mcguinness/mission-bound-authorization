@@ -113,8 +113,8 @@ Table of Contents
    resource within a pre-consented ceiling binds by policy drawdown
    ([I-D.draft-mcguinness-oauth-mission-progressive]), a catalog
    capability binds through the capability-source binding
-   ([I-D.draft-mcguinness-mission-authzen]), a partner domain binds
-   through projection
+   ([I-D.draft-mcguinness-mission-capability-binding]), a partner domain
+   binds through projection
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]), and anything
    else requires a fresh approval
    ([I-D.draft-mcguinness-oauth-mission-expansion]).  What no document
@@ -235,7 +235,8 @@ Table of Contents
       under this profile like any resource, through the Mission Issuer;
       the binding names the catalog and its admitted tool_id set, and
       each capability thereafter binds and drifts at the PDP under the
-      capability-source rules ([I-D.draft-mcguinness-mission-authzen]).
+      capability-source rules
+      ([I-D.draft-mcguinness-mission-capability-binding]).
 
    *  *A foreign trust domain*: a resource whose Authorization Server
       the deployment's trust does not cover.  This profile does not bind
@@ -462,7 +463,7 @@ Table of Contents
    adjudicate a bound resource whose declaration changed before further
    use in a consequential class.  The capability-source rules already
    refuse drifted catalog capabilities at the PDP
-   ([I-D.draft-mcguinness-mission-authzen]).
+   ([I-D.draft-mcguinness-mission-capability-binding]).
 
    The taint floor (Section 9) is applied only at binding.  A binding
    created while the session was untainted remains usable after the
@@ -777,11 +778,10 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-authority-server.html>.
 
-   [I-D.draft-mcguinness-mission-authzen]
-              McGuinness, K., "Mission-Bound Runtime Enforcement:
-              AuthZEN Profile", 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-mission-
-              authzen.html>.
+   [I-D.draft-mcguinness-mission-capability-binding]
+              McGuinness, K., "Mission Capability Binding", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-capability-binding.html>.
 
    [I-D.draft-mcguinness-mission-metering]
               McGuinness, K., "Mission Consumption Metering", 2026,

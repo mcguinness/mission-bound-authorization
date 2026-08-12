@@ -16,13 +16,12 @@ maps the contract's decision inputs onto the AuthZEN Authorization API
 request, shapes the permit and denial responses, maps decisions and
 refusals into the Decision Evidence, Execution Evidence, and Refusal
 Record of a binding-neutral evidence companion, binds every runtime
-failure condition to a wire-visible identifier, composes requestable
-denials with the AuthZEN Access Request and Approval Profile, and
-binds a Mission's approved authority to the capability source it was
-derived from, so a drifted capability definition is refused. It does
-not restate the enforcement semantics the runtime profile owns, and it
-does not restate the evidence formats the runtime evidence companion
-owns. 
+failure condition to a wire-visible identifier, and composes
+requestable denials with the AuthZEN Access Request and Approval
+Profile. It does not restate the enforcement semantics the runtime
+profile owns, the evidence formats the runtime evidence companion
+owns, or the capability-source binding the capability-binding
+companion owns. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
@@ -1104,13 +1103,12 @@ maps the contract's decision inputs onto the AuthZEN Authorization API
 request, shapes the permit and denial responses, maps decisions and
 refusals into the Decision Evidence, Execution Evidence, and Refusal
 Record of a binding-neutral evidence companion, binds every runtime
-failure condition to a wire-visible identifier, composes requestable
-denials with the AuthZEN Access Request and Approval Profile, and
-binds a Mission's approved authority to the capability source it was
-derived from, so a drifted capability definition is refused. It does
-not restate the enforcement semantics the runtime profile owns, and it
-does not restate the evidence formats the runtime evidence companion
-owns.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+failure condition to a wire-visible identifier, and composes
+requestable denials with the AuthZEN Access Request and Approval
+Profile. It does not restate the enforcement semantics the runtime
+profile owns, the evidence formats the runtime evidence companion
+owns, or the capability-source binding the capability-binding
+companion owns.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1217,22 +1215,19 @@ owns.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.5.2.10.1"><a href="#section-5.10" class="auto internal xref">5.10</a>. <a href="#name-history-context" class="internal xref">History Context</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.11">
-                <p id="section-toc.1-1.5.2.11.1"><a href="#section-5.11" class="auto internal xref">5.11</a>. <a href="#name-capability-source-context" class="internal xref">Capability Source Context</a></p>
+                <p id="section-toc.1-1.5.2.11.1"><a href="#section-5.11" class="auto internal xref">5.11</a>. <a href="#name-worked-pdp-request" class="internal xref">Worked PDP request</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.12">
-                <p id="section-toc.1-1.5.2.12.1"><a href="#section-5.12" class="auto internal xref">5.12</a>. <a href="#name-worked-pdp-request" class="internal xref">Worked PDP request</a></p>
+                <p id="section-toc.1-1.5.2.12.1"><a href="#section-5.12" class="auto internal xref">5.12</a>. <a href="#name-pdp-side-consistency-checks" class="internal xref">PDP-side consistency checks</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.13">
-                <p id="section-toc.1-1.5.2.13.1"><a href="#section-5.13" class="auto internal xref">5.13</a>. <a href="#name-pdp-side-consistency-checks" class="internal xref">PDP-side consistency checks</a></p>
+                <p id="section-toc.1-1.5.2.13.1"><a href="#section-5.13" class="auto internal xref">5.13</a>. <a href="#name-clock-skew" class="internal xref">Clock skew</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.14">
-                <p id="section-toc.1-1.5.2.14.1"><a href="#section-5.14" class="auto internal xref">5.14</a>. <a href="#name-clock-skew" class="internal xref">Clock skew</a></p>
+                <p id="section-toc.1-1.5.2.14.1"><a href="#section-5.14" class="auto internal xref">5.14</a>. <a href="#name-batch-evaluations" class="internal xref">Batch evaluations</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.15">
-                <p id="section-toc.1-1.5.2.15.1"><a href="#section-5.15" class="auto internal xref">5.15</a>. <a href="#name-batch-evaluations" class="internal xref">Batch evaluations</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.16">
-                <p id="section-toc.1-1.5.2.16.1"><a href="#section-5.16" class="auto internal xref">5.16</a>. <a href="#name-timeouts-retries-and-overlo" class="internal xref">Timeouts, Retries, and Overload</a></p>
+                <p id="section-toc.1-1.5.2.15.1"><a href="#section-5.15" class="auto internal xref">5.15</a>. <a href="#name-timeouts-retries-and-overlo" class="internal xref">Timeouts, Retries, and Overload</a></p>
 </li>
             </ul>
 </li>
@@ -1275,69 +1270,61 @@ owns.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-runtime-evidence" class="internal xref">Runtime Evidence</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
-            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-capability-source-binding" class="internal xref">Capability Source Binding</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
-                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-per-capability-extraction" class="internal xref">Per-Capability Extraction</a></p>
-</li>
-            </ul>
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-mission-status-composition" class="internal xref">Mission Status Composition</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-mission-status-composition" class="internal xref">Mission Status Composition</a></p>
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-conformance" class="internal xref">Conformance</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
-                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-unbound-evaluation-downgrad" class="internal xref">Unbound-evaluation downgrade</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-unbound-evaluation-downgrad" class="internal xref">Unbound-evaluation downgrade</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
-                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-access-request-service-in-t" class="internal xref">Access Request Service in the trusted base</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-access-request-service-in-t" class="internal xref">Access Request Service in the trusted base</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.3">
-                <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-denial-oracle" class="internal xref">Denial oracle</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-denial-oracle" class="internal xref">Denial oracle</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.4">
-                <p id="section-toc.1-1.11.2.4.1"><a href="#section-11.4" class="auto internal xref">11.4</a>.  <a href="#name-materialized-view-fidelity" class="internal xref">Materialized view fidelity</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.4">
+                <p id="section-toc.1-1.10.2.4.1"><a href="#section-10.4" class="auto internal xref">10.4</a>.  <a href="#name-materialized-view-fidelity" class="internal xref">Materialized view fidelity</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.5">
-                <p id="section-toc.1-1.11.2.5.1"><a href="#section-11.5" class="auto internal xref">11.5</a>.  <a href="#name-transport" class="internal xref">Transport</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.5">
+                <p id="section-toc.1-1.10.2.5.1"><a href="#section-10.5" class="auto internal xref">10.5</a>.  <a href="#name-transport" class="internal xref">Transport</a></p>
 </li>
             </ul>
 </li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-authzen-obligation-types-re" class="internal xref">AuthZEN Obligation Types Registration</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
+                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-http-field-name-registratio" class="internal xref">HTTP Field Name Registration</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-references" class="internal xref">References</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
-                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-authzen-obligation-types-re" class="internal xref">AuthZEN Obligation Types Registration</a></p>
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
-                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-http-field-name-registratio" class="internal xref">HTTP Field Name Registration</a></p>
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
 </li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
-            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-references" class="internal xref">References</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
-                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
-                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
-</li>
-            </ul>
+            <p id="section-toc.1-1.14.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
-            <p id="section-toc.1-1.15.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
-            <p id="section-toc.1-1.16.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.15.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1377,7 +1364,7 @@ request, and the PDP-side consistency checks (<a href="#pdp-request" class="auto
 </li>
         <li class="normal" id="section-1-3.3">
           <p id="section-1-3.3.1">batch evaluations over the AuthZEN evaluations endpoint
-(<a href="#batch-evaluations" class="auto internal xref">Section 5.15</a>);<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
+(<a href="#batch-evaluations" class="auto internal xref">Section 5.14</a>);<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.4">
           <p id="section-1-3.4.1">how the PDP's permit and denial responses are shaped, and the rules
@@ -1400,8 +1387,10 @@ runtime profile's failure conditions onto wire-visible identifiers
 and Approval Profile <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>;<a href="#section-1-3.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.8">
-          <p id="section-1-3.8.1">the binding of a Mission's approved authority to concrete,
-catalog-sourced capabilities (<a href="#capability-source-binding" class="auto internal xref">Section 8</a>).<a href="#section-1-3.8.1" class="pilcrow">¶</a></p>
+          <p id="section-1-3.8.1">how a deployment adopting Mission Capability Binding carries that
+companion's capability-source context and consumes an already
+established action identity here
+(<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>).<a href="#section-1-3.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-1-4">The AuthZEN wire representation of cumulative consumption metering,
@@ -1498,28 +1487,19 @@ only the wire member <code>policy_view_id</code>
 (<a href="#mission-to-policy-materialization" class="auto internal xref">Section 4</a>).<a href="#section-2-8.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-8.3">Validating server:</dt>
+<dt id="section-2-8.3">Decision Evidence, Execution Evidence, Refusal Record:</dt>
         <dd style="margin-left: 1.5em" id="section-2-8.4">
-          <p id="section-2-8.4.1">The component that, at derivation, validates the Mission's authority
-and records the derivation-time facts the PDP later checks (such as a
-capability <code>source_digest</code>, <a href="#capability-source-binding" class="auto internal xref">Section 8</a>). In the
-issuance profile this is the Mission Issuer; this profile uses the
-term where the recording role is what matters.<a href="#section-2-8.4.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-2-8.5">Decision Evidence, Execution Evidence, Refusal Record:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-8.6">
-          <p id="section-2-8.6.1">The records the PDP and PEP emit for a decision, an execution
+          <p id="section-2-8.4.1">The records the PDP and PEP emit for a decision, an execution
 outcome, or a pre-decision refusal, defined by the runtime evidence
-companion (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-2-8.6.1" class="pilcrow">¶</a></p>
+companion (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-2-8.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-8.7">Executor:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-8.8">
-          <p id="section-2-8.8.1">The component that carries out a permitted action and emits
+<dt id="section-2-8.5">Executor:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-8.6">
+          <p id="section-2-8.6.1">The component that carries out a permitted action and emits
 Execution Evidence. It is the PEP in the common case, or a distinct
 component where the requesting PEP and the executing component
-differ (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-2-8.8.1" class="pilcrow">¶</a></p>
+differ (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-2-8.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1954,7 +1934,7 @@ mismatch as staleness; it is never compared against
 <code>mode</code>:</dt>
               <dd style="margin-left: 1.5em" id="section-5.6-1.4.2.6">
                 <p id="section-5.6-1.4.2.6.1"><span class="bcp14">REQUIRED</span>. A string. One of <code>fresh</code>, <code>cached</code>, or <code>event_driven</code>
-(<a href="#mission-status-composition" class="auto internal xref">Section 9</a>).<a href="#section-5.6-1.4.2.6.1" class="pilcrow">¶</a></p>
+(<a href="#mission-status-composition" class="auto internal xref">Section 8</a>).<a href="#section-5.6-1.4.2.6.1" class="pilcrow">¶</a></p>
 </dd>
               <dd class="break"></dd>
 <dt id="section-5.6-1.4.2.7">
@@ -2207,29 +2187,18 @@ evaluated predicates and their outcomes in Decision Evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-5.10-6" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="context-capability-source">
-<section id="section-5.11">
-        <h3 id="name-capability-source-context">
-<a href="#section-5.11" class="section-number selfRef">5.11. </a><a href="#name-capability-source-context" class="section-name selfRef">Capability Source Context</a>
-        </h3>
-<p id="section-5.11-1">For catalog-sourced actions, the PEP supplies the capability-source
-binding in <code>context.capability_source</code> using the object defined in
-<a href="#capability-source-binding" class="auto internal xref">Section 8</a>. For non-catalog actions, this member is
-absent.<a href="#section-5.11-1" class="pilcrow">¶</a></p>
-</section>
-</div>
 <div id="worked-pdp-request">
-<section id="section-5.12">
+<section id="section-5.11">
         <h3 id="name-worked-pdp-request">
-<a href="#section-5.12" class="section-number selfRef">5.12. </a><a href="#name-worked-pdp-request" class="section-name selfRef">Worked PDP request</a>
+<a href="#section-5.11" class="section-number selfRef">5.11. </a><a href="#name-worked-pdp-request" class="section-name selfRef">Worked PDP request</a>
         </h3>
-<p id="section-5.12-1">The <code>policy_view_id</code> values in this document's examples
+<p id="section-5.11-1">The <code>policy_view_id</code> values in this document's examples
 (<code>sha-256:kP3xR9sQ...</code>) differ from the runtime profile's worked
 materialized-view value (<code>sha-256:fuMqn6Nb...</code>): this deployment's
 view payload includes the engine-evaluable form, so it hashes
-differently. Both are valid views of the same Mission.<a href="#section-5.12-1" class="pilcrow">¶</a></p>
-<p id="section-5.12-2">For the ERP reconciliation Mission:<a href="#section-5.12-2" class="pilcrow">¶</a></p>
-<div class="breakable lang-http-message sourcecode" id="section-5.12-3">
+differently. Both are valid views of the same Mission.<a href="#section-5.11-1" class="pilcrow">¶</a></p>
+<p id="section-5.11-2">For the ERP reconciliation Mission:<a href="#section-5.11-2" class="pilcrow">¶</a></p>
+<div class="breakable lang-http-message sourcecode" id="section-5.11-3">
 <pre>
 POST /pdp/access/v1/evaluation HTTP/1.1
 Host: pdp.example.com
@@ -2295,29 +2264,29 @@ Authorization: ...
     }
   }
 }
-</pre><a href="#section-5.12-3" class="pilcrow">¶</a>
+</pre><a href="#section-5.11-3" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
 <div id="pdp-side-consistency-checks">
-<section id="section-5.13">
+<section id="section-5.12">
         <h3 id="name-pdp-side-consistency-checks">
-<a href="#section-5.13" class="section-number selfRef">5.13. </a><a href="#name-pdp-side-consistency-checks" class="section-name selfRef">PDP-side consistency checks</a>
+<a href="#section-5.12" class="section-number selfRef">5.12. </a><a href="#name-pdp-side-consistency-checks" class="section-name selfRef">PDP-side consistency checks</a>
         </h3>
-<p id="section-5.13-1">A PDP that also serves non-Mission AuthZEN traffic <span class="bcp14">MUST NOT</span> downgrade:
+<p id="section-5.12-1">A PDP that also serves non-Mission AuthZEN traffic <span class="bcp14">MUST NOT</span> downgrade:
 for an action within a runtime enforcement scope it mediates, a request
 whose <code>context</code> lacks the <code>mission</code> member (<a href="#context-mission" class="auto internal xref">Section 5.2</a>) is
 malformed under this binding, and the PDP <span class="bcp14">MUST</span> refuse it rather than
 evaluate it against non-Mission policy alone. A permit issued to an
 in-scope consequential action without Mission evaluation is an
 enforcement bypass, not a decision
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-5.13-1" class="pilcrow">¶</a></p>
-<p id="section-5.13-2">In addition to evaluating the decision inputs the runtime profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-5.12-1" class="pilcrow">¶</a></p>
+<p id="section-5.12-2">In addition to evaluating the decision inputs the runtime profile
 requires, the PDP <span class="bcp14">MUST</span> verify that the AuthZEN-carried envelope is
-self-consistent:<a href="#section-5.13-2" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-5.13-3">
-<li id="section-5.13-3.1">
-            <p id="section-5.13-3.1.1">When present, the Mission state conveyed in
+self-consistent:<a href="#section-5.12-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.12-3">
+<li id="section-5.12-3.1">
+            <p id="section-5.12-3.1.1">When present, the Mission state conveyed in
 <code>context.mission_state_observation.state</code> is exactly <code>active</code>; every
 other value, recognized or not, is non-active per the issuance
 profile's forward-compatibility rule
@@ -2330,45 +2299,45 @@ to a Mission state source <span class="bcp14">MUST</span> prefer its own fresher
 <code>context.mission_state_observation.state</code>, and <span class="bcp14">MUST</span> return
 <code>mission_inactive</code> when its view disagrees with the PEP-supplied
 state. PEP-supplied state is a floor, never a substitute for a state
-source the PDP can itself consult.<a href="#section-5.13-3.1.1" class="pilcrow">¶</a></p>
+source the PDP can itself consult.<a href="#section-5.12-3.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.13-3.2">
-            <p id="section-5.13-3.2.1">The <code>id</code> and <code>authority_hash</code> in <code>context.mission</code> equal the
+          <li id="section-5.12-3.2">
+            <p id="section-5.12-3.2.1">The <code>id</code> and <code>authority_hash</code> in <code>context.mission</code> equal the
 <code>mission_id</code> and <code>authority_hash</code> committed in the materialized
 policy view the PDP has loaded for this Mission
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); the PDP returns
-<code>view_inconsistent</code> on any inequality.<a href="#section-5.13-3.2.1" class="pilcrow">¶</a></p>
+<code>view_inconsistent</code> on any inequality.<a href="#section-5.12-3.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.13-3.3">
-            <p id="section-5.13-3.3.1">When <code>context.mission.policy_view_id</code> is present, it <span class="bcp14">MUST</span> equal
+          <li id="section-5.12-3.3">
+            <p id="section-5.12-3.3.1">When <code>context.mission.policy_view_id</code> is present, it <span class="bcp14">MUST</span> equal
 the loaded view's <code>policy_view_id</code>, and the PDP returns
-<code>view_inconsistent</code> on inequality.<a href="#section-5.13-3.3.1" class="pilcrow">¶</a></p>
+<code>view_inconsistent</code> on inequality.<a href="#section-5.12-3.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.13-3.4">
-            <p id="section-5.13-3.4.1">When <code>context.mission_state_observation.version</code> is present, the
+          <li id="section-5.12-3.4">
+            <p id="section-5.12-3.4.1">When <code>context.mission_state_observation.version</code> is present, the
 PDP compares it against its own tracked <code>mission_state_version</code>
 (<a href="#response-context" class="auto internal xref">Section 6.1</a>), never against <code>policy_view_id</code>, which
 commits to authority only (<a href="#mission-to-policy-materialization" class="auto internal xref">Section 4</a>),
 and treats a mismatch as staleness (<code>stale_state</code>): one side has
-missed a committed change.<a href="#section-5.13-3.4.1" class="pilcrow">¶</a></p>
+missed a committed change.<a href="#section-5.12-3.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.13-3.5">
-            <p id="section-5.13-3.5.1">A PDP <span class="bcp14">MUST NOT</span> fail a decision solely because the optional
+          <li id="section-5.12-3.5">
+            <p id="section-5.12-3.5.1">A PDP <span class="bcp14">MUST NOT</span> fail a decision solely because the optional
 <code>policy_view_id</code> or <code>policy_version</code> was omitted; the view the PDP
-loaded is authoritative.<a href="#section-5.13-3.5.1" class="pilcrow">¶</a></p>
+loaded is authoritative.<a href="#section-5.12-3.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.13-3.6">
-            <p id="section-5.13-3.6.1">When <code>context.credential.expires_at</code> is present, it has not passed;
-otherwise the PDP returns <code>credential_invalid</code>.<a href="#section-5.13-3.6.1" class="pilcrow">¶</a></p>
+          <li id="section-5.12-3.6">
+            <p id="section-5.12-3.6.1">When <code>context.credential.expires_at</code> is present, it has not passed;
+otherwise the PDP returns <code>credential_invalid</code>.<a href="#section-5.12-3.6.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.13-3.7">
-            <p id="section-5.13-3.7.1">The freshness conveyed in <code>context.mission_state_observation</code> the
+          <li id="section-5.12-3.7">
+            <p id="section-5.12-3.7.1">The freshness conveyed in <code>context.mission_state_observation</code> the
 PEP supplied is within the deployment's staleness bound; otherwise
 the PDP returns <code>stale_state</code>, with the freshness-window violation
-in the denial reason.<a href="#section-5.13-3.7.1" class="pilcrow">¶</a></p>
+in the denial reason.<a href="#section-5.12-3.7.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.13-3.8">
-            <p id="section-5.13-3.8.1">For an action whose class requires parameter binding
+          <li id="section-5.12-3.8">
+            <p id="section-5.12-3.8.1">For an action whose class requires parameter binding
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>),
 <code>action.properties.parameter_digest</code> <span class="bcp14">MUST</span> be present; if it is
 absent the PDP returns <code>parameter_violation</code>. When
@@ -2380,31 +2349,23 @@ to evaluate every applicable parameter constraint from the digest,
 the supplied <code>action.properties.parameter_attributes</code>, or local
 state, and returns <code>parameter_violation</code> if it cannot. A
 parameter-bound action <span class="bcp14">MUST NOT</span> be permitted without a verified
-<code>parameter_digest</code>.<a href="#section-5.13-3.8.1" class="pilcrow">¶</a></p>
+<code>parameter_digest</code>.<a href="#section-5.12-3.8.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.13-3.9">
-            <p id="section-5.13-3.9.1">For a catalog-sourced action whose approved entry recorded a
-capability source binding at derivation
-(<a href="#capability-source-binding" class="auto internal xref">Section 8</a>), <code>context.capability_source</code> <span class="bcp14">MUST</span> be
-present and match the approved binding: the presented <code>source_digest</code>,
-computed over the capability's current extracted definition
-(<a href="#capability-extraction" class="auto internal xref">Section 8.1</a>), <span class="bcp14">MUST</span> equal the recorded value, and, where
-a <code>catalog_digest</code> was recorded, the presented <code>catalog_digest</code> <span class="bcp14">MUST</span>
-equal it likewise; otherwise the PDP returns <code>capability_drift</code>.
-Whether an action is catalog-sourced, and which digests were
-recorded, are determined from the materialized policy view, not from
-the PEP's request; where no source binding was recorded, this check
-does not apply.<a href="#section-5.13-3.9.1" class="pilcrow">¶</a></p>
+          <li id="section-5.12-3.9">
+            <p id="section-5.12-3.9.1">A deployment adopting Mission Capability Binding applies that
+companion's source checks and its <code>capability_drift</code> extension
+reason (<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>); this
+binding consumes an already established action identity.<a href="#section-5.12-3.9.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 </section>
 </div>
 <div id="clock-skew">
-<section id="section-5.14">
+<section id="section-5.13">
         <h3 id="name-clock-skew">
-<a href="#section-5.14" class="section-number selfRef">5.14. </a><a href="#name-clock-skew" class="section-name selfRef">Clock skew</a>
+<a href="#section-5.13" class="section-number selfRef">5.13. </a><a href="#name-clock-skew" class="section-name selfRef">Clock skew</a>
         </h3>
-<p id="section-5.14-1">The time comparisons this binding performs (a permit's
+<p id="section-5.13-1">The time comparisons this binding performs (a permit's
 mission-execution obligation <code>expires_at</code> at the PEP, <a href="#obligations" class="auto internal xref">Section 6.2</a>,
 the <code>context.mission_state_observation</code> freshness window and
 <code>context.credential.expires_at</code> at the PDP, and the approval maximum
@@ -2417,50 +2378,50 @@ maximum-skew assumption in its Enforcement Scope Statement
 by more than the published maximum skew <span class="bcp14">MUST</span> fail closed: an expired
 permit, a stale freshness window, or an expired credential is refused,
 and the leeway never extends a permit lease or freshness lease beyond
-its bound plus the published skew.<a href="#section-5.14-1" class="pilcrow">¶</a></p>
+its bound plus the published skew.<a href="#section-5.13-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="batch-evaluations">
-<section id="section-5.15">
+<section id="section-5.14">
         <h3 id="name-batch-evaluations">
-<a href="#section-5.15" class="section-number selfRef">5.15. </a><a href="#name-batch-evaluations" class="section-name selfRef">Batch evaluations</a>
+<a href="#section-5.14" class="section-number selfRef">5.14. </a><a href="#name-batch-evaluations" class="section-name selfRef">Batch evaluations</a>
         </h3>
-<p id="section-5.15-1">The AuthZEN evaluations (boxcar) endpoint <span class="bcp14">MAY</span> be used to submit several
+<p id="section-5.14-1">The AuthZEN evaluations (boxcar) endpoint <span class="bcp14">MAY</span> be used to submit several
 Mission-bound decisions in one request. Batching is a transport
 optimization and changes none of the per-item enforcement semantics:
 each item is evaluated independently and on the same terms as a single
-request.<a href="#section-5.15-1" class="pilcrow">¶</a></p>
+request.<a href="#section-5.14-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.15-2.1">
-            <p id="section-5.15-2.1.1">Each item yields its own Decision Evidence Object
+<li class="normal" id="section-5.14-2.1">
+            <p id="section-5.14-2.1.1">Each item yields its own Decision Evidence Object
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>) with its own
-<code>evidence_id</code> and <code>sequence</code>, assigned in request order.<a href="#section-5.15-2.1.1" class="pilcrow">¶</a></p>
+<code>evidence_id</code> and <code>sequence</code>, assigned in request order.<a href="#section-5.14-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.15-2.2">
-            <p id="section-5.15-2.2.1">Any metered bounds apply per item in request order
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-5.15-2.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.14-2.2">
+            <p id="section-5.14-2.2.1">Any metered bounds apply per item in request order
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-5.14-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.15-2.3">
-            <p id="section-5.15-2.3.1">Permits are per item, so a boxcar <span class="bcp14">MAY</span> return a mix of permits and
-denials.<a href="#section-5.15-2.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.14-2.3">
+            <p id="section-5.14-2.3.1">Permits are per item, so a boxcar <span class="bcp14">MAY</span> return a mix of permits and
+denials.<a href="#section-5.14-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.15-2.4">
-            <p id="section-5.15-2.4.1">This profile requires <code>execute_all</code> semantics: every item <span class="bcp14">MUST</span> be
+          <li class="normal" id="section-5.14-2.4">
+            <p id="section-5.14-2.4.1">This profile requires <code>execute_all</code> semantics: every item <span class="bcp14">MUST</span> be
 evaluated independently, on the same terms as a single request,
 regardless of an earlier item's decision. A PDP <span class="bcp14">MUST</span> reject, as an
 AuthZEN request error rather than a silent downgrade, a request
 whose recognized <code>options</code> ask for <code>deny_on_first_deny</code>,
 <code>permit_on_first_permit</code>, or any other recognized short-circuit or
 fail-fast semantics. An <code>options</code> member the PDP does not recognize
-follows AuthZEN's own rules for unrecognized options.<a href="#section-5.15-2.4.1" class="pilcrow">¶</a></p>
+follows AuthZEN's own rules for unrecognized options.<a href="#section-5.14-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.15-3">A batch request for two journal-entry writes under the ERP
+<p id="section-5.14-3">A batch request for two journal-entry writes under the ERP
 reconciliation Mission, where the second exceeds the entry's
 <code>max_amount</code> ceiling of 500.00 USD. The shared <code>subject</code> is hoisted
 to the request's default members per <span>[<a href="#AUTHZEN" class="cite xref">AUTHZEN</a>]</span>; each item carries its
-complete <code>context</code>:<a href="#section-5.15-3" class="pilcrow">¶</a></p>
-<div class="breakable lang-http-message sourcecode" id="section-5.15-4">
+complete <code>context</code>:<a href="#section-5.14-3" class="pilcrow">¶</a></p>
+<div class="breakable lang-http-message sourcecode" id="section-5.14-4">
 <pre>
 POST /pdp/access/v1/evaluations HTTP/1.1
 Host: pdp.example.com
@@ -2554,13 +2515,13 @@ Authorization: ...
     }
   ]
 }
-</pre><a href="#section-5.15-4" class="pilcrow">¶</a>
+</pre><a href="#section-5.14-4" class="pilcrow">¶</a>
 </div>
-<p id="section-5.15-5">The response returns one decision per item, in request order; the
+<p id="section-5.14-5">The response returns one decision per item, in request order; the
 first is a permit and the second a <code>parameter_violation</code> deny, whose
 failing <code>max_amount</code> key is listed in that item's Decision
-Evidence <code>contributing_constraints</code>:<a href="#section-5.15-5" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-5.15-6">
+Evidence <code>contributing_constraints</code>:<a href="#section-5.14-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.14-6">
 <pre>
 {
   "evaluations": [
@@ -2604,48 +2565,48 @@ Evidence <code>contributing_constraints</code>:<a href="#section-5.15-5" class="
     }
   ]
 }
-</pre><a href="#section-5.15-6" class="pilcrow">¶</a>
+</pre><a href="#section-5.14-6" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
 <div id="transport-behavior">
-<section id="section-5.16">
+<section id="section-5.15">
         <h3 id="name-timeouts-retries-and-overlo">
-<a href="#section-5.16" class="section-number selfRef">5.16. </a><a href="#name-timeouts-retries-and-overlo" class="section-name selfRef">Timeouts, Retries, and Overload</a>
+<a href="#section-5.15" class="section-number selfRef">5.15. </a><a href="#name-timeouts-retries-and-overlo" class="section-name selfRef">Timeouts, Retries, and Overload</a>
         </h3>
-<p id="section-5.16-1">An evaluation exchange carries metered and single-use consequences,
-so its transport behavior is specified, not assumed:<a href="#section-5.16-1" class="pilcrow">¶</a></p>
+<p id="section-5.15-1">An evaluation exchange carries metered and single-use consequences,
+so its transport behavior is specified, not assumed:<a href="#section-5.15-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.16-2.1">
-            <p id="section-5.16-2.1.1">A PEP <span class="bcp14">MUST</span> bound each evaluation call with a timeout inside the
+<li class="normal" id="section-5.15-2.1">
+            <p id="section-5.15-2.1.1">A PEP <span class="bcp14">MUST</span> bound each evaluation call with a timeout inside the
 action class's staleness budget and treat expiry as
 <code>pdp_unreachable</code>
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>): fail closed,
-never a permit.<a href="#section-5.16-2.1.1" class="pilcrow">¶</a></p>
+never a permit.<a href="#section-5.15-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.16-2.2">
-            <p id="section-5.16-2.2.1">A PEP <span class="bcp14">MAY</span> retry an evaluation whose response was lost, carrying
+          <li class="normal" id="section-5.15-2.2">
+            <p id="section-5.15-2.2.1">A PEP <span class="bcp14">MAY</span> retry an evaluation whose response was lost, carrying
 the same normalized parameters and idempotency key. The runtime
 profile's retransmission rule then returns the prior decision
 where its permit is unexpired and unconsumed
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and metering <span class="bcp14">MUST NOT</span>
 charge the bound twice for the retried request
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-5.16-2.2.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-5.15-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.16-2.3">
-            <p id="section-5.16-2.3.1">A PDP under overload sheds load explicitly with HTTP 429 and
+          <li class="normal" id="section-5.15-2.3">
+            <p id="section-5.15-2.3.1">A PDP under overload sheds load explicitly with HTTP 429 and
 <code>Retry-After</code>. This is transport backpressure, not an authorization
 result: the PEP <span class="bcp14">MUST NOT</span> retry before <code>Retry-After</code> elapses, and
 when no decision is obtainable within its policy window it fails
 closed as <code>pdp_unreachable</code> under the runtime profile. A successful
 evaluation that denies transiently is expressed with
 <code>context.next_action: retry</code> (<a href="#response-context" class="auto internal xref">Section 6.1</a>), never as an
-HTTP error.<a href="#section-5.16-2.3.1" class="pilcrow">¶</a></p>
+HTTP error.<a href="#section-5.15-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.16-2.4">
-            <p id="section-5.16-2.4.1">A PDP <span class="bcp14">MAY</span> publish a maximum batch size and refuse an oversized
+          <li class="normal" id="section-5.15-2.4">
+            <p id="section-5.15-2.4.1">A PDP <span class="bcp14">MAY</span> publish a maximum batch size and refuse an oversized
 boxcar with HTTP 413; the PEP splits the batch rather than
-dropping items.<a href="#section-5.16-2.4.1" class="pilcrow">¶</a></p>
+dropping items.<a href="#section-5.15-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -2836,7 +2797,7 @@ context, as the obligations profile defines <span>[<a href="#AUTHZEN-OBL" class=
 declaration is advisory. A PDP <span class="bcp14">MUST NOT</span> rely on an obligation the
 PEP has not declared or is not required to support: this profile's
 conformance floor requires every conforming PEP to support both
-<code>step-up</code> and <code>mission-execution</code> unconditionally (<a href="#conformance" class="auto internal xref">Section 10</a>);
+<code>step-up</code> and <code>mission-execution</code> unconditionally (<a href="#conformance" class="auto internal xref">Section 9</a>);
 for any other obligation type, the PDP relies on it only when the
 PEP has declared it.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
 <p id="section-6.2-3">The PDP <span class="bcp14">MAY</span> attach the <span>[<a href="#AUTHZEN-OBL" class="cite xref">AUTHZEN-OBL</a>]</span> step-up obligation
@@ -3090,29 +3051,20 @@ and settlement exchange are defined by the experimental metering
 companion (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-6.5-2.13.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.14">
-            <p id="section-6.5-2.14.1"><code>capability_drift</code>: for a catalog-sourced action whose approved entry
-recorded a capability source binding (<a href="#capability-source-binding" class="auto internal xref">Section 8</a>),
-the digest of the action's current extracted capability definition
-differs from the <code>source_digest</code> committed at derivation, a recorded
-<code>catalog_digest</code> no longer matches the retrieved source, or the
-presented <code>tool_id</code> is outside the approved set (see the note after
-this list).<a href="#section-6.5-2.14.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-6.5-2.15">
-            <p id="section-6.5-2.15.1"><code>unsupported_authorization_type</code>: the action targets an
+            <p id="section-6.5-2.14.1"><code>unsupported_authorization_type</code>: the action targets an
 <code>authorization_details</code> type the PDP does not understand or cannot
 enforce, so it refuses rather than guess the type's semantics
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6.5-2.15.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6.5-2.14.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.5-2.16">
-            <p id="section-6.5-2.16.1"><code>constraint_unsupported</code>: an applicable constraint or consumption
+          <li class="normal" id="section-6.5-2.15">
+            <p id="section-6.5-2.15.1"><code>constraint_unsupported</code>: an applicable constraint or consumption
 bound on the entry is unrecognized or unmetered, so the PDP cannot
 enforce it and refuses (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).
 This is distinct from <code>parameter_violation</code>, which is a constraint the
-PDP evaluated and found violated.<a href="#section-6.5-2.16.1" class="pilcrow">¶</a></p>
+PDP evaluated and found violated.<a href="#section-6.5-2.15.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.5-2.17">
-            <p id="section-6.5-2.17.1"><code>history_not_satisfied</code>: a deployment- or Resource-policy-required
+          <li class="normal" id="section-6.5-2.16">
+            <p id="section-6.5-2.16.1"><code>history_not_satisfied</code>: a deployment- or Resource-policy-required
 history predicate (<a href="#context-history" class="auto internal xref">Section 5.10</a>) is not satisfied: the PDP
 established it false, could not establish it, could not consult
 its evidence store within the declared staleness bound, or does
@@ -3120,21 +3072,17 @@ not recognize the presented <code>predicate</code> value. The per-predicate
 outcomes are in Decision Evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), so the
 unsatisfied and unavailable cases stay distinguishable after the
-fact.<a href="#section-6.5-2.17.1" class="pilcrow">¶</a></p>
+fact.<a href="#section-6.5-2.16.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-6.5-3">Authentication step-up is not a denial reason under this profile; it
 is the step-up obligation on a permit (<a href="#obligations" class="auto internal xref">Section 6.2</a>). A
 Resource-policy refusal not expressible as a permit-plus-obligation is
 <code>resource_policy</code>.<a href="#section-6.5-3" class="pilcrow">¶</a></p>
-<p id="section-6.5-4"><code>capability_drift</code> applies only when a source binding was recorded and
-the digest comparison ran; an invoked identity outside the approved
-set for which no source binding was recorded is <code>out_of_authority</code>,
-not <code>capability_drift</code>.<a href="#section-6.5-4" class="pilcrow">¶</a></p>
-<p id="section-6.5-5">A terminal policy refusal <span class="bcp14">SHOULD</span> carry <code>next_action: none</code>; a denial
+<p id="section-6.5-4">A terminal policy refusal <span class="bcp14">SHOULD</span> carry <code>next_action: none</code>; a denial
 the deployment exposes as requestable carries <code>next_action: request</code>
-with <code>context.access_request</code> (<a href="#response-context" class="auto internal xref">Section 6.1</a>).<a href="#section-6.5-5" class="pilcrow">¶</a></p>
-<p id="section-6.5-6">This document defines no other denial-reason values. A companion
+with <code>context.access_request</code> (<a href="#response-context" class="auto internal xref">Section 6.1</a>).<a href="#section-6.5-4" class="pilcrow">¶</a></p>
+<p id="section-6.5-5">This document defines no other denial-reason values. A companion
 profile <span class="bcp14">MAY</span> extend the set by specification; an extension value <span class="bcp14">MUST</span>
 be either a collision-resistant name (following the Collision-Resistant
 Name guidance of <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Section 4.2) or a name coordinated within
@@ -3144,7 +3092,7 @@ reason, wherever it is carried (the Decision Evidence <code>denial_reason</code>
 <code>context.reason</code>, <a href="#response-context" class="auto internal xref">Section 6.1</a>), <span class="bcp14">MUST</span> treat an unrecognized value as
 a deny and <span class="bcp14">MUST NOT</span> attach any other semantics to it, mirroring the
 issuance profile's open lifecycle state space
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.5-6" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.5-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="requestable-denials">
@@ -3461,13 +3409,6 @@ governed by each carrier's extensibility rule.<a href="#section-6.8-1" class="pi
 </td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Capability or catalog drift, or invoked identity outside the approved set when a source binding was recorded</td>
-              <td class="text-left" rowspan="1" colspan="1">PDP denial</td>
-              <td class="text-left" rowspan="1" colspan="1">
-                <code>capability_drift</code>
-</td>
-            </tr>
-            <tr>
               <td class="text-left" rowspan="1" colspan="1">Unsupported <code>authorization_details</code> type</td>
               <td class="text-left" rowspan="1" colspan="1">PDP denial</td>
               <td class="text-left" rowspan="1" colspan="1">
@@ -3571,11 +3512,11 @@ cache hit ratio (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="c
 <p id="section-6.10-1">The resource request a permit authorizes is commonly served by a
 Resource Server that did not see the PDP exchange. The PEP <span class="bcp14">SHOULD</span>
 propagate the permit's <code>evaluation_id</code> to the resource request in the
-<code>Mission-Decision</code> request header field (<a href="#iana" class="auto internal xref">Section 13</a>); the field value is
+<code>Mission-Decision</code> request header field (<a href="#iana" class="auto internal xref">Section 12</a>); the field value is
 the <code>evaluation_id</code>, whose ABNF (<a href="#response-context" class="auto internal xref">Section 6.1</a>) is
 field-value-safe. The field is protected in transit per deployment: at
 minimum it rides the TLS channel this binding already requires
-(<a href="#security-considerations" class="auto internal xref">Section 11</a>), and where the deployment signs resource
+(<a href="#security-considerations" class="auto internal xref">Section 10</a>), and where the deployment signs resource
 requests the signature <span class="bcp14">MUST</span> cover it.<a href="#section-6.10-1" class="pilcrow">¶</a></p>
 <p id="section-6.10-2">A Resource Server that logs the received <code>evaluation_id</code> with the
 access it serves closes the decision-to-access join: the Decision
@@ -3626,362 +3567,154 @@ own registered media type
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-7-3" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="capability-source-binding">
-<section id="section-8">
-      <h2 id="name-capability-source-binding">
-<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-capability-source-binding" class="section-name selfRef">Capability Source Binding</a>
-      </h2>
-<p id="section-8-1">Consequential actions an agent discovers at runtime, through a Model
-Context Protocol tool catalog, an OpenAPI document, a Protected
-Resource Metadata-linked catalog, or an equivalent capability source,
-identify the source they came from, so a Mission's approved authority
-stays bound to concrete tools rather than to bare action names a later
-catalog revision could redefine. The runtime profile assigns capability
-identity to the approved <code>actions</code> and refuses an invoked identity
-outside them (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); this
-section gives the concrete binding an AuthZEN deployment presents for
-catalog-sourced actions.<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">For MCP tools, this binding composes with the AuthZEN MCP profile's
-COAZ mapping <span>[<a href="#COAZ" class="cite xref">COAZ</a>]</span>. COAZ maps MCP tool definitions and invocation
-parameters into the AuthZEN Subject-Action-Resource-Context model; this
-profile adds Mission governance, source binding, Mission evidence, and
-runtime metering. A Mission-governed MCP deployment <span class="bcp14">MAY</span> use COAZ to
-construct the AuthZEN <code>subject</code>, <code>resource</code>, <code>action</code>, and
-parameter-bearing <code>context</code> members, but the Mission-specific
-<code>context.mission</code>, <code>context.actor</code>, freshness, permit binding, and
-evidence requirements in this document still apply.<a href="#section-8-2" class="pilcrow">¶</a></p>
-<p id="section-8-3">The minimum binding, committed by the validating server at derivation
-and presented by the executing component at request time in
-<code>context.capability_source</code>, is:<a href="#section-8-3" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-8-4">
-<pre>
-{
-  "tool_id": "mcp://docs.example.com/tools/write_document",
-  "source_uri": "https://docs.example.com/.well-known/mcp",
-  "source_digest":
-    "sha-256:OAbEIh2DTYUVP7DjRhHct4aapsT8PybZq2ILdut9UP0",
-  "operation_ref": "tools/write_document"
-}
-</pre><a href="#section-8-4" class="pilcrow">¶</a>
-</div>
-<span class="break"></span><dl class="dlParallel" id="section-8-5">
-        <dt id="section-8-5.1">
-<code>tool_id</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-8-5.2">
-          <p id="section-8-5.2.1">A string. A stable capability identifier the executing
-component asserts the action invokes.<a href="#section-8-5.2.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-8-5.3">
-<code>source_uri</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-8-5.4">
-          <p id="section-8-5.4.1">A string. The discovery source the capability was
-resolved from.<a href="#section-8-5.4.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-8-5.5">
-<code>source_digest</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-8-5.6">
-          <p id="section-8-5.6.1">A string. The integrity-anchor encoded form
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) over the capability's
-extracted definition (<a href="#capability-extraction" class="auto internal xref">Section 8.1</a>), recorded at
-derivation time. At request time it is computed over the current
-extracted definition, so the PDP's comparison detects a mutated
-definition.<a href="#section-8-5.6.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-8-5.7">
-<code>operation_ref</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-8-5.8">
-          <p id="section-8-5.8.1">A string. The source-format-specific operation
-reference (MCP tool name, OpenAPI <code>operationId</code>, or equivalent).<a href="#section-8-5.8.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-8-5.9">
-<code>catalog_digest</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-8-5.10">
-          <p id="section-8-5.10.1"><span class="bcp14">OPTIONAL</span>. A string. The integrity-anchor encoded form over the exact
-retrieved source representation, recorded at derivation time. Its
-semantics are strictly stricter than <code>source_digest</code>: when recorded,
-any change to the retrieved source refuses, whether or not it touches
-the capability. A deployment records it where the whole catalog is
-the trust unit.<a href="#section-8-5.10.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-8-5.11">
-<code>executor</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-8-5.12">
-          <p id="section-8-5.12.1"><span class="bcp14">OPTIONAL</span>. A string. An identifier for the executing component that
-serves the capability at request time (for example, an MCP server
-instance), asserted by the PEP that authenticates it. It is a
-request-time fact, not part of the derived authority recorded at
-derivation, and is recorded in Decision Evidence when present; it
-is never an input to the <code>source_digest</code> or <code>catalog_digest</code>
-comparison.
-Where the executing component authenticates under an
-attested-instance profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>), the deployment
-<span class="bcp14">SHOULD</span> carry the attested instance identifier here rather than a
-self-chosen label.<a href="#section-8-5.12.1" class="pilcrow">¶</a></p>
-</dd>
-      <dd class="break"></dd>
-</dl>
-<p id="section-8-6">Rules:<a href="#section-8-6" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-8-7.1">
-          <p id="section-8-7.1.1">The validating server records <code>tool_id</code>, <code>source_uri</code>,
-<code>source_digest</code>, <code>operation_ref</code>, and any <code>catalog_digest</code> for every
-consequential action sourced from a discovered catalog. These values
-are part of the approved Mission's derived authority and are
-therefore covered by <code>authority_hash</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-8-7.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-8-7.2">
-          <p id="section-8-7.2.1">The PEP presents <code>tool_id</code> on consequential requests for
-catalog-sourced actions. The runtime profile owns the drift
-semantics (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); the PDP
-applies them through the PDP-side consistency checks
-(<a href="#pdp-request" class="auto internal xref">Section 5</a>), over the per-capability comparison scope of
-<a href="#capability-extraction" class="auto internal xref">Section 8.1</a>. This binding adds only the wire
-representation: such a refusal is carried as <code>capability_drift</code>,
-with its boundary against <code>out_of_authority</code> drawn where the
-identifiers are defined (<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>). It
-defines no drift rule of its own.<a href="#section-8-7.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-8-7.3">
-          <p id="section-8-7.3.1">Resource policy <span class="bcp14">MAY</span> refuse a catalog-sourced action whose
-<code>source_uri</code> or <code>executor</code> is outside the deployment's trusted set.
-Such a refusal is a Resource-policy condition, carried as
-<code>resource_policy</code> (<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>), not a drift
-refusal.<a href="#section-8-7.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-8-7.4">
-          <p id="section-8-7.4.1">Actions not sourced from a discovered catalog (deployment-registered
-<code>authorization_details</code> types, first-party operations with stable
-identity) do not require this binding.<a href="#section-8-7.4.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<div id="capability-extraction">
-<section id="section-8.1">
-        <h3 id="name-per-capability-extraction">
-<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-per-capability-extraction" class="section-name selfRef">Per-Capability Extraction</a>
-        </h3>
-<p id="section-8.1-1"><code>source_digest</code> is computed over the extracted per-capability
-definition, not the whole retrieved source, so a revision elsewhere in
-a shared catalog does not invalidate a Mission's approved capabilities,
-while any mutation of an approved capability's own definition still
-refuses. The extraction rule is fixed per source format:<a href="#section-8.1-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-8.1-2.1">
-            <p id="section-8.1-2.1.1">For an MCP tool catalog, the extracted definition is the single
-tool's definition object as retrieved (the member of the catalog's
-tool list whose name is the capability's), JCS-canonicalized
-<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>.<a href="#section-8.1-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-8.1-2.2">
-            <p id="section-8.1-2.2.1">For an OpenAPI document, the extracted definition is an object with
-two members: <code>operation</code>, the operation object <code>operation_ref</code>
-identifies, and <code>components</code>, an object carrying, under their
-component names, the components of the document the operation
-references by name, directly or transitively. The assembled object
-is JCS-canonicalized.<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-8.1-2.3">
-            <p id="section-8.1-2.3.1">For another source format, the binding profile in use defines the
-extraction rule. A capability whose format has no defined extraction
-rule cannot carry a <code>source_digest</code>; the whole-source
-<code>catalog_digest</code> remains available for it.<a href="#section-8.1-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<p id="section-8.1-3">For the MCP tool of the minimum binding above, the extracted
-definition is the tool's definition object:<a href="#section-8.1-3" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-8.1-4">
-<pre>
-{
-  "name": "write_document",
-  "description": "Create or update a document",
-  "inputSchema": {
-    "type": "object",
-    "properties": {
-      "path": { "type": "string" },
-      "content": { "type": "string" }
-    },
-    "required": ["path", "content"]
-  }
-}
-</pre><a href="#section-8.1-4" class="pilcrow">¶</a>
-</div>
-<p id="section-8.1-5">The JCS canonical bytes are a single line with sorted member names and
-no whitespace, shown here wrapped for layout only; remove the layout
-line breaks, adding no characters, to recover the canonical form:<a href="#section-8.1-5" class="pilcrow">¶</a></p>
-<div class="lang-text sourcecode" id="section-8.1-6">
-<pre>
-{"description":"Create or update a document","inputSchema":{"propert
-ies":{"content":{"type":"string"},"path":{"type":"string"}},"require
-d":["path","content"],"type":"object"},"name":"write_document"}
-</pre><a href="#section-8.1-6" class="pilcrow">¶</a>
-</div>
-<div class="lang-text sourcecode" id="section-8.1-7">
-<pre>
-source_digest = sha-256:OAbEIh2DTYUVP7DjRhHct4aapsT8PybZq2ILdut9UP0
-</pre><a href="#section-8.1-7" class="pilcrow">¶</a>
-</div>
-<p id="section-8.1-8">Adding, removing, or renaming another tool in the same catalog leaves
-this value unchanged; any byte change to this definition changes it.<a href="#section-8.1-8" class="pilcrow">¶</a></p>
-<p id="section-8.1-9">Cross-format canonicalization, signed capability manifests, and
-media-type negotiation across catalog formats are out of scope
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); this binding requires
-only the stable identifier plus source evidence above.<a href="#section-8.1-9" class="pilcrow">¶</a></p>
-</section>
-</div>
-</section>
-</div>
 <div id="mission-status-composition">
-<section id="section-9">
+<section id="section-8">
       <h2 id="name-mission-status-composition">
-<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-mission-status-composition" class="section-name selfRef">Mission Status Composition</a>
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-mission-status-composition" class="section-name selfRef">Mission Status Composition</a>
       </h2>
-<p id="section-9-1">The PDP relies on Mission state to decide. The runtime profile defines
+<p id="section-8-1">The PDP relies on Mission state to decide. The runtime profile defines
 the Mission state source, the maximum staleness bound, and the
 fail-closed rule (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). This
 binding conveys that state and its freshness on the wire through the
 <code>context.mission_state_observation</code> snapshot
 (<a href="#context-audience-freshness" class="auto internal xref">Section 5.6</a>), using a <code>mode</code> member with one of
-three values that describe how the PEP obtained the state:<a href="#section-9-1" class="pilcrow">¶</a></p>
+three values that describe how the PEP obtained the state:<a href="#section-8-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-9-2.1">
-          <p id="section-9-2.1.1"><code>fresh</code>: the PEP consulted the Mission state source synchronously
-before the action.<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-8-2.1">
+          <p id="section-8-2.1.1"><code>fresh</code>: the PEP consulted the Mission state source synchronously
+before the action.<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.2">
-          <p id="section-9-2.2.1"><code>cached</code>: the PEP used cached Mission state within the deployment's
-staleness bound.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-8-2.2">
+          <p id="section-8-2.2.1"><code>cached</code>: the PEP used cached Mission state within the deployment's
+staleness bound.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.3">
-          <p id="section-9-2.3.1"><code>event_driven</code>: the PEP relies on event-channel invalidation, but the
+        <li class="normal" id="section-8-2.3">
+          <p id="section-8-2.3.1"><code>event_driven</code>: the PEP relies on event-channel invalidation, but the
 cached state remains bounded by the deployment's staleness bound, or
 the lease the state carries, exactly as for <code>cached</code>; it is not valid
 indefinitely. A missed or delayed invalidation event does not extend
 validity, and when the bound elapses without a confirming event the
 PEP <span class="bcp14">MUST</span> refresh from a Mission state source rather than continue on
-the cache.<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
+the cache.<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-9-3">When freshness cannot be established within the bound, the PDP fails
+<p id="section-8-3">When freshness cannot be established within the bound, the PDP fails
 closed for consequential actions as the runtime profile requires; in
 this binding that surfaces as a <code>stale_state</code> denial
-(<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>).<a href="#section-9-3" class="pilcrow">¶</a></p>
+(<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>).<a href="#section-8-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conformance">
-<section id="section-10">
+<section id="section-9">
       <h2 id="name-conformance">
-<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
       </h2>
-<p id="section-10-1">This binding adds AuthZEN-specific obligations on top of the runtime
+<p id="section-9-1">This binding adds AuthZEN-specific obligations on top of the runtime
 profile's enforcement contract; an implementation conforms to this
 binding only for the resources, action classes, and PDPs in the runtime
 enforcement scope it documents
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-10-1" class="pilcrow">¶</a></p>
-<p id="section-10-2">Each role's obligations are normative in their owning sections; this
-checklist cites them without restating their mechanics.<a href="#section-10-2" class="pilcrow">¶</a></p>
-<p id="section-10-3">A PEP conforming to this binding <span class="bcp14">MUST</span>:<a href="#section-10-3" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">Each role's obligations are normative in their owning sections; this
+checklist cites them without restating their mechanics.<a href="#section-9-2" class="pilcrow">¶</a></p>
+<p id="section-9-3">A PEP conforming to this binding <span class="bcp14">MUST</span>:<a href="#section-9-3" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-10-4.1">
-          <p id="section-10-4.1.1">carry the Mission and actor decision inputs from validated token
+<li class="normal" id="section-9-4.1">
+          <p id="section-9-4.1.1">carry the Mission and actor decision inputs from validated token
 claims only, matching the approved entry's <code>resource</code> against
-<code>resource.properties.audience</code> (<a href="#pdp-request" class="auto internal xref">Section 5</a>);<a href="#section-10-4.1.1" class="pilcrow">¶</a></p>
+<code>resource.properties.audience</code> (<a href="#pdp-request" class="auto internal xref">Section 5</a>);<a href="#section-9-4.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-4.2">
-          <p id="section-10-4.2.1">supply <code>action.properties.parameter_digest</code> and
-<code>context.capability_source</code> where required (<a href="#parameter-digest" class="auto internal xref">Section 5.5</a>,
-<a href="#capability-source-binding" class="auto internal xref">Section 8</a>);<a href="#section-10-4.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-9-4.2">
+          <p id="section-9-4.2.1">supply <code>action.properties.parameter_digest</code> where required
+(<a href="#parameter-digest" class="auto internal xref">Section 5.5</a>), and, where the deployment adopts Mission
+Capability Binding, <code>context.capability_source</code> as that companion
+requires (<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>);<a href="#section-9-4.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-4.3">
-          <p id="section-10-4.3.1">support both the <code>step-up</code> and <code>mission-execution</code> obligation types
+        <li class="normal" id="section-9-4.3">
+          <p id="section-9-4.3.1">support both the <code>step-up</code> and <code>mission-execution</code> obligation types
 unconditionally, whatever it declares in <code>supported_obligations</code>
-(<a href="#obligations" class="auto internal xref">Section 6.2</a>);<a href="#section-10-4.3.1" class="pilcrow">¶</a></p>
+(<a href="#obligations" class="auto internal xref">Section 6.2</a>);<a href="#section-9-4.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-4.4">
-          <p id="section-10-4.4.1">fulfill every obligation attached to a permit before releasing the
+        <li class="normal" id="section-9-4.4">
+          <p id="section-9-4.4.1">fulfill every obligation attached to a permit before releasing the
 action's effect, including the permit lease and use limit carried in
 the mission-execution obligation, and execute every obligation
-attached to a denial while still denying the action (<a href="#obligations" class="auto internal xref">Section 6.2</a>);<a href="#section-10-4.4.1" class="pilcrow">¶</a></p>
+attached to a denial while still denying the action (<a href="#obligations" class="auto internal xref">Section 6.2</a>);<a href="#section-9-4.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-4.5">
-          <p id="section-10-4.5.1">be the same enforcement identity as the requesting component, on the
+        <li class="normal" id="section-9-4.5">
+          <p id="section-9-4.5.1">be the same enforcement identity as the requesting component, on the
 same mutually authenticated channel, and never relay a permit or
 treat signed Decision Evidence as authorization to act
-(<a href="#permit-binding-split" class="auto internal xref">Section 6.9</a>);<a href="#section-10-4.5.1" class="pilcrow">¶</a></p>
+(<a href="#permit-binding-split" class="auto internal xref">Section 6.9</a>);<a href="#section-9-4.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-4.6">
-          <p id="section-10-4.6.1">key permit caches on the permit's bound fields
-(<a href="#permit-binding-split" class="auto internal xref">Section 6.9</a>); and<a href="#section-10-4.6.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-9-4.6">
+          <p id="section-9-4.6.1">key permit caches on the permit's bound fields
+(<a href="#permit-binding-split" class="auto internal xref">Section 6.9</a>); and<a href="#section-9-4.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-4.7">
-          <p id="section-10-4.7.1">emit the records of <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>
+        <li class="normal" id="section-9-4.7">
+          <p id="section-9-4.7.1">emit the records of <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>
 for a pre-decision refusal and, for the classes its emission rule
-covers, an execution outcome.<a href="#section-10-4.7.1" class="pilcrow">¶</a></p>
+covers, an execution outcome.<a href="#section-9-4.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-10-5">Of these, the mission-execution obligation and execution-outcome
+<p id="section-9-5">Of these, the mission-execution obligation and execution-outcome
 evidence are the machinery of the runtime profile's transaction-assurance
 tier (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>): a PEP carries them for
-the classes that tier covers.<a href="#section-10-5" class="pilcrow">¶</a></p>
-<p id="section-10-6">A PDP conforming to this binding <span class="bcp14">MUST</span>:<a href="#section-10-6" class="pilcrow">¶</a></p>
+the classes that tier covers.<a href="#section-9-5" class="pilcrow">¶</a></p>
+<p id="section-9-6">A PDP conforming to this binding <span class="bcp14">MUST</span>:<a href="#section-9-6" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-10-7.1">
-          <p id="section-10-7.1.1">refuse an in-scope consequential request that lacks the Mission
+<li class="normal" id="section-9-7.1">
+          <p id="section-9-7.1.1">refuse an in-scope consequential request that lacks the Mission
 decision context, and perform the PDP-side consistency checks
-(<a href="#pdp-request" class="auto internal xref">Section 5</a>);<a href="#section-10-7.1.1" class="pilcrow">¶</a></p>
+(<a href="#pdp-request" class="auto internal xref">Section 5</a>);<a href="#section-9-7.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-7.2">
-          <p id="section-10-7.2.1">advertise <code>step-up</code> and <code>mission-execution</code> in its metadata
+        <li class="normal" id="section-9-7.2">
+          <p id="section-9-7.2.1">advertise <code>step-up</code> and <code>mission-execution</code> in its metadata
 <code>supported_obligations</code> array, and <span class="bcp14">MUST NOT</span> rely on any other
 obligation type the PEP has not declared support for
-(<a href="#obligations" class="auto internal xref">Section 6.2</a>);<a href="#section-10-7.2.1" class="pilcrow">¶</a></p>
+(<a href="#obligations" class="auto internal xref">Section 6.2</a>);<a href="#section-9-7.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-7.3">
-          <p id="section-10-7.3.1">classify every denial per <a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>;<a href="#section-10-7.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-9-7.3">
+          <p id="section-9-7.3.1">classify every denial per <a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>;<a href="#section-9-7.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-7.4">
-          <p id="section-10-7.4.1">return the decision context of <a href="#response-context" class="auto internal xref">Section 6.1</a>, including the
-obligations array on a permit or denial (<a href="#obligations" class="auto internal xref">Section 6.2</a>); and<a href="#section-10-7.4.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-9-7.4">
+          <p id="section-9-7.4.1">return the decision context of <a href="#response-context" class="auto internal xref">Section 6.1</a>, including the
+obligations array on a permit or denial (<a href="#obligations" class="auto internal xref">Section 6.2</a>); and<a href="#section-9-7.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-7.5">
-          <p id="section-10-7.5.1">emit the records of <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>
-for every decision.<a href="#section-10-7.5.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-9-7.5">
+          <p id="section-9-7.5.1">emit the records of <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>
+for every decision.<a href="#section-9-7.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-10-8">A deployment whose requesting component and executing component
+<p id="section-9-8">A deployment whose requesting component and executing component
 differ is out of scope for conformance to this profile
-(<a href="#permit-binding-split" class="auto internal xref">Section 6.9</a>).<a href="#section-10-8" class="pilcrow">¶</a></p>
-<p id="section-10-9">Record producer and consumer conformance, including evidence
+(<a href="#permit-binding-split" class="auto internal xref">Section 6.9</a>).<a href="#section-9-8" class="pilcrow">¶</a></p>
+<p id="section-9-9">Record producer and consumer conformance, including evidence
 signing-key verification and the classification of orphaned Decision
 Evidence, is defined by the runtime evidence companion
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-10-9" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-9-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
-<section id="section-11">
+<section id="section-10">
       <h2 id="name-security-considerations">
-<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
-<p id="section-11-1">The runtime profile's Security Considerations
+<p id="section-10-1">The runtime profile's Security Considerations
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) apply in full:
 placement and bypass, classification integrity, freshness and
 consumption honesty, Resource policy authority, TOCTOU and replay, and
 the limits of a compromised PEP or PDP. This section addresses only
 threats specific to the AuthZEN binding; threats specific to the
 evidence records are the runtime evidence companion's
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-11-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), and threats
+specific to capability-source binding are the capability-binding
+companion's (<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>).<a href="#section-10-1" class="pilcrow">¶</a></p>
 <div id="unbound-evaluation-downgrade">
-<section id="section-11.1">
+<section id="section-10.1">
         <h3 id="name-unbound-evaluation-downgrad">
-<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-unbound-evaluation-downgrad" class="section-name selfRef">Unbound-evaluation downgrade</a>
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-unbound-evaluation-downgrad" class="section-name selfRef">Unbound-evaluation downgrade</a>
         </h3>
-<p id="section-11.1-1">A PDP that serves both Mission-bound and ordinary AuthZEN traffic has
+<p id="section-10.1-1">A PDP that serves both Mission-bound and ordinary AuthZEN traffic has
 two policy surfaces, and the request selects between them by carrying
 <code>context.mission</code>. If an in-scope request that lost its Mission
 context (a PEP defect, or a path an attacker can influence) were
@@ -3990,28 +3723,28 @@ stand in for the Mission evaluation this binding exists to force. The
 consistency requirement of <a href="#pdp-request" class="auto internal xref">Section 5</a> refuses such a request
 outright; deployments <span class="bcp14">SHOULD</span> additionally alert on in-scope requests
 arriving without Mission context, since each one is a PEP defect or a
-probe.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+probe.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="access-request-service-in-the-trusted-base">
-<section id="section-11.2">
+<section id="section-10.2">
         <h3 id="name-access-request-service-in-t">
-<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-access-request-service-in-t" class="section-name selfRef">Access Request Service in the trusted base</a>
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-access-request-service-in-t" class="section-name selfRef">Access Request Service in the trusted base</a>
         </h3>
-<p id="section-11.2-1">A deployment that composes with ARAP adds the Access Request Service to
+<p id="section-10.2-1">A deployment that composes with ARAP adds the Access Request Service to
 its trusted base: it adjudicates requestable denials and issues the
 approvals the PDP consumes as input. A compromised or misconfigured
 Access Request Service can auto-approve escalations, so it <span class="bcp14">MUST</span> be
 trusted, authenticated, and access-controlled like the PDP, and its
-auto-approval is bounded as above.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+auto-approval is bounded as above.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="denial-oracle">
-<section id="section-11.3">
+<section id="section-10.3">
         <h3 id="name-denial-oracle">
-<a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-denial-oracle" class="section-name selfRef">Denial oracle</a>
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-denial-oracle" class="section-name selfRef">Denial oracle</a>
         </h3>
-<p id="section-11.3-1">The denial-reason identifiers and any <code>contributing_constraints</code> are a
+<p id="section-10.3-1">The denial-reason identifiers and any <code>contributing_constraints</code> are a
 decision oracle: an agent can probe them to map authority it does not
 hold. The PEP <span class="bcp14">SHOULD</span> minimize the denial detail it relays to the agent;
 a generic refusal suffices to stop the action, and the full reason and
@@ -4019,102 +3752,106 @@ contributing constraints belong in evidence, not in the agent-facing
 response. To bound probing through the request loop, deployments <span class="bcp14">SHOULD</span>
 rate-limit access requests per Mission and surface request provenance to
 Approvers, so a compromised agent driving repeated requestable denials
-is visible to the humans adjudicating them.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
+is visible to the humans adjudicating them.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="materialized-view-fidelity">
-<section id="section-11.4">
+<section id="section-10.4">
         <h3 id="name-materialized-view-fidelity">
-<a href="#section-11.4" class="section-number selfRef">11.4. </a><a href="#name-materialized-view-fidelity" class="section-name selfRef">Materialized view fidelity</a>
+<a href="#section-10.4" class="section-number selfRef">10.4. </a><a href="#name-materialized-view-fidelity" class="section-name selfRef">Materialized view fidelity</a>
         </h3>
-<p id="section-11.4-1">A PDP that evaluates against a materialized view enlarging the
+<p id="section-10.4-1">A PDP that evaluates against a materialized view enlarging the
 Authority Set's bounds violates the bounded property of
 <a href="#mission-to-policy-materialization" class="auto internal xref">Section 4</a>. <code>authority_hash</code> is the upper
 bound; <code>policy_view_id</code> lets the PDP detect that the view it loaded
 does not match the Mission the PEP referenced and deny with
-<code>view_inconsistent</code>.<a href="#section-11.4-1" class="pilcrow">¶</a></p>
+<code>view_inconsistent</code>.<a href="#section-10.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transport">
-<section id="section-11.5">
+<section id="section-10.5">
         <h3 id="name-transport">
-<a href="#section-11.5" class="section-number selfRef">11.5. </a><a href="#name-transport" class="section-name selfRef">Transport</a>
+<a href="#section-10.5" class="section-number selfRef">10.5. </a><a href="#name-transport" class="section-name selfRef">Transport</a>
         </h3>
-<p id="section-11.5-1">The PDP endpoint <span class="bcp14">MUST</span> be served over TLS 1.2 or later (TLS 1.3
+<p id="section-10.5-1">The PDP endpoint <span class="bcp14">MUST</span> be served over TLS 1.2 or later (TLS 1.3
 <span class="bcp14">RECOMMENDED</span>). PEP-to-PDP authentication <span class="bcp14">MUST</span> be mutual, satisfying the
 integrity and mutual-authentication requirement the runtime profile
 places on the PEP-PDP channel
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Evidence transport and
 storage requirements are the runtime evidence companion's
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-11.5-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-10.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="privacy-considerations">
-<section id="section-12">
+<section id="section-11">
       <h2 id="name-privacy-considerations">
-<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-12-1">The runtime profile's evidence-privacy guidance
+<p id="section-11-1">The runtime profile's evidence-privacy guidance
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) applies in full. The
 privacy properties of the Decision Evidence, Execution Evidence, and
 Refusal Record objects, including their status as PII sinks,
 parameter exposure, and actor-chain correlation, are the runtime
 evidence companion's (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>);
 this binding defines no additional record content and no exemption
-from that guidance.<a href="#section-12-1" class="pilcrow">¶</a></p>
+from that guidance.<a href="#section-11-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">
-<section id="section-13">
+<section id="section-12">
       <h2 id="name-iana-considerations">
-<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-13-1">This document requests the following IANA actions.<a href="#section-13-1" class="pilcrow">¶</a></p>
-<p id="section-13-2">The Decision Evidence, Execution Evidence, and Refusal Record media
+<p id="section-12-1">This document requests the following IANA actions.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<p id="section-12-2">The Decision Evidence, Execution Evidence, and Refusal Record media
 types are registered by the runtime evidence companion
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), not by this
-document.<a href="#section-13-2" class="pilcrow">¶</a></p>
+document.<a href="#section-12-2" class="pilcrow">¶</a></p>
 <div id="authzen-obligation-types-registration">
-<section id="section-13.1">
+<section id="section-12.1">
         <h3 id="name-authzen-obligation-types-re">
-<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-authzen-obligation-types-re" class="section-name selfRef">AuthZEN Obligation Types Registration</a>
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-authzen-obligation-types-re" class="section-name selfRef">AuthZEN Obligation Types Registration</a>
         </h3>
-<p id="section-13.1-1">This document requests registration of the <code>mission-execution</code>
+<p id="section-12.1-1">This document requests registration of the <code>mission-execution</code>
 obligation type in the AuthZEN Obligation Types registry established
 by <span>[<a href="#AUTHZEN-OBL" class="cite xref">AUTHZEN-OBL</a>]</span>: Type name <code>mission-execution</code>; Reference this
 document, <a href="#obligations" class="auto internal xref">Section 6.2</a>; Change controller IETF. The <code>step-up</code>
 obligation type this profile relies on (<a href="#obligations" class="auto internal xref">Section 6.2</a>) is
-registered by <span>[<a href="#AUTHZEN-OBL" class="cite xref">AUTHZEN-OBL</a>]</span> itself and is not re-registered here.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+registered by <span>[<a href="#AUTHZEN-OBL" class="cite xref">AUTHZEN-OBL</a>]</span> itself and is not re-registered here.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="http-field-name-registration">
-<section id="section-13.2">
+<section id="section-12.2">
         <h3 id="name-http-field-name-registratio">
-<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-http-field-name-registratio" class="section-name selfRef">HTTP Field Name Registration</a>
+<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-http-field-name-registratio" class="section-name selfRef">HTTP Field Name Registration</a>
         </h3>
-<p id="section-13.2-1">This document registers the following in the "Hypertext Transfer
-Protocol (HTTP) Field Name" registry (<span>[<a href="#RFC9110" class="cite xref">RFC9110</a>]</span>):<a href="#section-13.2-1" class="pilcrow">¶</a></p>
+<p id="section-12.2-1">This document registers the following in the "Hypertext Transfer
+Protocol (HTTP) Field Name" registry (<span>[<a href="#RFC9110" class="cite xref">RFC9110</a>]</span>):<a href="#section-12.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-13.2-2.1">
-            <p id="section-13.2-2.1.1">Field Name: Mission-Decision<a href="#section-13.2-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-12.2-2.1">
+            <p id="section-12.2-2.1.1">Field Name: Mission-Decision<a href="#section-12.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.2-2.2">
-            <p id="section-13.2-2.2.1">Status: permanent<a href="#section-13.2-2.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-12.2-2.2">
+            <p id="section-12.2-2.2.1">Status: permanent<a href="#section-12.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.2-2.3">
-            <p id="section-13.2-2.3.1">Reference: this document, <a href="#decision-id-propagation" class="auto internal xref">Section 6.10</a><a href="#section-13.2-2.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-12.2-2.3">
+            <p id="section-12.2-2.3.1">Reference: this document, <a href="#decision-id-propagation" class="auto internal xref">Section 6.10</a><a href="#section-12.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.2-2.4">
-            <p id="section-13.2-2.4.1">Comments: none<a href="#section-13.2-2.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-12.2-2.4">
+            <p id="section-12.2-2.4.1">Comments: none<a href="#section-12.2-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-13.2-3">The <code>context.mission</code>, <code>context.mission_state_observation</code>,
-<code>context.actor</code>, <code>context.credential</code>, <code>context.taint</code>,
-<code>context.approval</code>, and <code>context.capability_source</code> members carried
-inside the AuthZEN request <code>context</code> object (<a href="#pdp-request" class="auto internal xref">Section 5</a>) are
-AuthZEN extension data and are not registered in an IETF registry.
+<p id="section-12.2-3">The <code>context.mission</code>, <code>context.mission_state_observation</code>,
+<code>context.actor</code>, <code>context.credential</code>, <code>context.taint</code>, and
+<code>context.approval</code> members carried inside the AuthZEN request
+<code>context</code> object (<a href="#pdp-request" class="auto internal xref">Section 5</a>) are AuthZEN extension data and are
+not registered in an IETF registry. The <code>context.capability_source</code>
+member a deployment adopting Mission Capability Binding adds to that
+object is likewise AuthZEN extension data, registered by that
+companion, not by this document
+(<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>).
 The <code>action.properties.parameters</code>,
 <code>action.properties.parameter_digest</code>,
 <code>action.properties.idempotency_key</code>,
@@ -4130,20 +3867,20 @@ likewise AuthZEN extension data. The response <code>context.evaluation_id</code>
 <code>context.next_action</code>, and <code>context.retry_after</code> members
 (<a href="#response-context" class="auto internal xref">Section 6.1</a>) are likewise AuthZEN extension
 data. The Mission-bound token claims this profile consumes are
-registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-13.2-3" class="pilcrow">¶</a></p>
+registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-12.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="sec-combined-references">
-<section id="section-14">
+<section id="section-13">
       <h2 id="name-references">
-<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-references" class="section-name selfRef">References</a>
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-14.1">
+<section id="section-13.1">
         <h3 id="name-normative-references">
-<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
 <dt id="ARAP">[ARAP]</dt>
@@ -4214,14 +3951,14 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-14.2">
+<section id="section-13.2">
         <h3 id="name-informative-references">
-<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
-<dt id="COAZ">[COAZ]</dt>
+<dt id="I-D.draft-mcguinness-mission-capability-binding">[I-D.draft-mcguinness-mission-capability-binding]</dt>
         <dd>
-<span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"AuthZEN Profile for Model Context Protocol Tool Authorization - Draft 1"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://openid.github.io/authzen/authzen-mcp-profile-1_0.html">https://openid.github.io/authzen/authzen-mcp-profile-1_0.html</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Capability Binding"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
         <dd>

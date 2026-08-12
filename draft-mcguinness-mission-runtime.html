@@ -2761,7 +2761,8 @@ validating server recorded a digest of the capability's extracted
 definition at derivation, the PDP <span class="bcp14">MUST</span> refuse the action when the
 digest of the capability's current extracted definition differs from
 the recorded digest (capability drift). The extraction rule per
-source format is the decision-API binding's (<a href="#authzen" class="auto internal xref">Section 15</a>).<a href="#section-7.2.2-1" class="pilcrow">¶</a></p>
+source format is the capability-binding companion's
+(<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>).<a href="#section-7.2.2-1" class="pilcrow">¶</a></p>
 <p id="section-7.2.2-2">A source change that leaves the extracted definition byte-identical
 does not by itself refuse. Where the deployment also recorded a
 whole-source digest, that digest's stricter semantics apply and any
@@ -3331,8 +3332,8 @@ object enters the <code>parameter_digest</code>; and the single-use,
 idempotency, and lease requirements follow from the operation's
 class. A derived profile is recorded with the capability's source
 digest where the capability-source binding applies
-(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), so the binding drifts
-with the schema that defined it.<a href="#section-8-4" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>), so the binding
+drifts with the schema that defined it.<a href="#section-8-4" class="pilcrow">¶</a></p>
 <div id="parameter-digest">
 <section id="section-8.1">
         <h3 id="name-parameter-digest">
@@ -4407,10 +4408,12 @@ an inspection layer.<a href="#section-17.4-1" class="pilcrow">¶</a></p>
 Parameter binding (<a href="#parameter-binding" class="auto internal xref">Section 8</a>) ties a permit to the concrete
 parameters the action executes with, so an application cannot alter a
 tool call's arguments after the decision. Capability-source binding, in
-the AuthZEN binding (<a href="#authzen" class="auto internal xref">Section 15</a>), ties an approved action to the digest
-of the capability definition it was derived from, so a swapped or
-poisoned tool definition fails the decision. Both refuse the action;
-neither inspects the agent's reasoning.<a href="#section-17.4-2" class="pilcrow">¶</a></p>
+the capability-binding companion
+(<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>), ties an
+approved action to the digest of the capability definition it was
+derived from, so a swapped or poisoned tool definition fails the
+decision. Both refuse the action; neither inspects the agent's
+reasoning.<a href="#section-17.4-2" class="pilcrow">¶</a></p>
 <p id="section-17.4-3">Two adjacent checks are out of scope (<a href="#deferred" class="auto internal xref">Section 16</a>). This profile
 evaluates the request path: it does not verify the integrity of the
 result a tool returns as the application relays it back to the agent's
@@ -4706,6 +4709,10 @@ any decision-API wire members are defined by the binding
 <dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-capability-binding">[I-D.draft-mcguinness-mission-capability-binding]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Capability Binding"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
         <dd>
