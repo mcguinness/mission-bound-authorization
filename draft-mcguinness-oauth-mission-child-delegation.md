@@ -398,8 +398,11 @@ The child-creation token exchange carries:
 
 `authorization_details`:
 : OPTIONAL. The child's authority proposal: the standard {{RFC9396}}
-  parameter carried on the same token request, under the issuance
-  profile's authority-proposal rules applied unchanged
+  parameter carried on the same token request, itself ordinary
+  {{RFC9396}} token-request usage. This parameter is this exchange's
+  proposal carriage, replacing the issuance profile's PAR-only
+  carriage rule; that profile's validation, derivation, recording,
+  and hashing semantics apply unchanged
   ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
   authority: the child Authority Set is derived and bounded by policy
   and by the strict-subset rule regardless of what was proposed. A

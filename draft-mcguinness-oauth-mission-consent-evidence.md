@@ -712,13 +712,15 @@ A Consent Evidence object has these members:
   - When `decision` is `narrowed`, the review required a narrowing
     revision and no Mission was created ({{revision-events}}). Like a
     decline, it contains `issuer` and the reviewed disclosure's
-    `intent_hash` and `authority_hash`, matching that disclosure's
+    `intent_hash` and `authority_hash` (with `proposal_hash` where
+    present), matching that disclosure's
     `source_hashes`, and MUST NOT contain `id`.
 
   This descriptor follows the evidence-descriptor convention of the
   issuance profile ({{I-D.draft-mcguinness-oauth-mission}}): it is the
   `mission` claim shape extended with the collision-resistantly named
-  audit members `intent_hash` and `consent_rendering_hash`, and it is
+  audit members `intent_hash`, `consent_rendering_hash`, and, where
+  present, `proposal_hash`, and it is
   not authority-bearing on its own.
 
 `approver`:

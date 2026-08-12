@@ -492,8 +492,10 @@ is closed at the top level, the authorization server MUST bound its
 size and array lengths, and it is untrusted client input, never
 authority). The payload MAY additionally carry an
 `authorization_details` claim: the client's authority proposal, an
-array of `authorization_details` objects under the issuance
-profile's authority-proposal rules applied unchanged (a proposal,
+array of `authorization_details` objects. This claim is this
+binding's proposal carriage, replacing the issuance profile's
+PAR-only carriage rule; that profile's validation, derivation,
+recording, and hashing semantics apply unchanged (a proposal,
 never authority; the Intent itself carries no authority members). A
 Mission created from a push carrying one records `proposed_authority`
 and `proposal_hash` as the issuance profile's Mission record defines

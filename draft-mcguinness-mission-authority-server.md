@@ -473,8 +473,10 @@ codes ({{submission-errors}}):
 
 The request body MAY additionally carry an `authorization_details`
 member: the client's authority proposal, an array of
-`authorization_details` objects under the issuance profile's
-authority-proposal rules applied unchanged
+`authorization_details` objects. This member is this binding's
+proposal carriage, replacing the issuance profile's PAR-only
+carriage rule; that profile's validation, derivation, recording, and
+hashing semantics apply unchanged
 ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
 authority, and it is a submission member, not a Mission Intent member
 ({{native-carriage}}): the MAS MUST remove it before applying the

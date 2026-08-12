@@ -12,7 +12,7 @@ conformance (the four Baseline invariants plus two).
 
 | # | Invariant | Met by | Evidence |
 |---|---|---|---|
-| 1 | **Durable approved-task record.** A Mission Record exists, immutable but for state, committed by both anchors. | `mission-core` anchors; kernel approval event | `mission-core/test/anchors.test.ts`, `authorization-server/test/kernel.test.ts` |
+| 1 | **Durable approved-task record.** A Mission Record exists, immutable but for state, committed by its integrity anchors (`intent_hash`, `authority_hash`, and `proposal_hash` where a proposal was recorded). | `mission-core` anchors; kernel approval event | `mission-core/test/anchors.test.ts`, `authorization-server/test/kernel.test.ts` |
 | 2 | **Authority derived, not asserted.** Authority is derived from the Intent under policy; the client cannot widen it. | derivation + subset rule; compromised-shaper test | `kernel.test.ts` (compromised shaper), `agent/test/harness.test.ts` |
 | 3 | **State-gated issuance.** Tokens issue only while the Mission is active; revocation gates issuance and refresh. | `gateDerivation`, grant destruction on revoke | `tracer.test.ts` (suspend/revoke gating) |
 | 4 | **Evidence that attributes.** Every governance/enforcement point emits attributable, tamper-evident evidence. | Decision/Execution/Refusal evidence; SCITT feed | `transaction.test.ts`, `transparency/test/transparency.test.ts` |

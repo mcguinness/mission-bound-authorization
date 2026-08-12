@@ -552,8 +552,11 @@ instance with:
 
 `authorization_details`:
 : OPTIONAL. The Dispatcher's authority proposal: the standard
-  {{RFC9396}} parameter carried on the same token request, under the
-  issuance profile's authority-proposal rules applied unchanged
+  {{RFC9396}} parameter carried on the same token request, itself
+  ordinary {{RFC9396}} token-request usage. This parameter is this
+  grant's proposal carriage, replacing the issuance profile's
+  PAR-only carriage rule; that profile's validation, derivation,
+  recording, and hashing semantics apply unchanged
   ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
   authority: it bounds the derivation of step 3 of {{dispatch}} in
   narrowing mode, and the double intersection of step 4 applies to
