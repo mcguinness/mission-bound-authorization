@@ -81,11 +81,6 @@ interface AuthEntry {
   actions: string[];
   constraints?: { max_amount?: Amount; vendors?: string[] };
 }
-interface IntentShape {
-  proposed_authority?: AuthEntry[];
-  [k: string]: unknown;
-}
-
 const PORT = Number(process.env.CONSOLE_BFF_PORT ?? TOPOLOGY.ports.console);
 const INDEX = fileURLToPath(new URL("../public/index.html", import.meta.url));
 
@@ -118,16 +113,18 @@ async function main() {
     goal: "Pay approved Acme invoices and send remittance",
     resources: [CANONICAL_RESOURCE],
     expires_at: "2027-01-01T00:00:00Z",
-    proposed_authority: [
-      {
-        type: "mission_resource_access",
-        resource: CANONICAL_RESOURCE,
-        actions: ["payments:invoice.read", "payments:payment.execute", "payments:remittance.send"],
-        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-      },
-    ],
   });
-  const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, scope: "payments" });
+  // The authority proposal rides the standard RFC 9396 authorization_details
+  // parameter, pushed through PAR alongside mission_intent.
+  const authorizationDetails = JSON.stringify([
+    {
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: ["payments:invoice.read", "payments:payment.execute", "payments:remittance.send"],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ]);
+  const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, authorizationDetails, scope: "payments" });
   const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST");
   const facts: TokenFacts = {
     ...(await stack.server.validateToken(issued.accessToken, rsProof, CANONICAL_RESOURCE, "POST")),
@@ -409,29 +406,33 @@ async function main() {
   // a goal. The AS derives and bounds authority regardless of what is proposed,
   // so a compromised shaper can propose more but never widen past the ceiling.
 
-  // Shape a goal into a proposed Mission Intent. The shaper carries no cap, so
-  // the demo injects the proposed max_amount here (services/agent untouched) to
+  // Shape a goal into a proposed Mission Intent plus its authority proposal
+  // (the standard RFC 9396 authorization_details array, sent beside the
+  // intent). The shaper carries no cap, so the demo injects the proposed
+  // max_amount into the proposal entry here (services/agent untouched) to
   // surface an over-ask the derivation will visibly narrow.
   app.post("/agent/shape", async (c) => {
     const b = await readJson(c);
     const resources = (b.resources as string[]) ?? [CANONICAL_RESOURCE];
-    const raw = shapeIntent({
+    const shaped = shapeIntent({
       goal: String(b.goal ?? ""),
       resources,
       expiresAt: (b.expiresAt as string) ?? "2027-01-01T00:00:00Z",
       ...(Array.isArray(b.actions) ? { proposedActions: b.actions as string[] } : {}),
       ...(Array.isArray(b.vendors) ? { vendors: b.vendors as string[] } : {}),
     });
-    const intent = JSON.parse(raw) as Record<string, unknown>;
+    const intent = JSON.parse(shaped.missionIntent) as Record<string, unknown>;
+    const entries = shaped.authorizationDetails
+      ? (JSON.parse(shaped.authorizationDetails) as Array<Record<string, unknown>>)
+      : undefined;
     const cap = (b.cap ?? b.max_amount) as string | undefined;
-    const entries = intent.proposed_authority as Array<Record<string, unknown>> | undefined;
     if (cap && entries?.[0]) {
       const e = entries[0];
       const constraints = (e.constraints as Record<string, unknown> | undefined) ?? {};
       constraints.max_amount = { amount: String(cap), currency: "USD" };
       e.constraints = constraints;
     }
-    return c.json({ intent });
+    return c.json({ intent, ...(entries ? { authorization_details: entries } : {}) });
   });
 
   // Derive the bounded Authority Set from the (untrusted) Intent and compute the
@@ -441,12 +442,22 @@ async function main() {
   app.post("/agent/propose", async (c) => {
     const b = await readJson(c);
     const raw = typeof b.intent === "string" ? b.intent : JSON.stringify(b.intent ?? {});
+    // The proposal arrives as a separate authorization_details member (array
+    // or JSON string), never inside the Intent.
+    const rawDetails = b.authorization_details;
     let proposed: AuthEntry[];
     let derived: AuthEntry[];
     try {
       const parsed = stack.kernel.validateIntent(raw);
-      derived = stack.kernel.derive(parsed) as unknown as AuthEntry[];
-      proposed = (parsed as unknown as IntentShape).proposed_authority ?? [];
+      const proposal =
+        rawDetails == null
+          ? undefined
+          : stack.kernel.validateProposal(
+              typeof rawDetails === "string" ? rawDetails : JSON.stringify(rawDetails),
+              parsed.resources,
+            );
+      derived = stack.kernel.derive(parsed, proposal) as unknown as AuthEntry[];
+      proposed = (proposal ?? []) as unknown as AuthEntry[];
     } catch (e) {
       return c.json({ error: (e as Error).message }, 400);
     }
@@ -479,20 +490,30 @@ async function main() {
   app.post("/agent/submit", async (c) => {
     const b = await readJson(c);
     const missionIntent = typeof b.intent === "string" ? b.intent : JSON.stringify(b.intent ?? {});
+    const rawDetails = b.authorization_details;
+    const authorizationDetails =
+      rawDetails == null ? undefined : typeof rawDetails === "string" ? rawDetails : JSON.stringify(rawDetails);
     // Validate + derive up front (same as /agent/propose) so the queue can show
     // the approver the goal and the authority they are about to grant.
     let goal: string;
     let derived: AuthEntry[];
     try {
       const parsed = stack.kernel.validateIntent(missionIntent);
-      derived = stack.kernel.derive(parsed) as unknown as AuthEntry[];
+      const proposal = authorizationDetails
+        ? stack.kernel.validateProposal(authorizationDetails, parsed.resources)
+        : undefined;
+      derived = stack.kernel.derive(parsed, proposal) as unknown as AuthEntry[];
       goal = String((parsed as unknown as { goal?: unknown }).goal ?? "");
     } catch (e) {
       return c.json({ error: (e as Error).message }, 400);
     }
     let submitted: Awaited<ReturnType<typeof submitMissionApproval>>;
     try {
-      submitted = await submitMissionApproval(asUrl, agentClientJwk, { missionIntent, scope: "payments" });
+      submitted = await submitMissionApproval(asUrl, agentClientJwk, {
+        missionIntent,
+        scope: "payments",
+        ...(authorizationDetails ? { authorizationDetails } : {}),
+      });
     } catch (e) {
       return c.json({ error: (e as Error).message }, 400);
     }

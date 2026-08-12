@@ -371,66 +371,80 @@ function aamTemplateBody(issuer: string, seq: number): Record<string, unknown> {
   };
 }
 
+/** A request pair: the task-context mission_intent plus the authority proposal
+ *  that rides beside it as the standard RFC 9396 authorization_details
+ *  parameter (both JSON strings, exactly as they go on the wire). */
+interface IntentPair {
+  missionIntent: string;
+  authorizationDetails: string;
+}
+
 /**
- * The LOW-CONSEQUENCE dispatch intent: read only. This is the only intent a
+ * The LOW-CONSEQUENCE dispatch request: read only. This is the only proposal a
  * machine-speed Dispatch of this Template ever successfully instantiates.
  */
-function aamLowConsequenceIntent(): string {
-  return JSON.stringify({
-    goal: "nightly reconciliation of Acme invoices (read-only)",
-    resources: [CANONICAL_RESOURCE],
-    expires_at: AAM_FAR_FUTURE,
-    proposed_authority: [
+function aamLowConsequenceIntent(): IntentPair {
+  return {
+    missionIntent: JSON.stringify({
+      goal: "nightly reconciliation of Acme invoices (read-only)",
+      resources: [CANONICAL_RESOURCE],
+      expires_at: AAM_FAR_FUTURE,
+    }),
+    authorizationDetails: JSON.stringify([
       {
         type: "mission_resource_access",
         resource: CANONICAL_RESOURCE,
         actions: ["payments:invoice.read"],
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
       },
-    ],
-  });
+    ]),
+  };
 }
 
 /**
- * The PROHIBITED-CLASS intent: read invoices + post the finance remittance.
+ * The PROHIBITED-CLASS request: read invoices + post the finance remittance.
  * payments:remittance.send is within the Template Ceiling, but a Dispatch of
- * this intent MUST be refused dispatch_prohibited_class (external_commitment).
- * The SAME JSON string is reused, unmodified, as the mission_intent of the
- * ordinary human approval in step 17: one intent, two paths, only one of which
+ * this proposal MUST be refused dispatch_prohibited_class (external_commitment).
+ * The SAME intent + authorization_details pair is reused, unmodified, in the
+ * ordinary human approval in step 17: one request, two paths, only one of which
  * the Template may instantiate.
  */
-function aamIntent(): string {
-  return JSON.stringify({
-    goal: "nightly reconciliation of Acme invoices",
-    resources: [CANONICAL_RESOURCE],
-    expires_at: AAM_FAR_FUTURE,
-    proposed_authority: [
+function aamIntent(): IntentPair {
+  return {
+    missionIntent: JSON.stringify({
+      goal: "nightly reconciliation of Acme invoices",
+      resources: [CANONICAL_RESOURCE],
+      expires_at: AAM_FAR_FUTURE,
+    }),
+    authorizationDetails: JSON.stringify([
       {
         type: "mission_resource_access",
         resource: CANONICAL_RESOURCE,
         actions: ["payments:invoice.read", "payments:remittance.send"],
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
       },
-    ],
-  });
+    ]),
+  };
 }
 
-/** An intent that exceeds the read/post ceiling (payment.schedule is in the
+/** A proposal that exceeds the read/post ceiling (payment.schedule is in the
  *  derivation policy but was filtered out of this template's ceiling). */
-function aamOverCeilingIntent(): string {
-  return JSON.stringify({
-    goal: "schedule a payment (exceeds the reconciliation ceiling)",
-    resources: [CANONICAL_RESOURCE],
-    expires_at: AAM_FAR_FUTURE,
-    proposed_authority: [
+function aamOverCeilingIntent(): IntentPair {
+  return {
+    missionIntent: JSON.stringify({
+      goal: "schedule a payment (exceeds the reconciliation ceiling)",
+      resources: [CANONICAL_RESOURCE],
+      expires_at: AAM_FAR_FUTURE,
+    }),
+    authorizationDetails: JSON.stringify([
       {
         type: "mission_resource_access",
         resource: CANONICAL_RESOURCE,
         actions: ["payments:payment.schedule"],
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
       },
-    ],
-  });
+    ]),
+  };
 }
 
 /** The AAM component -> Mission surface legend (mirrors legend()'s row style). */
@@ -476,11 +490,12 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   // and the RS-side proof in step 16 re-presents it (proof jkt == token cnf.jkt).
   const dispatcherDpop = await generateKeyPair("ES256", { extractable: true });
 
-  const dispatch = (intent: string, evtId: string) =>
+  const dispatch = (pair: IntentPair, evtId: string) =>
     tokenGrantRequest(asUrl, as.agentClientJwk, dispatcherDpop, {
       grant_type: MISSION_DISPATCH_GRANT_TYPE,
       template_id: templateId,
-      mission_intent: intent,
+      mission_intent: pair.missionIntent,
+      authorization_details: pair.authorizationDetails,
       dispatch_event_id: evtId,
     });
 
@@ -546,7 +561,8 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     body: {
       grant_type: MISSION_DISPATCH_GRANT_TYPE,
       template_id: templateId,
-      mission_intent: "<low-consequence reconciliation intent (read invoices only)>",
+      mission_intent: "<low-consequence reconciliation intent (task context only)>",
+      authorization_details: "<standard RFC 9396 proposal: read invoices only>",
       dispatch_event_id: "evt-dispatch-...",
       client_assertion: "<private_key_jwt>",
     },
@@ -619,7 +635,8 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     body: {
       grant_type: MISSION_DISPATCH_GRANT_TYPE,
       template_id: templateId,
-      mission_intent: "<intent adding payments:remittance.send (within the ceiling, but a prohibited class)>",
+      mission_intent: "<reconciliation intent (task context only)>",
+      authorization_details: "<proposal adding payments:remittance.send (within the ceiling, but a prohibited class)>",
     },
   });
   const prohibRes = await dispatch(aamIntent(), `evt-prohibited-${seq++}`);
@@ -641,7 +658,8 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     body: {
       grant_type: MISSION_DISPATCH_GRANT_TYPE,
       template_id: templateId,
-      mission_intent: "<intent adding payments:payment.schedule — outside the ceiling>",
+      mission_intent: "<scheduling intent (task context only)>",
+      authorization_details: "<proposal adding payments:payment.schedule (outside the ceiling)>",
     },
   });
   const overRes = await dispatch(aamOverCeilingIntent(), `evt-over-${seq++}`);
@@ -797,7 +815,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     "the Mission carries remittance.send with a direct approval_basis, distinct approver bob != subject alice, and NO template lineage.",
   );
   hop("Approver (Bob)", "AS", "PAR → authorize → decide → token (ordinary human approval)", "HTTP");
-  const humanIssued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent: aamIntent(), scope: "payments" });
+  const humanIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent(), scope: "payments" });
   const humanClaims = decodeClaims(humanIssued.accessToken);
   const humanMissionId = (humanClaims.mission as { id: string }).id;
   const humanRecord = stack.kernel.get(humanMissionId);
@@ -904,7 +922,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     "the fresh task carries remittance.send again; the contained mission never regains it mid-run.",
   );
   hop("Approver (Bob)", "AS", "PAR → authorize → decide → token (a fresh human approval)", "HTTP");
-  const restoreIssued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent: aamIntent(), scope: "payments" });
+  const restoreIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent(), scope: "payments" });
   const restoreClaims = decodeClaims(restoreIssued.accessToken);
   const restoredHumanMissionId = (restoreClaims.mission as { id: string }).id;
   const restoredRecord = stack.kernel.get(restoredHumanMissionId);
@@ -1056,28 +1074,31 @@ async function main() {
     "Alice's agent drafts an over-broad two-estate proposal (payments plus the LedgerCloud SaaS ledger).",
     "nothing is granted here; the proposal is untrusted input the issuer will bound at approval.",
   );
-  hop("Agent", "Agent (self)", "compose mission_intent", "in-process; submitted via PAR in step 2");
+  hop("Agent", "Agent (self)", "compose mission_intent + authorization_details", "in-process; submitted via PAR in step 2");
   const missionIntent = JSON.stringify({
     goal: "Pay approved Acme invoices for Q3 and post the corresponding ledger entries",
     resources: [CANONICAL_RESOURCE, SAAS_RESOURCE],
     expires_at: "2027-01-01T00:00:00Z",
-    proposed_authority: [
-      {
-        // Payments estate: deliberately over-broad (bogus action, extra vendors, huge cap).
-        type: "mission_resource_access",
-        resource: CANONICAL_RESOURCE,
-        actions: ["payments:invoice.read", "payments:payment.execute", "payments:remittance.send", "payments:vendor.delete"],
-        constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme", "globex", "evilcorp"] },
-      },
-      {
-        // Cross-domain SaaS (LedgerCloud) estate.
-        type: "mission_resource_access",
-        resource: SAAS_RESOURCE,
-        actions: ["ledger:vendor.read", "ledger:journal.write"],
-      },
-    ],
   });
+  // The authority proposal rides the standard RFC 9396 authorization_details
+  // request parameter pushed beside mission_intent, never inside the Intent.
+  const authorizationDetails = JSON.stringify([
+    {
+      // Payments estate: deliberately over-broad (bogus action, extra vendors, huge cap).
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: ["payments:invoice.read", "payments:payment.execute", "payments:remittance.send", "payments:vendor.delete"],
+      constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme", "globex", "evilcorp"] },
+    },
+    {
+      // Cross-domain SaaS (LedgerCloud) estate.
+      type: "mission_resource_access",
+      resource: SAAS_RESOURCE,
+      actions: ["ledger:vendor.read", "ledger:journal.write"],
+    },
+  ]);
   block("mission_intent (submitted via PAR, mission_intent parameter)", JSON.parse(missionIntent));
+  block("authorization_details (submitted via PAR, standard RFC 9396 parameter)", JSON.parse(authorizationDetails));
   note("This is a proposal. Nothing here grants authority; the issuer derives and bounds it at approval.");
 
   act(
@@ -1093,7 +1114,7 @@ async function main() {
     "The agent runs the real OAuth dance (PAR, authorize, Bob approves, token) to mint a mission-bound token pair.",
     "the issuer narrows the proposal to the policy ceiling: bogus vendor.delete dropped, vendors reduced to acme, cap 999999 to 500; a real access token and id_token are issued.",
   );
-  const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, scope: "openid profile email payments" });
+  const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, authorizationDetails, scope: "openid profile email payments" });
 
   // PAR (Agent → AS, real HTTP): push the request carrying the mission_intent.
   hop("Agent", "AS", "POST /request", "HTTP");
@@ -1101,7 +1122,8 @@ async function main() {
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: {
       ...issued.artifacts.par.request,
-      mission_intent: `${missionIntent.slice(0, 60)}... (full proposal in step 1)`,
+      mission_intent: `${missionIntent.slice(0, 60)}... (task context in step 1)`,
+      authorization_details: `${authorizationDetails.slice(0, 60)}... (full proposal in step 1)`,
       client_assertion: "<private_key_jwt>",
     },
   });
@@ -1724,25 +1746,27 @@ async function main() {
       goal: "Pay approved Acme invoices for Q3 (expanded: also schedule payments)",
       resources: [CANONICAL_RESOURCE, SAAS_RESOURCE],
       expires_at: "2027-01-01T00:00:00Z",
-      proposed_authority: [
-        {
-          type: "mission_resource_access",
-          resource: CANONICAL_RESOURCE,
-          actions: ["payments:invoice.read", "payments:payment.execute", "payments:remittance.send", "payments:payment.schedule"],
-          constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme"] },
-        },
-        {
-          type: "mission_resource_access",
-          resource: SAAS_RESOURCE,
-          actions: ["ledger:vendor.read", "ledger:journal.write"],
-        },
-      ],
     }),
   );
   hop("Operator", "AS", "expand mission — successor from a fresh approval (kernel op)", "in-process");
   const expansion = createExpansion(stack.kernel, {
     predecessorId: missionId,
     intent: successorIntent,
+    // The widened proposal: what the wire submits as the standard RFC 9396
+    // authorization_details parameter beside mission_intent.
+    proposedAuthority: [
+      {
+        type: "mission_resource_access",
+        resource: CANONICAL_RESOURCE,
+        actions: ["payments:invoice.read", "payments:payment.execute", "payments:remittance.send", "payments:payment.schedule"],
+        constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme"] },
+      },
+      {
+        type: "mission_resource_access",
+        resource: SAAS_RESOURCE,
+        actions: ["ledger:vendor.read", "ledger:journal.write"],
+      },
+    ],
     approver: { iss: asUrl, sub: "bob" },
     approvalEventId: "apev-exhibit-successor",
     approvedUntil: "2027-01-01T00:00:00Z",

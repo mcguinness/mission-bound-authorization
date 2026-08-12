@@ -235,7 +235,7 @@
 </aside>
 
 <script>
-  let CSRF = "", MISSION = "", SHAPED = null;
+  let CSRF = "", MISSION = "", SHAPED = null, SHAPED_DETAILS = null;
   // Interval handles for the two auto-pollers (mission approval + JIT retry).
   // Every poller has a bounded stop condition and clears its own handle.
   let missionPoll = null, jitPoll = null;
@@ -354,9 +354,14 @@
     const body = { goal: $("f_goal").value, actions: csv("f_actions"), vendors: csv("f_vendors"), cap: $("f_cap").value.trim() };
     const r = await post("/agent/shape", body);
     SHAPED = r.intent;
+    SHAPED_DETAILS = r.authorization_details || null;
     $("intentOut").innerHTML =
       `<div style="margin:.7rem 0 .3rem"><span class="taglabel untrust">untrusted &middot; client proposal</span></div>
-       <pre class="json untrusted">${esc(JSON.stringify(r.intent, null, 2))}</pre>`;
+       <pre class="json untrusted">${esc(JSON.stringify(r.intent, null, 2))}</pre>` +
+      (SHAPED_DETAILS
+        ? `<div style="margin:.7rem 0 .3rem"><span class="taglabel untrust">untrusted &middot; authorization_details (RFC 9396, sent beside the intent)</span></div>
+       <pre class="json untrusted">${esc(JSON.stringify(SHAPED_DETAILS, null, 2))}</pre>`
+        : "");
     $("proposeBtn").disabled = false;
     $("issueBtn").disabled = true;
     $("proposeOut").innerHTML = "";
@@ -367,7 +372,7 @@
   // ---- step 2: propose (derive) ----
   async function propose() {
     if (!SHAPED) return;
-    const r = await post("/agent/propose", { intent: SHAPED });
+    const r = await post("/agent/propose", { intent: SHAPED, ...(SHAPED_DETAILS ? { authorization_details: SHAPED_DETAILS } : {}) });
     if (r.error) { $("proposeOut").innerHTML = `<p class="no">derivation error: ${esc(r.error)}</p>`; return; }
     const proposedHtml = (r.proposed || []).map((e) => authEntryHtml(e, dropsFor(e, r.diff))).join("");
     const grantedHtml = (r.derived || []).map((e) => authEntryHtml(e, null)).join("");
@@ -392,7 +397,7 @@
   async function submitApproval() {
     if (!SHAPED) return;
     $("issueBtn").disabled = true;
-    const r = await post("/agent/submit", { intent: SHAPED });
+    const r = await post("/agent/submit", { intent: SHAPED, ...(SHAPED_DETAILS ? { authorization_details: SHAPED_DETAILS } : {}) });
     if (r.error) { $("issueOut").innerHTML = `<p class="no">submit error: ${esc(r.error)}</p>`; $("issueBtn").disabled = false; return; }
     const grantHtml = (r.derived || []).map((e) => authEntryHtml(e, null)).join("");
     $("issueOut").innerHTML =

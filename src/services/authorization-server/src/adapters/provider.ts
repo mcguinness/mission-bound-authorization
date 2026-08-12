@@ -592,7 +592,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
   provider.registerGrantType(
     MISSION_DISPATCH_GRANT_TYPE,
     (ctx) => handleMissionDispatchGrant(provider, opts, ctx),
-    new Set(["template_id", "mission_intent", "dispatch_event_id"]),
+    // `authorization_details` carries the dispatcher's authority proposal
+    // (@spec mission#authority-proposal), the same standard carriage as PAR
+    // and the child/expansion exchanges; it MUST be declared here or
+    // stripGrantIrrelevantParams removes it.
+    new Set(["template_id", "mission_intent", "dispatch_event_id", "authorization_details"]),
   );
 
   // @spec id-continuation-assertion — the RFC 8693 token-exchange grant: an ICA
@@ -1803,6 +1807,31 @@ async function handleMissionDispatchGrant(
     return;
   }
 
+  // @spec mission#authority-proposal — the dispatcher's authority proposal
+  // rides the standard authorization_details parameter of this grant (the
+  // instance Intent carries no authority members). Optional: absent means
+  // template-mode derivation under the double intersection.
+  let proposedAuthority: AuthorityEntry[] | undefined;
+  const proposalRaw = params.authorization_details;
+  if (proposalRaw !== undefined) {
+    if (typeof proposalRaw !== "string" || !proposalRaw) {
+      ctx.status = 400;
+      ctx.body = { error: "invalid_request", error_description: "authorization_details must be a JSON array" };
+      return;
+    }
+    try {
+      const proposal = kernel.validateProposal(proposalRaw, intent.resources);
+      proposedAuthority = proposal.length ? proposal : undefined;
+    } catch (e) {
+      if (e instanceof IntentError) {
+        ctx.status = 400;
+        ctx.body = { error: e.code, error_description: e.message };
+        return;
+      }
+      throw e;
+    }
+  }
+
   // Core-consistency: the Dispatcher does NOT name the Subject; the Issuer
   // establishes it. The template carries the consenting human (approver); the
   // subject is established from it (decide() defaults subject to approver, and
@@ -1815,6 +1844,7 @@ async function handleMissionDispatchGrant(
       dispatcher: client.clientId,
       recipient,
       intent,
+      ...(proposedAuthority ? { proposedAuthority } : {}),
       subject: { iss: template.issuer, sub: template.approver.sub },
       policyVersion: DERIVATION_POLICY.policy_version,
       dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,

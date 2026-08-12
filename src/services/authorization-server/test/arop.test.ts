@@ -41,26 +41,28 @@ const NARROW_POLICY = {
 let kernel: MissionKernel;
 let statusKey: CryptoKey;
 
-const intent = (vendors: string[]) =>
+const intent = () =>
   validateMissionIntent(
     JSON.stringify({
       goal: "Pay invoices",
       resources: [RESOURCE],
       expires_at: "2027-01-01T00:00:00Z",
-      proposed_authority: [
-        {
-          type: "mission_resource_access",
-          resource: RESOURCE,
-          actions: ["payments:invoice.read", "payments:payment.execute"],
-          constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors },
-        },
-      ],
     }),
   );
 
+const proposal = (vendors: string[]): AuthorityEntry[] => [
+  {
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions: ["payments:invoice.read", "payments:payment.execute"],
+    constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors },
+  },
+];
+
 const approveMission = (n: number, vendors: string[]) =>
   kernel.approve({
-    intent: intent(vendors),
+    intent: intent(),
+    proposedAuthority: proposal(vendors),
     subject: { iss: ISS, sub: "alice" },
     approver: { iss: ISS, sub: "bob" },
     clientId: "ap-agent",
@@ -159,7 +161,8 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
     expect(() =>
       createExpansion(kernel, {
         predecessorId: predecessor.id,
-        intent: intent(["acme", "globex"]),
+        intent: intent(),
+        proposedAuthority: proposal(["acme", "globex"]),
         approver: { iss: ISS, sub: "bob" },
         approvalEventId: "apev-x",
         approvedUntil: "2026-12-31T00:00:00Z",
@@ -171,7 +174,8 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
     const predecessor = approveMission(4, ["acme"]);
     const { successor } = createExpansion(kernel, {
       predecessorId: predecessor.id,
-      intent: intent(["acme", "globex"]),
+      intent: intent(),
+      proposedAuthority: proposal(["acme", "globex"]),
       approver: { iss: ISS, sub: "bob" },
       approvalEventId: "apev-exp",
       approvedUntil: "2026-12-31T00:00:00Z",

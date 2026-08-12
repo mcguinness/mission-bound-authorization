@@ -132,14 +132,6 @@ function readOnlyIntent(): string {
     goal: "reconcile Acme invoices",
     resources: [RESOURCE],
     expires_at: FAR_FUTURE,
-    proposed_authority: [
-      {
-        type: "mission_resource_access",
-        resource: RESOURCE,
-        actions: ["payments:invoice.read"],
-        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-      },
-    ],
   });
 }
 
@@ -147,12 +139,16 @@ async function dispatch(params: {
   templateId: string;
   intent: string;
   dispatchEventId: string;
+  /** @spec mission#authority-proposal — the dispatcher's proposal on the
+   *  standard authorization_details parameter of the dispatch grant. */
+  authorizationDetails?: string;
 }): Promise<Response> {
   return tokenRequest({
     grant_type: MISSION_DISPATCH_GRANT_TYPE,
     template_id: params.templateId,
     mission_intent: params.intent,
     dispatch_event_id: params.dispatchEventId,
+    ...(params.authorizationDetails ? { authorization_details: params.authorizationDetails } : {}),
   });
 }
 
@@ -263,16 +259,15 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
       goal: "schedule a payment",
       resources: [RESOURCE],
       expires_at: FAR_FUTURE,
-      proposed_authority: [
-        {
-          type: "mission_resource_access",
-          resource: RESOURCE,
-          actions: ["payments:payment.schedule"],
-          constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-        },
-      ],
     });
-    const res = await dispatch({ templateId: template_id, intent, dispatchEventId: "evt-ceiling" });
+    const res = await dispatch({
+      templateId: template_id,
+      intent,
+      dispatchEventId: "evt-ceiling",
+      authorizationDetails: JSON.stringify([
+        { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:payment.schedule"] },
+      ]),
+    });
     const body = (await res.json()) as { mission_denial_reason?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.mission_denial_reason).toBe("out_of_template_ceiling");
@@ -302,14 +297,6 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
       goal: "execute a payment",
       resources: [RESOURCE],
       expires_at: FAR_FUTURE,
-      proposed_authority: [
-        {
-          type: "mission_resource_access",
-          resource: RESOURCE,
-          actions: ["payments:payment.execute"],
-          constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-        },
-      ],
     });
     const res = await dispatch({ templateId: template_id, intent, dispatchEventId: "evt-prohibited" });
     const body = (await res.json()) as { mission_denial_reason?: string };

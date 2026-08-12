@@ -60,15 +60,18 @@ const POLICY = {
   ],
 };
 
-const intent = (actions: string[]) =>
+const intent = () =>
   validateMissionIntent(
     JSON.stringify({
       goal: "Read approved invoices",
       resources: [RESOURCE],
       expires_at: EXPIRES_AT,
-      proposed_authority: [{ type: "mission_resource_access", resource: RESOURCE, actions }],
     }),
   );
+
+const proposedAuthority = (actions: string[]) => [
+  { type: "mission_resource_access" as const, resource: RESOURCE, actions },
+];
 
 describe("suspend->resume lift accepted by the Signal receiver (@spec child-delegation#child-state)", () => {
   it("applies a projected child's suspended->active restore lift and the Status List reads back the restored state", async () => {
@@ -108,7 +111,8 @@ describe("suspend->resume lift accepted by the Signal receiver (@spec child-dele
     });
 
     const parent = kernel.approve({
-      intent: intent(["payments:invoice.read", "payments:payment.execute"]),
+      intent: intent(),
+      proposedAuthority: proposedAuthority(["payments:invoice.read", "payments:payment.execute"]),
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
       clientId: "parent-agent",
@@ -116,7 +120,8 @@ describe("suspend->resume lift accepted by the Signal receiver (@spec child-dele
     });
     const { child } = createChildMission(kernel, {
       parentId: parent.id,
-      intent: intent(["payments:invoice.read"]),
+      intent: intent(),
+      proposedAuthority: proposedAuthority(["payments:invoice.read"]),
       childActor: { sub: "subagent", sub_profile: "ai_agent" },
     });
 

@@ -77,18 +77,18 @@ function newLineage(eventId: string, envelope: { authTime?: number; acr?: string
       goal: "Continue a Mission across an intra-domain hop",
       resources: [RESOURCE],
       expires_at: MISSION_EXP,
-      proposed_authority: [
-        {
-          type: "mission_resource_access",
-          resource: RESOURCE,
-          actions: ["payments:invoice.read"],
-          constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-        },
-      ],
     }),
   );
   const mission = as.kernel.approve({
     intent,
+    proposedAuthority: [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ],
     subject: { iss: ISSUER, sub: "alice" }, // the GLOBAL subject
     approver: { iss: ISSUER, sub: "bob" },
     clientId: "ap-agent",
@@ -120,18 +120,18 @@ function approveLineage(eventId: string, opts: { acr?: string } = {}): {
       resources: [RESOURCE],
       expires_at: MISSION_EXP,
       ...(opts.acr !== undefined ? { controls: { acr: opts.acr } } : {}),
-      proposed_authority: [
-        {
-          type: "mission_resource_access",
-          resource: RESOURCE,
-          actions: ["payments:invoice.read"],
-          constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-        },
-      ],
     }),
   );
   const mission = as.kernel.approve({
     intent,
+    proposedAuthority: [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ],
     subject: { iss: ISSUER, sub: "alice" },
     approver: { iss: ISSUER, sub: "bob" },
     clientId: "ap-agent",

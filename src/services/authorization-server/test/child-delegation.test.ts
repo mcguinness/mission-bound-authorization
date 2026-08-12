@@ -94,9 +94,9 @@ const approveParent = (actions = ["payments:invoice.read", "payments:payment.exe
         goal: "Pay Acme invoices for Q3",
         resources: [RESOURCE],
         expires_at: PARENT_EXP,
-        proposed_authority: proposed(actions),
       }),
     ),
+    proposedAuthority: proposed(actions),
     subject: { iss: ISS, sub: "alice" },
     approver: { iss: ISS, sub: "bob" },
     clientId: "parent-agent",
@@ -109,7 +109,6 @@ const childIntent = (actions: string[], over: Record<string, unknown> = {}) =>
       goal: "Extract Acme invoices",
       resources: [RESOURCE],
       expires_at: PARENT_EXP,
-      proposed_authority: proposed(actions),
       ...over,
     }),
   );
@@ -118,6 +117,7 @@ const createChild = (parentId: string, actions: string[], over: Record<string, u
   createChildMission(kernel, {
     parentId,
     intent: childIntent(actions, over.intentOver as Record<string, unknown>),
+    proposedAuthority: proposed(actions),
     childActor: { sub: "subagent-extractor", sub_profile: "ai_agent", ...(over.childActor ?? {}) },
     ...(over.cascadeMode ? { cascadeMode: over.cascadeMode as "immediate" } : {}),
     ...(over.delegationId ? { delegationId: over.delegationId as string } : {}),
@@ -239,6 +239,7 @@ describe("cascade revocation (@spec child-delegation#cascade)", () => {
     const { child: grandchild } = createChildMission(kernel, {
       parentId: child.id,
       intent: childIntent(["payments:invoice.read"]),
+      proposedAuthority: proposed(["payments:invoice.read"]),
       childActor: { sub: "grandchild-agent", sub_profile: "ai_agent" },
     });
     expect(grandchild.parent?.depth).toBe(2);
@@ -256,6 +257,7 @@ describe("cascade revocation (@spec child-delegation#cascade)", () => {
     const { child: grandchild } = createChildMission(kernel, {
       parentId: child.id,
       intent: childIntent(["payments:invoice.read"]),
+      proposedAuthority: proposed(["payments:invoice.read"]),
       childActor: { sub: "grandchild-agent", sub_profile: "ai_agent" },
     });
     // Terminate the grandchild directly first.
@@ -293,9 +295,9 @@ describe("child creation guards (@spec child-delegation#denial-reasons)", () => 
           goal: "Reconcile the ledger",
           resources: [LEDGER],
           expires_at: PARENT_EXP,
-          proposed_authority: [ledgerProposed(["ledger:vendor.read"])],
         }),
       ),
+      proposedAuthority: [ledgerProposed(["ledger:vendor.read"])],
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
       clientId: "parent-agent",
@@ -309,9 +311,9 @@ describe("child creation guards (@spec child-delegation#denial-reasons)", () => 
             goal: "Read ledger vendors",
             resources: [LEDGER],
             expires_at: PARENT_EXP,
-            proposed_authority: [ledgerProposed(["ledger:vendor.read"])],
           }),
         ),
+        proposedAuthority: [ledgerProposed(["ledger:vendor.read"])],
         childActor: { sub: "subagent-ledger", sub_profile: "ai_agent" },
       });
       expect.unreachable();
@@ -334,6 +336,7 @@ describe("child creation guards (@spec child-delegation#denial-reasons)", () => 
     const { child: grandchild } = createChildMission(kernel, {
       parentId: child.id,
       intent: childIntent(["payments:invoice.read"]),
+      proposedAuthority: proposed(["payments:invoice.read"]),
       childActor: { sub: "grandchild-agent", sub_profile: "ai_agent" },
     });
     // A great-grandchild would be depth 3 > MAX_CHILD_DEPTH (2).
@@ -341,6 +344,7 @@ describe("child creation guards (@spec child-delegation#denial-reasons)", () => 
       createChildMission(kernel, {
         parentId: grandchild.id,
         intent: childIntent(["payments:invoice.read"]),
+        proposedAuthority: proposed(["payments:invoice.read"]),
         childActor: { sub: "ggc-agent", sub_profile: "ai_agent" },
       });
       expect.unreachable();
@@ -412,24 +416,25 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       now,
       actorProfiles: aiAgents("some-agent"),
     });
+    const noActorsProposal: AuthorityEntry[] = [
+      {
+        type: "mission_resource_access",
+        resource: R,
+        actions: ["res.read"],
+        constraints: { max_amount: { amount: "100.00", currency: "USD" } },
+      },
+    ];
     const intentFor = (goal: string) =>
       validateMissionIntent(
         JSON.stringify({
           goal,
           resources: [R],
           expires_at: PARENT_EXP,
-          proposed_authority: [
-            {
-              type: "mission_resource_access",
-              resource: R,
-              actions: ["res.read"],
-              constraints: { max_amount: { amount: "100.00", currency: "USD" } },
-            },
-          ],
         }),
       );
     const parent = k.approve({
       intent: intentFor("parent"),
+      proposedAuthority: noActorsProposal,
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
       clientId: "parent-agent",
@@ -439,6 +444,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       createChildMission(k, {
         parentId: parent.id,
         intent: intentFor("child"),
+        proposedAuthority: noActorsProposal,
         childActor: { sub: "some-agent", sub_profile: "ai_agent" },
       });
       expect.unreachable();
@@ -552,20 +558,20 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
     };
     dKernel.insertRecord(parentRecord);
 
+    const dProposal: AuthorityEntry[] = [
+      {
+        type: "mission_resource_access",
+        resource: R,
+        actions: ["res.read"],
+        constraints: { max_amount: { amount: "100.00", currency: "USD" } },
+      },
+    ];
     const dChildIntent = () =>
       validateMissionIntent(
         JSON.stringify({
           goal: "read",
           resources: [R],
           expires_at: PARENT_EXP,
-          proposed_authority: [
-            {
-              type: "mission_resource_access",
-              resource: R,
-              actions: ["res.read"],
-              constraints: { max_amount: { amount: "100.00", currency: "USD" } },
-            },
-          ],
         }),
       );
 
@@ -573,6 +579,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
     const first = createChildMission(dKernel, {
       parentId: parentRecord.id,
       intent: dChildIntent(),
+      proposedAuthority: dProposal,
       childActor: { sub: "d-agent-0", sub_profile: "ai_agent" },
     });
     expect(first.child.state).toBe("active");
@@ -585,6 +592,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       createChildMission(dKernel, {
         parentId: parentRecord.id,
         intent: dChildIntent(),
+        proposedAuthority: dProposal,
         childActor: { sub: "d-agent-1", sub_profile: "ai_agent" },
       });
       expect.unreachable();
@@ -679,10 +687,10 @@ describe("child derivation cap is independent of the parent's (@spec child-deleg
           goal: "Pay Acme invoices for Q3",
           resources: [RESOURCE],
           expires_at: PARENT_EXP,
-          proposed_authority: proposed(["payments:invoice.read"]),
           controls: { max_derivations: 5 },
         }),
       ),
+      proposedAuthority: proposed(["payments:invoice.read"]),
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
       clientId: "parent-agent",
@@ -705,10 +713,10 @@ describe("child derivation cap is independent of the parent's (@spec child-deleg
           goal: "Pay Acme invoices for Q3",
           resources: [RESOURCE],
           expires_at: PARENT_EXP,
-          proposed_authority: proposed(["payments:invoice.read"]),
           controls: { max_derivations: 5 },
         }),
       ),
+      proposedAuthority: proposed(["payments:invoice.read"]),
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
       clientId: "parent-agent",

@@ -185,7 +185,6 @@ async function issueParentMission(): Promise<{ missionId: string; refreshToken: 
     goal: "Pay Acme invoices and send remittance",
     resources: [RESOURCE],
     expires_at: PARENT_EXP,
-    proposed_authority: parentAuthority(),
   });
   const par = await fetch(`${ISSUER}/request`, {
     method: "POST",
@@ -199,6 +198,7 @@ async function issueParentMission(): Promise<{ missionId: string; refreshToken: 
       code_challenge: challenge,
       code_challenge_method: "S256",
       mission_intent: intent,
+      authorization_details: JSON.stringify(parentAuthority()),
       client_assertion: await clientAssertion(),
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
     }).toString(),
@@ -288,9 +288,9 @@ async function createChildViaExchange(fields: {
         goal: "Extract Acme invoices",
         resources: [RESOURCE],
         expires_at: PARENT_EXP,
-        proposed_authority: childAuthority(),
       },
     ),
+    authorization_details: JSON.stringify(childAuthority()),
     child_actor: JSON.stringify(fields.childActor),
   };
   if (fields.parent !== undefined) params.parent = fields.parent;
@@ -417,8 +417,8 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
         goal: "Extract Acme invoices",
         resources: [RESOURCE],
         expires_at: PARENT_EXP,
-        proposed_authority: childAuthority(),
       }),
+      authorization_details: JSON.stringify(childAuthority()),
       child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
@@ -460,8 +460,8 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
         goal: "Extract Acme invoices",
         resources: [RESOURCE],
         expires_at: PARENT_EXP,
-        proposed_authority: childAuthority(),
       }),
+      authorization_details: JSON.stringify(childAuthority()),
       child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
@@ -483,8 +483,8 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
           goal: "Extract Acme invoices",
           resources: [RESOURCE],
           expires_at: PARENT_EXP,
-          proposed_authority: childAuthority(),
         }),
+        authorization_details: JSON.stringify(childAuthority()),
         child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
         client_assertion: await clientAssertion(),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",

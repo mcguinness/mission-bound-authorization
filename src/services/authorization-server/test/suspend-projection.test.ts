@@ -13,6 +13,7 @@ import { DERIVATION_POLICY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
+  type AuthorityEntry,
   createChildMission,
   GateError,
   type LifecycleCommit,
@@ -31,7 +32,7 @@ const now = () => clock;
 
 /** A proposed entry restating the ceiling's Common Constraints so the derived
  *  entry carries max_amount/vendors and the child subset probe is exact. */
-const proposed = (actions: string[]) => [
+const proposed = (actions: string[]): AuthorityEntry[] => [
   {
     type: "mission_resource_access",
     resource: RESOURCE,
@@ -70,9 +71,9 @@ const approveParent = () =>
         goal: "Pay Acme invoices for Q3",
         resources: [RESOURCE],
         expires_at: PARENT_EXP,
-        proposed_authority: proposed(["payments:invoice.read", "payments:payment.execute"]),
       }),
     ),
+    proposedAuthority: proposed(["payments:invoice.read", "payments:payment.execute"]),
     subject: { iss: ISS, sub: "alice" },
     approver: { iss: ISS, sub: "bob" },
     clientId: "parent-agent",
@@ -93,10 +94,10 @@ const createChild = (
         goal: "Extract Acme invoices",
         resources: [RESOURCE],
         expires_at: PARENT_EXP,
-        proposed_authority: proposed(["payments:invoice.read"]),
         ...intentOver,
       }),
     ),
+    proposedAuthority: proposed(["payments:invoice.read"]),
     childActor: { sub, sub_profile: "ai_agent" },
   }).child;
 

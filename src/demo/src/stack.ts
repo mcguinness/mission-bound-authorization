@@ -391,18 +391,20 @@ export function approveDemoMission(stack: DemoStack): { id: string } {
       goal: "Pay approved Acme invoices for Q3",
       resources: [DERIVATION_POLICY.ceiling[0].resource],
       expires_at: "2027-01-01T00:00:00Z",
-      proposed_authority: [
-        {
-          type: "mission_resource_access",
-          resource: DERIVATION_POLICY.ceiling[0].resource,
-          actions: ["payments:invoice.read", "payments:payment.schedule", "payments:payment.execute", "payments:remittance.send"],
-          constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-        },
-      ],
     }),
   );
   return stack.kernel.approve({
     intent,
+    // The authority proposal: what the wire submits as the standard RFC 9396
+    // authorization_details parameter beside mission_intent.
+    proposedAuthority: [
+      {
+        type: "mission_resource_access",
+        resource: DERIVATION_POLICY.ceiling[0].resource,
+        actions: ["payments:invoice.read", "payments:payment.schedule", "payments:payment.execute", "payments:remittance.send"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ],
     subject: { iss: ISS, sub: "alice" },
     approver: { iss: ISS, sub: "bob" },
     clientId: "ap-agent",
