@@ -29,6 +29,7 @@ author:
 
 normative:
   RFC6755:
+  RFC9396:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -445,7 +446,9 @@ The Mission Issuer adjudicates a Dispatch in this order:
    template's `allowed_dispatchers`. Refuse a request from any other
    principal.
 3. **Derive the instance Authority Set.** Derive an Authority Set from
-   the dispatch intent and bound it by the deployment's derivation
+   the dispatch intent, and from the Dispatcher's authority proposal
+   where one was submitted ({{grant-type}}), and bound it by the
+   deployment's derivation
    policy, exactly as for any Mission
    ({{I-D.draft-mcguinness-oauth-mission}}). This document adds no
    authority-derivation rule.
@@ -546,6 +549,19 @@ instance with:
 : REQUIRED. The dispatch intent, in the issuance profile's Mission
   Intent shape ({{I-D.draft-mcguinness-oauth-mission}}), from which the
   instance Authority Set is derived ({{dispatch}}).
+
+`authorization_details`:
+: OPTIONAL. The Dispatcher's authority proposal: the standard
+  {{RFC9396}} parameter carried on the same token request, under the
+  issuance profile's authority-proposal rules applied unchanged
+  ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
+  authority: it bounds the derivation of step 3 of {{dispatch}} in
+  narrowing mode, and the double intersection of step 4 applies to
+  the result unchanged, so a proposal narrows the instance and never
+  widens it beyond the Template Ceiling. Absent a proposal, the
+  instance derives from the dispatch intent alone. An instance
+  created from a Dispatch carrying one records `proposed_authority`
+  and `proposal_hash`.
 
 `dispatch_event_id`:
 : REQUIRED. The dispatch event identifier that makes the Dispatch
