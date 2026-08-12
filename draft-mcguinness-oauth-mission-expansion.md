@@ -63,6 +63,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -583,6 +591,24 @@ order, refusing on the first failure:
 On any failure the Mission Issuer MUST refuse with `invalid_request`,
 `invalid_grant`, or `invalid_token` as appropriate, and MUST NOT create
 a successor.
+
+The predecessor's **effective Authority Set**, the right-hand side of
+step 7's subset test, is its approved Authority Set as reduced by the
+overlays the deployment runs: authority removed by the containment
+profile's issuer-held overlay
+({{I-D.draft-mcguinness-oauth-mission-containment}}) and entries
+discharged under the Mission Status profile's completion machinery
+({{I-D.draft-mcguinness-oauth-mission-status}}) are not in it. Where
+neither profile is deployed, the effective set is the approved set.
+
+Authority the predecessor once held but containment or discharge has
+removed is therefore never `nothing_to_expand`: a request for it
+widens the effective set and is expansion-eligible. Such authority
+returns only through a fresh-consent successor, with the
+predecessor's containment history surfaced in the expansion consent
+disclosure ({{completion-modes}},
+{{I-D.draft-mcguinness-oauth-mission-containment}}), never by
+re-deriving under the predecessor.
 
 ## Completion modes {#completion-modes}
 
@@ -1185,9 +1211,10 @@ machine-readable reason code from the closed set below:
   effective Authority Set, so there is nothing to expand: ordinary
   token derivation under the predecessor already serves the request
   ({{verification-order}}). This refusal surfaces on the token exchange
-  response itself, as `invalid_request` with this reason code, and is
-  never answered with a token derived under the predecessor, so an
-  expansion response is never ambiguously a non-successor.
+  response itself, as `invalid_request`, and MUST carry this reason
+  code; it is never answered with a token derived under the
+  predecessor, so an expansion response is never ambiguously a
+  non-successor.
 
 A companion profile MAY extend this set by specification (the
 experimental progressive authorization companion defines
@@ -1196,9 +1223,15 @@ a consumer MUST treat an unrecognized reason code as a denial with no
 further semantics.
 
 A Mission Issuer MUST NOT use a reason code to disclose policy
-boundaries beyond the adjudicated request ({{policy-probing}}); omitting
-the reason code is always permitted. When present, a reason code is
-carried in a `mission_denial_reason` member: at the token endpoint, on
+boundaries beyond the adjudicated request ({{policy-probing}});
+omitting the reason code is always permitted, with one exception:
+`nothing_to_expand` MUST be carried on its refusal. It reveals only
+that the requester already holds the requested authority, which the
+requester can observe from its own token, so the policy-probing
+rationale for omission does not apply ({{policy-probing}}); carrying
+it keeps a non-widening refusal distinguishable from a policy denial.
+When present, a reason code is carried in a
+`mission_denial_reason` member: at the token endpoint, on
 the token exchange response and on a deferred token response poll, a
 member of the JSON error response body alongside the OAuth `error`
 member; on the retained interactive path's front-channel authorization
@@ -1246,6 +1279,7 @@ subject_token=<predecessor%20Mission-bound%20access%20token>&
 subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
 mission_intent=%7B...journal-entries%20cap%20%242000...%7D&
 predecessor=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&
+creation_request_id=7c9e6679-7425-40de-944b-e07fc1f90ae7&
 client_id=s6BhdRkqt3
 ~~~
 
