@@ -149,7 +149,7 @@ carries a new Mission Intent in an {{RFC8693}} token exchange
 ({{expansion-request}}) bound to the predecessor by possession of the
 predecessor's Mission-bound access token, leading to a fresh approval
 event ({{I-D.draft-mcguinness-oauth-mission}}) with its own
-`intent_hash`, `authority_hash`, and Mission record. The successor's
+integrity anchors and Mission record. The successor's
 authority comes only from that approval. This document adds exactly
 three things on top of the issuance profile: a way to bind an expansion
 request to the predecessor it expands; a `predecessor` lineage member
@@ -400,6 +400,16 @@ token endpoint. The request carries:
   Intent and bounds it by policy exactly as for any Mission; this
   document adds no authority-derivation rule.
 
+`authorization_details`:
+: OPTIONAL. The successor's authority proposal: the standard
+  {{RFC9396}} parameter carried on the same token request, under the
+  issuance profile's authority-proposal rules applied unchanged
+  ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
+  authority: the Mission Issuer derives and bounds the successor's
+  Authority Set by policy regardless of what was proposed. A
+  successor created from an exchange carrying one records
+  `proposed_authority` and `proposal_hash`.
+
 `predecessor`:
 : OPTIONAL. A string. The `mission_id` of the predecessor, a
   non-authoritative cross-check and audit value only. The Mission Issuer
@@ -603,7 +613,8 @@ new consent: if the Approver declines, no successor is created and the
 predecessor is untouched ({{denial-reasons}}).
 
 At completion the Mission Issuer computes the successor's integrity
-anchors (`intent_hash`, `authority_hash`) and, at the point the
+anchors (`intent_hash`, `authority_hash`, and, where the exchange
+carried an authority proposal, `proposal_hash`) and, at the point the
 successor's authority is issued (the exchange response for a synchronous
 completion, the resolving poll for a deferred completion, or the code
 redemption for an interactive completion), creates the successor Mission

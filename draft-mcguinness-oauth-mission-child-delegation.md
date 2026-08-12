@@ -33,6 +33,7 @@ normative:
   RFC8259:
   RFC8414:
   RFC8693:
+  RFC9396:
   RFC8705:
   RFC8785:
   RFC9126:
@@ -394,6 +395,16 @@ The child-creation token exchange carries:
 
 `mission_intent`:
 : REQUIRED. The proposed Child Mission Intent.
+
+`authorization_details`:
+: OPTIONAL. The child's authority proposal: the standard {{RFC9396}}
+  parameter carried on the same token request, under the issuance
+  profile's authority-proposal rules applied unchanged
+  ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
+  authority: the child Authority Set is derived and bounded by policy
+  and by the strict-subset rule regardless of what was proposed. A
+  Child Mission created from an exchange carrying one records
+  `proposed_authority` and `proposal_hash`.
 
 `child_actor`:
 : REQUIRED. An object identifying the child actor that will hold or
@@ -903,6 +914,8 @@ The Child Mission record MUST contain:
 - the child `authority_hash`;
 - the child Mission Intent's `intent_hash`
   ({{I-D.draft-mcguinness-oauth-mission}});
+- where the child-creation exchange carried an authority proposal,
+  the recorded `proposed_authority` and its `proposal_hash`;
 - the delegation event identifier;
 - the cascade mode; and
 - the fan-out policy result.
@@ -912,7 +925,9 @@ The `parent` value is immutable after creation.
 The delegation event ({{child-creation}}) is the Child Mission's
 approval event. It MUST commit the issuance profile's integrity anchors
 ({{I-D.draft-mcguinness-oauth-mission}}): `authority_hash` over the
-child Authority Set and `intent_hash` over the child Mission Intent, and
+child Authority Set, `intent_hash` over the child Mission Intent, and,
+where the exchange carried an authority proposal, `proposal_hash` over
+it, and
 it MUST produce the immutable, accountable record the core approval
 event produces.
 
