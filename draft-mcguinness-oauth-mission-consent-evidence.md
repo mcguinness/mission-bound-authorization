@@ -275,12 +275,14 @@ A Consent Disclosure object has these members:
 
 `source_hashes`:
 : REQUIRED. An object containing the `intent_hash` and
-  `authority_hash` values the disclosure corresponds to. The disclosure
-  object carries these two hashes rather than the full `mission`
+  `authority_hash` values the disclosure corresponds to, and, when the
+  client submitted an authority proposal, the `proposal_hash` value
+  ({{I-D.draft-mcguinness-oauth-mission}}). The disclosure
+  object carries these hashes rather than the full `mission`
   container ({{consent-evidence}}) because it is constructed before
   approval commits the Mission: the Mission `id` and lifecycle do not
-  yet exist, and the disclosure can commit only to the proposed Intent
-  and Authority Set it actually renders. The Consent Evidence object,
+  yet exist, and the disclosure can commit only to the proposed Intent,
+  the submitted proposal, and the Authority Set it actually renders. The Consent Evidence object,
   recorded at or after the decision, carries the resolved `mission`
   container with `id`, `issuer`, and the same anchors.
 
@@ -327,7 +329,13 @@ A Consent Disclosure object has these members:
   Presentation wording is free; coverage is normative. An array that
   omits an entry, a constraint, a delegation right, or a consumption
   bound is not faithful, and a verifier can check the rendered set
-  against the committed Authority Set. A disclosure that renders
+  against the committed Authority Set. When the client submitted an
+  authority proposal, the issuance profile requires the rendering to
+  distinguish the entries the client proposed from any narrowing or
+  restructuring the AS applied
+  ({{I-D.draft-mcguinness-oauth-mission}}); a disclosure for such a
+  Mission carries that distinction in its rendered elements. A
+  disclosure that renders
   `mission_summary` without a faithful `authority_summary` does not
   conform.
 
@@ -630,10 +638,14 @@ only. It MUST NOT grant or widen authority.
 
 The Consent Disclosure object MUST be constructed after Authority Set
 derivation and before approval. If any disclosure input changes after
-the disclosure is constructed and before the decision (the Authority
+the disclosure is constructed and before the decision (the Mission
+Intent, the authority proposal, the Authority
 Set, the locale, the template, or the material notices), the Mission
 Issuer MUST discard the disclosure and construct a new one. It
-MUST NOT reuse the prior `consent_rendering_hash`. Rung 1 determinism
+MUST NOT reuse the prior `consent_rendering_hash`; the issuance
+profile's rule recomputing the integrity anchors over the changed
+context applies alongside
+({{I-D.draft-mcguinness-oauth-mission}}). Rung 1 determinism
 ({{experimental-rungs}}) applies per presentation modality: the same
 inputs produce the same rendered form within a given modality, not
 across modalities.
@@ -688,11 +700,13 @@ A Consent Evidence object has these members:
   approval ({{I-D.draft-mcguinness-oauth-mission}}):
 
   - When `decision` is `approved`, it contains `id`, `issuer`,
-    `intent_hash`, `authority_hash`, and, when this profile records it
-    on the Mission, `consent_rendering_hash`.
+    `intent_hash`, `authority_hash`, when the Mission records an
+    authority proposal, `proposal_hash`, and, when this profile records
+    it on the Mission, `consent_rendering_hash`.
   - When `decision` is `declined`, no Mission was created
     ({{declined-events}}), so there is no `id`. It instead contains
-    `issuer` and the `intent_hash` and `authority_hash` the disclosure
+    `issuer` and the `intent_hash` and `authority_hash` (with
+    `proposal_hash` where present) the disclosure
     corresponded to, matching the disclosure object's `source_hashes`
     ({{consent-disclosure}}). It MUST NOT contain `id`.
   - When `decision` is `narrowed`, the review required a narrowing
@@ -971,8 +985,9 @@ than accepted without verification.
 
 At an approval event, a Consent-Evidence-capable Mission Issuer MUST:
 
-1. derive the Authority Set and compute `intent_hash` and
-   `authority_hash` under {{I-D.draft-mcguinness-oauth-mission}};
+1. derive the Authority Set and compute `intent_hash`,
+   `authority_hash`, and, where an authority proposal was submitted,
+   `proposal_hash` under {{I-D.draft-mcguinness-oauth-mission}};
 2. construct the Consent Disclosure object from that exact Authority
    Set and Mission Intent;
 3. compute `consent_rendering_hash`;
@@ -1328,7 +1343,8 @@ issuance profile's test vectors
 `journal-entries.write` bounded by a `max_amount` of 500.00 USD on
 `https://erp.example.com`, approved by `alice`
 (`user_3p2q8mN1a0kV7tR`); `source_hashes` carries that profile's
-computed `intent_hash` and `authority_hash`. The `template_hash` value
+computed `intent_hash` and `authority_hash`. This Mission submitted
+no authority proposal, so `source_hashes` carries no `proposal_hash`. The `template_hash` value
 stands for the deployment's template commitment and is illustrative.
 
 The Consent Disclosure object:
