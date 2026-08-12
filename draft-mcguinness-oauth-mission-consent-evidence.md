@@ -700,8 +700,8 @@ A Consent Evidence object has these members:
   approval ({{I-D.draft-mcguinness-oauth-mission}}):
 
   - When `decision` is `approved`, it contains `id`, `issuer`,
-    `intent_hash`, `authority_hash`, when the Mission records an
-    authority proposal, `proposal_hash`, and, when this profile records
+    `intent_hash`, `authority_hash`, `proposal_hash` when the Mission
+    records an authority proposal, and, when this profile records
     it on the Mission, `consent_rendering_hash`.
   - When `decision` is `declined`, no Mission was created
     ({{declined-events}}), so there is no `id`. It instead contains
