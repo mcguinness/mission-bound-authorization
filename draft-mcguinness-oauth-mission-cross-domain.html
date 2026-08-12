@@ -1415,8 +1415,10 @@ for the pattern this profile attaches Mission context to.<a href="#section-4-3" 
 <p id="section-4-4">This document is a thin Mission-bound profile of the cross-domain
 grant, not merely <code>mission</code>-claim carriage: beyond attaching and
 validating Mission context, it imposes two security requirements on the
-grant for Mission-bound use, proof-of-possession and single use
-(<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>, <a href="#validation-at-resource-as" class="auto internal xref">Section 10</a>). The grant's
+grant for Mission-bound use, proof-of-possession (by requiring the
+grant profile's own mechanism, which the ID-JAG profile leaves
+<span class="bcp14">OPTIONAL</span>) and single use (<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>,
+<a href="#validation-at-resource-as" class="auto internal xref">Section 10</a>). The grant's
 own format, signing, and token-exchange envelope remain defined by the
 cross-domain grant profile (ID-JAG in the recommended case) and its
 underlying <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> and <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>; this document does not redefine
@@ -1579,10 +1581,9 @@ which <code>resource</code> values, the mapping audience scoping is computed
 under (<a href="#audience-scope" class="auto internal xref">Section 5.1</a>).<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.3">
-          <p id="section-8-2.3.1">The grant profile in use (the ID-JAG in the <span class="bcp14">RECOMMENDED</span> case) and,
-where that profile defines no proof-of-possession, the
-sender-constraint mechanism (<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>); binding and
-verification interoperate only if both domains fix the same one.<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.3.1">The grant profile in use (the ID-JAG in the <span class="bcp14">RECOMMENDED</span> case) and
+its proof-of-possession mechanism (<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>); binding
+and verification interoperate only if both domains fix the same one.<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.4">
           <p id="section-8-2.4.1">Client registration: the presenting client is registered with and
@@ -1655,30 +1656,24 @@ bounds cross-domain revocation latency; see
 Access Tokens");<a href="#section-9-4.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-4.6">
-          <p id="section-9-4.6.1"><span class="bcp14">MUST</span> be sender-constrained (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>) to the presenting client:<a href="#section-9-4.6.1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-9-4.6.2.1">
-              <p id="section-9-4.6.2.1.1">where the cross-domain grant profile defines a
-proof-of-possession mechanism, by that mechanism. This document
-does not define a new PoP mechanism; the originating AS and the
-Resource AS <span class="bcp14">MUST</span> use the mechanism of the profile in use, so
-that binding and verification interoperate;<a href="#section-9-4.6.2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-9-4.6.2.2">
-              <p id="section-9-4.6.2.2.1">where the grant profile in use defines no proof-of-possession,
-by a <code>cnf</code> claim (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>) binding the presenting client's
-DPoP key (<code>jkt</code>, <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) or mTLS certificate (<code>x5t#S256</code>,
-<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>), and the Resource AS <span class="bcp14">MUST</span> verify possession at
-redemption (<a href="#validation-at-resource-as" class="auto internal xref">Section 10</a>). The ID-JAG profile
-defines none: the ID-JAG is a bearer authorization grant,
-protected by audience restriction, short lifetime, and client
-authentication at redemption; and<a href="#section-9-4.6.2.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-9-4.6.2.3">
-              <p id="section-9-4.6.2.3.1">in either case, binding and verification <span class="bcp14">MUST</span> use the same
-mechanism;<a href="#section-9-4.6.2.3.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
+          <p id="section-9-4.6.1"><span class="bcp14">MUST</span> be sender-constrained (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>) to the presenting client by
+the proof-of-possession mechanism the cross-domain grant profile
+defines; this document defines no new PoP mechanism. For the
+<span class="bcp14">RECOMMENDED</span> profile that mechanism is the ID-JAG's own
+proof-of-possession
+(<span>[<a href="#I-D.draft-ietf-oauth-identity-assertion-authz-grant" class="cite xref">I-D.draft-ietf-oauth-identity-assertion-authz-grant</a>]</span>): a <code>cnf</code>
+claim (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>) carrying the <code>jkt</code> thumbprint (<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) of
+the presenting client's key, control of which the client proves with
+a DPoP proof. That <code>cnf</code> is <span class="bcp14">OPTIONAL</span> in the ID-JAG profile; for
+Mission-bound cross-domain use it is <span class="bcp14">REQUIRED</span>, so the grant is never
+a bearer credential at the trust boundary (<a href="#grant-at-boundary" class="auto internal xref">Section 15.2</a>). A
+deployment <span class="bcp14">MAY</span> additionally sender-constrain the grant to a client
+certificate, a Mission profile of certificate-bound key confirmation
+aligning with the mTLS support ID-JAG is expected to add: for such a
+grant the <code>cnf</code> carries the certificate's <code>x5t#S256</code> thumbprint
+(<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>) in place of a <code>jkt</code>, and the client proves control over
+an mTLS session. Binding and verification <span class="bcp14">MUST</span> use the same
+mechanism;<a href="#section-9-4.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-4.7">
           <p id="section-9-4.7.1"><span class="bcp14">MUST</span> carry a <code>jti</code> for one-time use, so the bound party cannot
@@ -1706,19 +1701,19 @@ the artifact is the ID-JAG and the issuance request carries a
 <code>subject_token_type</code> of
 <code>urn:ietf:params:oauth:token-type:refresh_token</code>, and the <code>audience</code>
 identifies the target Resource AS.<a href="#section-9-6" class="pilcrow">¶</a></p>
-<p id="section-9-7">The refresh-token subject is this profile's deviation from the
-ID-JAG issuance request, which that
-specification defines over an identity-assertion <code>subject_token</code>
-(<code>id_token</code> or <code>saml2</code>); a Mission-bound deployment substitutes the
-Mission's grant so the exchange resolves a Mission rather than a bare
-subject assertion. This refresh-token mode is what
+<p id="section-9-7">ID-JAG defines the refresh-token subject mode
+(<span>[<a href="#I-D.draft-ietf-oauth-identity-assertion-authz-grant" class="cite xref">I-D.draft-ietf-oauth-identity-assertion-authz-grant</a>]</span>) alongside
+its identity-assertion <code>subject_token</code> modes (<code>id_token</code> or <code>saml2</code>);
+this profile REQUIRES the refresh-token mode and restricts Mission
+cross-domain projection to it, so the exchange resolves a Mission
+rather than a bare subject assertion. This refresh-token mode is what
 binds the request to a Mission: the AS resolves the Mission from the
 presented grant per the issuance profile's grant binding
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Binding the Mission
 to the Grant"), exactly as on any other refresh, and the grant
 therefore projects the agent's full Mission authority
 (audience-scoped), never a narrowed delegate's.<a href="#section-9-7" class="pilcrow">¶</a></p>
-<p id="section-9-8">The refresh-token subject mode is the only mode this profile defines,
+<p id="section-9-8">The refresh-token subject mode is the only mode this profile permits,
 and fixing it is deliberate: the refresh token resolves to exactly
 one Mission and its full authority, where an access token or
 delegated token could carry a narrowed or actor-specific subset that
@@ -1816,22 +1811,22 @@ active at issuance; the short grant lifetime bounds the staleness.<a href="#sect
 </li>
         <li class="normal" id="section-10-2.4">
           <p id="section-10-2.4.1"><span class="bcp14">MUST</span> verify the grant's sender-constraint by the proof-of-possession
-mechanism the cross-domain grant profile defines (for the ID-JAG
-profile, as that specification defines). It <span class="bcp14">MUST</span> reject with
-<code>invalid_grant</code> a cross-domain grant that is not sender-constrained
-or whose proof-of-possession does not verify. A bearer grant <span class="bcp14">MUST NOT</span> be accepted: accepting one unbound would let any party that
-captured it mint a local token (<a href="#grant-at-boundary" class="auto internal xref">Section 15.2</a>).<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+mechanism the cross-domain grant profile defines. For the ID-JAG
+profile this is a DPoP proof (<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) for the Resource AS's own
+token endpoint, presenting the key whose <code>jkt</code> thumbprint the grant's
+<code>cnf</code> claim (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>) carries
+(<span>[<a href="#I-D.draft-ietf-oauth-identity-assertion-authz-grant" class="cite xref">I-D.draft-ietf-oauth-identity-assertion-authz-grant</a>]</span>). Where the
+deployment uses the certificate-bound option of
+<a href="#cross-domain-grant" class="auto internal xref">Section 9</a>, the <code>cnf</code> carries an <code>x5t#S256</code> thumbprint
+instead, and the Resource AS verifies that the presented mTLS client
+certificate's <code>x5t#S256</code> (<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>) matches it. It <span class="bcp14">MUST</span> reject
+with <code>invalid_grant</code> a cross-domain grant that is not
+sender-constrained or whose proof-of-possession does not verify. A
+bearer grant <span class="bcp14">MUST NOT</span> be accepted: accepting one unbound would let
+any party that captured it mint a local token (<a href="#grant-at-boundary" class="auto internal xref">Section 15.2</a>).<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-10-2.4.2.1">
-              <p id="section-10-2.4.2.1.1">When the grant profile defines no proof-of-possession and the
-grant carries a <code>cnf</code> claim per <a href="#cross-domain-grant" class="auto internal xref">Section 9</a>, the
-Resource AS <span class="bcp14">MUST</span> verify possession of that key at redemption: a
-DPoP proof (<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) for its own token endpoint for a <code>jkt</code>
-binding, or the mTLS connection certificate (<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>) for an
-<code>x5t#S256</code> binding.<a href="#section-10-2.4.2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-10-2.4.2.2">
-              <p id="section-10-2.4.2.2.1">Binding and verification <span class="bcp14">MUST</span> use the same mechanism.<a href="#section-10-2.4.2.2.1" class="pilcrow">¶</a></p>
+              <p id="section-10-2.4.2.1.1">Binding and verification <span class="bcp14">MUST</span> use the same mechanism.<a href="#section-10-2.4.2.1.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </li>

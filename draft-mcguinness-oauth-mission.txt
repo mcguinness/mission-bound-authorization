@@ -139,15 +139,16 @@ Table of Contents
      16.4.  Prompt Injection and the Exfiltration Leg
      16.5.  Authority Does Not Propagate With Information
      16.6.  Issuance Scope, Not Runtime Enforcement
-     16.7.  Denial Detail Disclosure
-     16.8.  Token Theft
-     16.9.  Delegation and Chain Compromise
-     16.10. client_id Conformance and the Approved-Agent Residual
-     16.11. Signing and Key Rotation
-     16.12. Compromised or Over-Broad Derivation
-     16.13. Authority Hash Is Not a Mission Identifier
-     16.14. Composition and the Effective Ceiling
-     16.15. The Containment Materialized-Capability Residual
+     16.7.  Resource Boundary Canonicalization
+     16.8.  Denial Detail Disclosure
+     16.9.  Token Theft
+     16.10. Delegation and Chain Compromise
+     16.11. client_id Conformance and the Approved-Agent Residual
+     16.12. Signing and Key Rotation
+     16.13. Compromised or Over-Broad Derivation
+     16.14. Authority Hash Is Not a Mission Identifier
+     16.15. Composition and the Effective Ceiling
+     16.16. The Containment Materialized-Capability Residual
    17. Privacy Considerations
      17.1.  Mission Identifier Correlation
      17.2.  Token Payload Disclosure
@@ -591,13 +592,16 @@ Table of Contents
 
    On a derived token the sub claim is the Subject's sub and the token
    iss is the AS; within the issuing AS's namespace this (iss, sub) pair
-   is authoritative for the Subject, and Resource Servers authorize
-   against it.  The Subject's home issuer is recorded on the Mission as
-   subject.iss for audit and is not carried on the token; this document
-   defines no runtime lookup of it (there is no by-Mission status
-   endpoint).  Across trust domains, the companion's cross-domain grant
-   conveys Subject identity to the Resource AS through its own subject-
-   resolution claims
+   is the AS-local subject principal, authoritative for the Subject, and
+   Resource Servers authorize against it.  The Mission separately
+   records the Subject's home issuer and identifier as subject.iss and
+   subject.sub: this pair is the external subject identity, carried as
+   provenance for audit and not on the token, and this document defines
+   no runtime lookup of it (there is no by-Mission status endpoint).
+   The record's (subject.iss, subject.sub) and the token's (AS iss, sub)
+   identify the same Subject in two issuer namespaces.  Across trust
+   domains, the companion's cross-domain grant conveys Subject identity
+   to the Resource AS through its own subject-resolution claims
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]), not through a
    Mission lookup.
 
@@ -607,12 +611,15 @@ Table of Contents
    claim unchanged ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
    Principals are recorded at the approval event and are immutable.  Two
-   principals are equal when their iss and sub are byte-equal.  Dynamic
-   delegation (the actors an agent delegates to during execution) is
-   carried on derived tokens via the act chain (Section 11), not on the
-   immutable Mission record.  Richer subject identifier formats (for
-   example, the formats of [RFC9493]) MAY be layered in future versions
-   and are not required here.
+   principals are equal when their iss and sub are byte-equal, a test
+   that therefore compares principals only within one issuer namespace;
+   the external subject identity and the AS-local subject principal are
+   two representations of one Subject and are never compared to each
+   other under this rule.  Dynamic delegation (the actors an agent
+   delegates to during execution) is carried on derived tokens via the
+   act chain (Section 11), not on the immutable Mission record.  Richer
+   subject identifier formats (for example, the formats of [RFC9493])
+   MAY be layered in future versions and are not required here.
 
 3.2.  Protocol Flow
 
@@ -1161,11 +1168,13 @@ Table of Contents
 
    Resource containment under a prefix reference is compared after RFC
    3986 [RFC3986] syntax-based normalization of both URIs: lowercase the
-   scheme and host, remove a default port, decode percent-encoded octets
-   of unreserved characters, and remove dot-segments.  This
-   normalization applies to comparison only, never to hashing: anchor
-   computation (Section 6.3, Section 6.4) remains byte-exact over the
-   recorded values and is untouched by this rule.
+   scheme and host, remove a default port, uppercase the hexadecimal
+   digits of any percent-encoding ([RFC3986] Section 2.1, so %2f and %2F
+   are equivalent), decode percent-encoded octets of unreserved
+   characters, and remove dot-segments.  This normalization applies to
+   comparison only, never to hashing: anchor computation (Section 6.3,
+   Section 6.4) remains byte-exact over the recorded values and is
+   untouched by this rule.
 
    The default comparison is deliberately flat: resource matches by
    exact equality and a literal action by array membership.  Hierarchy
@@ -1525,7 +1534,11 @@ Table of Contents
        Subject from unauthenticated client input.  This document defines
        no wire parameter for the Subject; how the AS establishes it
        (administrative selection, a directory, an authenticated
-       reference) is a deployment matter.
+       reference) is a deployment matter.  When the Subject's home
+       issuer (subject.iss) differs from the AS, the AS MUST ensure the
+       sub it adopts is unique within its own issuer namespace and does
+       not collide with a different principal's sub, so a derived
+       token's (iss, sub) pair unambiguously denotes the Subject.
 
    3.  Render for consent the derived Authority Set in human-meaningful
        terms, with the goal, constraints, expires_at, and any controls
@@ -2258,6 +2271,20 @@ Table of Contents
       is permitted if at least one carried entry permits it: entries are
       alternative grants of authority, not conjunctive filters.
 
+   *  MUST, when it matches a concrete request URI against a prefix
+      entry (Section 5), apply the same RFC 3986 [RFC3986] syntax-based
+      normalization the AS uses for containment (Section 5.1), and MUST
+      apply it before the prefix comparison rather than after.  That
+      normalization decodes only unreserved octets, so reserved octets
+      stay encoded: an encoded slash (%2F, equivalently %2f since
+      percent-encoding is hex-case-insensitive) remains encoded and MUST
+      NOT be treated as a path-segment separator when matching.  An
+      intermediary that percent-decodes %2F, or a downstream component
+      that decodes and removes dot-segments after the Resource Server's
+      check (for example collapsing a decoded %2e%2e), moves the
+      enforced boundary, so a deployment MUST prevent such rewriting or
+      account for it in what it authorizes.
+
    *  MUST fail closed on any constraints key it does not understand, or
       understands but cannot enforce, in an entry whose resource it
       serves: it MUST refuse the request (for example, a 403 with
@@ -2362,7 +2389,7 @@ Table of Contents
    a constraints key the RS cannot enforce, and the request fails
    closed).  A value the client does not recognize is treated as
    insufficient_authority.  The attribute's disclosure considerations
-   are Section 16.7's.
+   are Section 16.8's.
 
    A Mission-unaware Resource Server that authorizes only from scope
    still operates within the Mission at the coarse scope level, because
@@ -3426,9 +3453,95 @@ Table of Contents
    layer composes with this profile and is out of scope here.  Which
    party enforces each Mission-carried bound is summarized in the
    enforcement table (Section 4).  Short token lifetimes and narrow
-   authority bound, but do not eliminate, this exposure.
+   authority bound, but do not eliminate, this exposure.  Where the
+   Resource Server or a composing runtime layer does match a concrete
+   request URI against a prefix entry, that match MUST apply the same
+   RFC 3986 [RFC3986] normalization the AS uses for containment
+   (Section 5.1, Section 8.2), so the boundary enforced at the point of
+   use is the one the AS derived, not a divergent one.
 
-16.7.  Denial Detail Disclosure
+16.7.  Resource Boundary Canonicalization
+
+   A prefix entry (Section 5) draws an authority boundary in URI space.
+   The AS's containment test (Section 5.1) and the Resource Server's
+   request matching (Section 8.2) MUST apply the single RFC 3986
+   [RFC3986] normalization defined in Section 5.1, so issuance and
+   enforcement draw the same boundary.  A matcher that normalizes
+   differently from the party that derived the entry can admit a request
+   the Approver never authorized, or deny one it did.  The normalization
+   MUST run before the prefix comparison, never after, and the boundary
+   MUST be evaluated on the same normalized form a downstream component
+   will act on.  The following vectors each turn on such a difference:
+
+   *  *Encoded slash (%2F).* A reserved octet, left encoded by this
+      normalization (which decodes only unreserved octets) and never a
+      path-segment separator when matching.  An intermediary that
+      decodes it before the Resource Server enforces shifts the
+      boundary; a deployment MUST prevent that rewriting or account for
+      it.
+
+   *  *Encoded dot (%2e, %2e%2e).* The . octet is unreserved, so this
+      normalization decodes it and then removes dot-segments.  The
+      hazard is order: normalizing before the comparison collapses a
+      decoded %2e%2e out of the path and draws the boundary correctly,
+      while matching the raw string first and letting a downstream
+      component decode and collapse afterward can escape the prefix.
+
+   *  *Double or empty path segments.* An empty path and / denote the
+      same base (Section 5); a matcher MUST NOT coalesce // or trailing-
+      slash differences of its own, since the Section 5.1 normalization
+      does not.
+
+   *  *Default-port presence.* https://a.example:443 and
+      https://a.example are one authority only after the default-port
+      removal Section 5.1 performs; a matcher that skips it splits one
+      boundary into two.
+
+   *  *Unicode and IDNA host.* The Section 5.1 normalization lowercases
+      the host but does not define Unicode to A-label (IDNA) conversion,
+      so a deployment that accepts non-ASCII hosts MUST ensure both
+      sides compare the same form.
+
+   *  *Percent-decoding order.* This normalization decodes only
+      unreserved octets and runs before comparison; decoding reserved
+      octets, or decoding after the comparison, changes which characters
+      count as separators and can move the boundary.
+
+   These vectors make the rule concrete.  For a prefix entry whose
+   resource is https://api.example/orders, a concrete request URI
+   matches as follows:
+
+   *  https://api.example/orders and https://api.example/orders/123
+      ALLOW: the base itself, and an extension at a path-segment
+      boundary.
+
+   *  https://API.EXAMPLE/orders/123 ALLOW: the scheme and host are
+      case-folded, so the host matches.
+
+   *  https://api.example:443/orders/123 ALLOW: the default port is
+      removed, so the authority matches.
+
+   *  https://api.example/Orders/123 DENY: the path is case-sensitive,
+      so Orders is not orders.
+
+   *  https://api.example/orders%2F123 (equivalently %2f) DENY: the hex
+      digits normalize to %2F, which stays encoded and is not a path-
+      segment separator, so this is the single segment orders%2F123, not
+      an extension of /orders.
+
+   *  https://api.example/ordersX DENY: the match extends only at a
+      path-segment boundary, not within a segment.
+
+   *  https://api.example/orders/%2e%2e/admin DENY: normalization
+      decodes %2e%2e to .. and removes the dot-segment, yielding
+      https://api.example/admin, outside the prefix.
+
+   A deployment MAY agree out of band on the canonicalization profile
+   its AS and Resource Servers apply; this document defines one rule
+   (Section 5.1), so no profile identifier is required for
+   interoperation.
+
+16.8.  Denial Detail Disclosure
 
    The mission_denial attribute (Section 8.2) tells a caller which path
    a denial leads into, and thereby reveals authorization shape:
@@ -3442,7 +3555,7 @@ Table of Contents
    when in doubt, insufficient_authority is the value that reveals
    least, and omission reveals nothing.
 
-16.8.  Token Theft
+16.9.  Token Theft
 
    Derived tokens are sender-constrained (DPoP [RFC9449] or mTLS
    [RFC8705]) at the levels set in Section 8 and Section 11: SHOULD for
@@ -3452,7 +3565,7 @@ Table of Contents
    is bounded by the Authority Set and the Mission lifetime regardless,
    but sender-constraint prevents replay by a different party.
 
-16.9.  Delegation and Chain Compromise
+16.10.  Delegation and Chain Compromise
 
    Delegation (Section 11) widens the set of parties holding Mission-
    derived authority.  Because authority only narrows down the chain, a
@@ -3488,7 +3601,7 @@ Table of Contents
    stolen from an audience then fails presentation at the token
    endpoint.
 
-16.10.  client_id Conformance and the Approved-Agent Residual
+16.11.  client_id Conformance and the Approved-Agent Residual
 
    Because this profile keeps client_id's ordinary [RFC9068] meaning
    (Section 11.1), a generic [RFC9068] Resource Server, or a logging,
@@ -3510,7 +3623,7 @@ Table of Contents
    authorizes or logs solely from client_id for this gap before exposing
    it to delegated Mission-bound tokens.
 
-16.11.  Signing and Key Rotation
+16.12.  Signing and Key Rotation
 
    The mission claim and authorization_details are carried inside the
    [RFC9068] JWT and are covered by the AS's token signature; their
@@ -3541,7 +3654,7 @@ Table of Contents
    Recovery from a signing-key compromise is deployment-owned and
    belongs in the deployment's documented procedures.
 
-16.12.  Compromised or Over-Broad Derivation
+16.13.  Compromised or Over-Broad Derivation
 
    The AS is trusted to derive authority no broader than the Mission
    Intent.  Both derivation modes (Section 5) are mechanical, a proposal
@@ -3550,7 +3663,7 @@ Table of Contents
    derivation ran under so the derivation can be audited.  General OAuth
    security guidance [RFC9700] applies.
 
-16.13.  Authority Hash Is Not a Mission Identifier
+16.14.  Authority Hash Is Not a Mission Identifier
 
    authority_hash commits the approved Authority Set, not the Mission.
    Two distinct Missions that approve byte-identical authority carry the
@@ -3565,7 +3678,7 @@ Table of Contents
    Mission uses the Mission Identifier, and intent_hash and approver
    distinguish Missions that share an Authority Set.
 
-16.14.  Composition and the Effective Ceiling
+16.15.  Composition and the Effective Ceiling
 
    Delegation depth (Section 11.3) resets to 0 at each cross-domain hop
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]) and, where a
@@ -3589,7 +3702,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-metering]), not a property this
    document or its composition partners provide by themselves.
 
-16.15.  The Containment Materialized-Capability Residual
+16.16.  The Containment Materialized-Capability Residual
 
    Where a deployment runs the Mission Containment profile
    ([I-D.draft-mcguinness-oauth-mission-containment]), containment
