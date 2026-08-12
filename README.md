@@ -25,7 +25,7 @@ with the PEP/PDP boundary are its data plane.
 
 At a glance:
 
-- **35 drafts, deliberately decomposed.** One mandatory core (the
+- **36 drafts, deliberately decomposed.** One mandatory core (the
   OAuth 2.0 issuance profile, [on the
   datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)),
   three further bindings (one an experimental sketch) and normative
@@ -362,6 +362,7 @@ facts are the next subsection.
 5. **Advanced, when the use case arrives**: **approval** (asynchronous
    approvals), **expansion**, **child-delegation**,
    **cross-domain**, **management**, **mandate**, **audit**,
+   **capability-binding** (catalog and MCP tool drift detection),
    **shaping**, **signals** (push latency optimization over correctly
    sized status polling).
 6. **Experimental, adopt for evaluation only**:
@@ -409,8 +410,9 @@ optional hardening above the base conformance floor. For
 **authzen**, the decision binding tracks the AuthZEN working group:
 the core evaluation API, and normatively the Access Request and
 Approval Profile (ARAP) and the Obligations Profile, both
-working-group drafts; the Model Context Protocol tool-authorization
-(COAZ) integration remains informative and optional.
+working-group drafts. **capability-binding**'s Model Context Protocol
+tool-authorization (COAZ) integration remains informative and
+optional.
 
 Family-internal normative dependencies are Internet-Drafts by
 construction: the substrate contract anchors the **uma**,
@@ -845,6 +847,22 @@ classes, governed work runs with no unmediated path to the resource. The
 core principle: session continuity is not authority.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-harness.html)
+
+#### Mission Capability Binding
+
+Binds a Mission's approved catalog-sourced entry, an MCP tool, an
+OpenAPI operation, or an equivalent capability source, to the
+capability source it was derived from: `tool_id`, source, and a
+content digest recorded at derivation and verified at decision time.
+Defines the per-capability extraction rule that computes the digest,
+the `capability_drift` denial reason as a coordinated extension of
+the AuthZEN binding's runtime denial classification, and the mapping
+onto the OpenID AuthZEN Profile for Model Context Protocol Tool
+Authorization (COAZ) for MCP deployments. It rides the AuthZEN
+binding's request and consumes an already established action
+identity.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-capability-binding.html)
 
 #### Mission Orchestration and Unwinding
 

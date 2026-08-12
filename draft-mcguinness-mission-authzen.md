@@ -93,12 +93,13 @@ informative:
   RFC9470:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-oauth-ai-agent-instance:
-  COAZ:
-    target: https://openid.github.io/authzen/authzen-mcp-profile-1_0.html
-    title: "AuthZEN Profile for Model Context Protocol Tool Authorization - Draft 1"
+  I-D.draft-mcguinness-mission-capability-binding:
+    title: "Mission Capability Binding"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html
     author:
       -
-        org: OpenID Foundation
+        ins: K. McGuinness
+        name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
@@ -152,13 +153,12 @@ maps the contract's decision inputs onto the AuthZEN Authorization API
 request, shapes the permit and denial responses, maps decisions and
 refusals into the Decision Evidence, Execution Evidence, and Refusal
 Record of a binding-neutral evidence companion, binds every runtime
-failure condition to a wire-visible identifier, composes requestable
-denials with the AuthZEN Access Request and Approval Profile, and
-binds a Mission's approved authority to the capability source it was
-derived from, so a drifted capability definition is refused. It does
-not restate the enforcement semantics the runtime profile owns, and it
-does not restate the evidence formats the runtime evidence companion
-owns.
+failure condition to a wire-visible identifier, and composes
+requestable denials with the AuthZEN Access Request and Approval
+Profile. It does not restate the enforcement semantics the runtime
+profile owns, the evidence formats the runtime evidence companion
+owns, or the capability-source binding the capability-binding
+companion owns.
 
 --- middle
 
@@ -202,8 +202,10 @@ AuthZEN-binding deltas:
   ({{runtime-denial-classification}}, {{failure-condition-coverage}});
 - how requestable denials can compose with the AuthZEN Access Request
   and Approval Profile {{ARAP}};
-- the binding of a Mission's approved authority to concrete,
-  catalog-sourced capabilities ({{capability-source-binding}}).
+- how a deployment adopting Mission Capability Binding carries that
+  companion's capability-source context and consumes an already
+  established action identity here
+  ({{I-D.draft-mcguinness-mission-capability-binding}}).
 
 The AuthZEN wire representation of cumulative consumption metering,
 including the settlement exchange and duration-lease renewal, is
@@ -289,13 +291,6 @@ Materialized policy view, trusted compiler:
   ({{I-D.draft-mcguinness-mission-runtime}}). This binding carries
   only the wire member `policy_view_id`
   ({{mission-to-policy-materialization}}).
-
-Validating server:
-: The component that, at derivation, validates the Mission's authority
-  and records the derivation-time facts the PDP later checks (such as a
-  capability `source_digest`, {{capability-source-binding}}). In the
-  issuance profile this is the Mission Issuer; this profile uses the
-  term where the recording role is what matters.
 
 Decision Evidence, Execution Evidence, Refusal Record:
 : The records the PDP and PEP emit for a decision, an execution
@@ -808,13 +803,6 @@ store's freshness discipline
 evaluated predicates and their outcomes in Decision Evidence
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
-## Capability Source Context {#context-capability-source}
-
-For catalog-sourced actions, the PEP supplies the capability-source
-binding in `context.capability_source` using the object defined in
-{{capability-source-binding}}. For non-catalog actions, this member is
-absent.
-
 ## Worked PDP request
 
 The `policy_view_id` values in this document's examples
@@ -957,18 +945,10 @@ self-consistent:
    state, and returns `parameter_violation` if it cannot. A
    parameter-bound action MUST NOT be permitted without a verified
    `parameter_digest`.
-9. For a catalog-sourced action whose approved entry recorded a
-   capability source binding at derivation
-   ({{capability-source-binding}}), `context.capability_source` MUST be
-   present and match the approved binding: the presented `source_digest`,
-   computed over the capability's current extracted definition
-   ({{capability-extraction}}), MUST equal the recorded value, and, where
-   a `catalog_digest` was recorded, the presented `catalog_digest` MUST
-   equal it likewise; otherwise the PDP returns `capability_drift`.
-   Whether an action is catalog-sourced, and which digests were
-   recorded, are determined from the materialized policy view, not from
-   the PEP's request; where no source binding was recorded, this check
-   does not apply.
+9. A deployment adopting Mission Capability Binding applies that
+   companion's source checks and its `capability_drift` extension
+   reason ({{I-D.draft-mcguinness-mission-capability-binding}}); this
+   binding consumes an already established action identity.
 
 ## Clock skew {#clock-skew}
 
@@ -1553,13 +1533,6 @@ carried in Decision Evidence:
   ({{I-D.draft-mcguinness-mission-runtime}}); the metering semantics
   and settlement exchange are defined by the experimental metering
   companion ({{I-D.draft-mcguinness-mission-metering}}).
-- `capability_drift`: for a catalog-sourced action whose approved entry
-  recorded a capability source binding ({{capability-source-binding}}),
-  the digest of the action's current extracted capability definition
-  differs from the `source_digest` committed at derivation, a recorded
-  `catalog_digest` no longer matches the retrieved source, or the
-  presented `tool_id` is outside the approved set (see the note after
-  this list).
 - `unsupported_authorization_type`: the action targets an
   `authorization_details` type the PDP does not understand or cannot
   enforce, so it refuses rather than guess the type's semantics
@@ -1583,11 +1556,6 @@ Authentication step-up is not a denial reason under this profile; it
 is the step-up obligation on a permit ({{obligations}}). A
 Resource-policy refusal not expressible as a permit-plus-obligation is
 `resource_policy`.
-
-`capability_drift` applies only when a source binding was recorded and
-the digest comparison ran; an invoked identity outside the approved
-set for which no source binding was recorded is `out_of_authority`,
-not `capability_drift`.
 
 A terminal policy refusal SHOULD carry `next_action: none`; a denial
 the deployment exposes as requestable carries `next_action: request`
@@ -1780,7 +1748,6 @@ governed by each carrier's extensibility rule.
 | Idempotency key and parameters match a prior unresolved or completed decision | PDP denial | `duplicate_suppressed` |
 | Resource policy refuses the action | PDP denial | `resource_policy` |
 | Consumption bound exhausted | PDP denial | `quota_exceeded` |
-| Capability or catalog drift, or invoked identity outside the approved set when a source binding was recorded | PDP denial | `capability_drift` |
 | Unsupported `authorization_details` type | PDP denial | `unsupported_authorization_type` |
 | Unrecognized or unmetered constraint | PDP denial | `constraint_unsupported` |
 | Policy-required history predicate unsatisfied or not establishable | PDP denial | `history_not_satisfied` |
@@ -1890,176 +1857,6 @@ format is `jws-compact`, and the protected `typ` names the record's
 own registered media type
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
-# Capability Source Binding {#capability-source-binding}
-
-Consequential actions an agent discovers at runtime, through a Model
-Context Protocol tool catalog, an OpenAPI document, a Protected
-Resource Metadata-linked catalog, or an equivalent capability source,
-identify the source they came from, so a Mission's approved authority
-stays bound to concrete tools rather than to bare action names a later
-catalog revision could redefine. The runtime profile assigns capability
-identity to the approved `actions` and refuses an invoked identity
-outside them ({{I-D.draft-mcguinness-mission-runtime}}); this
-section gives the concrete binding an AuthZEN deployment presents for
-catalog-sourced actions.
-
-For MCP tools, this binding composes with the AuthZEN MCP profile's
-COAZ mapping {{COAZ}}. COAZ maps MCP tool definitions and invocation
-parameters into the AuthZEN Subject-Action-Resource-Context model; this
-profile adds Mission governance, source binding, Mission evidence, and
-runtime metering. A Mission-governed MCP deployment MAY use COAZ to
-construct the AuthZEN `subject`, `resource`, `action`, and
-parameter-bearing `context` members, but the Mission-specific
-`context.mission`, `context.actor`, freshness, permit binding, and
-evidence requirements in this document still apply.
-
-The minimum binding, committed by the validating server at derivation
-and presented by the executing component at request time in
-`context.capability_source`, is:
-
-~~~ json
-{
-  "tool_id": "mcp://docs.example.com/tools/write_document",
-  "source_uri": "https://docs.example.com/.well-known/mcp",
-  "source_digest":
-    "sha-256:OAbEIh2DTYUVP7DjRhHct4aapsT8PybZq2ILdut9UP0",
-  "operation_ref": "tools/write_document"
-}
-~~~
-
-`tool_id`:
-: A string. A stable capability identifier the executing
-  component asserts the action invokes.
-
-`source_uri`:
-: A string. The discovery source the capability was
-  resolved from.
-
-`source_digest`:
-: A string. The integrity-anchor encoded form
-  ({{I-D.draft-mcguinness-oauth-mission}}) over the capability's
-  extracted definition ({{capability-extraction}}), recorded at
-  derivation time. At request time it is computed over the current
-  extracted definition, so the PDP's comparison detects a mutated
-  definition.
-
-`operation_ref`:
-: A string. The source-format-specific operation
-  reference (MCP tool name, OpenAPI `operationId`, or equivalent).
-
-`catalog_digest`:
-: OPTIONAL. A string. The integrity-anchor encoded form over the exact
-  retrieved source representation, recorded at derivation time. Its
-  semantics are strictly stricter than `source_digest`: when recorded,
-  any change to the retrieved source refuses, whether or not it touches
-  the capability. A deployment records it where the whole catalog is
-  the trust unit.
-
-`executor`:
-: OPTIONAL. A string. An identifier for the executing component that
-  serves the capability at request time (for example, an MCP server
-  instance), asserted by the PEP that authenticates it. It is a
-  request-time fact, not part of the derived authority recorded at
-  derivation, and is recorded in Decision Evidence when present; it
-  is never an input to the `source_digest` or `catalog_digest`
-  comparison.
-  Where the executing component authenticates under an
-  attested-instance profile
-  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
-  {{I-D.draft-mcguinness-oauth-ai-agent-instance}}), the deployment
-  SHOULD carry the attested instance identifier here rather than a
-  self-chosen label.
-
-Rules:
-
-- The validating server records `tool_id`, `source_uri`,
-  `source_digest`, `operation_ref`, and any `catalog_digest` for every
-  consequential action sourced from a discovered catalog. These values
-  are part of the approved Mission's derived authority and are
-  therefore covered by `authority_hash`
-  ({{I-D.draft-mcguinness-oauth-mission}}).
-- The PEP presents `tool_id` on consequential requests for
-  catalog-sourced actions. The runtime profile owns the drift
-  semantics ({{I-D.draft-mcguinness-mission-runtime}}); the PDP
-  applies them through the PDP-side consistency checks
-  ({{pdp-request}}), over the per-capability comparison scope of
-  {{capability-extraction}}. This binding adds only the wire
-  representation: such a refusal is carried as `capability_drift`,
-  with its boundary against `out_of_authority` drawn where the
-  identifiers are defined ({{runtime-denial-classification}}). It
-  defines no drift rule of its own.
-- Resource policy MAY refuse a catalog-sourced action whose
-  `source_uri` or `executor` is outside the deployment's trusted set.
-  Such a refusal is a Resource-policy condition, carried as
-  `resource_policy` ({{runtime-denial-classification}}), not a drift
-  refusal.
-- Actions not sourced from a discovered catalog (deployment-registered
-  `authorization_details` types, first-party operations with stable
-  identity) do not require this binding.
-
-## Per-Capability Extraction {#capability-extraction}
-
-`source_digest` is computed over the extracted per-capability
-definition, not the whole retrieved source, so a revision elsewhere in
-a shared catalog does not invalidate a Mission's approved capabilities,
-while any mutation of an approved capability's own definition still
-refuses. The extraction rule is fixed per source format:
-
-- For an MCP tool catalog, the extracted definition is the single
-  tool's definition object as retrieved (the member of the catalog's
-  tool list whose name is the capability's), JCS-canonicalized
-  {{RFC8785}}.
-- For an OpenAPI document, the extracted definition is an object with
-  two members: `operation`, the operation object `operation_ref`
-  identifies, and `components`, an object carrying, under their
-  component names, the components of the document the operation
-  references by name, directly or transitively. The assembled object
-  is JCS-canonicalized.
-- For another source format, the binding profile in use defines the
-  extraction rule. A capability whose format has no defined extraction
-  rule cannot carry a `source_digest`; the whole-source
-  `catalog_digest` remains available for it.
-
-For the MCP tool of the minimum binding above, the extracted
-definition is the tool's definition object:
-
-~~~ json
-{
-  "name": "write_document",
-  "description": "Create or update a document",
-  "inputSchema": {
-    "type": "object",
-    "properties": {
-      "path": { "type": "string" },
-      "content": { "type": "string" }
-    },
-    "required": ["path", "content"]
-  }
-}
-~~~
-
-The JCS canonical bytes are a single line with sorted member names and
-no whitespace, shown here wrapped for layout only; remove the layout
-line breaks, adding no characters, to recover the canonical form:
-
-~~~ text
-{"description":"Create or update a document","inputSchema":{"propert
-ies":{"content":{"type":"string"},"path":{"type":"string"}},"require
-d":["path","content"],"type":"object"},"name":"write_document"}
-~~~
-
-~~~ text
-source_digest = sha-256:OAbEIh2DTYUVP7DjRhHct4aapsT8PybZq2ILdut9UP0
-~~~
-
-Adding, removing, or renaming another tool in the same catalog leaves
-this value unchanged; any byte change to this definition changes it.
-
-Cross-format canonicalization, signed capability manifests, and
-media-type negotiation across catalog formats are out of scope
-({{I-D.draft-mcguinness-mission-runtime}}); this binding requires
-only the stable identifier plus source evidence above.
-
 # Mission Status Composition {#mission-status-composition}
 
 The PDP relies on Mission state to decide. The runtime profile defines
@@ -2103,9 +1900,10 @@ A PEP conforming to this binding MUST:
 - carry the Mission and actor decision inputs from validated token
   claims only, matching the approved entry's `resource` against
   `resource.properties.audience` ({{pdp-request}});
-- supply `action.properties.parameter_digest` and
-  `context.capability_source` where required ({{parameter-digest}},
-  {{capability-source-binding}});
+- supply `action.properties.parameter_digest` where required
+  ({{parameter-digest}}), and, where the deployment adopts Mission
+  Capability Binding, `context.capability_source` as that companion
+  requires ({{I-D.draft-mcguinness-mission-capability-binding}});
 - support both the `step-up` and `mission-execution` obligation types
   unconditionally, whatever it declares in `supported_obligations`
   ({{obligations}});
@@ -2161,7 +1959,9 @@ consumption honesty, Resource policy authority, TOCTOU and replay, and
 the limits of a compromised PEP or PDP. This section addresses only
 threats specific to the AuthZEN binding; threats specific to the
 evidence records are the runtime evidence companion's
-({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+({{I-D.draft-mcguinness-mission-runtime-evidence}}), and threats
+specific to capability-source binding are the capability-binding
+companion's ({{I-D.draft-mcguinness-mission-capability-binding}}).
 
 ## Unbound-evaluation downgrade
 
@@ -2256,10 +2056,14 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 - Comments: none
 
 The `context.mission`, `context.mission_state_observation`,
-`context.actor`, `context.credential`, `context.taint`,
-`context.approval`, and `context.capability_source` members carried
-inside the AuthZEN request `context` object ({{pdp-request}}) are
-AuthZEN extension data and are not registered in an IETF registry.
+`context.actor`, `context.credential`, `context.taint`, and
+`context.approval` members carried inside the AuthZEN request
+`context` object ({{pdp-request}}) are AuthZEN extension data and are
+not registered in an IETF registry. The `context.capability_source`
+member a deployment adopting Mission Capability Binding adds to that
+object is likewise AuthZEN extension data, registered by that
+companion, not by this document
+({{I-D.draft-mcguinness-mission-capability-binding}}).
 The `action.properties.parameters`,
 `action.properties.parameter_digest`,
 `action.properties.idempotency_key`,

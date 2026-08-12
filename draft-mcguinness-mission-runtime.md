@@ -101,6 +101,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-capability-binding:
+    title: "Mission Capability Binding"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime-evidence:
     title: "Mission Runtime Evidence"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
@@ -1264,7 +1272,8 @@ validating server recorded a digest of the capability's extracted
 definition at derivation, the PDP MUST refuse the action when the
 digest of the capability's current extracted definition differs from
 the recorded digest (capability drift). The extraction rule per
-source format is the decision-API binding's ({{authzen}}).
+source format is the capability-binding companion's
+({{I-D.draft-mcguinness-mission-capability-binding}}).
 
 A source change that leaves the extracted definition byte-identical
 does not by itself refuse. Where the deployment also recorded a
@@ -1680,8 +1689,8 @@ object enters the `parameter_digest`; and the single-use,
 idempotency, and lease requirements follow from the operation's
 class. A derived profile is recorded with the capability's source
 digest where the capability-source binding applies
-({{I-D.draft-mcguinness-mission-authzen}}), so the binding drifts
-with the schema that defined it.
+({{I-D.draft-mcguinness-mission-capability-binding}}), so the binding
+drifts with the schema that defined it.
 
 ## Parameter Digest {#parameter-digest}
 
@@ -2428,10 +2437,12 @@ Two of this profile's mechanisms are deterministic checks of that kind.
 Parameter binding ({{parameter-binding}}) ties a permit to the concrete
 parameters the action executes with, so an application cannot alter a
 tool call's arguments after the decision. Capability-source binding, in
-the AuthZEN binding ({{authzen}}), ties an approved action to the digest
-of the capability definition it was derived from, so a swapped or
-poisoned tool definition fails the decision. Both refuse the action;
-neither inspects the agent's reasoning.
+the capability-binding companion
+({{I-D.draft-mcguinness-mission-capability-binding}}), ties an
+approved action to the digest of the capability definition it was
+derived from, so a swapped or poisoned tool definition fails the
+decision. Both refuse the action; neither inspects the agent's
+reasoning.
 
 Two adjacent checks are out of scope ({{deferred}}). This profile
 evaluates the request path: it does not verify the integrity of the
