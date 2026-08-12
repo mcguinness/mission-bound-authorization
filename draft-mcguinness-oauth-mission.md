@@ -660,11 +660,15 @@ This document maps principals onto native OAuth constructs:
 
 On a derived token the `sub` claim is the Subject's `sub` and the
 token `iss` is the AS; within the issuing AS's namespace this
-(`iss`, `sub`) pair is authoritative for the Subject, and Resource
-Servers authorize against it. The Subject's home issuer is recorded
-on the Mission as `subject.iss` for audit and is not carried on the
-token; this document defines no runtime lookup of it (there is no
-by-Mission status endpoint). Across trust domains, the companion's
+(`iss`, `sub`) pair is the AS-local subject principal, authoritative
+for the Subject, and Resource Servers authorize against it. The
+Mission separately records the Subject's home issuer and identifier
+as `subject.iss` and `subject.sub`: this pair is the external subject
+identity, carried as provenance for audit and not on the token, and
+this document defines no runtime lookup of it (there is no by-Mission
+status endpoint). The record's (`subject.iss`, `subject.sub`) and the
+token's (AS `iss`, `sub`) identify the same Subject in two issuer
+namespaces. Across trust domains, the companion's
 cross-domain grant conveys Subject identity to the Resource AS through
 its own subject-resolution claims
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), not through a
@@ -676,7 +680,11 @@ and a local token minted in another domain preserves the `mission`
 claim unchanged ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
 Principals are recorded at the approval event and are immutable. Two
-principals are equal when their `iss` and `sub` are byte-equal.
+principals are equal when their `iss` and `sub` are byte-equal, a
+test that therefore compares principals only within one issuer
+namespace; the external subject identity and the AS-local subject
+principal are two representations of one Subject and are never
+compared to each other under this rule.
 Dynamic delegation (the actors an agent delegates to during
 execution) is carried on derived tokens via the `act` chain
 ({{delegation}}), not on the immutable Mission record. Richer subject
@@ -1227,8 +1235,10 @@ successor per the companion
 
 Resource containment under a `prefix` reference is compared after
 RFC 3986 {{RFC3986}} syntax-based normalization of both URIs: lowercase
-the scheme and host, remove a default port, decode percent-encoded
-octets of unreserved characters, and remove dot-segments. This
+the scheme and host, remove a default port, uppercase the hexadecimal
+digits of any percent-encoding ({{RFC3986}} Section 2.1, so `%2f` and
+`%2F` are equivalent), decode percent-encoded octets of unreserved
+characters, and remove dot-segments. This
 normalization applies to comparison only, never to hashing: anchor
 computation ({{integrity-anchors}}, {{canonicalization}}) remains
 byte-exact over the recorded values and is untouched by this rule.
@@ -2356,8 +2366,9 @@ required. A Resource Server:
   {{RFC3986}} syntax-based normalization the AS uses for containment
   ({{subset}}), and MUST apply it before the prefix comparison rather
   than after. That normalization decodes only unreserved octets, so
-  reserved octets stay encoded: an encoded slash (`%2F`) remains
-  `%2F` and MUST NOT be treated as a path-segment separator when
+  reserved octets stay encoded: an encoded slash (`%2F`, equivalently
+  `%2f` since percent-encoding is hex-case-insensitive) remains
+  encoded and MUST NOT be treated as a path-segment separator when
   matching. An intermediary that percent-decodes `%2F`, or a
   downstream component that decodes and removes dot-segments after
   the Resource Server's check (for example collapsing a decoded
@@ -3562,6 +3573,28 @@ such a difference:
   unreserved octets and runs before comparison; decoding reserved
   octets, or decoding after the comparison, changes which characters
   count as separators and can move the boundary.
+
+These vectors make the rule concrete. For a `prefix` entry whose
+`resource` is `https://api.example/orders`, a concrete request URI
+matches as follows:
+
+- `https://api.example/orders` and `https://api.example/orders/123`
+  ALLOW: the base itself, and an extension at a path-segment boundary.
+- `https://API.EXAMPLE/orders/123` ALLOW: the scheme and host are
+  case-folded, so the host matches.
+- `https://api.example:443/orders/123` ALLOW: the default port is
+  removed, so the authority matches.
+- `https://api.example/Orders/123` DENY: the path is case-sensitive,
+  so `Orders` is not `orders`.
+- `https://api.example/orders%2F123` (equivalently `%2f`) DENY: the
+  hex digits normalize to `%2F`, which stays encoded and is not a
+  path-segment separator, so this is the single segment
+  `orders%2F123`, not an extension of `/orders`.
+- `https://api.example/ordersX` DENY: the match extends only at a
+  path-segment boundary, not within a segment.
+- `https://api.example/orders/%2e%2e/admin` DENY: normalization
+  decodes `%2e%2e` to `..` and removes the dot-segment, yielding
+  `https://api.example/admin`, outside the prefix.
 
 A deployment MAY agree out of band on the canonicalization profile its
 AS and Resource Servers apply; this document defines one rule
