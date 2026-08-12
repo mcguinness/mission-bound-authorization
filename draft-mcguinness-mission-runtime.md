@@ -1466,10 +1466,13 @@ A Mission-aware decision needs the Mission's current state, which a
 token alone does not convey. A runtime deployment MUST define the
 Mission state source it trusts for each enforcement scope. Examples
 include issuer AS token introspection, a local Mission database, an
-authenticated status or event feed from the Mission `issuer`, a
-materialized policy view, or a short-lived cross-domain credential
+authenticated status or event feed from the Mission `issuer`, or a
+short-lived cross-domain credential
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) whose lifetime
-is the deployment's accepted state lease.
+is the deployment's accepted state lease. The materialized policy
+view ({{policy-view}}) is not a state source: it commits the
+compiled authority, never the mutable lifecycle state a decision
+consults.
 
 The substrate this profile enforces against provides at least a
 lifecycle-gated capability (Mission state at the issuer, with reliance
@@ -1487,11 +1490,15 @@ class whose bound demands that.
 - The PDP MUST refuse a consequential action when it cannot establish,
   within the deployment's published staleness bound, that the Mission
   is `active`.
-- A state source MUST either report the Mission state with a freshness
-  time, or define a lease interval over which a previously established
-  `active` state remains acceptable for the relevant action class.
-  A permit issued from that state view MUST expire no later than the
-  applicable freshness time or lease interval.
+- A state source MUST either report the Mission state with an
+  explicit expiry or lease end, or report only an observation time, in
+  which case the state remains acceptable only until that observation
+  time plus the deployment's published staleness bound for the
+  relevant action class. A permit issued from that state view MUST
+  expire no later than this state valid-through: the reported expiry
+  or lease end, or, absent one, the observation time plus the
+  published staleness bound. The observation time alone, without
+  adding the staleness bound, is never a permit's expiry.
 - When the credential issuer also holds the Mission, the PDP can learn
   state through token introspection ({{RFC7662}}) at the issuer per
   {{I-D.draft-mcguinness-oauth-mission}}. A non-issuer Resource AS
@@ -1605,10 +1612,9 @@ wire ({{authzen}}).
 
 The materialized policy view MUST satisfy three properties:
 
-- Reproducible: the same inputs (the Mission's approved Authority Set
-  as committed by `authority_hash`, and the derivation `policy_version`
-  recorded at the approval event) produce byte-identical materialized
-  output under the canonicalization rules of
+- Reproducible: identical manifest inputs, including the compiler
+  identity, produce a byte-identical manifest, and therefore an
+  identical `policy_view_id`, under the canonicalization rules of
   {{I-D.draft-mcguinness-oauth-mission}}.
 - Identifiable: the view carries a `policy_view_id`, so PDP cache
   entries are addressable.
@@ -1616,7 +1622,10 @@ The materialized policy view MUST satisfy three properties:
   Authority Set's semantic bounds. A materialized view is an
   evaluation aid, never new authority.
 
-`policy_view_id` is the integrity-anchor encoded form
+The committed object is a canonical JSON manifest, never the engine
+binary itself: JCS canonicalization applies to the manifest, and an
+engine-native artifact enters the manifest only by digest, never
+directly. `policy_view_id` is the integrity-anchor encoded form
 ({{I-D.draft-mcguinness-oauth-mission}}) of the SHA-256 {{RFC6234}} of
 the JCS {{RFC8785}} canonical bytes of that profile's domain-separated,
 issuer-bound integrity-anchor envelope with `typ` `mission-policy-view`:
@@ -1625,31 +1634,48 @@ issuer-bound integrity-anchor envelope with `typ` `mission-policy-view`:
 SHA-256(JCS({
   "typ":   "mission-policy-view",
   "iss":   <mission.issuer>,
-  "value": <materialized view payload>
+  "value": <materialized view manifest>
 }))
 ~~~
 
-The committed materialized view payload MUST carry the Mission's
-`mission_id` and `authority_hash` as members. It MUST NOT embed
-Mission lifecycle state: three independent values govern reliance,
-and conflating them is the common implementation error.
-`policy_view_id` is the content identity of the compiled authority
-and the cache key. A `mission_state_version`, where the deployment
-serves one ({{I-D.draft-mcguinness-oauth-mission-status}}), versions
-the mutable lifecycle state the decision consulted. The state
+The committed manifest MUST carry:
+
+- `mission_id` and `authority_hash`: the Mission's identifier and
+  Authority Set integrity anchor.
+- `policy_version`: the derivation `policy_version` recorded at the
+  approval event.
+- `compiler`: an object naming the trusted compiler that produced the
+  manifest, with `profile` (the compiler's identity) and `version`
+  (its version), so a change in compiler identity or version is
+  itself a reproducibility input rather than an unaccounted
+  difference.
+- Either `policy_ir`, the normalized policy intermediate
+  representation as JSON, or `artifact`, an object carrying `digest`
+  (the integrity-anchor encoded digest of the engine-native artifact)
+  and `encoding` (naming the artifact's format), for a deployment
+  that compiles to an engine-native form this document does not
+  standardize.
+
+The manifest MUST NOT embed Mission lifecycle state: three independent
+values govern reliance, and conflating them is the common
+implementation error. `policy_view_id` is the content identity of the
+compiled authority and the cache key. A `mission_state_version`, where
+the deployment serves one ({{I-D.draft-mcguinness-oauth-mission-status}}),
+versions the mutable lifecycle state the decision consulted. The state
 observation's freshness or lease bounds how long that consultation
-stands ({{state-freshness}}). A state transition invalidates
-reliance through the version and freshness values without
-re-identifying the compiled authority; the view acquires a new
-`policy_view_id` only when the authority it compiles changes. A
-consistency check between a decision request's Mission reference and
-the loaded view is therefore an equality test: the request's Mission
-`id` and `authority_hash` either equal the committed values or the
-view does not apply. Because `policy_view_id` is a content hash, any
-change to the view yields a new `policy_view_id`, so equality on
-`policy_view_id` is the cache identity; it is never the freshness
-test. This document defines no second canonicalization and no
-policy-language wire form for the view.
+stands ({{state-freshness}}). A state transition invalidates reliance
+through the version and freshness values without re-identifying the
+compiled authority; the manifest acquires a new `policy_view_id` only
+when the authority it compiles, or the compiler that compiled it,
+changes. A consistency check between a decision request's Mission
+reference and the loaded view is therefore an equality test: the
+request's Mission `id` and `authority_hash` either equal the committed
+values or the view does not apply. Because `policy_view_id` is a
+content hash, any change to the manifest yields a new `policy_view_id`,
+so equality on `policy_view_id` is the cache identity; it is never the
+freshness test. This document defines no second canonicalization and
+no policy-language wire form for `policy_ir` or the engine-native
+artifact.
 
 ## Semantic Evaluators {#semantic-evaluators}
 
@@ -1772,9 +1798,10 @@ Beyond the `parameter_digest`, the permit MUST also bind:
   requirement ({{state-freshness}}).
 
 A permit is bound to the full set of authorization-relevant inputs it
-was issued for, and a decision-API binding realizes this as one
-normalized fingerprint over those inputs, never as an enumerated
-subset of fields ({{I-D.draft-mcguinness-mission-authzen}}).
+was issued for: the authorization binding, which a decision-API
+binding realizes as one normalized projection over those inputs,
+never as an enumerated subset of fields
+({{I-D.draft-mcguinness-mission-authzen}}).
 
 The permit lifetime control is set by action class:
 
@@ -1804,39 +1831,86 @@ Where a single-use decision identifier is used:
 A single-use identifier bounds executions of one permit, not permits
 for one action. Enforcement is an atomic state machine over the
 (idempotency scope, `idempotency_key`) pair, not a comparison against
-retained parameters.
+retained parameters, with three separated responsibilities: the PDP
+prevents concurrent double-permits before an operation completes, the
+PEP prevents a consumed permit from executing twice, and the resource
+owns the lifecycle and prior result of a completed operation.
 
 - For every non-idempotent operation in the irreversible-action,
   external-commitment, and privileged-administration classes, the
   Operation Profile MUST therefore also define an idempotency key.
 - Before issuing a permit for a keyed action, the PDP MUST atomically
   claim the pair (idempotency scope, `idempotency_key`) together with
-  the request's authorization-relevant fingerprint
+  the request's operation identity, a canonical projection a
+  decision-API binding defines
   ({{I-D.draft-mcguinness-mission-authzen}}). The claim is a single
   linearizable operation: of two concurrent requests presenting the
   same scope and key, exactly one obtains the claim, and the other
   observes it.
-- Same key, same fingerprint: the PDP returns the prior evaluation or
-  its status, the retransmission-versus-repeat rule below, now
-  anchored on the claim rather than on comparing retained request
-  fields.
-- Same key, a different fingerprint: the PDP MUST refuse with a new,
-  terminal failure condition distinct from the transient duplicate
-  case above, a decision-API binding's `idempotency_conflict`
-  classification ({{I-D.draft-mcguinness-mission-authzen}}). An
-  idempotency key identifies one intended execution of one normalized
-  request; reuse of the key with different content is a conflict,
-  never a new execution, the same discipline HTTP's own
-  Idempotency-Key handling applies, restated here in the family's own
-  terms. An intentional re-execution of the same normalized action is
-  instead a new operation under a new idempotency key, never a retry
-  under the consumed one, and an action-bound approval
-  ({{action-approval}}) authorizes that new operation as such, never
-  re-execution under the consumed key.
-- The idempotency scope is, at minimum, the Mission, the subject or
-  actor, the audience, the action, and the resource; a deployment MAY
-  narrow it further and MUST publish the scope in its Enforcement
-  Scope Statement.
+
+**Evaluation retransmission (PDP)**:
+: For a re-presentation whose cache key is equal to the prior
+  decision's and whose claim matches (same idempotency scope and key,
+  same operation identity), while the prior permit is unexpired and
+  its `evaluation_id` unconsumed, the PDP SHOULD return the prior
+  decision, so a permit response lost in transit does not lock the
+  action out for the reconciliation window. This is the only same-key
+  path that returns a permit: the PDP claim's purpose is narrowed to
+  preventing concurrent double-permits before completion, never to
+  replaying a completed result.
+
+**Permit replay prevention (PEP)**:
+: Unchanged: the single-use rule of {{single-use-identifiers}} is
+  itself atomic. Before releasing the effect of a
+  `use_limit`-bearing permit, the enforcement scope MUST atomically
+  consume, or atomically reserve and then confirm, the
+  `evaluation_id` in a store that is linearizable across every PEP
+  replica of the scope. Two replicas MUST NOT both succeed in
+  consuming the same identifier; a replica that instead observes an
+  already-consumed identifier treats the presentation as consumed,
+  not as a fresh single use, a decision-API binding's
+  `permit_consumed` classification
+  ({{I-D.draft-mcguinness-mission-authzen}}).
+
+**Operation idempotency (Resource Server / Operation Profile)**:
+: The resource, not the PDP, owns the key's lifecycle and the prior
+  result once an operation completes: for a COMPLETED duplicate the
+  resource returns the prior operation result under the Operation
+  Profile's rules. A fresh authorization denial is not the vehicle
+  for result replay; the claim states below govern only whether a
+  new permit issues, never what the resource returns for a completed
+  key.
+
+The claim resolves per state, keyed on whether the presented
+(idempotency scope, `idempotency_key`) pair matches an existing claim
+and whether the request's operation identity equals the one the claim
+was made under:
+
+| Claim state | Same key + same operation identity | Same key + different operation identity |
+|---|---|---|
+| claimed / permit-issued (unconsumed, unexpired) | return the prior decision (retransmission) | `idempotency_conflict`, terminal |
+| reserved / outcome unresolved | `duplicate_suppressed`, transient (`next_action: retry`, `retry_after` within the reconciliation window) | `idempotency_conflict`, terminal |
+| completed (within window or tombstoned horizon) | `duplicate_suppressed`, terminal (`next_action: none`); the prior result is available from the resource under the Operation Profile | `idempotency_conflict`, terminal |
+| failed | deployment policy: retry as a NEW operation requires a new key | `idempotency_conflict`, terminal |
+| expired past the declared horizon | outside the guarantee; treated as new | outside the guarantee |
+{: title="Idempotency claim state resolution"}
+
+A different operation identity under the same key is always a
+conflict, never a new execution: an idempotency key identifies one
+intended execution of one normalized request, the same discipline
+HTTP's own Idempotency-Key handling applies, restated here in the
+family's own terms. A consumed key never yields a second execution:
+retransmission returns the prior decision, and a completed operation's
+result is replayed by the resource, not re-executed. An intentional
+re-execution of the same normalized action is a new operation under a
+new idempotency key, never a retry under the consumed one, and an
+action-bound approval ({{action-approval}}) authorizes that new
+operation as such, never re-execution under the consumed key.
+
+- The idempotency scope is, at minimum, the Mission, the subject and
+  the actor, the audience, the action, and the resource; a deployment
+  MAY narrow it further and MUST publish the scope in its Enforcement
+  Scope Statement. Volatile members MUST NOT be added to the scope.
 - For the high-consequence classes the deployment MUST retain a
   durable consumed-key record (a tombstone) for at least its declared
   idempotency horizon, published in the Enforcement Scope Statement.
@@ -1845,24 +1919,6 @@ retained parameters.
   fresh claim. Outside those classes a deployment MAY scope the
   guarantee to the reconciliation window ({{evidence}}), and it MUST
   publish which posture applies.
-- The single-use rule of {{single-use-identifiers}} is itself atomic:
-  before releasing the effect of a `use_limit`-bearing permit, the
-  enforcement scope MUST atomically consume, or atomically reserve
-  and then confirm, the `evaluation_id` in a store that is
-  linearizable across every PEP replica of the scope. Two replicas
-  MUST NOT both succeed in consuming the same identifier; a replica
-  that instead observes an already-consumed identifier treats the
-  presentation as consumed, not as a fresh single use, a
-  decision-API binding's `permit_consumed` classification
-  ({{I-D.draft-mcguinness-mission-authzen}}).
-- A retransmission is distinguishable from a repeat: when the claim
-  matches a prior decision whose permit is unexpired and whose
-  single-use identifier is unconsumed, the PDP SHOULD return that
-  prior decision (same decision identifier, same permit) rather than
-  refuse, so a permit response lost in transit does not lock the
-  action out for the reconciliation window. Once the identifier is
-  consumed or the permit expired, the refusal above stands until the
-  outcome is reconciled.
 
 ## Execution Reverification {#execution-reverification}
 
@@ -2739,14 +2795,12 @@ different digest and the permit is refused.
 # Policy View Worked Example {#policy-view-example}
 
 This non-normative example shows the `policy_view_id` computation of
-{{policy-view}} over a minimal materialized-view envelope for the same
-Mission. The payload here is reduced to the two members every
-committed view binds, `mission_id` and `authority_hash`; a deployment
+{{policy-view}} over a materialized-view manifest for the same
+Mission. This deployment compiles to an engine-native artifact, so
+the manifest carries `artifact` rather than `policy_ir`; a deployment
 that serves a state version records it in Decision Evidence and
 consumes it through freshness processing instead, never embedding it
-in this payload ({{policy-view}}), and a deployment's payload also
-carries its evaluable materialized form, which this document does not
-standardize.
+in this manifest ({{policy-view}}).
 
 ~~~ json
 {
@@ -2755,7 +2809,17 @@ standardize.
   "value": {
     "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "policy_version": "deploy-policy:v17",
+    "compiler": {
+      "profile": "https://as.example.com/policy-compiler",
+      "version": "1.4.0"
+    },
+    "artifact": {
+      "digest":
+        "sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7tX",
+      "encoding": "application/vnd.example.policy-engine+bin"
+    }
   }
 }
 ~~~
@@ -2766,15 +2830,19 @@ line breaks, adding no characters, to recover the canonical form:
 
 ~~~ text
 {"iss":"https://as.example.com","typ":"mission-policy-view","value":
-{"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5
-pNQ","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"}}
+{"artifact":{"digest":"sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ
+4mZ7tX","encoding":"application/vnd.example.policy-engine+bin"},"aut
+hority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ","
+compiler":{"profile":"https://as.example.com/policy-compiler","versi
+on":"1.4.0"},"mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","po
+licy_version":"deploy-policy:v17"}}
 ~~~
 
 ~~~ text
-policy_view_id = sha-256:fuMqn6Nb5LfyziflJuYj8VgHHH1bskZ0SrMDxdQ8CaA
+policy_view_id = sha-256:kFxuopgt9C4G7S4BhP7ayGhP49wG55HBnq0BzH09UZ8
 ~~~
 
-Because the identifier is a content hash, any change to the payload
+Because the identifier is a content hash, any change to the manifest
 yields a different `policy_view_id` ({{policy-view}}).
 
 # Runtime Evidence Worked Examples {#evidence-examples}
