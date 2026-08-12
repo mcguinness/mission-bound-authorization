@@ -88,8 +88,9 @@ Table of Contents
      6.5.  Protocol Flow
      6.6.  Grant Type
      6.7.  Request Processing
-     6.8.  Worked Example
-     6.9.  Child Creation Denial Reasons
+     6.8.  Creation Idempotency
+     6.9.  Worked Example
+     6.10. Child Creation Denial Reasons
    7.  The Parent Mission Reference
      7.1.  Mission Record Requirements
    8.  Attenuation Rules
@@ -404,6 +405,14 @@ Table of Contents
       same resolved Mission and refuse a mismatch with invalid_grant.
       parent does not by itself authorize child creation.
 
+   creation_request_id:  REQUIRED.  The creation idempotency identifier
+      the expansion profile defines for the family's Mission-creating
+      token exchanges ([I-D.draft-mcguinness-oauth-mission-expansion]):
+      an ASCII string of at most 255 octets identifying this one child-
+      creation operation across every completion mode (Section 6.8).
+      The Mission Issuer MUST refuse an exchange missing it with
+      invalid_request.
+
    The parent redeems this token exchange at the token endpoint under
    the child-creation grant type (Section 6.6).  The presence of
    child_actor marks the exchange as a child creation; an exchange
@@ -585,15 +594,18 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
    The exchange follows [RFC8693], carrying subject_token,
-   subject_token_type, child_actor, mission_intent, and the optional
-   parent cross-check of Section 6.  The parent proves possession of the
-   Parent Mission by controlling the subject_token's confirmation key
-   (Section 6.7); the Mission Issuer resolves and authorizes the parent
-   from that possession, not from client registration alone.  This is
-   the single gated child-creation decision this profile permits per
-   exchange: where the possession proof is a DPoP proof, its jti is
-   single-use per [RFC9449], so a captured exchange cannot be replayed
-   to derive a second Child Mission.
+   subject_token_type, child_actor, mission_intent, creation_request_id,
+   and the optional parent cross-check of Section 6.  The parent proves
+   possession of the Parent Mission by controlling the subject_token's
+   confirmation key (Section 6.7); the Mission Issuer resolves and
+   authorizes the parent from that possession, not from client
+   registration alone.  This is the single gated child-creation decision
+   this profile permits per exchange: where the possession proof is a
+   DPoP proof, its jti is single-use per [RFC9449], so a captured
+   exchange cannot be replayed to derive a second Child Mission.  A lost
+   response is the complementary fault: a retried exchange recovers the
+   committed child under the creation idempotency of Section 6.8, never
+   a second one.
 
    On success the Mission Issuer responds with the [RFC8693] token
    response shape:
@@ -624,44 +636,91 @@ Table of Contents
    The Mission Issuer MUST process a child-creation token exchange in
    this order, refusing on the first failure:
 
-   1.  Parse the exchange and require subject_token with
-       subject_token_type = urn:ietf:params:oauth:token-
-       type:access_token; reject a refresh token (Section 6).
+   1.   Parse the exchange, require subject_token with
+        subject_token_type = urn:ietf:params:oauth:token-
+        type:access_token, rejecting a refresh token, and require
+        creation_request_id (Section 6).
 
-   2.  Resolve the Parent Mission from subject_token.
+   2.   Resolve the Parent Mission from subject_token.
 
-   3.  Verify possession: the presenter controls the subject_token's own
-       confirmation key ([RFC9449] DPoP proof jkt, or [RFC8705] mTLS
-       x5t#S256), and, for a DPoP proof, the proof jti is single-use.
+   3.   Verify possession: the presenter controls the subject_token's
+        own confirmation key ([RFC9449] DPoP proof jkt, or [RFC8705]
+        mTLS x5t#S256), and, for a DPoP proof, the proof jti is single-
+        use.
 
-   4.  Verify the acting agent (actor_token, or the request's client
-       authentication) is authorized to create a child under this
-       parent, and verify that any parent cross-check names the resolved
-       Mission.
+   4.   Verify the acting agent (actor_token, or the request's client
+        authentication) is authorized to create a child under this
+        parent, and verify that any parent cross-check names the
+        resolved Mission.
 
-   5.  Verify the Parent Mission is active and no ancestor Mission in
-       its lineage chain is non-active.
+   5.   Look up the (client, creation_request_id) reservation and, where
+        one exists, recover the recorded operation instead of proceeding
+        (Section 6.8).  Per the expansion profile's lookup order, the
+        lookup follows client authentication and possession verification
+        and precedes the parent-state gate of step 6.
 
-   6.  Verify the applicable parent Authority Set entry's delegation
-       carries a children object permitting child creation, and that
-       child_actor satisfies its constraints (Section 9).
+   6.   Verify the Parent Mission is active and no ancestor Mission in
+        its lineage chain is non-active.
 
-   7.  Derive the child Authority Set, verify strict subset
-       (Section 8.1), and apply fan-out controls.
+   7.   Verify the applicable parent Authority Set entry's delegation
+        carries a children object permitting child creation, and that
+        child_actor satisfies its constraints (Section 9).
 
-   8.  Determine subset derivation versus fresh approval and complete
-       per Section 6.4: synchronous, deferred, or interactive.
+   8.   Derive the child Authority Set, verify strict subset
+        (Section 8.1), and apply fan-out controls.
 
-   9.  At the creation commit, re-verify parent state (Section 6.3),
-       create the Child Mission record with parent atomically, and
-       record Child Evidence.
+   9.   Determine subset derivation versus fresh approval and complete
+        per Section 6.4: synchronous, deferred, or interactive.
+
+   10.  At the creation commit, re-verify parent state (Section 6.3),
+        create the Child Mission record with parent and the completed
+        (client, creation_request_id) reservation atomically
+        (Section 6.8), and record Child Evidence.
 
    On any failure the Mission Issuer MUST refuse with invalid_request,
    invalid_grant, or invalid_token as appropriate, and MUST NOT create a
    child.  The child actor then authenticates at the token endpoint and
    redeems its own grant for the Child Mission's tokens (Section 6.1).
 
-6.8.  Worked Example
+6.8.  Creation Idempotency
+
+   The creation_request_id semantics are the expansion profile's,
+   defined once for the family's Mission-creating token exchanges and
+   not redefined here ([I-D.draft-mcguinness-oauth-mission-expansion]):
+   the operation fingerprint and its extension rule, the durable
+   reservation and its uniqueness constraint, recovery as delivery, the
+   revalidation and lookup-order rules, and tombstone retention against
+   the published retry horizon.  This section states what is specific to
+   child creation.
+
+   In the fingerprint object, op is child-creation; source is the Parent
+   Mission's mission_id resolved from subject_token (Section 6.7);
+   child_actor is the parsed child_actor object; and cross_check is the
+   supplied parent value, when present.  The remaining members are as
+   the expansion profile defines them.  Two child creations differing
+   only in child_actor are different operations: presenting the same
+   creation_request_id for both is refused with invalid_request.
+
+   Recovery is delivery, never a second child.  A revalidated repetition
+   of the same (client, creation_request_id):
+
+   *  returns the same deferral or interactive continuation while
+      completion is pending, scoped to the authenticated client;
+
+   *  returns the original child-bound JWT authorization grant while it
+      remains valid;
+
+   *  re-mints the child-bound grant for the same Child Mission when the
+      original has expired (the assertion is deliberately short-lived,
+      [I-D.draft-mcguinness-oauth-mission-issuance-grant]), provided the
+      Child Mission remains active under the conditions of Section 10.1
+      and the requester re-establishes the recorded authorization
+      context.  Re-minting is a delivery event with ordinary issuance
+      accounting; it MUST NOT create a second Child Mission, count a
+      second time against max_children (Section 9.1), or record a second
+      Child Evidence object (Section 11).
+
+6.9.  Worked Example
 
    Under the Q3 reconciliation Mission
    msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-, the approved agent s6BhdRkqt3,
@@ -738,7 +797,7 @@ Table of Contents
    for a child of a root Mission.  The cnf key is the sub-agent's own
    (Section 6.1).
 
-6.9.  Child Creation Denial Reasons
+6.10.  Child Creation Denial Reasons
 
    This profile defines these symbolic denial reasons:
 
@@ -1006,8 +1065,8 @@ Table of Contents
    children:  OPTIONAL.  An object.  Its PRESENCE on a parent Authority
       Set entry's delegation member is what permits Child Mission
       creation for that entry; an entry whose delegation carries no
-      children permits no child (Section 6.9).  Its members are the fan-
-      out controls, each applied per entry, per parent Mission:
+      children permits no child (Section 6.10).  Its members are the
+      fan-out controls, each applied per entry, per parent Mission:
 
       max_children:  OPTIONAL.  A positive integer.  The maximum number
          of concurrently non-terminal Child Missions drawing on this
@@ -1415,7 +1474,7 @@ Table of Contents
       and enforces the controls of this profile.  A client MUST NOT
       infer the fan-out controls (Section 9) a deployment enforces from
       this member alone; an unenforceable requested control is refused
-      at creation (Section 6.9).
+      at creation (Section 6.10).
 
 16.  Conformance
 
@@ -1429,6 +1488,10 @@ Table of Contents
    *  resolve the Parent Mission from subject_token and prove possession
       against that token's own confirmation key, not from the caller-
       supplied parent identifier alone (Section 6.7);
+
+   *  require creation_request_id on every child-creation exchange and
+      recover a repeated one per Section 6.8, never creating a second
+      child;
 
    *  enforce strict-subset authority and expiry;
 
@@ -1548,6 +1611,11 @@ Table of Contents
    presented only on the token endpoint's authenticated back channel,
    never on a front-channel authorization request (Section 6).
 
+   The creation_request_id parameter this profile requires on the child-
+   creation exchange (Section 6.8) is defined and registered by the
+   expansion profile ([I-D.draft-mcguinness-oauth-mission-expansion]);
+   this document adds no registration for it.
+
    This document registers one member in the existing "OAuth
    Authorization Server Metadata" registry [RFC8414]: Change Controller
    IETF; Reference this document, Section 15.
@@ -1561,7 +1629,7 @@ Table of Contents
    profile, carried inside the already-registered mission claim.
 
    This document defines one closed set of symbolic codes: the child
-   creation denial reasons (Section 6.9).  Like the issuance profile's
+   creation denial reasons (Section 6.10).  Like the issuance profile's
    restraint with mission members, these are documented in this
    specification rather than placed in a new IANA registry: they ride in
    the shared mission_denial_reason member defined and registered by the

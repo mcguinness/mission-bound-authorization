@@ -1215,7 +1215,7 @@ companion owns.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.5.2.10.1"><a href="#section-5.10" class="auto internal xref">5.10</a>. <a href="#name-history-context" class="internal xref">History Context</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.11">
-                <p id="section-toc.1-1.5.2.11.1"><a href="#section-5.11" class="auto internal xref">5.11</a>. <a href="#name-authorization-relevant-fing" class="internal xref">Authorization-Relevant Fingerprint</a></p>
+                <p id="section-toc.1-1.5.2.11.1"><a href="#section-5.11" class="auto internal xref">5.11</a>. <a href="#name-canonical-projections" class="internal xref">Canonical Projections</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.12">
                 <p id="section-toc.1-1.5.2.12.1"><a href="#section-5.12" class="auto internal xref">5.12</a>. <a href="#name-worked-pdp-request" class="internal xref">Worked PDP request</a></p>
@@ -1547,9 +1547,11 @@ reproducibility rules, its bounded-fidelity property, and the
 content-addressed <code>policy_view_id</code> with its <code>mission-policy-view</code>
 integrity envelope are defined by the runtime profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). That envelope's
-committed payload binds the Mission's <code>mission_id</code> and <code>authority_hash</code>,
-so a consistency check between a decision request and the loaded view is
-an equality test on those values (<a href="#pdp-request" class="auto internal xref">Section 5</a>). Nothing in this
+committed manifest binds the Mission's <code>mission_id</code> and <code>authority_hash</code>,
+alongside <code>policy_version</code> and the compiler identity that produced it,
+so a consistency check between a decision request and the loaded view
+is an equality test on <code>mission_id</code> and <code>authority_hash</code> alone
+(<a href="#pdp-request" class="auto internal xref">Section 5</a>). Nothing in this
 binding requires the PDP to be remote: a PDP embedded in or colocated
 with its PEP, evaluating against a loaded materialized policy view,
 is a conforming deployment, and the decision's network cost is then
@@ -1873,22 +1875,24 @@ for a non-idempotent action in the high-consequence classes
 execution of one normalized request, so a legitimate re-execution
 mints a new key. <span class="bcp14">REQUIRED</span> where the Operation Profile defines one for
 the action. The PDP atomically claims the pair (idempotency scope,
-<code>idempotency_key</code>) together with the request's authorization-relevant
-fingerprint (<a href="#request-fingerprint" class="auto internal xref">Section 5.11</a>) before issuing a permit
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). When the key and
-fingerprint match a prior decision whose execution outcome is
-unresolved or completed within the reconciliation window, the PDP
-<span class="bcp14">MUST</span> deny with <code>duplicate_suppressed</code>
-(<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>); reuse of an <code>idempotency_key</code>
-never executes again within the deployment's declared idempotency
-horizon, which for the high-consequence classes is backed by a
-durable consumed-key tombstone
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). When the same key instead
-matches a prior decision under a different fingerprint, the reuse is
-a conflict, never a new execution: the PDP <span class="bcp14">MUST</span> deny with
-<code>idempotency_conflict</code> (<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>), a
-terminal condition distinct from the transient
-<code>duplicate_suppressed</code> above.<a href="#section-5.5-2.6.1" class="pilcrow">¶</a></p>
+<code>idempotency_key</code>) together with the request's operation identity
+(<a href="#projections" class="auto internal xref">Section 5.11</a>) before issuing a permit
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The claim resolves per
+the runtime profile's idempotency claim-state table: while the
+claim is unresolved, a matching key and operation identity is a
+transient
+<code>duplicate_suppressed</code> (<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>); once the
+operation completes, a matching key and operation identity is a
+terminal <code>duplicate_suppressed</code> and the prior result is available
+from the resource under the Operation Profile, never re-executed.
+Reuse of an <code>idempotency_key</code> never yields a second execution
+within the deployment's declared idempotency horizon, which for the
+high-consequence classes is backed by a durable consumed-key
+tombstone (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). When the same
+key instead matches a prior claim under a different operation
+identity, the reuse is a conflict, never a new execution: the PDP
+<span class="bcp14">MUST</span> deny with <code>idempotency_conflict</code>
+(<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>), terminal in every claim state.<a href="#section-5.5-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.5-2.7">
@@ -2065,8 +2069,8 @@ fail-closed default applies: the PDP <span class="bcp14">MUST</span> deny with
 fresh evaluation after an access request is approved. The PEP returns
 here exactly the approval object the Access Request Service issued:
 ARAP's approval object <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span> unchanged, with all of ARAP's
-members, including its <span class="bcp14">REQUIRED</span> <code>approved_until</code>. This profile does
-not subset or rename it.<a href="#section-5.9-1" class="pilcrow">¶</a></p>
+members. ARAP makes <code>approved_at</code> <span class="bcp14">OPTIONAL</span> and <code>approved_until</code>
+          <span class="bcp14">REQUIRED</span>; this profile does not subset or rename either.<a href="#section-5.9-1" class="pilcrow">¶</a></p>
 <p id="section-5.9-2">On top of ARAP's own requirements, before treating <code>context.approval</code>
 as satisfying <code>approval_required</code>, the PDP <span class="bcp14">MUST</span> additionally
 establish the Mission checks: that the approval binds to the
@@ -2074,13 +2078,27 @@ request's <code>parameter_digest</code> (a mismatch means the approval does not
 cover these parameters), that its grant time is within the
 deployment's maximum approval age
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and that <code>approved_until</code>
-has not passed. An approval failing any of these checks does not
-satisfy the denial. The PDP <span class="bcp14">MUST</span> record the presented approval <code>id</code>
-in Decision Evidence. The approval is an input attribute, never a
-bearer grant: the PDP evaluates current policy and current state.<a href="#section-5.9-2" class="pilcrow">¶</a></p>
-<p id="section-5.9-3">When policy requires an action-bound approval and no valid
-<code>context.approval</code> satisfies the checks above, the PDP <span class="bcp14">MUST</span> deny with
-<code>approval_required</code> (<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>).<a href="#section-5.9-3" class="pilcrow">¶</a></p>
+has not passed. This profile requires a verifiable completion time
+for an action-bound approval: <code>approved_at</code> when present, otherwise
+the PDP <span class="bcp14">MUST</span> establish the grant time from the approval record it
+resolves by <code>id</code> or from verified signed <code>state</code>. An approval whose
+completion time cannot be established is treated as unverifiable. An
+approval failing any of these checks does not satisfy the denial. The
+PDP <span class="bcp14">MUST</span> record the presented approval <code>id</code> in Decision Evidence. The
+approval is an input attribute, never a bearer grant: the PDP
+evaluates current policy and current state.<a href="#section-5.9-2" class="pilcrow">¶</a></p>
+<p id="section-5.9-3">When policy requires an action-bound approval and no <code>context.approval</code>
+is presented, the PDP <span class="bcp14">MUST</span> deny with <code>approval_required</code>
+(<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>). On a re-evaluation that presented
+<code>context.approval</code> and failed a Mission or ARAP check, the PDP instead
+returns one of ARAP's five registered re-evaluation reasons in
+<code>context.reason</code>: <code>approval_expired</code>, <code>out_of_scope</code>, <code>grant_pending</code>,
+<code>policy_denied</code>, or <code>approval_unverifiable</code>, with ARAP's default
+<code>next_action</code> value for each (<code>request</code>, <code>request</code>, <code>retry</code>, <code>none</code>,
+and <code>none</code> respectively). These are ARAP-owned values carried under
+its extensibility rule <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>, not values this profile defines; an
+approval whose completion time cannot be established under the
+paragraph above is <code>approval_unverifiable</code>.<a href="#section-5.9-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="context-history">
@@ -2161,25 +2179,66 @@ evaluated predicates and their outcomes in Decision Evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-5.10-6" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="request-fingerprint">
+<div id="projections">
 <section id="section-5.11">
-        <h3 id="name-authorization-relevant-fing">
-<a href="#section-5.11" class="section-number selfRef">5.11. </a><a href="#name-authorization-relevant-fing" class="section-name selfRef">Authorization-Relevant Fingerprint</a>
+        <h3 id="name-canonical-projections">
+<a href="#section-5.11" class="section-number selfRef">5.11. </a><a href="#name-canonical-projections" class="section-name selfRef">Canonical Projections</a>
         </h3>
-<p id="section-5.11-1">The idempotency claim (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) and
-permit reuse both turn on one normalized value instead of an
-enumerated field list: the <strong>authorization-relevant fingerprint</strong>,
-<code>sha-256:</code> followed by the base64url, no padding, SHA-256
-<span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span> of the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> serialization of the normalized
-evaluation request. The digested object carries <code>subject</code>, <code>action</code>
-with its properties, <code>resource</code> with its properties, and every
-authorization-relevant <code>context</code> member, including <code>approval</code>,
-<code>taint</code>, the Mission history reference, the capability source, and
-any extension member a companion profile adds. It excludes only the
-request's volatile machinery: the <code>supported_obligations</code> declaration
-and transport metadata. A new companion context member is
-authorization-relevant, and so included, by default; a companion
-narrows the fingerprint only by amending this enumeration.<a href="#section-5.11-1" class="pilcrow">¶</a></p>
+<p id="section-5.11-1">The idempotency claim (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>),
+permit retransmission and reuse, and the deviation and binding
+language elsewhere in this profile each turn on a different relation
+over the normalized evaluation request; one fingerprint cannot serve
+all three without conflating them. This section defines three
+INTERNAL canonical projections instead. Each is <code>sha-256:</code> followed
+by the base64url, no padding, SHA-256 <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span> digest of the JCS
+<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> serialization of its defined subset of the normalized
+request. None is a wire parameter: a decision-API binding computes
+each internally from the request and response members it already
+carries, and this document adds none of them to the AuthZEN
+extension-data registrations of <a href="#iana" class="auto internal xref">Section 12</a>.<a href="#section-5.11-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5.11-2">
+          <dt id="section-5.11-2.1">Operation identity:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.11-2.2">
+            <p id="section-5.11-2.2.1">The action, the resource, and the normalized effectful parameters.
+This is what an idempotency key identifies one execution of.<a href="#section-5.11-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.11-2.3">Authorization binding:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.11-2.4">
+            <p id="section-5.11-2.4.1">The subject, the actor, credential-derived facts, the Mission
+reference, the authority and view identity, the approval, and
+every policy-relevant context input, including <code>taint</code>, the
+Mission history reference, the capability source, and any
+extension member a companion profile adds. This is what a permit
+is bound to. A new companion context member is part of the
+authorization binding by default; a companion narrows it only by
+amending this enumeration. It excludes only the request's volatile
+machinery: the <code>supported_obligations</code> declaration and transport
+metadata.<a href="#section-5.11-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.11-2.5">Cache key:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.11-2.6">
+            <p id="section-5.11-2.6.1">The authorization binding plus the explicit state generation the
+decision consulted (the PDP's tracked <code>mission_state_version</code>, or
+an equivalent status-issuance generation marker where the
+deployment does not track one), EXCLUDING observation telemetry:
+<code>freshness_at</code>, retrieval or issuance timestamps, and other
+volatile machinery.<a href="#section-5.11-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-5.11-3">State generation is cache-relevant; observation telemetry never is:
+a decision computed against an unchanged authorization binding and an
+unchanged state generation is the same decision regardless of when
+either side observed it. Permit retransmission and permit reuse
+therefore test the cache key for equality (<a href="#permit-binding-split" class="auto internal xref">Section 6.9</a>).
+The idempotency claim identifies one execution rather than one
+decision, so it tests operation identity instead
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Deviation and binding
+language elsewhere in this profile, what a permit is bound to and
+what a re-presented request must match to rely on that binding, means
+the authorization binding.<a href="#section-5.11-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="worked-pdp-request">
@@ -2189,9 +2248,8 @@ narrows the fingerprint only by amending this enumeration.<a href="#section-5.11
         </h3>
 <p id="section-5.12-1">The <code>policy_view_id</code> values in this document's examples
 (<code>sha-256:kP3xR9sQ...</code>) differ from the runtime profile's worked
-materialized-view value (<code>sha-256:fuMqn6Nb...</code>): this deployment's
-view payload includes the engine-evaluable form, so it hashes
-differently. Both are valid views of the same Mission.<a href="#section-5.12-1" class="pilcrow">¶</a></p>
+materialized-view value (<code>sha-256:kFxuopgt...</code>): the two manifests
+name different compilers. Both are valid views of the same Mission.<a href="#section-5.12-1" class="pilcrow">¶</a></p>
 <p id="section-5.12-2">For the ERP reconciliation Mission:<a href="#section-5.12-2" class="pilcrow">¶</a></p>
 <div class="breakable lang-http-message sourcecode" id="section-5.12-3">
 <pre>
@@ -2272,10 +2330,13 @@ Authorization: ...
 for an action within a runtime enforcement scope it mediates, a request
 whose <code>context</code> lacks the <code>mission</code> member (<a href="#context-mission" class="auto internal xref">Section 5.2</a>) is
 malformed under this binding, and the PDP <span class="bcp14">MUST</span> refuse it rather than
-evaluate it against non-Mission policy alone. A permit issued to an
-in-scope consequential action without Mission evaluation is an
-enforcement bypass, not a decision
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-5.13-1" class="pilcrow">¶</a></p>
+evaluate it against non-Mission policy alone, and <span class="bcp14">MUST</span> record the
+refusal as a Refusal Record with <code>denial_reason</code>
+          <code>mission_context_missing</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), populating the
+members the PDP itself can attest. A permit issued to an in-scope
+consequential action without Mission evaluation is an enforcement
+bypass, not a decision (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-5.13-1" class="pilcrow">¶</a></p>
 <p id="section-5.13-2">In addition to evaluating the decision inputs the runtime profile
 requires, the PDP <span class="bcp14">MUST</span> verify that the AuthZEN-carried envelope is
 self-consistent:<a href="#section-5.13-2" class="pilcrow">¶</a></p>
@@ -2681,22 +2742,34 @@ binding. This is the response's only carriage of the digest.<a href="#section-6.
               <dd style="margin-left: 1.5em" id="section-6.1-2.10.2.4">
                 <p id="section-6.1-2.10.2.4.1"><span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp. The permit's
 validity bound, past which the permit <span class="bcp14">MUST NOT</span> be used.
-<code>valid_until</code> <span class="bcp14">MUST NOT</span> exceed the minimum of: the freshness time
-or lease of the Mission state view the decision relied on
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), in particular a
+<code>valid_until</code> <span class="bcp14">MUST NOT</span> exceed:<a href="#section-6.1-2.10.2.4.1" class="pilcrow">¶</a></p>
+<p id="section-6.1-2.10.2.4.2">~~~
+  min(
+    the presented credential's expiry;
+    the approval's <code>approved_until</code>, where the permit
+      satisfied an approval requirement;
+    the state valid-through;
+    any policy-defined maximum permit lifetime for the
+      action's class
+  )
+  ~~~<a href="#section-6.1-2.10.2.4.2" class="pilcrow">¶</a></p>
+<p id="section-6.1-2.10.2.4.3">The presented credential's expiry is
+<code>context.credential.expires_at</code> (<a href="#context-credential" class="auto internal xref">Section 5.4</a>), when
+present. The approval's <code>approved_until</code> applies where the
+permit satisfies <code>approval_required</code> (<a href="#context-approval" class="auto internal xref">Section 5.9</a>).
+The state valid-through is defined by source: a signed Mission
+Status Response's expiry, or a lease's end, both carried in a
 supplied
 <code>context.mission_state_observation.mission_status_expires_at</code>;
-the presented credential's expiry
-(<code>context.credential.expires_at</code>, <a href="#context-credential" class="auto internal xref">Section 5.4</a>), when
-present; where the permit satisfies <code>approval_required</code>, the
-satisfying approval's <code>approved_until</code> (<a href="#context-approval" class="auto internal xref">Section 5.9</a>);
-and any policy-defined maximum permit lifetime for the action's
-class. No mode leaves this window unbounded on the wire. In
-<code>fresh</code> mode with no supplied <code>mission_status_expires_at</code>, the
-PDP derives the state-freshness component of the bound from its
-own state view: the view's freshness time or lease where the
-source reports one, otherwise the deployment's published
-staleness bound for the action's class.<a href="#section-6.1-2.10.2.4.1" class="pilcrow">¶</a></p>
+or, for a polled observation reporting neither, <code>freshness_at</code>
+plus the deployment's published maximum staleness bound for the
+action's class. The state valid-through is never the
+observation timestamp (<code>freshness_at</code>) by itself: an
+observation only bounds the window in combination with the
+deployment's published staleness. No mode leaves this window
+unbounded on the wire. In <code>fresh</code> mode with no supplied
+<code>mission_status_expires_at</code>, the PDP derives the state
+valid-through from its own state view under the same rule.<a href="#section-6.1-2.10.2.4.3" class="pilcrow">¶</a></p>
 </dd>
               <dd class="break"></dd>
 <dt id="section-6.1-2.10.2.5">
@@ -2807,35 +2880,54 @@ and a deployment that needs proof of a denial-side obligation's
 execution composes its own audit mechanism.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
 <p id="section-6.2-2">The <code>supported_obligations</code> declaration below is a usability
 optimization on that fail-closed baseline, not a precondition for it:
-it lets a PDP avoid attaching an obligation it already knows the PEP
-cannot discharge, sparing a guaranteed-fail round trip, never a
-dependency the model needs to stay safe. A PDP that supports the
-step-up obligation advertises it in its metadata
-<code>supported_obligations</code>
-array, and a PEP <span class="bcp14">MAY</span> declare its own <code>supported_obligations</code> in the
-request context, as the obligations profile defines <span>[<a href="#AUTHZEN-OBL" class="cite xref">AUTHZEN-OBL</a>]</span>;
-the declaration is advisory. A PDP <span class="bcp14">MUST NOT</span> rely on an obligation the
-PEP has not declared: this profile mandates correct obligation
-processing, not any particular obligation type, and a PEP that
-cannot perform an attached obligation treats it as unfulfillable, an
-effective deny (<a href="#conformance" class="auto internal xref">Section 9</a>).<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+a PDP that supports the step-up obligation advertises it in its
+metadata <code>supported_obligations</code> array. A PEP <span class="bcp14">MAY</span> declare
+<code>supported_obligations</code> in the request context, as the obligations
+profile defines <span>[<a href="#AUTHZEN-OBL" class="cite xref">AUTHZEN-OBL</a>]</span>; the declaration is advisory. A PDP
+<span class="bcp14">MAY</span> use the declaration to avoid attaching an obligation that is
+guaranteed to fail, sparing a round trip. A PDP <span class="bcp14">MAY</span> nonetheless
+attach an obligation the PEP did not declare. The PEP always fails
+closed on an obligation it cannot fulfill: this profile mandates
+correct obligation processing, not any particular obligation type,
+and a PEP that cannot perform an attached obligation treats it as
+unfulfillable, an effective deny (<a href="#conformance" class="auto internal xref">Section 9</a>).<a href="#section-6.2-2" class="pilcrow">¶</a></p>
 <p id="section-6.2-3">The PDP <span class="bcp14">MAY</span> attach the <span>[<a href="#AUTHZEN-OBL" class="cite xref">AUTHZEN-OBL</a>]</span> step-up obligation
 (authentication-context properties such as <code>acr_value</code> and
-<code>amr_values</code>, per that profile) to a permit when Resource policy
-requires a stronger authentication context than the actor presents.
-The PEP <span class="bcp14">MUST</span> achieve the required context before release; on an OAuth
-resource surface it does so through RFC 9470 step-up authentication
-<span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span> at the protected resource. Step-up is not a denial reason
-in this profile. The core's <code>mission_denial</code> value <code>step_up_required</code>
-remains the Resource Server's own challenge-surface signal
+<code>amr_values</code>, per that profile) when Resource policy requires a
+stronger authentication context than the actor presents. Two
+fulfillment shapes exist, both in this obligations lane:<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-4"><strong>In-process step-up</strong>: the obligation rides a permit only when the
+PEP can establish the stronger authentication context without
+changing any credential-bound authorization input, for example a
+session re-verification or a local challenge. The PEP <span class="bcp14">MUST</span> achieve
+the required context before releasing the action's effect, and the
+original permit continues.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.2-5"><strong>OAuth step-up (RFC 9470)</strong>: obtaining a new access token changes
+credential-derived inputs, so this shape is not fulfillment of an
+obligation attached to a permit before release. The flow denies the
+original request: the PDP returns <code>decision: false</code> with <code>reason</code>
+          <code>resource_policy</code> WITH the step-up obligation carrying the challenge
+parameters, an obligation on a denial being this profile's normal
+deny-obligation processing (<a href="#response-context" class="auto internal xref">Section 6.1</a>). The PEP challenges
+the actor, obtains a new access token through RFC 9470 step-up
+authentication <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span> at the protected resource, and a fresh
+evaluation follows under the new credential. The original permit is
+never continued across an RFC 9470 step-up, and denial does not turn
+step-up into governance: no access request is submitted and no
+approval record is created (<a href="#lanes" class="auto internal xref">Section 6.7</a>).<a href="#section-6.2-5" class="pilcrow">¶</a></p>
+<p id="section-6.2-6">Authentication step-up has no dedicated denial-reason value under this
+profile: an in-process step-up rides the obligation on a permit, and
+an RFC 9470 step-up rides the obligation on a <code>resource_policy</code>
+denial. The core's <code>mission_denial</code> value <code>step_up_required</code> remains
+the Resource Server's own challenge-surface signal
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and composes with, but is
-not, this obligation. The requirement is Resource policy, never a
-Mission constraint: the issuance profile's <code>acr</code> is an approval-time
-requirement on the Approver, recorded on the Mission and neither
-carried on derived tokens nor evaluated per action, and the issuance
-profile defines no per-action <code>amr</code> constraint
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.2-3" class="pilcrow">¶</a></p>
-<p id="section-6.2-4">A deployment <span class="bcp14">MAY</span> define further obligation types for genuine attached
+not, either shape of this obligation. The requirement is Resource
+policy, never a Mission constraint: the issuance profile's <code>acr</code> is
+an approval-time requirement on the Approver, recorded on the Mission
+and neither carried on derived tokens nor evaluated per action, and
+the issuance profile defines no per-action <code>amr</code> constraint
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.2-6" class="pilcrow">¶</a></p>
+<p id="section-6.2-7">A deployment <span class="bcp14">MAY</span> define further obligation types for genuine attached
 PEP actions, for example <code>watermark</code> (apply a provenance watermark to
 output before release) or <code>notify</code> (send a mandatory notification);
 such types follow the AuthZEN Obligations Profile's own registration
@@ -2843,11 +2935,11 @@ and extensibility rule <span>[<a href="#AUTHZEN-OBL" class="cite xref">AUTHZEN-O
 human approval, role or relationship creation, Mission expansion, a
 task handle, residual policy, or retry instructions; <code>evaluation_id</code>
 and evaluation timestamps are decision facts outside it.
-Obligation-array ordering is not normative.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
-<p id="section-6.2-5">This profile defines no advice collection. A future <code>context.advice</code>
+Obligation-array ordering is not normative.<a href="#section-6.2-7" class="pilcrow">¶</a></p>
+<p id="section-6.2-8">This profile defines no advice collection. A future <code>context.advice</code>
 carrying safely-ignorable instructions is reserved; an obligation <span class="bcp14">MUST NOT</span> be marked optional or downgraded to advice, and permit request
 binding, permit expiry, use limits, evidence emission, step-up, and
-mandatory notification are never advice.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
+mandatory notification are never advice.<a href="#section-6.2-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="permit-response-shape">
@@ -2938,111 +3030,126 @@ carried in Decision Evidence:<a href="#section-6.5-1" class="pilcrow">¶</a></p>
           <li class="normal" id="section-6.5-2.2">
             <p id="section-6.5-2.2.1"><code>approval_required</code>: deployment or Resource policy requires an
 action-bound approval for this action
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) and a valid fresh
-approval bound to the action's parameters is not present, is older
-than the deployment's maximum approval age, or is bound to a different
-<code>parameter_digest</code>. The PEP carries any such approval in
-<code>context.approval</code> (<a href="#context-approval" class="auto internal xref">Section 5.9</a>); this profile does
-not define the approval artifact, which the runtime profile owns.<a href="#section-6.5-2.2.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) and no <code>context.approval</code>
+is presented. This is the first-evaluation reason. The PEP carries
+any presented approval in <code>context.approval</code> (<a href="#context-approval" class="auto internal xref">Section 5.9</a>);
+this profile does not define the approval artifact, which the
+runtime profile owns.<a href="#section-6.5-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.3">
-            <p id="section-6.5-2.3.1"><code>taint_context_missing</code>: the deployment declares PDP-enforced taint
-for the action's class, as the harness profile defines
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), and the decision request
-carries no <code>context.taint</code> (<a href="#context-taint" class="auto internal xref">Section 5.8</a>).<a href="#section-6.5-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-2.3.1"><code>approval_expired</code>, <code>out_of_scope</code>, <code>grant_pending</code>, <code>policy_denied</code>,
+<code>approval_unverifiable</code>: ARAP's five registered re-evaluation
+reasons <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>, returned in <code>context.reason</code> when a re-evaluation
+that presented <code>context.approval</code> fails a Mission or ARAP check
+(<a href="#context-approval" class="auto internal xref">Section 5.9</a>). Their trigger conditions and default
+<code>next_action</code> values (<code>request</code>, <code>request</code>, <code>retry</code>, <code>none</code>, and
+<code>none</code> respectively) are ARAP's own; this profile carries them
+under ARAP's extensibility rule rather than redefining them, except
+that <code>approval_unverifiable</code> additionally covers the Mission check
+of <a href="#context-approval" class="auto internal xref">Section 5.9</a>: an approval whose completion time cannot
+be established.<a href="#section-6.5-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.4">
-            <p id="section-6.5-2.4.1"><code>stale_state</code>: the PEP-supplied freshness is outside the deployment's
-staleness bound (a freshness-window violation). While the condition
-is expected to clear on a fresh read, the PDP <span class="bcp14">SHOULD</span> mark the denial
-transient with <code>next_action: retry</code> (<a href="#response-context" class="auto internal xref">Section 6.1</a>).<a href="#section-6.5-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-2.4.1"><code>taint_context_missing</code>: the deployment declares PDP-enforced taint
+for the action's class, as the harness profile defines
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), and the decision request
+carries no <code>context.taint</code> (<a href="#context-taint" class="auto internal xref">Section 5.8</a>).<a href="#section-6.5-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.5">
-            <p id="section-6.5-2.5.1"><code>view_inconsistent</code>: the request's Mission <code>id</code>, <code>authority_hash</code>, or
+            <p id="section-6.5-2.5.1"><code>stale_state</code>: the PEP-supplied freshness is outside the deployment's
+staleness bound (a freshness-window violation). While the condition
+is expected to clear on a fresh read, the PDP <span class="bcp14">SHOULD</span> mark the denial
+transient with <code>next_action: retry</code> (<a href="#response-context" class="auto internal xref">Section 6.1</a>).<a href="#section-6.5-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.5-2.6">
+            <p id="section-6.5-2.6.1"><code>view_inconsistent</code>: the request's Mission <code>id</code>, <code>authority_hash</code>, or
 <code>policy_view_id</code> does not equal the committed values in the
 materialized policy view the PDP loaded, so the request and the loaded
 view disagree on which Mission or view is in force. This is a view
-inconsistency, not staleness.<a href="#section-6.5-2.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-6.5-2.6">
-            <p id="section-6.5-2.6.1"><code>mission_inactive</code>: the Mission state is not <code>active</code>.<a href="#section-6.5-2.6.1" class="pilcrow">¶</a></p>
+inconsistency, not staleness.<a href="#section-6.5-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.7">
-            <p id="section-6.5-2.7.1"><code>mission_binding_failed</code>: in externally-established Mission binding
-mode (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), the PDP could not
-verify the supplied Mission reference against the acting credential
-under the binding's join, so no Mission is established.<a href="#section-6.5-2.7.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-2.7.1"><code>mission_inactive</code>: the Mission state is not <code>active</code>.<a href="#section-6.5-2.7.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.8">
-            <p id="section-6.5-2.8.1"><code>actor_invalid</code>: the required <code>act</code> chain is missing or malformed, so
-the PDP cannot establish the runtime actor context
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6.5-2.8.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-2.8.1"><code>mission_binding_failed</code>: in externally-established Mission binding
+mode (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), the PDP could not
+verify the supplied Mission reference against the acting credential
+under the binding's join, so no Mission is established.<a href="#section-6.5-2.8.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.9">
-            <p id="section-6.5-2.9.1"><code>credential_invalid</code>: token-derived credential facts supplied by the
-PEP are expired, inconsistent, or otherwise not usable for a runtime
-decision.<a href="#section-6.5-2.9.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-2.9.1"><code>actor_invalid</code>: the required <code>act</code> chain is missing or malformed, so
+the PDP cannot establish the runtime actor context
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6.5-2.9.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.10">
-            <p id="section-6.5-2.10.1"><code>parameter_violation</code>: parameters violate a constraint the PDP
-evaluated, the recomputed digest does not match, or a required
-<code>parameter_digest</code> is absent for a parameter-bound action.<a href="#section-6.5-2.10.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-2.10.1"><code>credential_invalid</code>: token-derived credential facts supplied by the
+PEP are expired, inconsistent, or otherwise not usable for a runtime
+decision.<a href="#section-6.5-2.10.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.11">
-            <p id="section-6.5-2.11.1"><code>duplicate_suppressed</code>: the request's <code>idempotency_key</code> and
-authorization-relevant fingerprint (<a href="#request-fingerprint" class="auto internal xref">Section 5.11</a>) match a
-prior decision whose execution outcome is unresolved or completed
-within the reconciliation window, so the PDP suppresses a duplicate
-execution of the same normalized action
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). An unresolved duplicate
-carries <code>next_action: retry</code> (<a href="#response-context" class="auto internal xref">Section 6.1</a>) with the
-reconciliation window as its <code>retry_after</code> guidance: the condition
-is transient and expected to clear. Reuse of an <code>idempotency_key</code>
-never executes again; an intentional re-execution is a new
-operation under a new key, which an action-bound approval <span class="bcp14">MAY</span>
-authorize as such, never as re-execution under the consumed key.
-This is distinct from <code>idempotency_conflict</code> below: here the
-fingerprint matches the prior decision's; a mismatched fingerprint
-under the same key is a conflict, never a duplicate, and never
-transient.<a href="#section-6.5-2.11.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-2.11.1"><code>parameter_violation</code>: parameters violate a constraint the PDP
+evaluated, the recomputed digest does not match, or a required
+<code>parameter_digest</code> is absent for a parameter-bound action.<a href="#section-6.5-2.11.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.12">
-            <p id="section-6.5-2.12.1"><code>idempotency_conflict</code>: the request reused an <code>idempotency_key</code> with
-a different authorization-relevant fingerprint (<a href="#request-fingerprint" class="auto internal xref">Section 5.11</a>)
-than the prior decision it was claimed under
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). An idempotency key
-identifies one intended execution of one normalized request, so
-reuse with different content is a conflict, never a new execution.
-This condition is terminal, carries <code>next_action: none</code>
-(<a href="#response-context" class="auto internal xref">Section 6.1</a>), and is never marked requestable
-(<a href="#requestable-denials" class="auto internal xref">Section 6.6</a>).<a href="#section-6.5-2.12.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-2.12.1"><code>duplicate_suppressed</code>: the request's <code>idempotency_key</code> and
+operation identity (<a href="#projections" class="auto internal xref">Section 5.11</a>) match a prior claim whose
+outcome is unresolved or completed
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), so the PDP suppresses a
+duplicate execution of the same normalized action rather than
+issue a second permit. Its state follows the runtime profile's
+idempotency claim-state table exactly: while the outcome is
+unresolved the condition is transient, carrying <code>next_action: retry</code>
+(<a href="#response-context" class="auto internal xref">Section 6.1</a>) with the reconciliation window as its
+<code>retry_after</code> guidance; once the operation has completed the
+condition is terminal, carrying <code>next_action: none</code>, and the prior
+result is available from the resource under the Operation Profile,
+never replayed by a fresh PDP decision. A consumed key never yields
+a second execution; an intentional re-execution is a new operation
+under a new key, which an action-bound approval <span class="bcp14">MAY</span> authorize as
+such, never as re-execution under the consumed key. This is
+distinct from <code>idempotency_conflict</code> below: here the operation
+identity matches the prior claim's; a mismatched operation identity
+under the same key is a conflict, never a duplicate, and never
+transient.<a href="#section-6.5-2.12.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.13">
-            <p id="section-6.5-2.13.1"><code>resource_policy</code>: Resource policy refuses the action independently
-of Mission authority.<a href="#section-6.5-2.13.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-2.13.1"><code>idempotency_conflict</code>: the request reused an <code>idempotency_key</code> with
+a different operation identity (<a href="#projections" class="auto internal xref">Section 5.11</a>) than the prior
+claim it was made under (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).
+An idempotency key identifies one intended execution of one
+normalized request, so reuse with different content is a conflict,
+never a new execution. This condition is terminal in every claim
+state, carries <code>next_action: none</code> (<a href="#response-context" class="auto internal xref">Section 6.1</a>), and is
+never marked requestable (<a href="#requestable-denials" class="auto internal xref">Section 6.6</a>).<a href="#section-6.5-2.13.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.14">
-            <p id="section-6.5-2.14.1"><code>quota_exceeded</code>: a metered runtime bound is exhausted. The runtime
+            <p id="section-6.5-2.14.1"><code>resource_policy</code>: Resource policy refuses the action independently
+of Mission authority.<a href="#section-6.5-2.14.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.5-2.15">
+            <p id="section-6.5-2.15.1"><code>quota_exceeded</code>: a metered runtime bound is exhausted. The runtime
 profile fixes the fail-closed posture for consumption bounds
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); the metering semantics
 and settlement exchange are defined by the experimental metering
-companion (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-6.5-2.14.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-6.5-2.15">
-            <p id="section-6.5-2.15.1"><code>unsupported_authorization_type</code>: the action targets an
-<code>authorization_details</code> type the PDP does not understand or cannot
-enforce, so it refuses rather than guess the type's semantics
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6.5-2.15.1" class="pilcrow">¶</a></p>
+companion (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-6.5-2.15.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.16">
-            <p id="section-6.5-2.16.1"><code>constraint_unsupported</code>: an applicable constraint or consumption
+            <p id="section-6.5-2.16.1"><code>unsupported_authorization_type</code>: the action targets an
+<code>authorization_details</code> type the PDP does not understand or cannot
+enforce, so it refuses rather than guess the type's semantics
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6.5-2.16.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.5-2.17">
+            <p id="section-6.5-2.17.1"><code>constraint_unsupported</code>: an applicable constraint or consumption
 bound on the entry is unrecognized or unmetered, so the PDP cannot
 enforce it and refuses (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).
 This is distinct from <code>parameter_violation</code>, which is a constraint the
-PDP evaluated and found violated.<a href="#section-6.5-2.16.1" class="pilcrow">¶</a></p>
+PDP evaluated and found violated.<a href="#section-6.5-2.17.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.5-2.17">
-            <p id="section-6.5-2.17.1"><code>history_not_satisfied</code>: a deployment- or Resource-policy-required
+          <li class="normal" id="section-6.5-2.18">
+            <p id="section-6.5-2.18.1"><code>history_not_satisfied</code>: a deployment- or Resource-policy-required
 history predicate (<a href="#context-history" class="auto internal xref">Section 5.10</a>) is not satisfied: the PDP
 established it false, could not establish it, could not consult
 its evidence store within the declared staleness bound, or does
@@ -3050,17 +3157,31 @@ not recognize the presented <code>predicate</code> value. The per-predicate
 outcomes are in Decision Evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), so the
 unsatisfied and unavailable cases stay distinguishable after the
-fact.<a href="#section-6.5-2.17.1" class="pilcrow">¶</a></p>
+fact.<a href="#section-6.5-2.18.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-6.5-3">Authentication step-up is not a denial reason under this profile; it
-is the step-up obligation on a permit (<a href="#obligations" class="auto internal xref">Section 6.2</a>). A
-Resource-policy refusal not expressible as a permit-plus-obligation is
-<code>resource_policy</code>.<a href="#section-6.5-3" class="pilcrow">¶</a></p>
-<p id="section-6.5-4">A terminal policy refusal <span class="bcp14">SHOULD</span> carry <code>next_action: none</code>; a denial
-the deployment exposes as requestable carries <code>next_action: request</code>
-with <code>context.access_request</code> (<a href="#response-context" class="auto internal xref">Section 6.1</a>).<a href="#section-6.5-4" class="pilcrow">¶</a></p>
-<p id="section-6.5-5">This document defines no other denial-reason values. A companion
+<p id="section-6.5-3">Authentication step-up has no dedicated denial-reason value under
+this profile (<a href="#obligations" class="auto internal xref">Section 6.2</a>): an in-process step-up rides the
+obligation on a permit; an RFC 9470 step-up rides the obligation on a
+<code>resource_policy</code> denial, since obtaining a new access token changes
+credential-derived inputs the original permit cannot absorb. That
+denial carries no <code>next_action</code> value: the step-up obligation is the
+actionable instruction, distinct from the <code>request</code>/<code>retry</code>/<code>none</code>
+machinery below, and the fresh evaluation that follows depends on the
+PEP obtaining a new token, not on a timed retry or a requestable
+workflow. A Resource-policy refusal with no step-up path at all is
+likewise <code>resource_policy</code>.<a href="#section-6.5-3" class="pilcrow">¶</a></p>
+<p id="section-6.5-4">A terminal policy refusal <span class="bcp14">SHOULD</span> carry <code>next_action: none</code>, except a
+denial carrying the step-up obligation, which carries neither
+<code>next_action</code> value per above; a denial the deployment exposes as
+requestable carries <code>next_action: request</code> with
+<code>context.access_request</code> (<a href="#response-context" class="auto internal xref">Section 6.1</a>).<a href="#section-6.5-4" class="pilcrow">¶</a></p>
+<p id="section-6.5-5">This document defines no other denial-reason values of its own. ARAP's
+five re-evaluation reasons above are the one exception: they are
+values ARAP owns and registers under its own extensibility rule
+<span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>, carried here rather than redefined, and this profile does
+not require them to independently satisfy the collision-resistant or
+family-coordinated form below. Beyond that exception, a companion
 profile <span class="bcp14">MAY</span> extend the set by specification; an extension value <span class="bcp14">MUST</span>
 be either a collision-resistant name (following the Collision-Resistant
 Name guidance of <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Section 4.2) or a name coordinated within
@@ -3241,16 +3362,19 @@ profile.<a href="#section-6.7-4" class="pilcrow">¶</a></p>
 <p id="section-6.8-1">Every runtime failure condition, whether named in the runtime profile's
 failure-mode table or in its other normative requirements
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), surfaces through exactly
-one of four carriers in this binding: a Refusal Record for a PEP
-refusal before any PDP decision
+one of four carriers in this binding: a Refusal Record for a PEP or
+PDP refusal before any PDP decision
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), a PDP
 denial (<code>reason</code> in the decision context, <code>denial_reason</code> in Decision
 Evidence), a permit obligation (<a href="#obligations" class="auto internal xref">Section 6.2</a>), or an Execution
 Evidence <code>error</code> for a failure after a permit
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>). The table below
-is the normative mapping for the conditions it names; extension
-identifiers remain
-governed by each carrier's extensibility rule.<a href="#section-6.8-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>). A PDP denial <span class="bcp14">MAY</span>
+additionally carry an obligation, the OAuth step-up composition of
+<a href="#obligations" class="auto internal xref">Section 6.2</a> being the one case this document defines; the row
+below marking that composite still names a single condition surfaced
+by one denial. The table below is the normative mapping for the
+conditions it names; extension identifiers remain governed by each
+carrier's extensibility rule.<a href="#section-6.8-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
           <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
@@ -3297,6 +3421,13 @@ governed by each carrier's extensibility rule.<a href="#section-6.8-1" class="pi
 </td>
             </tr>
             <tr>
+              <td class="text-left" rowspan="1" colspan="1">In-scope request reaches the PDP without the Mission decision context</td>
+              <td class="text-left" rowspan="1" colspan="1">Refusal Record</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>mission_context_missing</code>
+</td>
+            </tr>
+            <tr>
               <td class="text-left" rowspan="1" colspan="1">Action outside the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it</td>
               <td class="text-left" rowspan="1" colspan="1">PDP denial</td>
               <td class="text-left" rowspan="1" colspan="1">
@@ -3304,23 +3435,34 @@ governed by each carrier's extensibility rule.<a href="#section-6.8-1" class="pi
 </td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Resource policy requires a stronger authentication context, satisfiable via step-up</td>
+              <td class="text-left" rowspan="1" colspan="1">Resource policy requires a stronger authentication context, satisfiable by in-process step-up with no change to credential-bound inputs</td>
               <td class="text-left" rowspan="1" colspan="1">Obligation on permit</td>
               <td class="text-left" rowspan="1" colspan="1">step-up obligation (<span>[<a href="#AUTHZEN-OBL" class="cite xref">AUTHZEN-OBL</a>]</span>)</td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Resource policy requires a stronger authentication context and refuses outright (not expressible as a permit-plus-obligation)</td>
+              <td class="text-left" rowspan="1" colspan="1">Resource policy requires a stronger authentication context satisfiable only by a new access token (RFC 9470)</td>
+              <td class="text-left" rowspan="1" colspan="1">PDP denial (with obligation)</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>resource_policy</code> with the step-up obligation (<span>[<a href="#AUTHZEN-OBL" class="cite xref">AUTHZEN-OBL</a>]</span>)</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Resource policy requires a stronger authentication context and refuses outright, no step-up path available</td>
               <td class="text-left" rowspan="1" colspan="1">PDP denial</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>resource_policy</code>
 </td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Required action-bound approval absent, stale, or parameter-mismatched</td>
+              <td class="text-left" rowspan="1" colspan="1">Required action-bound approval absent (first evaluation)</td>
               <td class="text-left" rowspan="1" colspan="1">PDP denial</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>approval_required</code>
 </td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Re-evaluation's presented approval fails a Mission or ARAP check</td>
+              <td class="text-left" rowspan="1" colspan="1">PDP denial</td>
+              <td class="text-left" rowspan="1" colspan="1">ARAP's <code>approval_expired</code>, <code>out_of_scope</code>, <code>grant_pending</code>, <code>policy_denied</code>, or <code>approval_unverifiable</code> (<span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>)</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Mission state stale (freshness-window violation)</td>
@@ -3373,14 +3515,14 @@ governed by each carrier's extensibility rule.<a href="#section-6.8-1" class="pi
 </td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Idempotency key and authorization-relevant fingerprint match a prior unresolved or completed decision</td>
+              <td class="text-left" rowspan="1" colspan="1">Idempotency key and operation identity match a prior unresolved or completed claim</td>
               <td class="text-left" rowspan="1" colspan="1">PDP denial</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>duplicate_suppressed</code>
 </td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Idempotency key reused with a different authorization-relevant fingerprint</td>
+              <td class="text-left" rowspan="1" colspan="1">Idempotency key reused with a different operation identity</td>
               <td class="text-left" rowspan="1" colspan="1">PDP denial</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>idempotency_conflict</code>
@@ -3461,8 +3603,8 @@ governed by each carrier's extensibility rule.<a href="#section-6.8-1" class="pi
 <p id="section-6.8-3">The <code>duplicate_suppressed</code> and <code>idempotency_conflict</code> rows key on the
 same (idempotency scope, <code>idempotency_key</code>) claim
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); which one applies turns on
-whether the new request's authorization-relevant fingerprint
-(<a href="#request-fingerprint" class="auto internal xref">Section 5.11</a>) equals the one the claim was made under.<a href="#section-6.8-3" class="pilcrow">¶</a></p>
+whether the new request's operation identity (<a href="#projections" class="auto internal xref">Section 5.11</a>) equals
+the one the claim was made under.<a href="#section-6.8-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="permit-binding-split">
@@ -3488,19 +3630,16 @@ honors the permit's conditions (the permit's <code>valid_until</code> and <code>
 <a href="#response-context" class="auto internal xref">Section 6.1</a>) under the runtime profile's consumed-identifier
 rules (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), so a permit cannot
 be executed twice or after its lease.<a href="#section-6.9-3" class="pilcrow">¶</a></p>
-<p id="section-6.9-4">A PEP permit cache <span class="bcp14">MUST</span> key on the request's authorization-relevant
-fingerprint (<a href="#request-fingerprint" class="auto internal xref">Section 5.11</a>) and <span class="bcp14">MUST NOT</span> key on freshness
-telemetry (<code>freshness_at</code>, <code>mission_status_issued_at</code>,
-<code>mission_status_expires_at</code>), whose per-request variation would
-otherwise make the cache never hit. This binding does not echo the
-materialized view identifier on the response
-(<a href="#mission-to-policy-materialization" class="auto internal xref">Section 4</a>), so a cache cannot key on it;
-reuse is instead bounded by the permit's own <code>valid_until</code> and
-<code>use_limit</code>, the same lifetime-bounded controls that already gate
+<p id="section-6.9-4">A PEP permit cache <span class="bcp14">MUST</span> key on the request's cache key
+(<a href="#projections" class="auto internal xref">Section 5.11</a>), which already excludes observation telemetry by
+definition, so a per-request timestamp cannot prevent a cache hit.
+This binding does not echo the materialized view identifier on the
+response (<a href="#mission-to-policy-materialization" class="auto internal xref">Section 4</a>), so a cache cannot
+key on it; reuse is instead bounded by the permit's own <code>valid_until</code>
+and <code>use_limit</code>, the same lifetime-bounded controls that already gate
 execution, so a permit issued against a view the PDP has since
 retired cannot outlive its own lease regardless of cache key. A
-cached permit cannot be reused for a request whose fingerprint
-differs.<a href="#section-6.9-4" class="pilcrow">¶</a></p>
+cached permit cannot be reused for a request whose cache key differs.<a href="#section-6.9-4" class="pilcrow">¶</a></p>
 <p id="section-6.9-5">The envelope rule fixes what a permit cache is for. A parameter-bound
 class keys on <code>parameter_digest</code>, and a high-consequence permit is
 single-use, so caching amortizes only repeat-identical,
@@ -3593,13 +3732,13 @@ own registered media type
 Execution Evidence Object
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>) for the final
 disposition of every consequential permit: <code>completed</code>, <code>failed</code>, or
-<code>suppressed</code> before release. The record is identified by its stable
-<code>execution_id</code>; delivery of that record <span class="bcp14">MAY</span> be retried (at-least-once
-delivery), and a consumer <span class="bcp14">MUST</span> deduplicate on <code>execution_id</code> rather
-than assume single delivery. A permit whose action is never released
-still ends in Execution Evidence with <code>outcome</code> <code>suppressed</code>; only a
-refusal before any PDP decision is a Refusal Record. This is a
-profile-level PEP requirement, not an obligation.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<code>suppressed</code> before release. The record's delivery contract, keyed on
+its stable <code>execution_id</code>, is defined by the runtime evidence
+companion (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>). A
+permit whose action is never released still ends in Execution
+Evidence with <code>outcome</code> <code>suppressed</code>; only a refusal before any PDP
+decision is a Refusal Record. This is a profile-level PEP requirement,
+not an obligation.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
 <p id="section-7.1-2">If evidence emission fails after an irreversible effect, the effect
 stands: nothing retroactively permits or denies it. The PEP <span class="bcp14">MUST</span>
 record the emission failure durably and surface it on its operational
@@ -3704,8 +3843,8 @@ treat signed Decision Evidence as authorization to act
 (<a href="#permit-binding-split" class="auto internal xref">Section 6.9</a>);<a href="#section-9-4.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-4.7">
-          <p id="section-9-4.7.1">key permit caches on the request's authorization-relevant
-fingerprint (<a href="#permit-binding-split" class="auto internal xref">Section 6.9</a>); and<a href="#section-9-4.7.1" class="pilcrow">¶</a></p>
+          <p id="section-9-4.7.1">key permit caches on the request's cache key
+(<a href="#permit-binding-split" class="auto internal xref">Section 6.9</a>); and<a href="#section-9-4.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-4.8">
           <p id="section-9-4.8.1">emit a Refusal Record (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>)
@@ -3724,34 +3863,37 @@ decision context, and perform the PDP-side consistency checks
 (<a href="#pdp-request" class="auto internal xref">Section 5</a>);<a href="#section-9-7.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-7.2">
-          <p id="section-9-7.2.1">advertise in its metadata <code>supported_obligations</code> array each
-obligation type it supports, and <span class="bcp14">MUST NOT</span> rely on an obligation
-type the PEP has not declared support for (<a href="#obligations" class="auto internal xref">Section 6.2</a>);<a href="#section-9-7.2.1" class="pilcrow">¶</a></p>
+          <p id="section-9-7.2.1">classify every denial per <a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>;<a href="#section-9-7.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-7.3">
-          <p id="section-9-7.3.1">classify every denial per <a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>;<a href="#section-9-7.3.1" class="pilcrow">¶</a></p>
+          <p id="section-9-7.3.1">return the decision context of <a href="#response-context" class="auto internal xref">Section 6.1</a>, including a
+<code>conditions</code> object on every consequential permit and an obligations
+array only when a genuine obligation applies (<a href="#obligations" class="auto internal xref">Section 6.2</a>);<a href="#section-9-7.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-7.4">
-          <p id="section-9-7.4.1">return the decision context of <a href="#response-context" class="auto internal xref">Section 6.1</a>, including a
-<code>conditions</code> object on every consequential permit and an obligations
-array only when a genuine obligation applies (<a href="#obligations" class="auto internal xref">Section 6.2</a>);<a href="#section-9-7.4.1" class="pilcrow">¶</a></p>
+          <p id="section-9-7.4.1">advertise the <code>urn:ietf:params:authzen:mission-runtime</code> capability
+URN in its metadata <code>capabilities</code> array (<a href="#iana" class="auto internal xref">Section 12</a>);<a href="#section-9-7.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-7.5">
-          <p id="section-9-7.5.1">advertise the <code>mission-runtime</code> capability in its metadata
-<code>capabilities</code> array (<a href="#iana" class="auto internal xref">Section 12</a>); and<a href="#section-9-7.5.1" class="pilcrow">¶</a></p>
+          <p id="section-9-7.5.1">emit the records of <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>
+for every decision; and<a href="#section-9-7.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-7.6">
-          <p id="section-9-7.6.1">emit the records of <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>
-for every decision.<a href="#section-9-7.6.1" class="pilcrow">¶</a></p>
+          <p id="section-9-7.6.1">emit a Refusal Record
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>) for an in-scope
+request it refuses before evaluation (<a href="#pdp-request" class="auto internal xref">Section 5</a>).<a href="#section-9-7.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-9-8">A deployment whose requesting component and executing component
+<p id="section-9-8">A PDP conforming to this binding <span class="bcp14">SHOULD</span> advertise in its metadata
+<code>supported_obligations</code> array each obligation type it supports
+(<a href="#obligations" class="auto internal xref">Section 6.2</a>).<a href="#section-9-8" class="pilcrow">¶</a></p>
+<p id="section-9-9">A deployment whose requesting component and executing component
 differ is out of scope for conformance to this profile
-(<a href="#permit-binding-split" class="auto internal xref">Section 6.9</a>).<a href="#section-9-8" class="pilcrow">¶</a></p>
-<p id="section-9-9">Record producer and consumer conformance, including evidence
+(<a href="#permit-binding-split" class="auto internal xref">Section 6.9</a>).<a href="#section-9-9" class="pilcrow">¶</a></p>
+<p id="section-9-10">Record producer and consumer conformance, including evidence
 signing-key verification and the classification of orphaned Decision
 Evidence, is defined by the runtime evidence companion
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-9-9" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-9-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -3895,28 +4037,32 @@ itself and is not re-registered here.<a href="#section-12.1-1" class="pilcrow">�
         <h3 id="name-authzen-policy-decision-poi">
 <a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-authzen-policy-decision-poi" class="section-name selfRef">AuthZEN Policy Decision Point Capability Registration</a>
         </h3>
-<p id="section-12.2-1">This document requests registration of one capability identifier,
-<code>mission-runtime</code>, in the AuthZEN Policy Decision Point Capabilities
+<p id="section-12.2-1">This document requests registration of one capability, using the
+registry's template, in the AuthZEN Policy Decision Point Capabilities
 registry <span>[<a href="#AUTHZEN" class="cite xref">AUTHZEN</a>]</span> establishes, naming this profile's support in a
 PDP's metadata <code>capabilities</code> array. A PDP conforming to this binding
-<span class="bcp14">MUST</span> advertise the <code>mission-runtime</code> capability, so a PEP can
-discover profile support in-band before it evaluates a Mission-bound
-request (<a href="#conformance" class="auto internal xref">Section 9</a>). This in-band discovery complements, and
-does not replace, the deployment-established conformance gating this
-profile otherwise requires.<a href="#section-12.2-1" class="pilcrow">¶</a></p>
+<span class="bcp14">MUST</span> advertise the full URN, <code>urn:ietf:params:authzen:mission-runtime</code>,
+never the bare capability name, so a PEP can discover profile support
+in-band before it evaluates a Mission-bound request (<a href="#conformance" class="auto internal xref">Section 9</a>).
+This in-band discovery complements, and does not replace, the
+deployment-established conformance gating this profile otherwise
+requires.<a href="#section-12.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-12.2-2.1">
-            <p id="section-12.2-2.1.1">Capability Name: mission-runtime<a href="#section-12.2-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-12.2-2.1.1">Capability Name: :mission-runtime<a href="#section-12.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.2-2.2">
-            <p id="section-12.2-2.2.1">Description: support for the Mission-Bound Runtime Enforcement
-AuthZEN binding of this document.<a href="#section-12.2-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-12.2-2.2.1">Capability URN: urn:ietf:params:authzen:mission-runtime<a href="#section-12.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.2-2.3">
-            <p id="section-12.2-2.3.1">Change Controller: the author of this document<a href="#section-12.2-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-12.2-2.3.1">Capability Description: support for the Mission-Bound Runtime
+Enforcement AuthZEN binding of this document.<a href="#section-12.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.2-2.4">
-            <p id="section-12.2-2.4.1">Reference: this document<a href="#section-12.2-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-12.2-2.4.1">Change Controller: the author of this document<a href="#section-12.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.2-2.5">
+            <p id="section-12.2-2.5.1">Specification Document: this document<a href="#section-12.2-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>

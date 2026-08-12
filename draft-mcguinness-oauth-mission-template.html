@@ -1760,7 +1760,10 @@ Dispatcher supplies a dispatch event identifier with the request; a
 repeated request bearing an identifier the Mission Issuer has already
 committed returns the Mission it already committed, and instantiates no
 second Mission. This makes retry safe at machine speed and keeps
-<code>max_active</code> and <code>dispatch_rate</code> accounting exact.<a href="#section-7-5" class="pilcrow">¶</a></p>
+<code>max_active</code> and <code>dispatch_rate</code> accounting exact. The dispatch event
+identifier is this grant's realization of the creation idempotency
+the expansion profile defines for the family's Mission-creating token
+exchanges (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-7-5" class="pilcrow">¶</a></p>
 <div id="template-member">
 <section id="section-7.1">
         <h3 id="name-the-template-lineage-member">

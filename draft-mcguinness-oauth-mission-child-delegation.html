@@ -1213,10 +1213,13 @@ Mission is never created by session ancestry alone.<a href="#section-abstract-1"
                 <p id="section-toc.1-1.6.2.7.1"><a href="#section-6.7" class="auto internal xref">6.7</a>.  <a href="#name-request-processing" class="internal xref">Request Processing</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.8">
-                <p id="section-toc.1-1.6.2.8.1"><a href="#section-6.8" class="auto internal xref">6.8</a>.  <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
+                <p id="section-toc.1-1.6.2.8.1"><a href="#section-6.8" class="auto internal xref">6.8</a>.  <a href="#name-creation-idempotency" class="internal xref">Creation Idempotency</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.9">
-                <p id="section-toc.1-1.6.2.9.1"><a href="#section-6.9" class="auto internal xref">6.9</a>.  <a href="#name-child-creation-denial-reaso" class="internal xref">Child Creation Denial Reasons</a></p>
+                <p id="section-toc.1-1.6.2.9.1"><a href="#section-6.9" class="auto internal xref">6.9</a>.  <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.10">
+                <p id="section-toc.1-1.6.2.10.1"><a href="#section-6.10" class="auto internal xref">6.10</a>. <a href="#name-child-creation-denial-reaso" class="internal xref">Child Creation Denial Reasons</a></p>
 </li>
             </ul>
 </li>
@@ -1701,6 +1704,18 @@ resolves and selects the parent from <code>subject_token</code>
 names that same resolved Mission and refuse a mismatch with
 <code>invalid_grant</code>. <code>parent</code> does not by itself authorize child creation.<a href="#section-6-4.20.1" class="pilcrow">¶</a></p>
 </dd>
+        <dd class="break"></dd>
+<dt id="section-6-4.21">
+<code>creation_request_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-4.22">
+          <p id="section-6-4.22.1"><span class="bcp14">REQUIRED</span>. The creation idempotency identifier the expansion profile
+defines for the family's Mission-creating token exchanges
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>): an ASCII string
+of at most 255 octets identifying this one child-creation operation
+across every completion mode (<a href="#creation-idempotency" class="auto internal xref">Section 6.8</a>). The
+Mission Issuer <span class="bcp14">MUST</span> refuse an exchange missing it with
+<code>invalid_request</code>.<a href="#section-6-4.22.1" class="pilcrow">¶</a></p>
+</dd>
       <dd class="break"></dd>
 </dl>
 <p id="section-6-5">The parent redeems this token exchange at the token endpoint under the
@@ -1921,15 +1936,19 @@ by the access-token type
         <dd class="break"></dd>
 </dl>
 <p id="section-6.6-3">The exchange follows <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>, carrying <code>subject_token</code>,
-<code>subject_token_type</code>, <code>child_actor</code>, <code>mission_intent</code>, and the optional
-<code>parent</code> cross-check of <a href="#child-creation" class="auto internal xref">Section 6</a>. The parent proves possession
+<code>subject_token_type</code>, <code>child_actor</code>, <code>mission_intent</code>,
+<code>creation_request_id</code>, and the optional <code>parent</code> cross-check of
+<a href="#child-creation" class="auto internal xref">Section 6</a>. The parent proves possession
 of the Parent Mission by controlling the <code>subject_token</code>'s confirmation
 key (<a href="#request-processing" class="auto internal xref">Section 6.7</a>); the Mission Issuer resolves and
 authorizes the parent from that possession, not from client
 registration alone. This is the single gated child-creation decision
 this profile permits per exchange: where the possession proof is a DPoP
 proof, its <code>jti</code> is single-use per <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, so a captured exchange
-cannot be replayed to derive a second Child Mission.<a href="#section-6.6-3" class="pilcrow">¶</a></p>
+cannot be replayed to derive a second Child Mission. A lost response
+is the complementary fault: a retried exchange recovers the committed
+child under the creation idempotency of <a href="#creation-idempotency" class="auto internal xref">Section 6.8</a>,
+never a second one.<a href="#section-6.6-3" class="pilcrow">¶</a></p>
 <p id="section-6.6-4">On success the Mission Issuer responds with the <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token
 response shape:<a href="#section-6.6-4" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-6.6-5">
@@ -1986,10 +2005,11 @@ parent (<a href="#child-client-identity" class="auto internal xref">Section 6.1<
 order, refusing on the first failure:<a href="#section-6.7-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-6.7-2">
 <li id="section-6.7-2.1">
-            <p id="section-6.7-2.1.1">Parse the exchange and require <code>subject_token</code> with
+            <p id="section-6.7-2.1.1">Parse the exchange, require <code>subject_token</code> with
 <code>subject_token_type</code> =
-<code>urn:ietf:params:oauth:token-type:access_token</code>; reject a refresh
-token (<a href="#child-creation" class="auto internal xref">Section 6</a>).<a href="#section-6.7-2.1.1" class="pilcrow">¶</a></p>
+<code>urn:ietf:params:oauth:token-type:access_token</code>, rejecting a
+refresh token, and require <code>creation_request_id</code>
+(<a href="#child-creation" class="auto internal xref">Section 6</a>).<a href="#section-6.7-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.7-2.2">
             <p id="section-6.7-2.2.1">Resolve the Parent Mission from <code>subject_token</code>.<a href="#section-6.7-2.2.1" class="pilcrow">¶</a></p>
@@ -2005,26 +2025,34 @@ authentication) is authorized to create a child under this parent,
 and verify that any <code>parent</code> cross-check names the resolved Mission.<a href="#section-6.7-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.7-2.5">
-            <p id="section-6.7-2.5.1">Verify the Parent Mission is <code>active</code> and no ancestor Mission in its
-lineage chain is non-active.<a href="#section-6.7-2.5.1" class="pilcrow">¶</a></p>
+            <p id="section-6.7-2.5.1">Look up the <code>(client, creation_request_id)</code> reservation and, where
+one exists, recover the recorded operation instead of proceeding
+(<a href="#creation-idempotency" class="auto internal xref">Section 6.8</a>). Per the expansion profile's lookup
+order, the lookup follows client authentication and possession
+verification and precedes the parent-state gate of step 6.<a href="#section-6.7-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.7-2.6">
-            <p id="section-6.7-2.6.1">Verify the applicable parent Authority Set entry's <code>delegation</code>
-carries a <code>children</code> object permitting child creation, and that
-<code>child_actor</code> satisfies its constraints (<a href="#fanout" class="auto internal xref">Section 9</a>).<a href="#section-6.7-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-6.7-2.6.1">Verify the Parent Mission is <code>active</code> and no ancestor Mission in its
+lineage chain is non-active.<a href="#section-6.7-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.7-2.7">
-            <p id="section-6.7-2.7.1">Derive the child Authority Set, verify strict subset
-(<a href="#strict-subset" class="auto internal xref">Section 8.1</a>), and apply fan-out controls.<a href="#section-6.7-2.7.1" class="pilcrow">¶</a></p>
+            <p id="section-6.7-2.7.1">Verify the applicable parent Authority Set entry's <code>delegation</code>
+carries a <code>children</code> object permitting child creation, and that
+<code>child_actor</code> satisfies its constraints (<a href="#fanout" class="auto internal xref">Section 9</a>).<a href="#section-6.7-2.7.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.7-2.8">
-            <p id="section-6.7-2.8.1">Determine subset derivation versus fresh approval and complete per
-<a href="#completion" class="auto internal xref">Section 6.4</a>: synchronous, deferred, or interactive.<a href="#section-6.7-2.8.1" class="pilcrow">¶</a></p>
+            <p id="section-6.7-2.8.1">Derive the child Authority Set, verify strict subset
+(<a href="#strict-subset" class="auto internal xref">Section 8.1</a>), and apply fan-out controls.<a href="#section-6.7-2.8.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.7-2.9">
-            <p id="section-6.7-2.9.1">At the creation commit, re-verify parent state (<a href="#creation-race" class="auto internal xref">Section 6.3</a>),
-create the Child Mission record with <code>parent</code> atomically, and record
-Child Evidence.<a href="#section-6.7-2.9.1" class="pilcrow">¶</a></p>
+            <p id="section-6.7-2.9.1">Determine subset derivation versus fresh approval and complete per
+<a href="#completion" class="auto internal xref">Section 6.4</a>: synchronous, deferred, or interactive.<a href="#section-6.7-2.9.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.7-2.10">
+            <p id="section-6.7-2.10.1">At the creation commit, re-verify parent state (<a href="#creation-race" class="auto internal xref">Section 6.3</a>),
+create the Child Mission record with <code>parent</code> and the completed
+<code>(client, creation_request_id)</code> reservation atomically
+(<a href="#creation-idempotency" class="auto internal xref">Section 6.8</a>), and record Child Evidence.<a href="#section-6.7-2.10.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 <p id="section-6.7-3">On any failure the Mission Issuer <span class="bcp14">MUST</span> refuse with <code>invalid_request</code>,
@@ -2034,12 +2062,60 @@ redeems its own grant for the Child Mission's tokens
 (<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>).<a href="#section-6.7-3" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="worked-example">
+<div id="creation-idempotency">
 <section id="section-6.8">
-        <h3 id="name-worked-example">
-<a href="#section-6.8" class="section-number selfRef">6.8. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
+        <h3 id="name-creation-idempotency">
+<a href="#section-6.8" class="section-number selfRef">6.8. </a><a href="#name-creation-idempotency" class="section-name selfRef">Creation Idempotency</a>
         </h3>
-<p id="section-6.8-1">Under the Q3 reconciliation Mission
+<p id="section-6.8-1">The <code>creation_request_id</code> semantics are the expansion profile's,
+defined once for the family's Mission-creating token exchanges and
+not redefined here
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>): the operation
+fingerprint and its extension rule, the durable reservation and its
+uniqueness constraint, recovery as delivery, the revalidation and
+lookup-order rules, and tombstone retention against the published
+retry horizon. This section states what is specific to child
+creation.<a href="#section-6.8-1" class="pilcrow">¶</a></p>
+<p id="section-6.8-2">In the fingerprint object, <code>op</code> is <code>child-creation</code>; <code>source</code> is the
+Parent Mission's <code>mission_id</code> resolved from <code>subject_token</code>
+(<a href="#request-processing" class="auto internal xref">Section 6.7</a>); <code>child_actor</code> is the parsed <code>child_actor</code>
+object; and <code>cross_check</code> is the supplied <code>parent</code> value, when
+present. The remaining members are as the expansion profile defines
+them. Two child creations differing only in <code>child_actor</code> are
+different operations: presenting the same <code>creation_request_id</code> for
+both is refused with <code>invalid_request</code>.<a href="#section-6.8-2" class="pilcrow">¶</a></p>
+<p id="section-6.8-3">Recovery is delivery, never a second child. A revalidated repetition
+of the same <code>(client, creation_request_id)</code>:<a href="#section-6.8-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.8-4.1">
+            <p id="section-6.8-4.1.1">returns the same deferral or interactive continuation while
+completion is pending, scoped to the authenticated client;<a href="#section-6.8-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.8-4.2">
+            <p id="section-6.8-4.2.1">returns the original child-bound JWT authorization grant while it
+remains valid;<a href="#section-6.8-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.8-4.3">
+            <p id="section-6.8-4.3.1">re-mints the child-bound grant for the same Child Mission when the
+original has expired (the assertion is deliberately short-lived,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>), provided
+the Child Mission remains <code>active</code> under the conditions of
+<a href="#child-state" class="auto internal xref">Section 10.1</a> and the requester re-establishes the recorded
+authorization context. Re-minting is a delivery event with
+ordinary issuance accounting; it <span class="bcp14">MUST NOT</span> create a second Child
+Mission, count a second time against <code>max_children</code>
+(<a href="#fanout-accounting" class="auto internal xref">Section 9.1</a>), or record a second Child Evidence object
+(<a href="#child-evidence" class="auto internal xref">Section 11</a>).<a href="#section-6.8-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="worked-example">
+<section id="section-6.9">
+        <h3 id="name-worked-example">
+<a href="#section-6.9" class="section-number selfRef">6.9. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
+        </h3>
+<p id="section-6.9-1">Under the Q3 reconciliation Mission
 <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>, the approved agent
 <code>s6BhdRkqt3</code>, acting for <code>alice</code>, spawns a read-only invoice
 extraction sub-agent and presents a child-creation token exchange whose
@@ -2047,8 +2123,8 @@ extraction sub-agent and presents a child-creation token exchange whose
 possession with a DPoP proof over the token's confirmation key
 (illustrative; this Mission's Authority Set extends the single-domain
 walkthrough's, its read entry's <code>delegation</code> carrying a <code>children</code>
-object (<a href="#fanout" class="auto internal xref">Section 9</a>), so its anchors differ from that example's):<a href="#section-6.8-1" class="pilcrow">¶</a></p>
-<div class="lang-http sourcecode" id="section-6.8-2">
+object (<a href="#fanout" class="auto internal xref">Section 9</a>), so its anchors differ from that example's):<a href="#section-6.9-1" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="section-6.9-2">
 <pre>
 POST /token HTTP/1.1
 Host: as.example.com
@@ -2065,17 +2141,17 @@ parent=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&amp;
 child_actor=%7B%22sub%22%3A%22subagent-invoice-extractor%22%2C
   %22sub_profile%22%3A%22ai_agent%22%7D&amp;
 client_id=s6BhdRkqt3
-</pre><a href="#section-6.8-2" class="pilcrow">¶</a>
+</pre><a href="#section-6.9-2" class="pilcrow">¶</a>
 </div>
-<p id="section-6.8-3">The Mission Issuer resolves the parent from <code>subject_token</code>, verifies
+<p id="section-6.9-3">The Mission Issuer resolves the parent from <code>subject_token</code>, verifies
 the presenter controls the token's confirmation key, processes the
 request per <a href="#request-processing" class="auto internal xref">Section 6.7</a>, and, as this child is a strict
 subset of the parent, completes synchronously (<a href="#completion" class="auto internal xref">Section 6.4</a>) and
 creates the Child Mission. The sub-agent then authenticates as
 <code>subagent-invoice-extractor</code> at the token endpoint and redeems its own
 grant (<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>); no child credential transits the
-parent. The decoded child access token:<a href="#section-6.8-3" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-6.8-4">
+parent. The decoded child access token:<a href="#section-6.9-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.9-4">
 <pre>
 {
   "iss": "https://as.example.com",
@@ -2111,70 +2187,70 @@ parent. The decoded child access token:<a href="#section-6.8-3" class="pilcrow">
     }
   }
 }
-</pre><a href="#section-6.8-4" class="pilcrow">¶</a>
+</pre><a href="#section-6.9-4" class="pilcrow">¶</a>
 </div>
-<p id="section-6.8-5"><code>mission.id</code> is the Child Mission and <code>mission.authority_hash</code> commits
+<p id="section-6.9-5"><code>mission.id</code> is the Child Mission and <code>mission.authority_hash</code> commits
 the child Authority Set; the <code>parent</code> object is lineage, with <code>depth</code> 1
 for a child of a root Mission. The <code>cnf</code> key is the sub-agent's own
-(<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>).<a href="#section-6.8-5" class="pilcrow">¶</a></p>
+(<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>).<a href="#section-6.9-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="denial-reasons">
-<section id="section-6.9">
+<section id="section-6.10">
         <h3 id="name-child-creation-denial-reaso">
-<a href="#section-6.9" class="section-number selfRef">6.9. </a><a href="#name-child-creation-denial-reaso" class="section-name selfRef">Child Creation Denial Reasons</a>
+<a href="#section-6.10" class="section-number selfRef">6.10. </a><a href="#name-child-creation-denial-reaso" class="section-name selfRef">Child Creation Denial Reasons</a>
         </h3>
-<p id="section-6.9-1">This profile defines these symbolic denial reasons:<a href="#section-6.9-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-6.9-2">
-          <dt id="section-6.9-2.1">
+<p id="section-6.10-1">This profile defines these symbolic denial reasons:<a href="#section-6.10-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.10-2">
+          <dt id="section-6.10-2.1">
 <code>parent_not_active</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.9-2.2">
-            <p id="section-6.9-2.2.1">The Parent Mission is not active.<a href="#section-6.9-2.2.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-6.10-2.2">
+            <p id="section-6.10-2.2.1">The Parent Mission is not active.<a href="#section-6.10-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-6.9-2.3">
+<dt id="section-6.10-2.3">
 <code>parent_mismatch</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.9-2.4">
-            <p id="section-6.9-2.4.1">The caller-supplied <code>parent</code> cross-check does not match the Mission
-resolved from <code>subject_token</code>.<a href="#section-6.9-2.4.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-6.10-2.4">
+            <p id="section-6.10-2.4.1">The caller-supplied <code>parent</code> cross-check does not match the Mission
+resolved from <code>subject_token</code>.<a href="#section-6.10-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-6.9-2.5">
+<dt id="section-6.10-2.5">
 <code>delegation_not_permitted</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.9-2.6">
-            <p id="section-6.9-2.6.1">The applicable parent Authority Set entry's <code>delegation</code> member
+          <dd style="margin-left: 1.5em" id="section-6.10-2.6">
+            <p id="section-6.10-2.6.1">The applicable parent Authority Set entry's <code>delegation</code> member
 carries no <code>children</code> object, so it permits no child creation
-(<a href="#fanout" class="auto internal xref">Section 9</a>).<a href="#section-6.9-2.6.1" class="pilcrow">¶</a></p>
+(<a href="#fanout" class="auto internal xref">Section 9</a>).<a href="#section-6.10-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-6.9-2.7">
+<dt id="section-6.10-2.7">
 <code>child_actor_not_allowed</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.9-2.8">
-            <p id="section-6.9-2.8.1">The child actor does not satisfy the parent entry's
-<code>allowed_child_actors</code> (<a href="#fanout" class="auto internal xref">Section 9</a>) or equivalent policy.<a href="#section-6.9-2.8.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-6.10-2.8">
+            <p id="section-6.10-2.8.1">The child actor does not satisfy the parent entry's
+<code>allowed_child_actors</code> (<a href="#fanout" class="auto internal xref">Section 9</a>) or equivalent policy.<a href="#section-6.10-2.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-6.9-2.9">
+<dt id="section-6.10-2.9">
 <code>not_strict_subset</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.9-2.10">
-            <p id="section-6.9-2.10.1">The proposed child authority is not a strict subset of parent
-authority (<a href="#strict-subset" class="auto internal xref">Section 8.1</a>).<a href="#section-6.9-2.10.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-6.10-2.10">
+            <p id="section-6.10-2.10.1">The proposed child authority is not a strict subset of parent
+authority (<a href="#strict-subset" class="auto internal xref">Section 8.1</a>).<a href="#section-6.10-2.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-6.9-2.11">
+<dt id="section-6.10-2.11">
 <code>fanout_exceeded</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.9-2.12">
-            <p id="section-6.9-2.12.1">Creating the child would exceed a fan-out control.<a href="#section-6.9-2.12.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-6.10-2.12">
+            <p id="section-6.10-2.12.1">Creating the child would exceed a fan-out control.<a href="#section-6.10-2.12.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-6.9-2.13">
+<dt id="section-6.10-2.13">
 <code>policy_denied</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.9-2.14">
-            <p id="section-6.9-2.14.1">Deployment policy denied child creation.<a href="#section-6.9-2.14.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-6.10-2.14">
+            <p id="section-6.10-2.14.1">Deployment policy denied child creation.<a href="#section-6.10-2.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-6.9-3">These symbolic strings appear in error bodies, evidence, and audit,
+<p id="section-6.10-3">These symbolic strings appear in error bodies, evidence, and audit,
 layered on the OAuth error codes the issuance profile uses:
 <code>parent_not_active</code> and <code>parent_mismatch</code> accompany <code>invalid_grant</code>;
 <code>delegation_not_permitted</code>, <code>child_actor_not_allowed</code>,
@@ -2187,18 +2263,18 @@ alongside the OAuth <code>error</code> member. On a deferred completion
 (<a href="#completion" class="auto internal xref">Section 6.4</a>) a denial surfaces as the deferred substrate's
 <code>access_denied</code> resolution. The possession proof is presented only on
 the token endpoint's authenticated back channel and <span class="bcp14">MUST NOT</span> appear on
-any front channel (<a href="#child-creation" class="auto internal xref">Section 6</a>).<a href="#section-6.9-3" class="pilcrow">¶</a></p>
-<p id="section-6.9-4">For example, a child Mission Intent that drops the parent entry's
+any front channel (<a href="#child-creation" class="auto internal xref">Section 6</a>).<a href="#section-6.10-3" class="pilcrow">¶</a></p>
+<p id="section-6.10-4">For example, a child Mission Intent that drops the parent entry's
 <code>resource_issued_before</code> constraint proposes a relaxation, not a
 subset. The
-Mission Issuer refuses it (<a href="#strict-subset" class="auto internal xref">Section 8.1</a>) with:<a href="#section-6.9-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-6.9-5">
+Mission Issuer refuses it (<a href="#strict-subset" class="auto internal xref">Section 8.1</a>) with:<a href="#section-6.10-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.10-5">
 <pre>
 {
   "error": "invalid_request",
   "mission_denial_reason": "not_strict_subset"
 }
-</pre><a href="#section-6.9-5" class="pilcrow">¶</a>
+</pre><a href="#section-6.10-5" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -2502,7 +2578,7 @@ profile's <code>children</code> member is such a member.<a href="#section-9-1" c
           <p id="section-9-2.2.1"><span class="bcp14">OPTIONAL</span>. An object. Its PRESENCE on a parent Authority Set entry's
 <code>delegation</code> member is what permits Child Mission creation for that
 entry; an entry whose <code>delegation</code> carries no <code>children</code> permits no
-child (<a href="#denial-reasons" class="auto internal xref">Section 6.9</a>). Its members are the fan-out controls, each
+child (<a href="#denial-reasons" class="auto internal xref">Section 6.10</a>). Its members are the fan-out controls, each
 applied per entry, per parent Mission:<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-9-2.2.2">
             <dt id="section-9-2.2.2.1">
@@ -3034,7 +3110,7 @@ creation request of <a href="#child-creation" class="auto internal xref">Section
 this profile. A client <span class="bcp14">MUST NOT</span> infer the fan-out controls
 (<a href="#fanout" class="auto internal xref">Section 9</a>) a deployment enforces from this member alone; an
 unenforceable requested control is refused at creation
-(<a href="#denial-reasons" class="auto internal xref">Section 6.9</a>).<a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
+(<a href="#denial-reasons" class="auto internal xref">Section 6.10</a>).<a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -3060,25 +3136,30 @@ caller-supplied <code>parent</code> identifier alone
 (<a href="#request-processing" class="auto internal xref">Section 6.7</a>);<a href="#section-16-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.3">
-          <p id="section-16-2.3.1">enforce strict-subset authority and expiry;<a href="#section-16-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.3.1">require <code>creation_request_id</code> on every child-creation exchange and
+recover a repeated one per <a href="#creation-idempotency" class="auto internal xref">Section 6.8</a>, never creating
+a second child;<a href="#section-16-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.4">
-          <p id="section-16-2.4.1">enforce delegation and fan-out controls;<a href="#section-16-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.4.1">enforce strict-subset authority and expiry;<a href="#section-16-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.5">
-          <p id="section-16-2.5.1">record the <code>parent</code> member on child Mission records and tokens;<a href="#section-16-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.5.1">enforce delegation and fan-out controls;<a href="#section-16-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.6">
-          <p id="section-16-2.6.1">record the Child Mission's <code>approval_basis</code> (<a href="#record-requirements" class="auto internal xref">Section 7.1</a>):
-<code>direct</code> for a human-approved child, <code>policy_drawdown</code> for one
-policy adjudicates, with <code>consent_principal</code> always the Parent
-Mission's human <code>approver</code>;<a href="#section-16-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.6.1">record the <code>parent</code> member on child Mission records and tokens;<a href="#section-16-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.7">
-          <p id="section-16-2.7.1">implement cascade revocation; and<a href="#section-16-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.7.1">record the Child Mission's <code>approval_basis</code> (<a href="#record-requirements" class="auto internal xref">Section 7.1</a>):
+<code>direct</code> for a human-approved child, <code>policy_drawdown</code> for one
+policy adjudicates, with <code>consent_principal</code> always the Parent
+Mission's human <code>approver</code>;<a href="#section-16-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.8">
-          <p id="section-16-2.8.1">record child delegation evidence.<a href="#section-16-2.8.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.8.1">implement cascade revocation; and<a href="#section-16-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-2.9">
+          <p id="section-16-2.9.1">record child delegation evidence.<a href="#section-16-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-16-3">A Resource Server does not need to understand this profile to enforce
@@ -3228,22 +3309,27 @@ so no dedicated parent-token parameter exists. The <code>parent</code> and <code
 parameters are presented only on the token endpoint's authenticated
 back channel, never on a front-channel authorization request
 (<a href="#child-creation" class="auto internal xref">Section 6</a>).<a href="#section-19-3" class="pilcrow">¶</a></p>
-<p id="section-19-4">This document registers one member in the existing "OAuth Authorization
+<p id="section-19-4">The <code>creation_request_id</code> parameter this profile requires on the
+child-creation exchange (<a href="#creation-idempotency" class="auto internal xref">Section 6.8</a>) is defined and
+registered by the expansion profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>); this document
+adds no registration for it.<a href="#section-19-4" class="pilcrow">¶</a></p>
+<p id="section-19-5">This document registers one member in the existing "OAuth Authorization
 Server Metadata" registry <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>: Change Controller IETF; Reference
-this document, <a href="#discovery" class="auto internal xref">Section 15</a>.<a href="#section-19-4" class="pilcrow">¶</a></p>
+this document, <a href="#discovery" class="auto internal xref">Section 15</a>.<a href="#section-19-5" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-19-5.1">
-          <p id="section-19-5.1.1"><code>mission_child_delegation_supported</code><a href="#section-19-5.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-19-6.1">
+          <p id="section-19-6.1.1"><code>mission_child_delegation_supported</code><a href="#section-19-6.1.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-19-6">Consistent with the issuance profile, which registers the <code>mission</code>
+<p id="section-19-7">Consistent with the issuance profile, which registers the <code>mission</code>
 claim as an open object with no registry of its members, this document
 defines the <code>parent</code> member of the <code>mission</code> claim
 (<a href="#parent-member" class="auto internal xref">Section 7</a>) without a separate claim registration: it is a
 member defined by this profile, carried inside the already-registered
-<code>mission</code> claim.<a href="#section-19-6" class="pilcrow">¶</a></p>
-<p id="section-19-7">This document defines one closed set of symbolic codes: the child
-creation denial reasons (<a href="#denial-reasons" class="auto internal xref">Section 6.9</a>). Like the issuance
+<code>mission</code> claim.<a href="#section-19-7" class="pilcrow">¶</a></p>
+<p id="section-19-8">This document defines one closed set of symbolic codes: the child
+creation denial reasons (<a href="#denial-reasons" class="auto internal xref">Section 6.10</a>). Like the issuance
 profile's restraint with <code>mission</code> members, these are documented in
 this specification rather than placed in a new IANA registry: they ride
 in the shared <code>mission_denial_reason</code> member defined and registered by
@@ -3255,15 +3341,15 @@ document therefore requires no registration for the member. Should
 interoperable extension prove necessary, the expansion profile's IANA
 considerations anticipate a shared "Mission Denial Reason" registry
 with a Specification Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> policy; this document does
-not create it.<a href="#section-19-7" class="pilcrow">¶</a></p>
-<p id="section-19-8">Child creation uses the already-registered <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>
+not create it.<a href="#section-19-8" class="pilcrow">¶</a></p>
+<p id="section-19-9">Child creation uses the already-registered <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>
         <code>urn:ietf:params:oauth:grant-type:token-exchange</code> grant type, selected
 by the <code>requested_token_type</code> value <code>urn:ietf:params:oauth:token-type:jwt</code>
 (<a href="#grant-type" class="auto internal xref">Section 6.6</a>); this document requests no new grant-type registration.
 An earlier revision requested registration of a dedicated
 <code>urn:ietf:params:oauth:grant-type:mission-child-creation</code> grant type;
 this document removes that request, folding child creation into the
-token-exchange grant the rest of the Mission family already uses.<a href="#section-19-8" class="pilcrow">¶</a></p>
+token-exchange grant the rest of the Mission family already uses.<a href="#section-19-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">

@@ -3014,10 +3014,13 @@ evidence record bind.<a href="#section-7.3-3" class="pilcrow">¶</a></p>
 token alone does not convey. A runtime deployment <span class="bcp14">MUST</span> define the
 Mission state source it trusts for each enforcement scope. Examples
 include issuer AS token introspection, a local Mission database, an
-authenticated status or event feed from the Mission <code>issuer</code>, a
-materialized policy view, or a short-lived cross-domain credential
+authenticated status or event feed from the Mission <code>issuer</code>, or a
+short-lived cross-domain credential
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) whose lifetime
-is the deployment's accepted state lease.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
+is the deployment's accepted state lease. The materialized policy
+view (<a href="#policy-view" class="auto internal xref">Section 7.5</a>) is not a state source: it commits the
+compiled authority, never the mutable lifecycle state a decision
+consults.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
 <p id="section-7.4-2">The substrate this profile enforces against provides at least a
 lifecycle-gated capability (Mission state at the issuer, with reliance
 boundable by credential lifetime alone) and <span class="bcp14">MAY</span> additionally provide a
@@ -3037,11 +3040,15 @@ within the deployment's published staleness bound, that the Mission
 is <code>active</code>.<a href="#section-7.4-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.4-3.2">
-            <p id="section-7.4-3.2.1">A state source <span class="bcp14">MUST</span> either report the Mission state with a freshness
-time, or define a lease interval over which a previously established
-<code>active</code> state remains acceptable for the relevant action class.
-A permit issued from that state view <span class="bcp14">MUST</span> expire no later than the
-applicable freshness time or lease interval.<a href="#section-7.4-3.2.1" class="pilcrow">¶</a></p>
+            <p id="section-7.4-3.2.1">A state source <span class="bcp14">MUST</span> either report the Mission state with an
+explicit expiry or lease end, or report only an observation time, in
+which case the state remains acceptable only until that observation
+time plus the deployment's published staleness bound for the
+relevant action class. A permit issued from that state view <span class="bcp14">MUST</span>
+expire no later than this state valid-through: the reported expiry
+or lease end, or, absent one, the observation time plus the
+published staleness bound. The observation time alone, without
+adding the staleness bound, is never a permit's expiry.<a href="#section-7.4-3.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.4-3.3">
             <p id="section-7.4-3.3.1">When the credential issuer also holds the Mission, the PDP can learn
@@ -3237,10 +3244,9 @@ wire (<a href="#authzen" class="auto internal xref">Section 15</a>).<a href="#se
 <p id="section-7.5-2">The materialized policy view <span class="bcp14">MUST</span> satisfy three properties:<a href="#section-7.5-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7.5-3.1">
-            <p id="section-7.5-3.1.1">Reproducible: the same inputs (the Mission's approved Authority Set
-as committed by <code>authority_hash</code>, and the derivation <code>policy_version</code>
-recorded at the approval event) produce byte-identical materialized
-output under the canonicalization rules of
+            <p id="section-7.5-3.1.1">Reproducible: identical manifest inputs, including the compiler
+identity, produce a byte-identical manifest, and therefore an
+identical <code>policy_view_id</code>, under the canonicalization rules of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-7.5-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.5-3.2">
@@ -3253,7 +3259,10 @@ Authority Set's semantic bounds. A materialized view is an
 evaluation aid, never new authority.<a href="#section-7.5-3.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-7.5-4"><code>policy_view_id</code> is the integrity-anchor encoded form
+<p id="section-7.5-4">The committed object is a canonical JSON manifest, never the engine
+binary itself: JCS canonicalization applies to the manifest, and an
+engine-native artifact enters the manifest only by digest, never
+directly. <code>policy_view_id</code> is the integrity-anchor encoded form
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) of the SHA-256 <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span> of
 the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of that profile's domain-separated,
 issuer-bound integrity-anchor envelope with <code>typ</code> <code>mission-policy-view</code>:<a href="#section-7.5-4" class="pilcrow">¶</a></p>
@@ -3262,31 +3271,56 @@ issuer-bound integrity-anchor envelope with <code>typ</code> <code>mission-polic
 SHA-256(JCS({
   "typ":   "mission-policy-view",
   "iss":   &lt;mission.issuer&gt;,
-  "value": &lt;materialized view payload&gt;
+  "value": &lt;materialized view manifest&gt;
 }))
 </pre><a href="#section-7.5-5" class="pilcrow">¶</a>
 </div>
-<p id="section-7.5-6">The committed materialized view payload <span class="bcp14">MUST</span> carry the Mission's
-<code>mission_id</code> and <code>authority_hash</code> as members. It <span class="bcp14">MUST NOT</span> embed
-Mission lifecycle state: three independent values govern reliance,
-and conflating them is the common implementation error.
-<code>policy_view_id</code> is the content identity of the compiled authority
-and the cache key. A <code>mission_state_version</code>, where the deployment
-serves one (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), versions
-the mutable lifecycle state the decision consulted. The state
+<p id="section-7.5-6">The committed manifest <span class="bcp14">MUST</span> carry:<a href="#section-7.5-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.5-7.1">
+            <p id="section-7.5-7.1.1"><code>mission_id</code> and <code>authority_hash</code>: the Mission's identifier and
+Authority Set integrity anchor.<a href="#section-7.5-7.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.5-7.2">
+            <p id="section-7.5-7.2.1"><code>policy_version</code>: the derivation <code>policy_version</code> recorded at the
+approval event.<a href="#section-7.5-7.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.5-7.3">
+            <p id="section-7.5-7.3.1"><code>compiler</code>: an object naming the trusted compiler that produced the
+manifest, with <code>profile</code> (the compiler's identity) and <code>version</code>
+(its version), so a change in compiler identity or version is
+itself a reproducibility input rather than an unaccounted
+difference.<a href="#section-7.5-7.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.5-7.4">
+            <p id="section-7.5-7.4.1">Either <code>policy_ir</code>, the normalized policy intermediate
+representation as JSON, or <code>artifact</code>, an object carrying <code>digest</code>
+(the integrity-anchor encoded digest of the engine-native artifact)
+and <code>encoding</code> (naming the artifact's format), for a deployment
+that compiles to an engine-native form this document does not
+standardize.<a href="#section-7.5-7.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.5-8">The manifest <span class="bcp14">MUST NOT</span> embed Mission lifecycle state: three independent
+values govern reliance, and conflating them is the common
+implementation error. <code>policy_view_id</code> is the content identity of the
+compiled authority and the cache key. A <code>mission_state_version</code>, where
+the deployment serves one (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>),
+versions the mutable lifecycle state the decision consulted. The state
 observation's freshness or lease bounds how long that consultation
-stands (<a href="#state-freshness" class="auto internal xref">Section 7.4</a>). A state transition invalidates
-reliance through the version and freshness values without
-re-identifying the compiled authority; the view acquires a new
-<code>policy_view_id</code> only when the authority it compiles changes. A
-consistency check between a decision request's Mission reference and
-the loaded view is therefore an equality test: the request's Mission
-<code>id</code> and <code>authority_hash</code> either equal the committed values or the
-view does not apply. Because <code>policy_view_id</code> is a content hash, any
-change to the view yields a new <code>policy_view_id</code>, so equality on
-<code>policy_view_id</code> is the cache identity; it is never the freshness
-test. This document defines no second canonicalization and no
-policy-language wire form for the view.<a href="#section-7.5-6" class="pilcrow">¶</a></p>
+stands (<a href="#state-freshness" class="auto internal xref">Section 7.4</a>). A state transition invalidates reliance
+through the version and freshness values without re-identifying the
+compiled authority; the manifest acquires a new <code>policy_view_id</code> only
+when the authority it compiles, or the compiler that compiled it,
+changes. A consistency check between a decision request's Mission
+reference and the loaded view is therefore an equality test: the
+request's Mission <code>id</code> and <code>authority_hash</code> either equal the committed
+values or the view does not apply. Because <code>policy_view_id</code> is a
+content hash, any change to the manifest yields a new <code>policy_view_id</code>,
+so equality on <code>policy_view_id</code> is the cache identity; it is never the
+freshness test. This document defines no second canonicalization and
+no policy-language wire form for <code>policy_ir</code> or the engine-native
+artifact.<a href="#section-7.5-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="semantic-evaluators">
@@ -3479,9 +3513,10 @@ requirement (<a href="#state-freshness" class="auto internal xref">Section 7.4</
 </li>
         </ul>
 <p id="section-8.2-3">A permit is bound to the full set of authorization-relevant inputs it
-was issued for, and a decision-API binding realizes this as one
-normalized fingerprint over those inputs, never as an enumerated
-subset of fields (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+was issued for: the authorization binding, which a decision-API
+binding realizes as one normalized projection over those inputs,
+never as an enumerated subset of fields
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-8.2-3" class="pilcrow">¶</a></p>
 <p id="section-8.2-4">The permit lifetime control is set by action class:<a href="#section-8.2-4" class="pilcrow">¶</a></p>
 <table class="center" id="table-5">
           <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
@@ -3541,7 +3576,10 @@ single-use identifier cannot be consumed once per replica.<a href="#section-8.3-
 <p id="section-8.4-1">A single-use identifier bounds executions of one permit, not permits
 for one action. Enforcement is an atomic state machine over the
 (idempotency scope, <code>idempotency_key</code>) pair, not a comparison against
-retained parameters.<a href="#section-8.4-1" class="pilcrow">¶</a></p>
+retained parameters, with three separated responsibilities: the PDP
+prevents concurrent double-permits before an operation completes, the
+PEP prevents a consumed permit from executing twice, and the resource
+owns the lifecycle and prior result of a completed operation.<a href="#section-8.4-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8.4-2.1">
             <p id="section-8.4-2.1.1">For every non-idempotent operation in the irreversible-action,
@@ -3551,70 +3589,135 @@ Operation Profile <span class="bcp14">MUST</span> therefore also define an idemp
           <li class="normal" id="section-8.4-2.2">
             <p id="section-8.4-2.2.1">Before issuing a permit for a keyed action, the PDP <span class="bcp14">MUST</span> atomically
 claim the pair (idempotency scope, <code>idempotency_key</code>) together with
-the request's authorization-relevant fingerprint
+the request's operation identity, a canonical projection a
+decision-API binding defines
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). The claim is a single
 linearizable operation: of two concurrent requests presenting the
 same scope and key, exactly one obtains the claim, and the other
 observes it.<a href="#section-8.4-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-8.4-2.3">
-            <p id="section-8.4-2.3.1">Same key, same fingerprint: the PDP returns the prior evaluation or
-its status, the retransmission-versus-repeat rule below, now
-anchored on the claim rather than on comparing retained request
-fields.<a href="#section-8.4-2.3.1" class="pilcrow">¶</a></p>
+        </ul>
+<span class="break"></span><dl class="dlParallel" id="section-8.4-3">
+          <dt id="section-8.4-3.1">
+<strong>Evaluation retransmission (PDP)</strong>:</dt>
+          <dd style="margin-left: 1.5em" id="section-8.4-3.2">
+            <p id="section-8.4-3.2.1">For a re-presentation whose cache key is equal to the prior
+decision's and whose claim matches (same idempotency scope and key,
+same operation identity), while the prior permit is unexpired and
+its <code>evaluation_id</code> unconsumed, the PDP <span class="bcp14">SHOULD</span> return the prior
+decision, so a permit response lost in transit does not lock the
+action out for the reconciliation window. This is the only same-key
+path that returns a permit: the PDP claim's purpose is narrowed to
+preventing concurrent double-permits before completion, never to
+replaying a completed result.<a href="#section-8.4-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-8.4-3.3">
+<strong>Permit replay prevention (PEP)</strong>:</dt>
+          <dd style="margin-left: 1.5em" id="section-8.4-3.4">
+            <p id="section-8.4-3.4.1">Unchanged: the single-use rule of <a href="#single-use-identifiers" class="auto internal xref">Section 8.3</a> is
+itself atomic. Before releasing the effect of a
+<code>use_limit</code>-bearing permit, the enforcement scope <span class="bcp14">MUST</span> atomically
+consume, or atomically reserve and then confirm, the
+<code>evaluation_id</code> in a store that is linearizable across every PEP
+replica of the scope. Two replicas <span class="bcp14">MUST NOT</span> both succeed in
+consuming the same identifier; a replica that instead observes an
+already-consumed identifier treats the presentation as consumed,
+not as a fresh single use, a decision-API binding's
+<code>permit_consumed</code> classification
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-8.4-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-8.4-3.5">
+<strong>Operation idempotency (Resource Server / Operation Profile)</strong>:</dt>
+          <dd style="margin-left: 1.5em" id="section-8.4-3.6">
+            <p id="section-8.4-3.6.1">The resource, not the PDP, owns the key's lifecycle and the prior
+result once an operation completes: for a COMPLETED duplicate the
+resource returns the prior operation result under the Operation
+Profile's rules. A fresh authorization denial is not the vehicle
+for result replay; the claim states below govern only whether a
+new permit issues, never what the resource returns for a completed
+key.<a href="#section-8.4-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-8.4-4">The claim resolves per state, keyed on whether the presented
+(idempotency scope, <code>idempotency_key</code>) pair matches an existing claim
+and whether the request's operation identity equals the one the claim
+was made under:<a href="#section-8.4-4" class="pilcrow">¶</a></p>
+<span id="name-idempotency-claim-state-res"></span><table class="center" id="table-6">
+          <caption>
+<a href="#table-6" class="selfRef">Table 6</a>:
+<a href="#name-idempotency-claim-state-res" class="selfRef">Idempotency claim state resolution</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Claim state</th>
+              <th class="text-left" rowspan="1" colspan="1">Same key + same operation identity</th>
+              <th class="text-left" rowspan="1" colspan="1">Same key + different operation identity</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">claimed / permit-issued (unconsumed, unexpired)</td>
+              <td class="text-left" rowspan="1" colspan="1">return the prior decision (retransmission)</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>idempotency_conflict</code>, terminal</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">reserved / outcome unresolved</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>duplicate_suppressed</code>, transient (<code>next_action: retry</code>, <code>retry_after</code> within the reconciliation window)</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>idempotency_conflict</code>, terminal</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">completed (within window or tombstoned horizon)</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>duplicate_suppressed</code>, terminal (<code>next_action: none</code>); the prior result is available from the resource under the Operation Profile</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>idempotency_conflict</code>, terminal</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">failed</td>
+              <td class="text-left" rowspan="1" colspan="1">deployment policy: retry as a NEW operation requires a new key</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>idempotency_conflict</code>, terminal</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">expired past the declared horizon</td>
+              <td class="text-left" rowspan="1" colspan="1">outside the guarantee; treated as new</td>
+              <td class="text-left" rowspan="1" colspan="1">outside the guarantee</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-8.4-6">A different operation identity under the same key is always a
+conflict, never a new execution: an idempotency key identifies one
+intended execution of one normalized request, the same discipline
+HTTP's own Idempotency-Key handling applies, restated here in the
+family's own terms. A consumed key never yields a second execution:
+retransmission returns the prior decision, and a completed operation's
+result is replayed by the resource, not re-executed. An intentional
+re-execution of the same normalized action is a new operation under a
+new idempotency key, never a retry under the consumed one, and an
+action-bound approval (<a href="#action-approval" class="auto internal xref">Section 4.4</a>) authorizes that new
+operation as such, never re-execution under the consumed key.<a href="#section-8.4-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.4-7.1">
+            <p id="section-8.4-7.1.1">The idempotency scope is, at minimum, the Mission, the subject and
+the actor, the audience, the action, and the resource; a deployment
+<span class="bcp14">MAY</span> narrow it further and <span class="bcp14">MUST</span> publish the scope in its Enforcement
+Scope Statement. Volatile members <span class="bcp14">MUST NOT</span> be added to the scope.<a href="#section-8.4-7.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-8.4-2.4">
-            <p id="section-8.4-2.4.1">Same key, a different fingerprint: the PDP <span class="bcp14">MUST</span> refuse with a new,
-terminal failure condition distinct from the transient duplicate
-case above, a decision-API binding's <code>idempotency_conflict</code>
-classification (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). An
-idempotency key identifies one intended execution of one normalized
-request; reuse of the key with different content is a conflict,
-never a new execution, the same discipline HTTP's own
-Idempotency-Key handling applies, restated here in the family's own
-terms. An intentional re-execution of the same normalized action is
-instead a new operation under a new idempotency key, never a retry
-under the consumed one, and an action-bound approval
-(<a href="#action-approval" class="auto internal xref">Section 4.4</a>) authorizes that new operation as such, never
-re-execution under the consumed key.<a href="#section-8.4-2.4.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-8.4-2.5">
-            <p id="section-8.4-2.5.1">The idempotency scope is, at minimum, the Mission, the subject or
-actor, the audience, the action, and the resource; a deployment <span class="bcp14">MAY</span>
-narrow it further and <span class="bcp14">MUST</span> publish the scope in its Enforcement
-Scope Statement.<a href="#section-8.4-2.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-8.4-2.6">
-            <p id="section-8.4-2.6.1">For the high-consequence classes the deployment <span class="bcp14">MUST</span> retain a
+          <li class="normal" id="section-8.4-7.2">
+            <p id="section-8.4-7.2.1">For the high-consequence classes the deployment <span class="bcp14">MUST</span> retain a
 durable consumed-key record (a tombstone) for at least its declared
 idempotency horizon, published in the Enforcement Scope Statement.
 Tombstones are enforced, not merely retained: within that horizon a
 claim against a tombstoned key <span class="bcp14">MUST</span> be refused, never treated as a
 fresh claim. Outside those classes a deployment <span class="bcp14">MAY</span> scope the
 guarantee to the reconciliation window (<a href="#evidence" class="auto internal xref">Section 11</a>), and it <span class="bcp14">MUST</span>
-publish which posture applies.<a href="#section-8.4-2.6.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-8.4-2.7">
-            <p id="section-8.4-2.7.1">The single-use rule of <a href="#single-use-identifiers" class="auto internal xref">Section 8.3</a> is itself atomic:
-before releasing the effect of a <code>use_limit</code>-bearing permit, the
-enforcement scope <span class="bcp14">MUST</span> atomically consume, or atomically reserve
-and then confirm, the <code>evaluation_id</code> in a store that is
-linearizable across every PEP replica of the scope. Two replicas
-<span class="bcp14">MUST NOT</span> both succeed in consuming the same identifier; a replica
-that instead observes an already-consumed identifier treats the
-presentation as consumed, not as a fresh single use, a
-decision-API binding's <code>permit_consumed</code> classification
-(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-8.4-2.7.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-8.4-2.8">
-            <p id="section-8.4-2.8.1">A retransmission is distinguishable from a repeat: when the claim
-matches a prior decision whose permit is unexpired and whose
-single-use identifier is unconsumed, the PDP <span class="bcp14">SHOULD</span> return that
-prior decision (same decision identifier, same permit) rather than
-refuse, so a permit response lost in transit does not lock the
-action out for the reconciliation window. Once the identifier is
-consumed or the permit expired, the refusal above stands until the
-outcome is reconciled.<a href="#section-8.4-2.8.1" class="pilcrow">¶</a></p>
+publish which posture applies.<a href="#section-8.4-7.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -3697,8 +3800,8 @@ the PDP <span class="bcp14">MUST</span> refuse a consequential action governed b
 <span class="bcp14">MUST</span> behave as follows; in all cases the evidence record
 (<a href="#evidence" class="auto internal xref">Section 11</a>) <span class="bcp14">MUST</span> be sufficient to reconstruct which path produced a
 refusal.<a href="#section-10-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-6">
-        <caption><a href="#table-6" class="selfRef">Table 6</a></caption>
+<table class="center" id="table-7">
+        <caption><a href="#table-7" class="selfRef">Table 7</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Condition</th>
@@ -4090,8 +4193,8 @@ together, so the claim is no stronger than the weakest of the three,
 and "mediated custody" on its own is not the property.<a href="#section-12.1-6" class="pilcrow">¶</a></p>
 <p id="section-12.1-7">Each unmet condition loses a specific property; the base-profile
 column records the level each condition has outside this claim:<a href="#section-12.1-7" class="pilcrow">¶</a></p>
-<table class="center" id="table-7">
-          <caption><a href="#table-7" class="selfRef">Table 7</a></caption>
+<table class="center" id="table-8">
+          <caption><a href="#table-8" class="selfRef">Table 8</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Condition unmet</th>
@@ -4223,8 +4326,8 @@ protocol element proves. A deployment <span class="bcp14">SHOULD</span> demonstr
 negative tests: each of the following bypass attempts <span class="bcp14">MUST</span> be refused
 or contained by a conforming deployment that makes the relevant
 claim, and a deployment <span class="bcp14">SHOULD</span> retain evidence that it ran them.<a href="#section-13-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-8">
-        <caption><a href="#table-8" class="selfRef">Table 8</a></caption>
+<table class="center" id="table-9">
+        <caption><a href="#table-9" class="selfRef">Table 9</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Bypass attempt</th>
@@ -4986,14 +5089,12 @@ different digest and the permit is refused.<a href="#appendix-A-7" class="pilcro
 <a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-policy-view-worked-example" class="section-name selfRef">Policy View Worked Example</a>
       </h2>
 <p id="appendix-B-1">This non-normative example shows the <code>policy_view_id</code> computation of
-<a href="#policy-view" class="auto internal xref">Section 7.5</a> over a minimal materialized-view envelope for the same
-Mission. The payload here is reduced to the two members every
-committed view binds, <code>mission_id</code> and <code>authority_hash</code>; a deployment
+<a href="#policy-view" class="auto internal xref">Section 7.5</a> over a materialized-view manifest for the same
+Mission. This deployment compiles to an engine-native artifact, so
+the manifest carries <code>artifact</code> rather than <code>policy_ir</code>; a deployment
 that serves a state version records it in Decision Evidence and
 consumes it through freshness processing instead, never embedding it
-in this payload (<a href="#policy-view" class="auto internal xref">Section 7.5</a>), and a deployment's payload also
-carries its evaluable materialized form, which this document does not
-standardize.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+in this manifest (<a href="#policy-view" class="auto internal xref">Section 7.5</a>).<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="appendix-B-2">
 <pre>
 {
@@ -5002,7 +5103,17 @@ standardize.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
   "value": {
     "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "policy_version": "deploy-policy:v17",
+    "compiler": {
+      "profile": "https://as.example.com/policy-compiler",
+      "version": "1.4.0"
+    },
+    "artifact": {
+      "digest":
+        "sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7tX",
+      "encoding": "application/vnd.example.policy-engine+bin"
+    }
   }
 }
 </pre><a href="#appendix-B-2" class="pilcrow">¶</a>
@@ -5013,16 +5124,20 @@ line breaks, adding no characters, to recover the canonical form:<a href="#appen
 <div class="lang-text sourcecode" id="appendix-B-4">
 <pre>
 {"iss":"https://as.example.com","typ":"mission-policy-view","value":
-{"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5
-pNQ","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"}}
+{"artifact":{"digest":"sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ
+4mZ7tX","encoding":"application/vnd.example.policy-engine+bin"},"aut
+hority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ","
+compiler":{"profile":"https://as.example.com/policy-compiler","versi
+on":"1.4.0"},"mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","po
+licy_version":"deploy-policy:v17"}}
 </pre><a href="#appendix-B-4" class="pilcrow">¶</a>
 </div>
 <div class="lang-text sourcecode" id="appendix-B-5">
 <pre>
-policy_view_id = sha-256:fuMqn6Nb5LfyziflJuYj8VgHHH1bskZ0SrMDxdQ8CaA
+policy_view_id = sha-256:kFxuopgt9C4G7S4BhP7ayGhP49wG55HBnq0BzH09UZ8
 </pre><a href="#appendix-B-5" class="pilcrow">¶</a>
 </div>
-<p id="appendix-B-6">Because the identifier is a content hash, any change to the payload
+<p id="appendix-B-6">Because the identifier is a content hash, any change to the manifest
 yields a different <code>policy_view_id</code> (<a href="#policy-view" class="auto internal xref">Section 7.5</a>).<a href="#appendix-B-6" class="pilcrow">¶</a></p>
 </section>
 </div>
