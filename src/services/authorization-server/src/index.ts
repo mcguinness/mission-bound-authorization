@@ -45,7 +45,7 @@ export {
   type IngestionEvidenceInput,
 } from "./kernel/issuer-evidence.js";
 export type { ProtectedEventSource } from "./adapters/provider.js";
-export { validateMissionIntent, IntentError } from "./kernel/intent.js";
+export { validateAuthorityProposal, validateMissionIntent, IntentError } from "./kernel/intent.js";
 export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
 export { delegatePermitted, type DelegateCandidate } from "./kernel/delegate-matcher.js";
 export {

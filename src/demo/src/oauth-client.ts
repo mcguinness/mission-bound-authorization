@@ -21,8 +21,15 @@ export interface DpopKeys {
 }
 
 export interface IssueOpts {
-  /** The untrusted mission_intent proposal (JSON string), carried via PAR. */
+  /** The untrusted mission_intent task context (JSON string), carried via PAR. */
   missionIntent: string;
+  /**
+   * @spec mission#authority-proposal — the authority proposal: a JSON string
+   * carrying the standard RFC 9396 authorization_details array, pushed through
+   * PAR alongside mission_intent. Optional: absent means template-mode
+   * derivation (task + policy alone).
+   */
+  authorizationDetails?: string;
   /** Requested scope (e.g. "openid payments" to also receive an id_token). */
   scope: string;
 }
@@ -118,6 +125,7 @@ export async function submitMissionApproval(
     code_challenge: challenge,
     code_challenge_method: "S256",
     mission_intent: opts.missionIntent,
+    ...(opts.authorizationDetails ? { authorization_details: opts.authorizationDetails } : {}),
   };
   const parRes = await fetch(`${asUrl}/request`, {
     method: "POST",
@@ -318,6 +326,7 @@ export async function issueMissionToken(
     code_challenge: challenge,
     code_challenge_method: "S256",
     mission_intent: opts.missionIntent,
+    ...(opts.authorizationDetails ? { authorization_details: opts.authorizationDetails } : {}),
   };
   const parRes = await fetch(`${asUrl}/request`, {
     method: "POST",

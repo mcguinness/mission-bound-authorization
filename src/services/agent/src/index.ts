@@ -52,9 +52,13 @@ export function initializeCapabilities(): Record<string, unknown> {
 
 /**
  * A shaper proposal is untrusted client input (@spec mission-shaping, D22).
- * This helper only *proposes* a Mission Intent from a natural-language-ish
- * goal; the AS derives and bounds authority regardless of what is proposed,
- * so a compromised shaper can propose badly but never widen.
+ * This helper only *proposes* from a natural-language-ish goal; the AS derives
+ * and bounds authority regardless of what is proposed, so a compromised shaper
+ * can propose badly but never widen. Two wire values come back
+ * (@spec mission#authority-proposal): `missionIntent` is the pure task context
+ * (the Intent carries no authority members), and `authorizationDetails`, when
+ * concrete actions were proposed, is the standard RFC 9396
+ * authorization_details array pushed through PAR alongside it.
  */
 export function shapeIntent(input: {
   goal: string;
@@ -62,21 +66,24 @@ export function shapeIntent(input: {
   expiresAt: string;
   proposedActions?: string[];
   vendors?: string[];
-}): string {
+}): { missionIntent: string; authorizationDetails?: string } {
   const intent: Record<string, unknown> = {
     goal: input.goal,
     resources: input.resources,
     expires_at: input.expiresAt,
   };
   if (input.proposedActions) {
-    intent.proposed_authority = [
-      {
-        type: "mission_resource_access",
-        resource: input.resources[0],
-        actions: input.proposedActions,
-        ...(input.vendors ? { constraints: { vendors: input.vendors } } : {}),
-      },
-    ];
+    return {
+      missionIntent: JSON.stringify(intent),
+      authorizationDetails: JSON.stringify([
+        {
+          type: "mission_resource_access",
+          resource: input.resources[0],
+          actions: input.proposedActions,
+          ...(input.vendors ? { constraints: { vendors: input.vendors } } : {}),
+        },
+      ]),
+    };
   }
-  return JSON.stringify(intent);
+  return { missionIntent: JSON.stringify(intent) };
 }

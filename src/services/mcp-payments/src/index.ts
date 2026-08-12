@@ -31,6 +31,8 @@ export {
   type TokenFacts,
   type EnforceResult,
   type ActionApprovalInput,
+  buildInsufficientAuthorization,
+  type InsufficientAuthorization,
   CANONICAL_RESOURCE,
   TOOL_BASE,
   sourceDigestOf,
