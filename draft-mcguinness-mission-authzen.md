@@ -566,7 +566,10 @@ following action-scoped members:
   decision whose execution outcome is unresolved or completed within the
   reconciliation window, the PDP MUST deny with `duplicate_suppressed`
   ({{runtime-denial-classification}}); reuse of an `idempotency_key`
-  never executes again.
+  never executes again within the deployment's declared idempotency
+  horizon, which for the high-consequence classes is backed by a
+  durable consumed-key tombstone
+  ({{I-D.draft-mcguinness-mission-runtime}}).
 
 `parameter_attributes`:
 : OPTIONAL. An object. Privacy-preserving attributes derived from the
@@ -1113,8 +1116,6 @@ Evidence `contributing_constraints`:
       "decision": true,
       "context": {
         "evaluation_id": "dec_2FpQ8kV5nR1tX7mB4sJ9eL6wYc",
-        "parameter_digest":
-          "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
         "conditions": {
           "parameter_digest":
             "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
@@ -1127,9 +1128,7 @@ Evidence `contributing_constraints`:
       "decision": false,
       "context": {
         "evaluation_id": "dec_6JwN3xT9rQ4mV8kP1sB5eZ2yLd",
-        "reason": "parameter_violation",
-        "parameter_digest":
-          "sha-256:mzFwtXAT6_hY0v8_NFHMDJG39HFuWY2fRcOCSFGDyyE"
+        "reason": "parameter_violation"
       }
     }
   ]
@@ -1282,9 +1281,10 @@ This profile defines the following AuthZEN response `context` members:
 `access_request`:
 : OPTIONAL. An object. Present on an `out_of_authority` or
   `approval_required` denial when the deployment exposes it as
-  requestable under {{ARAP}}. Its members are ARAP's requestable-denial
-  context verbatim: the submission `endpoint`, the ARAP-required
-  `expires_at`, and the PDP-signed `binding_token`. The denied
+  requestable under {{ARAP}}. The object is ARAP's requestable-denial
+  context object, imported as ARAP defines it; this profile adds no
+  members and no additional required members. The example below uses
+  the PDP-signed `binding_token` form. The denied
   evaluation is identified by the top-level `context.evaluation_id`
   above, which the access request the PEP submits references as
   {{ARAP}} specifies. Its presence does not change the
@@ -1329,8 +1329,9 @@ The `supported_obligations` declaration below is a usability
 optimization on that fail-closed baseline, not a precondition for it:
 it lets a PDP avoid attaching an obligation it already knows the PEP
 cannot discharge, sparing a guaranteed-fail round trip, never a
-dependency the model needs to stay safe. A PDP supporting this
-profile advertises `step-up` in its metadata `supported_obligations`
+dependency the model needs to stay safe. A PDP that supports the
+step-up obligation advertises it in its metadata
+`supported_obligations`
 array, and a PEP MAY declare its own `supported_obligations` in the
 request context, as the obligations profile defines {{AUTHZEN-OBL}};
 the declaration is advisory. A PDP MUST NOT rely on an obligation the
@@ -1387,8 +1388,6 @@ obligation applies.
   "decision": true,
   "context": {
     "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
-    "parameter_digest":
-      "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "conditions": {
       "parameter_digest":
         "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
@@ -1594,8 +1593,6 @@ present, and the PDP marks the denial requestable under {{ARAP}}:
   "context": {
     "evaluation_id": "dec_7YbK4nQ9tR2xV6mL1sP8eJ3wZc",
     "reason": "approval_required",
-    "parameter_digest":
-      "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "access_request": {
       "endpoint": "https://requests.example.com/access-requests",
       "expires_at": "2026-11-02T09:14:00Z",
@@ -1851,8 +1848,12 @@ own registered media type
 Independent of anything the PDP returns, the PEP MUST emit the
 Execution Evidence Object
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}) once, and only
-once, the outcome of every released consequential action is known.
-This is a profile-level PEP requirement, not an obligation.
+once, for the final disposition of every consequential permit:
+`completed`, `failed`, or `suppressed` before release. A permit
+whose action is never released still ends in Execution Evidence with
+`outcome` `suppressed`; only a refusal before any PDP decision is a
+Refusal Record. This is a profile-level PEP requirement, not an
+obligation.
 
 If evidence emission fails after an irreversible effect, the effect
 stands: nothing retroactively permits or denies it. The PEP MUST

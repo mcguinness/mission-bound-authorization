@@ -1782,7 +1782,13 @@ for one action.
   is a new operation under a new idempotency key, never a retry under
   the consumed one, and an action-bound approval
   ({{action-approval}}) authorizes that new operation as such, never
-  re-execution under the consumed key.
+  re-execution under the consumed key. For the high-consequence
+  classes the deployment MUST retain a durable consumed-key record (a
+  tombstone) for at least its declared idempotency horizon, published
+  in the Enforcement Scope Statement; within that horizon a consumed
+  key never executes again. Outside those classes a deployment MAY
+  scope the guarantee to the reconciliation window, and it MUST
+  publish which posture applies.
 - A retransmission is distinguishable from a repeat: when the
   matching prior decision's permit is unexpired and its single-use
   identifier unconsumed, the PDP SHOULD return that prior decision
@@ -1887,10 +1893,11 @@ or PDP unreachability) or after a PDP permit (for example, a
 `parameter_digest` mismatch), MUST likewise produce a runtime
 enforcement evidence record with the available fields and the failure
 condition. This document fixes the minimum record content and local
-integrity requirements. The concrete record schema, any interoperable
-canonical byte representation, separate Decision Evidence and
-Execution Evidence object schemas, and the Mission Receipt's portable
-schema ({{mission-receipt}}) are out of scope ({{deferred}}).
+integrity requirements; the concrete record schemas, canonical byte
+representation, and integrity envelope are defined by Mission Runtime
+Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}). The
+Mission Receipt's portable schema ({{mission-receipt}}) remains out
+of scope ({{deferred}}).
 
 A record captures decision inputs, the applicable policy and
 authority references, the result, and the failure condition. No
@@ -2766,20 +2773,22 @@ keyed to the permit's evaluation identifier ({{evidence}}):
 }
 ~~~
 
-A PEP refusal record for a later attempt on the same operation. A
+Execution Evidence for a later attempt on the same operation. A
 permit (`dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA`) bound the digest of a
 423.50 entry; between check and use the parameters became 780.00
 (normalized object
 `{"amount_usd":"780.00","source_invoice_id":"inv_2026Q3_842"}`). The
 executing PEP recomputed the digest over the parameters it was about
-to use, found a mismatch, and refused ({{parameter-binding}}); the
-record carries the recomputed digest:
+to use, found a mismatch, and suppressed the release
+({{parameter-binding}}); a post-decision suppression is a final
+disposition and is recorded as Execution Evidence, never as a
+Refusal Record. The record carries the recomputed digest:
 
 ~~~ json
 {
-  "decision": "refuse",
-  "failure_condition": "parameter_digest_mismatch",
-  "request_time": "2026-11-02T09:03:29Z",
+  "outcome": "suppressed",
+  "error": "parameter_mismatch",
+  "outcome_at": "2026-11-02T09:03:29Z",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",

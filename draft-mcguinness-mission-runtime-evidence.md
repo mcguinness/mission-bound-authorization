@@ -343,14 +343,16 @@ canonicalization, and integrity envelope a deployment emits.
 
 `conditions`:
 : REQUIRED when `decision` is `permit` for a consequential action. An
-  object recording the permit's decision conditions as returned to
-  the PEP: `parameter_digest` (the parameter binding the permit is
-  bound to), `valid_until` (the validity bound), and
-  `use_limit` (the consumption bound on `evaluation_id`). The PDP
-  MUST set `use_limit: 1` for a permit in the high-consequence
-  classes. Carried per the AuthZEN binding's `conditions` response
-  member, or the binding's equivalent
-  ({{I-D.draft-mcguinness-mission-authzen}}).
+  object recording the permit's decision conditions in this
+  document's normalized form: `valid_until` (the validity bound) and
+  `use_limit` (the consumption bound on `evaluation_id`; the PDP MUST
+  set `use_limit: 1` for a permit in the high-consequence classes).
+  The parameter binding is recorded once, in this record's
+  `parameter_digest` member; the producer MUST ensure that value
+  equals the binding carried by the wire conditions. A binding maps
+  its wire members onto this form (for example the AuthZEN binding's
+  `conditions` response member,
+  {{I-D.draft-mcguinness-mission-authzen}}).
 
 `evaluation_request_digest`:
 : CONDITIONAL. A string. A privacy-preserving digest of the whole
@@ -359,8 +361,8 @@ canonicalization, and integrity envelope a deployment emits.
   `parameter_digest` is absent for a consequential action, so the closed
   object still carries the request digest the runtime profile requires
   of every decision record ({{I-D.draft-mcguinness-mission-runtime}}).
-  Distinct from the `conditions` member's `parameter_digest`: that
-  member records the parameter binding a granted permit is bound to;
+  Distinct from `parameter_digest`: that member records the parameter
+  binding the decision was bound to;
   `evaluation_request_digest` is this record's fallback digest of the
   whole evaluation request, present whether the decision was a permit
   or a deny.
@@ -465,7 +467,11 @@ failure, PDP unreachability, or the PEP being unable to establish
 Mission state ({{I-D.draft-mcguinness-mission-runtime}}). Such a
 refusal has no PDP decision and cannot populate the PDP-derived members
 above. A deployment records it as a Refusal Record, carrying
-only facts the PEP verified:
+only facts the PEP verified. The boundary is the PDP decision: a
+Refusal Record is exclusively pre-decision, and once a PDP has
+decided, every final disposition of a consequential permit, whether
+completed, failed, or suppressed before release, is Execution
+Evidence ({{execution-evidence-object}}), never a Refusal Record:
 
 `refusal_id`:
 : REQUIRED. A string. Unique refusal identifier. ABNF:
@@ -727,8 +733,6 @@ envelopes with unsupported formats.
   "action_class": "irreversible_action",
   "class_source": "deployment",
   "conditions": {
-    "parameter_digest":
-      "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "valid_until": "2026-11-02T08:15:00Z",
     "use_limit": 1
   },
@@ -930,8 +934,7 @@ completed execution under a `parameter_digest` that does not match the
 linked Decision Evidence. When the executing PEP detects a mismatch
 before acting, it MUST refuse the action and emit Execution Evidence
 with `outcome` set to `suppressed` and `error` set to
-`parameter_mismatch`, or emit an equivalent PEP-refusal evidence record
-under the deployment's runtime evidence mechanism. When values
+`parameter_mismatch`. When values
 nonetheless diverge across the chain, the audit consumer MUST classify
 the action as parameter-mismatch and treat it as equivalent to an
 unauthorized action for compliance purposes.
