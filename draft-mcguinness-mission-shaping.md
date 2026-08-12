@@ -148,7 +148,9 @@ Mission Intent with a goal, resources, free-text constraints, success
 criteria, purpose, controls, and expiry.
 
 This document describes that missing shaping step. A **Mission Shaper**
-is a client-side component that produces a candidate Mission Intent
+is a client-side component that produces a candidate Mission Intent,
+and any authority proposal submitted alongside it
+({{mission-intent-proposal}}),
 before the issuance profile's approval flow begins. The shaper can be a
 deterministic rules engine, a form, an LLM-assisted function, or a
 workflow. Whatever its implementation, its output is only a proposal
@@ -413,15 +415,20 @@ issuance profile's `mission_intent` object
 - optional free-text `constraints`;
 - optional `success_criteria`;
 - an optional `purpose`;
-- an optional `proposed_authority` array of candidate Authority Set
-  entries;
 - an `expires_at`; and
 - an optional `controls` object.
+
+The Intent carries no authority members. Where the task calls for
+concrete candidate authority, the shaper additionally produces an
+authority proposal: an array of candidate Authority Set entries the
+requesting client submits as the standard `authorization_details`
+parameter alongside the Intent
+({{I-D.draft-mcguinness-oauth-mission}}).
 
 The shaper proposes the resources. It describes the desired bounds in
 free-text `constraints` and `success_criteria`. It carries any
 concrete candidate authority (actions, structured constraints,
-delegation facts) in `proposed_authority`, the untrusted carrier the
+delegation facts) in the authority proposal, the untrusted carrier the
 Mission Issuer only narrows when it derives the Authority Set
 ({{I-D.draft-mcguinness-oauth-mission}}). The proposal MUST be
 bounded enough for the Mission Issuer to derive an Authority Set without
@@ -431,7 +438,8 @@ The proposal MUST NOT present issuer outputs as approved authority:
 the derived Authority Set is the Mission Issuer's product
 ({{proposes-only}}). Concrete candidate authority
 (actions, structured constraints such as `max_amount`, delegation)
-belongs in the Intent's `proposed_authority` member, where the core
+belongs in the authority proposal submitted alongside the Intent,
+where the core
 treats it as untrusted proposal input and bounds the derivation to a
 subset of it ({{I-D.draft-mcguinness-oauth-mission}}). A shaper that
 has resolved such facts (for
@@ -474,9 +482,9 @@ revocable.
 
 Where cross-vendor interoperability matters, the shaper SHOULD carry
 the concrete candidate authority it proposes (the resources, actions,
-and constraints) in the Intent's `proposed_authority` member, and
+and constraints) in an authority proposal alongside the Intent, and
 record the same proposal in Shaping Evidence. This lets the Mission
-Issuer derive the Authority Set by narrowing `proposed_authority`
+Issuer derive the Authority Set by narrowing the proposal
 under its subset rule, with the deterministic-reproducibility rule
 applying, rather than generating authority from free text
 ({{I-D.draft-mcguinness-oauth-mission}}). Narrowing is the portable
@@ -505,7 +513,7 @@ even when no caller ceiling is present.
 
 The shaper does not author the derived `delegation` member: it
 proposes delegation facts as untrusted candidate authority in the
-Intent's `proposed_authority` member, which the Mission Issuer only
+authority proposal, which the Mission Issuer only
 narrows when it derives `delegation` on the relevant Authority Set
 entry, or refuses ({{I-D.draft-mcguinness-oauth-mission}}). If the
 task implies use of sub-agents, background workers, or delegated
@@ -535,8 +543,8 @@ identifier and the parent-derived ceiling it shaped under.
 The following maps a prompt or trigger onto the Mission Intent fields.
 It is guidance, not a normative algorithm; the SHOULD/MUST points are
 called out. Resolved actions, structured constraints, and delegation
-facts do not appear here: they belong in the Intent's
-`proposed_authority` member, the untrusted carrier the Mission Issuer
+facts do not appear here: they belong in the authority proposal
+alongside the Intent, the untrusted carrier the Mission Issuer
 only narrows; Shaping Evidence records the same facts for audit only
 and is never an input authority derives from.
 
@@ -915,7 +923,9 @@ Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} defines a `mission_intent`
 parameter carried inside a Pushed Authorization Request (PAR)
 {{RFC9126}}. The Mission Intent the shaper produced is the value of that
-parameter. The Authorization Server {{RFC6749}} acts as the Mission
+parameter; an authority proposal the shaper produced is the value of
+the standard `authorization_details` parameter pushed alongside it
+({{I-D.draft-mcguinness-oauth-mission}}). The Authorization Server {{RFC6749}} acts as the Mission
 Issuer: it validates, narrows, renders the consent disclosure, records
 the approval event, and derives an Authority Set
 ({{I-D.draft-mcguinness-oauth-mission}}).
