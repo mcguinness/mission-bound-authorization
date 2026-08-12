@@ -743,6 +743,8 @@ envelopes with unsupported formats.
   "sequence": 42,
   "emitter": { "id": "pdp.example.com", "role": "pdp" },
   "evaluated_at": "2026-11-02T08:14:03Z",
+  "entry_digest":
+    "sha-256:dPCNLHsZuzPXuhco_s21VTvDI4cagI_LMhPQsqfNJKQ",
   "evidence_envelope": {
     "format": "jws-compact",
     "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
@@ -819,9 +821,24 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
 : REQUIRED. A string. The Mission `id`, mirrored from the
   linked Decision Evidence for join-key convenience.
 
-`parameter_digest`:
-: CONDITIONAL. A string. MUST be present when the
-  linked Decision Evidence carries one, and MUST match it.
+`authorized_parameter_digest`:
+: CONDITIONAL. A string. REQUIRED when the linked Decision Evidence
+  carries `parameter_digest`; MUST equal it. The link to what the
+  permit authorized.
+
+`effective_parameter_digest`:
+: CONDITIONAL. A string. REQUIRED whenever
+  `authorized_parameter_digest` is present. The digest, in the same
+  form, over the normalized parameters actually attempted or
+  executed. Equality with `authorized_parameter_digest` is the
+  binding-held case. Inequality is a parameter deviation, and the
+  record REMAINS VALID: evidence of an unauthorized execution is
+  still evidence, never grounds to discard the record. A deviation
+  recorded against `outcome` `suppressed` carries `error`
+  `parameter_mismatch`. A deviation recorded against `outcome`
+  `completed` or `failed`, a buggy or compromised executor having
+  gone ahead despite the mismatch, is equally representable, and a
+  consumer MUST flag it as an unauthorized execution.
 
 `outcome`:
 : REQUIRED. A string. One of `completed`, `failed`, or `suppressed`;
@@ -838,12 +855,25 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   executing PEP found the effective parameters differ from those the
   permit bound), `permit_expired` (the permit's validity window had
   passed at execution), `permit_consumed` (re-presentation of an
-  already-consumed single-use evaluation identifier), and `kill_switch`
-  (execution suppressed by an operator or safety control). A deployment
-  MAY define additional values, which MUST be collision-resistant names
+  already-consumed single-use evaluation identifier),
+  `obligation_unfulfilled` (a permit suppressed before release because
+  an attached obligation could not be fulfilled; the failing entry is
+  named in `obligation_outcomes`), and `kill_switch` (execution
+  suppressed by an operator or safety control). A deployment MAY
+  define additional values, which MUST be collision-resistant names
   (a short name within a namespace the deployment controls, following
   the Collision-Resistant Name guidance of {{RFC7519}} Section 4.2) so
   they cannot collide with this set or another deployment's.
+
+`obligation_outcomes`:
+: CONDITIONAL. An array of objects. REQUIRED when the linked Decision
+  Evidence carried obligations and a permit disposition exists. One
+  object per attached obligation, with `id` (REQUIRED, a string, the
+  obligation's identifier as returned by the decision), `type`
+  (REQUIRED, a string, the obligation type), `outcome` (REQUIRED, a
+  string, one of `fulfilled`, `failed`, or `unsupported`), and `error`
+  (OPTIONAL, a string, an implementation-specific detail on a
+  non-`fulfilled` outcome).
 
 `sequence`:
 : REQUIRED. An integer. The per-Mission sequence indicator the runtime
@@ -895,7 +925,9 @@ not understand.
   "execution_id":  "exe_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
   "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
   "mission_id":    "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "parameter_digest":
+  "authorized_parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "effective_parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
   "outcome":      "completed",
   "sequence":     43,
@@ -917,27 +949,78 @@ Decision Evidence and Execution Evidence are linked but distinct.
 Authorization is not proof that an action occurred; a Decision
 Evidence record with no corresponding Execution Evidence record
 indicates the action was not attempted, or that the executor failed to
-emit evidence.
+emit evidence. Here the two Execution Evidence digests are equal: the
+binding-held case, the executed parameters are the ones the permit
+authorized.
+
+## Worked example: parameter deviation {#example-parameter-deviation}
+
+A later attempt on the same operation, a different permit
+(`evaluation_id` `dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA`) bound to the same
+423.50 journal entry the runtime profile's parameter-digest example
+digests ({{I-D.draft-mcguinness-mission-runtime}}). Between check and
+use the parameters became
+`{"amount_usd":"780.00","source_invoice_id":"inv_2026Q3_842"}`. The
+executing PEP recomputed the digest over the parameters it was about
+to use, found it differed from the authorized digest, and suppressed
+the release before acting:
+
+~~~ json
+{
+  "execution_id":  "exe_7QsK2wR4xN9mV3pB6tY8eJ1zH5uD0cA",
+  "evaluation_id": "dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA",
+  "mission_id":    "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "authorized_parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "effective_parameter_digest":
+    "sha-256:UdG-TiebDHTiKRXUVURs1Jeq_vDJp_Ro8jWbBAD8hgM",
+  "outcome":      "suppressed",
+  "error":        "parameter_mismatch",
+  "sequence":     44,
+  "emitter":      { "id": "pep.example.com", "role": "executor" },
+  "attempted_at": "2026-11-02T09:03:28Z",
+  "outcome_at":   "2026-11-02T09:03:29Z",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXkt..."
+  }
+}
+~~~
+
+The two digests differ: a parameter deviation. The record REMAINS
+VALID; it is evidence that the executing PEP caught the deviation and
+suppressed the release, never an invalid record to be discarded. Had
+the executor instead gone ahead with the 780.00 parameters despite the
+mismatch, the same two-digest divergence would appear against
+`outcome` `completed` or `failed`, and a consumer MUST flag that
+record as an unauthorized execution regardless of the recorded
+outcome.
 
 ## TOCTOU and parameter binding
 
 The semantics of parameter binding and the time-of-check to
 time-of-use gap are defined by the runtime profile
-({{I-D.draft-mcguinness-mission-runtime}}). The `parameter_digest`
-chain runs from the decision-API request through Decision Evidence to
-Execution Evidence: if the executed action's effective parameters
-differ from those the PDP evaluated, the digest mismatch is
-detectable in audit.
+({{I-D.draft-mcguinness-mission-runtime}}). The parameter-digest chain
+runs from the decision-API request through Decision Evidence's
+`parameter_digest` to Execution Evidence's
+`authorized_parameter_digest` (REQUIRED to equal it) and
+`effective_parameter_digest` (the digest over what the executing PEP
+actually attempted or executed).
 
-The PEP MUST NOT emit Execution Evidence that claims an attempted or
-completed execution under a `parameter_digest` that does not match the
-linked Decision Evidence. When the executing PEP detects a mismatch
-before acting, it MUST refuse the action and emit Execution Evidence
-with `outcome` set to `suppressed` and `error` set to
-`parameter_mismatch`. When values
-nonetheless diverge across the chain, the audit consumer MUST classify
-the action as parameter-mismatch and treat it as equivalent to an
-unauthorized action for compliance purposes.
+Equality between the two Execution Evidence digests is the
+binding-held case. Inequality is a parameter deviation, and the
+record REMAINS VALID: evidence of an unauthorized execution is still
+evidence, never an invalid record to discard. When the executing PEP
+detects the deviation before acting, it MUST refuse the action and
+emit Execution Evidence with `outcome` `suppressed` and `error`
+`parameter_mismatch` ({{example-parameter-deviation}}). A deviation
+recorded against an `outcome` of `completed` or `failed`, a buggy or
+compromised executor having gone ahead despite the mismatch, is
+equally representable and is never grounds to reject the record.
+Whatever the recorded `outcome`, when the two digests diverge the
+audit consumer MUST classify the execution as a parameter deviation
+and treat it as equivalent to an unauthorized action for compliance
+purposes.
 
 ## Retention
 
@@ -1111,7 +1194,9 @@ Decision Evidence, Execution Evidence, and Refusal Records carry the
 authenticated
 `subject`, actor chain, resource and action identifiers,
 credential-derived correlators, capability-source identifiers,
-`parameter_digest`, and timing. These records are PII sinks and SHOULD
+`parameter_digest` (or, on Execution Evidence,
+`authorized_parameter_digest` and `effective_parameter_digest`), and
+timing. These records are PII sinks and SHOULD
 be access-controlled to audit consumers with a legitimate need,
 encrypted at rest, and retained per the window of
 {{execution-evidence-object}}.
