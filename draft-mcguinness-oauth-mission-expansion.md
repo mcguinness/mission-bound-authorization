@@ -31,6 +31,7 @@ normative:
   RFC9396:
   RFC8693:
   RFC8705:
+  RFC8785:
   RFC9449:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
@@ -44,6 +45,7 @@ normative:
 informative:
   RFC8126:
   RFC9470:
+  RFC9562:
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -423,6 +425,15 @@ token endpoint. The request carries:
   authorize a predecessor: a client MUST NOT be able to expand a Mission
   merely by naming its `mission_id`.
 
+`creation_request_id`:
+: REQUIRED. The creation idempotency identifier: an ASCII string of at
+  most 255 octets, opaque to the Mission Issuer beyond equality, that
+  identifies this one Mission-creation operation across every
+  completion mode ({{creation-idempotency}}). At least 128 bits of
+  client-generated randomness is RECOMMENDED; a UUID {{RFC9562}}
+  satisfies this. The Mission Issuer MUST refuse an exchange missing
+  it with `invalid_request`.
+
 The presence of `mission_intent` on a token exchange marks it as a
 Mission-creation exchange under this suite; an exchange whose
 `subject_token` resolves to a Mission and that carries no `child_actor`
@@ -543,9 +554,10 @@ the modes of {{completion-modes}}.
 The Mission Issuer MUST evaluate an expansion token exchange in this
 order, refusing on the first failure:
 
-1. Parse the exchange and require `subject_token` with
-   `subject_token_type` = `urn:ietf:params:oauth:token-type:access_token`;
-   reject a refresh token ({{submission}}).
+1. Parse the exchange, require `subject_token` with
+   `subject_token_type` = `urn:ietf:params:oauth:token-type:access_token`,
+   rejecting a refresh token, and require `creation_request_id`
+   ({{submission}}).
 2. Resolve the predecessor Mission from `subject_token`
    ({{request-binding}}).
 3. Verify possession: the presenter controls the `subject_token`'s own
@@ -555,12 +567,17 @@ order, refusing on the first failure:
 4. Verify the acting agent (`actor_token`, or the request's client
    authentication) is authorized to request expansion of this
    predecessor.
-5. Verify the predecessor is `active` ({{predecessor-active}}) and,
+5. Look up the `(client, creation_request_id)` reservation and, where
+   one exists, recover the recorded operation instead of proceeding
+   ({{creation-idempotency}}). The lookup follows client
+   authentication and possession verification and precedes the
+   predecessor lifecycle gate of step 6 ({{creation-revalidation}}).
+6. Verify the predecessor is `active` ({{predecessor-active}}) and,
    when `predecessor` is present, that it names the resolved Mission.
-6. Determine whether the request is a pure subset derivation of
+7. Determine whether the request is a pure subset derivation of
    already-approved authority or requires a fresh approval, and derive
    the successor's Authority Set under policy ({{completion-modes}}).
-7. Complete per {{completion-modes}}; at a deferred or interactive
+8. Complete per {{completion-modes}}; at a deferred or interactive
    completion, re-verify the predecessor's Mission state before issuing
    ({{deferred-window}}).
 
@@ -628,6 +645,11 @@ the predecessor remains `active`; an expansion that never completes,
 whose deferred approval lapses, or whose authorization code is never
 redeemed or expires, creates no successor and leaves the predecessor
 `active`.
+
+Whichever mode is selected, the exchange's `creation_request_id`
+reservation ({{creation-idempotency}}) makes completion recoverable:
+a client that loses the response recovers the one committed
+operation, never a second creation.
 
 ## The deferred window {#deferred-window}
 
@@ -942,6 +964,197 @@ alongside the `invalid_grant` error:
   Adjudication denial reasons ride the separate `mission_denial_reason`
   member ({{denial-reasons}}).
 
+# Creation Idempotency {#creation-idempotency}
+
+A `creation_request_id` identifies one Mission-creation operation
+across every completion mode. The Mission Issuer MUST durably bind
+the authenticated client, the identifier, the operation fingerprint
+({{creation-fingerprint}}), and the resulting continuation or
+successor Mission, atomically with the creation decision. Repetition
+of the exchange recovers that operation ({{creation-recovery}}); it
+MUST NOT repeat Mission creation or any creation-side effect:
+creation accounting, creation lifecycle events, evidence emission.
+
+The identifier is REQUIRED in every completion mode because the
+client cannot know in advance which mode the Mission Issuer will
+select, and because the existing single-use artifacts do not close
+the retry fault. DPoP proof `jti` single-use ({{request-binding}})
+prevents replay of one captured proof; a client that loses the
+response retries with a fresh, valid proof, and without the
+identifier that retry is a second creation. The retained interactive
+path's single-use artifacts prevent only duplicate redemption within
+one ceremony; the reservation made at initiation is what prevents a
+retry from starting a second ceremony ({{creation-recovery}}).
+
+The child delegation profile
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) carries the
+same parameter with the same semantics on its child-creation
+exchange, as `mission_denial_reason` is shared across the profiles
+that mint a Mission related to an existing one ({{denial-reasons}}).
+
+## The operation fingerprint {#creation-fingerprint}
+
+The operation fingerprint commits what the operation is, so a
+repeated identifier is distinguishable from a reused one. It is
+computed as an issuance-profile integrity anchor
+({{I-D.draft-mcguinness-oauth-mission}}) whose `typ` is
+`mission-creation-fingerprint`, under that profile's
+collision-resistant `typ` convention, and whose committed value is
+the object below: the anchor envelope is canonicalized with JCS
+{{RFC8785}}, hashed with SHA-256, and encoded as `sha-256:` followed
+by the base64url, no-padding, encoding of the digest, exactly as for
+the profile's other anchors.
+
+The fingerprint object carries exactly these members:
+
+`op`:
+: `expansion` for this document's exchange; `child-creation` for the
+  child delegation profile's. This member domain-separates the two
+  operations that share the token-exchange grant.
+
+`iss`:
+: The Mission Issuer's issuer identifier.
+
+`client`:
+: The authenticated client identifier.
+
+`source`:
+: The `mission_id` of the source Mission resolved from
+  `subject_token` ({{request-binding}}): the predecessor here, the
+  parent under child delegation. The resolved identifier is the
+  member, never the raw `subject_token`, since a legitimate retry
+  may carry a newly issued token for the same Mission, and never the
+  optional cross-check alone, which is non-authoritative.
+
+`cnf`:
+: The verified presenter confirmation: the DPoP proof key's `jkt`,
+  or the mTLS certificate's `x5t#S256` ({{request-binding}}).
+
+`actor`:
+: The verified acting-agent identity, with its relevant actor
+  context, where the exchange carries one (`actor_token`); absent
+  where client authentication alone identifies the acting agent.
+
+`intent`:
+: The parsed `mission_intent` object.
+
+`proposal`:
+: The parsed `authorization_details` array, when present.
+
+`child_actor`:
+: The parsed `child_actor` object; child creation only, absent on an
+  expansion.
+
+`requested_token_type`:
+: The exchange's `requested_token_type` value.
+
+`cross_check`:
+: The supplied `predecessor` value (under child delegation, the
+  supplied `parent` value), when present.
+
+An extension that defines a new parameter affecting the
+authorization, derivation, approval, output, or side effects of the
+creation MUST extend the fingerprint object with it. Attempt-specific
+material is excluded: the DPoP proof serialization and its `jti`, the
+client-authentication assertion serialization, the raw
+`subject_token` serialization, and `creation_request_id` itself.
+
+## The durable reservation {#creation-reservation}
+
+A reservation is the durable record binding the authenticated client,
+the `creation_request_id`, and the fingerprint. It is created in a
+`reserved` state and moves to `completed` or `failed`. The
+`(client, creation_request_id)` pair is unique, and the store MUST
+enforce that uniqueness as a constraint; a read-before-insert check
+without one does not withstand concurrent retries.
+
+The reservation and the created Mission's identifier MUST be
+committed atomically with Mission creation; credential generation MAY
+follow the commit. This closes the crash window: when the Mission
+commits and the Mission Issuer fails before responding, the retry
+finds the committed operation and resumes delivery
+({{creation-recovery}}), never creating again.
+
+A repeated presentation of the same `(client, creation_request_id)`
+resolves by fingerprint:
+
+- same fingerprint, operation completed: recover it
+  ({{creation-recovery}});
+- same fingerprint, operation reserved or pending: return the same
+  continuation, or a retryable in-progress result;
+- different fingerprint: refuse with `invalid_request`. The
+  identifier was reused for a different operation.
+
+## Recovery is delivery {#creation-recovery}
+
+The Mission Issuer stores the operation's stable outcome, never its
+serialized response: the completion mode with its continuation
+handle, or the created Mission's identifier with its
+delivery-artifact metadata. A revalidated retry
+({{creation-revalidation}}) recovers that outcome:
+
+- A pending deferred completion returns the same deferral: the same
+  `(client, creation_request_id)` resolves to the same deferred
+  continuation, scoped to the authenticated client, never to a
+  second deferral.
+- A pending interactive completion returns the same continuation
+  reference. The reservation is made at initiation, so a retry
+  cannot start a second approval ceremony.
+- A completed operation whose delivery credential is still valid
+  returns that credential.
+- A completed operation whose delivery credential has expired is
+  recovered by minting a fresh delivery credential for the
+  already-created successor, provided that successor remains
+  `active` and the requester re-establishes the recorded
+  authorization context ({{creation-revalidation}}). The fresh
+  credential is a delivery event with ordinary issuance accounting;
+  it MUST NOT repeat creation accounting: no second creation
+  lifecycle event, no second evidence emission, no second count
+  against any creation budget.
+
+Recovery never re-creates. Whatever the outcome tier, a recovered
+operation yields the Mission the operation already created, or the
+continuation it already opened, and nothing else.
+
+## Revalidation and lookup order {#creation-revalidation}
+
+A matching `creation_request_id` never bypasses authentication or
+possession. Before recovering anything, the Mission Issuer MUST
+establish:
+
+- the same authenticated client;
+- the recorded source Mission;
+- the same authorized acting agent;
+- possession of the recorded sender-constraint identity, the stored
+  `cnf` of {{creation-fingerprint}}; and
+- fingerprint compatibility ({{creation-reservation}}).
+
+No key-rotation recovery path is defined: a requester that can no
+longer prove possession of the recorded `cnf` does not recover the
+operation.
+
+The idempotency lookup occurs after client authentication and
+possession verification and before the predecessor lifecycle gate
+({{verification-order}}). The order is load-bearing: the retry worth
+recovering is exactly the one whose predecessor transitioned to
+`superseded` when the first attempt succeeded
+({{superseded-state}}), so re-running the predecessor-active gate
+first would refuse the very recovery this mechanism exists to serve.
+
+## Tombstone retention {#creation-retention}
+
+Retention has two tiers. The full delivery-artifact record MAY be
+retained briefly. The idempotency tombstone, the
+`(client, creation_request_id)` binding with its fingerprint and its
+Mission or continuation reference, MUST survive at least the
+deployment's published retry horizon, and retention to the source or
+created Mission's lifetime, or to the deployment's audit horizon, is
+RECOMMENDED. The retry horizon is a published deployment bound, like
+the deployment's other operational bounds. A client MUST NOT retry a
+creation past the published horizon: reuse of an identifier after
+its tombstone expires is outside the contract and is processed as a
+new operation.
+
 # Expansion Denial Reasons {#denial-reasons}
 
 An adjudication that completes with the Approver declining, or with the
@@ -1073,6 +1286,10 @@ conforming **expansion-capable Mission Issuer** MUST:
   that is not `active` with `invalid_grant`, and evaluate the request in
   the verification order of {{verification-order}}
   ({{request-binding}}, {{predecessor-active}});
+- require a `creation_request_id` on every expansion exchange,
+  refusing a missing one with `invalid_request`, and recover a
+  repeated one under the reservation, recovery, revalidation, and
+  retention rules of {{creation-idempotency}};
 - complete the expansion in one of the modes of {{completion-modes}}:
   synchronously for a subset derivation, or, for a fresh approval,
   through the deferred token response or the retained interactive
@@ -1189,6 +1406,34 @@ Mitigations:
   status that tells the client whether to discover an existing
   successor or stop, without leaking the predecessor's new internal
   state beyond that ({{reconciliation}}).
+
+## Duplicate creation {#duplicate-creation}
+
+To a client, a lost response is indistinguishable from a failed
+creation. Without idempotency the natural retry after a network
+fault creates a second Mission: live authority nobody intended and,
+under the child delegation profile, a consumed fan-out budget
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Proof
+`jti` single-use does not close this fault: the retry carries a
+fresh, valid proof.
+
+Mitigations:
+
+- The REQUIRED `creation_request_id`, with its durable reservation
+  and uniqueness constraint, makes the retry recover the one
+  committed operation, concurrent retries included
+  ({{creation-idempotency}}, {{creation-reservation}}).
+- The identifier is a deduplication handle, not a secret and not a
+  credential: recovery re-establishes client authentication,
+  possession of the recorded confirmation key, and the recorded
+  authorization context, so the recovery path never weakens the
+  possession requirements of {{request-binding}}
+  ({{creation-revalidation}}).
+- Reservations are scoped to the authenticated client, so one
+  client's identifiers cannot interfere with, or replay, another's.
+- Storage is bounded: the tombstone is small, its horizon is
+  published ({{creation-retention}}), and a Mission Issuer MAY cap
+  outstanding reservations per client.
 
 ## Expansion versus step-up {#step-up-distinction}
 
@@ -1317,11 +1562,20 @@ Parameters" registry:
   child delegation profile
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
 
+- Name: `creation_request_id`
+- Parameter Usage Location: token request
+- Change Controller: IETF
+- Reference: this document, {{submission}}, {{creation-idempotency}};
+  also carried by the child delegation profile
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
+
 The `predecessor` cross-check rides the token exchange request at the
 token endpoint and, on the retained interactive path, the authorization
 request; the reconciliation status and denial reason ride the token
 error response and, on the interactive path, the authorization error
-response.
+response. The `creation_request_id` identifier rides the token
+exchange request at the token endpoint in every completion mode and
+never appears on a front channel.
 
 # Acknowledgments
 {:numbered="false"}
