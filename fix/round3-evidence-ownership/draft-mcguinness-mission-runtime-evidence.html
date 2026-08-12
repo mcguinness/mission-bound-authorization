@@ -1521,11 +1521,11 @@ binding's decision-API request's audience member,
 <dt id="section-3.1-1.15">
 <code>mission_state_version</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-3.1-1.16">
-            <p id="section-3.1-1.16.1"><span class="bcp14">OPTIONAL</span>. An integer. Mirrors the decision-API response's Mission
-state version member, when the PDP tracks Mission state version
-(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). Distinct from the
-<code>mission</code> sub-member <code>policy_view_id</code>, which commits to authority
-only (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-3.1-1.16.1" class="pilcrow">¶</a></p>
+            <p id="section-3.1-1.16.1"><span class="bcp14">OPTIONAL</span>. An integer. The Mission lifecycle-state version the
+decision consulted, when the PDP tracks one: the mutable-state
+counterpart of the compiled-authority <code>policy_view_id</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The PDP computes and
+records it directly; no decision-API wire echo is required.<a href="#section-3.1-1.16.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-3.1-1.17">
@@ -1590,7 +1590,7 @@ binding, <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref
           <dd style="margin-left: 1.5em" id="section-3.1-1.30">
             <p id="section-3.1-1.30.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>permit</code> for a consequential action. An
 object recording the permit's decision conditions as returned to
-the PEP: <code>request_digest</code> (the parameter binding the permit is
+the PEP: <code>parameter_digest</code> (the parameter binding the permit is
 bound to), <code>valid_until</code> (the validity bound), and
 <code>use_limit</code> (the consumption bound on <code>evaluation_id</code>). The PDP
 <span class="bcp14">MUST</span> set <code>use_limit: 1</code> for a permit in the high-consequence
@@ -1608,9 +1608,8 @@ evaluation request, in the integrity-anchor encoded form
 <code>parameter_digest</code> is absent for a consequential action, so the closed
 object still carries the request digest the runtime profile requires
 of every decision record (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).
-Distinct from the <code>conditions</code> member's <code>request_digest</code>: that
-member
-records the parameter binding a granted permit is bound to;
+Distinct from the <code>conditions</code> member's <code>parameter_digest</code>: that
+member records the parameter binding a granted permit is bound to;
 <code>evaluation_request_digest</code> is this record's fallback digest of the
 whole evaluation request, present whether the decision was a permit
 or a deny.<a href="#section-3.1-1.32.1" class="pilcrow">¶</a></p>
@@ -1819,7 +1818,7 @@ refused request, in the form of <a href="#request-digest-worked" class="auto int
 when <code>parameter_digest</code> is absent, so the record meets the runtime
 profile's record minimum
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Distinct from a granted
-permit's <code>request_digest</code> parameter binding
+permit's <code>parameter_digest</code> condition
 (<a href="#decision-evidence-object" class="auto internal xref">Section 3</a>): a Refusal Record has no PDP decision
 and no permit.<a href="#section-3.2-2.18.1" class="pilcrow">¶</a></p>
 </dd>
@@ -2076,7 +2075,7 @@ envelopes with unsupported formats.<a href="#section-3.3-10" class="pilcrow">¶<
   "action_class": "irreversible_action",
   "class_source": "deployment",
   "conditions": {
-    "request_digest":
+    "parameter_digest":
       "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "valid_until": "2026-11-02T08:15:00Z",
     "use_limit": 1
