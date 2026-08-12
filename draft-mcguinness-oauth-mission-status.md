@@ -306,17 +306,33 @@ per request:
 1. **mTLS client authentication** {{RFC8705}}. The AS validates the
    client's X.509 certificate against its configured trust anchors and
    the client's registered `tls_client_auth` metadata.
-2. **DPoP-bound bearer token** {{RFC9449}}. The client presents a
-   `mission_status`-scoped DPoP-bound access token (see the
-   authorization requirement below) in the `Authorization` header with
-   a `DPoP` proof header; the token's `cnf.jkt` MUST match the proof
-   key thumbprint.
+2. **Sender-constrained access token**. The client presents a
+   `mission_status`-scoped access token (see the authorization
+   requirement below) in the `Authorization` header, sender-constrained
+   either by DPoP {{RFC9449}} (the `DPoP` scheme with a `DPoP` proof
+   header, the token's `cnf.jkt` matching the proof key thumbprint) or
+   by mTLS {{RFC8705}} (a certificate-bound token, the `Bearer` scheme,
+   whose `cnf.x5t#S256` matches the presented client certificate). The
+   token MUST be audience-restricted to this endpoint's
+   protected-resource identifier (below).
 3. **Private-key-JWT client authentication** {{RFC7523}}. The client
-   presents a signed JWT assertion as `client_assertion`.
+   presents `client_assertion_type` with the exact value
+   `urn:ietf:params:oauth:client-assertion-type:jwt-bearer` and a signed
+   JWT as `client_assertion`. The assertion's `aud` MUST name the URL of
+   the endpoint being invoked (the `mission_status_endpoint` for a
+   Status request, the `mission_lifecycle_endpoint` for a Lifecycle
+   request), not the token endpoint; the AS MUST reject an assertion
+   whose `aud` names no such endpoint. The AS accepts only the JWS
+   {{RFC7515}} algorithms it advertises for that endpoint
+   ({{as-metadata}}); `none` MUST NOT be used.
 
 Plain Basic or POST client authentication MUST NOT be used for this
 endpoint. The AS MUST refuse a request not authenticated by one of the
-three mechanisms with `unauthorized` (HTTP 401).
+three mechanisms with `unauthorized` (HTTP 401). A request that presents
+an access token in `Authorization` is mechanism 2, and any client
+certificate is then evaluated only as that token's mTLS sender
+constraint, not as mechanism-1 client authentication; a request with no
+`Authorization` access token and a client certificate is mechanism 1.
 
 An authenticated caller MUST additionally carry an explicit read
 authorization: a `mission_status` scope on the presented access token,
@@ -331,20 +347,34 @@ Mission state without holding an access token the AS issued. A caller
 carrying no such authorization is refused with the not-found response
 of {{mission-status-errors}} ({{mission-status-anti-oracle}}).
 
+A presented access token (mechanism 2) MUST be audience-restricted to
+this endpoint's protected-resource identifier: the `resource` value the
+AS publishes for this endpoint in its Protected Resource Metadata
+{{RFC9728}}. The AS MUST reject a token whose audience does not name that
+identifier. This token audience is distinct from the request body's
+`audience` parameter ({{mission-status-request}}): the token audience
+authorizes the call at this endpoint, whereas the request `audience`
+carries no authentication weight and only selects the
+Resource-Server-specific authority projection the response returns
+({{mission-status-response}}).
+
 Which mechanisms and authorization this endpoint accepts are
 discoverable per endpoint, not inferred from the token endpoint's
-client-authentication metadata. For the audience-restricted
-access-token path (the `mission_status`-scoped DPoP-bound token above),
-this endpoint is an OAuth protected resource: the AS publishes, in its
-Protected Resource Metadata for this resource {{RFC9728}}, the
-access-token presentation it accepts (`bearer_methods_supported`,
-`dpop_bound_access_tokens_required`) and the `mission_status` scope it
-requires (`scopes_supported`). For the retained
+metadata. The AS advertises the methods this endpoint accepts in
+`mission_status_endpoint_auth_methods_supported` ({{as-metadata}}). For
+the sender-constrained access-token path, this endpoint is an OAuth
+protected resource: the AS publishes, in its Protected Resource Metadata
+for this resource {{RFC9728}}, the `resource` identifier the token's
+audience MUST name, the `mission_status` scope it requires
+(`scopes_supported`), and the sender constraints it accepts
+(`dpop_bound_access_tokens_required`,
+`tls_client_certificate_bound_access_tokens`). For the retained
 direct-client-authentication path (mTLS {{RFC8705}} or private-key JWT
-{{RFC7523}}), the accepted client-authentication methods are the AS's
-registered client-authentication methods, discoverable through its
-existing OAuth client-authentication metadata {{RFC8414}}. Both paths
-are therefore discoverable.
+{{RFC7523}}), the accepted methods and, for `private_key_jwt`, the
+accepted client-assertion signing algorithms are advertised for this
+endpoint ({{as-metadata}}), not read from the token endpoint's
+`token_endpoint_auth_methods_supported` {{RFC8414}}. Both paths are
+therefore discoverable.
 
 ## Worked Request Example
 
@@ -919,12 +949,18 @@ companion state is produced by this profile's endpoint.
 ## Authentication
 
 The lifecycle endpoint uses the same authentication mechanisms as the
-Mission Status endpoint ({{mission-status-authentication}}): mTLS,
-DPoP-bound bearer, or private-key JWT. It is discoverable per endpoint
-by the same split ({{mission-status-authentication}}): the access-token
-path through this endpoint's OAuth Protected Resource Metadata
-{{RFC9728}}, and the direct-client-authentication path through the AS's
-OAuth client-authentication metadata {{RFC8414}}.
+Mission Status endpoint ({{mission-status-authentication}}): mTLS client
+authentication, a sender-constrained access token (DPoP- or mTLS-bound),
+or private-key JWT. Its discovery mirrors that endpoint: the accepted
+methods in `mission_lifecycle_endpoint_auth_methods_supported` and, for
+`private_key_jwt`, the accepted client-assertion algorithms in
+`mission_lifecycle_endpoint_auth_signing_alg_values_supported`
+({{as-metadata}}); the sender-constrained access-token path through this
+endpoint's OAuth Protected Resource Metadata {{RFC9728}}. A private-key
+JWT `client_assertion` MUST name the `mission_lifecycle_endpoint` URL in
+`aud`, and a presented access token MUST be audience-restricted to this
+endpoint's protected-resource identifier, exactly as at the Mission
+Status endpoint.
 
 ## Authorization
 
@@ -1602,6 +1638,28 @@ through standard {{RFC8414}} discovery.
   dedicated Mission Status operation ({{mission-status}}). Present
   when the AS supports it.
 
+`mission_status_endpoint_auth_methods_supported`:
+: OPTIONAL. A JSON array of strings naming the authentication methods
+  the Mission Status endpoint ({{mission-status}}) accepts. Its value
+  space is a closed set defined by this document, not the OAuth Token
+  Endpoint Authentication Methods registry: `mtls_client_auth`
+  (mutual-TLS client authentication {{RFC8705}}), `private_key_jwt`
+  (private-key JWT client authentication {{RFC7523}}), and `access_token`
+  (a `mission_status`-scoped, sender-constrained access token, whose
+  presentation and DPoP or mTLS binding are described by this endpoint's
+  Protected Resource Metadata {{RFC9728}}). The first two values are
+  spelled identically to registered token-endpoint authentication
+  methods by intent; this member describes this endpoint, not the token
+  endpoint. Present, and SHOULD be advertised, when the AS serves the
+  Mission Status endpoint.
+
+`mission_status_endpoint_auth_signing_alg_values_supported`:
+: OPTIONAL. A JSON array of strings, the JWS {{RFC7515}} algorithm
+  values the AS accepts for the `private_key_jwt` client-assertion JWT
+  ({{mission-status-authentication}}) at the Mission Status endpoint.
+  `none` MUST NOT be used. Present when that endpoint lists
+  `private_key_jwt`.
+
 `mission_status_signing_alg_values_supported`:
 : OPTIONAL. A JSON array of strings. The JWS {{RFC7515}} algorithm
   values the AS uses to sign the Mission Status Response shape
@@ -1615,6 +1673,21 @@ through standard {{RFC8414}} discovery.
 : OPTIONAL. A string containing a URL. The URL of the
   Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}}). Present
   when the AS supports it.
+
+`mission_lifecycle_endpoint_auth_methods_supported`:
+: OPTIONAL. A JSON array of strings naming the authentication methods
+  the Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}})
+  accepts, from the same closed value space as
+  `mission_status_endpoint_auth_methods_supported` (with `access_token`
+  naming a `mission_lifecycle`-scoped access token). Present, and SHOULD
+  be advertised, when the AS serves the Mission Lifecycle endpoint.
+
+`mission_lifecycle_endpoint_auth_signing_alg_values_supported`:
+: OPTIONAL. A JSON array of strings, the JWS {{RFC7515}} algorithm
+  values the AS accepts for the `private_key_jwt` client-assertion JWT
+  ({{mission-status-authentication}}) at the Mission Lifecycle endpoint.
+  `none` MUST NOT be used. Present when that endpoint lists
+  `private_key_jwt`.
 
 `mission_max_stale_seconds`:
 : OPTIONAL. An integer. The maximum
@@ -1654,9 +1727,15 @@ Cache-Control: max-age=3600
 
   "mission_status_endpoint":
     "https://as.example.com/as/mission/status",
+  "mission_status_endpoint_auth_methods_supported":
+    ["mtls_client_auth", "private_key_jwt", "access_token"],
+  "mission_status_endpoint_auth_signing_alg_values_supported": ["ES256"],
   "mission_status_signing_alg_values_supported": ["ES256"],
   "mission_lifecycle_endpoint":
     "https://as.example.com/as/mission/lifecycle",
+  "mission_lifecycle_endpoint_auth_methods_supported":
+    ["mtls_client_auth", "private_key_jwt", "access_token"],
+  "mission_lifecycle_endpoint_auth_signing_alg_values_supported": ["ES256"],
   "mission_max_stale_seconds": 60
 }
 ~~~
@@ -1681,7 +1760,8 @@ An implementation claiming an extension MUST meet its requirements:
   read authorization of {{mission-status-authentication}}, the
   anti-oracle property
   ({{mission-status-anti-oracle}}), and the error shape of
-  {{mission-status-errors}}; and advertise `mission_status_endpoint`.
+  {{mission-status-errors}}; and advertise `mission_status_endpoint` and
+  `mission_status_endpoint_auth_methods_supported`.
 - **Introspection projection**: carry the Mission projection on the
   introspection response ({{introspection-projection}}), returning it
   as a {{RFC9701}}-signed response where end-to-end integrity is
@@ -1689,7 +1769,8 @@ An implementation claiming an extension MUST meet its requirements:
 - **Mission Lifecycle**: serve the management endpoint
   ({{mission-lifecycle-endpoint}}), gate the `suspended` and
   `completed` states it introduces exactly as the issuance profile gates
-  on non-`active` state, and advertise `mission_lifecycle_endpoint`.
+  on non-`active` state, and advertise `mission_lifecycle_endpoint` and
+  `mission_lifecycle_endpoint_auth_methods_supported`.
 - **Mission Completion**: issue and gate `terminal_when` entries per
   {{completion}}, meeting the requirements of
   {{completion-conformance}}.
@@ -1848,10 +1929,10 @@ that exposure when the source is operated by another party.
 # IANA Considerations {#iana}
 
 This document requests IANA actions for OAuth AS metadata members and
-a media type. It defines no new registry: the authentication-method
-value space is a closed set defined inline, and the `terminal_when`
-Common Constraint is defined by specification
-({{iana-terminal-when}}), not by an IANA action.
+a media type. It defines no new registry: the endpoint
+authentication-method value space is a closed set defined inline
+({{as-metadata}}), and the `terminal_when` Common Constraint is defined
+by specification ({{iana-terminal-when}}), not by an IANA action.
 
 ## OAuth Authorization Server Metadata Registration
 
@@ -1860,8 +1941,12 @@ Authorization Server Metadata" registry {{RFC8414}}. For each:
 Change Controller IETF; Reference this document, {{as-metadata}}.
 
 - `mission_status_endpoint`
+- `mission_status_endpoint_auth_methods_supported`
+- `mission_status_endpoint_auth_signing_alg_values_supported`
 - `mission_status_signing_alg_values_supported`
 - `mission_lifecycle_endpoint`
+- `mission_lifecycle_endpoint_auth_methods_supported`
+- `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
 - `mission_max_stale_seconds`
 
 ## Media Type Registration
