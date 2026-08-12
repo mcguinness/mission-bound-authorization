@@ -2277,9 +2277,10 @@ SHOULD sender-constrain the primary token as well where its threat
 model warrants.
 
 The token-endpoint response conveys the granted authority to the
-client. Because the client submits `mission_intent` rather than
-`authorization_details`, and is not expected to parse the access
-token, the AS MUST return the granted `authorization_details` in the
+client. Because what the client submitted was a proposal, never the
+grant ({{authority-proposal}}), and the client is not expected to
+parse the access token, the AS MUST return the granted
+`authorization_details` in the
 token-endpoint response, per {{RFC9396}} Section 7, reflecting
 exactly the (possibly narrowed) set assigned to the issued token;
 the same applies to refresh and Token Exchange responses. The
@@ -2630,11 +2631,14 @@ issued token to that same gap. It names what
 document does not fold that grain into `mission_denial`'s carriage,
 nor redefine either grain's response status: each rides the wire
 shape its own defining document gives it. A client that decodes
-`authorization_remediation` proposes the carried entries back as
-`proposed_authority` ({{mission-intent}}), where they derive under
+`authorization_remediation` proposes the carried entries back on the
+standard `authorization_details` parameter ({{authority-proposal}}),
+where they derive under
 this document's ordinary rules ({{authorization-derivation}}): of an
 advertised, schema-valid type ({{discovery}}), narrowed same-type
-({{subset}}, {{other-types}}) like any other proposal.
+({{subset}}, {{other-types}}) like any other proposal. The loop
+closes natively: the remediation grain's output vocabulary is this
+document's input carriage, with no re-wrapping between them.
 
 A third grain routes the same denial into a governed access request
 rather than a fresh derivation: the AuthZEN Access Request and
@@ -2791,12 +2795,15 @@ Mission-bound access tokens. When it does, the response for such a
 token carries, in addition to the standard members, a `mission`
 member: `id`, `issuer`, and `authority_hash` (as in the `mission`
 claim, {{mission-claim}}) plus, when the responding AS is the Mission
-`issuer`, the current lifecycle `state` (string) and, when
+`issuer`, the current lifecycle `state` (string); when
 `controls.max_derivations` is in force, `derivations_remaining` (a
 number): the derivations left under the cap at the time of the
 response, counting committed issuances ({{lifecycle}}), so a harness
-can plan refreshes against the budget. Like `state`, only the issuer
-reports `derivations_remaining`
+can plan refreshes against the budget; and, when the Mission records
+an authority proposal, `proposal_hash` (string): the Mission's
+`proposal_hash` ({{mission-record}}), surfaced for audit. Like
+`state`, only the issuer reports `derivations_remaining` and
+`proposal_hash`
 ({{only-issuer-reports-state}}). The core states are `active`, `revoked`,
 and `expired` ({{lifecycle}}); a deployment that runs a companion
 profile defining an additional state reports that state here, and a
@@ -2919,6 +2926,8 @@ While the Mission is `active`, the response is the standard
     "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "proposal_hash":
+      "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
     "state": "active"
   }
 }
@@ -3312,13 +3321,22 @@ discover the authorization details type through the standard mechanism.
 A client MAY use the RFC 9396 client metadata `authorization_details_types`
 at registration to declare the types it understands.
 
+An advertised type, `mission_resource_access` included, appears in
+authorization requests only as a proposal subject to derivation
+({{authority-proposal}}): a client submits entries of advertised
+types on the `authorization_details` parameter alongside
+`mission_intent`, and the AS derives, narrows, or refuses under
+{{authorization-derivation}}. The granted entries on issued tokens
+and echoes are issuer-derived, never the submission carried through
+by right.
+
 Discovery is OPTIONAL: a deployment MAY arrange Mission-bound
 authorization out of band, and this member only lets an AS advertise
 it. When the member is absent or `false`, a client MUST NOT infer
 that the AS supports this specification. A client holding a Mission
 Intent MUST NOT silently downgrade the task to an ungoverned
 authorization request against an AS whose support is not advertised
-and not otherwise established: submitting the same authority as plain
+and not otherwise established: submitting the same authority as bare
 `scope` or `authorization_details` obtains tokens no Mission governs,
 the client-side face of downgrade by omission
 ({{downgrade-by-omission}}). The client surfaces the inability
@@ -3400,8 +3418,9 @@ enforcement ({{rs-enforcement}}).
 A **Mission Client** implements the client surfaces:
 
 - submission of the Mission Intent via PAR only
-  ({{submission-via-par}}), never sending `authorization_details`
-  alongside `mission_intent`;
+  ({{submission-via-par}}), proposing concrete authority, where it
+  does, on the `authorization_details` parameter pushed alongside
+  `mission_intent` ({{authority-proposal}});
 - reading its granted authority from the token-response
   `authorization_details` echo ({{mission-bound-tokens}}); and
 - obtaining `mission_id` from the `mission_id` token-response parameter
@@ -3460,8 +3479,8 @@ Exchange, a cross-domain grant issuance, or an introspection request
 fails if the issuer does not support it.
 
 The smallest useful conforming deployment, noted here informatively,
-is a Mission Issuer that derives in narrowing mode from the Intent's
-`proposed_authority` ({{authorization-derivation}}), emits only the
+is a Mission Issuer that derives in narrowing mode from the client's
+authority proposal ({{authorization-derivation}}), emits only the
 Common Constraints of {{common-constraints}}, and implements none of
 the OPTIONAL capabilities; a scope-only Resource Server still operates
 at the coarse scope level ({{rs-enforcement}}). This note names a
@@ -3495,8 +3514,12 @@ enforcing the token's `authorization_details` directly
 `intent_hash` extends the same protection to the task itself: it
 commits the approved Mission Intent, so an auditor can detect any
 later alteration of the recorded task, independently of the authority
-derived from it. The two anchors are domain-separated
-({{integrity-anchors}}); neither is a substitute for the other.
+derived from it. `proposal_hash`, present when the client submitted
+an authority proposal ({{authority-proposal}}), commits what the
+agent asked for: approval-time provenance that lets an auditor
+compare the narrowed grant against the request that sought it. The
+anchors are domain-separated
+({{integrity-anchors}}); none is a substitute for another.
 
 The task and the authority are committed separately, rather than folded
 into one hash over the whole Mission, because they are distinct objects
@@ -3547,7 +3570,13 @@ A token bearing equivalent `authorization_details` but no `mission`
 claim is governed by no Mission state, revocation, or consent
 commitment. A deployment that designates a resource Mission-governed
 MUST NOT issue tokens for that resource outside a Mission, except under
-documented policy exceptions. On the enforcement side, a Resource
+documented policy exceptions. The same rule has a per-client form: a
+deployment MAY register a client as Mission-governed, and an AS MUST
+reject a bare `authorization_details` request, one carrying no
+`mission_intent`, from a client so registered, so a governed client
+cannot strip the Intent from its submission to obtain ungoverned
+tokens; the client-side face of this duty is stated in
+{{discovery}}. On the enforcement side, a Resource
 Server for such a resource rejects a token lacking the `mission` claim
 ({{rs-enforcement}}), and MAY advertise the requirement through
 `mission_bound_authorization_required`
@@ -3978,7 +4007,9 @@ transparency-side mechanism ({{I-D.draft-mcguinness-mission-audit}}).
 The integrity anchors are unsalted commitments: a party holding a
 candidate Intent can confirm it against `intent_hash`, so over
 low-entropy or guessable content the anchor is a disclosure channel,
-and deployments treat it as one when the Intent itself is sensitive.
+and deployments treat it as one when the Intent itself is sensitive;
+the same confirmation channel exists for a candidate proposal
+against `proposal_hash`.
 
 ## Mission Record and Evidence Access {#record-access}
 
@@ -4059,8 +4090,9 @@ Introspection Response" registry ({{RFC7662}}):
 - Description: The Mission a token was derived under. Same object shape
   as the `mission` JWT claim ({{mission-claim}}); a response from the
   Mission's issuer additionally carries a `state` member giving the
-  current lifecycle state and, where a derivation cap is in force, a
-  `derivations_remaining` member ({{introspection}}).
+  current lifecycle state, where a derivation cap is in force a
+  `derivations_remaining` member, and where the Mission records an
+  authority proposal a `proposal_hash` member ({{introspection}}).
 - Change Controller: IESG
 - Specification Document(s): this document, {{introspection}}
 
