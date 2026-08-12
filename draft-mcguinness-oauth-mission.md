@@ -155,6 +155,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -235,7 +243,7 @@ integrity-bound authorization artifact for OAuth 2.0. A client submits
 a Mission Intent through Pushed Authorization Requests; the
 Authorization Server derives Rich Authorization Requests authorization
 details from it, binds the approved task and its derived authority to
-the Approver's consent through two integrity anchors, and records a
+the Approver's consent through integrity anchors, and records a
 durable Mission. Every access token derived under the Mission carries
 that authority and a "mission" claim, and issuance is gated on the
 Mission's lifecycle state. Optional capabilities represent
@@ -275,7 +283,8 @@ authorization artifact. The contribution is a single chain:
 
 1. The client submits a structured **Mission Intent** describing the
    task (goal, target resources, constraints) instead of requesting
-   raw scopes.
+   raw scopes, optionally proposing concrete authority alongside it
+   as standard `authorization_details`.
 2. The Authorization Server (AS) derives **authorization details**
    ({{RFC9396}}), the **Authority Set**: the concrete authority the
    task needs.
@@ -609,6 +618,11 @@ Mission Intent:
 : The structured description of the task the client submits
   ({{mission-intent}}).
 
+Authority Proposal:
+: The `authorization_details` array a client submits alongside a
+  Mission Intent, a proposal for derivation and never authority
+  ({{authority-proposal}}).
+
 Authority Set:
 : The set of `authorization_details` entries the AS derives from a
   Mission Intent and the Approver approves
@@ -658,8 +672,11 @@ This document maps principals onto native OAuth constructs:
   is governance state this document does not model
   ({{multi-party-approval}}).
 
-On a derived token the `sub` claim is the Subject's `sub` and the
-token `iss` is the AS; within the issuing AS's namespace this
+On a derived token the `sub` claim is the AS-local `sub` the AS
+maps the Subject to under the injective mapping of
+{{approval-event}}, verbatim adoption of the external `sub` being
+the common case, and the token `iss` is the AS; within the issuing
+AS's namespace this
 (`iss`, `sub`) pair is the AS-local subject principal, authoritative
 for the Subject, and Resource Servers authorize against it. The
 Mission separately records the Subject's home issuer and identifier
@@ -696,7 +713,7 @@ layered in future versions and are not required here.
 ~~~
  Agent (client)                       Mission Issuer (AS)
       |                                     |
-      | 1. PAR: mission_intent ------------>| derive authority
+      | 1. PAR: intent + proposal --------->| derive authority
       |<----------- request_uri ------------| (authz_details)
       |                                     |
       | 2. authorization request ---------->| Approver consents
@@ -729,9 +746,12 @@ the same Intent produce two distinct pending requests, and a Mission
 acquires its Mission Identifier ({{mission-id}}) only at activation.
 The approved Intent is recorded on the Mission and committed by
 `intent_hash`
-({{integrity-anchors}}); it describes the task but commits no
-authority, which is committed separately by `authority_hash` over the
-derived Authority Set ({{authorization-derivation}}).
+({{integrity-anchors}}); it describes the task and carries no
+authority members. Concrete authority is proposed separately, on the
+standard `authorization_details` parameter pushed alongside the
+Intent ({{authority-proposal}}) and committed by `proposal_hash` when
+submitted; the granted authority is committed by `authority_hash`
+over the derived Authority Set ({{authorization-derivation}}).
 
 A Mission Intent is a JSON object describing the task. The client
 submits it in place of `scope`, or alongside a narrowed `scope`. It
@@ -751,40 +771,6 @@ has the following members:
 : OPTIONAL. An array of strings. Human-readable bounds on
   the task (for example, "read only invoices from 2026"). These
   inform derivation and consent rendering.
-
-`proposed_authority`:
-: OPTIONAL. An array of objects, each shaped as an {{RFC9396}}
-  `authorization_details` entry. The client's concrete authority
-  proposal for the task. It is untrusted input like the rest of the
-  Intent and is committed by `intent_hash` with it
-  ({{integrity-anchors}}). Each entry MUST be of a type the AS
-  advertises and MUST validate against that type's published JSON
-  Schema ({{other-types}}, {{discovery}}); where a deployment
-  arranges Mission-bound authorization out of band rather than
-  advertising the metadata endpoint, the supported types and their
-  schemas are established out of band, and this rule applies over
-  that knowledge the same way. An entry of an unadvertised type, or
-  one that fails its schema, MUST NOT be carried into the Authority
-  Set unexamined: the AS refuses the Intent with
-  `invalid_authorization_details`, or omits the entry; it MUST NOT
-  keep the entry silently, and where the AS omits the entry the
-  granted `authorization_details` echo ({{mission-bound-tokens}})
-  MUST reflect the omission, so no entry is ever represented as
-  granted when it was not.
-
-  When present, the AS MUST derive each Authority Set entry as a
-  subset ({{subset}}) of some `proposed_authority` entry of the
-  *same type*: a `mission_resource_access` entry derives only from a
-  `mission_resource_access` proposal, under the subset rule of
-  {{subset}}; an entry of another AS-supported type derives only
-  from a same-type proposal, narrowed under that type's own subset
-  rule where it defines one, or carried through unchanged where it
-  defines none ({{other-types}}). No entry derives from a proposed
-  entry of a different type. `goal` and `constraints` then serve as
-  rendering and bounding context over the proposed authority. Each
-  entry that carries a `resource` member MUST have it among the
-  Intent's `resources`; the AS refuses an Intent violating this with
-  `invalid_request`.
 
 `success_criteria`:
 : OPTIONAL. An array of strings. Human-readable
@@ -933,9 +919,9 @@ Submission is governed by the following rules:
   is well-formed but yields no valid Authority Set (an unsupported
   resource, action, or authorization details type, or a policy that
   bars the requested authority), the AS SHOULD refuse with
-  `invalid_authorization_details` ({{RFC9396}}), even though the
-  client did not submit `authorization_details` directly, so a
-  client can tell a syntax error from a derivation failure.
+  `invalid_authorization_details` ({{RFC9396}}), whether or not the
+  request carried an authority proposal ({{authority-proposal}}), so
+  a client can tell a syntax error from a derivation failure.
 - **One carriage, through PAR.** The Intent is accepted as the
   form-encoded `mission_intent` parameter of the PAR request body, or
   as a `mission_intent` claim inside a signed Request Object
@@ -956,44 +942,144 @@ Submission is governed by the following rules:
   the lengths of its arrays, refusing an Intent that exceeds the
   deployment-defined limits with `invalid_request`, so an oversized
   Intent cannot exhaust the AS at rendering, derivation, or hashing.
-- **No raw authorization details.** A client MUST NOT submit the
-  {{RFC9396}} `authorization_details` request parameter together
-  with `mission_intent`, and the AS MUST refuse a request carrying
-  both with `invalid_request`: concrete authority is proposed inside
-  the Intent, through `proposed_authority` ({{mission-intent}}). A
-  client MAY submit `scope` and `resource` ({{RFC8707}}) values. The
-  AS treats them as a requested subset and MUST NOT grant authority
-  beyond what the Mission Intent yields.
+- **Concrete authority is proposed via `authorization_details`.**
+  A client proposing concrete authority submits the standard
+  {{RFC9396}} `authorization_details` request parameter alongside
+  `mission_intent` in the same push, as a proposal subject to
+  derivation ({{authority-proposal}}); `mission_intent` itself
+  carries no authority members. A client MAY submit `scope` and
+  `resource` ({{RFC8707}}) values. The AS treats them as a requested
+  subset and MUST NOT grant authority beyond what the Mission Intent
+  yields.
 - **Pushed parameters are authoritative.** On the front-channel
   request that redeems the `request_uri`, the AS MUST ignore any
   `mission_intent`, `authorization_details`, `scope`, or `resource`
   presented, and MUST NOT let such a value widen the authority
-  derived from the pushed Intent.
-- **A proposal, never authority.** A Mission Intent is untrusted
-  client input; trust enters only when the AS validates it and the
-  Approver consents to the rendered result. The AS MUST treat the
-  submitted Intent as a proposal and MUST derive and bound authority
-  by policy regardless of what the client submitted. How a client
-  produces the Intent (for example, a "Mission Shaper" deriving it
-  from a natural-language instruction) is out of scope for this
-  document.
+  derived from the pushed parameters.
+- **A proposal, never authority.** A Mission Intent, and any
+  authority proposal submitted alongside it ({{authority-proposal}}),
+  is untrusted client input; trust enters only when the AS validates
+  it and the Approver consents to the rendered result. The AS MUST
+  treat the submission as a proposal and MUST derive and bound
+  authority by policy regardless of what the client submitted. How a
+  client produces the Intent (for example, a "Mission Shaper"
+  deriving it from a natural-language instruction) is out of scope
+  for this document.
+
+## The Authority Proposal {#authority-proposal}
+
+A client MAY propose concrete authority for the task by submitting
+the standard {{RFC9396}} `authorization_details` request parameter,
+a JSON array of `authorization_details` objects, alongside
+`mission_intent` in the same pushed request
+({{submission-via-par}}). The Mission Intent carries no authority
+members: earlier revisions of this document carried the proposal
+inside the Intent as a `proposed_authority` member, this document
+does not ({{document-history}}), and an Intent carrying that member
+is refused as an unknown top-level member under the closed-top-level
+rule of {{submission-via-par}}.
+
+The submitted `authorization_details` is a proposal, never
+authority. The AS MUST treat it as untrusted input, MUST derive and
+bound the Authority Set by policy regardless of what was submitted
+({{authorization-derivation}}), and MUST NOT grant authority beyond
+what the Mission Intent yields.
+
+Each submitted entry MUST be of a type the AS advertises and MUST
+validate against that type's published JSON Schema ({{other-types}},
+{{discovery}}); where a deployment arranges Mission-bound
+authorization out of band rather than advertising the metadata
+endpoint, the supported types and their schemas are established out
+of band, and this rule applies over that knowledge the same way.
+This is the {{RFC9396}} Section 5 validation of the standard
+parameter: the AS MUST refuse a request carrying an entry of an
+unadvertised type, or an entry that fails its type's schema, with
+`invalid_authorization_details`; a validation failure is never
+repaired by omitting the entry. Policy narrowing is distinct.
+During derivation the AS MAY narrow or omit a syntactically valid
+entry that policy cannot accept ({{authorization-derivation}}); it
+MUST NOT keep such an entry silently, and the granted
+`authorization_details` echo ({{mission-bound-tokens}}) MUST
+reflect every narrowing and omission, so no entry is ever
+represented as granted when it was not.
+
+When a proposal is present, the AS MUST derive each Authority Set
+entry as a subset ({{subset}}) of some proposed entry of the *same
+type*: a `mission_resource_access` entry derives only from a
+`mission_resource_access` proposal, under the subset rule of
+{{subset}}; an entry of another AS-supported type derives only from
+a same-type proposal, narrowed under that type's own subset rule
+where it defines one, or carried through unchanged where it defines
+none ({{other-types}}). No entry derives from a proposed entry of a
+different type. `goal` and `constraints` then serve as rendering and
+bounding context over the proposed authority. Each proposed entry
+that carries a `resource` member MUST have it among the Intent's
+`resources`; the AS refuses a request violating this with
+`invalid_request`.
+
+The proposal rides the Intent's carriage rules
+({{submission-via-par}}): it is accepted only through PAR, inside
+the Request Object when one is used ({{RFC9101}}), it is ignored on
+the front-channel request that redeems the `request_uri`, and the
+bounded-size rule applies to it the same way. The AS records the
+submitted array on the Mission exactly as submitted and commits it
+by `proposal_hash` ({{integrity-anchors}}, {{mission-record}}),
+present iff a proposal was submitted: what the agent asked for is
+committed separately from the task (`intent_hash`) and from what
+was granted (`authority_hash`), so a narrowed grant can be audited
+against the proposal that sought it.
+
+Submitting `authorization_details` without `mission_intent` is an
+ordinary {{RFC9396}} request that this document does not govern;
+the client-side and AS-side duties that keep a governed task from
+downgrading across that line are stated in {{discovery}} and
+{{downgrade-by-omission}}.
+
+Example authority proposal, submitted alongside the example Intent
+of {{mission-intent}}. Derivation narrows `invoices.*` to
+`invoices.read` bounded to a Q3 issuance window, halves the
+proposed ceiling under the Intent's constraints, and carries the
+proposed `delegation` policy through unchanged (the example
+Authority Set of {{authorization-derivation}}):
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.*"],
+    "delegation": {
+      "max_depth": 2,
+      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+    } },
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": {
+      "max_amount": { "amount": "1000.00", "currency": "USD" }
+    } }
+]
+~~~
 
 # Mission Authority {#authorization-derivation}
 
-From the Mission Intent, the AS derives the **Authority Set**: one or
+From the Mission Intent, and from the authority proposal where one
+was submitted ({{authority-proposal}}), the AS derives the
+**Authority Set**: one or
 more {{RFC9396}} `authorization_details` entries of type
 `mission_resource_access` ({{type-registration}}). Derivation is
 mechanical. It happens once, at the approval event, over the
 derivation policy then in force, in one of two modes:
 
-- **Narrowing mode** (RECOMMENDED): the Intent carries
-  `proposed_authority` ({{mission-intent}}), and the Authority Set is
-  the proposal narrowed to policy. Each derived entry MUST be a
-  subset ({{subset}}) of some `proposed_authority` entry of the same
-  type ({{mission-intent}}); a proposed entry of an unadvertised
-  type, one that fails its schema, or one policy otherwise cannot
-  accept, is narrowed or omitted ({{mission-intent}}).
-- **Template mode**: the Intent carries no `proposed_authority`, and
+- **Narrowing mode** (RECOMMENDED): the client submitted an
+  authority proposal ({{authority-proposal}}), and the Authority Set
+  is the proposal narrowed to policy. Each derived entry MUST be a
+  subset ({{subset}}) of some proposed entry of the same type
+  ({{authority-proposal}}). An entry of an unadvertised type, or one
+  that fails its schema, was refused at validation and never reaches
+  derivation ({{authority-proposal}}); a valid proposed entry that
+  policy cannot accept is narrowed or omitted, and the granted echo
+  reflects it ({{authority-proposal}}).
+- **Template mode**: no authority proposal was submitted, and
   a deployment-configured mapping, keyed on the Intent's `purpose` or
   `resources`, yields the candidate entries, which are then narrowed
   to policy. The mapping is a lookup, never synthesis; the AS refuses
@@ -1023,13 +1109,14 @@ and recording rule above still apply to it.
 A `resources` entry the deployment does not recognize either causes
 refusal with `invalid_authorization_details` ({{submission-via-par}})
 or is omitted from the Authority Set, by deployment policy. When an
-omission or a narrowing leaves the Authority Set short of what the
-Intent proposed, derivation is partial. The granted
+omission or a narrowing leaves the Authority Set short of what was
+proposed ({{authority-proposal}}), derivation is partial. The granted
 `authorization_details` echo ({{mission-bound-tokens}}) MUST reflect
 every omission and narrowing and remains the authoritative statement
 of what was granted; a client learns of any shortfall by comparing
-the echo against its proposal. No omitted or narrowed entry is ever
-represented as granted.
+the echo against its proposal, which `proposal_hash` commits as
+submitted ({{integrity-anchors}}). No omitted or narrowed entry is
+ever represented as granted.
 
 The derived Authority Set, not the Mission Intent, is the authority the
 Approver consents to: the AS renders the Authority Set for approval and
@@ -1296,9 +1383,9 @@ deployment; a consumer that does not recognize it MUST fail closed
 ({{rs-enforcement}}).
 
 The same duty binds the AS side of narrowing: whenever the AS derives
-a candidate entry from a ceiling (a Mission Intent's
-`proposed_authority` narrowed to the Authority Set, or an Authority
-Set entry narrowed to a derived or delegated token,
+a candidate entry from a ceiling (a client's authority proposal
+narrowed to the Authority Set ({{authority-proposal}}), or an
+Authority Set entry narrowed to a derived or delegated token,
 {{authorization-derivation}}, {{delegation-constraints}}), a
 registered Common Constraint key present in the ceiling entry that the
 AS does not implement narrowing for MUST NOT be dropped while the
@@ -1400,9 +1487,9 @@ ceiling value and MUST be rejected.
 A value of any other form, including scientific notation
 (`"1e300"`), a sign, a thousands separator, or a non-numeric token
 (`"NaN"`, `"Infinity"`), is malformed, and a consumer MUST reject it
-rather than attempt to parse it: an Intent carrying one in
-`proposed_authority` is refused at submission
-({{submission-via-par}}), and a Resource Server treats a malformed
+rather than attempt to parse it: an authority proposal carrying
+one is refused at submission ({{authority-proposal}}), and a
+Resource Server treats a malformed
 decimal value the same as a `constraints` key it cannot enforce
 ({{rs-enforcement}}). Comparison and intersection over two such
 decimal-string values MUST be computed as exact decimal arithmetic
@@ -1591,8 +1678,8 @@ At the approval event the AS MUST, in order:
 1. Authenticate the Approver. If the Mission Intent's
    `controls.acr` is present, the authentication MUST satisfy it.
 2. Establish the Subject: the principal the task is for, recorded as
-   the Mission's `subject` and set as the `sub` of every derived token
-   ({{mission-bound-tokens}}). When the Approver is the Subject
+   the Mission's `subject` and mapped to the `sub` of every derived
+   token ({{mission-bound-tokens}}). When the Approver is the Subject
    (self-approval), this is the authenticated Approver. When the
    Approver is a different principal (for example, an administrator or
    manager approving on a user's behalf), the AS MUST itself establish
@@ -1602,10 +1689,15 @@ At the approval event the AS MUST, in order:
    wire parameter for the Subject; how the AS establishes it
    (administrative selection, a directory, an authenticated reference)
    is a deployment matter. When the Subject's home issuer
-   (`subject.iss`) differs from the AS, the AS MUST ensure the `sub`
-   it adopts is unique within its own issuer namespace and does not
-   collide with a different principal's `sub`, so a derived token's
-   (`iss`, `sub`) pair unambiguously denotes the Subject.
+   (`subject.iss`) differs from the AS, the AS MUST map the external
+   (`subject.iss`, `subject.sub`) pair to an AS-local `sub` under an
+   injective mapping: one external Subject maps to exactly one
+   AS-local `sub`, and no two distinct external Subjects map to the
+   same local `sub`, so a derived token's (`iss`, `sub`) pair
+   unambiguously denotes the Subject. Adopting the external `sub`
+   string verbatim as the local `sub` is one permitted deployment
+   choice, valid exactly where it collides with no other principal's
+   `sub`; the injectivity, not the verbatim adoption, is the rule.
 3. Render for consent the derived Authority Set in human-meaningful
    terms, with the `goal`, `constraints`, `expires_at`, and any
    `controls` bounds (notably `max_derivations`) as context:
@@ -1617,17 +1709,19 @@ At the approval event the AS MUST, in order:
      derived Authority Set does not conform.
    - When the Approver is not the Subject, the rendering MUST
      identify the Subject the authority is granted for.
-   - When the Intent carried `proposed_authority`
-     ({{mission-intent}}), the rendering MUST distinguish the entries
-     the client proposed from any narrowing or restructuring the AS
-     applied.
+   - When the client submitted an authority proposal
+     ({{authority-proposal}}), the rendering MUST distinguish the
+     entries the client proposed from any narrowing or restructuring
+     the AS applied.
 
    The Authority Set, not the Intent, is the consent object because
    derivation is local policy: nothing commits that the derived
    authority faithfully reflects the goal the Approver read.
 4. Compute the integrity anchors ({{integrity-anchors}}):
-   `authority_hash` over the consented Authority Set and
-   `intent_hash` over the approved Mission Intent.
+   `authority_hash` over the consented Authority Set, `intent_hash`
+   over the approved Mission Intent, and, when an authority proposal
+   was submitted ({{authority-proposal}}), `proposal_hash` over the
+   submitted `authorization_details` array.
 5. Create the Mission record ({{mission-record}}) in the `active`
    state, atomically with issuance of the authorization code.
 
@@ -1701,9 +1795,18 @@ what was approved. A party holding only a narrowed subset cannot
 recompute it and treats it as an audit anchor (see
 {{consent-binding}}).
 
-If the derived Authority Set changes between rendering and consent,
-the AS MUST recompute the anchors and MUST NOT activate the Mission
-unless the Approver consents to the changed set.
+If the task, the authority proposal, or the derived Authority Set
+changes between approval rendering and the approval decision, the AS
+MUST recompute the anchors the Mission records (`intent_hash` and
+`authority_hash`, and `proposal_hash` where a proposal was
+submitted) and MUST NOT create the
+Mission without the Approver's consent to the changed context, each
+anchor computed over the context actually approved (the
+approval-event rule of {{I-D.draft-mcguinness-mission-substrate}},
+stated here across this document's commitments). Committing the
+proposal separately keeps the anchors from equivocating: a proposal
+swapped between rendering and decision changes `proposal_hash` even
+where `intent_hash` is unchanged.
 
 The `intent_hash` commits the **approved Mission Intent**: the
 task the Approver consented to, as recorded on the Mission. It makes
@@ -1774,7 +1877,7 @@ evidence's co-approval members
 
 ## Integrity Anchors {#integrity-anchors}
 
-Both anchors are computed the same way over a domain-separated,
+Every anchor is computed the same way over a domain-separated,
 issuer-bound envelope:
 
 1. Construct the envelope, where `typ` selects the committed object
@@ -1782,24 +1885,28 @@ issuer-bound envelope:
 
    ~~~
    {
-     "typ": "<mission-intent | mission-authority-set>",
+     "typ": "<mission-intent | mission-proposed-authority
+             | mission-authority-set>",
      "iss": "<the AS issuer URL>",
      "value": <the committed object>
    }
    ~~~
 
    For `intent_hash`, `typ` is `mission-intent` and `value` is the
-   approved Mission Intent object. For `authority_hash`, `typ` is
-   `mission-authority-set` and `value` is the Authority Set as a JSON
-   array of entries.
+   approved Mission Intent object. For `proposal_hash`, `typ` is
+   `mission-proposed-authority` and `value` is the submitted
+   `authorization_details` array exactly as recorded
+   ({{authority-proposal}}); the anchor exists iff a proposal was
+   submitted. For `authority_hash`, `typ` is `mission-authority-set`
+   and `value` is the Authority Set as a JSON array of entries.
 
 2. Canonicalize the envelope with JCS {{RFC8785}}.
 3. Compute SHA-256 {{RFC6234}} over the canonical bytes.
 4. Encode as `sha-256:` followed by the base64url, no-padding,
    encoding of the digest.
 
-The `typ` field domain-separates the two anchors so a digest of one
-object can never be mistaken for the other. The `iss` binding
+The `typ` field domain-separates the anchors so a digest of one
+object can never be mistaken for another's. The `iss` binding
 prevents a committed object from being transplanted across
 Authorization Servers.
 
@@ -1830,9 +1937,10 @@ every byte. The following rules close the remaining gaps; they apply
 to computing an anchor and to comparing committed values:
 
 - The committed `value` is exactly the object the AS recorded on the
-  Mission: the approved `intent` for `intent_hash`, the
-  `authority_set` for `authority_hash`. An auditor reproduces a
-  digest from the record alone.
+  Mission: the approved `intent` for `intent_hash`, the recorded
+  `proposed_authority` for `proposal_hash`, and the `authority_set`
+  for `authority_hash`. An auditor reproduces a digest from the
+  record alone.
 - The AS MUST reject an input object containing duplicate JSON member
   names before canonicalization; such input is invalid.
 - JCS does not reorder array elements, and this document defines no
@@ -1847,7 +1955,7 @@ to computing an anchor and to comparing committed values:
   remains an exact match, and anchor computation is always byte-exact
   over the recorded values.
 
-Test vectors for both anchors are provided in {{test-vectors}}.
+Test vectors for the anchors are provided in {{test-vectors}}.
 
 # Mission Record {#mission-record}
 
@@ -1897,6 +2005,13 @@ profile defines:
 `intent`:
 : REQUIRED. An object. The approved Mission Intent.
 
+`proposed_authority`:
+: OPTIONAL. An array. The `authorization_details` array the client
+  submitted as its authority proposal ({{authority-proposal}}),
+  recorded exactly as submitted. Present iff a proposal was
+  submitted; a Mission derived in template mode
+  ({{authorization-derivation}}) records none.
+
 `authority_set`:
 : REQUIRED. An array. The consented Authority Set.
 
@@ -1908,6 +2023,14 @@ profile defines:
 : REQUIRED. A string. The integrity commitment over
   the approved Mission Intent ({{integrity-anchors}}), making the
   recorded task tamper-evident.
+
+`proposal_hash`:
+: OPTIONAL. A string. The integrity commitment over the recorded
+  `proposed_authority` ({{integrity-anchors}}). Present iff
+  `proposed_authority` is present. It is approval-time provenance,
+  not enforcement input: like `approval_basis`, it is surfaced on
+  the record and through introspection ({{introspection}}) and is
+  not carried on the `mission` claim ({{mission-claim}}).
 
 `subject`:
 : REQUIRED. An object. The Subject, an object with `iss` and
@@ -2021,6 +2144,21 @@ outside carries it as `mission_id`, as in the token-response parameter
   "intent": { "goal": "Reconcile Q3 invoices ...",
     "resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z" },
+  "proposed_authority": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.*"],
+      "delegation": {
+        "max_depth": 2,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+      } },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": {
+        "max_amount": { "amount": "1000.00", "currency": "USD" }
+      } }
+  ],
   "authority_set": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
@@ -2044,6 +2182,8 @@ outside carries it as `mission_id`, as in the token-response parameter
     "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
   "intent_hash":
     "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+  "proposal_hash":
+    "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
   "subject": { "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR" },
   "approver": { "iss": "https://idp.example.com",
@@ -2066,7 +2206,8 @@ outside carries it as `mission_id`, as in the token-response parameter
 }
 ~~~
 
-This recorded `intent` and `authority_set`, and the anchors above,
+This recorded `intent`, `proposed_authority`, and `authority_set`,
+and the anchors above,
 are this document's canonical worked example; the test vectors
 ({{test-vectors}}) compute over them. A companion that extends this
 example MUST either reproduce the recorded objects byte-exactly or
@@ -2086,7 +2227,8 @@ profile requires, a derived token:
   `authorization_details` ({{RFC9396}}); this MAY be the full Authority
   Set or a narrowed subset ({{subset}});
 - carries a `mission` claim ({{mission-claim}});
-- sets `sub` to the Mission's Subject `sub`;
+- sets `sub` to the AS-local `sub` the AS maps the Mission's
+  Subject to ({{approval-event}});
 - carries `client_id` per its ordinary {{RFC8693}} Section 4.3 and
   {{RFC9068}} Section 2.2 meaning, the client that requested this
   particular token; the Mission's originally-approved agent is not
@@ -2148,9 +2290,10 @@ SHOULD sender-constrain the primary token as well where its threat
 model warrants.
 
 The token-endpoint response conveys the granted authority to the
-client. Because the client submits `mission_intent` rather than
-`authorization_details`, and is not expected to parse the access
-token, the AS MUST return the granted `authorization_details` in the
+client. Because what the client submitted was a proposal, never the
+grant ({{authority-proposal}}), and the client is not expected to
+parse the access token, the AS MUST return the granted
+`authorization_details` in the
 token-endpoint response, per {{RFC9396}} Section 7, reflecting
 exactly the (possibly narrowed) set assigned to the issued token;
 the same applies to refresh and Token Exchange responses. The
@@ -2501,11 +2644,14 @@ issued token to that same gap. It names what
 document does not fold that grain into `mission_denial`'s carriage,
 nor redefine either grain's response status: each rides the wire
 shape its own defining document gives it. A client that decodes
-`authorization_remediation` proposes the carried entries back as
-`proposed_authority` ({{mission-intent}}), where they derive under
+`authorization_remediation` proposes the carried entries back on the
+standard `authorization_details` parameter ({{authority-proposal}}),
+where they derive under
 this document's ordinary rules ({{authorization-derivation}}): of an
 advertised, schema-valid type ({{discovery}}), narrowed same-type
-({{subset}}, {{other-types}}) like any other proposal.
+({{subset}}, {{other-types}}) like any other proposal. The loop
+closes natively: the remediation grain's output vocabulary is this
+document's input carriage, with no re-wrapping between them.
 
 A third grain routes the same denial into a governed access request
 rather than a fresh derivation: the AuthZEN Access Request and
@@ -2662,12 +2808,15 @@ Mission-bound access tokens. When it does, the response for such a
 token carries, in addition to the standard members, a `mission`
 member: `id`, `issuer`, and `authority_hash` (as in the `mission`
 claim, {{mission-claim}}) plus, when the responding AS is the Mission
-`issuer`, the current lifecycle `state` (string) and, when
+`issuer`, the current lifecycle `state` (string); when
 `controls.max_derivations` is in force, `derivations_remaining` (a
 number): the derivations left under the cap at the time of the
 response, counting committed issuances ({{lifecycle}}), so a harness
-can plan refreshes against the budget. Like `state`, only the issuer
-reports `derivations_remaining`
+can plan refreshes against the budget; and, when the Mission records
+an authority proposal, `proposal_hash` (string): the Mission's
+`proposal_hash` ({{mission-record}}), surfaced for audit. Like
+`state`, only the issuer reports `derivations_remaining` and
+`proposal_hash`
 ({{only-issuer-reports-state}}). The core states are `active`, `revoked`,
 and `expired` ({{lifecycle}}); a deployment that runs a companion
 profile defining an additional state reports that state here, and a
@@ -2790,6 +2939,8 @@ While the Mission is `active`, the response is the standard
     "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "proposal_hash":
+      "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
     "state": "active"
   }
 }
@@ -3183,13 +3334,22 @@ discover the authorization details type through the standard mechanism.
 A client MAY use the RFC 9396 client metadata `authorization_details_types`
 at registration to declare the types it understands.
 
+An advertised type, `mission_resource_access` included, appears in
+authorization requests only as a proposal subject to derivation
+({{authority-proposal}}): a client submits entries of advertised
+types on the `authorization_details` parameter alongside
+`mission_intent`, and the AS derives, narrows, or refuses under
+{{authorization-derivation}}. The granted entries on issued tokens
+and echoes are issuer-derived, never the submission carried through
+by right.
+
 Discovery is OPTIONAL: a deployment MAY arrange Mission-bound
 authorization out of band, and this member only lets an AS advertise
 it. When the member is absent or `false`, a client MUST NOT infer
 that the AS supports this specification. A client holding a Mission
 Intent MUST NOT silently downgrade the task to an ungoverned
 authorization request against an AS whose support is not advertised
-and not otherwise established: submitting the same authority as plain
+and not otherwise established: submitting the same authority as bare
 `scope` or `authorization_details` obtains tokens no Mission governs,
 the client-side face of downgrade by omission
 ({{downgrade-by-omission}}). The client surfaces the inability
@@ -3271,8 +3431,9 @@ enforcement ({{rs-enforcement}}).
 A **Mission Client** implements the client surfaces:
 
 - submission of the Mission Intent via PAR only
-  ({{submission-via-par}}), never sending `authorization_details`
-  alongside `mission_intent`;
+  ({{submission-via-par}}), proposing concrete authority, where it
+  does, on the `authorization_details` parameter pushed alongside
+  `mission_intent` ({{authority-proposal}});
 - reading its granted authority from the token-response
   `authorization_details` echo ({{mission-bound-tokens}}); and
 - obtaining `mission_id` from the `mission_id` token-response parameter
@@ -3331,8 +3492,8 @@ Exchange, a cross-domain grant issuance, or an introspection request
 fails if the issuer does not support it.
 
 The smallest useful conforming deployment, noted here informatively,
-is a Mission Issuer that derives in narrowing mode from the Intent's
-`proposed_authority` ({{authorization-derivation}}), emits only the
+is a Mission Issuer that derives in narrowing mode from the client's
+authority proposal ({{authorization-derivation}}), emits only the
 Common Constraints of {{common-constraints}}, and implements none of
 the OPTIONAL capabilities; a scope-only Resource Server still operates
 at the coarse scope level ({{rs-enforcement}}). This note names a
@@ -3366,8 +3527,12 @@ enforcing the token's `authorization_details` directly
 `intent_hash` extends the same protection to the task itself: it
 commits the approved Mission Intent, so an auditor can detect any
 later alteration of the recorded task, independently of the authority
-derived from it. The two anchors are domain-separated
-({{integrity-anchors}}); neither is a substitute for the other.
+derived from it. `proposal_hash`, present when the client submitted
+an authority proposal ({{authority-proposal}}), commits what the
+agent asked for: approval-time provenance that lets an auditor
+compare the narrowed grant against the request that sought it. The
+anchors are domain-separated
+({{integrity-anchors}}); none is a substitute for another.
 
 The task and the authority are committed separately, rather than folded
 into one hash over the whole Mission, because they are distinct objects
@@ -3418,7 +3583,13 @@ A token bearing equivalent `authorization_details` but no `mission`
 claim is governed by no Mission state, revocation, or consent
 commitment. A deployment that designates a resource Mission-governed
 MUST NOT issue tokens for that resource outside a Mission, except under
-documented policy exceptions. On the enforcement side, a Resource
+documented policy exceptions. The same rule has a per-client form: a
+deployment MAY register a client as Mission-governed, and an AS MUST
+reject a bare `authorization_details` request, one carrying no
+`mission_intent`, from a client so registered, so a governed client
+cannot strip the Intent from its submission to obtain ungoverned
+tokens; the client-side face of this duty is stated in
+{{discovery}}. On the enforcement side, a Resource
 Server for such a resource rejects a token lacking the `mission` claim
 ({{rs-enforcement}}), and MAY advertise the requirement through
 `mission_bound_authorization_required`
@@ -3849,7 +4020,9 @@ transparency-side mechanism ({{I-D.draft-mcguinness-mission-audit}}).
 The integrity anchors are unsalted commitments: a party holding a
 candidate Intent can confirm it against `intent_hash`, so over
 low-entropy or guessable content the anchor is a disclosure channel,
-and deployments treat it as one when the Intent itself is sensitive.
+and deployments treat it as one when the Intent itself is sensitive;
+the same confirmation channel exists for a candidate proposal
+against `proposal_hash`.
 
 ## Mission Record and Evidence Access {#record-access}
 
@@ -3930,8 +4103,9 @@ Introspection Response" registry ({{RFC7662}}):
 - Description: The Mission a token was derived under. Same object shape
   as the `mission` JWT claim ({{mission-claim}}); a response from the
   Mission's issuer additionally carries a `state` member giving the
-  current lifecycle state and, where a derivation cap is in force, a
-  `derivations_remaining` member ({{introspection}}).
+  current lifecycle state, where a derivation cap is in force a
+  `derivations_remaining` member, and where the Mission records an
+  authority proposal a `proposal_hash` member ({{introspection}}).
 - Change Controller: IESG
 - Specification Document(s): this document, {{introspection}}
 
@@ -4046,7 +4220,9 @@ that identity; Stage 0 is otherwise unchanged from that specification.
 
 ## Stage 1: Mission Creation
 
-The agent submits this Mission Intent through PAR ({{mission-intent}}):
+The agent submits this Mission Intent through PAR
+({{mission-intent}}), proposing concrete authority alongside it on
+the `authorization_details` parameter ({{authority-proposal}}):
 
 ~~~ json
 {
@@ -4069,8 +4245,30 @@ The agent submits this Mission Intent through PAR ({{mission-intent}}):
 }
 ~~~
 
-The AS (`as.example.com`) validates it, derives this Authority Set,
-and renders it for `alice`'s consent:
+The submitted authority proposal, on `authorization_details` in the
+same push:
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.*"],
+    "delegation": {
+      "max_depth": 2,
+      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+    } },
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": {
+      "max_amount": { "amount": "1000.00", "currency": "USD" }
+    } }
+]
+~~~
+
+The AS (`as.example.com`) validates both, derives this Authority Set
+(each entry a same-type subset of a proposed entry,
+{{authority-proposal}}), and renders it for `alice`'s consent:
 
 ~~~ json
 [
@@ -4097,9 +4295,11 @@ and renders it for `alice`'s consent:
 After approval, the AS records Mission
 `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` in the `active` state with
 `authority_hash`
-`sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ` and
+`sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ`,
 `intent_hash`
-`sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY`.
+`sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY`, and
+`proposal_hash`
+`sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo`.
 
 ## Stage 2: Mission-Bound Token Issuance
 
@@ -4181,7 +4381,7 @@ through in the companion's end-to-end example
 
 These non-normative vectors let an implementation verify its anchor
 computation ({{integrity-anchors}}, {{canonicalization}}) byte for byte.
-Both use the issuer `https://as.example.com`. Each canonical-bytes block
+All use the issuer `https://as.example.com`. Each canonical-bytes block
 is the exact JCS {{RFC8785}} output: a single line, UTF-8, with no
 whitespace outside string values.
 It is shown here wrapped only for layout; remove the layout line breaks,
@@ -4310,6 +4510,40 @@ ess"}]}
 authority_hash = sha-256:notrA9wZaP3I5Gx8UzN0mfzUjHYPeX4Ri_B3ilh7BbA
 ~~~
 
+The last vector exercises the third anchor. `proposal_hash`, over
+this submitted `authorization_details` proposal as the envelope
+`value` with `typ` `mission-proposed-authority`
+({{authority-proposal}}):
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.*"] },
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": {
+      "max_amount": { "amount": "1000.00", "currency": "USD" }
+    } }
+]
+~~~
+
+Canonical bytes of the envelope:
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-proposed-authority"
+,"value":[{"actions":["invoices.*"],"resource":"https://erp.exampl
+e.com","type":"mission_resource_access"},{"actions":["journal-entr
+ies.write"],"constraints":{"max_amount":{"amount":"1000.00","curre
+ncy":"USD"}},"resource":"https://erp.example.com","type":"mission_
+resource_access"}]}
+~~~
+
+~~~ text
+proposal_hash = sha-256:udzftXYQy0pvYNxz4KgtmyL_EV8ry4DhIbBFfwILEBA
+~~~
+
 An implementation that canonicalizes the same `value` under the same
 `typ` and `iss`, computes SHA-256, and encodes as `sha-256:` followed by
 base64url with no padding ({{integrity-anchors}}) reproduces these
@@ -4322,6 +4556,19 @@ resolve before interoperating.
 
 -01
 
+- Breaking change to the authority-proposal carriage: the proposal
+  moves from the Intent's `proposed_authority` member, which is
+  removed, to the standard top-level `authorization_details`
+  parameter pushed alongside `mission_intent`
+  ({{authority-proposal}}), and the old prohibition on submitting
+  the two together inverts. Anchor inputs changed: `intent_hash` no
+  longer covers the authority proposal, and the new `proposal_hash`
+  (`typ` `mission-proposed-authority`) commits the submitted
+  proposal, recorded on the Mission and surfaced through
+  introspection, never on the `mission` claim. Worked examples and
+  test vectors are recomputed; an approval-event rule recomputing
+  every recorded anchor and a Mission-governed-client bare-request
+  rejection accompany the change.
 - Derivation is mechanical, in two modes: narrowing (RECOMMENDED)
   and template. The deterministic-reproducibility and
   policy-inspectability rules are retired, `policy_version` stays as
