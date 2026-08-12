@@ -1064,7 +1064,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 12 February 2027</td>
+<td class="center">Expires 13 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-audit-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-11" class="published">11 August 2026</time>
+<time datetime="2026-08-12" class="published">12 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-12">12 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-13">13 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ commit to the evidence by hash rather than carrying it.<a href="#section-abstrac
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 12 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 13 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1487,18 +1487,19 @@ canonical bytes are rehashed and checked against the committed digest
         <h3 id="name-the-mission-evidence-base">
 <a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-the-mission-evidence-base" class="section-name selfRef">The Mission Evidence Base</a>
         </h3>
-<p id="section-6.2-1">Several registrable evidence types, defined across the runtime,
-AuthZEN, harness, and containment profiles, record an enforcement or
+<p id="section-6.2-1">Several registrable evidence types, defined across the runtime
+evidence, harness, and containment profiles, record an enforcement or
 issuer decision under a shared shape: a reference to the Mission the
 record concerns, an <code>emitter</code> object naming the component that
 produced it (<code>id</code>, a string; <code>role</code>, one of <code>pdp</code>, <code>pep</code>, <code>executor</code>,
 <code>harness</code>, <code>egress</code>, or <code>issuer</code>), and, where the defining profile
 fixes it, an <code>entry_digest</code> naming the Authority Set entry the record
-concerns (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). Two further
-members carry correlation a record <span class="bcp14">MAY</span> need: <code>hop_reference</code>,
-attributing a record to the continuation hop that authorized it,
-defined as a coordinated Decision Evidence member by the AuthZEN
-binding (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), and
+concerns (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>). Two
+further members carry correlation a record <span class="bcp14">MAY</span> need:
+<code>hop_reference</code>, attributing a record to the continuation hop that
+authorized it, defined as a coordinated Decision Evidence member by
+the runtime evidence companion
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), and
 <code>scope_statement_digest</code>, binding a record to the published
 Enforcement Scope Statement in effect when it was made, defined by the
 harness profile (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-6.2-1" class="pilcrow">¶</a></p>
@@ -1669,9 +1670,10 @@ not implement, and they are not audit failures.<a href="#section-6.3-3" class="p
 every record whose producer is the Mission <code>issuer</code>, the Signed
 Statement's <code>iss</code> <span class="bcp14">MUST</span> equal that <code>issuer</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The PDP and PEP keys are those
-in the deployment-published key sets the runtime and AuthZEN profiles
-require (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-6.3-4" class="pilcrow">¶</a></p>
+in the deployment-published key sets the runtime profile and its
+runtime evidence companion require
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-6.3-4" class="pilcrow">¶</a></p>
 <p id="section-6.3-5">The approval event, the lifecycle-transition object, and the
 derivation record are canonicalized
 under the issuance profile's canonicalization rules
@@ -1689,7 +1691,7 @@ media types are defined by this profile (<a href="#iana" class="auto internal xr
             <p id="section-6.3-7.2.1">the consent, decision, execution, and refusal evidence types are
 registered by the profiles that define those objects
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>);<a href="#section-6.3-7.2.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>);<a href="#section-6.3-7.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.3-7.3">
             <p id="section-6.3-7.3.1">the Signals SET media type by the Signals profile it is carried in
@@ -2009,10 +2011,10 @@ standalone binding
 </li>
         </ul>
 <p id="section-6.4-5">A PDP, PEP, or harness key is resolved through the
-deployment-published key sets the runtime and AuthZEN
-profiles require (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); the harness profile
-requires the same publication of a harness that registers its
+deployment-published key sets the runtime profile and its runtime
+evidence companion require (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>); the harness
+profile requires the same publication of a harness that registers its
 evidence (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-6.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2693,7 +2695,8 @@ Service are defined elsewhere:<a href="#section-15-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-15-5.1">
           <p id="section-15-5.1.1">the runtime decision, execution, and refusal evidence types by the
-AuthZEN profile (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>);<a href="#section-15-5.1.1" class="pilcrow">¶</a></p>
+runtime evidence companion
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>);<a href="#section-15-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-5.2">
           <p id="section-15-5.2.1">the consent evidence type by the consent evidence profile
@@ -2737,9 +2740,9 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
         <dd>
 <span class="refAuthor">Steele, O.</span>, <span class="refAuthor">Lasker, S.</span>, and <span class="refAuthor">H. Birkholz</span>, <span class="refTitle">"COSE Hash Envelope"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-cose-hash-envelope-10</span>, <time datetime="2025-11-15" class="refDate">15 November 2025</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-cose-hash-envelope-10">https://datatracker.ietf.org/doc/html/draft-ietf-cose-hash-envelope-10</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
+<dt id="I-D.draft-mcguinness-mission-runtime-evidence">[I-D.draft-mcguinness-mission-runtime-evidence]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Runtime Evidence"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>

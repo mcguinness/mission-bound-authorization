@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          11 August 2026
-Expires: 12 February 2027
+Intended status: Standards Track                          12 August 2026
+Expires: 13 February 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 February 2027.
+   This Internet-Draft will expire on 13 February 2027.
 
 Copyright Notice
 
@@ -520,8 +520,8 @@ Table of Contents
       (Section 11);
 
    *  the locations of the deployment-published evidence signing key
-      sets (the AuthZEN profile's PDP and PEP key sets,
-      [I-D.draft-mcguinness-mission-authzen], resolve here);
+      sets (the runtime evidence companion's PDP and PEP key sets,
+      [I-D.draft-mcguinness-mission-runtime-evidence], resolve here);
 
    *  the reconciliation window for matching execution-outcome evidence
       to decisions, the component responsible for orphaned-evidence and
@@ -2116,10 +2116,11 @@ Table of Contents
       scope MUST name the mechanism (a hash-linked log, signed segments,
       a transparency anchor, or equivalent).  Where a JSON record is
       individually signed, the evidence_envelope JWS convention of the
-      AuthZEN profile ([I-D.draft-mcguinness-mission-authzen]) is the
-      suite's one signing convention for evidence objects and SHOULD be
-      used, with a typ that names the record's own media type, rather
-      than a record-specific signing scheme.
+      runtime evidence companion
+      ([I-D.draft-mcguinness-mission-runtime-evidence]) is the suite's
+      one signing convention for evidence objects and SHOULD be used,
+      with a typ that names the record's own media type, rather than a
+      record-specific signing scheme.
 
    *  Raw parameters MUST NOT appear in the record; when retained for
       forensics they MUST be in separately access-controlled storage
@@ -2426,8 +2427,8 @@ Table of Contents
    use identifier store and idempotency match (Section 8), the metering
    counters and exclusivity latch
    ([I-D.draft-mcguinness-mission-metering]), and the per-Mission
-   evidence sequence ([I-D.draft-mcguinness-mission-authzen]) are
-   strongly consistent state scoped to one Mission.  An embedded PDP
+   evidence sequence ([I-D.draft-mcguinness-mission-runtime-evidence])
+   are strongly consistent state scoped to one Mission.  An embedded PDP
    evaluating an action that consults any of them pays the round trip to
    the Mission's consistency domain wherever the decision runs, so the
    materialized view localizes only the actions that touch none of them;
@@ -2882,6 +2883,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-metering.html>.
 
+   [I-D.draft-mcguinness-mission-runtime-evidence]
+              McGuinness, K., "Mission Runtime Evidence", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime-evidence.html>.
+
    [I-D.draft-mcguinness-mission-security-model]
               McGuinness, K., "Mission Security Model", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -3056,14 +3062,14 @@ Appendix C.  Runtime Evidence Worked Examples
    These non-normative records illustrate the minimum record content of
    Section 11 for the operation of Appendix A.  They show substrate-
    level record content only: the concrete schema, serialization, and
-   integrity mechanism are the deployment's (Section 11.4), and a
-   decision-API binding defines concrete evidence objects
-   ([I-D.draft-mcguinness-mission-authzen]).  In this deployment, the
-   Resource Server runtime profile classifies journal-entries.write as
-   an irreversible action (a posted entry is corrected only by a
-   compensating entry), so the permit is single-use and execution-
-   outcome evidence is required.  The policy-view version cites the view
-   of Appendix B.
+   integrity mechanism are the deployment's (Section 11.4), and the
+   runtime evidence companion defines concrete evidence objects
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).  In this
+   deployment, the Resource Server runtime profile classifies journal-
+   entries.write as an irreversible action (a posted entry is corrected
+   only by a compensating entry), so the permit is single-use and
+   execution-outcome evidence is required.  The policy-view version
+   cites the view of Appendix B.
 
    A permit decision record:
 

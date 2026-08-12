@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            11 August 2026
-Expires: 12 February 2027
+Intended status: Informational                            12 August 2026
+Expires: 13 February 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 February 2027.
+   This Internet-Draft will expire on 13 February 2027.
 
 Copyright Notice
 
@@ -1579,8 +1579,10 @@ Table of Contents
    controllable point between agent and resource.  Owners: the runtime
    profile, the decision contract with parameter binding, custody, and
    fail-closed behavior ([I-D.draft-mcguinness-mission-runtime]); its
-   AuthZEN binding, the concrete decision API and evidence objects
-   ([I-D.draft-mcguinness-mission-authzen]).
+   AuthZEN binding, the concrete decision API
+   ([I-D.draft-mcguinness-mission-authzen]); the runtime evidence
+   companion, the Decision Evidence, Execution Evidence, and Refusal
+   Record objects ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
 14.5.  Run and Wind Down
 
@@ -2703,8 +2705,13 @@ Table of Contents
    mission-runtime:  The per-action decision contract: parameter
       binding, custody, fail-closed behavior.
 
-   mission-authzen:  The concrete decision-API binding and its Decision
-      and Execution Evidence objects.
+   mission-authzen:  The concrete decision-API binding: the AuthZEN
+      request and response mapping and the denial classification.
+
+   mission-runtime-evidence:  The binding-neutral Decision Evidence,
+      Execution Evidence, and Refusal Record objects a decision-API
+      binding's PDP and PEP emit, their integrity envelope, and
+      retention.
 
    mission-metering:  Experimental: cumulative consumption bounds and
       the metering that enforces them.
@@ -2841,6 +2848,11 @@ Table of Contents
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime.html>.
+
+   [I-D.draft-mcguinness-mission-runtime-evidence]
+              McGuinness, K., "Mission Runtime Evidence", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime-evidence.html>.
 
    [I-D.draft-mcguinness-mission-security-model]
               McGuinness, K., "Mission Security Model", 2026,

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             11 August 2026
-Expires: 12 February 2027
+Intended status: Experimental                             12 August 2026
+Expires: 13 February 2027
 
 
                   Mission Orchestration and Unwinding
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 February 2027.
+   This Internet-Draft will expire on 13 February 2027.
 
 Copyright Notice
 
@@ -150,10 +150,10 @@ Table of Contents
    This document uses the terms Mission, Mission state, and
    consequential action from [I-D.draft-mcguinness-oauth-mission]; and
    PEP, PDP, and runtime enforcement evidence from
-   [I-D.draft-mcguinness-mission-runtime].  Where a deployment uses the
-   AuthZEN profile ([I-D.draft-mcguinness-mission-authzen]), its
-   Decision Evidence and Execution Evidence objects are examples of the
-   runtime enforcement evidence records this document links.
+   [I-D.draft-mcguinness-mission-runtime].  Its Decision Evidence and
+   Execution Evidence objects
+   ([I-D.draft-mcguinness-mission-runtime-evidence]) are the concrete
+   form of the runtime enforcement evidence records this document links.
 
    Orchestrator:  The component that schedules, sequences, retries, or
       coordinates governed actions in a Mission.
@@ -394,9 +394,10 @@ Table of Contents
        Evidence record durably written before dispatch (Section 11).  As
        an alternative, a deployment MAY commit it instead as a
        coordinated member of the step's Decision Evidence, through the
-       AuthZEN profile's coordinated-extension seam
-       ([I-D.draft-mcguinness-mission-authzen]); the step's first
-       Orchestration Evidence record then repeats the committed value.
+       runtime evidence companion's coordinated-extension seam
+       ([I-D.draft-mcguinness-mission-runtime-evidence]); the step's
+       first Orchestration Evidence record then repeats the committed
+       value.
 
    2.  On whichever path commits the hash, the committing write MUST
        complete durably before dispatch.
@@ -956,12 +957,6 @@ Table of Contents
 
 17.1.  Normative References
 
-   [I-D.draft-mcguinness-mission-authzen]
-              McGuinness, K., "Mission-Bound Runtime Enforcement:
-              AuthZEN Profile", 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-mission-
-              authzen.html>.
-
    [I-D.draft-mcguinness-mission-harness]
               McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -971,6 +966,11 @@ Table of Contents
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime.html>.
+
+   [I-D.draft-mcguinness-mission-runtime-evidence]
+              McGuinness, K., "Mission Runtime Evidence", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime-evidence.html>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
