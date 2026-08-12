@@ -1055,7 +1055,9 @@ Authority Set of {{authorization-derivation}}):
 
 # Mission Authority {#authorization-derivation}
 
-From the Mission Intent, the AS derives the **Authority Set**: one or
+From the Mission Intent, and from the authority proposal where one
+was submitted ({{authority-proposal}}), the AS derives the
+**Authority Set**: one or
 more {{RFC9396}} `authorization_details` entries of type
 `mission_resource_access` ({{type-registration}}). Derivation is
 mechanical. It happens once, at the approval event, over the
