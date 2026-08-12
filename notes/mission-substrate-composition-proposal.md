@@ -1,6 +1,10 @@
 # Proposal: Mission substrate composition and MVP
 
 Status: design proposal, not an Internet-Draft and not yet normative.
+Reviewed 2026-08-11; disposition in the Review Disposition section below:
+harvest the adopted items as targeted PRs, keep the composition framework
+as a design record, run the validator as an implementation experiment,
+do not run the migration plan as written.
 
 Purpose: define the recommended refactor of the Mission Substrate Requirements,
 including a minimum viable substrate, scoped capability claims, consumer requirements,
@@ -61,6 +65,105 @@ The core rule is:
 > properties a provider supplies. Consumer profiles define which properties they need.
 > A deployment claim is valid only when every requirement is matched to a compatible,
 > scoped provider claim.
+
+## Review disposition (2026-08-11)
+
+This section records the review outcome and governs which parts of the
+proposal proceed. The document below is preserved as the design record;
+where a section conflicts with this disposition, the disposition wins.
+
+### Adopted — proceed as targeted, PR-sized changes to the current substrate
+
+1. **Authority role map** (5.1): enumerate the distinct authority roles in
+   the kernel's Controller element, with the rule that colocation MUST NOT
+   imply one role's assertion establishes another role's fact. A kernel
+   refinement, not a demotion.
+2. **Activation conditions replace `conditional`** (6.1): a capability row
+   either supplies the property in a named scope when stated activation
+   conditions hold, or does not supply it. Adopted inside the existing
+   Statement format; the surrounding claim schema is not adopted (see
+   deferred).
+3. **Mission-Bound Artifact fact-semantics split** (7.2): a claim selects
+   which of correlation / issued-under / authority-derived /
+   lifecycle-gated-issuance / state-as-of it establishes. Folded into the
+   existing Credential-Bound capability's requirements.
+4. **Authorized Context Correlation** (7.2) as a named capability: joining
+   authority, association policy, proof inputs, substitution protection.
+   Formalizes the MAS join and Join Assertion machinery; the
+   context-splicing consideration (16.2) travels with it.
+5. **`preserve` / `attenuate` / `decide_anew`** (7.3): adopted as the
+   transition classification for Monotonic Derivation and the cross-domain
+   profile, with incomparability routing to refusal or `decide_anew`,
+   never silent attenuation.
+6. **MVP conformance tests** (13.3): adopted, attached to the existing
+   **Baseline Issuance** assurance level. "Issuance-Bound Mission" is
+   Baseline Issuance restated; no second ladder is created (see rejected).
+7. **The OAuth-core Statement gap** (1.4, 14.1): the finding is accepted;
+   the fix is reshaped. The core stands alone and takes no companion
+   normative dependencies, so the normative OAuth-native Statement is
+   hosted on the substrate's side (its family appendix machinery), with a
+   core issue recording the pointer for the core's next revision — the
+   #440 pattern.
+8. **Temporal and failure fields**: the statement checklist gains required
+   temporal (freshness, decision lifetime, residual) and failure-behavior
+   elements per claim — adopted additively; the kernel floors they were
+   intended to replace stay where they are.
+9. **Worked composition** (14.3): adopted as an architecture-document
+   example candidate.
+
+### Deferred — revisit only with implementation experience
+
+- The 16-field provider-claim schema, consumer requirement schema, and the
+  10-step composition procedure as normative text. The **reference
+  composition evaluator** (19.1) with the fixtures of 19.2 is adopted as
+  an implementation-repo experiment (`src/`, zero normative surface); its
+  results decide whether the full model earns normative status.
+- Machine-readable statements, discovery carriage, registries (as the
+  proposal itself defers in Phase 5).
+- The exposure capability catalog (7.4) as substrate content: exposure,
+  working-set, provenance, and custody claims belong to the harness,
+  containment, and runtime documents publishing their own claims against
+  the substrate's extension point, not to the substrate catalog.
+
+### Rejected — relitigates ratified decisions or conflicts with recorded rules
+
+- **Kernel demotions** (17 Phase 1, items 3-6): moving Bounded Reliance out
+  of the kernel (ratified in, and defended against this exact argument,
+  twice); reducing the kernel record to approval + lifecycle history
+  (decision attributability is constitutive — the substrate's own
+  definition of a Mission — and for AAuth the decision log is the
+  governance mechanism itself; coverage honesty is already handled by
+  scope declarations); moving propagation out of the kernel (the current
+  element is already "propagation or decision correlation"). Note these
+  demotions appear in Phase 1 but not in the proposal's own section 20
+  accept list; section 20 governs.
+- **A parallel profile ladder**: Issuance-Bound / Action-Enforced /
+  Least-Exposure re-derive Baseline Issuance / Runtime-Enforced / the
+  Governed Agent territory without engaging the existing assurance levels,
+  named claims, and Deployment Profile. The deltas (tests, requirement
+  precision) strengthen the existing rungs instead.
+- A Statement **inside** the published OAuth core (see adopted item 7 for
+  the reshaped fix).
+
+### Corrected premises
+
+- The architecture's eight-primitive section already presents the
+  binding-neutral contract first, with the primitives labeled as the
+  issuance profile's instantiation; the section-18 row describes work that
+  is done.
+- The README already presents the assurance ladder and adoption order, not
+  an undifferentiated family claim.
+- The consumer-profile substrate sections already declare consumed
+  capabilities in the contract's vocabulary; the accepted delta is
+  precision (temporal/failure elements), not the requirement-statement
+  schema.
+
+### Sequencing
+
+The adopted items are five or six PRs in the established pattern, after
+the current stabilization commitments (substrate publishes before or with
+its bindings; migrate-by-touch). No five-phase migration; no
+fourteen-document sweep.
 
 ## 1. Problem statement
 
@@ -1362,6 +1465,11 @@ require a separately governed emergency path rather than an implicit fail-open.
 
 ## 17. Migration plan
 
+Superseded by the Review Disposition: the adopted items proceed as
+targeted PRs in the established pattern; this plan is retained as the
+design record. Phase 1 items 3-6 are rejected (kernel demotions); the
+Phase 5 deferrals stand.
+
 ### Phase 0: accept the model
 
 Review and resolve:
@@ -1457,6 +1565,11 @@ published specifications are sufficient to validate the model first.
 
 ## 18. Document-by-document impact
 
+Read against the Review Disposition: the architecture and README rows
+describe work that is already done, the OAuth-core row is reshaped to the
+substrate-side Statement, and only the rows implied by the adopted items
+proceed.
+
 | Document | Recommended change |
 |---|---|
 | Mission Substrate Requirements | Adopt kernel, claims, requirements, composition, and MVP defined here |
@@ -1520,6 +1633,12 @@ The substrate revision should include statement fragments showing:
 - disclosure ceiling conflict.
 
 ## 20. Decisions recommended now
+
+The Review Disposition records the ratified outcome of these lists:
+accepted 2, 5, 8, 9; 6 and 10 remapped (Baseline Issuance carries the MVP
+tests; the OAuth Statement is substrate-hosted); 3 and 4 deferred pending
+the validator experiment; the kernel rename in 1 and the separate profile
+ladder in 7 are not adopted. The defer and reject lists stand as written.
 
 Accept:
 
@@ -1604,3 +1723,11 @@ Refactor the substrate around a lifecycle-aware Mission Record Kernel, scoped pr
 and consumer capability statements, and deterministic composition; ship an
 Issuance-Bound MVP first, then let action enforcement, exposure governance, delegation,
 cross-domain continuity, and evidence compose as independently earned profiles.
+
+**As disposed (2026-08-11):** keep the current kernel and floors; adopt
+the role map, activation conditions, artifact fact-semantics,
+Authorized Context Correlation, the transition classification, the
+temporal/failure statement elements, the Baseline Issuance conformance
+tests, and the substrate-hosted OAuth-native Statement as targeted PRs;
+prove the composition machinery with the implementation-repo evaluator
+before any of it becomes normative.
