@@ -8,9 +8,12 @@
  * (`subject_token_type` = access_token) at /token under grant_type=token-exchange
  * with requested_token_type=access_token, authenticating with private_key_jwt and
  * proving possession with a DPoP proof over that token's OWN confirmation key. The
- * predecessor is resolved FROM `subject_token`. Completion modes:
- *   - SYNCHRONOUS when the requested authority is a pure subset of the
- *     predecessor's effective set (an ordinary confined derivation, no successor);
+ * predecessor is resolved FROM `subject_token`. Expansion ALWAYS widens and
+ * ALWAYS requires a fresh approval:
+ *   - a NON-WIDENING request (a pure subset of the predecessor's effective set)
+ *     is REFUSED (invalid_request + mission_denial_reason nothing_to_expand):
+ *     ordinary token derivation already serves it, and an expansion response
+ *     must never ambiguously be a non-successor (#486);
  *   - DEFERRED via the DTR substrate when the request WIDENS (fresh async
  *     approval): authorization_pending + deferral_code, poll, then a successor.
  * Deferred-window checks proven here (@spec #deferred-window):
@@ -27,7 +30,6 @@
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
-  calculateJwkThumbprint,
   createRemoteJWKSet,
   decodeJwt,
   type CryptoKey,
@@ -150,7 +152,8 @@ const intentJson = (goal: string, _actions: string[]): string =>
 /**
  * Full PAR -> interactive approval -> code -> token dance yielding an ACTIVE
  * predecessor Mission and its DPoP-bound (dpopKeys) Mission ACCESS token. The
- * approved actions parametrize whether a later expansion is a subset or a widen.
+ * approved actions parametrize whether a later expansion widens or is refused
+ * as non-widening.
  */
 async function issuePredecessor(actions: string[]): Promise<{ missionId: string; accessToken: string }> {
   const jar = new Map<string, string>();
@@ -213,7 +216,12 @@ async function issuePredecessor(actions: string[]): Promise<{ missionId: string;
 }
 
 /** Open an expansion exchange (requested_token_type=access_token). */
-async function expandViaExchange(subjectToken: string, goal: string, actions: string[]): Promise<Response> {
+async function expandViaExchange(
+  subjectToken: string,
+  goal: string,
+  actions: string[],
+  creationRequestId?: string,
+): Promise<Response> {
   return tokenRequest({
     grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
     subject_token: subjectToken,
@@ -222,7 +230,7 @@ async function expandViaExchange(subjectToken: string, goal: string, actions: st
     mission_intent: intentJson(goal, actions),
     authorization_details: JSON.stringify(authority(actions)),
     // @spec expansion#creation-request-id — REQUIRED on every initiation.
-    creation_request_id: crypto.randomUUID(),
+    creation_request_id: creationRequestId ?? crypto.randomUUID(),
   });
 }
 
@@ -262,40 +270,44 @@ afterAll(() => {
   asServer?.close();
 });
 
-describe("expansion wire: SYNCHRONOUS subset derivation (@spec expansion#expansion)", () => {
-  it("a pure subset request completes synchronously with a DPoP-bound Mission access token on the predecessor", async () => {
+describe("expansion wire: NON-WIDENING request is REFUSED (@spec expansion#nothing-to-expand)", () => {
+  it("a pure subset request refuses (invalid_request + nothing_to_expand): predecessor stays active, nothing created or reserved, no derivation consumed", async () => {
     const pred = await issuePredecessor(["payments:invoice.read", "payments:remittance.send"]);
-    const res = await expandViaExchange(pred.accessToken, "Read invoices only", ["payments:invoice.read"]);
-    const body = (await res.json()) as {
-      access_token?: string;
-      token_type?: string;
-      scope?: string;
-      authorization_details?: Array<{ actions: string[] }>;
-      error?: string;
-    };
-    expect(res.status, JSON.stringify(body)).toBe(200);
-    expect(body.token_type).toBe("DPoP");
-    expect(body.scope).toBe("payments");
-    // The confined subset: exactly the requested single action (no successor).
-    expect(body.authorization_details?.[0].actions).toEqual(["payments:invoice.read"]);
+    const before = as.kernel.get(pred.missionId);
+    expect(before?.state).toBe("active");
+    const derivationCountBefore = before?.derivation_count as number;
+    const missionCountBefore = as.kernel.allMissions().length;
 
-    // A real, resource-bound JWT that verifies on the AS jwks_uri and binds to the
-    // possession key and the PREDECESSOR mission (a subset derivation, not a successor).
-    const { payload } = await jwtVerify(body.access_token as string, remoteJwks, {
-      issuer: ISSUER,
-      audience: RESOURCE,
-    });
-    const jkt = await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey));
-    expect((payload.cnf as { jkt?: string })?.jkt).toBe(jkt);
-    const mission = payload.mission as { id?: string; predecessor?: string };
-    expect(mission?.id).toBe(pred.missionId);
-    // A subset derivation issues on the predecessor itself (NO successor), so the
-    // claim MUST NOT carry a `predecessor` member (@spec expansion#predecessor-member:
-    // set on a successor Mission only). Pins "successor only" against the claim
-    // selection in extraTokenClaims.
-    expect(mission?.predecessor).toBeUndefined();
-    // The predecessor is NOT superseded: a subset derivation creates no successor.
-    expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+    // Expansion ALWAYS widens: a request whose derived authority is a subset of
+    // the predecessor's own effective set has NOTHING to expand (ordinary token
+    // derivation already serves it), and an expansion response must never
+    // ambiguously be a non-successor (#486). No synchronous completion exists.
+    const crid = crypto.randomUUID();
+    const res = await expandViaExchange(pred.accessToken, "Read invoices only", ["payments:invoice.read"], crid);
+    const body = (await res.json()) as {
+      error?: string;
+      mission_denial_reason?: string;
+      access_token?: string;
+      deferral_code?: string;
+    };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.mission_denial_reason).toBe("nothing_to_expand");
+    // The refusal issues NOTHING: no token, no deferral continuation.
+    expect(body.access_token).toBeUndefined();
+    expect(body.deferral_code).toBeUndefined();
+
+    // Nothing was CREATED (no successor Mission record)...
+    expect(as.kernel.allMissions().length).toBe(missionCountBefore);
+    // ...and nothing was RESERVED: the refusal is stateless — no idempotency
+    // operation is recorded under the initiation's creation_request_id.
+    expect(as.creationIdempotency.find("ap-agent", crid)).toBeUndefined();
+
+    // The predecessor is untouched: still active, and NO derivation was consumed
+    // (derivation_count unchanged — the refusal is not a confined derivation).
+    const after = as.kernel.get(pred.missionId);
+    expect(after?.state).toBe("active");
+    expect(after?.derivation_count).toBe(derivationCountBefore);
   });
 });
 
