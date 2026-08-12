@@ -741,7 +741,9 @@ async function buildSeededClient(client: ClientSeed): Promise<SeededClient> {
       jwks: { keys: [pub] },
       scope: client.scope,
       authorization_details_types: client.authorization_details_types,
-      ...(client.mission_governed !== undefined ? { mission_governed: client.mission_governed } : {}),
+      ...(client.mission_governed !== undefined
+        ? { mission_governed: client.mission_governed }
+        : {}),
     },
     privateJwk: priv as Record<string, unknown>,
   };
