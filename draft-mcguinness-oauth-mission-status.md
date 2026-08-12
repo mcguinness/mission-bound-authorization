@@ -328,11 +328,14 @@ per request:
 
 Plain Basic or POST client authentication MUST NOT be used for this
 endpoint. The AS MUST refuse a request not authenticated by one of the
-three mechanisms with `unauthorized` (HTTP 401). A request that presents
-an access token in `Authorization` is mechanism 2, and any client
-certificate is then evaluated only as that token's mTLS sender
-constraint, not as mechanism-1 client authentication; a request with no
-`Authorization` access token and a client certificate is mechanism 1.
+three mechanisms with `unauthorized` (HTTP 401). The mechanism is
+determined by wire evidence in order: a request presenting an access
+token in `Authorization` is mechanism 2, and any client certificate is
+then evaluated only as that token's mTLS sender constraint; otherwise a
+request presenting `client_assertion` is mechanism 3, and any client
+certificate is not treated as client authentication; otherwise a request
+presenting only a client certificate is mechanism 1. This order keeps
+"exactly one mechanism" satisfiable when mTLS terminates at the edge.
 
 An authenticated caller MUST additionally carry an explicit read
 authorization: a `mission_status` scope on the presented access token,
@@ -350,8 +353,11 @@ of {{mission-status-errors}} ({{mission-status-anti-oracle}}).
 A presented access token (mechanism 2) MUST be audience-restricted to
 this endpoint's protected-resource identifier: the `resource` value the
 AS publishes for this endpoint in its Protected Resource Metadata
-{{RFC9728}}. The AS MUST reject a token whose audience does not name that
-identifier. This token audience is distinct from the request body's
+{{RFC9728}}. For these surfaces that identifier is the endpoint's own URL
+(the `mission_status_endpoint` or `mission_lifecycle_endpoint`), so the
+mechanism-2 access-token audience and the mechanism-3 private-key-JWT
+`aud` name the same value. The AS MUST reject a token whose audience does
+not name that identifier. This token audience is distinct from the request body's
 `audience` parameter ({{mission-status-request}}): the token audience
 authorizes the call at this endpoint, whereas the request `audience`
 carries no authentication weight and only selects the
@@ -366,8 +372,8 @@ the sender-constrained access-token path, this endpoint is an OAuth
 protected resource: the AS publishes, in its Protected Resource Metadata
 for this resource {{RFC9728}}, the `resource` identifier the token's
 audience MUST name, the `mission_status` scope it requires
-(`scopes_supported`), and the sender constraints it accepts
-(`dpop_bound_access_tokens_required`,
+(`scopes_supported`), and the presentation and sender constraints it
+accepts (`bearer_methods_supported`, `dpop_bound_access_tokens_required`,
 `tls_client_certificate_bound_access_tokens`). For the retained
 direct-client-authentication path (mTLS {{RFC8705}} or private-key JWT
 {{RFC7523}}), the accepted methods and, for `private_key_jwt`, the
@@ -1657,6 +1663,8 @@ through standard {{RFC8414}} discovery.
 : OPTIONAL. A JSON array of strings, the JWS {{RFC7515}} algorithm
   values the AS accepts for the `private_key_jwt` client-assertion JWT
   ({{mission-status-authentication}}) at the Mission Status endpoint.
+  This is the client-assertion verification set, not the response-signing
+  algorithms of `mission_status_signing_alg_values_supported` below.
   `none` MUST NOT be used. Present when that endpoint lists
   `private_key_jwt`.
 
@@ -1666,8 +1674,10 @@ through standard {{RFC8414}} discovery.
   ({{mission-status-response}}), on whichever surfaces of this
   profile family serve it (the dedicated Mission Status operation,
   the Lifecycle endpoint, and Mission Management), mirroring
-  `introspection_signing_alg_values_supported`. Present when the AS
-  serves any such surface.
+  `introspection_signing_alg_values_supported`. These are the
+  response-signing algorithms, not the algorithms the AS accepts on
+  `private_key_jwt` client assertions (the endpoint auth-signing
+  members). Present when the AS serves any such surface.
 
 `mission_lifecycle_endpoint`:
 : OPTIONAL. A string containing a URL. The URL of the
@@ -1686,6 +1696,8 @@ through standard {{RFC8414}} discovery.
 : OPTIONAL. A JSON array of strings, the JWS {{RFC7515}} algorithm
   values the AS accepts for the `private_key_jwt` client-assertion JWT
   ({{mission-status-authentication}}) at the Mission Lifecycle endpoint.
+  This is the client-assertion verification set, not the response-signing
+  algorithms of `mission_status_signing_alg_values_supported`.
   `none` MUST NOT be used. Present when that endpoint lists
   `private_key_jwt`.
 
