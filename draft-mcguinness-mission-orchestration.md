@@ -62,9 +62,9 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-authzen:
-    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
     author:
       -
         ins: K. McGuinness
@@ -150,10 +150,11 @@ Mission Assurance Level
 This document uses the terms Mission, Mission state, and consequential
 action from {{I-D.draft-mcguinness-oauth-mission}}; and PEP, PDP, and
 runtime enforcement evidence from
-{{I-D.draft-mcguinness-mission-runtime}}. Where a deployment
-uses the AuthZEN profile ({{I-D.draft-mcguinness-mission-authzen}}),
-its Decision Evidence and Execution Evidence objects are examples of
-the runtime enforcement evidence records this document links.
+{{I-D.draft-mcguinness-mission-runtime}}. Its Decision Evidence and
+Execution Evidence objects
+({{I-D.draft-mcguinness-mission-runtime-evidence}}) are the concrete
+form of the runtime enforcement evidence records this document
+links.
 
 Orchestrator:
 : The component that schedules, sequences, retries, or coordinates
@@ -378,9 +379,11 @@ The commit procedure is:
    record durably written before dispatch
    ({{orchestration-evidence}}). As an alternative, a deployment MAY
    commit it instead as a coordinated member of the step's Decision
-   Evidence, through the AuthZEN profile's coordinated-extension seam
-   ({{I-D.draft-mcguinness-mission-authzen}}); the step's first
-   Orchestration Evidence record then repeats the committed value.
+   Evidence, through the runtime evidence companion's
+   coordinated-extension seam
+   ({{I-D.draft-mcguinness-mission-runtime-evidence}}); the step's
+   first Orchestration Evidence record then repeats the committed
+   value.
 2. On whichever path commits the hash, the committing write MUST
    complete durably before dispatch.
 3. The orchestrator MUST NOT dispatch the step if that committing

@@ -52,6 +52,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
@@ -523,8 +531,8 @@ binding.
 The metering rules require the PEP to signal actual use so the PDP
 commits consumption and releases any reservation. In the AuthZEN
 binding, delivery of the Execution Evidence Object
-({{I-D.draft-mcguinness-mission-authzen}}) to the PDP is that
-commit-or-release signal: on receipt the PDP commits the consumption
+({{I-D.draft-mcguinness-mission-runtime-evidence}}) to the PDP is
+that commit-or-release signal: on receipt the PDP commits the consumption
 the linked action used and releases any reserved excess, keyed to the
 Execution Evidence's `decision_id`.
 
@@ -665,9 +673,9 @@ Their enforcement, however, is only as good as the metering:
   structurally.
 - **Settlement honesty.** The PDP commits what the PEP reports.
   Execution Evidence is integrity-protected and signed by the PEP
-  ({{I-D.draft-mcguinness-mission-authzen}}); a compromised PEP can
-  under-report duration or spend, which is within the runtime profile's
-  trusted-base assumptions for PEPs.
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}); a compromised
+  PEP can under-report duration or spend, which is within the runtime
+  profile's trusted-base assumptions for PEPs.
 - **Lease abandonment.** An agent that stops renewing a duration lease
   and keeps acting is stopped by the PEP, which {{metering}} requires
   to stop the action or obtain a new permit before the lease is
@@ -710,9 +718,11 @@ This document has no IANA actions. `max_budget`, `max_calls`,
 Intent `controls`
 members defined by this
 profile under the issuance profile's controls extension seam;
-`context.prior_decision_id` and `measured_duration` are AuthZEN
-extension data carried per the AuthZEN profile's conventions
-({{I-D.draft-mcguinness-mission-authzen}}).
+`context.prior_decision_id` is AuthZEN extension data carried per the
+AuthZEN profile's conventions ({{I-D.draft-mcguinness-mission-authzen}});
+`measured_duration` is a coordinated Execution Evidence member under
+the runtime evidence companion's extension conventions
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 --- back
 

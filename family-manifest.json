@@ -1,5 +1,5 @@
 {
-  "$comment": "Machine-readable inventory of the Mission-Bound Authorization family (34 draft-*.md files at repo root). Single source of truth for README's document catalog, adoption order, and the architecture document map. Validate with scripts/check-family-manifest.mjs.",
+  "$comment": "Machine-readable inventory of the Mission-Bound Authorization family (35 draft-*.md files at repo root). Single source of truth for README's document catalog, adoption order, and the architecture document map. Validate with scripts/check-family-manifest.mjs.",
   "generated_note": "Hand-curated; regenerate by re-deriving group/maturity/adoption_rung from README.md and each draft's front matter/Status section when drafts are added, renamed, or reclassified.",
   "known_non_family_refs": "draft-mcguinness-mission-architecture.md's Mission Document Map also names oauth-id-continuation-assertion. That is an adjacent, non-family draft (no draft-*.md file in this repo) and is intentionally absent from drafts[] below; do not add a phantom manifest entry for it.",
   "groups": [
@@ -24,7 +24,7 @@
     "Experimental",
     "outside-ordering"
   ],
-  "count": 34,
+  "count": 35,
   "drafts": [
     {
       "file": "draft-mcguinness-aauth-mission-expiry.md",
@@ -90,6 +90,7 @@
         "draft-mcguinness-mission-metering",
         "draft-mcguinness-mission-orchestration",
         "draft-mcguinness-mission-runtime",
+        "draft-mcguinness-mission-runtime-evidence",
         "draft-mcguinness-mission-security-model",
         "draft-mcguinness-mission-shaping",
         "draft-mcguinness-mission-substrate",
@@ -124,11 +125,11 @@
         "draft-mcguinness-mission-aauth",
         "draft-mcguinness-mission-architecture",
         "draft-mcguinness-mission-authority-server",
-        "draft-mcguinness-mission-authzen",
         "draft-mcguinness-mission-discovery",
         "draft-mcguinness-mission-harness",
         "draft-mcguinness-mission-mandate",
         "draft-mcguinness-mission-runtime",
+        "draft-mcguinness-mission-runtime-evidence",
         "draft-mcguinness-oauth-mission",
         "draft-mcguinness-oauth-mission-child-delegation",
         "draft-mcguinness-oauth-mission-consent-evidence",
@@ -154,6 +155,7 @@
         "draft-mcguinness-mission-harness",
         "draft-mcguinness-mission-mandate",
         "draft-mcguinness-mission-runtime",
+        "draft-mcguinness-mission-runtime-evidence",
         "draft-mcguinness-mission-security-model",
         "draft-mcguinness-mission-substrate",
         "draft-mcguinness-oauth-mission",
@@ -178,13 +180,12 @@
       "adoption_rung": "Implementation minimum",
       "is_published_core": false,
       "deps": [
-        "draft-mcguinness-mission-audit",
         "draft-mcguinness-mission-harness",
         "draft-mcguinness-mission-metering",
         "draft-mcguinness-mission-runtime",
+        "draft-mcguinness-mission-runtime-evidence",
         "draft-mcguinness-oauth-mission",
         "draft-mcguinness-oauth-mission-containment",
-        "draft-mcguinness-oauth-mission-continuation",
         "draft-mcguinness-oauth-mission-expansion",
         "draft-mcguinness-oauth-mission-progressive",
         "draft-mcguinness-oauth-mission-status"
@@ -230,6 +231,7 @@
         "draft-mcguinness-mission-discovery",
         "draft-mcguinness-mission-orchestration",
         "draft-mcguinness-mission-runtime",
+        "draft-mcguinness-mission-runtime-evidence",
         "draft-mcguinness-oauth-mission",
         "draft-mcguinness-oauth-mission-child-delegation",
         "draft-mcguinness-oauth-mission-expansion",
@@ -272,6 +274,7 @@
         "draft-mcguinness-mission-authzen",
         "draft-mcguinness-mission-orchestration",
         "draft-mcguinness-mission-runtime",
+        "draft-mcguinness-mission-runtime-evidence",
         "draft-mcguinness-mission-substrate",
         "draft-mcguinness-oauth-mission",
         "draft-mcguinness-oauth-mission-consent-evidence"
@@ -288,13 +291,27 @@
       "is_published_core": false,
       "deps": [
         "draft-mcguinness-mission-architecture",
-        "draft-mcguinness-mission-authzen",
         "draft-mcguinness-mission-harness",
         "draft-mcguinness-mission-runtime",
+        "draft-mcguinness-mission-runtime-evidence",
         "draft-mcguinness-oauth-mission",
         "draft-mcguinness-oauth-mission-expansion",
         "draft-mcguinness-oauth-mission-signals",
         "draft-mcguinness-oauth-mission-status"
+      ]
+    },
+    {
+      "file": "draft-mcguinness-mission-runtime-evidence.md",
+      "slug": "draft-mcguinness-mission-runtime-evidence",
+      "title": "Mission Runtime Evidence",
+      "category": "std",
+      "maturity": "stable",
+      "group": "runtime-enforcement",
+      "adoption_rung": "Implementation minimum",
+      "is_published_core": false,
+      "deps": [
+        "draft-mcguinness-mission-runtime",
+        "draft-mcguinness-oauth-mission"
       ]
     },
     {
@@ -563,6 +580,7 @@
         "draft-mcguinness-mission-discovery",
         "draft-mcguinness-mission-harness",
         "draft-mcguinness-mission-runtime",
+        "draft-mcguinness-mission-runtime-evidence",
         "draft-mcguinness-mission-substrate",
         "draft-mcguinness-oauth-mission",
         "draft-mcguinness-oauth-mission-attenuation",

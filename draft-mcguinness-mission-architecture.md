@@ -226,6 +226,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
@@ -1742,8 +1750,10 @@ permitted under this Mission now? The boundary: the last controllable
 point between agent and resource. Owners: the runtime profile, the
 decision contract with parameter binding, custody, and fail-closed
 behavior ({{I-D.draft-mcguinness-mission-runtime}}); its AuthZEN
-binding, the concrete decision API and evidence objects
-({{I-D.draft-mcguinness-mission-authzen}}).
+binding, the concrete decision API
+({{I-D.draft-mcguinness-mission-authzen}}); the runtime evidence
+companion, the Decision Evidence, Execution Evidence, and Refusal
+Record objects ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 ## Run and Wind Down
 
@@ -2697,8 +2707,13 @@ bound is AAuth's own `expires_at`, profiled by the expiry document
   fail-closed behavior.
 
 `mission-authzen`:
-: The concrete decision-API binding and its Decision and Execution
-  Evidence objects.
+: The concrete decision-API binding: the AuthZEN request and response
+  mapping and the denial classification.
+
+`mission-runtime-evidence`:
+: The binding-neutral Decision Evidence, Execution Evidence, and
+  Refusal Record objects a decision-API binding's PDP and PEP emit,
+  their integrity envelope, and retention.
 
 `mission-metering`:
 : Experimental: cumulative consumption bounds and the metering that

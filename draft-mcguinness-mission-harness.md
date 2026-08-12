@@ -113,6 +113,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -1233,7 +1241,8 @@ An Egress Evidence object is a JSON object {{RFC8259}} with:
 
 `emitter`:
 : REQUIRED. An object, in the form Decision Evidence defines
-  ({{I-D.draft-mcguinness-mission-authzen}}), with `role` `egress`.
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}), with `role`
+  `egress`.
 
 `scope_statement_digest`:
 : OPTIONAL. A string, in the form Harness Evidence defines above.
