@@ -350,10 +350,23 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
 });
 
 describe("end-to-end issuance under the new carriage", () => {
+  // An OVER-ASK: a cap above the policy ceiling (900 > 500) and an action the
+  // ceiling does not grant. Derivation must narrow both; the record still
+  // commits the proposal EXACTLY as submitted, so the client can diff the
+  // granted echo against what proposal_hash commits.
+  const OVER_ASK: AuthorityEntry[] = [
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: ["payments:invoice.read", "payments:remittance.send", "payments:acquire.company"],
+      constraints: { max_amount: { amount: "900.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ];
+
   it("derives issuer-side, echoes the granted set, surfaces proposal_hash issuer-only", async () => {
     const par = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
       mission_intent: JSON.stringify(TASK_INTENT),
-      authorization_details: JSON.stringify(PROPOSAL),
+      authorization_details: JSON.stringify(OVER_ASK),
     });
     expect(par.status).toBe(201);
     const { request_uri } = (await par.json()) as { request_uri: string };
@@ -423,11 +436,14 @@ describe("end-to-end issuance under the new carriage", () => {
     };
 
     // The granted echo is the ISSUER-DERIVED set (a same-type subset of the
-    // proposal), never the submission carried through by right.
+    // proposal), never the submission carried through by right: the over-asked
+    // cap narrows to the policy ceiling and the ungrantable action is dropped.
     expect(body.authorization_details.length).toBeGreaterThan(0);
     for (const entry of body.authorization_details) {
       expect(entry.type).toBe("mission_resource_access");
       expect(entry.resource).toBe(RESOURCE);
+      expect(entry.actions).not.toContain("payments:acquire.company");
+      expect(entry.constraints?.max_amount?.amount).toBe("500.00");
     }
 
     // Zero claim changes: the mission claim never carries the proposal members.
@@ -446,8 +462,8 @@ describe("end-to-end issuance under the new carriage", () => {
     // surface) reports proposal_hash beside state.
     const missionId = claims.mission.id as string;
     const record = as.kernel.get(missionId);
-    expect(record?.proposed_authority).toEqual(PROPOSAL);
-    expect(record?.proposal_hash).toBe(proposalHash(ISSUER, PROPOSAL as never));
+    expect(record?.proposed_authority).toEqual(OVER_ASK);
+    expect(record?.proposal_hash).toBe(proposalHash(ISSUER, OVER_ASK as never));
     const introspection = await fetch(`${ISSUER}/introspect`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
