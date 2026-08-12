@@ -1165,10 +1165,12 @@ mechanism, and the deployment's own governance.
 
 A decision separates three response lanes, and a binding maps each
 lane to its wire. Obligations and advice are PEP work under the
-existing decision: obligations bind (request binding, permit expiry,
-use limits, evidence emission; failing one makes the effective result
-deny), and advice, where a binding defines it, is safely ignorable
-and never carries a mandatory control. Governance rides the
+existing decision: obligations bind (a step-up, a mandated
+notification; failing one makes the effective result deny), and
+advice, where a binding defines it, is safely ignorable and never
+carries a mandatory control. Decision conditions (request binding,
+validity bound, use limit) are not work but constraints of the
+decision itself, evaluated at every use ({{decision-output}}). Governance rides the
 request-approval loop, never the permit: an access request tracked by
 a task handle, resolved by an approval or another authority-state
 change. Partial evaluation, residual policy the PEP completes
@@ -1197,6 +1199,11 @@ inventing parallel semantics:
 - an evaluation identifier and evaluation time, correlating the
   decision with its evidence;
 - on a deny, a reason from the binding's failure classification;
+- on a permit, decision conditions: declarative constraints on
+  relying on the permit (a request binding, a validity bound, a use
+  limit), evaluated at every use of the permit; a condition the
+  enforcing component does not recognize makes the permit unusable,
+  the reliance counterpart of the obligations rule;
 - zero or more obligations: mandatory enforcement duties the PEP
   completes under the existing decision, where an unfulfilled or
   unrecognized obligation is an effective deny;
@@ -1766,12 +1773,22 @@ for one action.
 - For every non-idempotent operation in the irreversible-action,
   external-commitment, and privileged-administration classes, the
   Operation Profile MUST therefore also define an idempotency key.
-- The PDP MUST refuse, or route to the action-bound approval
-  requirement ({{action-approval}}), a permit request whose
-  normalized parameters and idempotency key match a prior decision
-  whose execution outcome is unresolved or completed within the
-  reconciliation window ({{evidence}}). Legitimate re-execution of
-  the same normalized action mints a new idempotency key.
+- The PDP MUST refuse a permit request whose normalized parameters
+  and idempotency key match a prior decision whose execution outcome
+  is unresolved or completed within the reconciliation window
+  ({{evidence}}). An unresolved duplicate is a transient condition:
+  the requester retries, or the outcome reconciles, within that
+  window. An intentional re-execution of the same normalized action
+  is a new operation under a new idempotency key, never a retry under
+  the consumed one, and an action-bound approval
+  ({{action-approval}}) authorizes that new operation as such, never
+  re-execution under the consumed key. For the high-consequence
+  classes the deployment MUST retain a durable consumed-key record (a
+  tombstone) for at least its declared idempotency horizon, published
+  in the Enforcement Scope Statement; within that horizon a consumed
+  key never executes again. Outside those classes a deployment MAY
+  scope the guarantee to the reconciliation window, and it MUST
+  publish which posture applies.
 - A retransmission is distinguishable from a repeat: when the
   matching prior decision's permit is unexpired and its single-use
   identifier unconsumed, the PDP SHOULD return that prior decision
@@ -1876,10 +1893,11 @@ or PDP unreachability) or after a PDP permit (for example, a
 `parameter_digest` mismatch), MUST likewise produce a runtime
 enforcement evidence record with the available fields and the failure
 condition. This document fixes the minimum record content and local
-integrity requirements. The concrete record schema, any interoperable
-canonical byte representation, separate Decision Evidence and
-Execution Evidence object schemas, and the Mission Receipt's portable
-schema ({{mission-receipt}}) are out of scope ({{deferred}}).
+integrity requirements; the concrete record schemas, canonical byte
+representation, and integrity envelope are defined by Mission Runtime
+Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}). The
+Mission Receipt's portable schema ({{mission-receipt}}) remains out
+of scope ({{deferred}}).
 
 A record captures decision inputs, the applicable policy and
 authority references, the result, and the failure condition. No
@@ -1920,9 +1938,10 @@ and trusted for the refusal or decision path:
 - the decision identifier, when the PDP produced one;
 - the PDP's policy-view version;
 - the identity and role of the emitting enforcement component; and
-- OPTIONAL, a `compensates_decision_id` member linking a compensating
-  action's decision to the original decision identifier it reverses, so
-  a compensation can be reconciled against the action it undoes.
+- OPTIONAL, a `compensates_evaluation_id` member linking a
+  compensating action's decision to the original evaluation
+  identifier it reverses, so a compensation can be reconciled against
+  the action it undoes.
 
 For a token-validation failure, the record MUST NOT describe
 unverified token claims as authenticated facts. It MAY include a digest
@@ -1938,12 +1957,14 @@ record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
 
 For an action in the high-consequence classes, the executing PEP MUST
 also produce, after it acts, an
-execution-outcome record keyed to the permit's decision identifier,
+execution-outcome record keyed to the permit's evaluation identifier,
 recording at least success or failure and the `parameter_digest`
 actually executed. This lets a decision and its execution be reconciled
 one to one, so a permit that was obtained but executed more than once,
-or executed for different parameters, is detectable after the fact. The
-detailed object schema is deferred ({{deferred}}).
+or executed for different parameters, is detectable after the fact.
+The detailed object schema is the Execution Evidence Object, defined
+by the runtime evidence companion
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 Reconciliation is bounded in time by the reconciliation window,
 orphan-detection component, and alerting obligation the Enforcement
@@ -2004,8 +2025,12 @@ The following requirements apply to every record:
   forensic store, so an auditor can reconstruct what was refused, not
   only that a refusal happened.
 - Records for one Mission MUST carry a deployment-defined sequence
-  indicator so decision order can be reconstructed without relying on
-  wall-clock time alone.
+  indicator, scoped per emitter, so gaps are detectable and one
+  emitter's records order without relying on wall-clock time alone.
+  This does not by itself reconstruct Mission-wide decision order
+  across emitters; that ordering is best-effort, from the
+  correlation members and each record's timestamps together
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 - The retention window declared in the Enforcement Scope Statement
   MUST be no shorter than the Mission's audit horizon, as defined in
   the Mission Record section of {{I-D.draft-mcguinness-oauth-mission}}.
@@ -2310,9 +2335,11 @@ work and are not required to enforce it:
 - the Mission Receipt's portable schema and canonical byte
   representation ({{mission-receipt}}: this profile fixes the term,
   its minimum binding, and the local runtime enforcement evidence
-  record);
-- separate Decision Evidence and Execution Evidence object schemas and
-  media types;
+  record). The concrete Decision Evidence, Execution Evidence, and
+  Refusal Record object schemas, canonicalization, integrity
+  envelope, and media types are, by contrast, no longer deferred:
+  they are defined by the runtime evidence companion
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}});
 - actor provenance beyond the `act` chain and attestation of the
   execution environment: actor-signed hop proofs
   ({{I-D.draft-mcguinness-oauth-actor-proofs}}), issuer-signed hop
@@ -2698,7 +2725,7 @@ A permit decision record:
 
 ~~~ json
 {
-  "result": "permit",
+  "decision": "permit",
   "request_time": "2026-11-02T09:03:12Z",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -2721,46 +2748,47 @@ A permit decision record:
   },
   "parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-  "decision_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
-  "policy_view_version":
+  "evaluation_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
+  "policy_view_id":
     "sha-256:fuMqn6Nb5LfyziflJuYj8VgHHH1bskZ0SrMDxdQ8CaA",
   "sequence": 17
 }
 ~~~
 
 The execution-outcome record the executing PEP produces after it acts,
-keyed to the permit's decision identifier ({{evidence}}):
+keyed to the permit's evaluation identifier ({{evidence}}):
 
 ~~~ json
 {
-  "result": "executed",
-  "outcome": "success",
-  "decision_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
+  "outcome": "completed",
+  "evaluation_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com"
   },
   "parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-  "outcome_time": "2026-11-02T09:03:14Z",
+  "outcome_at": "2026-11-02T09:03:14Z",
   "sequence": 18
 }
 ~~~
 
-A PEP refusal record for a later attempt on the same operation. A
+Execution Evidence for a later attempt on the same operation. A
 permit (`dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA`) bound the digest of a
 423.50 entry; between check and use the parameters became 780.00
 (normalized object
 `{"amount_usd":"780.00","source_invoice_id":"inv_2026Q3_842"}`). The
 executing PEP recomputed the digest over the parameters it was about
-to use, found a mismatch, and refused ({{parameter-binding}}); the
-record carries the recomputed digest:
+to use, found a mismatch, and suppressed the release
+({{parameter-binding}}); a post-decision suppression is a final
+disposition and is recorded as Execution Evidence, never as a
+Refusal Record. The record carries the recomputed digest:
 
 ~~~ json
 {
-  "result": "refuse",
-  "failure_condition": "parameter_digest_mismatch",
-  "request_time": "2026-11-02T09:03:29Z",
+  "outcome": "suppressed",
+  "error": "parameter_mismatch",
+  "outcome_at": "2026-11-02T09:03:29Z",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
@@ -2772,7 +2800,7 @@ record carries the recomputed digest:
   "client_id": "s6BhdRkqt3",
   "action": "journal-entries.write",
   "resource": "je_2026Q3_inv_8421",
-  "decision_id": "dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA",
+  "evaluation_id": "dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA",
   "parameter_digest":
     "sha-256:UdG-TiebDHTiKRXUVURs1Jeq_vDJp_Ro8jWbBAD8hgM",
   "sequence": 19
