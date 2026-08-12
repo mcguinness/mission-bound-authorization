@@ -1302,7 +1302,7 @@ export async function handleExpansionExchange(
   const effective = opts.kernel.effectiveAuthoritySet(active);
   if (isSubsetSet(requested, effective)) {
     ctx.status = 400;
-    ctx.body = { error: "invalid_grant", mission_denial_reason: "nothing_to_expand" };
+    ctx.body = { error: "invalid_request", mission_denial_reason: "nothing_to_expand" };
     ctx.set("cache-control", "no-store");
     return;
   }

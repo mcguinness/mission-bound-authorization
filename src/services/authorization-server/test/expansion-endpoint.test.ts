@@ -11,7 +11,7 @@
  * predecessor is resolved FROM `subject_token`. Expansion ALWAYS widens and
  * ALWAYS requires a fresh approval:
  *   - a NON-WIDENING request (a pure subset of the predecessor's effective set)
- *     is REFUSED (invalid_grant + mission_denial_reason nothing_to_expand):
+ *     is REFUSED (invalid_request + mission_denial_reason nothing_to_expand):
  *     ordinary token derivation already serves it, and an expansion response
  *     must never ambiguously be a non-successor (#486);
  *   - DEFERRED via the DTR substrate when the request WIDENS (fresh async
@@ -271,7 +271,7 @@ afterAll(() => {
 });
 
 describe("expansion wire: NON-WIDENING request is REFUSED (@spec expansion#nothing-to-expand)", () => {
-  it("a pure subset request refuses (invalid_grant + nothing_to_expand): predecessor stays active, nothing created or reserved, no derivation consumed", async () => {
+  it("a pure subset request refuses (invalid_request + nothing_to_expand): predecessor stays active, nothing created or reserved, no derivation consumed", async () => {
     const pred = await issuePredecessor(["payments:invoice.read", "payments:remittance.send"]);
     const before = as.kernel.get(pred.missionId);
     expect(before?.state).toBe("active");
@@ -291,7 +291,7 @@ describe("expansion wire: NON-WIDENING request is REFUSED (@spec expansion#nothi
       deferral_code?: string;
     };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
+    expect(body.error).toBe("invalid_request");
     expect(body.mission_denial_reason).toBe("nothing_to_expand");
     // The refusal issues NOTHING: no token, no deferral continuation.
     expect(body.access_token).toBeUndefined();
