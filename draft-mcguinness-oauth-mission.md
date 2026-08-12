@@ -155,6 +155,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -235,7 +243,7 @@ integrity-bound authorization artifact for OAuth 2.0. A client submits
 a Mission Intent through Pushed Authorization Requests; the
 Authorization Server derives Rich Authorization Requests authorization
 details from it, binds the approved task and its derived authority to
-the Approver's consent through two integrity anchors, and records a
+the Approver's consent through integrity anchors, and records a
 durable Mission. Every access token derived under the Mission carries
 that authority and a "mission" claim, and issuance is gated on the
 Mission's lifecycle state. Optional capabilities represent
@@ -275,7 +283,8 @@ authorization artifact. The contribution is a single chain:
 
 1. The client submits a structured **Mission Intent** describing the
    task (goal, target resources, constraints) instead of requesting
-   raw scopes.
+   raw scopes, optionally proposing concrete authority alongside it
+   as standard `authorization_details`.
 2. The Authorization Server (AS) derives **authorization details**
    ({{RFC9396}}), the **Authority Set**: the concrete authority the
    task needs.
@@ -609,6 +618,11 @@ Mission Intent:
 : The structured description of the task the client submits
   ({{mission-intent}}).
 
+Authority Proposal:
+: The `authorization_details` array a client submits alongside a
+  Mission Intent, a proposal for derivation and never authority
+  ({{authority-proposal}}).
+
 Authority Set:
 : The set of `authorization_details` entries the AS derives from a
   Mission Intent and the Approver approves
@@ -696,7 +710,7 @@ layered in future versions and are not required here.
 ~~~
  Agent (client)                       Mission Issuer (AS)
       |                                     |
-      | 1. PAR: mission_intent ------------>| derive authority
+      | 1. PAR: intent + proposal --------->| derive authority
       |<----------- request_uri ------------| (authz_details)
       |                                     |
       | 2. authorization request ---------->| Approver consents
@@ -729,9 +743,12 @@ the same Intent produce two distinct pending requests, and a Mission
 acquires its Mission Identifier ({{mission-id}}) only at activation.
 The approved Intent is recorded on the Mission and committed by
 `intent_hash`
-({{integrity-anchors}}); it describes the task but commits no
-authority, which is committed separately by `authority_hash` over the
-derived Authority Set ({{authorization-derivation}}).
+({{integrity-anchors}}); it describes the task and carries no
+authority members. Concrete authority is proposed separately, on the
+standard `authorization_details` parameter pushed alongside the
+Intent ({{authority-proposal}}) and committed by `proposal_hash` when
+submitted; the granted authority is committed by `authority_hash`
+over the derived Authority Set ({{authorization-derivation}}).
 
 A Mission Intent is a JSON object describing the task. The client
 submits it in place of `scope`, or alongside a narrowed `scope`. It
@@ -751,40 +768,6 @@ has the following members:
 : OPTIONAL. An array of strings. Human-readable bounds on
   the task (for example, "read only invoices from 2026"). These
   inform derivation and consent rendering.
-
-`proposed_authority`:
-: OPTIONAL. An array of objects, each shaped as an {{RFC9396}}
-  `authorization_details` entry. The client's concrete authority
-  proposal for the task. It is untrusted input like the rest of the
-  Intent and is committed by `intent_hash` with it
-  ({{integrity-anchors}}). Each entry MUST be of a type the AS
-  advertises and MUST validate against that type's published JSON
-  Schema ({{other-types}}, {{discovery}}); where a deployment
-  arranges Mission-bound authorization out of band rather than
-  advertising the metadata endpoint, the supported types and their
-  schemas are established out of band, and this rule applies over
-  that knowledge the same way. An entry of an unadvertised type, or
-  one that fails its schema, MUST NOT be carried into the Authority
-  Set unexamined: the AS refuses the Intent with
-  `invalid_authorization_details`, or omits the entry; it MUST NOT
-  keep the entry silently, and where the AS omits the entry the
-  granted `authorization_details` echo ({{mission-bound-tokens}})
-  MUST reflect the omission, so no entry is ever represented as
-  granted when it was not.
-
-  When present, the AS MUST derive each Authority Set entry as a
-  subset ({{subset}}) of some `proposed_authority` entry of the
-  *same type*: a `mission_resource_access` entry derives only from a
-  `mission_resource_access` proposal, under the subset rule of
-  {{subset}}; an entry of another AS-supported type derives only
-  from a same-type proposal, narrowed under that type's own subset
-  rule where it defines one, or carried through unchanged where it
-  defines none ({{other-types}}). No entry derives from a proposed
-  entry of a different type. `goal` and `constraints` then serve as
-  rendering and bounding context over the proposed authority. Each
-  entry that carries a `resource` member MUST have it among the
-  Intent's `resources`; the AS refuses an Intent violating this with
-  `invalid_request`.
 
 `success_criteria`:
 : OPTIONAL. An array of strings. Human-readable
@@ -933,9 +916,9 @@ Submission is governed by the following rules:
   is well-formed but yields no valid Authority Set (an unsupported
   resource, action, or authorization details type, or a policy that
   bars the requested authority), the AS SHOULD refuse with
-  `invalid_authorization_details` ({{RFC9396}}), even though the
-  client did not submit `authorization_details` directly, so a
-  client can tell a syntax error from a derivation failure.
+  `invalid_authorization_details` ({{RFC9396}}), whether or not the
+  request carried an authority proposal ({{authority-proposal}}), so
+  a client can tell a syntax error from a derivation failure.
 - **One carriage, through PAR.** The Intent is accepted as the
   form-encoded `mission_intent` parameter of the PAR request body, or
   as a `mission_intent` claim inside a signed Request Object
@@ -956,27 +939,119 @@ Submission is governed by the following rules:
   the lengths of its arrays, refusing an Intent that exceeds the
   deployment-defined limits with `invalid_request`, so an oversized
   Intent cannot exhaust the AS at rendering, derivation, or hashing.
-- **No raw authorization details.** A client MUST NOT submit the
-  {{RFC9396}} `authorization_details` request parameter together
-  with `mission_intent`, and the AS MUST refuse a request carrying
-  both with `invalid_request`: concrete authority is proposed inside
-  the Intent, through `proposed_authority` ({{mission-intent}}). A
-  client MAY submit `scope` and `resource` ({{RFC8707}}) values. The
-  AS treats them as a requested subset and MUST NOT grant authority
-  beyond what the Mission Intent yields.
+- **Concrete authority is proposed via `authorization_details`.**
+  A client proposing concrete authority submits the standard
+  {{RFC9396}} `authorization_details` request parameter alongside
+  `mission_intent` in the same push, as a proposal subject to
+  derivation ({{authority-proposal}}); `mission_intent` itself
+  carries no authority members. A client MAY submit `scope` and
+  `resource` ({{RFC8707}}) values. The AS treats them as a requested
+  subset and MUST NOT grant authority beyond what the Mission Intent
+  yields.
 - **Pushed parameters are authoritative.** On the front-channel
   request that redeems the `request_uri`, the AS MUST ignore any
   `mission_intent`, `authorization_details`, `scope`, or `resource`
   presented, and MUST NOT let such a value widen the authority
-  derived from the pushed Intent.
-- **A proposal, never authority.** A Mission Intent is untrusted
-  client input; trust enters only when the AS validates it and the
-  Approver consents to the rendered result. The AS MUST treat the
-  submitted Intent as a proposal and MUST derive and bound authority
-  by policy regardless of what the client submitted. How a client
-  produces the Intent (for example, a "Mission Shaper" deriving it
-  from a natural-language instruction) is out of scope for this
-  document.
+  derived from the pushed parameters.
+- **A proposal, never authority.** A Mission Intent, and any
+  authority proposal submitted alongside it ({{authority-proposal}}),
+  is untrusted client input; trust enters only when the AS validates
+  it and the Approver consents to the rendered result. The AS MUST
+  treat the submission as a proposal and MUST derive and bound
+  authority by policy regardless of what the client submitted. How a
+  client produces the Intent (for example, a "Mission Shaper"
+  deriving it from a natural-language instruction) is out of scope
+  for this document.
+
+## The Authority Proposal {#authority-proposal}
+
+A client MAY propose concrete authority for the task by submitting
+the standard {{RFC9396}} `authorization_details` request parameter,
+a JSON array of `authorization_details` objects, alongside
+`mission_intent` in the same pushed request
+({{submission-via-par}}). The Mission Intent carries no authority
+members: earlier revisions of this document carried the proposal
+inside the Intent as a `proposed_authority` member, this document
+does not ({{document-history}}), and an Intent carrying that member
+is refused as an unknown top-level member under the closed-top-level
+rule of {{submission-via-par}}.
+
+The submitted `authorization_details` is a proposal, never
+authority. The AS MUST treat it as untrusted input, MUST derive and
+bound the Authority Set by policy regardless of what was submitted
+({{authorization-derivation}}), and MUST NOT grant authority beyond
+what the Mission Intent yields.
+
+Each submitted entry MUST be of a type the AS advertises and MUST
+validate against that type's published JSON Schema ({{other-types}},
+{{discovery}}); where a deployment arranges Mission-bound
+authorization out of band rather than advertising the metadata
+endpoint, the supported types and their schemas are established out
+of band, and this rule applies over that knowledge the same way. An
+entry of an unadvertised type, or one that fails its schema, MUST
+NOT be carried into the Authority Set unexamined: the AS refuses the
+request with `invalid_authorization_details`, or omits the entry; it
+MUST NOT keep the entry silently, and where the AS omits the entry
+the granted `authorization_details` echo ({{mission-bound-tokens}})
+MUST reflect the omission, so no entry is ever represented as
+granted when it was not.
+
+When a proposal is present, the AS MUST derive each Authority Set
+entry as a subset ({{subset}}) of some proposed entry of the *same
+type*: a `mission_resource_access` entry derives only from a
+`mission_resource_access` proposal, under the subset rule of
+{{subset}}; an entry of another AS-supported type derives only from
+a same-type proposal, narrowed under that type's own subset rule
+where it defines one, or carried through unchanged where it defines
+none ({{other-types}}). No entry derives from a proposed entry of a
+different type. `goal` and `constraints` then serve as rendering and
+bounding context over the proposed authority. Each proposed entry
+that carries a `resource` member MUST have it among the Intent's
+`resources`; the AS refuses a request violating this with
+`invalid_request`.
+
+The proposal rides the Intent's carriage rules
+({{submission-via-par}}): it is accepted only through PAR, inside
+the Request Object when one is used ({{RFC9101}}), it is ignored on
+the front-channel request that redeems the `request_uri`, and the
+bounded-size rule applies to it the same way. The AS records the
+submitted array on the Mission exactly as submitted and commits it
+by `proposal_hash` ({{integrity-anchors}}, {{mission-record}}),
+present iff a proposal was submitted: what the agent asked for is
+committed separately from the task (`intent_hash`) and from what
+was granted (`authority_hash`), so a narrowed grant can be audited
+against the proposal that sought it.
+
+Submitting `authorization_details` without `mission_intent` is an
+ordinary {{RFC9396}} request that this document does not govern;
+the client-side and AS-side duties that keep a governed task from
+downgrading across that line are stated in {{discovery}} and
+{{downgrade-by-omission}}.
+
+Example authority proposal, submitted alongside the example Intent
+of {{mission-intent}}. Derivation narrows `invoices.*` to
+`invoices.read` bounded to a Q3 issuance window, halves the
+proposed ceiling under the Intent's constraints, and carries the
+proposed `delegation` policy through unchanged (the example
+Authority Set of {{authorization-derivation}}):
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.*"],
+    "delegation": {
+      "max_depth": 2,
+      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+    } },
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": {
+      "max_amount": { "amount": "1000.00", "currency": "USD" }
+    } }
+]
+~~~
 
 # Mission Authority {#authorization-derivation}
 
@@ -986,14 +1061,14 @@ more {{RFC9396}} `authorization_details` entries of type
 mechanical. It happens once, at the approval event, over the
 derivation policy then in force, in one of two modes:
 
-- **Narrowing mode** (RECOMMENDED): the Intent carries
-  `proposed_authority` ({{mission-intent}}), and the Authority Set is
-  the proposal narrowed to policy. Each derived entry MUST be a
-  subset ({{subset}}) of some `proposed_authority` entry of the same
-  type ({{mission-intent}}); a proposed entry of an unadvertised
+- **Narrowing mode** (RECOMMENDED): the client submitted an
+  authority proposal ({{authority-proposal}}), and the Authority Set
+  is the proposal narrowed to policy. Each derived entry MUST be a
+  subset ({{subset}}) of some proposed entry of the same type
+  ({{authority-proposal}}); a proposed entry of an unadvertised
   type, one that fails its schema, or one policy otherwise cannot
-  accept, is narrowed or omitted ({{mission-intent}}).
-- **Template mode**: the Intent carries no `proposed_authority`, and
+  accept, is narrowed or omitted ({{authority-proposal}}).
+- **Template mode**: no authority proposal was submitted, and
   a deployment-configured mapping, keyed on the Intent's `purpose` or
   `resources`, yields the candidate entries, which are then narrowed
   to policy. The mapping is a lookup, never synthesis; the AS refuses
@@ -1023,13 +1098,14 @@ and recording rule above still apply to it.
 A `resources` entry the deployment does not recognize either causes
 refusal with `invalid_authorization_details` ({{submission-via-par}})
 or is omitted from the Authority Set, by deployment policy. When an
-omission or a narrowing leaves the Authority Set short of what the
-Intent proposed, derivation is partial. The granted
+omission or a narrowing leaves the Authority Set short of what was
+proposed ({{authority-proposal}}), derivation is partial. The granted
 `authorization_details` echo ({{mission-bound-tokens}}) MUST reflect
 every omission and narrowing and remains the authoritative statement
 of what was granted; a client learns of any shortfall by comparing
-the echo against its proposal. No omitted or narrowed entry is ever
-represented as granted.
+the echo against its proposal, which `proposal_hash` commits as
+submitted ({{integrity-anchors}}). No omitted or narrowed entry is
+ever represented as granted.
 
 The derived Authority Set, not the Mission Intent, is the authority the
 Approver consents to: the AS renders the Authority Set for approval and
@@ -1296,9 +1372,9 @@ deployment; a consumer that does not recognize it MUST fail closed
 ({{rs-enforcement}}).
 
 The same duty binds the AS side of narrowing: whenever the AS derives
-a candidate entry from a ceiling (a Mission Intent's
-`proposed_authority` narrowed to the Authority Set, or an Authority
-Set entry narrowed to a derived or delegated token,
+a candidate entry from a ceiling (a client's authority proposal
+narrowed to the Authority Set ({{authority-proposal}}), or an
+Authority Set entry narrowed to a derived or delegated token,
 {{authorization-derivation}}, {{delegation-constraints}}), a
 registered Common Constraint key present in the ceiling entry that the
 AS does not implement narrowing for MUST NOT be dropped while the
@@ -1400,9 +1476,9 @@ ceiling value and MUST be rejected.
 A value of any other form, including scientific notation
 (`"1e300"`), a sign, a thousands separator, or a non-numeric token
 (`"NaN"`, `"Infinity"`), is malformed, and a consumer MUST reject it
-rather than attempt to parse it: an Intent carrying one in
-`proposed_authority` is refused at submission
-({{submission-via-par}}), and a Resource Server treats a malformed
+rather than attempt to parse it: an authority proposal carrying
+one is refused at submission ({{authority-proposal}}), and a
+Resource Server treats a malformed
 decimal value the same as a `constraints` key it cannot enforce
 ({{rs-enforcement}}). Comparison and intersection over two such
 decimal-string values MUST be computed as exact decimal arithmetic
