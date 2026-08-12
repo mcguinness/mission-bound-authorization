@@ -1795,10 +1795,21 @@ async function handleMissionDispatchGrant(
     ctx.body = { error: "invalid_request", error_description: "mission_intent required" };
     return;
   }
+  // @spec mission-template#dispatch — dispatch_event_id is REQUIRED (it is the
+  // dispatch grant's realization of the creation_request_id pattern: the
+  // client-held idempotency handle). The former crypto.randomUUID() fallback
+  // silently DEFEATED idempotency for a client that omitted it (every retry
+  // minted a fresh event id, so a lost response duplicated the instance);
+  // missing now refuses, aligning the code to the spec's REQUIRED.
   const dispatchEventId =
     typeof params.dispatch_event_id === "string" && params.dispatch_event_id
       ? params.dispatch_event_id
-      : crypto.randomUUID();
+      : "";
+  if (!dispatchEventId) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: "dispatch_event_id required" };
+    return;
+  }
 
   // Resolve the template FIRST: we need its approver (to establish the subject)
   // and its recipient BEFORE dispatch, and to control the unknown-template reply
