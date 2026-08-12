@@ -341,14 +341,14 @@ canonicalization, and integrity envelope a deployment emits.
   returned to the PEP (for example, as carried by the AuthZEN
   binding, {{I-D.draft-mcguinness-mission-authzen}}).
 
-`permit`:
+`conditions`:
 : REQUIRED when `decision` is `permit` for a consequential action. An
   object recording the permit's decision conditions as returned to
   the PEP: `request_digest` (the parameter binding the permit is
   bound to), `valid_until` (the validity bound), and
   `use_limit` (the consumption bound on `evaluation_id`). The PDP
   MUST set `use_limit: 1` for a permit in the high-consequence
-  classes. Carried per the AuthZEN binding's `permit` response
+  classes. Carried per the AuthZEN binding's `conditions` response
   member, or the binding's equivalent
   ({{I-D.draft-mcguinness-mission-authzen}}).
 
@@ -359,7 +359,8 @@ canonicalization, and integrity envelope a deployment emits.
   `parameter_digest` is absent for a consequential action, so the closed
   object still carries the request digest the runtime profile requires
   of every decision record ({{I-D.draft-mcguinness-mission-runtime}}).
-  Distinct from the `permit` member's `request_digest`: that member
+  Distinct from the `conditions` member's `request_digest`: that
+  member
   records the parameter binding a granted permit is bound to;
   `evaluation_request_digest` is this record's fallback digest of the
   whole evaluation request, present whether the decision was a permit
@@ -726,7 +727,7 @@ envelopes with unsupported formats.
   "audience": "https://erp.example.com",
   "action_class": "irreversible_action",
   "class_source": "deployment",
-  "permit": {
+  "conditions": {
     "request_digest":
       "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "valid_until": "2026-11-02T08:15:00Z",

@@ -1115,8 +1115,8 @@ Evidence `contributing_constraints`:
         "evaluation_id": "dec_2FpQ8kV5nR1tX7mB4sJ9eL6wYc",
         "parameter_digest":
           "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-        "critical": ["permit"],
-        "permit": {
+        "critical": ["conditions"],
+        "conditions": {
           "request_digest":
             "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
           "valid_until": "2026-11-02T08:15:00Z",
@@ -1222,7 +1222,7 @@ This profile defines the following AuthZEN response `context` members:
   confers nothing and does not make the denial a permit
   ({{obligations}}).
 
-`permit`:
+`conditions`:
 : REQUIRED when `decision` is `true` for a consequential action; an
   object carrying the permit's decision conditions
   ({{I-D.draft-mcguinness-mission-runtime}}): declarative constraints
@@ -1281,7 +1281,7 @@ This profile defines the following AuthZEN response `context` members:
   PEP MUST recognize and process in order to rely on this decision;
   a PEP that does not recognize a named member MUST treat the
   decision as an effective deny. A PDP conforming to this profile
-  MUST list `permit` in `critical` on every response that carries
+  MUST list `conditions` in `critical` on every response that carries
   it. This member is profiled here in the shape proposed for AuthZEN
   standardization; a standardized must-understand mechanism, once
   defined, governs.
@@ -1398,8 +1398,8 @@ genuine obligation applies.
     "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
     "parameter_digest":
       "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-    "critical": ["permit"],
-    "permit": {
+    "critical": ["conditions"],
+    "conditions": {
       "request_digest":
         "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
       "valid_until": "2026-11-02T08:15:00Z",
@@ -1671,7 +1671,7 @@ Not a lane, transient denial:
   the condition is expected to clear with time.
 
 Not a lane, decision conditions:
-: CONSTRAINTS of the decision itself (`permit`,
+: CONSTRAINTS of the decision itself (`conditions`,
   {{response-context}}): declarative bounds on relying on it,
   evaluated at every use. They are not work the PEP performs; a
   condition the PEP does not recognize makes the permit invalid,
@@ -1841,7 +1841,7 @@ Decision Evidence `mission`, `subject`, `resource`, `action`,
 `audience`, `credential`, `parameter_digest`, `obligations`, `taint`,
 and `mission_history` members are populated from the correspondingly
 named members of this binding's PDP request and response
-({{pdp-request}}, {{pdp-response}}); the `permit` member is
+({{pdp-request}}, {{pdp-response}}); the `conditions` member is
 populated from the response `context.permit`
 ({{response-context}}); the `denial_reason` member carries the value
 returned in `context.reason` ({{runtime-denial-classification}}).
@@ -1957,7 +1957,7 @@ A PDP conforming to this binding MUST:
   declared support for ({{obligations}});
 - classify every denial per {{runtime-denial-classification}};
 - return the decision context of {{response-context}}, including a
-  `permit` object on every consequential permit and an obligations
+  `conditions` object on every consequential permit and an obligations
   array only when a genuine obligation applies ({{obligations}}); and
 - emit the records of {{I-D.draft-mcguinness-mission-runtime-evidence}}
   for every decision.
@@ -2067,7 +2067,7 @@ This document registers no obligation type in the AuthZEN Obligation
 Types registry established by {{AUTHZEN-OBL}}. A prior revision of
 this document requested registration of a composite obligation type
 carrying permit-lifecycle enforcement controls; that registration
-request is withdrawn, since those controls are now the `permit`
+request is withdrawn, since those controls are now the `conditions`
 response member ({{response-context}}) and execution evidence is a
 profile-level PEP requirement ({{execution-evidence-requirement}}),
 neither of which is an obligation. This profile's sole obligation
