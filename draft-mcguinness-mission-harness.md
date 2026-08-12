@@ -1029,6 +1029,83 @@ and the cost of its default-taint polarity, are discussed in
 source class, the provenance where established, and the resulting
 downgrade or approval in Harness Evidence ({{harness-evidence}}).
 
+## Decision-API Composition {#decision-api-composition}
+
+Where a deployment routes taint enforcement through the PDP
+({{I-D.draft-mcguinness-mission-authzen}}) instead of, or in addition
+to, enforcing the rule above at the harness itself, this section
+defines the composition: the member shapes the decision-API binding
+carries, and the PDP-side behavior those members drive. The harness
+remains the layer that establishes taint and the external-
+communication predicate; the decision-API binding is one wire carrier
+of that determination, never a second source of truth for it.
+
+The external-communication predicate is parameter-dependent: whether
+an action carries data outside the deployment's trust boundary
+depends on the concrete request parameters, not on the action class
+alone ({{I-D.draft-mcguinness-mission-runtime}}), so the PDP has no
+class-only way to recognize one. It is therefore an action-scoped
+member, carried at `action.properties.external_communication`
+alongside the other action parameter members. The PEP, at the last
+controllable boundary, computes the predicate from the request
+parameters and marks the action:
+
+`external_communication`:
+: CONDITIONAL. A boolean. `true` when the PEP determines, from the
+  request parameters at the last controllable boundary, that the
+  action carries data to a recipient outside the deployment's trust
+  boundary. REQUIRED for every action in a class for which the
+  deployment declares PDP-enforced taint, so the taint requirement
+  has a deterministic PDP-side trigger; OPTIONAL otherwise.
+
+The OPTIONAL `taint` member carries the harness's untrusted-content
+determination for the requested action, when the deployment routes
+taint enforcement through the PDP, as the value of `context.taint`:
+
+~~~ json
+{
+  "tainted": true,
+  "granularity": "parameter",
+  "source_class": "web_fetch"
+}
+~~~
+
+`tainted`:
+: REQUIRED when `taint` is present. A boolean. Whether a bound
+  parameter of the action derives from tainted content (under
+  `granularity` `parameter`) or tainted content has entered the
+  governed session (under `granularity` `session`).
+
+`granularity`:
+: REQUIRED when `taint` is present. A string, `parameter` or
+  `session`: the trigger granularity the harness established.
+
+`source_class`:
+: OPTIONAL. A string. The deployment-defined class of the tainting
+  source (for example, `web_fetch`, `inbound_message`,
+  `third_party_document`), for policy and evidence.
+
+Absence of `taint` means the harness did not route the determination
+through the decision request, not that the action is untainted; the
+harness's own egress rule above then applies. That reading is
+confined to harness-enforced deployments. When the deployment's
+Enforcement Scope Statement declares PDP-enforced taint for an action
+class ({{I-D.draft-mcguinness-mission-runtime}}):
+
+- The PDP MUST require `context.taint` on every decision in that
+  class whose `action.properties.external_communication` is `true`
+  or whose `action_class` is `external_commitment`, and MUST deny
+  with the decision-API binding's `taint_context_missing`
+  classification ({{I-D.draft-mcguinness-mission-authzen}}) when it
+  is absent.
+- When `taint` is present with `tainted` true on such an action, the
+  PDP MUST deny or return `approval_required`
+  ({{I-D.draft-mcguinness-mission-authzen}}) unless a fresh
+  action-bound approval bound to the action's parameters is present
+  in the decision context.
+- The PDP MUST record the presented taint context in Decision
+  Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+
 # Harness Evidence {#harness-evidence}
 
 A Mission-aware harness MUST emit a Harness Evidence record when it

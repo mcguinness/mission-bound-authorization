@@ -560,16 +560,25 @@ following action-scoped members:
   `parameter_digest`. The idempotency key the Operation Profile requires
   for a non-idempotent action in the high-consequence classes
   ({{I-D.draft-mcguinness-mission-runtime}}); it identifies one intended
-  execution of the normalized action, so a legitimate re-execution mints
-  a new key. REQUIRED where the Operation Profile defines one for the
-  action. When the key and the normalized parameters match a prior
-  decision whose execution outcome is unresolved or completed within the
-  reconciliation window, the PDP MUST deny with `duplicate_suppressed`
+  execution of one normalized request, so a legitimate re-execution
+  mints a new key. REQUIRED where the Operation Profile defines one for
+  the action. The PDP atomically claims the pair (idempotency scope,
+  `idempotency_key`) together with the request's authorization-relevant
+  fingerprint ({{request-fingerprint}}) before issuing a permit
+  ({{I-D.draft-mcguinness-mission-runtime}}). When the key and
+  fingerprint match a prior decision whose execution outcome is
+  unresolved or completed within the reconciliation window, the PDP
+  MUST deny with `duplicate_suppressed`
   ({{runtime-denial-classification}}); reuse of an `idempotency_key`
   never executes again within the deployment's declared idempotency
   horizon, which for the high-consequence classes is backed by a
   durable consumed-key tombstone
-  ({{I-D.draft-mcguinness-mission-runtime}}).
+  ({{I-D.draft-mcguinness-mission-runtime}}). When the same key instead
+  matches a prior decision under a different fingerprint, the reuse is
+  a conflict, never a new execution: the PDP MUST deny with
+  `idempotency_conflict` ({{runtime-denial-classification}}), a
+  terminal condition distinct from the transient
+  `duplicate_suppressed` above.
 
 `parameter_attributes`:
 : OPTIONAL. An object. Privacy-preserving attributes derived from the
@@ -652,74 +661,28 @@ profile ({{I-D.draft-mcguinness-mission-runtime}});
 
 ## External-Communication Context {#context-external-communication}
 
-The external-communication predicate is parameter-dependent: whether an
-action carries data outside the deployment's trust boundary depends on
-the concrete request parameters, not on the action class alone
-({{I-D.draft-mcguinness-mission-runtime}}), so the PDP has no class-only
-way to recognize one. It is therefore an action-scoped member, carried
-at `action.properties.external_communication` alongside the other
-action parameter members ({{parameter-digest}}). The PEP, at the last
-controllable boundary, computes the predicate from the request
-parameters and marks the action:
-
 `external_communication`:
-: CONDITIONAL. A boolean. `true` when the PEP determines, from the
-  request parameters at the last controllable boundary, that the action
-  carries data to a recipient outside the deployment's trust boundary
-  ({{I-D.draft-mcguinness-mission-runtime}}). REQUIRED for every action
-  in a class for which the deployment declares PDP-enforced taint, so
-  the taint requirement has a deterministic PDP-side trigger; OPTIONAL
-  otherwise.
+: CONDITIONAL. A boolean, carried at
+  `action.properties.external_communication` alongside the other
+  action parameter members ({{parameter-digest}}). A registered
+  extension point owned by the harness profile
+  ({{I-D.draft-mcguinness-mission-harness}}), which defines the
+  predicate and how the PEP computes it. REQUIRED for every action in
+  a class for which the deployment declares PDP-enforced taint;
+  OPTIONAL otherwise.
 
 ## Taint Context {#context-taint}
 
-The OPTIONAL `taint` member carries the harness's untrusted-content
-determination ({{I-D.draft-mcguinness-mission-harness}}) for the
-requested action, when the deployment routes taint enforcement
-through the PDP, as the value of `context.taint`:
-
-~~~ json
-{
-  "tainted": true,
-  "granularity": "parameter",
-  "source_class": "web_fetch"
-}
-~~~
-
-`tainted`:
-: REQUIRED when `taint` is present. A boolean. Whether a bound
-  parameter of the action derives from tainted content (under
-  `granularity` `parameter`) or tainted content has entered the
-  governed session (under `granularity` `session`).
-
-`granularity`:
-: REQUIRED when `taint` is present. A string, `parameter` or
-  `session`: the trigger granularity the harness established.
-
-`source_class`:
-: OPTIONAL. A string. The deployment-defined class of the tainting
-  source (for example, `web_fetch`, `inbound_message`,
-  `third_party_document`), for policy and evidence.
-
-Absence of `taint` means the harness did not route the determination
-through the decision request, not that the action is untainted; the
-harness's own egress rule then applies. That reading is confined to
-harness-enforced deployments. When the deployment's Enforcement Scope
-Statement declares PDP-enforced taint for an action class
-({{I-D.draft-mcguinness-mission-runtime}}):
-
-- The PDP MUST require `context.taint` on every decision in that class
-  whose `action.properties.external_communication` is `true`
-  ({{context-external-communication}}) or whose `action_class` is
-  `external_commitment`, and MUST deny with `taint_context_missing`
-  when it is absent.
-- When `taint` is present with `tainted` true on such an action, the
-  PDP MUST deny or return `approval_required`
-  ({{runtime-denial-classification}}) unless a fresh action-bound
-  approval bound to the action's parameters is present in the decision
-  context.
-- The PDP MUST record the presented taint context in Decision
-  Evidence.
+`taint`:
+: OPTIONAL, carried at `context.taint`. A registered extension point
+  owned by the harness profile
+  ({{I-D.draft-mcguinness-mission-harness}}), which defines the
+  member shape (`tainted`, `granularity`, `source_class`) and the
+  taint-state trust rules. Where the deployment's Enforcement Scope
+  Statement declares PDP-enforced taint for the action's class, the
+  fail-closed default applies: the PDP MUST deny with
+  `taint_context_missing` ({{runtime-denial-classification}}) when
+  `context.taint` is absent from an in-scope decision.
 
 ## Approval Context {#context-approval}
 
@@ -813,6 +776,23 @@ store's freshness discipline
 ({{I-D.draft-mcguinness-mission-runtime}}). The PDP MUST record the
 evaluated predicates and their outcomes in Decision Evidence
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+
+## Authorization-Relevant Fingerprint {#request-fingerprint}
+
+The idempotency claim ({{I-D.draft-mcguinness-mission-runtime}}) and
+permit reuse both turn on one normalized value instead of an
+enumerated field list: the **authorization-relevant fingerprint**,
+`sha-256:` followed by the base64url, no padding, SHA-256
+{{RFC6234}} of the JCS {{RFC8785}} serialization of the normalized
+evaluation request. The digested object carries `subject`, `action`
+with its properties, `resource` with its properties, and every
+authorization-relevant `context` member, including `approval`,
+`taint`, the Mission history reference, the capability source, and
+any extension member a companion profile adds. It excludes only the
+request's volatile machinery: the `supported_obligations` declaration
+and transport metadata. A new companion context member is
+authorization-relevant, and so included, by default; a companion
+narrows the fingerprint only by amending this enumeration.
 
 ## Worked PDP request
 
@@ -1231,19 +1211,23 @@ This profile defines the following AuthZEN response `context` members:
 
     `valid_until`:
     : REQUIRED. An RFC 3339 {{RFC3339}} timestamp. The permit's
-      validity bound,
-      past which the permit MUST NOT be used. No mode leaves this
-      window unbounded on the wire: `valid_until` MUST NOT be later
-      than the freshness time or lease of the Mission state view the
-      decision relied on
-      ({{I-D.draft-mcguinness-mission-runtime}}); in particular, it
-      MUST NOT be later than a supplied
-      `context.mission_state_observation.mission_status_expires_at`.
-      In `fresh` mode with no supplied `mission_status_expires_at`,
-      the PDP derives the bound from its own state view: the view's
-      freshness time or lease where the source reports one,
-      otherwise the deployment's published staleness bound for the
-      action's class.
+      validity bound, past which the permit MUST NOT be used.
+      `valid_until` MUST NOT exceed the minimum of: the freshness time
+      or lease of the Mission state view the decision relied on
+      ({{I-D.draft-mcguinness-mission-runtime}}), in particular a
+      supplied
+      `context.mission_state_observation.mission_status_expires_at`;
+      the presented credential's expiry
+      (`context.credential.expires_at`, {{context-credential}}), when
+      present; where the permit satisfies `approval_required`, the
+      satisfying approval's `approved_until` ({{context-approval}});
+      and any policy-defined maximum permit lifetime for the action's
+      class. No mode leaves this window unbounded on the wire. In
+      `fresh` mode with no supplied `mission_status_expires_at`, the
+      PDP derives the state-freshness component of the bound from its
+      own state view: the view's freshness time or lease where the
+      source reports one, otherwise the deployment's published
+      staleness bound for the action's class.
 
     `use_limit`:
     : OPTIONAL. An integer. A consumption bound on `evaluation_id`.
@@ -1321,9 +1305,17 @@ denial ({{response-context}}): on a permit the PEP MUST fulfill each
 obligation before releasing the action's effect; on a denial the PEP
 MUST still deny the action and MUST additionally execute every
 returned obligation. Failure to fulfill an obligation, or an
-unrecognized obligation type, makes the effective result deny, and
-for an already-released action the failure MUST be recorded in
-Execution Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+unrecognized obligation type, makes the effective result deny. On a
+permit, obligation processing is recorded in Execution Evidence's
+`obligation_outcomes`
+({{I-D.draft-mcguinness-mission-runtime-evidence}}), one entry per
+attached obligation, including a failure that suppresses an
+already-permitted action before release. On a denial, the PEP still
+executes every returned obligation, but this profile does not
+separately evidence it: a denial-side obligation inherits the
+obligations profile's no-proof-of-execution posture {{AUTHZEN-OBL}},
+and a deployment that needs proof of a denial-side obligation's
+execution composes its own audit mechanism.
 
 The `supported_obligations` declaration below is a usability
 optimization on that fail-closed baseline, not a precondition for it:
@@ -1454,8 +1446,9 @@ carried in Decision Evidence:
   `context.approval` ({{context-approval}}); this profile does
   not define the approval artifact, which the runtime profile owns.
 - `taint_context_missing`: the deployment declares PDP-enforced taint
-  for the action's class and the decision request carries no
-  `context.taint` ({{context-taint}}).
+  for the action's class, as the harness profile defines
+  ({{I-D.draft-mcguinness-mission-harness}}), and the decision request
+  carries no `context.taint` ({{context-taint}}).
 - `stale_state`: the PEP-supplied freshness is outside the deployment's
   staleness bound (a freshness-window violation). While the condition
   is expected to clear on a fresh read, the PDP SHOULD mark the denial
@@ -1479,10 +1472,11 @@ carried in Decision Evidence:
 - `parameter_violation`: parameters violate a constraint the PDP
   evaluated, the recomputed digest does not match, or a required
   `parameter_digest` is absent for a parameter-bound action.
-- `duplicate_suppressed`: the request's `idempotency_key` and normalized
-  parameters match a prior decision whose execution outcome is
-  unresolved or completed within the reconciliation window, so the PDP
-  suppresses a duplicate execution of the same normalized action
+- `duplicate_suppressed`: the request's `idempotency_key` and
+  authorization-relevant fingerprint ({{request-fingerprint}}) match a
+  prior decision whose execution outcome is unresolved or completed
+  within the reconciliation window, so the PDP suppresses a duplicate
+  execution of the same normalized action
   ({{I-D.draft-mcguinness-mission-runtime}}). An unresolved duplicate
   carries `next_action: retry` ({{response-context}}) with the
   reconciliation window as its `retry_after` guidance: the condition
@@ -1490,6 +1484,19 @@ carried in Decision Evidence:
   never executes again; an intentional re-execution is a new
   operation under a new key, which an action-bound approval MAY
   authorize as such, never as re-execution under the consumed key.
+  This is distinct from `idempotency_conflict` below: here the
+  fingerprint matches the prior decision's; a mismatched fingerprint
+  under the same key is a conflict, never a duplicate, and never
+  transient.
+- `idempotency_conflict`: the request reused an `idempotency_key` with
+  a different authorization-relevant fingerprint ({{request-fingerprint}})
+  than the prior decision it was claimed under
+  ({{I-D.draft-mcguinness-mission-runtime}}). An idempotency key
+  identifies one intended execution of one normalized request, so
+  reuse with different content is a conflict, never a new execution.
+  This condition is terminal, carries `next_action: none`
+  ({{response-context}}), and is never marked requestable
+  ({{requestable-denials}}).
 - `resource_policy`: Resource policy refuses the action independently
   of Mission authority.
 - `quota_exceeded`: a metered runtime bound is exhausted. The runtime
@@ -1714,7 +1721,8 @@ governed by each carrier's extensibility rule.
 | Required `act` chain missing or malformed | PDP denial | `actor_invalid` |
 | Credential facts expired or inconsistent | PDP denial | `credential_invalid` |
 | Parameter constraint violated, PDP digest mismatch, or required digest absent | PDP denial | `parameter_violation` |
-| Idempotency key and parameters match a prior unresolved or completed decision | PDP denial | `duplicate_suppressed` |
+| Idempotency key and authorization-relevant fingerprint match a prior unresolved or completed decision | PDP denial | `duplicate_suppressed` |
+| Idempotency key reused with a different authorization-relevant fingerprint | PDP denial | `idempotency_conflict` |
 | Resource policy refuses the action | PDP denial | `resource_policy` |
 | Consumption bound exhausted | PDP denial | `quota_exceeded` |
 | Unsupported `authorization_details` type | PDP denial | `unsupported_authorization_type` |
@@ -1723,7 +1731,14 @@ governed by each carrier's extensibility rule.
 | Effective parameters differ at the executing PEP | Execution Evidence | `parameter_mismatch` |
 | Permit validity window passed at execution | Execution Evidence | `permit_expired` |
 | Consumed single-use identifier presented again | Execution Evidence | `permit_consumed` |
+| Obligation attached to a permit could not be fulfilled | Execution Evidence | `obligation_unfulfilled` |
 | Operator or safety control suppressed execution | Execution Evidence | `kill_switch` |
+
+The `duplicate_suppressed` and `idempotency_conflict` rows key on the
+same (idempotency scope, `idempotency_key`) claim
+({{I-D.draft-mcguinness-mission-runtime}}); which one applies turns on
+whether the new request's authorization-relevant fingerprint
+({{request-fingerprint}}) equals the one the claim was made under.
 
 ## Permit binding in split topologies {#permit-binding-split}
 
@@ -1749,11 +1764,9 @@ honors the permit's conditions (the permit's `valid_until` and `use_limit`,
 rules ({{I-D.draft-mcguinness-mission-runtime}}), so a permit cannot
 be executed twice or after its lease.
 
-A PEP permit cache MUST key on the permit's bound fields (the Mission
-reference, `audience`, `subject`, `client_id`, actor context, action,
-resource, the authorizing entry or `entry_digest`, and
-`parameter_digest`) and MUST NOT key on freshness telemetry
-(`freshness_at`, `mission_status_issued_at`,
+A PEP permit cache MUST key on the request's authorization-relevant
+fingerprint ({{request-fingerprint}}) and MUST NOT key on freshness
+telemetry (`freshness_at`, `mission_status_issued_at`,
 `mission_status_expires_at`), whose per-request variation would
 otherwise make the cache never hit. This binding does not echo the
 materialized view identifier on the response
@@ -1762,8 +1775,8 @@ reuse is instead bounded by the permit's own `valid_until` and
 `use_limit`, the same lifetime-bounded controls that already gate
 execution, so a permit issued against a view the PDP has since
 retired cannot outlive its own lease regardless of cache key. A
-cached permit cannot be reused for a request that differs in any
-bound field.
+cached permit cannot be reused for a request whose fingerprint
+differs.
 
 The envelope rule fixes what a permit cache is for. A parameter-bound
 class keys on `parameter_digest`, and a high-consequence permit is
@@ -1845,15 +1858,17 @@ own registered media type
 
 ## Execution Evidence Requirement {#execution-evidence-requirement}
 
-Independent of anything the PDP returns, the PEP MUST emit the
+Independent of anything the PDP returns, the PEP MUST emit one
 Execution Evidence Object
-({{I-D.draft-mcguinness-mission-runtime-evidence}}) once, and only
-once, for the final disposition of every consequential permit:
-`completed`, `failed`, or `suppressed` before release. A permit
-whose action is never released still ends in Execution Evidence with
-`outcome` `suppressed`; only a refusal before any PDP decision is a
-Refusal Record. This is a profile-level PEP requirement, not an
-obligation.
+({{I-D.draft-mcguinness-mission-runtime-evidence}}) for the final
+disposition of every consequential permit: `completed`, `failed`, or
+`suppressed` before release. The record is identified by its stable
+`execution_id`; delivery of that record MAY be retried (at-least-once
+delivery), and a consumer MUST deduplicate on `execution_id` rather
+than assume single delivery. A permit whose action is never released
+still ends in Execution Evidence with `outcome` `suppressed`; only a
+refusal before any PDP decision is a Refusal Record. This is a
+profile-level PEP requirement, not an obligation.
 
 If evidence emission fails after an irreversible effect, the effect
 stands: nothing retroactively permits or denies it. The PEP MUST
@@ -1923,17 +1938,19 @@ A PEP conforming to this binding MUST:
   ({{response-context}}), fulfill every obligation attached to a
   permit, and execute every obligation attached to a denial while
   still denying the action ({{obligations}});
-- emit the Execution Evidence Object for every released consequential
-  action ({{execution-evidence-requirement}});
+- emit Execution Evidence for the final disposition of every
+  consequential permit (`completed`, `failed`, or `suppressed` before
+  release), for the classes the runtime profile's transaction-assurance
+  tier covers ({{I-D.draft-mcguinness-mission-runtime}})
+  ({{execution-evidence-requirement}});
 - be the same enforcement identity as the requesting component, on the
   same mutually authenticated channel, and never relay a permit or
   treat signed Decision Evidence as authorization to act
   ({{permit-binding-split}});
-- key permit caches on the permit's bound fields
-  ({{permit-binding-split}}); and
-- emit the records of {{I-D.draft-mcguinness-mission-runtime-evidence}}
-  for a pre-decision refusal and, for the classes its emission rule
-  covers, an execution outcome.
+- key permit caches on the request's authorization-relevant
+  fingerprint ({{permit-binding-split}}); and
+- emit a Refusal Record ({{I-D.draft-mcguinness-mission-runtime-evidence}})
+  for a pre-decision refusal.
 
 Of these, permit-control enforcement and execution-outcome evidence
 are the machinery of the runtime profile's transaction-assurance
@@ -1945,13 +1962,15 @@ A PDP conforming to this binding MUST:
 - refuse an in-scope consequential request that lacks the Mission
   decision context, and perform the PDP-side consistency checks
   ({{pdp-request}});
-- advertise `step-up` in its metadata `supported_obligations` array,
-  and MUST NOT rely on any other obligation type the PEP has not
-  declared support for ({{obligations}});
+- advertise in its metadata `supported_obligations` array each
+  obligation type it supports, and MUST NOT rely on an obligation
+  type the PEP has not declared support for ({{obligations}});
 - classify every denial per {{runtime-denial-classification}};
 - return the decision context of {{response-context}}, including a
   `conditions` object on every consequential permit and an obligations
-  array only when a genuine obligation applies ({{obligations}}); and
+  array only when a genuine obligation applies ({{obligations}});
+- advertise the `mission-runtime` capability in its metadata
+  `capabilities` array ({{iana}}); and
 - emit the records of {{I-D.draft-mcguinness-mission-runtime-evidence}}
   for every decision.
 
@@ -2067,6 +2086,24 @@ neither of which is an obligation. This profile's sole obligation
 type, `step-up` ({{obligations}}), is registered by {{AUTHZEN-OBL}}
 itself and is not re-registered here.
 
+## AuthZEN Policy Decision Point Capability Registration
+
+This document requests registration of one capability identifier,
+`mission-runtime`, in the AuthZEN Policy Decision Point Capabilities
+registry {{AUTHZEN}} establishes, naming this profile's support in a
+PDP's metadata `capabilities` array. A PDP conforming to this binding
+MUST advertise the `mission-runtime` capability, so a PEP can
+discover profile support in-band before it evaluates a Mission-bound
+request ({{conformance}}). This in-band discovery complements, and
+does not replace, the deployment-established conformance gating this
+profile otherwise requires.
+
+- Capability Name: mission-runtime
+- Description: support for the Mission-Bound Runtime Enforcement
+  AuthZEN binding of this document.
+- Change Controller: the author of this document
+- Reference: this document
+
 ## HTTP Field Name Registration
 
 This document registers the following in the "Hypertext Transfer
@@ -2078,23 +2115,28 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 - Comments: none
 
 The `context.mission`, `context.mission_state_observation`,
-`context.actor`, `context.credential`, `context.taint`, and
-`context.approval` members carried inside the AuthZEN request
-`context` object ({{pdp-request}}) are AuthZEN extension data and are
-not registered in an IETF registry. The `context.capability_source`
-member a deployment adopting Mission Capability Binding adds to that
-object is likewise AuthZEN extension data, registered by that
-companion, not by this document
-({{I-D.draft-mcguinness-mission-capability-binding}}).
+`context.actor`, `context.credential`, and `context.approval` members
+carried inside the AuthZEN request `context` object
+({{pdp-request}}) are AuthZEN extension data and are not registered
+in an IETF registry. The `context.capability_source` member a
+deployment adopting Mission Capability Binding adds to that object is
+likewise AuthZEN extension data, registered by that companion, not by
+this document ({{I-D.draft-mcguinness-mission-capability-binding}}).
+The `context.taint` member is likewise AuthZEN extension data,
+registered by the harness profile, not by this document
+({{I-D.draft-mcguinness-mission-harness}}).
 The `action.properties.parameters`,
 `action.properties.parameter_digest`,
-`action.properties.idempotency_key`,
-`action.properties.parameter_attributes`, and
-`action.properties.external_communication` members carried inside the
+`action.properties.idempotency_key`, and
+`action.properties.parameter_attributes` members carried inside the
 AuthZEN `action` object, and the `resource.properties.audience` member
 carried inside the AuthZEN `resource` object ({{pdp-request}}), are
-likewise AuthZEN extension data. The response `context.evaluation_id`,
-`context.evaluated_at`, `context.reason`,
+likewise AuthZEN extension data. The
+`action.properties.external_communication` member carried inside that
+same `action` object is likewise AuthZEN extension data, registered
+by the harness profile, not by this document
+({{I-D.draft-mcguinness-mission-harness}}). The response
+`context.evaluation_id`, `context.evaluated_at`, `context.reason`,
 `context.obligations`, `context.conditions`, `context.access_request`,
 `context.next_action`, and `context.retry_after` members
 ({{response-context}}) are likewise AuthZEN extension

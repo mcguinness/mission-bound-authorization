@@ -1742,6 +1742,11 @@ Beyond the `parameter_digest`, the permit MUST also bind:
 - a permit lifetime control bounded by the Mission state freshness
   requirement ({{state-freshness}}).
 
+A permit is bound to the full set of authorization-relevant inputs it
+was issued for, and a decision-API binding realizes this as one
+normalized fingerprint over those inputs, never as an enumerated
+subset of fields ({{I-D.draft-mcguinness-mission-authzen}}).
+
 The permit lifetime control is set by action class:
 
 | Action class | Required permit-lifetime control |
@@ -1768,35 +1773,67 @@ Where a single-use decision identifier is used:
 ## Idempotency {#idempotency}
 
 A single-use identifier bounds executions of one permit, not permits
-for one action.
+for one action. Enforcement is an atomic state machine over the
+(idempotency scope, `idempotency_key`) pair, not a comparison against
+retained parameters.
 
 - For every non-idempotent operation in the irreversible-action,
   external-commitment, and privileged-administration classes, the
   Operation Profile MUST therefore also define an idempotency key.
-- The PDP MUST refuse a permit request whose normalized parameters
-  and idempotency key match a prior decision whose execution outcome
-  is unresolved or completed within the reconciliation window
-  ({{evidence}}). An unresolved duplicate is a transient condition:
-  the requester retries, or the outcome reconciles, within that
-  window. An intentional re-execution of the same normalized action
-  is a new operation under a new idempotency key, never a retry under
-  the consumed one, and an action-bound approval
+- Before issuing a permit for a keyed action, the PDP MUST atomically
+  claim the pair (idempotency scope, `idempotency_key`) together with
+  the request's authorization-relevant fingerprint
+  ({{I-D.draft-mcguinness-mission-authzen}}). The claim is a single
+  linearizable operation: of two concurrent requests presenting the
+  same scope and key, exactly one obtains the claim, and the other
+  observes it.
+- Same key, same fingerprint: the PDP returns the prior evaluation or
+  its status, the retransmission-versus-repeat rule below, now
+  anchored on the claim rather than on comparing retained request
+  fields.
+- Same key, a different fingerprint: the PDP MUST refuse with a new,
+  terminal failure condition distinct from the transient duplicate
+  case above, a decision-API binding's `idempotency_conflict`
+  classification ({{I-D.draft-mcguinness-mission-authzen}}). An
+  idempotency key identifies one intended execution of one normalized
+  request; reuse of the key with different content is a conflict,
+  never a new execution, the same discipline HTTP's own
+  Idempotency-Key handling applies, restated here in the family's own
+  terms. An intentional re-execution of the same normalized action is
+  instead a new operation under a new idempotency key, never a retry
+  under the consumed one, and an action-bound approval
   ({{action-approval}}) authorizes that new operation as such, never
-  re-execution under the consumed key. For the high-consequence
-  classes the deployment MUST retain a durable consumed-key record (a
-  tombstone) for at least its declared idempotency horizon, published
-  in the Enforcement Scope Statement; within that horizon a consumed
-  key never executes again. Outside those classes a deployment MAY
-  scope the guarantee to the reconciliation window, and it MUST
+  re-execution under the consumed key.
+- The idempotency scope is, at minimum, the Mission, the subject or
+  actor, the audience, the action, and the resource; a deployment MAY
+  narrow it further and MUST publish the scope in its Enforcement
+  Scope Statement.
+- For the high-consequence classes the deployment MUST retain a
+  durable consumed-key record (a tombstone) for at least its declared
+  idempotency horizon, published in the Enforcement Scope Statement.
+  Tombstones are enforced, not merely retained: within that horizon a
+  claim against a tombstoned key MUST be refused, never treated as a
+  fresh claim. Outside those classes a deployment MAY scope the
+  guarantee to the reconciliation window ({{evidence}}), and it MUST
   publish which posture applies.
-- A retransmission is distinguishable from a repeat: when the
-  matching prior decision's permit is unexpired and its single-use
-  identifier unconsumed, the PDP SHOULD return that prior decision
-  (same decision identifier, same permit) rather than refuse, so a
-  permit response lost in transit does not lock the action out for
-  the reconciliation window. Once the identifier is consumed or the
-  permit expired, the refusal above stands until the outcome is
-  reconciled.
+- The single-use rule of {{single-use-identifiers}} is itself atomic:
+  before releasing the effect of a `use_limit`-bearing permit, the
+  enforcement scope MUST atomically consume, or atomically reserve
+  and then confirm, the `evaluation_id` in a store that is
+  linearizable across every PEP replica of the scope. Two replicas
+  MUST NOT both succeed in consuming the same identifier; a replica
+  that instead observes an already-consumed identifier treats the
+  presentation as consumed, not as a fresh single use, a
+  decision-API binding's `permit_consumed` classification
+  ({{I-D.draft-mcguinness-mission-authzen}}).
+- A retransmission is distinguishable from a repeat: when the claim
+  matches a prior decision whose permit is unexpired and whose
+  single-use identifier is unconsumed, the PDP SHOULD return that
+  prior decision (same decision identifier, same permit) rather than
+  refuse, so a permit response lost in transit does not lock the
+  action out for the reconciliation window. Once the identifier is
+  consumed or the permit expired, the refusal above stands until the
+  outcome is reconciled.
 
 ## Execution Reverification {#execution-reverification}
 
@@ -1958,10 +1995,13 @@ record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
 For an action in the high-consequence classes, the executing PEP MUST
 also produce, after it acts, an
 execution-outcome record keyed to the permit's evaluation identifier,
-recording at least success or failure and the `parameter_digest`
-actually executed. This lets a decision and its execution be reconciled
-one to one, so a permit that was obtained but executed more than once,
-or executed for different parameters, is detectable after the fact.
+recording at least success or failure and the effective parameter
+digest actually executed, alongside the authorized parameter digest
+the permit bound
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). This lets a
+decision and its execution be reconciled one to one, so a permit that
+was obtained but executed more than once, or executed for different
+parameters, is detectable after the fact.
 The detailed object schema is the Execution Evidence Object, defined
 by the runtime evidence companion
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
@@ -2673,9 +2713,11 @@ This non-normative example shows the `policy_view_id` computation of
 {{policy-view}} over a minimal materialized-view envelope for the same
 Mission. The payload here is reduced to the two members every
 committed view binds, `mission_id` and `authority_hash`; a deployment
-that serves a state version also binds it ({{policy-view}}), and a
-deployment's payload also carries its evaluable materialized form,
-which this document does not standardize.
+that serves a state version records it in Decision Evidence and
+consumes it through freshness processing instead, never embedding it
+in this payload ({{policy-view}}), and a deployment's payload also
+carries its evaluable materialized form, which this document does not
+standardize.
 
 ~~~ json
 {
@@ -2708,104 +2750,50 @@ yields a different `policy_view_id` ({{policy-view}}).
 
 # Runtime Evidence Worked Examples {#evidence-examples}
 
-These non-normative records illustrate the minimum record content of
-{{evidence}} for the operation of {{parameter-digest-example}}. They
-show substrate-level record content only: the concrete schema,
-serialization, and integrity mechanism are the deployment's
-({{record-integrity}}), and the runtime evidence companion defines
-concrete evidence objects
-({{I-D.draft-mcguinness-mission-runtime-evidence}}). In this
-deployment, the Resource Server runtime profile classifies
-`journal-entries.write` as an irreversible action (a posted entry is
-corrected only by a compensating entry), so the permit is single-use
-and execution-outcome evidence is required. The policy-view version
-cites the view of {{policy-view-example}}.
+These non-normative scenarios illustrate the minimum record content of
+{{evidence}} for the operation of {{parameter-digest-example}}, in the
+concrete record schemas and worked examples the runtime evidence
+companion defines
+({{I-D.draft-mcguinness-mission-runtime-evidence}}); this document
+carries no evidence JSON of its own. In this deployment, the Resource
+Server runtime profile classifies `journal-entries.write` as an
+irreversible action (a posted entry is corrected only by a
+compensating entry), so the permit is single-use and
+execution-outcome evidence is required. The policy-view version cites
+the view of {{policy-view-example}}.
 
-A permit decision record:
+A permit decision on the 423.50 USD journal entry of
+{{parameter-digest-example}}, within the ceiling, for subject
+`user_3p2q8mN1a0kV7tR` and client `s6BhdRkqt3` against audience
+`https://erp.example.com`: the Decision Evidence record cites the
+Mission, the authorizing `mission_resource_access` entry and its
+`max_amount` constraint, and the `parameter_digest` of
+{{parameter-digest-example}}, correlated by `evaluation_id`
+`dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ`. The companion's own worked example
+shows the concrete record
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
-~~~ json
-{
-  "decision": "permit",
-  "request_time": "2026-11-02T09:03:12Z",
-  "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
-  },
-  "token_issuer": "https://as.example.com",
-  "audience": "https://erp.example.com",
-  "sub": "user_3p2q8mN1a0kV7tR",
-  "client_id": "s6BhdRkqt3",
-  "action": "journal-entries.write",
-  "resource": "je_2026Q3_inv_8421",
-  "authorizing_entry": {
-    "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["journal-entries.write"],
-    "constraints": { "max_amount":
-      { "amount": "500.00", "currency": "USD" } }
-  },
-  "parameter_digest":
-    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-  "evaluation_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
-  "policy_view_id":
-    "sha-256:fuMqn6Nb5LfyziflJuYj8VgHHH1bskZ0SrMDxdQ8CaA",
-  "sequence": 17
-}
-~~~
+The executing PEP then acts and produces the execution-outcome record
+keyed to that same `evaluation_id`: outcome `completed`, the
+authorized and effective parameter digests equal, the binding-held
+case, reconciling the decision and its execution one to one. The
+companion's own worked example shows the concrete record
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
-The execution-outcome record the executing PEP produces after it acts,
-keyed to the permit's evaluation identifier ({{evidence}}):
-
-~~~ json
-{
-  "outcome": "completed",
-  "evaluation_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
-  "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com"
-  },
-  "parameter_digest":
-    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-  "outcome_at": "2026-11-02T09:03:14Z",
-  "sequence": 18
-}
-~~~
-
-Execution Evidence for a later attempt on the same operation. A
-permit (`dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA`) bound the digest of a
+A later attempt on the same operation shows a parameter deviation
+instead. A distinct permit (`evaluation_id`
+`dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA`) bound the digest of the same
 423.50 entry; between check and use the parameters became 780.00
 (normalized object
 `{"amount_usd":"780.00","source_invoice_id":"inv_2026Q3_842"}`). The
 executing PEP recomputed the digest over the parameters it was about
-to use, found a mismatch, and suppressed the release
-({{parameter-binding}}); a post-decision suppression is a final
-disposition and is recorded as Execution Evidence, never as a
-Refusal Record. The record carries the recomputed digest:
-
-~~~ json
-{
-  "outcome": "suppressed",
-  "error": "parameter_mismatch",
-  "outcome_at": "2026-11-02T09:03:29Z",
-  "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
-  },
-  "audience": "https://erp.example.com",
-  "sub": "user_3p2q8mN1a0kV7tR",
-  "client_id": "s6BhdRkqt3",
-  "action": "journal-entries.write",
-  "resource": "je_2026Q3_inv_8421",
-  "evaluation_id": "dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA",
-  "parameter_digest":
-    "sha-256:UdG-TiebDHTiKRXUVURs1Jeq_vDJp_Ro8jWbBAD8hgM",
-  "sequence": 19
-}
-~~~
+to use, found it differed from the authorized digest, and suppressed
+the release ({{parameter-binding}}): a post-decision suppression is a
+final disposition and is recorded as Execution Evidence, never as a
+Refusal Record, carrying both the authorized digest and the differing
+effective digest it recomputed. The companion's parameter-deviation
+worked example shows the concrete record
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 # Acknowledgments
 {:numbered="false"}
