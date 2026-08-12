@@ -4207,7 +4207,9 @@ that identity; Stage 0 is otherwise unchanged from that specification.
 
 ## Stage 1: Mission Creation
 
-The agent submits this Mission Intent through PAR ({{mission-intent}}):
+The agent submits this Mission Intent through PAR
+({{mission-intent}}), proposing concrete authority alongside it on
+the `authorization_details` parameter ({{authority-proposal}}):
 
 ~~~ json
 {
@@ -4230,8 +4232,30 @@ The agent submits this Mission Intent through PAR ({{mission-intent}}):
 }
 ~~~
 
-The AS (`as.example.com`) validates it, derives this Authority Set,
-and renders it for `alice`'s consent:
+The submitted authority proposal, on `authorization_details` in the
+same push:
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.*"],
+    "delegation": {
+      "max_depth": 2,
+      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+    } },
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": {
+      "max_amount": { "amount": "1000.00", "currency": "USD" }
+    } }
+]
+~~~
+
+The AS (`as.example.com`) validates both, derives this Authority Set
+(each entry a same-type subset of a proposed entry,
+{{authority-proposal}}), and renders it for `alice`'s consent:
 
 ~~~ json
 [
@@ -4258,9 +4282,11 @@ and renders it for `alice`'s consent:
 After approval, the AS records Mission
 `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` in the `active` state with
 `authority_hash`
-`sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ` and
+`sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ`,
 `intent_hash`
-`sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY`.
+`sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY`, and
+`proposal_hash`
+`sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo`.
 
 ## Stage 2: Mission-Bound Token Issuance
 
@@ -4342,7 +4368,7 @@ through in the companion's end-to-end example
 
 These non-normative vectors let an implementation verify its anchor
 computation ({{integrity-anchors}}, {{canonicalization}}) byte for byte.
-Both use the issuer `https://as.example.com`. Each canonical-bytes block
+All use the issuer `https://as.example.com`. Each canonical-bytes block
 is the exact JCS {{RFC8785}} output: a single line, UTF-8, with no
 whitespace outside string values.
 It is shown here wrapped only for layout; remove the layout line breaks,
@@ -4471,6 +4497,40 @@ ess"}]}
 authority_hash = sha-256:notrA9wZaP3I5Gx8UzN0mfzUjHYPeX4Ri_B3ilh7BbA
 ~~~
 
+The last vector exercises the third anchor. `proposal_hash`, over
+this submitted `authorization_details` proposal as the envelope
+`value` with `typ` `mission-proposed-authority`
+({{authority-proposal}}):
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.*"] },
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": {
+      "max_amount": { "amount": "1000.00", "currency": "USD" }
+    } }
+]
+~~~
+
+Canonical bytes of the envelope:
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-proposed-authority"
+,"value":[{"actions":["invoices.*"],"resource":"https://erp.exampl
+e.com","type":"mission_resource_access"},{"actions":["journal-entr
+ies.write"],"constraints":{"max_amount":{"amount":"1000.00","curre
+ncy":"USD"}},"resource":"https://erp.example.com","type":"mission_
+resource_access"}]}
+~~~
+
+~~~ text
+proposal_hash = sha-256:udzftXYQy0pvYNxz4KgtmyL_EV8ry4DhIbBFfwILEBA
+~~~
+
 An implementation that canonicalizes the same `value` under the same
 `typ` and `iss`, computes SHA-256, and encodes as `sha-256:` followed by
 base64url with no padding ({{integrity-anchors}}) reproduces these
@@ -4483,6 +4543,19 @@ resolve before interoperating.
 
 -01
 
+- Breaking change to the authority-proposal carriage: the proposal
+  moves from the Intent's `proposed_authority` member, which is
+  removed, to the standard top-level `authorization_details`
+  parameter pushed alongside `mission_intent`
+  ({{authority-proposal}}), and the old prohibition on submitting
+  the two together inverts. Anchor inputs changed: `intent_hash` no
+  longer covers the authority proposal, and the new `proposal_hash`
+  (`typ` `mission-proposed-authority`) commits the submitted
+  proposal, recorded on the Mission and surfaced through
+  introspection, never on the `mission` claim. Worked examples and
+  test vectors are recomputed; a tri-anchor recomputation rule at
+  the approval event and a Mission-governed-client bare-request
+  rejection accompany the change.
 - Derivation is mechanical, in two modes: narrowing (RECOMMENDED)
   and template. The deterministic-reproducibility and
   policy-inspectability rules are retired, `policy_version` stays as
