@@ -270,15 +270,11 @@ Expansion request:
      |                            |
      |                            | 2. complete, one of:
      |                            |
-     |    <-- access token ------ | (a) synchronous: subset
-     |                            |     derivation, no fresh
-     |                            |     consent needed
-     |                            |
-     |    <-- authz_pending ----- | (b) deferred: fresh async
+     |    <-- authz_pending ----- | (a) deferred: fresh async
      |    ---- poll ------------> |     approval via DTR;
      |    <-- access token ------ |     token on approval
      |                            |
-     |    <-- (front channel) --> | (c) interactive: the
+     |    <-- (front channel) --> | (b) interactive: the
      |                            |     deployment's front-
      |                            |     channel approval
      |                            |
@@ -290,12 +286,12 @@ Expansion request:
 The request is an {{RFC8693}} token exchange bound to the predecessor
 by possession of the predecessor's Mission-bound access token
 ({{expansion-request}}), so the Mission Issuer adjudicates a successor
-of a specific predecessor rather than an unrelated new Mission. When
-the request is a pure subset derivation of already-approved authority
-the exchange completes synchronously; otherwise a fresh consent
-supplies the broader authority, obtained through the deferred token
-response ({{I-D.draft-gerber-oauth-deferred-token-response}}) or the
-deployment's interactive approval ({{completion-modes}}). The
+of a specific predecessor rather than an unrelated new Mission. An
+expansion always widens authority, so a fresh consent supplies the
+broader authority, obtained through the deferred token response
+({{I-D.draft-gerber-oauth-deferred-token-response}}) or the
+deployment's interactive approval ({{completion-modes}}); a request
+that widens nothing is refused ({{verification-order}}). The
 successor's authority comes only from that consent. Supersession is
 deferred to activation: the successor activates and the predecessor
 becomes `superseded` atomically when the successor's authority is
@@ -574,9 +570,12 @@ order, refusing on the first failure:
    predecessor lifecycle gate of step 6 ({{creation-revalidation}}).
 6. Verify the predecessor is `active` ({{predecessor-active}}) and,
    when `predecessor` is present, that it names the resolved Mission.
-7. Determine whether the request is a pure subset derivation of
-   already-approved authority or requires a fresh approval, and derive
-   the successor's Authority Set under policy ({{completion-modes}}).
+7. Derive the successor's Authority Set under policy from the
+   submitted Mission Intent ({{adjudication}}) and verify that it
+   widens the predecessor: when the derived requested authority is a
+   subset of the predecessor's own effective Authority Set, refuse the
+   exchange with the `nothing_to_expand` denial reason, as there is
+   nothing to expand ({{denial-reasons}}).
 8. Complete per {{completion-modes}}; at a deferred or interactive
    completion, re-verify the predecessor's Mission state before issuing
    ({{deferred-window}}).
@@ -587,26 +586,16 @@ a successor.
 
 ## Completion modes {#completion-modes}
 
-An expansion completes in one of three modes. The deferred token
-response is a completion mode, not a replacement: every mode rests on
+An expansion completes in one of two modes, each obtaining the fresh
+approval the successor's authority requires. The deferred token
+response is a completion mode, not a replacement: both modes rest on
 the same possession-proven token exchange ({{expansion-request}}), and
 the interactive path is retained.
 
-Synchronous:
-: When the requested authority is a pure subset derivation of authority
-  already approved for the predecessor, no fresh consent is needed and
-  the Mission Issuer issues the successor's access token in the token
-  exchange response. Under this document alone an expansion widens
-  authority and so is not a subset derivation; this mode is reached only
-  where a companion pre-consents an authority ceiling, so an expansion
-  within that ceiling is a drawdown of already-approved authority (the
-  experimental progressive authorization companion,
-  {{I-D.draft-mcguinness-oauth-mission-progressive}}).
-
 Deferred:
-: When a fresh approval is required and approval is asynchronous, the
-  Mission Issuer returns the deferred token response of the family's
-  Mission Deferred Approval substrate
+: When approval is asynchronous, the Mission Issuer returns the
+  deferred token response of the family's Mission Deferred Approval
+  substrate
   ({{I-D.draft-gerber-oauth-deferred-token-response}}, profiled for
   Missions by {{I-D.draft-mcguinness-oauth-mission-approval}}):
   `authorization_pending` with a polling `interval`. The Approver acts
@@ -616,14 +605,25 @@ Deferred:
   substrate and does not redefine it.
 
 Interactive:
-: When a fresh approval is required interactively, the Mission Issuer
-  runs the deployment's existing front-channel approval event, the
+: When approval is interactive, the Mission Issuer runs the
+  deployment's existing front-channel approval event, the
   issuance profile's own approval ceremony
   ({{I-D.draft-mcguinness-oauth-mission}}), issuing an authorization
   code the client redeems to obtain the successor's authority. This is
   the interactive path retained from earlier revisions of this document.
 
-Whichever mode completes, obtaining a fresh approval means the Mission
+This document defines no synchronous exchange completion. An expansion
+response is a successor or a refusal, never a token derived under the
+predecessor: a request whose derived authority is a subset of the
+predecessor's own effective Authority Set is refused with
+`nothing_to_expand` ({{verification-order}}, {{denial-reasons}}).
+Policy-adjudicated expansion within a pre-consented authority ceiling
+is the experimental progressive authorization companion's concern
+({{I-D.draft-mcguinness-oauth-mission-progressive}}): an in-ceiling
+drawdown completes through the retained interactive path with the
+approval prompt skipped, as that companion defines.
+
+Whichever mode completes, obtaining the fresh approval means the Mission
 Issuer authenticates the Approver, obtains fresh consent for the
 derived Authority Set, satisfies any `controls.acr`, and renders the
 Subject when the Approver is not the Subject, per the issuance profile's
@@ -635,10 +635,10 @@ predecessor is untouched ({{denial-reasons}}).
 At completion the Mission Issuer computes the successor's integrity
 anchors (`intent_hash`, `authority_hash`, and, where the exchange
 carried an authority proposal, `proposal_hash`) and, at the point the
-successor's authority is issued (the exchange response for a synchronous
-completion, the resolving poll for a deferred completion, or the code
-redemption for an interactive completion), creates the successor Mission
-record in the `active` state, with its `predecessor` member set
+successor's authority is issued (the resolving poll for a deferred
+completion, or the code redemption for an interactive completion),
+creates the successor Mission record in the `active` state, with
+its `predecessor` member set
 ({{predecessor-member}}), atomically with the predecessor's transition
 to `superseded` ({{superseded-state}}). Until the successor activates
 the predecessor remains `active`; an expansion that never completes,
@@ -802,10 +802,10 @@ The transition has these requirements:
 
 - **Atomic with successor activation.** The successor activates, and the
   predecessor enters `superseded`, in one atomic operation at the point
-  the successor's authority is issued ({{completion-modes}}: the token
-  exchange response, the resolving deferred poll, or the interactive
-  code redemption), not at the approval decision that precedes it. In
-  that same operation the Mission Issuer sets the predecessor's
+  the successor's authority is issued ({{completion-modes}}: the
+  resolving deferred poll or the interactive code redemption), not at
+  the approval decision that precedes it. In that same operation the
+  Mission Issuer sets the predecessor's
   `successor` member to the successor's `mission_id`
   ({{predecessor-member}}). Until the successor activates the
   predecessor remains `active`.
@@ -1180,6 +1180,15 @@ machine-readable reason code from the closed set below:
   `purpose`; a different Mission, not an expansion of this one, is the
   appropriate vehicle.
 
+`nothing_to_expand`:
+: The derived requested authority is a subset of the predecessor's own
+  effective Authority Set, so there is nothing to expand: ordinary
+  token derivation under the predecessor already serves the request
+  ({{verification-order}}). This refusal surfaces on the token exchange
+  response itself, as `invalid_request` with this reason code, and is
+  never answered with a token derived under the predecessor, so an
+  expansion response is never ambiguously a non-successor.
+
 A companion profile MAY extend this set by specification (the
 experimental progressive authorization companion defines
 `out_of_ceiling`, {{I-D.draft-mcguinness-oauth-mission-progressive}});
@@ -1243,8 +1252,9 @@ client_id=s6BhdRkqt3
 The Mission Issuer resolves the predecessor from `subject_token`,
 verifies the presenter controls the token's confirmation key, confirms
 the `predecessor` cross-check names that Mission and that it is
-`active`, and derives the successor's Authority Set. The widening needs
-fresh consent, so the Mission Issuer returns a deferred token response;
+`active`, and derives the successor's Authority Set. The widening
+requires fresh consent and the deployment approves asynchronously, so
+the Mission Issuer returns a deferred token response;
 `alice` approves the widened cap on the review surface, and the client's
 next poll delivers the successor's access token. At that issuance the
 Mission Issuer activates the successor and supersedes the predecessor
@@ -1290,10 +1300,13 @@ conforming **expansion-capable Mission Issuer** MUST:
   refusing a missing one with `invalid_request`, and recover a
   repeated one under the reservation, recovery, revalidation, and
   retention rules of {{creation-idempotency}};
-- complete the expansion in one of the modes of {{completion-modes}}:
-  synchronously for a subset derivation, or, for a fresh approval,
-  through the deferred token response or the retained interactive
-  approval, obtaining new consent for the successor's authority
+- refuse an exchange whose derived requested authority is a subset of
+  the predecessor's own effective Authority Set, carrying the
+  `nothing_to_expand` denial reason ({{verification-order}},
+  {{denial-reasons}});
+- complete the expansion in one of the modes of {{completion-modes}},
+  obtaining new consent for the successor's authority through the
+  deferred token response or the retained interactive approval
   ({{adjudication}}) and enforcing the successor-expiry rule
   ({{successor-expiry}});
 - record the `predecessor` member on the successor's `mission` claim
