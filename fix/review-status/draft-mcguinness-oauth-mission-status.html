@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 12 February 2027</td>
+<td class="center">Expires 13 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-status-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-11" class="published">11 August 2026</time>
+<time datetime="2026-08-12" class="published">12 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-12">12 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-13">13 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1144,7 +1144,7 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 12 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 13 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1578,20 +1578,36 @@ client's X.509 certificate against its configured trust anchors and
 the client's registered <code>tls_client_auth</code> metadata.<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.2-2.2">
-            <p id="section-3.2-2.2.1"><strong>DPoP-bound bearer token</strong> <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>. The client presents a
-<code>mission_status</code>-scoped DPoP-bound access token (see the
-authorization requirement below) in the <code>Authorization</code> header with
-a <code>DPoP</code> proof header; the token's <code>cnf.jkt</code> <span class="bcp14">MUST</span> match the proof
-key thumbprint.<a href="#section-3.2-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-3.2-2.2.1"><strong>Sender-constrained access token</strong>. The client presents a
+<code>mission_status</code>-scoped access token (see the authorization
+requirement below) in the <code>Authorization</code> header, sender-constrained
+either by DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> (the <code>DPoP</code> scheme with a <code>DPoP</code> proof
+header, the token's <code>cnf.jkt</code> matching the proof key thumbprint) or
+by mTLS <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> (a certificate-bound token, the <code>Bearer</code> scheme,
+whose <code>cnf.x5t#S256</code> matches the presented client certificate). The
+token <span class="bcp14">MUST</span> be audience-restricted to this endpoint's
+protected-resource identifier (below).<a href="#section-3.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.2-2.3">
             <p id="section-3.2-2.3.1"><strong>Private-key-JWT client authentication</strong> <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>. The client
-presents a signed JWT assertion as <code>client_assertion</code>.<a href="#section-3.2-2.3.1" class="pilcrow">¶</a></p>
+presents <code>client_assertion_type</code> with the exact value
+<code>urn:ietf:params:oauth:client-assertion-type:jwt-bearer</code> and a signed
+JWT as <code>client_assertion</code>. The assertion's <code>aud</code> <span class="bcp14">MUST</span> name the URL of
+the endpoint being invoked (the <code>mission_status_endpoint</code> for a
+Status request, the <code>mission_lifecycle_endpoint</code> for a Lifecycle
+request), not the token endpoint; the AS <span class="bcp14">MUST</span> reject an assertion
+whose <code>aud</code> names no such endpoint. The AS accepts only the JWS
+<span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> algorithms it advertises for that endpoint
+(<a href="#as-metadata" class="auto internal xref">Section 9</a>); <code>none</code> <span class="bcp14">MUST NOT</span> be used.<a href="#section-3.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 <p id="section-3.2-3">Plain Basic or POST client authentication <span class="bcp14">MUST NOT</span> be used for this
 endpoint. The AS <span class="bcp14">MUST</span> refuse a request not authenticated by one of the
-three mechanisms with <code>unauthorized</code> (HTTP 401).<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+three mechanisms with <code>unauthorized</code> (HTTP 401). A request that presents
+an access token in <code>Authorization</code> is mechanism 2, and any client
+certificate is then evaluated only as that token's mTLS sender
+constraint, not as mechanism-1 client authentication; a request with no
+<code>Authorization</code> access token and a client certificate is mechanism 1.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
 <p id="section-3.2-4">An authenticated caller <span class="bcp14">MUST</span> additionally carry an explicit read
 authorization: a <code>mission_status</code> scope on the presented access token,
 or a deployment-defined equivalent grant bound to the authenticated
@@ -1604,20 +1620,33 @@ deployment-defined equivalent grant, not a scope, and so resolves
 Mission state without holding an access token the AS issued. A caller
 carrying no such authorization is refused with the not-found response
 of <a href="#mission-status-errors" class="auto internal xref">Section 3.7</a> (<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.6</a>).<a href="#section-3.2-4" class="pilcrow">¶</a></p>
-<p id="section-3.2-5">Which mechanisms and authorization this endpoint accepts are
+<p id="section-3.2-5">A presented access token (mechanism 2) <span class="bcp14">MUST</span> be audience-restricted to
+this endpoint's protected-resource identifier: the <code>resource</code> value the
+AS publishes for this endpoint in its Protected Resource Metadata
+<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>. The AS <span class="bcp14">MUST</span> reject a token whose audience does not name that
+identifier. This token audience is distinct from the request body's
+<code>audience</code> parameter (<a href="#mission-status-request" class="auto internal xref">Section 3.1</a>): the token audience
+authorizes the call at this endpoint, whereas the request <code>audience</code>
+carries no authentication weight and only selects the
+Resource-Server-specific authority projection the response returns
+(<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>).<a href="#section-3.2-5" class="pilcrow">¶</a></p>
+<p id="section-3.2-6">Which mechanisms and authorization this endpoint accepts are
 discoverable per endpoint, not inferred from the token endpoint's
-client-authentication metadata. For the audience-restricted
-access-token path (the <code>mission_status</code>-scoped DPoP-bound token above),
-this endpoint is an OAuth protected resource: the AS publishes, in its
-Protected Resource Metadata for this resource <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>, the
-access-token presentation it accepts (<code>bearer_methods_supported</code>,
-<code>dpop_bound_access_tokens_required</code>) and the <code>mission_status</code> scope it
-requires (<code>scopes_supported</code>). For the retained
+metadata. The AS advertises the methods this endpoint accepts in
+<code>mission_status_endpoint_auth_methods_supported</code> (<a href="#as-metadata" class="auto internal xref">Section 9</a>). For
+the sender-constrained access-token path, this endpoint is an OAuth
+protected resource: the AS publishes, in its Protected Resource Metadata
+for this resource <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>, the <code>resource</code> identifier the token's
+audience <span class="bcp14">MUST</span> name, the <code>mission_status</code> scope it requires
+(<code>scopes_supported</code>), and the sender constraints it accepts
+(<code>dpop_bound_access_tokens_required</code>,
+<code>tls_client_certificate_bound_access_tokens</code>). For the retained
 direct-client-authentication path (mTLS <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> or private-key JWT
-<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>), the accepted client-authentication methods are the AS's
-registered client-authentication methods, discoverable through its
-existing OAuth client-authentication metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. Both paths
-are therefore discoverable.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
+<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>), the accepted methods and, for <code>private_key_jwt</code>, the
+accepted client-assertion signing algorithms are advertised for this
+endpoint (<a href="#as-metadata" class="auto internal xref">Section 9</a>), not read from the token endpoint's
+<code>token_endpoint_auth_methods_supported</code> <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. Both paths are
+therefore discoverable.<a href="#section-3.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="worked-request-example">
@@ -2587,12 +2616,18 @@ companion state is produced by this profile's endpoint.<a href="#section-6.3-3" 
 <a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-authentication-2" class="section-name selfRef">Authentication</a>
         </h3>
 <p id="section-6.4-1">The lifecycle endpoint uses the same authentication mechanisms as the
-Mission Status endpoint (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>): mTLS,
-DPoP-bound bearer, or private-key JWT. It is discoverable per endpoint
-by the same split (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>): the access-token
-path through this endpoint's OAuth Protected Resource Metadata
-<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>, and the direct-client-authentication path through the AS's
-OAuth client-authentication metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+Mission Status endpoint (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>): mTLS client
+authentication, a sender-constrained access token (DPoP- or mTLS-bound),
+or private-key JWT. Its discovery mirrors that endpoint: the accepted
+methods in <code>mission_lifecycle_endpoint_auth_methods_supported</code> and, for
+<code>private_key_jwt</code>, the accepted client-assertion algorithms in
+<code>mission_lifecycle_endpoint_auth_signing_alg_values_supported</code>
+(<a href="#as-metadata" class="auto internal xref">Section 9</a>); the sender-constrained access-token path through this
+endpoint's OAuth Protected Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>. A private-key
+JWT <code>client_assertion</code> <span class="bcp14">MUST</span> name the <code>mission_lifecycle_endpoint</code> URL in
+<code>aud</code>, and a presented access token <span class="bcp14">MUST</span> be audience-restricted to this
+endpoint's protected-resource identifier, exactly as at the Mission
+Status endpoint.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authorization">
@@ -2617,9 +2652,10 @@ the parties per the issuance profile's access-token model
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): for a delegated access
 token its <code>sub</code> denotes the resource owner (the represented party),
 matching the <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> access-token <code>sub</code> model; the calling party
-is identified by <code>client_id</code>; and, where a delegation chain is
-present, the immediate actor is identified by the <code>act</code> claim
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or mTLS
+is identified by <code>client_id</code> (<span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> Section 4.3); and, where a
+delegation chain is present, the immediate actor is identified by the
+<code>act</code> claim (<span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>, <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A
+DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or mTLS
 <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> sender constraint binds the presenter to a key; it does
 not change what <code>sub</code> denotes. The acting party is the calling party
 so identified, and the presented token <span class="bcp14">MUST</span> carry the lifecycle
@@ -3386,32 +3422,81 @@ when the AS supports it.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-9-2.3">
-<code>mission_status_signing_alg_values_supported</code>:</dt>
+<code>mission_status_endpoint_auth_methods_supported</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-9-2.4">
-          <p id="section-9-2.4.1"><span class="bcp14">OPTIONAL</span>. A JSON array of strings. The JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> algorithm
+          <p id="section-9-2.4.1"><span class="bcp14">OPTIONAL</span>. A JSON array of strings naming the authentication methods
+the Mission Status endpoint (<a href="#mission-status" class="auto internal xref">Section 3</a>) accepts. Its value
+space is a closed set defined by this document, not the OAuth Token
+Endpoint Authentication Methods registry: <code>mtls_client_auth</code>
+(mutual-TLS client authentication <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>), <code>private_key_jwt</code>
+(private-key JWT client authentication <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>), and <code>access_token</code>
+(a <code>mission_status</code>-scoped, sender-constrained access token, whose
+presentation and DPoP or mTLS binding are described by this endpoint's
+Protected Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>). The first two values are
+spelled identically to registered token-endpoint authentication
+methods by intent; this member describes this endpoint, not the token
+endpoint. Present, and <span class="bcp14">SHOULD</span> be advertised, when the AS serves the
+Mission Status endpoint.<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-2.5">
+<code>mission_status_endpoint_auth_signing_alg_values_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-2.6">
+          <p id="section-9-2.6.1"><span class="bcp14">OPTIONAL</span>. A JSON array of strings, the JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> algorithm
+values the AS accepts for the <code>private_key_jwt</code> client-assertion JWT
+(<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>) at the Mission Status endpoint.
+<code>none</code> <span class="bcp14">MUST NOT</span> be used. Present when that endpoint lists
+<code>private_key_jwt</code>.<a href="#section-9-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-2.7">
+<code>mission_status_signing_alg_values_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-2.8">
+          <p id="section-9-2.8.1"><span class="bcp14">OPTIONAL</span>. A JSON array of strings. The JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> algorithm
 values the AS uses to sign the Mission Status Response shape
 (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>), on whichever surfaces of this
 profile family serve it (the dedicated Mission Status operation,
 the Lifecycle endpoint, and Mission Management), mirroring
 <code>introspection_signing_alg_values_supported</code>. Present when the AS
-serves any such surface.<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+serves any such surface.<a href="#section-9-2.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-2.5">
+<dt id="section-9-2.9">
 <code>mission_lifecycle_endpoint</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-2.6">
-          <p id="section-9-2.6.1"><span class="bcp14">OPTIONAL</span>. A string containing a URL. The URL of the
+        <dd style="margin-left: 1.5em" id="section-9-2.10">
+          <p id="section-9-2.10.1"><span class="bcp14">OPTIONAL</span>. A string containing a URL. The URL of the
 Mission Lifecycle endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>). Present
-when the AS supports it.<a href="#section-9-2.6.1" class="pilcrow">¶</a></p>
+when the AS supports it.<a href="#section-9-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-2.7">
+<dt id="section-9-2.11">
+<code>mission_lifecycle_endpoint_auth_methods_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-2.12">
+          <p id="section-9-2.12.1"><span class="bcp14">OPTIONAL</span>. A JSON array of strings naming the authentication methods
+the Mission Lifecycle endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>)
+accepts, from the same closed value space as
+<code>mission_status_endpoint_auth_methods_supported</code> (with <code>access_token</code>
+naming a <code>mission_lifecycle</code>-scoped access token). Present, and <span class="bcp14">SHOULD</span>
+be advertised, when the AS serves the Mission Lifecycle endpoint.<a href="#section-9-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-2.13">
+<code>mission_lifecycle_endpoint_auth_signing_alg_values_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-2.14">
+          <p id="section-9-2.14.1"><span class="bcp14">OPTIONAL</span>. A JSON array of strings, the JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> algorithm
+values the AS accepts for the <code>private_key_jwt</code> client-assertion JWT
+(<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>) at the Mission Lifecycle endpoint.
+<code>none</code> <span class="bcp14">MUST NOT</span> be used. Present when that endpoint lists
+<code>private_key_jwt</code>.<a href="#section-9-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-2.15">
 <code>mission_max_stale_seconds</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-2.8">
-          <p id="section-9-2.8.1"><span class="bcp14">OPTIONAL</span>. An integer. The maximum
+        <dd style="margin-left: 1.5em" id="section-9-2.16">
+          <p id="section-9-2.16.1"><span class="bcp14">OPTIONAL</span>. An integer. The maximum
 tolerated interval, in seconds, for revocation propagation
 (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 8</a>). When absent, no bound is
-declared, and a consumer sizes reliance to token lifetime alone.<a href="#section-9-2.8.1" class="pilcrow">¶</a></p>
+declared, and a consumer sizes reliance to token lifetime alone.<a href="#section-9-2.16.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -3449,9 +3534,15 @@ Cache-Control: max-age=3600
 
   "mission_status_endpoint":
     "https://as.example.com/as/mission/status",
+  "mission_status_endpoint_auth_methods_supported":
+    ["mtls_client_auth", "private_key_jwt", "access_token"],
+  "mission_status_endpoint_auth_signing_alg_values_supported": ["ES256"],
   "mission_status_signing_alg_values_supported": ["ES256"],
   "mission_lifecycle_endpoint":
     "https://as.example.com/as/mission/lifecycle",
+  "mission_lifecycle_endpoint_auth_methods_supported":
+    ["mtls_client_auth", "private_key_jwt", "access_token"],
+  "mission_lifecycle_endpoint_auth_signing_alg_values_supported": ["ES256"],
   "mission_max_stale_seconds": 60
 }
 </pre><a href="#section-9.1-2" class="pilcrow">¶</a>
@@ -3483,7 +3574,8 @@ is still a conforming issuance profile.<a href="#section-10-1" class="pilcrow">�
 read authorization of <a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>, the
 anti-oracle property
 (<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.6</a>), and the error shape of
-<a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>; and advertise <code>mission_status_endpoint</code>.<a href="#section-10-3.1.1" class="pilcrow">¶</a></p>
+<a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>; and advertise <code>mission_status_endpoint</code> and
+<code>mission_status_endpoint_auth_methods_supported</code>.<a href="#section-10-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-3.2">
           <p id="section-10-3.2.1"><strong>Introspection projection</strong>: carry the Mission projection on the
@@ -3495,7 +3587,8 @@ required.<a href="#section-10-3.2.1" class="pilcrow">¶</a></p>
           <p id="section-10-3.3.1"><strong>Mission Lifecycle</strong>: serve the management endpoint
 (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>), gate the <code>suspended</code> and
 <code>completed</code> states it introduces exactly as the issuance profile gates
-on non-<code>active</code> state, and advertise <code>mission_lifecycle_endpoint</code>.<a href="#section-10-3.3.1" class="pilcrow">¶</a></p>
+on non-<code>active</code> state, and advertise <code>mission_lifecycle_endpoint</code> and
+<code>mission_lifecycle_endpoint_auth_methods_supported</code>.<a href="#section-10-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-3.4">
           <p id="section-10-3.4.1"><strong>Mission Completion</strong>: issue and gate <code>terminal_when</code> entries per
@@ -3724,10 +3817,10 @@ that exposure when the source is operated by another party.<a href="#section-12.
 <a href="#section-13" class="section-number selfRef">13. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
 <p id="section-13-1">This document requests IANA actions for OAuth AS metadata members and
-a media type. It defines no new registry: the authentication-method
-value space is a closed set defined inline, and the <code>terminal_when</code>
-Common Constraint is defined by specification
-(<a href="#iana-terminal-when" class="auto internal xref">Section 13.3</a>), not by an IANA action.<a href="#section-13-1" class="pilcrow">¶</a></p>
+a media type. It defines no new registry: the endpoint
+authentication-method value space is a closed set defined inline
+(<a href="#as-metadata" class="auto internal xref">Section 9</a>), and the <code>terminal_when</code> Common Constraint is defined
+by specification (<a href="#iana-terminal-when" class="auto internal xref">Section 13.3</a>), not by an IANA action.<a href="#section-13-1" class="pilcrow">¶</a></p>
 <div id="oauth-authorization-server-metadata-registration">
 <section id="section-13.1">
         <h3 id="name-oauth-authorization-server-">
@@ -3741,13 +3834,25 @@ Change Controller IETF; Reference this document, <a href="#as-metadata" class="a
             <p id="section-13.1-2.1.1"><code>mission_status_endpoint</code><a href="#section-13.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.1-2.2">
-            <p id="section-13.1-2.2.1"><code>mission_status_signing_alg_values_supported</code><a href="#section-13.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-13.1-2.2.1"><code>mission_status_endpoint_auth_methods_supported</code><a href="#section-13.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.1-2.3">
-            <p id="section-13.1-2.3.1"><code>mission_lifecycle_endpoint</code><a href="#section-13.1-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-13.1-2.3.1"><code>mission_status_endpoint_auth_signing_alg_values_supported</code><a href="#section-13.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.1-2.4">
-            <p id="section-13.1-2.4.1"><code>mission_max_stale_seconds</code><a href="#section-13.1-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-13.1-2.4.1"><code>mission_status_signing_alg_values_supported</code><a href="#section-13.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.5">
+            <p id="section-13.1-2.5.1"><code>mission_lifecycle_endpoint</code><a href="#section-13.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.6">
+            <p id="section-13.1-2.6.1"><code>mission_lifecycle_endpoint_auth_methods_supported</code><a href="#section-13.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.7">
+            <p id="section-13.1-2.7.1"><code>mission_lifecycle_endpoint_auth_signing_alg_values_supported</code><a href="#section-13.1-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.8">
+            <p id="section-13.1-2.8.1"><code>mission_max_stale_seconds</code><a href="#section-13.1-2.8.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
