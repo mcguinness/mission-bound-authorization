@@ -1681,7 +1681,12 @@ At the approval event the AS MUST, in order:
    (`subject.iss`) differs from the AS, the AS MUST ensure the `sub`
    it adopts is unique within its own issuer namespace and does not
    collide with a different principal's `sub`, so a derived token's
-   (`iss`, `sub`) pair unambiguously denotes the Subject.
+   (`iss`, `sub`) pair unambiguously denotes the Subject. This is the
+   mapping between the external subject identity and the AS-local
+   principal: the AS adopts `subject.sub` as the local `sub`, and the
+   uniqueness requirement above is what makes that adoption
+   injective, so one AS-local principal denotes one external
+   Subject.
 3. Render for consent the derived Authority Set in human-meaningful
    terms, with the `goal`, `constraints`, `expires_at`, and any
    `controls` bounds (notably `max_derivations`) as context:
@@ -1693,17 +1698,19 @@ At the approval event the AS MUST, in order:
      derived Authority Set does not conform.
    - When the Approver is not the Subject, the rendering MUST
      identify the Subject the authority is granted for.
-   - When the Intent carried `proposed_authority`
-     ({{mission-intent}}), the rendering MUST distinguish the entries
-     the client proposed from any narrowing or restructuring the AS
-     applied.
+   - When the client submitted an authority proposal
+     ({{authority-proposal}}), the rendering MUST distinguish the
+     entries the client proposed from any narrowing or restructuring
+     the AS applied.
 
    The Authority Set, not the Intent, is the consent object because
    derivation is local policy: nothing commits that the derived
    authority faithfully reflects the goal the Approver read.
 4. Compute the integrity anchors ({{integrity-anchors}}):
-   `authority_hash` over the consented Authority Set and
-   `intent_hash` over the approved Mission Intent.
+   `authority_hash` over the consented Authority Set, `intent_hash`
+   over the approved Mission Intent, and, when an authority proposal
+   was submitted ({{authority-proposal}}), `proposal_hash` over the
+   submitted `authorization_details` array.
 5. Create the Mission record ({{mission-record}}) in the `active`
    state, atomically with issuance of the authorization code.
 
@@ -1777,9 +1784,17 @@ what was approved. A party holding only a narrowed subset cannot
 recompute it and treats it as an audit anchor (see
 {{consent-binding}}).
 
-If the derived Authority Set changes between rendering and consent,
-the AS MUST recompute the anchors and MUST NOT activate the Mission
-unless the Approver consents to the changed set.
+If the task, the authority proposal, or the derived Authority Set
+changes between approval rendering and the approval decision, the AS
+MUST recompute all three commitments (`intent_hash`,
+`proposal_hash`, and `authority_hash`) and MUST NOT create the
+Mission without the Approver's consent to the changed context, each
+anchor computed over the context actually approved (the
+approval-event rule of {{I-D.draft-mcguinness-mission-substrate}},
+stated here across this document's commitments). Committing the
+proposal separately keeps the anchors from equivocating: a proposal
+swapped between rendering and decision changes `proposal_hash` even
+where `intent_hash` is unchanged.
 
 The `intent_hash` commits the **approved Mission Intent**: the
 task the Approver consented to, as recorded on the Mission. It makes
@@ -1850,7 +1865,7 @@ evidence's co-approval members
 
 ## Integrity Anchors {#integrity-anchors}
 
-Both anchors are computed the same way over a domain-separated,
+Every anchor is computed the same way over a domain-separated,
 issuer-bound envelope:
 
 1. Construct the envelope, where `typ` selects the committed object
@@ -1858,24 +1873,28 @@ issuer-bound envelope:
 
    ~~~
    {
-     "typ": "<mission-intent | mission-authority-set>",
+     "typ": "<mission-intent | mission-proposed-authority
+             | mission-authority-set>",
      "iss": "<the AS issuer URL>",
      "value": <the committed object>
    }
    ~~~
 
    For `intent_hash`, `typ` is `mission-intent` and `value` is the
-   approved Mission Intent object. For `authority_hash`, `typ` is
-   `mission-authority-set` and `value` is the Authority Set as a JSON
-   array of entries.
+   approved Mission Intent object. For `proposal_hash`, `typ` is
+   `mission-proposed-authority` and `value` is the submitted
+   `authorization_details` array exactly as recorded
+   ({{authority-proposal}}); the anchor exists iff a proposal was
+   submitted. For `authority_hash`, `typ` is `mission-authority-set`
+   and `value` is the Authority Set as a JSON array of entries.
 
 2. Canonicalize the envelope with JCS {{RFC8785}}.
 3. Compute SHA-256 {{RFC6234}} over the canonical bytes.
 4. Encode as `sha-256:` followed by the base64url, no-padding,
    encoding of the digest.
 
-The `typ` field domain-separates the two anchors so a digest of one
-object can never be mistaken for the other. The `iss` binding
+The `typ` field domain-separates the anchors so a digest of one
+object can never be mistaken for another's. The `iss` binding
 prevents a committed object from being transplanted across
 Authorization Servers.
 
@@ -1906,9 +1925,10 @@ every byte. The following rules close the remaining gaps; they apply
 to computing an anchor and to comparing committed values:
 
 - The committed `value` is exactly the object the AS recorded on the
-  Mission: the approved `intent` for `intent_hash`, the
-  `authority_set` for `authority_hash`. An auditor reproduces a
-  digest from the record alone.
+  Mission: the approved `intent` for `intent_hash`, the recorded
+  `proposed_authority` for `proposal_hash`, and the `authority_set`
+  for `authority_hash`. An auditor reproduces a digest from the
+  record alone.
 - The AS MUST reject an input object containing duplicate JSON member
   names before canonicalization; such input is invalid.
 - JCS does not reorder array elements, and this document defines no
@@ -1923,7 +1943,7 @@ to computing an anchor and to comparing committed values:
   remains an exact match, and anchor computation is always byte-exact
   over the recorded values.
 
-Test vectors for both anchors are provided in {{test-vectors}}.
+Test vectors for the anchors are provided in {{test-vectors}}.
 
 # Mission Record {#mission-record}
 
@@ -1973,6 +1993,13 @@ profile defines:
 `intent`:
 : REQUIRED. An object. The approved Mission Intent.
 
+`proposed_authority`:
+: OPTIONAL. An array. The `authorization_details` array the client
+  submitted as its authority proposal ({{authority-proposal}}),
+  recorded exactly as submitted. Present iff a proposal was
+  submitted; a Mission derived in template mode
+  ({{authorization-derivation}}) records none.
+
 `authority_set`:
 : REQUIRED. An array. The consented Authority Set.
 
@@ -1984,6 +2011,14 @@ profile defines:
 : REQUIRED. A string. The integrity commitment over
   the approved Mission Intent ({{integrity-anchors}}), making the
   recorded task tamper-evident.
+
+`proposal_hash`:
+: OPTIONAL. A string. The integrity commitment over the recorded
+  `proposed_authority` ({{integrity-anchors}}). Present iff
+  `proposed_authority` is present. It is approval-time provenance,
+  not enforcement input: like `approval_basis`, it is surfaced on
+  the record and through introspection ({{introspection}}) and is
+  not carried on the `mission` claim ({{mission-claim}}).
 
 `subject`:
 : REQUIRED. An object. The Subject, an object with `iss` and
@@ -2097,6 +2132,21 @@ outside carries it as `mission_id`, as in the token-response parameter
   "intent": { "goal": "Reconcile Q3 invoices ...",
     "resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z" },
+  "proposed_authority": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.*"],
+      "delegation": {
+        "max_depth": 2,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+      } },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": {
+        "max_amount": { "amount": "1000.00", "currency": "USD" }
+      } }
+  ],
   "authority_set": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
@@ -2120,6 +2170,8 @@ outside carries it as `mission_id`, as in the token-response parameter
     "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
   "intent_hash":
     "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+  "proposal_hash":
+    "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
   "subject": { "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR" },
   "approver": { "iss": "https://idp.example.com",
@@ -2142,7 +2194,8 @@ outside carries it as `mission_id`, as in the token-response parameter
 }
 ~~~
 
-This recorded `intent` and `authority_set`, and the anchors above,
+This recorded `intent`, `proposed_authority`, and `authority_set`,
+and the anchors above,
 are this document's canonical worked example; the test vectors
 ({{test-vectors}}) compute over them. A companion that extends this
 example MUST either reproduce the recorded objects byte-exactly or
