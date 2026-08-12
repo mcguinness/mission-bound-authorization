@@ -386,7 +386,8 @@ authoritative.
 
 This document uses Mission, Mission Intent, Mission Issuer,
 Authority Set, Approver, Subject, `mission_id`, the integrity
-anchors (`intent_hash` and `authority_hash`), the subset rule, the
+anchors (`intent_hash`, `authority_hash`, and, where the Mission
+records an authority proposal, `proposal_hash`), the subset rule, the
 only-`active` rule, and the audit horizon as defined by
 {{I-D.draft-mcguinness-oauth-mission}}. It uses resource owner,
 requesting party, client, permission ticket, claims pushing, claim
@@ -489,7 +490,16 @@ A Mission Intent claim token is a JWT whose payload carries a
 profile defines it, under that profile's syntactic rules (the object
 is closed at the top level, the authorization server MUST bound its
 size and array lengths, and it is untrusted client input, never
-authority). The JWT MAY be signed by the client for attribution; a
+authority). The payload MAY additionally carry an
+`authorization_details` claim: the client's authority proposal, an
+array of `authorization_details` objects. This claim is this
+binding's proposal carriage, replacing the issuance profile's
+PAR-only carriage rule; that profile's validation, derivation,
+recording, and hashing semantics apply unchanged (a proposal,
+never authority; the Intent itself carries no authority members). A
+Mission created from a push carrying one records `proposed_authority`
+and `proposal_hash` as the issuance profile's Mission record defines
+them. The JWT MAY be signed by the client for attribution; a
 signature confers no authority. Its `claim_token_format` identifier
 is:
 
@@ -501,7 +511,8 @@ A Mission-Bound UMA Client MUST push the Mission Intent on the first
 ticket exchange it performs under a prospective Mission, and the
 Intent MUST describe the whole task, not the slice the ticket's
 registered permissions name. The authorization server derives the
-Authority Set from the Intent, bounded by the issuance profile's
+Authority Set from the Intent, and from the authority proposal where
+one was pushed, bounded by the issuance profile's
 Mission Authority rules; the ticket's permissions locate the first
 drawdown, not the Mission's extent ({{inversion}}). A ticket
 exchange with no pushed and no PCT-resolved Mission context is plain
@@ -536,7 +547,8 @@ executes the issuance profile's approval steps:
    identity claim tokens, interactive claims gathering, or a PCT it
    previously issued), never from the Mission Intent claim token or
    other unauthenticated client input.
-3. Derive the Authority Set from the Intent ({{mission-intent}})
+3. Derive the Authority Set from the Intent, and from the authority
+   proposal where one was pushed ({{mission-intent}}),
    and render it for consent on the owner surface under the
    issuance profile's rendering rules ({{security-rendering}}).
 4. Compute the integrity anchors with the authorization server's
@@ -853,9 +865,11 @@ The contextual-governance kernel maps as follows:
    Intent. Later RPT issuance and validation use UMA's ordinary client
    binding; the separately established requesting party is the Mission
    Subject ({{roles}}, {{approval}}, {{credential}}).
-4. **Approved Context**: the immutable Mission Intent and derived
+4. **Approved Context**: the immutable Mission Intent, the recorded
+   authority proposal where one was pushed, and the derived
    Authority Set in the Mission record are the Approved Context. The
-   family `intent_hash` and `authority_hash` commit them under the
+   family `intent_hash` and `authority_hash`, plus `proposal_hash`
+   where a proposal was pushed, commit them under the
    issuance profile's canonicalization; they are this binding's chosen
    mechanism, not a substrate-kernel requirement
    ({{mission-record}}).

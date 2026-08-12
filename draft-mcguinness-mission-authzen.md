@@ -1645,8 +1645,8 @@ Not a lane, the RAR remediation grain:
   RAR-details grain and the AuthZEN grain are not competing carriers,
   and a deployment MAY expose both on the same denial: the
   RAR-details grain names what authority to propose, carrying
-  actionable `authorization_details` the client proposes back on a
-  fresh Intent through `proposed_authority`
+  actionable `authorization_details` the client proposes back on the
+  standard `authorization_details` parameter alongside a fresh Intent
   ({{I-D.draft-mcguinness-oauth-mission}}); the AuthZEN grain names
   how the denial is escalated, routing it into a governed access
   request that an independent approver or policy adjudicates before

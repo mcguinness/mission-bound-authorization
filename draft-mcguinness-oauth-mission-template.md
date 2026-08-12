@@ -29,6 +29,7 @@ author:
 
 normative:
   RFC6755:
+  RFC9396:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -356,7 +357,8 @@ consented authority ceiling
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}). A dispatched
 Mission commits its own `intent_hash` and `authority_hash` over its own
 Intent and final Authority Set ({{dispatch}}); the template commits the
-ceiling once, under `template_hash`. The two anchors are never merged.
+ceiling once, under `template_hash`. The Mission's anchors and the
+template's anchor are never merged.
 
 ## Template lifecycle {#template-lifecycle}
 
@@ -444,7 +446,9 @@ The Mission Issuer adjudicates a Dispatch in this order:
    template's `allowed_dispatchers`. Refuse a request from any other
    principal.
 3. **Derive the instance Authority Set.** Derive an Authority Set from
-   the dispatch intent and bound it by the deployment's derivation
+   the dispatch intent, and from the Dispatcher's authority proposal
+   where one was submitted ({{grant-type}}), and bound it by the
+   deployment's derivation
    policy, exactly as for any Mission
    ({{I-D.draft-mcguinness-oauth-mission}}). This document adds no
    authority-derivation rule.
@@ -545,6 +549,22 @@ instance with:
 : REQUIRED. The dispatch intent, in the issuance profile's Mission
   Intent shape ({{I-D.draft-mcguinness-oauth-mission}}), from which the
   instance Authority Set is derived ({{dispatch}}).
+
+`authorization_details`:
+: OPTIONAL. The Dispatcher's authority proposal: the standard
+  {{RFC9396}} parameter carried on the same token request, itself
+  ordinary {{RFC9396}} token-request usage. This parameter is this
+  grant's proposal carriage, replacing the issuance profile's
+  PAR-only carriage rule; that profile's validation, derivation,
+  recording, and hashing semantics apply unchanged
+  ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
+  authority: it bounds the derivation of step 3 of {{dispatch}} in
+  narrowing mode, and the double intersection of step 4 applies to
+  the result unchanged, so a proposal narrows the instance and never
+  widens it beyond the Template Ceiling. Absent a proposal, the
+  instance derives from the dispatch intent alone. An instance
+  created from a Dispatch carrying one records `proposed_authority`
+  and `proposal_hash`.
 
 `dispatch_event_id`:
 : REQUIRED. The dispatch event identifier that makes the Dispatch

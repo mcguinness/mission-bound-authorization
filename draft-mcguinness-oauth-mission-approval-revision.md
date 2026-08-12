@@ -281,10 +281,13 @@ without further out-of-band interaction. A Mission Issuer MAY omit
 them when disclosure would reveal sensitive policy state.
 
 The Mission Issuer verifies per-dimension narrowing after it
-re-derives the Authority Set from the revised Intent
+re-derives the Authority Set from the revised submission
 ({{revision-submission}}). The client cannot author the Authority Set,
-so its obligation is scoped to the Intent members it does author (the
-`resources`, the `expires_at`, and the free-text `constraints`), which
+so its obligation is scoped to what it does author: the Intent members
+(the `resources`, the `expires_at`, and the free-text `constraints`)
+and, where it proposed concrete authority, the pushed
+`authorization_details` proposal
+({{I-D.draft-mcguinness-oauth-mission}}), which
 it revises to drive that narrowing.
 
 The `revision_handle` is not a token, grant, or continuation handle.
@@ -299,7 +302,9 @@ Mission remains unapproved.
 
 ## Submitting a Revision {#revision-submission}
 
-The client submits the narrowed Mission Intent to the PAR endpoint
+The client submits the narrowed Mission Intent, with any revised
+`authorization_details` proposal alongside it
+({{I-D.draft-mcguinness-oauth-mission}}), to the PAR endpoint
 {{RFC9126}} with the `revision_handle` as an additional parameter,
 sender-constrained as the deferred substrate requires. The Mission
 Issuer:
@@ -320,7 +325,8 @@ Issuer:
    by client authentication, by authenticating with the same
    client-authentication key. A PAR request whose key is not
    equivalent to the `deferral_code`'s is rejected;
-3. re-derives the Authority Set for the revised Intent, under the same
+3. re-derives the Authority Set for the revised Intent, and from the
+   revised authority proposal where one was pushed, under the same
    `policy_version` that governed the proposed Mission. If policy has
    changed since the proposal, the Mission Issuer re-derives the
    proposed Authority Set under the current policy to re-establish the
@@ -432,7 +438,9 @@ Integrity anchors:
 : The approval commits the final, narrowed Authority Set. The
   `intent_hash` and `authority_hash` are computed over the revised
   Mission Intent and Authority Set actually approved, not the originating
-  proposal.
+  proposal; where the revision pushed an `authorization_details`
+  proposal, `proposal_hash` commits that revised proposal as submitted
+  ({{I-D.draft-mcguinness-oauth-mission}}).
 
 This profile narrows only, and only while an approval is deferred. It is
 distinct from widening an approved Mission, which requires a fresh
@@ -441,7 +449,11 @@ approval ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 # Worked Example {#example}
 
 Agent `s6BhdRkqt3`, acting for `alice`, proposes a Mission to reconcile
-Q3 invoices that asks for both read and write on the ERP. It submits the
+Q3 invoices that asks for both read and write on the ERP. It expresses
+the ask in the Intent and pushes no `authorization_details` proposal,
+so no `proposal_hash` is committed; a proposal-carrying request
+revises the pushed proposal the same way
+({{revision-submission}}). It submits the
 Mission Intent through PAR and opts in to both deferral and revision on
 the token request:
 

@@ -347,10 +347,12 @@ The contextual-governance kernel maps as follows:
    Actor and Subject through the Mission Join, including the mapping
    assurance and ambiguity declared by the deployment
    ({{mission-approval}}, {{mission-join}}).
-4. **Approved Context**: the Mission Intent and derived Authority Set
+4. **Approved Context**: the Mission Intent, the recorded authority
+   proposal where one was submitted, and the derived Authority Set
    in the immutable Mission record are the Approved Context. The
    issuance profile's `intent_hash` and `authority_hash`, computed
-   with the MAS issuer URL, are this binding's chosen commitments;
+   with the MAS issuer URL, plus `proposal_hash` where a proposal
+   was submitted, are this binding's chosen commitments;
    they are not substrate-kernel requirements.
 5. **Approval ceremony**: the asynchronous MAS approval surface
    authenticates the Approver, establishes the Subject and Actor,
@@ -469,6 +471,21 @@ codes ({{submission-errors}}):
   (the MAS equivalent of `invalid_authorization_details`), so a client
   can distinguish a syntax error from an authority-derivation failure.
 
+The request body MAY additionally carry an `authorization_details`
+member: the client's authority proposal, an array of
+`authorization_details` objects. This member is this binding's
+proposal carriage, replacing the issuance profile's PAR-only
+carriage rule; that profile's validation, derivation, recording, and
+hashing semantics apply unchanged
+({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
+authority, and it is a submission member, not a Mission Intent member
+({{native-carriage}}): the MAS MUST remove it before applying the
+Intent validation above. The issuance profile's intake refusals for a
+proposed entry map to `invalid_authority` here. A Mission created
+from a submission carrying a proposal records `proposed_authority`
+and `proposal_hash` as the issuance profile's Mission record defines
+them.
+
 A MAS has no derivation event: no token is issued under the Mission,
 so `controls.max_derivations` binds nothing here (a MAS
 implementing the issuance-grant companion has one, each grant
@@ -479,7 +496,8 @@ rendering marks it non-binding, per the issuance profile's rule that
 consent is not given to a limit that binds nowhere. The same
 treatment applies to any future control scoped to an issuance event.
 
-On acceptance the MAS derives the Authority Set from the Intent under
+On acceptance the MAS derives the Authority Set from the Intent, and
+from the authority proposal where one was submitted, under
 the issuance profile's derivation rules
 ({{I-D.draft-mcguinness-oauth-mission}}) and returns HTTP 202 with a
 pending-submission reference:
@@ -606,7 +624,8 @@ profile's approval event unchanged
    strings inert, direction-override and confusable presentation
    mitigated, derived authority visually distinguished from client
    text.
-4. Compute the integrity anchors, `authority_hash` and `intent_hash`,
+4. Compute the integrity anchors, `authority_hash`, `intent_hash`,
+   and, where an authority proposal was submitted, `proposal_hash`,
    using the issuance profile's envelope with the MAS's issuer URL as
    `iss`.
 

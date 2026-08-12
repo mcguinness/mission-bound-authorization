@@ -436,7 +436,9 @@ The media types and type identifiers are defined as follows:
 
 The approval event's canonical bytes are the whole Mission record at
 creation with `state` excluded, canonicalized ({{evidence-types}}):
-every committed member is included, including members companion
+every committed member is included, the record's own optional members
+where present (for example, `proposed_authority` and `proposal_hash`,
+{{I-D.draft-mcguinness-oauth-mission}}), and members companion
 profiles add to the record under its extensibility rules, so the
 commitment covers the record as approved and not a fixed subset. These
 bytes carry no `typ`/`iss` integrity-anchor envelope, unlike the

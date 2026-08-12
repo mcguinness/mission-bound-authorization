@@ -279,7 +279,7 @@ be used to reproduce the committed blob.
 
 The reference simultaneously provides stable identification and an
 integrity commitment.  This binding does not add `intent_hash`,
-`authority_hash`, or a second semantic projection.  Such parallel
+`authority_hash`, `proposal_hash`, or a second semantic projection.  Such parallel
 commitments would create ambiguity about which object was approved and
 would require implementations to keep multiple canonicalizations in
 lockstep.
@@ -487,7 +487,8 @@ flat `mission_s256` claim, copied onward from the resource token.
 This binding adds no member alongside that claim.  The namespace once
 carried by `approver` is carried by the person token's `iss` and
 the resource token's `ps`.  Receivers MUST NOT require `mission_id`,
-`issuer`, `policy_version`, `intent_hash`, `authority_hash`, or embedded
+`issuer`, `policy_version`, `intent_hash`, `authority_hash`,
+`proposal_hash`, or embedded
 authorization details for conformance to this binding.
 
 Each copying party MUST preserve `mission_s256` exactly.  A PS receiving

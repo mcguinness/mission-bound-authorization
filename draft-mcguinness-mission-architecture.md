@@ -415,16 +415,19 @@ it. A Mission is not another `authorization_details` type: it is the
 durable, approval-backed object an Authority Set is derived for and
 gated by (the core's Why a New Object section).
 
-A client proposes a Mission Intent; the Mission Issuer derives an
-Authority Set for it; an approval event commits both and creates the
+A client proposes a Mission Intent, and MAY propose concrete
+authority alongside it; the Mission Issuer derives an
+Authority Set; an approval event commits them and creates the
 Mission.
 
-In the OAuth binding, the commitment is two integrity anchors,
+In the OAuth binding, the commitment is the integrity anchors:
 `intent_hash` over the
-approved Mission Intent and `authority_hash` over the consented
-Authority Set, each computed over a domain-separated, issuer-bound
+approved Mission Intent, `authority_hash` over the consented
+Authority Set, and, where the client submitted an authority proposal,
+`proposal_hash` over the submitted `authorization_details` array,
+each computed over a domain-separated, issuer-bound
 envelope with fixed canonicalization, so an auditor can reproduce
-either digest from the record alone (the core's Mission Approval,
+each digest from the record alone (the core's Mission Approval,
 Integrity Anchors, and Canonicalization Rules sections). The record
 is immutable except for its state (the Mission Record section).
 
@@ -636,15 +639,16 @@ derivation, consent, and enforcement, is stated once as the ontology
 contract ({{ontology-contract}}).
 
 Where the OAuth discovery profile consumes a self-declaration, the
-declaration's digest is committed with the binding evidence: a third
-commitment beside `intent_hash` and `authority_hash`, recording what
+declaration's digest is committed with the binding evidence: an
+additional commitment beside the Mission's integrity anchors,
+recording what
 the resource claimed to be at the moment authority bound to it. The rest of the
 encounter, its routing through drawdown, catalog binding, projection,
 or fresh approval, and its identity pinning and floors, is the
 discovery companion's contract
 ({{I-D.draft-mcguinness-mission-discovery}}). AAuth can use R3 for
 resource-owned deterministic semantics without placing that declaration
-or a third commitment in the private mission blob.
+or such an additional commitment in the private mission blob.
 
 # A Mission's Life {#mission-life}
 
@@ -654,12 +658,15 @@ under the OAuth binding: an operator gives an agent the task
 
 1. **Propose.** The client shapes the request into a structured
    Mission Intent, untrusted by construction, and submits it in a
-   Pushed Authorization Request {{RFC9126}}
+   Pushed Authorization Request {{RFC9126}}, optionally proposing
+   concrete authority on the standard `authorization_details`
+   parameter alongside it
    ({{I-D.draft-mcguinness-mission-shaping}}; the core).
 2. **Approve and record.** The Authorization Server derives an
    Authority Set (read invoices, post adjustments under a cap),
    discloses it, and the Approver approves. The approval event
-   commits `intent_hash` and `authority_hash` and creates the
+   commits `intent_hash`, `authority_hash`, and, where a proposal was
+   submitted, `proposal_hash`, and creates the
    Mission, `active` with an expiry; Consent Evidence commits what
    was shown
    ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
@@ -733,8 +740,8 @@ one in those bindings is a change to that model, not to a profile.
 
 The AAuth binding adopts the context-level invariants: durable approval,
 stable attribution, exact-byte integrity, an active-state gate at the
-PS, and termination. It does not adopt the OAuth Authority Set, the two
-OAuth anchors, or universal subset derivation. AAuth resource authority
+PS, and termination. It does not adopt the OAuth Authority Set, the
+OAuth integrity anchors, or universal subset derivation. AAuth resource authority
 is decided afresh in the vocabulary and policy of each Resource or
 Access Server, with contextual PS governance when the PS is on path.
 
@@ -792,7 +799,7 @@ Access Server, with contextual PS governance when the PS is on path.
   that the derivation was the right reading of the task
   ({{derivation-boundary}}). AAuth's corresponding integrity property is
   the `s256` commitment over exact mission-blob bytes, not the OAuth
-  `intent_hash` and `authority_hash` pair.
+  integrity anchors.
 
 Read against "approved" in the first invariant, the core names three
 authorization bases, never an eighth invariant: `direct`, a human's
@@ -1332,8 +1339,9 @@ the security model's retention analysis.
 
 For the portable-authority bindings, the approval event authenticates
 the Approver, establishes the Subject, derives and renders the Authority
-Set for consent, computes the anchors over the consented set and the
-approved Intent, and creates the record in `active` atomically with the
+Set for consent, computes the anchors over the consented set, the
+approved Intent, and, where one was submitted, the authority proposal,
+and creates the record in `active` atomically with the
 decision.
 
 AAuth approval has different fidelity: the native propose, clarify, and
@@ -1569,7 +1577,7 @@ Resource-Declared Semantics:
 : The full inversion: the resource publishes its operations, their
   human meaning, and their consequences. Under the OAuth discovery
   composition, the declaration can be content-addressed by `r3_s256`
-  as a third commitment beside `intent_hash` and `authority_hash`; the
+  as an additional commitment beside the Mission's integrity anchors; the
   declared operations become candidate vocabulary that derivation
   narrows against. AAuth can instead use R3 as a resource-owned
   deterministic authorization vocabulary while the private mission

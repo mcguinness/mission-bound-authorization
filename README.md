@@ -218,10 +218,12 @@ The first useful piece is one profile, not the suite. A minimal
 conforming deployment of the core implements:
 
 - `mission_intent` submission through Pushed Authorization Requests;
-- derivation of the Authority Set, in narrowing mode via
-  `proposed_authority`;
+- derivation of the Authority Set, in narrowing mode from the standard
+  `authorization_details` authority proposal pushed alongside the
+  Intent;
 - the Mission record with its `intent_hash` and `authority_hash`
-  integrity anchors;
+  integrity anchors (plus `proposal_hash` where a proposal was
+  submitted);
 - the `mission` claim on issued tokens and the `authorization_details`
   echo in token responses;
 - issuance and refresh gated on Mission state, with revocation by
