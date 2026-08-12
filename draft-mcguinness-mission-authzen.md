@@ -1115,10 +1115,11 @@ Evidence `contributing_constraints`:
         "evaluation_id": "dec_2FpQ8kV5nR1tX7mB4sJ9eL6wYc",
         "parameter_digest":
           "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+        "critical": ["permit"],
         "permit": {
           "request_digest":
             "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-          "expires_at": "2026-11-02T08:15:00Z",
+          "valid_until": "2026-11-02T08:15:00Z",
           "use_limit": 1
         }
       }
@@ -1223,8 +1224,9 @@ This profile defines the following AuthZEN response `context` members:
 
 `permit`:
 : REQUIRED when `decision` is `true` for a consequential action; an
-  object recording the permit controls the PEP MUST enforce before
-  releasing the action's effect. Members:
+  object carrying the permit's decision conditions
+  ({{I-D.draft-mcguinness-mission-runtime}}): declarative constraints
+  on relying on the permit, each evaluated at every use. Members:
 
     `request_digest`:
     : CONDITIONAL. A string. The parameter binding the permit is
@@ -1233,10 +1235,11 @@ This profile defines the following AuthZEN response `context` members:
       parameter-bound. The PEP MUST enforce the exact request
       binding.
 
-    `expires_at`:
-    : REQUIRED. An RFC 3339 {{RFC3339}} timestamp. The permit lease,
+    `valid_until`:
+    : REQUIRED. An RFC 3339 {{RFC3339}} timestamp. The permit's
+      validity bound,
       past which the permit MUST NOT be used. No mode leaves this
-      window unbounded on the wire: `expires_at` MUST NOT be later
+      window unbounded on the wire: `valid_until` MUST NOT be later
       than the freshness time or lease of the Mission state view the
       decision relied on
       ({{I-D.draft-mcguinness-mission-runtime}}); in particular, it
@@ -1265,8 +1268,23 @@ This profile defines the following AuthZEN response `context` members:
       does not compare against a PDP-returned class label; none is
       echoed on this response.
 
-  The PEP MUST enforce every permit control present before releasing
-  the action's effect.
+  The PEP MUST honor every condition present, at every use of the
+  permit. A permit carrying a condition member the PEP does not
+  recognize is invalid: the PEP MUST NOT release the action's effect
+  under it. New conditions are coordinated extensions under this
+  document's extensibility rule. If AuthZEN standardizes decision
+  conditions or must-understand response semantics, that mechanism
+  governs and this profile aligns with it.
+
+`critical`:
+: OPTIONAL. An array of strings naming response context members the
+  PEP MUST recognize and process in order to rely on this decision;
+  a PEP that does not recognize a named member MUST treat the
+  decision as an effective deny. A PDP conforming to this profile
+  MUST list `permit` in `critical` on every response that carries
+  it. This member is profiled here in the shape proposed for AuthZEN
+  standardization; a standardized must-understand mechanism, once
+  defined, governs.
 
 `access_request`:
 : OPTIONAL. An object. Present on an `out_of_authority` or
@@ -1380,10 +1398,11 @@ genuine obligation applies.
     "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
     "parameter_digest":
       "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+    "critical": ["permit"],
     "permit": {
       "request_digest":
         "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-      "expires_at": "2026-11-02T08:15:00Z",
+      "valid_until": "2026-11-02T08:15:00Z",
       "use_limit": 1
     }
   }
@@ -1651,6 +1670,14 @@ Not a lane, transient denial:
   `retry_after`), not a remediation path: nothing is remediated, and
   the condition is expected to clear with time.
 
+Not a lane, decision conditions:
+: CONSTRAINTS of the decision itself (`permit`,
+  {{response-context}}): declarative bounds on relying on it,
+  evaluated at every use. They are not work the PEP performs; a
+  condition the PEP does not recognize makes the permit invalid,
+  where an unrecognized obligation makes the result an effective
+  deny.
+
 Lanes coexist on one response: a requestable denial can carry a
 notification obligation under Lane 1's deny-obligation rule
 ({{obligations}}), and an approval-satisfied permit can carry a
@@ -1730,7 +1757,7 @@ define a purpose-built execution authorization artifact distinct from
 evidence: audience-bound to the executor, short-lived, and one-use.
 
 The single enforcement identity owns the consumed-identifier store and
-honors the permit lease (the permit's `expires_at` and `use_limit`,
+honors the permit's conditions (the permit's `valid_until` and `use_limit`,
 {{response-context}}) under the runtime profile's consumed-identifier
 rules ({{I-D.draft-mcguinness-mission-runtime}}), so a permit cannot
 be executed twice or after its lease.
@@ -1744,7 +1771,7 @@ resource, the authorizing entry or `entry_digest`, and
 otherwise make the cache never hit. This binding does not echo the
 materialized view identifier on the response
 ({{mission-to-policy-materialization}}), so a cache cannot key on it;
-reuse is instead bounded by the permit's own `expires_at` and
+reuse is instead bounded by the permit's own `valid_until` and
 `use_limit`, the same lifetime-bounded controls that already gate
 execution, so a permit issued against a view the PDP has since
 retired cannot outlive its own lease regardless of cache key. A

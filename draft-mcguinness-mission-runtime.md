@@ -1165,10 +1165,12 @@ mechanism, and the deployment's own governance.
 
 A decision separates three response lanes, and a binding maps each
 lane to its wire. Obligations and advice are PEP work under the
-existing decision: obligations bind (request binding, permit expiry,
-use limits, evidence emission; failing one makes the effective result
-deny), and advice, where a binding defines it, is safely ignorable
-and never carries a mandatory control. Governance rides the
+existing decision: obligations bind (a step-up, a mandated
+notification; failing one makes the effective result deny), and
+advice, where a binding defines it, is safely ignorable and never
+carries a mandatory control. Decision conditions (request binding,
+validity bound, use limit) are not work but constraints of the
+decision itself, evaluated at every use ({{decision-output}}). Governance rides the
 request-approval loop, never the permit: an access request tracked by
 a task handle, resolved by an approval or another authority-state
 change. Partial evaluation, residual policy the PEP completes
@@ -1197,8 +1199,11 @@ inventing parallel semantics:
 - an evaluation identifier and evaluation time, correlating the
   decision with its evidence;
 - on a deny, a reason from the binding's failure classification;
-- on a permit, permit controls binding a permit: request binding,
-  expiry, and use limit, enforced by the PEP before release;
+- on a permit, decision conditions: declarative constraints on
+  relying on the permit (a request binding, a validity bound, a use
+  limit), evaluated at every use of the permit; a condition the
+  enforcing component does not recognize makes the permit unusable,
+  the reliance counterpart of the obligations rule;
 - zero or more obligations: mandatory enforcement duties the PEP
   completes under the existing decision, where an unfulfilled or
   unrecognized obligation is an effective deny;

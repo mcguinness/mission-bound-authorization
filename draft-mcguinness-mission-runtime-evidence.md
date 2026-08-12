@@ -343,9 +343,9 @@ canonicalization, and integrity envelope a deployment emits.
 
 `permit`:
 : REQUIRED when `decision` is `permit` for a consequential action. An
-  object recording the permit controls the decision was bound to, as
-  returned to the PEP: `request_digest` (the parameter binding the
-  permit is bound to), `expires_at` (the permit lease expiry), and
+  object recording the permit's decision conditions as returned to
+  the PEP: `request_digest` (the parameter binding the permit is
+  bound to), `valid_until` (the validity bound), and
   `use_limit` (the consumption bound on `evaluation_id`). The PDP
   MUST set `use_limit: 1` for a permit in the high-consequence
   classes. Carried per the AuthZEN binding's `permit` response
@@ -729,7 +729,7 @@ envelopes with unsupported formats.
   "permit": {
     "request_digest":
       "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-    "expires_at": "2026-11-02T08:15:00Z",
+    "valid_until": "2026-11-02T08:15:00Z",
     "use_limit": 1
   },
   "decision": "permit",
