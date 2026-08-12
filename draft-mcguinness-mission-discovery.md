@@ -105,9 +105,9 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-authzen:
-    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+  I-D.draft-mcguinness-mission-capability-binding:
+    title: "Mission Capability Binding"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html
     author:
       -
         ins: K. McGuinness
@@ -184,7 +184,7 @@ The family already routes the encounter through existing levers: a
 resource within a pre-consented ceiling binds by policy drawdown
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}), a catalog
 capability binds through the capability-source binding
-({{I-D.draft-mcguinness-mission-authzen}}), a partner domain binds
+({{I-D.draft-mcguinness-mission-capability-binding}}), a partner domain binds
 through projection
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), and anything
 else requires a fresh approval
@@ -300,7 +300,7 @@ An encounter is classified before it is adjudicated:
   the binding names the catalog and its admitted `tool_id` set, and
   each capability thereafter binds and drifts at the PDP under the
   capability-source rules
-  ({{I-D.draft-mcguinness-mission-authzen}}).
+  ({{I-D.draft-mcguinness-mission-capability-binding}}).
 - **A foreign trust domain**: a resource whose Authorization Server
   the deployment's trust does not cover. This profile does not bind
   it; cross-domain projection exists for domains with established
@@ -519,7 +519,7 @@ bound, and a drift signal for what is. A deployment SHOULD
 re-adjudicate a bound resource whose declaration changed before
 further use in a consequential class. The capability-source rules
 already refuse drifted catalog capabilities at the PDP
-({{I-D.draft-mcguinness-mission-authzen}}).
+({{I-D.draft-mcguinness-mission-capability-binding}}).
 
 The taint floor ({{injection-discovery}}) is applied only at binding.
 A binding created while the session was untainted remains usable after

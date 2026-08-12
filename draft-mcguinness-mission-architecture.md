@@ -234,6 +234,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-capability-binding:
+    title: "Mission Capability Binding"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
@@ -1023,7 +1031,7 @@ Credential holder:
 
 Capability executor:
 : the `executor` of the capability source binding
-  ({{I-D.draft-mcguinness-mission-authzen}}).
+  ({{I-D.draft-mcguinness-mission-capability-binding}}).
 
 Downstream identity:
 : the audience-scoped token and the cross-domain local subject
@@ -1542,8 +1550,8 @@ Capability-source binding:
 : Catalog-sourced capability definitions (an MCP tool, an OpenAPI
   operation) content-digested at derivation and refused on drift at
   decision time, so the meaning authority bound to is the meaning
-  enforced. Home: the AuthZEN binding
-  ({{I-D.draft-mcguinness-mission-authzen}}).
+  enforced. Home: the capability-binding companion
+  ({{I-D.draft-mcguinness-mission-capability-binding}}).
 
 Operation Profiles:
 : The per-operation statement of normalization and binding rules,
@@ -2724,6 +2732,12 @@ bound is AAuth's own `expires_at`, profiled by the expiry document
 `mission-harness`:
 : Binding sessions, queues, and sub-agent handles to Mission state;
   the mediated environment.
+
+`mission-capability-binding`:
+: Binds an approved catalog-sourced entry (an MCP tool, an OpenAPI
+  operation) to its capability source at derivation and refuses on
+  drift at decision time, with the AuthZEN MCP profile's (COAZ)
+  mapping for MCP deployments.
 
 `mission-orchestration`:
 : Experimental: reversibility classes, unwind plans, and compensation
