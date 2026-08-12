@@ -36,6 +36,13 @@ import {
 } from "../kernel/continuation-assertion.js";
 import { ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain.js";
 import { isSubsetSet } from "../kernel/derive.js";
+import { UniqueViolationError } from "@mission/store";
+import {
+  type CreationOperation,
+  type CreationReservation,
+  creationFingerprint,
+  isValidCreationRequestId,
+} from "../kernel/creation-idempotency.js";
 import { ExpansionDeferralError } from "../kernel/deferred.js";
 import { ChildDelegationError, createChildMission } from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
@@ -832,6 +839,26 @@ async function mintMissionAccessToken(
  * invalid_authorization_details; resource containment / parse failures ->
  * invalid_request), mapped onto the exchange's error surface.
  */
+/**
+ * @spec expansion#creation-request-id (child-delegation cites it) — read the
+ * REQUIRED `creation_request_id`: the client-generated identifier of ONE
+ * Mission-creation operation across all completion modes. Missing or malformed
+ * -> invalid_request. Syntax: bounded ASCII (max 255 octets); opaque to the AS
+ * beyond equality.
+ */
+function readCreationRequestId(params: Record<string, unknown>): string {
+  const v = params.creation_request_id;
+  if (v === undefined) {
+    throw new errors.InvalidRequest("creation_request_id required");
+  }
+  if (!isValidCreationRequestId(v)) {
+    throw new errors.InvalidRequest(
+      "creation_request_id must be a visible-ASCII string of at most 255 octets",
+    );
+  }
+  return v;
+}
+
 function readProposalParam(
   opts: AdapterOptions,
   params: Record<string, unknown>,
@@ -868,6 +895,10 @@ export async function handleChildCreationExchange(
   // Step 4: acting agent (the authenticated parent client; carry actor_token).
   const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt);
   if (!acting) return;
+
+  // @spec child-delegation#creation-request-id — REQUIRED on every child
+  // creation, in every completion mode (missing -> invalid_request).
+  const creationRequestId = readCreationRequestId(params);
 
   // Non-authoritative `parent` cross-check (audit only): subject_token is the
   // selector, but a supplied `parent` that disagrees is refused (parent_mismatch).
@@ -909,22 +940,82 @@ export async function handleChildCreationExchange(
     throw new errors.InvalidRequest("child_actor must be a JSON object with a string sub");
   }
 
-  // Steps 5-6: SYNCHRONOUS, NON-derivation subset creation. Denials map through the
-  // shared childErrorCode + mission_denial_reason (set on ctx directly so err_out
-  // does not strip the reason).
+  // @spec expansion#creation-fingerprint (child-delegation members) — the typed
+  // operation fingerprint over the PARSED, VERIFIED inputs (never the raw
+  // subject_token, DPoP proof, or client-auth assertion; never
+  // creation_request_id itself).
+  const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+  const fingerprint = creationFingerprint({
+    op: "child-creation",
+    iss: opts.issuer,
+    client: client.clientId,
+    source: parent.id,
+    cnf: { jkt: resolved.jkt },
+    actor: acting,
+    intent,
+    ...(proposedAuthority ? { proposal: proposedAuthority } : {}),
+    child_actor: childActor,
+    requested_token_type: JWT_TOKEN_TYPE,
+    ...(typeof parentParam === "string" && parentParam ? { cross_check: parentParam } : {}),
+  });
+  const reservation: CreationReservation = {
+    clientId: client.clientId,
+    creationRequestId,
+    op: "child-creation",
+    fingerprint,
+    cnfJkt: resolved.jkt,
+    sourceMissionId: parent.id,
+  };
+  const idem = opts.creationIdempotency;
+  if (!idem) {
+    throw new errors.InvalidRequest("creation idempotency is not configured");
+  }
+
+  // @spec expansion#creation-lookup-order — the idempotency lookup runs AFTER
+  // client authentication and possession verification but BEFORE the parent
+  // lifecycle gate (inside createChildMission): the recoverable retry is exactly
+  // the one whose source Mission changed state when the first attempt succeeded.
+  const existing = idem.find(client.clientId, creationRequestId);
+  if (existing) {
+    await recoverChildCreation(opts, ctx, existing, fingerprint, resolved.jkt);
+    return;
+  }
+
+  // Steps 5-6: SYNCHRONOUS, NON-derivation subset creation, ATOMIC with the
+  // idempotency reservation (one kernel-db transaction: reserved -> insertRecord
+  // -> completed; the datastore uniqueness constraint — never read-before-insert
+  // — serializes concurrent duplicates). Denials map through the shared
+  // childErrorCode + mission_denial_reason (set on ctx directly so err_out
+  // does not strip the reason) and are recorded as a `failed` operation so a
+  // retry replays the refusal.
   let child: MissionRecord;
   try {
-    ({ child } = createChildMission(opts.kernel, {
-      parentId: parent.id,
-      intent,
-      ...(proposedAuthority ? { proposedAuthority } : {}),
-      childActor,
-    }));
+    child = idem.createCompleted(reservation, () => {
+      const created = createChildMission(opts.kernel, {
+        parentId: parent.id,
+        intent,
+        ...(proposedAuthority ? { proposedAuthority } : {}),
+        childActor,
+      });
+      return { missionId: created.child.id, value: created.child };
+    });
   } catch (e) {
+    if (e instanceof UniqueViolationError) {
+      // A concurrent duplicate won the reservation: recover its outcome.
+      const winner = idem.find(client.clientId, creationRequestId);
+      if (winner) {
+        await recoverChildCreation(opts, ctx, winner, fingerprint, resolved.jkt);
+        return;
+      }
+      throw e;
+    }
     if (e instanceof ChildDelegationError) {
       const code = childErrorCode(e.reason);
-      ctx.status = code === "access_denied" ? 403 : 400;
-      ctx.body = { error: code, mission_denial_reason: e.reason };
+      const status = code === "access_denied" ? 403 : 400;
+      const body = { error: code, mission_denial_reason: e.reason };
+      idem.recordFailure(reservation, { status, body });
+      ctx.status = status;
+      ctx.body = body;
       ctx.set("cache-control", "no-store");
       return;
     }
@@ -936,13 +1027,111 @@ export async function handleChildCreationExchange(
     ctx.body = { error: "child_delegation_unsupported" };
     return;
   }
+  // Credential generation AFTER the atomic creation commit: a crash between the
+  // commit and the response is recovered by the retry finding the completed
+  // operation and resuming DELIVERY (recovery = delivery, never re-creation).
   const { assertion } = await mintChildGrant(
     opts.kernel,
     { key: opts.childGrantKey, kid: opts.childGrantKid, alg: opts.childGrantAlg },
     { child, tokenEndpoint: `${opts.issuer}/token` },
   );
+  idem.recordDelivery(client.clientId, creationRequestId, {
+    mode: "synchronous",
+    assertion,
+    exp: decodeJwt(assertion).exp as number,
+  });
   // @spec RFC 8693 §2.2.1 — the (unchanged) child response: a grant reference, not
   // a token; token_type N_A because bearer semantics do not apply to an unredeemed grant.
+  ctx.status = 200;
+  ctx.set("cache-control", "no-store");
+  ctx.body = {
+    access_token: assertion,
+    issued_token_type: JWT_TOKEN_TYPE,
+    token_type: "N_A",
+    mission_id: child.id,
+    parent: child.parent,
+  };
+}
+
+/**
+ * @spec child-delegation#creation-request-id — recover a repeated child
+ * creation. A matching identifier NEVER bypasses verification: the fingerprint
+ * MUST match (the fingerprint binds the resolved source Mission, the acting
+ * actor, and every semantic input, so any divergence refuses), and the
+ * presenter MUST prove the RECORDED sender-constraint identity (no key-rotation
+ * recovery path is defined). Recovery is DELIVERY, never re-creation:
+ *  - reserved  -> retryable in-progress (a concurrent attempt holds the
+ *                 reservation; the client retries with the SAME identifier);
+ *  - failed    -> the recorded refusal is replayed verbatim;
+ *  - completed -> the stored child grant is returned while it is still valid;
+ *                 once expired (it is deliberately short-lived), a FRESH child
+ *                 grant is minted for the SAME child, provided the child
+ *                 remains active. The fresh mint is an ordinary issuance event:
+ *                 creation accounting is NOT repeated (no fan-out increment, no
+ *                 second lifecycle event, no second Child Evidence).
+ */
+async function recoverChildCreation(
+  opts: AdapterOptions,
+  ctx: KoaContextWithOIDC,
+  op: CreationOperation,
+  fingerprint: string,
+  presenterJkt: string,
+): Promise<void> {
+  if (op.op !== "child-creation" || op.fingerprint !== fingerprint) {
+    txError(
+      ctx,
+      400,
+      "invalid_request",
+      "creation_request_id was already used for a different creation request",
+    );
+    return;
+  }
+  if (presenterJkt !== op.cnfJkt) {
+    txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");
+    return;
+  }
+  if (op.state === "reserved") {
+    txError(ctx, 400, "invalid_request", "creation is in progress; retry with the same creation_request_id");
+    return;
+  }
+  if (op.state === "failed") {
+    ctx.status = op.failure?.status ?? 400;
+    ctx.body = op.failure?.body ?? { error: "invalid_request" };
+    ctx.set("cache-control", "no-store");
+    return;
+  }
+  const child = op.missionId ? opts.kernel.get(op.missionId) : undefined;
+  if (!child) {
+    txError(ctx, 400, "invalid_grant", "recorded child mission not found");
+    return;
+  }
+  const state = opts.kernel.applyExpiry(child).state;
+  if (state !== "active") {
+    txError(ctx, 400, "invalid_grant", `recorded child mission is ${state}`);
+    return;
+  }
+  const stored = op.delivery as { assertion?: string; exp?: number } | undefined;
+  const nowS = Math.floor(opts.kernel.nowDate().getTime() / 1000);
+  let assertion: string;
+  if (stored?.assertion && typeof stored.exp === "number" && stored.exp > nowS) {
+    assertion = stored.assertion;
+  } else {
+    if (!opts.childGrantKey || !opts.childGrantKid || !opts.childGrantAlg) {
+      ctx.status = 501;
+      ctx.body = { error: "child_delegation_unsupported" };
+      return;
+    }
+    ({ assertion } = await mintChildGrant(
+      opts.kernel,
+      { key: opts.childGrantKey, kid: opts.childGrantKid, alg: opts.childGrantAlg },
+      { child, tokenEndpoint: `${opts.issuer}/token` },
+    ));
+    opts.creationIdempotency?.recordDelivery(op.clientId, op.creationRequestId, {
+      mode: "synchronous",
+      assertion,
+      exp: decodeJwt(assertion).exp as number,
+    });
+  }
   ctx.status = 200;
   ctx.set("cache-control", "no-store");
   ctx.body = {

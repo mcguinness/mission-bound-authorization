@@ -40,6 +40,7 @@ import {
   type ChildDenialReason,
   childMissionClaim,
 } from "../kernel/child-delegation.js";
+import { CreationIdempotencyStore } from "../kernel/creation-idempotency.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
 import {
   authorizationDetailsTypesMetadata,
@@ -189,6 +190,13 @@ export interface AdapterOptions {
    * Evidence. When unset, the ingestion endpoint replies 501.
    */
   issuerEvidence?: IssuerEvidenceStore;
+  /**
+   * @spec expansion#creation-request-id — the durable creation-idempotency
+   * store (child creation + expansion). Lives over the KERNEL database so the
+   * reservation commits atomically with Mission creation. Defaulted by
+   * buildProvider when unset (instances over the same kernel share the table).
+   */
+  creationIdempotency?: CreationIdempotencyStore;
 }
 
 /**
@@ -261,6 +269,10 @@ interface KoaCtx {
 
 export function buildProvider(opts: AdapterOptions): Provider {
   const { kernel } = opts;
+  // @spec expansion#creation-request-id — idempotency is NOT optional wiring:
+  // default the store over the kernel database (any instance over the same
+  // kernel sees the same table, so a caller-supplied store is equivalent).
+  opts.creationIdempotency ??= new CreationIdempotencyStore(kernel);
 
   // Containment refresh-path conformance: a stored oidc grant copies its rar
   // at issuance, so a refresh (or a late code redemption) could echo a
@@ -633,6 +645,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
       "mission_intent",
       "child_actor",
       "parent",
+      // @spec expansion#creation-request-id — the non-authoritative
+      // `predecessor` cross-check (mirrors `parent`) and the REQUIRED
+      // `creation_request_id`; each MUST be declared here or
+      // stripGrantIrrelevantParams removes it.
+      "predecessor",
+      "creation_request_id",
       "deferral_code",
     ]),
   );
