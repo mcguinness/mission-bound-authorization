@@ -1544,7 +1544,7 @@ and reserializing the JSON can change the bytes and therefore MUST NOT
 be used to reproduce the committed blob.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
 <p id="section-3.2-4">The reference simultaneously provides stable identification and an
 integrity commitment.  This binding does not add <code>intent_hash</code>,
-<code>authority_hash</code>, or a second semantic projection.  Such parallel
+<code>authority_hash</code>, <code>proposal_hash</code>, or a second semantic projection.  Such parallel
 commitments would create ambiguity about which object was approved and
 would require implementations to keep multiple canonicalizations in
 lockstep.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
@@ -1848,7 +1848,8 @@ flat <code>mission_s256</code> claim, copied onward from the resource token.<a h
 <p id="section-4.6-2">This binding adds no member alongside that claim.  The namespace once
 carried by <code>approver</code> is carried by the person token's <code>iss</code> and
 the resource token's <code>ps</code>.  Receivers MUST NOT require <code>mission_id</code>,
-<code>issuer</code>, <code>policy_version</code>, <code>intent_hash</code>, <code>authority_hash</code>, or embedded
+<code>issuer</code>, <code>policy_version</code>, <code>intent_hash</code>, <code>authority_hash</code>,
+<code>proposal_hash</code>, or embedded
 authorization details for conformance to this binding.<a href="#section-4.6-2" class="pilcrow">¶</a></p>
 <p id="section-4.6-3">Each copying party MUST preserve <code>mission_s256</code> exactly.  A PS receiving
 a resource token with a mission reference MUST verify that <code>ps</code>

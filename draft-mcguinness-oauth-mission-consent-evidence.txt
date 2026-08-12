@@ -262,12 +262,14 @@ Table of Contents
       rendered disclosure.
 
    source_hashes:  REQUIRED.  An object containing the intent_hash and
-      authority_hash values the disclosure corresponds to.  The
-      disclosure object carries these two hashes rather than the full
-      mission container (Section 7) because it is constructed before
-      approval commits the Mission: the Mission id and lifecycle do not
-      yet exist, and the disclosure can commit only to the proposed
-      Intent and Authority Set it actually renders.  The Consent
+      authority_hash values the disclosure corresponds to, and, when the
+      client submitted an authority proposal, the proposal_hash value
+      ([I-D.draft-mcguinness-oauth-mission]).  The disclosure object
+      carries these hashes rather than the full mission container
+      (Section 7) because it is constructed before approval commits the
+      Mission: the Mission id and lifecycle do not yet exist, and the
+      disclosure can commit only to the proposed Intent, the submitted
+      proposal, and the Authority Set it actually renders.  The Consent
       Evidence object, recorded at or after the decision, carries the
       resolved mission container with id, issuer, and the same anchors.
 
@@ -315,9 +317,14 @@ Table of Contents
       Presentation wording is free; coverage is normative.  An array
       that omits an entry, a constraint, a delegation right, or a
       consumption bound is not faithful, and a verifier can check the
-      rendered set against the committed Authority Set. A disclosure
-      that renders mission_summary without a faithful authority_summary
-      does not conform.
+      rendered set against the committed Authority Set. When the client
+      submitted an authority proposal, the issuance profile requires the
+      rendering to distinguish the entries the client proposed from any
+      narrowing or restructuring the AS applied
+      ([I-D.draft-mcguinness-oauth-mission]); a disclosure for such a
+      Mission carries that distinction in its rendered elements.  A
+      disclosure that renders mission_summary without a faithful
+      authority_summary does not conform.
 
    material_notices:  REQUIRED.  An array, possibly empty.  Notices that
       materially affect the Approver's decision.  A notice SHOULD be
@@ -627,12 +634,15 @@ Table of Contents
    The Consent Disclosure object MUST be constructed after Authority Set
    derivation and before approval.  If any disclosure input changes
    after the disclosure is constructed and before the decision (the
-   Authority Set, the locale, the template, or the material notices),
-   the Mission Issuer MUST discard the disclosure and construct a new
-   one.  It MUST NOT reuse the prior consent_rendering_hash.  Rung 1
-   determinism (Appendix A) applies per presentation modality: the same
-   inputs produce the same rendered form within a given modality, not
-   across modalities.
+   Mission Intent, the authority proposal, the Authority Set, the
+   locale, the template, or the material notices), the Mission Issuer
+   MUST discard the disclosure and construct a new one.  It MUST NOT
+   reuse the prior consent_rendering_hash; the issuance profile's rule
+   recomputing the integrity anchors over the changed context applies
+   alongside ([I-D.draft-mcguinness-oauth-mission]).  Rung 1 determinism
+   (Appendix A) applies per presentation modality: the same inputs
+   produce the same rendered form within a given modality, not across
+   modalities.
 
 6.  Rendering Assurance
 
@@ -680,26 +690,30 @@ Table of Contents
       only after an approval ([I-D.draft-mcguinness-oauth-mission]):
 
       *  When decision is approved, it contains id, issuer, intent_hash,
-         authority_hash, and, when this profile records it on the
+         authority_hash, proposal_hash when the Mission records an
+         authority proposal, and, when this profile records it on the
          Mission, consent_rendering_hash.
 
       *  When decision is declined, no Mission was created
          (Section 8.1), so there is no id.  It instead contains issuer
-         and the intent_hash and authority_hash the disclosure
-         corresponded to, matching the disclosure object's source_hashes
-         (Section 4).  It MUST NOT contain id.
+         and the intent_hash and authority_hash (with proposal_hash
+         where present) the disclosure corresponded to, matching the
+         disclosure object's source_hashes (Section 4).  It MUST NOT
+         contain id.
 
       *  When decision is narrowed, the review required a narrowing
          revision and no Mission was created (Section 8.2).  Like a
          decline, it contains issuer and the reviewed disclosure's
-         intent_hash and authority_hash, matching that disclosure's
-         source_hashes, and MUST NOT contain id.
+         intent_hash and authority_hash (with proposal_hash where
+         present), matching that disclosure's source_hashes, and MUST
+         NOT contain id.
 
       This descriptor follows the evidence-descriptor convention of the
       issuance profile ([I-D.draft-mcguinness-oauth-mission]): it is the
       mission claim shape extended with the collision-resistantly named
-      audit members intent_hash and consent_rendering_hash, and it is
-      not authority-bearing on its own.
+      audit members intent_hash, consent_rendering_hash, and, where
+      present, proposal_hash, and it is not authority-bearing on its
+      own.
 
    approver:  REQUIRED.  An object identifying the authenticated
       Approver.  It MUST carry iss and sub, per the Mission record's
@@ -957,8 +971,9 @@ Table of Contents
 
    At an approval event, a Consent-Evidence-capable Mission Issuer MUST:
 
-   1.  derive the Authority Set and compute intent_hash and
-       authority_hash under [I-D.draft-mcguinness-oauth-mission];
+   1.  derive the Authority Set and compute intent_hash, authority_hash,
+       and, where an authority proposal was submitted, proposal_hash
+       under [I-D.draft-mcguinness-oauth-mission];
 
    2.  construct the Consent Disclosure object from that exact Authority
        Set and Mission Intent;
@@ -1481,8 +1496,9 @@ Appendix B.  Worked Disclosure and Test Vector
    entries.write bounded by a max_amount of 500.00 USD on
    https://erp.example.com, approved by alice (user_3p2q8mN1a0kV7tR);
    source_hashes carries that profile's computed intent_hash and
-   authority_hash.  The template_hash value stands for the deployment's
-   template commitment and is illustrative.
+   authority_hash.  This Mission submitted no authority proposal, so
+   source_hashes carries no proposal_hash.  The template_hash value
+   stands for the deployment's template commitment and is illustrative.
 
    The Consent Disclosure object:
 

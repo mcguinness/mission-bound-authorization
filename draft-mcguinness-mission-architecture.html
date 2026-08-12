@@ -1464,15 +1464,18 @@ is the concrete authority (resources, actions, constraints) derived for
 it. A Mission is not another <code>authorization_details</code> type: it is the
 durable, approval-backed object an Authority Set is derived for and
 gated by (the core's Why a New Object section).<a href="#section-4-3" class="pilcrow">¶</a></p>
-<p id="section-4-4">A client proposes a Mission Intent; the Mission Issuer derives an
-Authority Set for it; an approval event commits both and creates the
+<p id="section-4-4">A client proposes a Mission Intent, and MAY propose concrete
+authority alongside it; the Mission Issuer derives an
+Authority Set; an approval event commits them and creates the
 Mission.<a href="#section-4-4" class="pilcrow">¶</a></p>
-<p id="section-4-5">In the OAuth binding, the commitment is two integrity anchors,
+<p id="section-4-5">In the OAuth binding, the commitment is the integrity anchors:
 <code>intent_hash</code> over the
-approved Mission Intent and <code>authority_hash</code> over the consented
-Authority Set, each computed over a domain-separated, issuer-bound
+approved Mission Intent, <code>authority_hash</code> over the consented
+Authority Set, and, where the client submitted an authority proposal,
+<code>proposal_hash</code> over the submitted <code>authorization_details</code> array,
+each computed over a domain-separated, issuer-bound
 envelope with fixed canonicalization, so an auditor can reproduce
-either digest from the record alone (the core's Mission Approval,
+each digest from the record alone (the core's Mission Approval,
 Integrity Anchors, and Canonicalization Rules sections). The record
 is immutable except for its state (the Mission Record section).<a href="#section-4-5" class="pilcrow">¶</a></p>
 <p id="section-4-6">The core lifecycle states are <code>active</code>, <code>revoked</code>, and <code>expired</code>, and
@@ -1744,15 +1747,16 @@ own operations and consequences. Who owns meaning, and how it reaches
 derivation, consent, and enforcement, is stated once as the ontology
 contract (<a href="#ontology-contract" class="auto internal xref">Section 13</a>).<a href="#section-7-10" class="pilcrow">¶</a></p>
 <p id="section-7-11">Where the OAuth discovery profile consumes a self-declaration, the
-declaration's digest is committed with the binding evidence: a third
-commitment beside <code>intent_hash</code> and <code>authority_hash</code>, recording what
+declaration's digest is committed with the binding evidence: an
+additional commitment beside the Mission's integrity anchors,
+recording what
 the resource claimed to be at the moment authority bound to it. The rest of the
 encounter, its routing through drawdown, catalog binding, projection,
 or fresh approval, and its identity pinning and floors, is the
 discovery companion's contract
 (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>). AAuth can use R3 for
 resource-owned deterministic semantics without placing that declaration
-or a third commitment in the private mission blob.<a href="#section-7-11" class="pilcrow">¶</a></p>
+or such an additional commitment in the private mission blob.<a href="#section-7-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-life">
@@ -1767,14 +1771,17 @@ under the OAuth binding: an operator gives an agent the task
 <li id="section-8-2.1">
           <p id="section-8-2.1.1"><strong>Propose.</strong> The client shapes the request into a structured
 Mission Intent, untrusted by construction, and submits it in a
-Pushed Authorization Request <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>
+Pushed Authorization Request <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>, optionally proposing
+concrete authority on the standard <code>authorization_details</code>
+parameter alongside it
 (<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>; the core).<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-8-2.2">
           <p id="section-8-2.2.1"><strong>Approve and record.</strong> The Authorization Server derives an
 Authority Set (read invoices, post adjustments under a cap),
 discloses it, and the Approver approves. The approval event
-commits <code>intent_hash</code> and <code>authority_hash</code> and creates the
+commits <code>intent_hash</code>, <code>authority_hash</code>, and, where a proposal was
+submitted, <code>proposal_hash</code>, and creates the
 Mission, <code>active</code> with an expiry; Consent Evidence commits what
 was shown
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
@@ -1864,8 +1871,8 @@ the corresponding Authority Set capabilities. A change that would break
 one in those bindings is a change to that model, not to a profile.<a href="#section-9-1" class="pilcrow">¶</a></p>
 <p id="section-9-2">The AAuth binding adopts the context-level invariants: durable approval,
 stable attribution, exact-byte integrity, an active-state gate at the
-PS, and termination. It does not adopt the OAuth Authority Set, the two
-OAuth anchors, or universal subset derivation. AAuth resource authority
+PS, and termination. It does not adopt the OAuth Authority Set, the
+OAuth integrity anchors, or universal subset derivation. AAuth resource authority
 is decided afresh in the vocabulary and policy of each Resource or
 Access Server, with contextual PS governance when the PS is on path.<a href="#section-9-2" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-9-3">
@@ -1943,7 +1950,7 @@ treats its cache as unreliable rather than as permission
 that the derivation was the right reading of the task
 (<a href="#derivation-boundary" class="auto internal xref">Section 12</a>). AAuth's corresponding integrity property is
 the <code>s256</code> commitment over exact mission-blob bytes, not the OAuth
-<code>intent_hash</code> and <code>authority_hash</code> pair.<a href="#section-9-3.14.1" class="pilcrow">¶</a></p>
+integrity anchors.<a href="#section-9-3.14.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2599,8 +2606,9 @@ the security model's retention analysis.<a href="#section-11.8-1" class="pilcrow
         </h3>
 <p id="section-11.9-1">For the portable-authority bindings, the approval event authenticates
 the Approver, establishes the Subject, derives and renders the Authority
-Set for consent, computes the anchors over the consented set and the
-approved Intent, and creates the record in <code>active</code> atomically with the
+Set for consent, computes the anchors over the consented set, the
+approved Intent, and, where one was submitted, the authority proposal,
+and creates the record in <code>active</code> atomically with the
 decision.<a href="#section-11.9-1" class="pilcrow">¶</a></p>
 <p id="section-11.9-2">AAuth approval has different fidelity: the native propose, clarify, and
 approve interaction authenticates the parties, returns the approved
@@ -2904,7 +2912,7 @@ late still binds before use. Home: the discovery companion
           <p id="section-13-3.10.1">The full inversion: the resource publishes its operations, their
 human meaning, and their consequences. Under the OAuth discovery
 composition, the declaration can be content-addressed by <code>r3_s256</code>
-as a third commitment beside <code>intent_hash</code> and <code>authority_hash</code>; the
+as an additional commitment beside the Mission's integrity anchors; the
 declared operations become candidate vocabulary that derivation
 narrows against. AAuth can instead use R3 as a resource-owned
 deterministic authorization vocabulary while the private mission

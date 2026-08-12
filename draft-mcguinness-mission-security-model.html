@@ -2119,12 +2119,14 @@ comprehension stays out of reach; no electronic-consent scheme
 provides it.<a href="#section-9-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-5.2">
-          <p id="section-9-5.2.1"><strong>Anchor semantics.</strong> The two integrity anchors commit two objects,
-not the relationship between them: <code>intent_hash</code> commits the
-approved intent, <code>authority_hash</code> the consented Authority Set, and
+          <p id="section-9-5.2.1"><strong>Anchor semantics.</strong> The integrity anchors commit objects,
+not the relationships between them: <code>intent_hash</code> commits the
+approved intent, <code>authority_hash</code> the consented Authority Set,
+<code>proposal_hash</code>, where an authority proposal was submitted, the
+authority the client asked for, and
 that the authority faithfully serves the intent is a derivation
 policy fact (a recommendation, auditable via <code>policy_version</code>), not
-something either hash proves. And <code>authority_hash</code> commits the full
+something any of the hashes proves. And <code>authority_hash</code> commits the full
 consented set, which a per-Resource-Server token, carrying a
 narrowed subset, does not contain: at such a Resource Server the
 anchor is an audit correlator, not an enforcement input, and the

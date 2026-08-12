@@ -1560,7 +1560,8 @@ consented authority ceiling
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>). A dispatched
 Mission commits its own <code>intent_hash</code> and <code>authority_hash</code> over its own
 Intent and final Authority Set (<a href="#dispatch" class="auto internal xref">Section 7</a>); the template commits the
-ceiling once, under <code>template_hash</code>. The two anchors are never merged.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+ceiling once, under <code>template_hash</code>. The Mission's anchors and the
+template's anchor are never merged.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="template-lifecycle">
@@ -1674,7 +1675,9 @@ principal.<a href="#section-7-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-7-4.3">
           <p id="section-7-4.3.1"><strong>Derive the instance Authority Set.</strong> Derive an Authority Set from
-the dispatch intent and bound it by the deployment's derivation
+the dispatch intent, and from the Dispatcher's authority proposal
+where one was submitted (<a href="#grant-type" class="auto internal xref">Section 7.2</a>), and bound it by the
+deployment's derivation
 policy, exactly as for any Mission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). This document adds no
 authority-derivation rule.<a href="#section-7-4.3.1" class="pilcrow">¶</a></p>
@@ -1816,12 +1819,31 @@ instance Authority Set is derived (<a href="#dispatch" class="auto internal xref
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.2-2.7">
-<code>dispatch_event_id</code>:</dt>
+<code>authorization_details</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.2-2.8">
-            <p id="section-7.2-2.8.1"><span class="bcp14">REQUIRED</span>. The dispatch event identifier that makes the Dispatch
+            <p id="section-7.2-2.8.1"><span class="bcp14">OPTIONAL</span>. The Dispatcher's authority proposal: the standard
+<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> parameter carried on the same token request, itself
+ordinary <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> token-request usage. This parameter is this
+grant's proposal carriage, replacing the issuance profile's
+PAR-only carriage rule; that profile's validation, derivation,
+recording, and hashing semantics apply unchanged
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). It is a proposal, never
+authority: it bounds the derivation of step 3 of <a href="#dispatch" class="auto internal xref">Section 7</a> in
+narrowing mode, and the double intersection of step 4 applies to
+the result unchanged, so a proposal narrows the instance and never
+widens it beyond the Template Ceiling. Absent a proposal, the
+instance derives from the dispatch intent alone. An instance
+created from a Dispatch carrying one records <code>proposed_authority</code>
+and <code>proposal_hash</code>.<a href="#section-7.2-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-2.9">
+<code>dispatch_event_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-2.10">
+            <p id="section-7.2-2.10.1"><span class="bcp14">REQUIRED</span>. The dispatch event identifier that makes the Dispatch
 idempotent (<a href="#dispatch" class="auto internal xref">Section 7</a>). A redemption bearing an identifier the
 Mission Issuer has already committed <span class="bcp14">MUST</span> return the previously
-committed instance and <span class="bcp14">MUST NOT</span> derive a second Mission.<a href="#section-7.2-2.8.1" class="pilcrow">¶</a></p>
+committed instance and <span class="bcp14">MUST NOT</span> derive a second Mission.<a href="#section-7.2-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2266,8 +2288,12 @@ object by that value.<a href="#section-15-5.4.1" class="pilcrow">¶</a></p>
 <span class="refAuthor">Campbell, B.</span> and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"An IETF URN Sub-Namespace for OAuth"</span>, <span class="seriesInfo">RFC 6755</span>, <span class="seriesInfo">DOI 10.17487/RFC6755</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6755">https://www.rfc-editor.org/rfc/rfc6755</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8174">[RFC8174]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>

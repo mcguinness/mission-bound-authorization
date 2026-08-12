@@ -3184,8 +3184,8 @@ payload within an ARAP request, and confers nothing by itself. The
 RAR-details grain and the AuthZEN grain are not competing carriers,
 and a deployment <span class="bcp14">MAY</span> expose both on the same denial: the
 RAR-details grain names what authority to propose, carrying
-actionable <code>authorization_details</code> the client proposes back on a
-fresh Intent through <code>proposed_authority</code>
+actionable <code>authorization_details</code> the client proposes back on the
+standard <code>authorization_details</code> parameter alongside a fresh Intent
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); the AuthZEN grain names
 how the denial is escalated, routing it into a governed access
 request that an independent approver or policy adjudicates before

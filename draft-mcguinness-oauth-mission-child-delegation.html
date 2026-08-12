@@ -1636,35 +1636,51 @@ actor (<a href="#child-vs-act" class="auto internal xref">Section 3.2</a>).<a hr
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-4.15">
-<code>child_actor</code>:</dt>
+<code>authorization_details</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-6-4.16">
-          <p id="section-6-4.16.1"><span class="bcp14">REQUIRED</span>. An object identifying the child actor that will hold or
+          <p id="section-6-4.16.1"><span class="bcp14">OPTIONAL</span>. The child's authority proposal: the standard <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>
+parameter carried on the same token request, itself ordinary
+<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> token-request usage. This parameter is this exchange's
+proposal carriage, replacing the issuance profile's PAR-only
+carriage rule; that profile's validation, derivation, recording,
+and hashing semantics apply unchanged
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). It is a proposal, never
+authority: the child Authority Set is derived and bounded by policy
+and by the strict-subset rule regardless of what was proposed. A
+Child Mission created from an exchange carrying one records
+<code>proposed_authority</code> and <code>proposal_hash</code>.<a href="#section-6-4.16.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-4.17">
+<code>child_actor</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-4.18">
+          <p id="section-6-4.18.1"><span class="bcp14">REQUIRED</span>. An object identifying the child actor that will hold or
 execute under the Child Mission, using the issuance profile's actor
-vocabulary (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):<a href="#section-6-4.16.1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-6-4.16.2">
-            <dt id="section-6-4.16.2.1">
+vocabulary (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):<a href="#section-6-4.18.1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6-4.18.2">
+            <dt id="section-6-4.18.2.1">
 <code>sub</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-6-4.16.2.2">
-              <p id="section-6-4.16.2.2.1"><span class="bcp14">REQUIRED</span>. The child actor's identifier.<a href="#section-6-4.16.2.2.1" class="pilcrow">¶</a></p>
+            <dd style="margin-left: 1.5em" id="section-6-4.18.2.2">
+              <p id="section-6-4.18.2.2.1"><span class="bcp14">REQUIRED</span>. The child actor's identifier.<a href="#section-6-4.18.2.2.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-6-4.16.2.3">
+<dt id="section-6-4.18.2.3">
 <code>iss</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-6-4.16.2.4">
-              <p id="section-6-4.16.2.4.1"><span class="bcp14">OPTIONAL</span>. The issuer of <code>sub</code> when it is not the Mission Issuer's
-own namespace.<a href="#section-6-4.16.2.4.1" class="pilcrow">¶</a></p>
+            <dd style="margin-left: 1.5em" id="section-6-4.18.2.4">
+              <p id="section-6-4.18.2.4.1"><span class="bcp14">OPTIONAL</span>. The issuer of <code>sub</code> when it is not the Mission Issuer's
+own namespace.<a href="#section-6-4.18.2.4.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-6-4.16.2.5">
+<dt id="section-6-4.18.2.5">
 <code>sub_profile</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-6-4.16.2.6">
-              <p id="section-6-4.16.2.6.1"><span class="bcp14">RECOMMENDED</span>. The actor-type classification (for example,
+            <dd style="margin-left: 1.5em" id="section-6-4.18.2.6">
+              <p id="section-6-4.18.2.6.1"><span class="bcp14">RECOMMENDED</span>. The actor-type classification (for example,
 <code>ai_agent</code>), matched against the parent entry's
-<code>allowed_child_actors</code> (<a href="#fanout" class="auto internal xref">Section 9</a>).<a href="#section-6-4.16.2.6.1" class="pilcrow">¶</a></p>
+<code>allowed_child_actors</code> (<a href="#fanout" class="auto internal xref">Section 9</a>).<a href="#section-6-4.18.2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 </dl>
-<p id="section-6-4.16.3">A <code>child_actor</code> <span class="bcp14">MAY</span> be identified at instance granularity where the
+<p id="section-6-4.18.3">A <code>child_actor</code> <span class="bcp14">MAY</span> be identified at instance granularity where the
 deployment authenticates client instances
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>; for AI
 agents, <span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>): <code>sub</code>
@@ -1672,18 +1688,18 @@ carries the instance identifier and <code>sub_profile</code> the
 space-separated value list (for example,
 <code>ai_agent client_instance</code>). The child client-identity rule
 (<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>), under which child credentials never
-transit the parent, composes naturally with instance-specific keys.<a href="#section-6-4.16.3" class="pilcrow">¶</a></p>
+transit the parent, composes naturally with instance-specific keys.<a href="#section-6-4.18.3" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-4.17">
+<dt id="section-6-4.19">
 <code>parent</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-4.18">
-          <p id="section-6-4.18.1"><span class="bcp14">OPTIONAL</span>. A string. The <code>mission_id</code> of the Parent Mission, a
+        <dd style="margin-left: 1.5em" id="section-6-4.20">
+          <p id="section-6-4.20.1"><span class="bcp14">OPTIONAL</span>. A string. The <code>mission_id</code> of the Parent Mission, a
 non-authoritative cross-check and audit value only. The Mission Issuer
 resolves and selects the parent from <code>subject_token</code>
 (<a href="#request-processing" class="auto internal xref">Section 6.7</a>); when <code>parent</code> is present it <span class="bcp14">MUST</span> verify it
 names that same resolved Mission and refuse a mismatch with
-<code>invalid_grant</code>. <code>parent</code> does not by itself authorize child creation.<a href="#section-6-4.18.1" class="pilcrow">¶</a></p>
+<code>invalid_grant</code>. <code>parent</code> does not by itself authorize child creation.<a href="#section-6-4.20.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2307,20 +2323,26 @@ depth the ancestor entries allowed.<a href="#section-7-4" class="pilcrow">¶</a>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-7.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.1-2.6">
-            <p id="section-7.1-2.6.1">the delegation event identifier;<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-2.6.1">where the child-creation exchange carried an authority proposal,
+the recorded <code>proposed_authority</code> and its <code>proposal_hash</code>;<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.1-2.7">
-            <p id="section-7.1-2.7.1">the cascade mode; and<a href="#section-7.1-2.7.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-2.7.1">the delegation event identifier;<a href="#section-7.1-2.7.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.1-2.8">
-            <p id="section-7.1-2.8.1">the fan-out policy result.<a href="#section-7.1-2.8.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-2.8.1">the cascade mode; and<a href="#section-7.1-2.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.9">
+            <p id="section-7.1-2.9.1">the fan-out policy result.<a href="#section-7.1-2.9.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-7.1-3">The <code>parent</code> value is immutable after creation.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
 <p id="section-7.1-4">The delegation event (<a href="#child-creation" class="auto internal xref">Section 6</a>) is the Child Mission's
 approval event. It <span class="bcp14">MUST</span> commit the issuance profile's integrity anchors
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): <code>authority_hash</code> over the
-child Authority Set and <code>intent_hash</code> over the child Mission Intent, and
+child Authority Set, <code>intent_hash</code> over the child Mission Intent, and,
+where the exchange carried an authority proposal, <code>proposal_hash</code> over
+it, and
 it <span class="bcp14">MUST</span> produce the immutable, accountable record the core approval
 event produces.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
 <p id="section-7.1-5">A Child Mission is created under a parent grant rather than a
@@ -3310,6 +3332,10 @@ token-exchange grant the rest of the Mission family already uses.<a href="#secti
 <dt id="RFC9126">[RFC9126]</dt>
         <dd>
 <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Tonge, D.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"OAuth 2.0 Pushed Authorization Requests"</span>, <span class="seriesInfo">RFC 9126</span>, <span class="seriesInfo">DOI 10.17487/RFC9126</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9126">https://www.rfc-editor.org/rfc/rfc9126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9449">[RFC9449]</dt>
       <dd>

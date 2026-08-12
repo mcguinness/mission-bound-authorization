@@ -329,7 +329,8 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-progressive]).  A dispatched
    Mission commits its own intent_hash and authority_hash over its own
    Intent and final Authority Set (Section 7); the template commits the
-   ceiling once, under template_hash.  The two anchors are never merged.
+   ceiling once, under template_hash.  The Mission's anchors and the
+   template's anchor are never merged.
 
 5.2.  Template lifecycle
 
@@ -423,8 +424,9 @@ Table of Contents
        principal.
 
    3.  *Derive the instance Authority Set.* Derive an Authority Set from
-       the dispatch intent and bound it by the deployment's derivation
-       policy, exactly as for any Mission
+       the dispatch intent, and from the Dispatcher's authority proposal
+       where one was submitted (Section 7.2), and bound it by the
+       deployment's derivation policy, exactly as for any Mission
        ([I-D.draft-mcguinness-oauth-mission]).  This document adds no
        authority-derivation rule.
 
@@ -530,6 +532,21 @@ Table of Contents
       profile's Mission Intent shape
       ([I-D.draft-mcguinness-oauth-mission]), from which the instance
       Authority Set is derived (Section 7).
+
+   authorization_details:  OPTIONAL.  The Dispatcher's authority
+      proposal: the standard [RFC9396] parameter carried on the same
+      token request, itself ordinary [RFC9396] token-request usage.
+      This parameter is this grant's proposal carriage, replacing the
+      issuance profile's PAR-only carriage rule; that profile's
+      validation, derivation, recording, and hashing semantics apply
+      unchanged ([I-D.draft-mcguinness-oauth-mission]).  It is a
+      proposal, never authority: it bounds the derivation of step 3 of
+      Section 7 in narrowing mode, and the double intersection of step 4
+      applies to the result unchanged, so a proposal narrows the
+      instance and never widens it beyond the Template Ceiling.  Absent
+      a proposal, the instance derives from the dispatch intent alone.
+      An instance created from a Dispatch carrying one records
+      proposed_authority and proposal_hash.
 
    dispatch_event_id:  REQUIRED.  The dispatch event identifier that
       makes the Dispatch idempotent (Section 7).  A redemption bearing
@@ -875,6 +892,11 @@ Table of Contents
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC9396]  Lodderstedt, T., Richer, J., and B. Campbell, "OAuth 2.0
+              Rich Authorization Requests", RFC 9396,
+              DOI 10.17487/RFC9396, May 2023,
+              <https://www.rfc-editor.org/rfc/rfc9396>.
 
 16.2.  Informative References
 

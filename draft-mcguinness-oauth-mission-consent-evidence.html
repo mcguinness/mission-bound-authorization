@@ -1502,12 +1502,14 @@ approval event.<a href="#section-3-4.4.1" class="pilcrow">¶</a></p>
 <code>source_hashes</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-2.4">
           <p id="section-4-2.4.1"><span class="bcp14">REQUIRED</span>. An object containing the <code>intent_hash</code> and
-<code>authority_hash</code> values the disclosure corresponds to. The disclosure
-object carries these two hashes rather than the full <code>mission</code>
+<code>authority_hash</code> values the disclosure corresponds to, and, when the
+client submitted an authority proposal, the <code>proposal_hash</code> value
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The disclosure
+object carries these hashes rather than the full <code>mission</code>
 container (<a href="#consent-evidence" class="auto internal xref">Section 7</a>) because it is constructed before
 approval commits the Mission: the Mission <code>id</code> and lifecycle do not
-yet exist, and the disclosure can commit only to the proposed Intent
-and Authority Set it actually renders. The Consent Evidence object,
+yet exist, and the disclosure can commit only to the proposed Intent,
+the submitted proposal, and the Authority Set it actually renders. The Consent Evidence object,
 recorded at or after the decision, carries the resolved <code>mission</code>
 container with <code>id</code>, <code>issuer</code>, and the same anchors.<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
 </dd>
@@ -1582,7 +1584,13 @@ the derived authority, with <code>mission_summary</code> as context.
 Presentation wording is free; coverage is normative. An array that
 omits an entry, a constraint, a delegation right, or a consumption
 bound is not faithful, and a verifier can check the rendered set
-against the committed Authority Set. A disclosure that renders
+against the committed Authority Set. When the client submitted an
+authority proposal, the issuance profile requires the rendering to
+distinguish the entries the client proposed from any narrowing or
+restructuring the AS applied
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); a disclosure for such a
+Mission carries that distinction in its rendered elements. A
+disclosure that renders
 <code>mission_summary</code> without a faithful <code>authority_summary</code> does not
 conform.<a href="#section-4-2.16.3" class="pilcrow">¶</a></p>
 </dd>
@@ -2005,10 +2013,14 @@ integrity-anchor form. Consumers <span class="bcp14">MUST</span> treat the value
 only. It <span class="bcp14">MUST NOT</span> grant or widen authority.<a href="#section-5-6" class="pilcrow">¶</a></p>
 <p id="section-5-7">The Consent Disclosure object <span class="bcp14">MUST</span> be constructed after Authority Set
 derivation and before approval. If any disclosure input changes after
-the disclosure is constructed and before the decision (the Authority
+the disclosure is constructed and before the decision (the Mission
+Intent, the authority proposal, the Authority
 Set, the locale, the template, or the material notices), the Mission
 Issuer <span class="bcp14">MUST</span> discard the disclosure and construct a new one. It
-<span class="bcp14">MUST NOT</span> reuse the prior <code>consent_rendering_hash</code>. Rung 1 determinism
+<span class="bcp14">MUST NOT</span> reuse the prior <code>consent_rendering_hash</code>; the issuance
+profile's rule recomputing the integrity anchors over the changed
+context applies alongside
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Rung 1 determinism
 (<a href="#experimental-rungs" class="auto internal xref">Appendix A</a>) applies per presentation modality: the same
 inputs produce the same rendered form within a given modality, not
 across modalities.<a href="#section-5-7" class="pilcrow">¶</a></p>
@@ -2079,13 +2091,15 @@ approval (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref"
 <ul class="normal">
 <li class="normal" id="section-7-2.4.2.1">
               <p id="section-7-2.4.2.1.1">When <code>decision</code> is <code>approved</code>, it contains <code>id</code>, <code>issuer</code>,
-<code>intent_hash</code>, <code>authority_hash</code>, and, when this profile records it
-on the Mission, <code>consent_rendering_hash</code>.<a href="#section-7-2.4.2.1.1" class="pilcrow">¶</a></p>
+<code>intent_hash</code>, <code>authority_hash</code>, <code>proposal_hash</code> when the Mission
+records an authority proposal, and, when this profile records
+it on the Mission, <code>consent_rendering_hash</code>.<a href="#section-7-2.4.2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-7-2.4.2.2">
               <p id="section-7-2.4.2.2.1">When <code>decision</code> is <code>declined</code>, no Mission was created
 (<a href="#declined-events" class="auto internal xref">Section 8.1</a>), so there is no <code>id</code>. It instead contains
-<code>issuer</code> and the <code>intent_hash</code> and <code>authority_hash</code> the disclosure
+<code>issuer</code> and the <code>intent_hash</code> and <code>authority_hash</code> (with
+<code>proposal_hash</code> where present) the disclosure
 corresponded to, matching the disclosure object's <code>source_hashes</code>
 (<a href="#consent-disclosure" class="auto internal xref">Section 4</a>). It <span class="bcp14">MUST NOT</span> contain <code>id</code>.<a href="#section-7-2.4.2.2.1" class="pilcrow">¶</a></p>
 </li>
@@ -2093,14 +2107,16 @@ corresponded to, matching the disclosure object's <code>source_hashes</code>
               <p id="section-7-2.4.2.3.1">When <code>decision</code> is <code>narrowed</code>, the review required a narrowing
 revision and no Mission was created (<a href="#revision-events" class="auto internal xref">Section 8.2</a>). Like a
 decline, it contains <code>issuer</code> and the reviewed disclosure's
-<code>intent_hash</code> and <code>authority_hash</code>, matching that disclosure's
+<code>intent_hash</code> and <code>authority_hash</code> (with <code>proposal_hash</code> where
+present), matching that disclosure's
 <code>source_hashes</code>, and <span class="bcp14">MUST NOT</span> contain <code>id</code>.<a href="#section-7-2.4.2.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 <p id="section-7-2.4.3">This descriptor follows the evidence-descriptor convention of the
 issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): it is the
 <code>mission</code> claim shape extended with the collision-resistantly named
-audit members <code>intent_hash</code> and <code>consent_rendering_hash</code>, and it is
+audit members <code>intent_hash</code>, <code>consent_rendering_hash</code>, and, where
+present, <code>proposal_hash</code>, and it is
 not authority-bearing on its own.<a href="#section-7-2.4.3" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -2463,8 +2479,9 @@ than accepted without verification.<a href="#section-7.1-6" class="pilcrow">¶</
 <p id="section-8-1">At an approval event, a Consent-Evidence-capable Mission Issuer <span class="bcp14">MUST</span>:<a href="#section-8-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-8-2">
 <li id="section-8-2.1">
-          <p id="section-8-2.1.1">derive the Authority Set and compute <code>intent_hash</code> and
-<code>authority_hash</code> under <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>;<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.1.1">derive the Authority Set and compute <code>intent_hash</code>,
+<code>authority_hash</code>, and, where an authority proposal was submitted,
+<code>proposal_hash</code> under <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>;<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-8-2.2">
           <p id="section-8-2.2.1">construct the Consent Disclosure object from that exact Authority
@@ -3161,7 +3178,8 @@ issuance profile's test vectors
 <code>journal-entries.write</code> bounded by a <code>max_amount</code> of 500.00 USD on
 <code>https://erp.example.com</code>, approved by <code>alice</code>
 (<code>user_3p2q8mN1a0kV7tR</code>); <code>source_hashes</code> carries that profile's
-computed <code>intent_hash</code> and <code>authority_hash</code>. The <code>template_hash</code> value
+computed <code>intent_hash</code> and <code>authority_hash</code>. This Mission submitted
+no authority proposal, so <code>source_hashes</code> carries no <code>proposal_hash</code>. The <code>template_hash</code> value
 stands for the deployment's template commitment and is illustrative.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <p id="appendix-B-2">The Consent Disclosure object:<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <div class="breakable lang-json sourcecode" id="appendix-B-3">

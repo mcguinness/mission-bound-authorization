@@ -1476,10 +1476,13 @@ Mission that were refused so the agent can plan a narrowed revision
 without further out-of-band interaction. A Mission Issuer <span class="bcp14">MAY</span> omit
 them when disclosure would reveal sensitive policy state.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
 <p id="section-6.1-6">The Mission Issuer verifies per-dimension narrowing after it
-re-derives the Authority Set from the revised Intent
+re-derives the Authority Set from the revised submission
 (<a href="#revision-submission" class="auto internal xref">Section 6.2</a>). The client cannot author the Authority Set,
-so its obligation is scoped to the Intent members it does author (the
-<code>resources</code>, the <code>expires_at</code>, and the free-text <code>constraints</code>), which
+so its obligation is scoped to what it does author: the Intent members
+(the <code>resources</code>, the <code>expires_at</code>, and the free-text <code>constraints</code>)
+and, where it proposed concrete authority, the pushed
+<code>authorization_details</code> proposal
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), which
 it revises to drive that narrowing.<a href="#section-6.1-6" class="pilcrow">¶</a></p>
 <p id="section-6.1-7">The <code>revision_handle</code> is not a token, grant, or continuation handle.
 It is sender-constrained to the same key as the <code>deferral_code</code>
@@ -1496,7 +1499,9 @@ Mission remains unapproved.<a href="#section-6.1-8" class="pilcrow">¶</a></p>
         <h3 id="name-submitting-a-revision">
 <a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-submitting-a-revision" class="section-name selfRef">Submitting a Revision</a>
         </h3>
-<p id="section-6.2-1">The client submits the narrowed Mission Intent to the PAR endpoint
+<p id="section-6.2-1">The client submits the narrowed Mission Intent, with any revised
+<code>authorization_details</code> proposal alongside it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), to the PAR endpoint
 <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> with the <code>revision_handle</code> as an additional parameter,
 sender-constrained as the deferred substrate requires. The Mission
 Issuer:<a href="#section-6.2-1" class="pilcrow">¶</a></p>
@@ -1530,7 +1535,8 @@ client-authentication key. A PAR request whose key is not
 equivalent to the <code>deferral_code</code>'s is rejected;<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.2-2.3">
-            <p id="section-6.2-2.3.1">re-derives the Authority Set for the revised Intent, under the same
+            <p id="section-6.2-2.3.1">re-derives the Authority Set for the revised Intent, and from the
+revised authority proposal where one was pushed, under the same
 <code>policy_version</code> that governed the proposed Mission. If policy has
 changed since the proposal, the Mission Issuer re-derives the
 proposed Authority Set under the current policy to re-establish the
@@ -1680,7 +1686,9 @@ propose, learn what was refused, and re-propose without losing state.<a href="#s
           <p id="section-7-1.6.1">The approval commits the final, narrowed Authority Set. The
 <code>intent_hash</code> and <code>authority_hash</code> are computed over the revised
 Mission Intent and Authority Set actually approved, not the originating
-proposal.<a href="#section-7-1.6.1" class="pilcrow">¶</a></p>
+proposal; where the revision pushed an <code>authorization_details</code>
+proposal, <code>proposal_hash</code> commits that revised proposal as submitted
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-1.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1695,7 +1703,11 @@ approval (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
       </h2>
 <p id="section-8-1">Agent <code>s6BhdRkqt3</code>, acting for <code>alice</code>, proposes a Mission to reconcile
-Q3 invoices that asks for both read and write on the ERP. It submits the
+Q3 invoices that asks for both read and write on the ERP. It expresses
+the ask in the Intent and pushes no <code>authorization_details</code> proposal,
+so no <code>proposal_hash</code> is committed; a proposal-carrying request
+revises the pushed proposal the same way
+(<a href="#revision-submission" class="auto internal xref">Section 6.2</a>). It submits the
 Mission Intent through PAR and opts in to both deferral and revision on
 the token request:<a href="#section-8-1" class="pilcrow">¶</a></p>
 <div class="lang-http sourcecode" id="section-8-2">

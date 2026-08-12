@@ -1713,7 +1713,9 @@ discovery profile (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" clas
         </ul>
 <p id="section-6.3-8">The approval event's canonical bytes are the whole Mission record at
 creation with <code>state</code> excluded, canonicalized (<a href="#evidence-types" class="auto internal xref">Section 6.3</a>):
-every committed member is included, including members companion
+every committed member is included, the record's own optional members
+where present (for example, <code>proposed_authority</code> and <code>proposal_hash</code>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), and members companion
 profiles add to the record under its extensibility rules, so the
 commitment covers the record as approved and not a fixed subset. These
 bytes carry no <code>typ</code>/<code>iss</code> integrity-anchor envelope, unlike the

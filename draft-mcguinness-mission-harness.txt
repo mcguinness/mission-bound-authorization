@@ -1609,26 +1609,27 @@ Appendix A.  Mapping to Durable-Execution Engines
    execution ledger stays with the harness or engine, the authorization
    ledger with the Mission Issuer and its enforcement plane.
 
-       +========================+=================================+
-       | Execution ledger       | Authorization ledger            |
-       +========================+=================================+
-       | Step execution,        | Mission lifecycle state and     |
-       | retries, failure loops | expiry                          |
-       +------------------------+---------------------------------+
-       | Memory, context        | The committed record:           |
-       | windows, prompt state  | intent_hash and authority_hash  |
-       +------------------------+---------------------------------+
-       | Sub-agent spawning     | Child-Mission adjudication:     |
-       | mechanics              | lineage, subset, depth, cascade |
-       +------------------------+---------------------------------+
-       | Tool connections and   | Credential issuance and         |
-       | caches                 | custody; counters and latches   |
-       +------------------------+---------------------------------+
-       | Scheduling and queue   | Per-action permits and their    |
-       | management             | evidence                        |
-       +------------------------+---------------------------------+
+       +========================+==================================+
+       | Execution ledger       | Authorization ledger             |
+       +========================+==================================+
+       | Step execution,        | Mission lifecycle state and      |
+       | retries, failure loops | expiry                           |
+       +------------------------+----------------------------------+
+       | Memory, context        | The committed record:            |
+       | windows, prompt state  | intent_hash, authority_hash, and |
+       |                        | proposal_hash where recorded     |
+       +------------------------+----------------------------------+
+       | Sub-agent spawning     | Child-Mission adjudication:      |
+       | mechanics              | lineage, subset, depth, cascade  |
+       +------------------------+----------------------------------+
+       | Tool connections and   | Credential issuance and custody; |
+       | caches                 | counters and latches             |
+       +------------------------+----------------------------------+
+       | Scheduling and queue   | Per-action permits and their     |
+       | management             | evidence                         |
+       +------------------------+----------------------------------+
 
-                                 Table 3
+                                  Table 3
 
    Each obligation is discharged at a boundary such an engine already
    exposes:

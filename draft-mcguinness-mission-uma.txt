@@ -223,7 +223,8 @@ Table of Contents
 
    This document uses Mission, Mission Intent, Mission Issuer, Authority
    Set, Approver, Subject, mission_id, the integrity anchors
-   (intent_hash and authority_hash), the subset rule, the only-active
+   (intent_hash, authority_hash, and, where the Mission records an
+   authority proposal, proposal_hash), the subset rule, the only-active
    rule, and the audit horizon as defined by
    [I-D.draft-mcguinness-oauth-mission].  It uses resource owner,
    requesting party, client, permission ticket, claims pushing, claim
@@ -346,9 +347,17 @@ Table of Contents
    defines it, under that profile's syntactic rules (the object is
    closed at the top level, the authorization server MUST bound its size
    and array lengths, and it is untrusted client input, never
-   authority).  The JWT MAY be signed by the client for attribution; a
-   signature confers no authority.  Its claim_token_format identifier
-   is:
+   authority).  The payload MAY additionally carry an
+   authorization_details claim: the client's authority proposal, an
+   array of authorization_details objects.  This claim is this binding's
+   proposal carriage, replacing the issuance profile's PAR-only carriage
+   rule; that profile's validation, derivation, recording, and hashing
+   semantics apply unchanged (a proposal, never authority; the Intent
+   itself carries no authority members).  A Mission created from a push
+   carrying one records proposed_authority and proposal_hash as the
+   issuance profile's Mission record defines them.  The JWT MAY be
+   signed by the client for attribution; a signature confers no
+   authority.  Its claim_token_format identifier is:
 
    https://mcguinness.github.io/mission-bound-authorization/uma-intent-jwt
 
@@ -356,11 +365,12 @@ Table of Contents
    ticket exchange it performs under a prospective Mission, and the
    Intent MUST describe the whole task, not the slice the ticket's
    registered permissions name.  The authorization server derives the
-   Authority Set from the Intent, bounded by the issuance profile's
-   Mission Authority rules; the ticket's permissions locate the first
-   drawdown, not the Mission's extent (Section 1.1).  A ticket exchange
-   with no pushed and no PCT-resolved Mission context is plain UMA,
-   outside this profile's scope.
+   Authority Set from the Intent, and from the authority proposal where
+   one was pushed, bounded by the issuance profile's Mission Authority
+   rules; the ticket's permissions locate the first drawdown, not the
+   Mission's extent (Section 1.1).  A ticket exchange with no pushed and
+   no PCT-resolved Mission context is plain UMA, outside this profile's
+   scope.
 
    The Intent is one claim token among UMA's ordinary ones.  The
    requesting party's identity claims arrive through their own channels
@@ -392,8 +402,9 @@ Table of Contents
        previously issued), never from the Mission Intent claim token or
        other unauthenticated client input.
 
-   3.  Derive the Authority Set from the Intent (Section 4) and render
-       it for consent on the owner surface under the issuance profile's
+   3.  Derive the Authority Set from the Intent, and from the authority
+       proposal where one was pushed (Section 4), and render it for
+       consent on the owner surface under the issuance profile's
        rendering rules (Section 12.2).
 
    4.  Compute the integrity anchors with the authorization server's
@@ -724,11 +735,13 @@ Table of Contents
        ordinary client binding; the separately established requesting
        party is the Mission Subject (Section 2, Section 5, Section 8).
 
-   4.  *Approved Context*: the immutable Mission Intent and derived
+   4.  *Approved Context*: the immutable Mission Intent, the recorded
+       authority proposal where one was pushed, and the derived
        Authority Set in the Mission record are the Approved Context.
-       The family intent_hash and authority_hash commit them under the
-       issuance profile's canonicalization; they are this binding's
-       chosen mechanism, not a substrate-kernel requirement (Section 6).
+       The family intent_hash and authority_hash, plus proposal_hash
+       where a proposal was pushed, commit them under the issuance
+       profile's canonicalization; they are this binding's chosen
+       mechanism, not a substrate-kernel requirement (Section 6).
 
    5.  *Approval ceremony*: UMA authorization assessment performs the
        five approval steps in either the deferred owner-decision or pre-

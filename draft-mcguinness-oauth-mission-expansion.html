@@ -1348,7 +1348,7 @@ carries a new Mission Intent in an <span>[<a href="#RFC8693" class="cite xref">R
 (<a href="#expansion-request" class="auto internal xref">Section 4</a>) bound to the predecessor by possession of the
 predecessor's Mission-bound access token, leading to a fresh approval
 event (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) with its own
-<code>intent_hash</code>, <code>authority_hash</code>, and Mission record. The successor's
+integrity anchors and Mission record. The successor's
 authority comes only from that approval. This document adds exactly
 three things on top of the issuance profile: a way to bind an expansion
 request to the predecessor it expands; a <code>predecessor</code> lineage member
@@ -1689,16 +1689,32 @@ document adds no authority-derivation rule.<a href="#section-4.1-2.14.1" class="
 </dd>
           <dd class="break"></dd>
 <dt id="section-4.1-2.15">
-<code>predecessor</code>:</dt>
+<code>authorization_details</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-4.1-2.16">
-            <p id="section-4.1-2.16.1"><span class="bcp14">OPTIONAL</span>. A string. The <code>mission_id</code> of the predecessor, a
+            <p id="section-4.1-2.16.1"><span class="bcp14">OPTIONAL</span>. The successor's authority proposal: the standard
+<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> parameter carried on the same token request, itself
+ordinary <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> token-request usage. This parameter is this
+exchange's proposal carriage, replacing the issuance profile's
+PAR-only carriage rule; that profile's validation, derivation,
+recording, and hashing semantics apply unchanged
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). It is a proposal, never
+authority: the Mission Issuer derives and bounds the successor's
+Authority Set by policy regardless of what was proposed. A
+successor created from an exchange carrying one records
+<code>proposed_authority</code> and <code>proposal_hash</code>.<a href="#section-4.1-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-2.17">
+<code>predecessor</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-2.18">
+            <p id="section-4.1-2.18.1"><span class="bcp14">OPTIONAL</span>. A string. The <code>mission_id</code> of the predecessor, a
 non-authoritative cross-check and audit value only. The Mission Issuer
 resolves and selects the predecessor from <code>subject_token</code>
 (<a href="#request-binding" class="auto internal xref">Section 4.2</a>); when <code>predecessor</code> is present the Mission
 Issuer <span class="bcp14">MUST</span> verify it names that same resolved Mission and refuse a
 mismatch with <code>invalid_grant</code>. <code>predecessor</code> does not select or
 authorize a predecessor: a client <span class="bcp14">MUST NOT</span> be able to expand a Mission
-merely by naming its <code>mission_id</code>.<a href="#section-4.1-2.16.1" class="pilcrow">¶</a></p>
+merely by naming its <code>mission_id</code>.<a href="#section-4.1-2.18.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -1942,7 +1958,8 @@ authority being adjudicated. Expansion never widens authority without a
 new consent: if the Approver declines, no successor is created and the
 predecessor is untouched (<a href="#denial-reasons" class="auto internal xref">Section 10</a>).<a href="#section-5.2-3" class="pilcrow">¶</a></p>
 <p id="section-5.2-4">At completion the Mission Issuer computes the successor's integrity
-anchors (<code>intent_hash</code>, <code>authority_hash</code>) and, at the point the
+anchors (<code>intent_hash</code>, <code>authority_hash</code>, and, where the exchange
+carried an authority proposal, <code>proposal_hash</code>) and, at the point the
 successor's authority is issued (the exchange response for a synchronous
 completion, the resolving poll for a deferred completion, or the code
 redemption for an interactive completion), creates the successor Mission

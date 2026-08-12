@@ -362,6 +362,18 @@ Table of Contents
 
    mission_intent:  REQUIRED.  The proposed Child Mission Intent.
 
+   authorization_details:  OPTIONAL.  The child's authority proposal:
+      the standard [RFC9396] parameter carried on the same token
+      request, itself ordinary [RFC9396] token-request usage.  This
+      parameter is this exchange's proposal carriage, replacing the
+      issuance profile's PAR-only carriage rule; that profile's
+      validation, derivation, recording, and hashing semantics apply
+      unchanged ([I-D.draft-mcguinness-oauth-mission]).  It is a
+      proposal, never authority: the child Authority Set is derived and
+      bounded by policy and by the strict-subset rule regardless of what
+      was proposed.  A Child Mission created from an exchange carrying
+      one records proposed_authority and proposal_hash.
+
    child_actor:  REQUIRED.  An object identifying the child actor that
       will hold or execute under the Child Mission, using the issuance
       profile's actor vocabulary ([I-D.draft-mcguinness-oauth-mission]):
@@ -845,6 +857,9 @@ Table of Contents
    *  the child Mission Intent's intent_hash
       ([I-D.draft-mcguinness-oauth-mission]);
 
+   *  where the child-creation exchange carried an authority proposal,
+      the recorded proposed_authority and its proposal_hash;
+
    *  the delegation event identifier;
 
    *  the cascade mode; and
@@ -856,9 +871,10 @@ Table of Contents
    The delegation event (Section 6) is the Child Mission's approval
    event.  It MUST commit the issuance profile's integrity anchors
    ([I-D.draft-mcguinness-oauth-mission]): authority_hash over the child
-   Authority Set and intent_hash over the child Mission Intent, and it
-   MUST produce the immutable, accountable record the core approval
-   event produces.
+   Authority Set, intent_hash over the child Mission Intent, and, where
+   the exchange carried an authority proposal, proposal_hash over it,
+   and it MUST produce the immutable, accountable record the core
+   approval event produces.
 
    A Child Mission is created under a parent grant rather than a first-
    party approval (Section 3), so its human accountability is inherited
@@ -1639,6 +1655,11 @@ Table of Contents
               and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
               RFC 9126, DOI 10.17487/RFC9126, September 2021,
               <https://www.rfc-editor.org/rfc/rfc9126>.
+
+   [RFC9396]  Lodderstedt, T., Richer, J., and B. Campbell, "OAuth 2.0
+              Rich Authorization Requests", RFC 9396,
+              DOI 10.17487/RFC9396, May 2023,
+              <https://www.rfc-editor.org/rfc/rfc9396>.
 
    [RFC9449]  Fett, D., Campbell, B., Bradley, J., Lodderstedt, T.,
               Jones, M., and D. Waite, "OAuth 2.0 Demonstrating Proof of

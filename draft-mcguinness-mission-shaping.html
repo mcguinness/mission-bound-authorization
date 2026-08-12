@@ -1338,7 +1338,9 @@ open-ended task request, such as "resolve this billing dispute," into a
 Mission Intent with a goal, resources, free-text constraints, success
 criteria, purpose, controls, and expiry.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">This document describes that missing shaping step. A <strong>Mission Shaper</strong>
-is a client-side component that produces a candidate Mission Intent
+is a client-side component that produces a candidate Mission Intent,
+and any authority proposal submitted alongside it
+(<a href="#mission-intent-proposal" class="auto internal xref">Section 7</a>),
 before the issuance profile's approval flow begins. The shaper can be a
 deterministic rules engine, a form, an LLM-assisted function, or a
 workflow. Whatever its implementation, its output is only a proposal
@@ -1700,40 +1702,43 @@ issuance profile's <code>mission_intent</code> object
           <p id="section-7-2.5.1">an optional <code>purpose</code>;<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.6">
-          <p id="section-7-2.6.1">an optional <code>proposed_authority</code> array of candidate Authority Set
-entries;<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.6.1">an <code>expires_at</code>; and<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.7">
-          <p id="section-7-2.7.1">an <code>expires_at</code>; and<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-7-2.8">
-          <p id="section-7-2.8.1">an optional <code>controls</code> object.<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.7.1">an optional <code>controls</code> object.<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-7-3">The shaper proposes the resources. It describes the desired bounds in
+<p id="section-7-3">The Intent carries no authority members. Where the task calls for
+concrete candidate authority, the shaper additionally produces an
+authority proposal: an array of candidate Authority Set entries the
+requesting client submits as the standard <code>authorization_details</code>
+parameter alongside the Intent
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4">The shaper proposes the resources. It describes the desired bounds in
 free-text <code>constraints</code> and <code>success_criteria</code>. It carries any
 concrete candidate authority (actions, structured constraints,
-delegation facts) in <code>proposed_authority</code>, the untrusted carrier the
+delegation facts) in the authority proposal, the untrusted carrier the
 Mission Issuer only narrows when it derives the Authority Set
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The proposal <span class="bcp14">MUST</span> be
 bounded enough for the Mission Issuer to derive an Authority Set without
-interpreting natural language as authority.<a href="#section-7-3" class="pilcrow">¶</a></p>
-<p id="section-7-4">The proposal <span class="bcp14">MUST NOT</span> present issuer outputs as approved authority:
+interpreting natural language as authority.<a href="#section-7-4" class="pilcrow">¶</a></p>
+<p id="section-7-5">The proposal <span class="bcp14">MUST NOT</span> present issuer outputs as approved authority:
 the derived Authority Set is the Mission Issuer's product
 (<a href="#proposes-only" class="auto internal xref">Section 5.2</a>). Concrete candidate authority
 (actions, structured constraints such as <code>max_amount</code>, delegation)
-belongs in the Intent's <code>proposed_authority</code> member, where the core
+belongs in the authority proposal submitted alongside the Intent,
+where the core
 treats it as untrusted proposal input and bounds the derivation to a
 subset of it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A shaper that
 has resolved such facts (for
 example, the actions a resource supports, or that the task implies
 delegated execution) proposes them there and records the same facts in
 Shaping Evidence (<a href="#shaping-evidence" class="auto internal xref">Section 10</a>) for audit only. Shaping
-Evidence is never an input the derivation consumes.<a href="#section-7-4" class="pilcrow">¶</a></p>
-<p id="section-7-5">A sound shaper does not include a resource in the proposal merely because
+Evidence is never an input the derivation consumes.<a href="#section-7-5" class="pilcrow">¶</a></p>
+<p id="section-7-6">A sound shaper does not include a resource in the proposal merely because
 the task text implies it might be useful: it has a resolution basis
 under <a href="#capability-resolution" class="auto internal xref">Section 9</a>, or it produces a clarification
-request or a refusal.<a href="#section-7-5" class="pilcrow">¶</a></p>
+request or a refusal.<a href="#section-7-6" class="pilcrow">¶</a></p>
 <div id="authority-ceiling">
 <section id="section-7.1">
         <h3 id="name-shaping-ceiling-and-default">
@@ -1763,9 +1768,9 @@ resulting Mission stays narrow, separately approved, and separately
 revocable.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
 <p id="section-7.1-4">Where cross-vendor interoperability matters, the shaper <span class="bcp14">SHOULD</span> carry
 the concrete candidate authority it proposes (the resources, actions,
-and constraints) in the Intent's <code>proposed_authority</code> member, and
+and constraints) in an authority proposal alongside the Intent, and
 record the same proposal in Shaping Evidence. This lets the Mission
-Issuer derive the Authority Set by narrowing <code>proposed_authority</code>
+Issuer derive the Authority Set by narrowing the proposal
 under its subset rule, with the deterministic-reproducibility rule
 applying, rather than generating authority from free text
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Narrowing is the portable
@@ -1801,7 +1806,7 @@ even when no caller ceiling is present.<a href="#section-7.1-7" class="pilcrow">
         </h3>
 <p id="section-7.2-1">The shaper does not author the derived <code>delegation</code> member: it
 proposes delegation facts as untrusted candidate authority in the
-Intent's <code>proposed_authority</code> member, which the Mission Issuer only
+authority proposal, which the Mission Issuer only
 narrows when it derives <code>delegation</code> on the relevant Authority Set
 entry, or refuses (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). If the
 task implies use of sub-agents, background workers, or delegated
@@ -1833,8 +1838,8 @@ identifier and the parent-derived ceiling it shaped under.<a href="#section-7.2-
 <p id="section-7.3-1">The following maps a prompt or trigger onto the Mission Intent fields.
 It is guidance, not a normative algorithm; the <span class="bcp14">SHOULD</span>/<span class="bcp14">MUST</span> points are
 called out. Resolved actions, structured constraints, and delegation
-facts do not appear here: they belong in the Intent's
-<code>proposed_authority</code> member, the untrusted carrier the Mission Issuer
+facts do not appear here: they belong in the authority proposal
+alongside the Intent, the untrusted carrier the Mission Issuer
 only narrows; Shaping Evidence records the same facts for audit only
 and is never an input authority derives from.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
@@ -2404,7 +2409,9 @@ retry.<a href="#section-13-4" class="pilcrow">¶</a></p>
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> defines a <code>mission_intent</code>
 parameter carried inside a Pushed Authorization Request (PAR)
 <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>. The Mission Intent the shaper produced is the value of that
-parameter. The Authorization Server <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> acts as the Mission
+parameter; an authority proposal the shaper produced is the value of
+the standard <code>authorization_details</code> parameter pushed alongside it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The Authorization Server <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> acts as the Mission
 Issuer: it validates, narrows, renders the consent disclosure, records
 the approval event, and derives an Authority Set
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-14.1-1" class="pilcrow">¶</a></p>

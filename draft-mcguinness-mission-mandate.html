@@ -1300,7 +1300,9 @@ limits what a given verifier sees.<a href="#section-abstract-1" class="pilcrow">
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile")
 commits a Mission's facts at the approval event:
 the approved Mission Intent and consented Authority Set under their
-integrity anchors, the Subject and Approver, the agent <code>client_id</code>,
+integrity anchors (with the submitted authority proposal, where one
+was submitted, under its own), the Subject and Approver, the agent
+<code>client_id</code>,
 the derivation <code>policy_version</code>, and the expiry. Those facts
 live on the Mission record, held by the Mission Issuer; a derived
 token or cross-domain grant projects only the <code>mission</code> claim and an

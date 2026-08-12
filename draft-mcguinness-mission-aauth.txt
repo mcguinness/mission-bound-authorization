@@ -300,10 +300,10 @@ Table of Contents
 
    The reference simultaneously provides stable identification and an
    integrity commitment.  This binding does not add intent_hash,
-   authority_hash, or a second semantic projection.  Such parallel
-   commitments would create ambiguity about which object was approved
-   and would require implementations to keep multiple canonicalizations
-   in lockstep.
+   authority_hash, proposal_hash, or a second semantic projection.  Such
+   parallel commitments would create ambiguity about which object was
+   approved and would require implementations to keep multiple
+   canonicalizations in lockstep.
 
    The reference does not authenticate itself when copied outside a
    protected AAuth message.  It gains protocol integrity from the AAuth
@@ -585,8 +585,8 @@ Table of Contents
    This binding adds no member alongside that claim.  The namespace once
    carried by approver is carried by the person token's iss and the
    resource token's ps.  Receivers MUST NOT require mission_id, issuer,
-   policy_version, intent_hash, authority_hash, or embedded
-   authorization details for conformance to this binding.
+   policy_version, intent_hash, authority_hash, proposal_hash, or
+   embedded authorization details for conformance to this binding.
 
    Each copying party MUST preserve mission_s256 exactly.  A PS
    receiving a resource token with a mission reference MUST verify that
