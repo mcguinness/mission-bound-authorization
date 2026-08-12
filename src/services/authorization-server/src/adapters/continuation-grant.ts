@@ -104,6 +104,16 @@ function txError(ctx: KoaContextWithOIDC, status: number, error: string, descrip
 }
 
 /**
+ * @spec RFC 9449 — record-and-check a manually verified DPoP proof's `jti` in
+ * the bounded replay cache: a missing/empty jti or a reuse within the window
+ * refuses (invalid_dpop_proof). Shared by every manual DPoP block at the token
+ * endpoint (the custom grants); exported for the provider.ts blocks.
+ */
+export function freshProofJti(opts: AdapterOptions, jti: unknown): boolean {
+  return typeof jti === "string" && jti !== "" && opts.dpopProofReplay?.check(jti) === true;
+}
+
+/**
  * Handle the RFC 8693 token-exchange grant. Client authentication
  * (private_key_jwt) has already run, so `ctx.oidc.client` is the authenticated
  * presenter. Returns by setting the response on `ctx` directly (the ID-JAG is
@@ -199,6 +209,7 @@ export async function handleTokenExchangeGrant(
   }
   let jkt: string;
   let dpopJwk: JWK;
+  let proofJti: unknown;
   try {
     const header = decodeProtectedHeader(proofJws);
     dpopJwk = header.jwk as JWK;
@@ -207,8 +218,13 @@ export async function handleTokenExchangeGrant(
     if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
       throw new Error("DPoP htu/htm mismatch");
     }
+    proofJti = proof.jti;
   } catch {
     txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+    return;
+  }
+  if (!freshProofJti(opts, proofJti)) {
+    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
     return;
   }
 
@@ -423,6 +439,7 @@ export async function handleAsyncDelegationExchange(
     return;
   }
   let jkt: string;
+  let proofJti: unknown;
   try {
     const header = decodeProtectedHeader(proofJws);
     const dpopJwk = header.jwk as JWK;
@@ -431,8 +448,13 @@ export async function handleAsyncDelegationExchange(
     if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
       throw new Error("DPoP htu/htm mismatch");
     }
+    proofJti = proof.jti;
   } catch {
     txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+    return;
+  }
+  if (!freshProofJti(opts, proofJti)) {
+    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
     return;
   }
 
@@ -631,8 +653,8 @@ interface ResolvedSubject {
  * verify POSSESSION: the presenter's DPoP proof key MUST equal the subject_token's
  * OWN cnf.jkt. This is the inverse of {@link handleAsyncDelegationExchange}, which
  * deliberately re-binds to the acting client's key. The DPoP `jti` is single-use
- * per RFC 9449; NOTE the token endpoint does not maintain a proof-jti replay cache
- * for custom grants (the same limitation as every other manual DPoP block here).
+ * per RFC 9449, enforced by the shared bounded-TTL replay cache
+ * ({@link freshProofJti}) like every other manual DPoP block here.
  * Returns null after setting the ctx error body; the caller returns immediately.
  */
 async function verifySubjectPossession(
@@ -690,6 +712,7 @@ async function verifySubjectPossession(
   }
   let jkt: string;
   let dpopJwk: JWK;
+  let proofJti: unknown;
   try {
     const header = decodeProtectedHeader(proofJws);
     dpopJwk = header.jwk as JWK;
@@ -698,8 +721,13 @@ async function verifySubjectPossession(
     if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
       throw new Error("DPoP htu/htm mismatch");
     }
+    proofJti = proof.jti;
   } catch {
     txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+    return null;
+  }
+  if (!freshProofJti(opts, proofJti)) {
+    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
     return null;
   }
   if (jkt !== cnfJkt) {
@@ -1343,6 +1371,7 @@ async function pollDeferredExpansion(
     return;
   }
   let jkt: string;
+  let proofJti: unknown;
   try {
     const header = decodeProtectedHeader(proofJws);
     const dpopJwk = header.jwk as JWK;
@@ -1351,8 +1380,13 @@ async function pollDeferredExpansion(
     if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
       throw new Error("DPoP htu/htm mismatch");
     }
+    proofJti = proof.jti;
   } catch {
     txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+    return;
+  }
+  if (!freshProofJti(opts, proofJti)) {
+    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
     return;
   }
   const recordedJkt = store.recordedJkt(deferralCode);
