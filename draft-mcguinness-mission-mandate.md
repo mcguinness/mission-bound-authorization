@@ -129,7 +129,9 @@ Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile")
 commits a Mission's facts at the approval event:
 the approved Mission Intent and consented Authority Set under their
-integrity anchors, the Subject and Approver, the agent `client_id`,
+integrity anchors (with the submitted authority proposal, where one
+was submitted, under its own), the Subject and Approver, the agent
+`client_id`,
 the derivation `policy_version`, and the expiry. Those facts
 live on the Mission record, held by the Mission Issuer; a derived
 token or cross-domain grant projects only the `mission` claim and an
