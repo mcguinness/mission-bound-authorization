@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            11 August 2026
-Expires: 12 February 2027
+Intended status: Informational                            12 August 2026
+Expires: 13 February 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 February 2027.
+   This Internet-Draft will expire on 13 February 2027.
 
 Copyright Notice
 
@@ -1568,9 +1568,9 @@ Table of Contents
    ceiling ([I-D.draft-mcguinness-mission-discovery]).  The AAuth
    binding carries this verb natively: its management companion for
    status, termination, and delegation-tree queries
-   ([I-D.draft-mcguinness-mission-aauth-management]), and its expiry
-   extension for the approved lifetime bound
-   ([I-D.draft-mcguinness-aauth-mission-expiry]).
+   ([I-D.draft-mcguinness-mission-aauth-management]); the approved
+   lifetime bound is AAuth's own expires_at, profiled by the expiry
+   document ([I-D.draft-mcguinness-aauth-mission-expiry]).
 
 14.4.  Enforce Each Action
 
@@ -2491,13 +2491,13 @@ Table of Contents
        done is reconstructible from evidence joined on the object's
        identity.
 
-   AAuth as its binding profiles it, including AAuth Mission Expiry for
-   the reliance bound, supplies the first four, with its lifecycle gate
-   scoped to PS endpoints and PS-mediated paths carrying the validated
-   reference.  The OAuth core supplies the structured-authority layer as
-   well.  Runtime and portable evidence remain separately claimed
-   capabilities; the requirements below unpack the family mechanisms
-   without implying every binding implements every one.
+   AAuth supplies the first four natively (its expires_at member carries
+   the reliance bound), with its lifecycle gate scoped to PS endpoints
+   and PS-mediated paths carrying the validated reference.  The OAuth
+   core supplies the structured-authority layer as well.  Runtime and
+   portable evidence remain separately claimed capabilities; the
+   requirements below unpack the family mechanisms without implying
+   every binding implements every one.
 
 19.1.  Context and Intent
 
@@ -2645,8 +2645,8 @@ Table of Contents
    operator plane) as its satellites.  AAuth keeps its native two-state
    lifecycle and uses mission-aauth-management for its corresponding
    status, termination, expiry, and delegation-tree surface.  The expiry
-   bound itself is an extension to the base AAuth protocol that the
-   AAuth binding requires ([I-D.draft-mcguinness-aauth-mission-expiry]).
+   bound is AAuth's own expires_at, profiled by the expiry document
+   ([I-D.draft-mcguinness-aauth-mission-expiry]).
 
    oauth-mission-status:  The signed pull surface and the lifecycle
       endpoint, with suspended and completed, and per-entry discharge
@@ -2679,10 +2679,12 @@ Table of Contents
       Person Server, keyed only by {approver, s256} and preserving
       AAuth's active and terminated states.
 
-   aauth-mission-expiry:  The immutable expires_at bound on an approved
-      AAuth mission, covered by s256 and enforced on every Person Server
-      decision path; required by the AAuth binding, adoptable by base
-      AAuth deployments independently.
+   aauth-mission-expiry:  Profile of AAuth's expires_at mission lifetime
+      bound (RFC 3339 precision, skew documentation, prompt
+      termination).  The base protocol enforces the bound on every
+      Person Server decision path and caps every token carrying
+      mission_s256; the AAuth binding requires the member on every
+      mission.
 
    oauth-mission-cross-domain:  Single-hop projection of a Mission to
       another trust domain via the cross-domain grant.
