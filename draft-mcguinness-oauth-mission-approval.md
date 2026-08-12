@@ -415,7 +415,9 @@ Shaping:
 Integrity anchors:
 : The approval commits the proposal actually approved. The
   `intent_hash` and `authority_hash` are computed over the Mission
-  Intent and Authority Set the Approver decided on.
+  Intent and Authority Set the Approver decided on; where the client
+  submitted an authority proposal, `proposal_hash` commits it as
+  submitted ({{I-D.draft-mcguinness-oauth-mission}}).
 
 # Worked Example {#example}
 
