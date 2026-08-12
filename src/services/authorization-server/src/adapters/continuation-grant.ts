@@ -1212,6 +1212,26 @@ export async function handleExpansionExchange(
   // (missing -> invalid_request).
   const creationRequestId = readCreationRequestId(params);
 
+  // @spec expansion#request-binding — the non-authoritative `predecessor`
+  // cross-check (audit only; subject_token is the selector, mirroring the
+  // child path's `parent`): a supplied value that does not name the resolved
+  // Mission is refused. Per the profile this is NOT a denial reason (no
+  // mission_denial_reason): it fails with invalid_grant directly.
+  const predecessorParam = params.predecessor;
+  if (
+    typeof predecessorParam === "string" &&
+    predecessorParam &&
+    predecessorParam !== resolved.record.id
+  ) {
+    txError(
+      ctx,
+      400,
+      "invalid_grant",
+      "predecessor cross-check does not match the subject_token-resolved mission",
+    );
+    return;
+  }
+
   // The widened Intent (the fresh-approval basis).
   const missionIntentRaw = params.mission_intent;
   if (typeof missionIntentRaw !== "string" || !missionIntentRaw) {
@@ -1231,7 +1251,6 @@ export async function handleExpansionExchange(
   // @spec expansion#creation-fingerprint — the typed operation fingerprint over
   // the PARSED, VERIFIED inputs.
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
-  const predecessorParam = params.predecessor;
   const fingerprint = creationFingerprint({
     op: "expansion",
     iss: opts.issuer,

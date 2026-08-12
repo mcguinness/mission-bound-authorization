@@ -418,6 +418,43 @@ describe("expansion idempotency (@spec expansion#creation-request-id)", () => {
     expect(activatingCommits(successorId)).toHaveLength(1);
   });
 
+  it("predecessor cross-check != the subject_token-resolved Mission -> invalid_grant; a MATCHING cross-check leaves the fingerprint/idempotency behavior unchanged", async () => {
+    const pred = await issueMission(["payments:invoice.read"]);
+    const widened = ["payments:invoice.read", "payments:remittance.send"];
+
+    // Mismatch: refused with plain invalid_grant (@spec expansion#request-binding:
+    // not a denial reason, so no mission_denial_reason member).
+    const mismatch = await tokenRequest({
+      ...expansionParams(pred.accessToken, crypto.randomUUID(), widened),
+      predecessor: "msn_not-the-resolved-predecessor",
+    });
+    const mb = (await mismatch.json()) as { error?: string; error_description?: string };
+    expect(mismatch.status, JSON.stringify(mb)).toBe(400);
+    expect(mb.error).toBe("invalid_grant");
+    expect(mb.error_description).toContain("predecessor");
+    // No creation happened, and no operation was reserved under the identifier.
+    expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+
+    // Match: the exchange proceeds normally (widening -> deferred) and the
+    // idempotent retry with the SAME id + SAME matching cross-check returns the
+    // SAME deferral (the cross_check fingerprint member is stable).
+    const crid = crypto.randomUUID();
+    const withCrossCheck = () =>
+      tokenRequest({
+        ...expansionParams(pred.accessToken, crid, widened),
+        predecessor: pred.missionId,
+      });
+    const opened = await withCrossCheck();
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(opened.status, JSON.stringify(ob)).toBe(400);
+    expect(ob.error).toBe("authorization_pending");
+    const retry = await withCrossCheck();
+    const rb = (await retry.json()) as { error?: string; deferral_code?: string };
+    expect(retry.status, JSON.stringify(rb)).toBe(400);
+    expect(rb.error).toBe("authorization_pending");
+    expect(rb.deferral_code).toBe(ob.deferral_code);
+  });
+
   it("deferral dedup is CLIENT-scoped: two clients, same request, two deferrals (AROP + expansion stores)", async () => {
     const m = await issueMission(["payments:invoice.read"]);
     const requested = as.kernel.get(m.missionId)?.authority_set ?? [];
