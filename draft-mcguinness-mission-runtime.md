@@ -44,6 +44,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-rosomakho-oauth-txn-challenge:
@@ -508,26 +516,47 @@ Mission-bound token:
 # Mission Substrate {#mission-substrate}
 
 This profile is defined against the Mission model rather than against
-OAuth 2.0 mechanics. It consumes these substrate primitives: the
-Mission identifier and issuer; the lifecycle state space with its
-only-`active`-permits rule, always in its lifecycle-gated form and
-additionally in its state-observable form (an authenticated freshness
-source with a stated staleness bound) wherever an enforcement scope's
-published staleness bound is tighter than the credential lifetime
-({{state-freshness}}); the Authority Set
-representation with its subset rule and Common Constraints; the
-Mission-bound credential carrying the `mission` claim, consumed when
-the binding provides it; the integrity-anchor envelope; and the
-Mission's audit horizon. The Mission-bound credential primitive is
-binding-dependent: a binding that does not provide it supplies an
-externally established Mission reference instead, under the
-binding-establishment step of {{mission-binding}}. The
-issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
-version's normative substrate: it defines each primitive for OAuth
-2.0, and every OAuth artifact named in this document enters through
-it. Another authorization substrate that provides the same primitives
-with the same semantics can host this profile unchanged; such a
-binding is defined by that substrate, not here.
+OAuth 2.0 mechanics: it is a substrate-neutral consumer, and this
+section is its consumption declaration under the rule of Mission
+Substrate Requirements ({{I-D.draft-mcguinness-mission-substrate}})
+that a substrate-neutral profile declare the kernel functions and
+optional capabilities it consumes.
+
+From the contextual-governance kernel it consumes the Mission
+identifier and issuer, the kernel's Mission Reference and Controller;
+the lifecycle state space with its only-`active`-permits rule, the
+kernel's governance gate; the integrity-anchor envelope; and the
+Mission's audit horizon, which bounds the ordered governance record.
+
+It consumes these optional capabilities:
+
+| Capability | Consumption | Scope of consumption |
+| --- | --- | --- |
+| Structured Authority | required | The decision contract materializes and evaluates the effective Authority Set, with its subset rule and Common Constraints ({{input-authority}}, {{policy-view}}); as the substrate's composition rule warns, a Mission reference alone is not structured authority |
+| Lifecycle-Gated Authorization | required | Every Runtime Decision gates on the only-`active`-permits rule ({{decision}}) |
+| State-Observable | conditional | An authenticated freshness source with a stated staleness bound, consumed wherever an enforcement scope's published staleness bound is tighter than the credential lifetime ({{state-freshness}}) |
+| Monotonic Derivation | conditional | Consumed where delegation, attenuation, or containment narrowing is enforced at action time through effective-set evaluation ({{input-authority}}) |
+| Credential-Bound | conditional | Consumed when the binding provides the Mission-bound credential carrying the `mission` claim; a binding that does not provide it supplies an externally established Mission reference instead, under the binding-establishment step of {{mission-binding}} |
+| Independently Verifiable, Portable Evidence | not consumed | Evidence portability and offline verification are the runtime evidence companion's concern ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
+{: title="Runtime profile capability consumption"}
+
+The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
+version's normative substrate: it defines each consumed kernel
+function and capability for OAuth 2.0, and every OAuth artifact named
+in this document enters through it. A binding that provides the
+required capabilities above, and whichever conditional capabilities
+the deployment's enforcement scopes require, can host this profile;
+such a binding is defined by that substrate, not here, and its
+Mission Substrate Statement declares what it provides (the AAuth
+binding {{I-D.draft-mcguinness-mission-aauth}} is one example). A
+binding that does not provide Structured Authority does not host this
+profile's decision contract; it composes through its own native
+authorization gate and the externally established Mission reference
+of {{mission-binding}}. The portability claim is capability-scoped
+rather than substrate-wide for the reason the substrate's Capability
+Confusion consideration states: every property this profile requires
+matches an explicit capability claim and its scope, never the generic
+statement that a binding supports Missions.
 
 # The Runtime Model {#runtime-model}
 
