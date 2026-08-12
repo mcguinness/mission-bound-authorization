@@ -1363,24 +1363,6 @@ NOT be marked optional or downgraded to advice, and permit request
 binding, permit expiry, use limits, evidence emission, step-up, and
 mandatory notification are never advice.
 
-## Execution Evidence Requirement {#execution-evidence-requirement}
-
-Independent of anything the PDP returns, the PEP MUST emit the
-Execution Evidence Object
-({{I-D.draft-mcguinness-mission-runtime-evidence}}) once, and only
-once, the outcome of every released consequential action is known.
-This is a profile-level PEP requirement, not an obligation.
-
-If evidence emission fails after an irreversible effect, the effect
-stands: nothing retroactively permits or denies it. The PEP MUST
-record the emission failure durably and surface it on its operational
-alarm path, and the deployment's audit posture treats the execution
-as unevidenced. Where the deployment's transaction assurance depends
-on that later evidence ({{I-D.draft-mcguinness-mission-runtime}}),
-the PEP MUST durably reserve evidence capacity for the execution, an
-evidence reservation, before acting, and MUST fail closed when the
-reservation cannot be made.
-
 ## Permit response shape
 
 When the PDP permits an action, it returns AuthZEN `decision: true`
@@ -1847,6 +1829,24 @@ format is `jws-compact`, and the protected `typ` names the record's
 own registered media type
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
+## Execution Evidence Requirement {#execution-evidence-requirement}
+
+Independent of anything the PDP returns, the PEP MUST emit the
+Execution Evidence Object
+({{I-D.draft-mcguinness-mission-runtime-evidence}}) once, and only
+once, the outcome of every released consequential action is known.
+This is a profile-level PEP requirement, not an obligation.
+
+If evidence emission fails after an irreversible effect, the effect
+stands: nothing retroactively permits or denies it. The PEP MUST
+record the emission failure durably and surface it on its operational
+alarm path, and the deployment's audit posture treats the execution
+as unevidenced. Where the deployment's transaction assurance depends
+on that later evidence ({{I-D.draft-mcguinness-mission-runtime}}),
+the PEP MUST durably reserve evidence capacity for the execution, an
+evidence reservation, before acting, and MUST fail closed when the
+reservation cannot be made.
+
 # Mission Status Composition {#mission-status-composition}
 
 The PDP relies on Mission state to decide. The runtime profile defines
@@ -2017,9 +2017,13 @@ The runtime profile's evidence-privacy guidance
 privacy properties of the Decision Evidence, Execution Evidence, and
 Refusal Record objects, including their status as PII sinks,
 parameter exposure, and actor-chain correlation, are the runtime
-evidence companion's ({{I-D.draft-mcguinness-mission-runtime-evidence}});
-this binding defines no additional record content and no exemption
-from that guidance.
+evidence companion's ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+This binding's one coordinated extension member, `mission_history`
+({{evidence}}), carries behavioral history predicates and their
+outcomes and inherits that guidance in full: it is subject to the
+same PII-sink, access-control, and retention treatment as the core
+record, with no exemption. This binding otherwise defines no
+additional record content.
 
 # IANA Considerations {#iana}
 

@@ -957,10 +957,11 @@ authority from any member it does not recognize. An extension member
 is recorded as presented; this document does not otherwise define
 its semantics.
 
-The following members are coordinated extensions this document's
-examples draw on. Each is registered and owned by the specification
-named, not by this document or by the AuthZEN binding merely because
-an example carries it that way.
+The following members are coordinated extensions a deployment
+following the family's Standards-Track AuthZEN binding commonly
+carries. Each is registered and owned by the specification named,
+not by this document or by the AuthZEN binding merely because it is
+a common wire carrier.
 
 `taint`:
 : OPTIONAL. An object, recorded on Decision Evidence as presented.

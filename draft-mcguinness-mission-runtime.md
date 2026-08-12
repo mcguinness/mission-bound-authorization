@@ -2748,8 +2748,7 @@ keyed to the permit's evaluation identifier ({{evidence}}):
 
 ~~~ json
 {
-  "decision": "executed",
-  "outcome": "success",
+  "outcome": "completed",
   "evaluation_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
