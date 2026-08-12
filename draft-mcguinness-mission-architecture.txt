@@ -986,11 +986,14 @@ Table of Contents
    Structured Authority, Monotonic Derivation, Credential-Bound,
    Independently Verifiable, and Portable Evidence).
 
-   The companion profiles named without "oauth" are defined against the
-   binding-neutral contract and declare, each in a Mission Substrate
-   section of its own, the kernel functions and optional capabilities
-   they consume.  Where a companion consumes a concrete representation,
-   it is today the issuance profile's.
+   The bindings declare what they provide, each in its Mission Substrate
+   Statement.  The companion profiles named without "oauth" are defined
+   against the binding-neutral contract and declare what they consume,
+   each in a Mission Substrate section of its own; the runtime profile
+   is the exemplar of that consumption declaration
+   ([I-D.draft-mcguinness-mission-runtime]), and the remaining consumers
+   align progressively.  Where a companion consumes a concrete
+   representation, it is today the issuance profile's.
 
    The remainder of this section documents that instantiation: eight
    primitives, each with its normative home and its consumers.  Every

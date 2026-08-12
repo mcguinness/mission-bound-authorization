@@ -1802,26 +1802,80 @@ Mission lifecycle state or the freshness of that state
 <a href="#section-3" class="section-number selfRef">3. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
       </h2>
 <p id="section-3-1">This profile is defined against the Mission model rather than against
-OAuth 2.0 mechanics. It consumes these substrate primitives: the
-Mission identifier and issuer; the lifecycle state space with its
-only-<code>active</code>-permits rule, always in its lifecycle-gated form and
-additionally in its state-observable form (an authenticated freshness
-source with a stated staleness bound) wherever an enforcement scope's
-published staleness bound is tighter than the credential lifetime
-(<a href="#state-freshness" class="auto internal xref">Section 7.4</a>); the Authority Set
-representation with its subset rule and Common Constraints; the
-Mission-bound credential carrying the <code>mission</code> claim, consumed when
-the binding provides it; the integrity-anchor envelope; and the
-Mission's audit horizon. The Mission-bound credential primitive is
-binding-dependent: a binding that does not provide it supplies an
-externally established Mission reference instead, under the
-binding-establishment step of <a href="#mission-binding" class="auto internal xref">Section 7.3</a>. The
-issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is this
-version's normative substrate: it defines each primitive for OAuth
-2.0, and every OAuth artifact named in this document enters through
-it. Another authorization substrate that provides the same primitives
-with the same semantics can host this profile unchanged; such a
-binding is defined by that substrate, not here.<a href="#section-3-1" class="pilcrow">¶</a></p>
+OAuth 2.0 mechanics: it is a substrate-neutral consumer, and this
+section is its consumption declaration under the rule of Mission
+Substrate Requirements (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>)
+that a substrate-neutral profile declare the kernel functions and
+optional capabilities it consumes.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">From the contextual-governance kernel it consumes the Mission
+identifier and issuer, the kernel's Mission Reference and Controller;
+the lifecycle state space with its only-<code>active</code>-permits rule, the
+kernel's governance gate; the integrity-anchor envelope; and the
+Mission's audit horizon, which bounds the ordered governance record.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3">It consumes these optional capabilities:<a href="#section-3-3" class="pilcrow">¶</a></p>
+<span id="name-runtime-profile-capability-"></span><table class="center" id="table-1">
+        <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-runtime-profile-capability-" class="selfRef">Runtime profile capability consumption</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Capability</th>
+            <th class="text-left" rowspan="1" colspan="1">Consumption</th>
+            <th class="text-left" rowspan="1" colspan="1">Scope of consumption</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
+            <td class="text-left" rowspan="1" colspan="1">required</td>
+            <td class="text-left" rowspan="1" colspan="1">The decision contract materializes and evaluates the effective Authority Set, with its subset rule and Common Constraints (<a href="#input-authority" class="auto internal xref">Section 7.2.1</a>, <a href="#policy-view" class="auto internal xref">Section 7.5</a>); as the substrate's composition rule warns, a Mission reference alone is not structured authority</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
+            <td class="text-left" rowspan="1" colspan="1">required</td>
+            <td class="text-left" rowspan="1" colspan="1">Every Runtime Decision gates on the only-<code>active</code>-permits rule (<a href="#decision" class="auto internal xref">Section 7</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
+            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">An authenticated freshness source with a stated staleness bound, consumed wherever an enforcement scope's published staleness bound is tighter than the credential lifetime (<a href="#state-freshness" class="auto internal xref">Section 7.4</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
+            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">Consumed where delegation, attenuation, or containment narrowing is enforced at action time through effective-set evaluation (<a href="#input-authority" class="auto internal xref">Section 7.2.1</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
+            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">Consumed when the binding provides the Mission-bound credential carrying the <code>mission</code> claim; a binding that does not provide it supplies an externally established Mission reference instead, under the binding-establishment step of <a href="#mission-binding" class="auto internal xref">Section 7.3</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Independently Verifiable, Portable Evidence</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">Evidence portability and offline verification are the runtime evidence companion's concern (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>)</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-3-5">The issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is this
+version's normative substrate: it defines each consumed kernel
+function and capability for OAuth 2.0, and every OAuth artifact named
+in this document enters through it. A binding that provides the
+required capabilities above, and whichever conditional capabilities
+the deployment's enforcement scopes require, can host this profile;
+such a binding is defined by that substrate, not here, and its
+Mission Substrate Statement declares what it provides (the AAuth
+binding <span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span> is one example). A
+binding that does not provide Structured Authority does not host this
+profile's decision contract; it composes through its own native
+authorization gate and the externally established Mission reference
+of <a href="#mission-binding" class="auto internal xref">Section 7.3</a>. The portability claim is capability-scoped
+rather than substrate-wide for the reason the substrate's Capability
+Confusion consideration states: every property this profile requires
+matches an explicit capability claim and its scope, never the generic
+statement that a binding supports Missions.<a href="#section-3-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="runtime-model">
@@ -2015,8 +2069,8 @@ contractual profile.<a href="#section-4.2-8" class="pilcrow">¶</a></p>
 deployment policy, bounded by the classification floor below. This
 document defines a default classification a deployment <span class="bcp14">SHOULD</span> adopt,
 and a floor it <span class="bcp14">MUST</span> observe.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-1">
-          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<table class="center" id="table-2">
+          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Class</th>
@@ -3062,8 +3116,8 @@ high-consequence classes require an active source.<a href="#section-7.4-5" class
 <p id="section-7.4-6">Together the sources form a single freshness dial, and a deployment
 picks a position per action class rather than one posture for the
 estate. The comparison, informative:<a href="#section-7.4-6" class="pilcrow">¶</a></p>
-<table class="center" id="table-2">
-          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<table class="center" id="table-3">
+          <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">State source</th>
@@ -3126,8 +3180,8 @@ freshness dial made concrete
 Scope Statement records the chosen position per class.<a href="#section-7.4-8" class="pilcrow">¶</a></p>
 <p id="section-7.4-9">The following are the <span class="bcp14">RECOMMENDED</span> default freshness postures per
 class, adopted absent a documented, consequence-specific analysis:<a href="#section-7.4-9" class="pilcrow">¶</a></p>
-<table class="center" id="table-3">
-          <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
+<table class="center" id="table-4">
+          <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Class</th>
@@ -3424,9 +3478,13 @@ optional fields, and set-like array handling before canonicalization.<a href="#s
 requirement (<a href="#state-freshness" class="auto internal xref">Section 7.4</a>).<a href="#section-8.2-2.12.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-8.2-3">The permit lifetime control is set by action class:<a href="#section-8.2-3" class="pilcrow">¶</a></p>
-<table class="center" id="table-4">
-          <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
+<p id="section-8.2-3">A permit is bound to the full set of authorization-relevant inputs it
+was issued for, and a decision-API binding realizes this as one
+normalized fingerprint over those inputs, never as an enumerated
+subset of fields (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+<p id="section-8.2-4">The permit lifetime control is set by action class:<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+<table class="center" id="table-5">
+          <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Action class</th>
@@ -3481,7 +3539,9 @@ single-use identifier cannot be consumed once per replica.<a href="#section-8.3-
 <a href="#section-8.4" class="section-number selfRef">8.4. </a><a href="#name-idempotency" class="section-name selfRef">Idempotency</a>
         </h3>
 <p id="section-8.4-1">A single-use identifier bounds executions of one permit, not permits
-for one action.<a href="#section-8.4-1" class="pilcrow">¶</a></p>
+for one action. Enforcement is an atomic state machine over the
+(idempotency scope, <code>idempotency_key</code>) pair, not a comparison against
+retained parameters.<a href="#section-8.4-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8.4-2.1">
             <p id="section-8.4-2.1.1">For every non-idempotent operation in the irreversible-action,
@@ -3489,32 +3549,72 @@ external-commitment, and privileged-administration classes, the
 Operation Profile <span class="bcp14">MUST</span> therefore also define an idempotency key.<a href="#section-8.4-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.4-2.2">
-            <p id="section-8.4-2.2.1">The PDP <span class="bcp14">MUST</span> refuse a permit request whose normalized parameters
-and idempotency key match a prior decision whose execution outcome
-is unresolved or completed within the reconciliation window
-(<a href="#evidence" class="auto internal xref">Section 11</a>). An unresolved duplicate is a transient condition:
-the requester retries, or the outcome reconciles, within that
-window. An intentional re-execution of the same normalized action
-is a new operation under a new idempotency key, never a retry under
-the consumed one, and an action-bound approval
-(<a href="#action-approval" class="auto internal xref">Section 4.4</a>) authorizes that new operation as such, never
-re-execution under the consumed key. For the high-consequence
-classes the deployment <span class="bcp14">MUST</span> retain a durable consumed-key record (a
-tombstone) for at least its declared idempotency horizon, published
-in the Enforcement Scope Statement; within that horizon a consumed
-key never executes again. Outside those classes a deployment <span class="bcp14">MAY</span>
-scope the guarantee to the reconciliation window, and it <span class="bcp14">MUST</span>
-publish which posture applies.<a href="#section-8.4-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-8.4-2.2.1">Before issuing a permit for a keyed action, the PDP <span class="bcp14">MUST</span> atomically
+claim the pair (idempotency scope, <code>idempotency_key</code>) together with
+the request's authorization-relevant fingerprint
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). The claim is a single
+linearizable operation: of two concurrent requests presenting the
+same scope and key, exactly one obtains the claim, and the other
+observes it.<a href="#section-8.4-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.4-2.3">
-            <p id="section-8.4-2.3.1">A retransmission is distinguishable from a repeat: when the
-matching prior decision's permit is unexpired and its single-use
-identifier unconsumed, the PDP <span class="bcp14">SHOULD</span> return that prior decision
-(same decision identifier, same permit) rather than refuse, so a
-permit response lost in transit does not lock the action out for
-the reconciliation window. Once the identifier is consumed or the
-permit expired, the refusal above stands until the outcome is
-reconciled.<a href="#section-8.4-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-8.4-2.3.1">Same key, same fingerprint: the PDP returns the prior evaluation or
+its status, the retransmission-versus-repeat rule below, now
+anchored on the claim rather than on comparing retained request
+fields.<a href="#section-8.4-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.4-2.4">
+            <p id="section-8.4-2.4.1">Same key, a different fingerprint: the PDP <span class="bcp14">MUST</span> refuse with a new,
+terminal failure condition distinct from the transient duplicate
+case above, a decision-API binding's <code>idempotency_conflict</code>
+classification (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). An
+idempotency key identifies one intended execution of one normalized
+request; reuse of the key with different content is a conflict,
+never a new execution, the same discipline HTTP's own
+Idempotency-Key handling applies, restated here in the family's own
+terms. An intentional re-execution of the same normalized action is
+instead a new operation under a new idempotency key, never a retry
+under the consumed one, and an action-bound approval
+(<a href="#action-approval" class="auto internal xref">Section 4.4</a>) authorizes that new operation as such, never
+re-execution under the consumed key.<a href="#section-8.4-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.4-2.5">
+            <p id="section-8.4-2.5.1">The idempotency scope is, at minimum, the Mission, the subject or
+actor, the audience, the action, and the resource; a deployment <span class="bcp14">MAY</span>
+narrow it further and <span class="bcp14">MUST</span> publish the scope in its Enforcement
+Scope Statement.<a href="#section-8.4-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.4-2.6">
+            <p id="section-8.4-2.6.1">For the high-consequence classes the deployment <span class="bcp14">MUST</span> retain a
+durable consumed-key record (a tombstone) for at least its declared
+idempotency horizon, published in the Enforcement Scope Statement.
+Tombstones are enforced, not merely retained: within that horizon a
+claim against a tombstoned key <span class="bcp14">MUST</span> be refused, never treated as a
+fresh claim. Outside those classes a deployment <span class="bcp14">MAY</span> scope the
+guarantee to the reconciliation window (<a href="#evidence" class="auto internal xref">Section 11</a>), and it <span class="bcp14">MUST</span>
+publish which posture applies.<a href="#section-8.4-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.4-2.7">
+            <p id="section-8.4-2.7.1">The single-use rule of <a href="#single-use-identifiers" class="auto internal xref">Section 8.3</a> is itself atomic:
+before releasing the effect of a <code>use_limit</code>-bearing permit, the
+enforcement scope <span class="bcp14">MUST</span> atomically consume, or atomically reserve
+and then confirm, the <code>evaluation_id</code> in a store that is
+linearizable across every PEP replica of the scope. Two replicas
+<span class="bcp14">MUST NOT</span> both succeed in consuming the same identifier; a replica
+that instead observes an already-consumed identifier treats the
+presentation as consumed, not as a fresh single use, a
+decision-API binding's <code>permit_consumed</code> classification
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-8.4-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.4-2.8">
+            <p id="section-8.4-2.8.1">A retransmission is distinguishable from a repeat: when the claim
+matches a prior decision whose permit is unexpired and whose
+single-use identifier is unconsumed, the PDP <span class="bcp14">SHOULD</span> return that
+prior decision (same decision identifier, same permit) rather than
+refuse, so a permit response lost in transit does not lock the
+action out for the reconciliation window. Once the identifier is
+consumed or the permit expired, the refusal above stands until the
+outcome is reconciled.<a href="#section-8.4-2.8.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -3597,8 +3697,8 @@ the PDP <span class="bcp14">MUST</span> refuse a consequential action governed b
 <span class="bcp14">MUST</span> behave as follows; in all cases the evidence record
 (<a href="#evidence" class="auto internal xref">Section 11</a>) <span class="bcp14">MUST</span> be sufficient to reconstruct which path produced a
 refusal.<a href="#section-10-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-5">
-        <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
+<table class="center" id="table-6">
+        <caption><a href="#table-6" class="selfRef">Table 6</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Condition</th>
@@ -3786,10 +3886,13 @@ record them, consistent with <span>[<a href="#I-D.draft-mcguinness-oauth-mission
 <p id="section-11.2-1">For an action in the high-consequence classes, the executing PEP <span class="bcp14">MUST</span>
 also produce, after it acts, an
 execution-outcome record keyed to the permit's evaluation identifier,
-recording at least success or failure and the <code>parameter_digest</code>
-actually executed. This lets a decision and its execution be reconciled
-one to one, so a permit that was obtained but executed more than once,
-or executed for different parameters, is detectable after the fact.
+recording at least success or failure and the effective parameter
+digest actually executed, alongside the authorized parameter digest
+the permit bound
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>). This lets a
+decision and its execution be reconciled one to one, so a permit that
+was obtained but executed more than once, or executed for different
+parameters, is detectable after the fact.
 The detailed object schema is the Execution Evidence Object, defined
 by the runtime evidence companion
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-11.2-1" class="pilcrow">¶</a></p>
@@ -3987,8 +4090,8 @@ together, so the claim is no stronger than the weakest of the three,
 and "mediated custody" on its own is not the property.<a href="#section-12.1-6" class="pilcrow">¶</a></p>
 <p id="section-12.1-7">Each unmet condition loses a specific property; the base-profile
 column records the level each condition has outside this claim:<a href="#section-12.1-7" class="pilcrow">¶</a></p>
-<table class="center" id="table-6">
-          <caption><a href="#table-6" class="selfRef">Table 6</a></caption>
+<table class="center" id="table-7">
+          <caption><a href="#table-7" class="selfRef">Table 7</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Condition unmet</th>
@@ -4120,8 +4223,8 @@ protocol element proves. A deployment <span class="bcp14">SHOULD</span> demonstr
 negative tests: each of the following bypass attempts <span class="bcp14">MUST</span> be refused
 or contained by a conforming deployment that makes the relevant
 claim, and a deployment <span class="bcp14">SHOULD</span> retain evidence that it ran them.<a href="#section-13-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-7">
-        <caption><a href="#table-7" class="selfRef">Table 7</a></caption>
+<table class="center" id="table-8">
+        <caption><a href="#table-8" class="selfRef">Table 8</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Bypass attempt</th>
@@ -4652,6 +4755,10 @@ any decision-API wire members are defined by the binding
 <a href="#section-20.1" class="section-number selfRef">20.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
@@ -4882,9 +4989,11 @@ different digest and the permit is refused.<a href="#appendix-A-7" class="pilcro
 <a href="#policy-view" class="auto internal xref">Section 7.5</a> over a minimal materialized-view envelope for the same
 Mission. The payload here is reduced to the two members every
 committed view binds, <code>mission_id</code> and <code>authority_hash</code>; a deployment
-that serves a state version also binds it (<a href="#policy-view" class="auto internal xref">Section 7.5</a>), and a
-deployment's payload also carries its evaluable materialized form,
-which this document does not standardize.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+that serves a state version records it in Decision Evidence and
+consumes it through freshness processing instead, never embedding it
+in this payload (<a href="#policy-view" class="auto internal xref">Section 7.5</a>), and a deployment's payload also
+carries its evaluable materialized form, which this document does not
+standardize.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="appendix-B-2">
 <pre>
 {
@@ -4922,104 +5031,47 @@ yields a different <code>policy_view_id</code> (<a href="#policy-view" class="au
       <h2 id="name-runtime-evidence-worked-exa">
 <a href="#appendix-C" class="section-number selfRef">Appendix C. </a><a href="#name-runtime-evidence-worked-exa" class="section-name selfRef">Runtime Evidence Worked Examples</a>
       </h2>
-<p id="appendix-C-1">These non-normative records illustrate the minimum record content of
-<a href="#evidence" class="auto internal xref">Section 11</a> for the operation of <a href="#parameter-digest-example" class="auto internal xref">Appendix A</a>. They
-show substrate-level record content only: the concrete schema,
-serialization, and integrity mechanism are the deployment's
-(<a href="#record-integrity" class="auto internal xref">Section 11.4</a>), and the runtime evidence companion defines
-concrete evidence objects
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>). In this
-deployment, the Resource Server runtime profile classifies
-<code>journal-entries.write</code> as an irreversible action (a posted entry is
-corrected only by a compensating entry), so the permit is single-use
-and execution-outcome evidence is required. The policy-view version
-cites the view of <a href="#policy-view-example" class="auto internal xref">Appendix B</a>.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
-<p id="appendix-C-2">A permit decision record:<a href="#appendix-C-2" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="appendix-C-3">
-<pre>
-{
-  "decision": "permit",
-  "request_time": "2026-11-02T09:03:12Z",
-  "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
-  },
-  "token_issuer": "https://as.example.com",
-  "audience": "https://erp.example.com",
-  "sub": "user_3p2q8mN1a0kV7tR",
-  "client_id": "s6BhdRkqt3",
-  "action": "journal-entries.write",
-  "resource": "je_2026Q3_inv_8421",
-  "authorizing_entry": {
-    "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["journal-entries.write"],
-    "constraints": { "max_amount":
-      { "amount": "500.00", "currency": "USD" } }
-  },
-  "parameter_digest":
-    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-  "evaluation_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
-  "policy_view_id":
-    "sha-256:fuMqn6Nb5LfyziflJuYj8VgHHH1bskZ0SrMDxdQ8CaA",
-  "sequence": 17
-}
-</pre><a href="#appendix-C-3" class="pilcrow">¶</a>
-</div>
-<p id="appendix-C-4">The execution-outcome record the executing PEP produces after it acts,
-keyed to the permit's evaluation identifier (<a href="#evidence" class="auto internal xref">Section 11</a>):<a href="#appendix-C-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="appendix-C-5">
-<pre>
-{
-  "outcome": "completed",
-  "evaluation_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
-  "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com"
-  },
-  "parameter_digest":
-    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-  "outcome_at": "2026-11-02T09:03:14Z",
-  "sequence": 18
-}
-</pre><a href="#appendix-C-5" class="pilcrow">¶</a>
-</div>
-<p id="appendix-C-6">Execution Evidence for a later attempt on the same operation. A
-permit (<code>dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA</code>) bound the digest of a
+<p id="appendix-C-1">These non-normative scenarios illustrate the minimum record content of
+<a href="#evidence" class="auto internal xref">Section 11</a> for the operation of <a href="#parameter-digest-example" class="auto internal xref">Appendix A</a>, in the
+concrete record schemas and worked examples the runtime evidence
+companion defines
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>); this document
+carries no evidence JSON of its own. In this deployment, the Resource
+Server runtime profile classifies <code>journal-entries.write</code> as an
+irreversible action (a posted entry is corrected only by a
+compensating entry), so the permit is single-use and
+execution-outcome evidence is required. The policy-view version cites
+the view of <a href="#policy-view-example" class="auto internal xref">Appendix B</a>.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
+<p id="appendix-C-2">A permit decision on the 423.50 USD journal entry of
+<a href="#parameter-digest-example" class="auto internal xref">Appendix A</a>, within the ceiling, for subject
+<code>user_3p2q8mN1a0kV7tR</code> and client <code>s6BhdRkqt3</code> against audience
+<code>https://erp.example.com</code>: the Decision Evidence record cites the
+Mission, the authorizing <code>mission_resource_access</code> entry and its
+<code>max_amount</code> constraint, and the <code>parameter_digest</code> of
+<a href="#parameter-digest-example" class="auto internal xref">Appendix A</a>, correlated by <code>evaluation_id</code>
+        <code>dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ</code>. The companion's own worked example
+shows the concrete record
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#appendix-C-2" class="pilcrow">¶</a></p>
+<p id="appendix-C-3">The executing PEP then acts and produces the execution-outcome record
+keyed to that same <code>evaluation_id</code>: outcome <code>completed</code>, the
+authorized and effective parameter digests equal, the binding-held
+case, reconciling the decision and its execution one to one. The
+companion's own worked example shows the concrete record
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#appendix-C-3" class="pilcrow">¶</a></p>
+<p id="appendix-C-4">A later attempt on the same operation shows a parameter deviation
+instead. A distinct permit (<code>evaluation_id</code>
+        <code>dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA</code>) bound the digest of the same
 423.50 entry; between check and use the parameters became 780.00
 (normalized object
 <code>{"amount_usd":"780.00","source_invoice_id":"inv_2026Q3_842"}</code>). The
 executing PEP recomputed the digest over the parameters it was about
-to use, found a mismatch, and suppressed the release
-(<a href="#parameter-binding" class="auto internal xref">Section 8</a>); a post-decision suppression is a final
-disposition and is recorded as Execution Evidence, never as a
-Refusal Record. The record carries the recomputed digest:<a href="#appendix-C-6" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="appendix-C-7">
-<pre>
-{
-  "outcome": "suppressed",
-  "error": "parameter_mismatch",
-  "outcome_at": "2026-11-02T09:03:29Z",
-  "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
-  },
-  "audience": "https://erp.example.com",
-  "sub": "user_3p2q8mN1a0kV7tR",
-  "client_id": "s6BhdRkqt3",
-  "action": "journal-entries.write",
-  "resource": "je_2026Q3_inv_8421",
-  "evaluation_id": "dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA",
-  "parameter_digest":
-    "sha-256:UdG-TiebDHTiKRXUVURs1Jeq_vDJp_Ro8jWbBAD8hgM",
-  "sequence": 19
-}
-</pre><a href="#appendix-C-7" class="pilcrow">¶</a>
-</div>
+to use, found it differed from the authorized digest, and suppressed
+the release (<a href="#parameter-binding" class="auto internal xref">Section 8</a>): a post-decision suppression is a
+final disposition and is recorded as Execution Evidence, never as a
+Refusal Record, carrying both the authorized digest and the differing
+effective digest it recomputed. The companion's parameter-deviation
+worked example shows the concrete record
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#appendix-C-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="acknowledgments">

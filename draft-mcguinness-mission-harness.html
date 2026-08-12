@@ -1257,6 +1257,11 @@ treats session continuity as proof that Mission authority continues.<a href="#se
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
             <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-untrusted-content-and-egres" class="internal xref">Untrusted Content and Egress</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-decision-api-composition" class="internal xref">Decision-API Composition</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
             <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-harness-evidence" class="internal xref">Harness Evidence</a></p>
@@ -2609,6 +2614,108 @@ and the cost of its default-taint polarity, are discussed in
 <a href="#sec-taint-limits" class="auto internal xref">Section 18.7</a>. A harness that applies it records the taint
 source class, the provenance where established, and the resulting
 downgrade or approval in Harness Evidence (<a href="#harness-evidence" class="auto internal xref">Section 15</a>).<a href="#section-14-14" class="pilcrow">¶</a></p>
+<div id="decision-api-composition">
+<section id="section-14.1">
+        <h3 id="name-decision-api-composition">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-decision-api-composition" class="section-name selfRef">Decision-API Composition</a>
+        </h3>
+<p id="section-14.1-1">Where a deployment routes taint enforcement through the PDP
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) instead of, or in addition
+to, enforcing the rule above at the harness itself, this section
+defines the composition: the member shapes the decision-API binding
+carries, and the PDP-side behavior those members drive. The harness
+remains the layer that establishes taint and the external-
+communication predicate; the decision-API binding is one wire carrier
+of that determination, never a second source of truth for it.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+<p id="section-14.1-2">The external-communication predicate is parameter-dependent: whether
+an action carries data outside the deployment's trust boundary
+depends on the concrete request parameters, not on the action class
+alone (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), so the PDP has no
+class-only way to recognize one. It is therefore an action-scoped
+member, carried at <code>action.properties.external_communication</code>
+alongside the other action parameter members. The PEP, at the last
+controllable boundary, computes the predicate from the request
+parameters and marks the action:<a href="#section-14.1-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-14.1-3">
+          <dt id="section-14.1-3.1">
+<code>external_communication</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-14.1-3.2">
+            <p id="section-14.1-3.2.1">CONDITIONAL. A boolean. <code>true</code> when the PEP determines, from the
+request parameters at the last controllable boundary, that the
+action carries data to a recipient outside the deployment's trust
+boundary. <span class="bcp14">REQUIRED</span> for every action in a class for which the
+deployment declares PDP-enforced taint, so the taint requirement
+has a deterministic PDP-side trigger; <span class="bcp14">OPTIONAL</span> otherwise.<a href="#section-14.1-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-14.1-4">The <span class="bcp14">OPTIONAL</span> <code>taint</code> member carries the harness's untrusted-content
+determination for the requested action, when the deployment routes
+taint enforcement through the PDP, as the value of <code>context.taint</code>:<a href="#section-14.1-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-14.1-5">
+<pre>
+{
+  "tainted": true,
+  "granularity": "parameter",
+  "source_class": "web_fetch"
+}
+</pre><a href="#section-14.1-5" class="pilcrow">¶</a>
+</div>
+<span class="break"></span><dl class="dlParallel" id="section-14.1-6">
+          <dt id="section-14.1-6.1">
+<code>tainted</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-14.1-6.2">
+            <p id="section-14.1-6.2.1"><span class="bcp14">REQUIRED</span> when <code>taint</code> is present. A boolean. Whether a bound
+parameter of the action derives from tainted content (under
+<code>granularity</code> <code>parameter</code>) or tainted content has entered the
+governed session (under <code>granularity</code> <code>session</code>).<a href="#section-14.1-6.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-14.1-6.3">
+<code>granularity</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-14.1-6.4">
+            <p id="section-14.1-6.4.1"><span class="bcp14">REQUIRED</span> when <code>taint</code> is present. A string, <code>parameter</code> or
+<code>session</code>: the trigger granularity the harness established.<a href="#section-14.1-6.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-14.1-6.5">
+<code>source_class</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-14.1-6.6">
+            <p id="section-14.1-6.6.1"><span class="bcp14">OPTIONAL</span>. A string. The deployment-defined class of the tainting
+source (for example, <code>web_fetch</code>, <code>inbound_message</code>,
+<code>third_party_document</code>), for policy and evidence.<a href="#section-14.1-6.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-14.1-7">Absence of <code>taint</code> means the harness did not route the determination
+through the decision request, not that the action is untainted; the
+harness's own egress rule above then applies. That reading is
+confined to harness-enforced deployments. When the deployment's
+Enforcement Scope Statement declares PDP-enforced taint for an action
+class (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>):<a href="#section-14.1-7" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14.1-8.1">
+            <p id="section-14.1-8.1.1">The PDP <span class="bcp14">MUST</span> require <code>context.taint</code> on every decision in that
+class whose <code>action.properties.external_communication</code> is <code>true</code>
+or whose <code>action_class</code> is <code>external_commitment</code>, and <span class="bcp14">MUST</span> deny
+with the decision-API binding's <code>taint_context_missing</code>
+classification (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) when it
+is absent.<a href="#section-14.1-8.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.1-8.2">
+            <p id="section-14.1-8.2.1">When <code>taint</code> is present with <code>tainted</code> true on such an action, the
+PDP <span class="bcp14">MUST</span> deny or return <code>approval_required</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) unless a fresh
+action-bound approval bound to the action's parameters is present
+in the decision context.<a href="#section-14.1-8.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.1-8.3">
+            <p id="section-14.1-8.3.1">The PDP <span class="bcp14">MUST</span> record the presented taint context in Decision
+Evidence (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-14.1-8.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
 </section>
 </div>
 <div id="harness-evidence">
