@@ -135,8 +135,8 @@ records.
 This document defines three record types: the Decision Evidence
 Object, for a PDP's decision on a consequential action; the
 Execution Evidence Object, for the outcome of a permitted action;
-and the Refusal Record, for a PEP refusal that occurs before any PDP
-decision. It fixes their members, canonicalization, integrity
+and the Refusal Record, for a PEP or PDP refusal that occurs before
+any PDP decision. It fixes their members, canonicalization, integrity
 envelope, media types, and retention. A decision-API binding maps
 its own wire request and response onto these records; the OpenID
 AuthZEN Profile {{I-D.draft-mcguinness-mission-authzen}} is the
@@ -188,8 +188,8 @@ Execution Evidence:
   outcome is determined ({{execution-evidence-object}}).
 
 Refusal Record:
-: The record a PEP emits for a refusal that occurs before any PDP
-  decision ({{pre-decision-refusal}}).
+: The record a PEP or PDP emits for a refusal that occurs before any
+  PDP decision ({{pre-decision-refusal}}).
 
 Executor:
 : The component that carries out a permitted action and emits
@@ -461,16 +461,25 @@ commonly carries (`taint`, `mission_history`, `capability_source`,
 
 The Decision Evidence Object records a PDP decision, which is why its
 PDP-derived members are REQUIRED. The runtime profile also requires an
-evidence record for a PEP refusal that occurs before any PDP decision:
-token validation failure, a missing `mission` claim, PEP-PDP channel
-failure, PDP unreachability, or the PEP being unable to establish
-Mission state ({{I-D.draft-mcguinness-mission-runtime}}). Such a
-refusal has no PDP decision and cannot populate the PDP-derived members
-above. A deployment records it as a Refusal Record, carrying
-only facts the PEP verified. The boundary is the PDP decision: a
-Refusal Record is exclusively pre-decision, and once a PDP has
-decided, every final disposition of a consequential permit, whether
-completed, failed, or suppressed before release, is Execution
+evidence record for a refusal that occurs before any PDP decision,
+whether the refusing component is the PEP or the PDP: a PEP refusal
+for token validation failure, a missing `mission` claim, PEP-PDP
+channel failure, PDP unreachability, or the PEP being unable to
+establish Mission state ({{I-D.draft-mcguinness-mission-runtime}}); or
+a PDP refusal of an in-scope request that reaches it without the
+Mission decision context a runtime enforcement scope requires, per
+the AuthZEN binding ({{I-D.draft-mcguinness-mission-authzen}}). Such a
+refusal has no PDP decision and cannot populate the PDP-derived
+members above. A deployment records it as a Refusal Record, carrying
+only facts the refusing role verified: a PEP populates the members it
+can attest from token validation and its own state establishment; a
+PDP populates the members it can attest from the request it received.
+Neither role attests facts only the other could verify: the PDP
+cannot attest PEP-side token checks, and the PEP cannot attest the
+PDP's own context-completeness check. The boundary is the PDP
+decision: a Refusal Record is exclusively pre-decision, and once a
+PDP has decided, every final disposition of a consequential permit,
+whether completed, failed, or suppressed before release, is Execution
 Evidence ({{execution-evidence-object}}), never a Refusal Record:
 
 `refusal_id`:
@@ -478,29 +487,34 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   `1*64( ALPHA / DIGIT / "-" / "_" )`. At least 128 bits of entropy.
 
 `audience`:
-: REQUIRED. A string. The PEP's audience or protected-resource
-  identifier.
+: REQUIRED. A string. The audience or protected-resource identifier,
+  as the refusing component established it.
 
 `action`:
-: REQUIRED. An object. The requested action descriptor, as the PEP
-  established it.
+: REQUIRED. An object. The requested action descriptor, as the
+  refusing component established it.
 
 `resource`:
-: OPTIONAL. An object. The target object identity, when the PEP
-  established one.
+: OPTIONAL. An object. The target object identity, when the refusing
+  component established one.
 
 `decision`:
 : REQUIRED. A string. Always `deny`.
 
 `denial_reason`:
-: REQUIRED. A string. One of `token_invalid`,
+: REQUIRED. A string. For a PEP refusal, one of `token_invalid`,
   `mission_claim_missing`, `channel_failure`, `pdp_unreachable`, or
   `state_unavailable` (where the deployment's state-source placement
-  has the PEP supply state, and it cannot establish it). These name PEP-side conditions and are disjoint from
-  the runtime profile's PDP denial reasons (for example, as carried by
-  the AuthZEN binding, {{I-D.draft-mcguinness-mission-authzen}}); a
-  record that can populate the PDP-derived members is a Decision
-  Evidence Object instead.
+  has the PEP supply state, and it cannot establish it). For a PDP
+  refusal of an in-scope request that reaches it without the Mission
+  decision context a runtime enforcement scope requires,
+  `mission_context_missing`. These name pre-evaluation conditions,
+  PEP-side or PDP-side, and are disjoint from the runtime profile's
+  PDP denial reasons for an evaluated decision (for example, as
+  carried by the AuthZEN binding,
+  {{I-D.draft-mcguinness-mission-authzen}}); a record that can
+  populate the PDP-derived members of an evaluated decision is a
+  Decision Evidence Object instead.
 
 `evaluated_at`:
 : REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
@@ -520,16 +534,21 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
 
 `mission`:
 : OPTIONAL. An object. The Mission reference (`id`, `issuer`,
-  `authority_hash`), present only when the PEP verified the `mission`
-  claim before the failure (for example, on `pdp_unreachable`).
+  `authority_hash`), present only when the refusing component
+  established it before the failure: for a PEP, for example, on
+  `pdp_unreachable`; for a PDP refusing on
+  `mission_context_missing`, the reference is typically absent,
+  since that is exactly what the request lacked.
 
 `subject`, `actor`, `credential`:
 : OPTIONAL. Objects. Verified facts only, in the projected forms
   {{decision-evidence-object}} defines (for example, as carried in the
   AuthZEN binding's decision-API request,
-  {{I-D.draft-mcguinness-mission-authzen}}). For a
-  token-validation failure, the record MUST NOT describe unverified
-  token claims as authenticated facts
+  {{I-D.draft-mcguinness-mission-authzen}}). A PEP populates them from
+  its own token validation; a PDP populates them from the request
+  context it received, never asserting a check only the other role
+  can perform. For a token-validation failure, the record MUST NOT
+  describe unverified token claims as authenticated facts
   ({{I-D.draft-mcguinness-mission-runtime}}).
 
 `sequence`:
@@ -539,22 +558,23 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   Mission was established.
 
 `emitter`:
-: REQUIRED. An object. The identity of the refusing PEP that emitted and
-  signed this record, in the form Decision Evidence defines
-  ({{decision-evidence-object}}), with `role` `pep`. A verifier MUST
-  bind the emitter's signing key to the enforcement scope and audience
-  the record serves ({{decision-evidence-integrity}}).
+: REQUIRED. An object. The identity of the refusing component that
+  emitted and signed this record, in the form Decision Evidence
+  defines ({{decision-evidence-object}}), with `role` `pep` or `pdp`.
+  A verifier MUST bind the emitter's signing key to the enforcement
+  scope and audience the record serves
+  ({{decision-evidence-integrity}}).
 
 `hop_reference`:
 : OPTIONAL. An object, in the coordinated extension form
-  {{evidence-extensions}} defines. Present only when the PEP verified
-  enough of the presented credential, before the failure, to establish
-  it was a continued credential.
+  {{evidence-extensions}} defines. Present only when the refusing
+  component verified enough of the presented credential, before the
+  failure, to establish it was a continued credential.
 
 `evidence_envelope`:
 : REQUIRED. An object. Integrity protection in the form of
-  {{decision-evidence-integrity}}, emitted by the refusing PEP, whose
-  JWS protected `typ` is `application/mission-refusal-record+json`
+  {{decision-evidence-integrity}}, emitted by the refusing component,
+  whose JWS protected `typ` is `application/mission-refusal-record+json`
   ({{iana}}).
 
 A Refusal Record is closed to uncoordinated extension under the same
@@ -605,6 +625,29 @@ that failed closed:
 }
 ~~~
 
+A PDP-side refusal, recorded by the PDP itself: an in-scope request
+reached it without the Mission decision context the AuthZEN binding
+requires, so no Mission reference is established and the PDP
+populates only what it can attest from the request it received:
+
+~~~ json
+{
+  "refusal_id": "ref_9NcT4wQ1xM6rB3sK7eV0jY2wLz",
+  "audience": "https://erp.example.com",
+  "action": { "name": "journal-entries.write" },
+  "parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "decision": "deny",
+  "denial_reason": "mission_context_missing",
+  "emitter": { "id": "pdp.example.com", "role": "pdp" },
+  "evaluated_at": "2026-11-02T08:17:02Z",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
+  }
+}
+~~~
+
 ## Integrity {#decision-evidence-integrity}
 
 The `evidence_envelope` carries the integrity protection over the
@@ -640,12 +683,15 @@ Execution Evidence and Refusal Records.
 
 A verifier MUST confirm that the signing key selected by the JWS `kid`
 is the published key of the component named in the record's `emitter`
-member, and that this key is bound to the enforcement scope and audience
-the record serves (the decision-API request's audience member,
-{{I-D.draft-mcguinness-mission-authzen}}, and the record's
-`audience`). A verifier MUST reject a record whose signing key is not
-published for that scope, so one component's key cannot sign evidence
-for a resource, audience, or scope it does not serve.
+member, and that this key is bound to the enforcement scope and
+audience the record serves: the record's own `audience` member,
+present directly on Decision Evidence, Execution Evidence, and
+Refusal Records alike (for Decision Evidence, mirroring the
+decision-API request's audience member,
+{{I-D.draft-mcguinness-mission-authzen}}). A verifier MUST reject a
+record whose signing key is not published for that scope, so one
+component's key cannot sign evidence for a resource, audience, or
+scope it does not serve.
 
 The JWS protected header MUST carry:
 
@@ -808,9 +854,12 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
 ## Members
 
 `execution_id`:
-: REQUIRED. A string. Unique execution identifier.
-  ABNF: `1*64( ALPHA / DIGIT / "-" / "_" )`. At least 128 bits of
-  entropy.
+: REQUIRED. A string. Unique execution identifier, stable across
+  delivery retries of this record: exactly one Execution Evidence
+  Object exists per final disposition of a permit, and delivery of
+  that record is at-least-once, so a consumer MUST deduplicate on
+  `execution_id` rather than assume single delivery. ABNF:
+  `1*64( ALPHA / DIGIT / "-" / "_" )`. At least 128 bits of entropy.
 
 `evaluation_id`:
 : REQUIRED. A string. Correlates this record with the linked Decision
@@ -820,6 +869,12 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
 `mission_id`:
 : REQUIRED. A string. The Mission `id`, mirrored from the
   linked Decision Evidence for join-key convenience.
+
+`audience`:
+: REQUIRED. A string. The audience the linked Decision Evidence
+  recorded, mirrored for join-key convenience and so a verifier's
+  key-to-audience binding ({{decision-evidence-integrity}}) has its
+  input.
 
 `authorized_parameter_digest`:
 : CONDITIONAL. A string. REQUIRED when the linked Decision Evidence
@@ -925,6 +980,7 @@ not understand.
   "execution_id":  "exe_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
   "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
   "mission_id":    "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "audience":      "https://erp.example.com",
   "authorized_parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
   "effective_parameter_digest":
@@ -970,6 +1026,7 @@ the release before acting:
   "execution_id":  "exe_7QsK2wR4xN9mV3pB6tY8eJ1zH5uD0cA",
   "evaluation_id": "dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA",
   "mission_id":    "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "audience":      "https://erp.example.com",
   "authorized_parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
   "effective_parameter_digest":
@@ -1106,8 +1163,8 @@ A PRODUCER conforming to this document MUST:
 
 - emit a Decision Evidence Object for every PDP decision on a
   consequential action ({{decision-evidence-object}});
-- emit a Refusal Record for a PEP refusal that occurs before any PDP
-  decision ({{pre-decision-refusal}});
+- emit a Refusal Record for a PEP or PDP refusal that occurs before
+  any PDP decision ({{pre-decision-refusal}});
 - emit an Execution Evidence Object for the classes the runtime
   profile's transaction-assurance tier covers
   ({{I-D.draft-mcguinness-mission-runtime}})

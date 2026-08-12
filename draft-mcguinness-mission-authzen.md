@@ -328,9 +328,11 @@ reproducibility rules, its bounded-fidelity property, and the
 content-addressed `policy_view_id` with its `mission-policy-view`
 integrity envelope are defined by the runtime profile
 ({{I-D.draft-mcguinness-mission-runtime}}). That envelope's
-committed payload binds the Mission's `mission_id` and `authority_hash`,
-so a consistency check between a decision request and the loaded view is
-an equality test on those values ({{pdp-request}}). Nothing in this
+committed manifest binds the Mission's `mission_id` and `authority_hash`,
+alongside `policy_version` and the compiler identity that produced it,
+so a consistency check between a decision request and the loaded view
+is an equality test on `mission_id` and `authority_hash` alone
+({{pdp-request}}). Nothing in this
 binding requires the PDP to be remote: a PDP embedded in or colocated
 with its PEP, evaluating against a loaded materialized policy view,
 is a conforming deployment, and the decision's network cost is then
@@ -563,22 +565,24 @@ following action-scoped members:
   execution of one normalized request, so a legitimate re-execution
   mints a new key. REQUIRED where the Operation Profile defines one for
   the action. The PDP atomically claims the pair (idempotency scope,
-  `idempotency_key`) together with the request's authorization-relevant
-  fingerprint ({{request-fingerprint}}) before issuing a permit
-  ({{I-D.draft-mcguinness-mission-runtime}}). When the key and
-  fingerprint match a prior decision whose execution outcome is
-  unresolved or completed within the reconciliation window, the PDP
-  MUST deny with `duplicate_suppressed`
-  ({{runtime-denial-classification}}); reuse of an `idempotency_key`
-  never executes again within the deployment's declared idempotency
-  horizon, which for the high-consequence classes is backed by a
-  durable consumed-key tombstone
-  ({{I-D.draft-mcguinness-mission-runtime}}). When the same key instead
-  matches a prior decision under a different fingerprint, the reuse is
-  a conflict, never a new execution: the PDP MUST deny with
-  `idempotency_conflict` ({{runtime-denial-classification}}), a
-  terminal condition distinct from the transient
-  `duplicate_suppressed` above.
+  `idempotency_key`) together with the request's operation identity
+  ({{projections}}) before issuing a permit
+  ({{I-D.draft-mcguinness-mission-runtime}}). The claim resolves per
+  the runtime profile's idempotency claim-state table: while the
+  claim is unresolved, a matching key and operation identity is a
+  transient
+  `duplicate_suppressed` ({{runtime-denial-classification}}); once the
+  operation completes, a matching key and operation identity is a
+  terminal `duplicate_suppressed` and the prior result is available
+  from the resource under the Operation Profile, never re-executed.
+  Reuse of an `idempotency_key` never yields a second execution
+  within the deployment's declared idempotency horizon, which for the
+  high-consequence classes is backed by a durable consumed-key
+  tombstone ({{I-D.draft-mcguinness-mission-runtime}}). When the same
+  key instead matches a prior claim under a different operation
+  identity, the reuse is a conflict, never a new execution: the PDP
+  MUST deny with `idempotency_conflict`
+  ({{runtime-denial-classification}}), terminal in every claim state.
 
 `parameter_attributes`:
 : OPTIONAL. An object. Privacy-preserving attributes derived from the
@@ -690,8 +694,8 @@ The OPTIONAL `approval` member is carried at `context.approval` on a
 fresh evaluation after an access request is approved. The PEP returns
 here exactly the approval object the Access Request Service issued:
 ARAP's approval object {{ARAP}} unchanged, with all of ARAP's
-members, including its REQUIRED `approved_until`. This profile does
-not subset or rename it.
+members. ARAP makes `approved_at` OPTIONAL and `approved_until`
+REQUIRED; this profile does not subset or rename either.
 
 On top of ARAP's own requirements, before treating `context.approval`
 as satisfying `approval_required`, the PDP MUST additionally
@@ -700,14 +704,28 @@ request's `parameter_digest` (a mismatch means the approval does not
 cover these parameters), that its grant time is within the
 deployment's maximum approval age
 ({{I-D.draft-mcguinness-mission-runtime}}), and that `approved_until`
-has not passed. An approval failing any of these checks does not
-satisfy the denial. The PDP MUST record the presented approval `id`
-in Decision Evidence. The approval is an input attribute, never a
-bearer grant: the PDP evaluates current policy and current state.
+has not passed. This profile requires a verifiable completion time
+for an action-bound approval: `approved_at` when present, otherwise
+the PDP MUST establish the grant time from the approval record it
+resolves by `id` or from verified signed `state`. An approval whose
+completion time cannot be established is treated as unverifiable. An
+approval failing any of these checks does not satisfy the denial. The
+PDP MUST record the presented approval `id` in Decision Evidence. The
+approval is an input attribute, never a bearer grant: the PDP
+evaluates current policy and current state.
 
-When policy requires an action-bound approval and no valid
-`context.approval` satisfies the checks above, the PDP MUST deny with
-`approval_required` ({{runtime-denial-classification}}).
+When policy requires an action-bound approval and no `context.approval`
+is presented, the PDP MUST deny with `approval_required`
+({{runtime-denial-classification}}). On a re-evaluation that presented
+`context.approval` and failed a Mission or ARAP check, the PDP instead
+returns one of ARAP's five registered re-evaluation reasons in
+`context.reason`: `approval_expired`, `out_of_scope`, `grant_pending`,
+`policy_denied`, or `approval_unverifiable`, with ARAP's default
+`next_action` value for each (`request`, `request`, `retry`, `none`,
+and `none` respectively). These are ARAP-owned values carried under
+its extensibility rule {{ARAP}}, not values this profile defines; an
+approval whose completion time cannot be established under the
+paragraph above is `approval_unverifiable`.
 
 ## History Context {#context-history}
 
@@ -777,30 +795,63 @@ store's freshness discipline
 evaluated predicates and their outcomes in Decision Evidence
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
-## Authorization-Relevant Fingerprint {#request-fingerprint}
+## Canonical Projections {#projections}
 
-The idempotency claim ({{I-D.draft-mcguinness-mission-runtime}}) and
-permit reuse both turn on one normalized value instead of an
-enumerated field list: the **authorization-relevant fingerprint**,
-`sha-256:` followed by the base64url, no padding, SHA-256
-{{RFC6234}} of the JCS {{RFC8785}} serialization of the normalized
-evaluation request. The digested object carries `subject`, `action`
-with its properties, `resource` with its properties, and every
-authorization-relevant `context` member, including `approval`,
-`taint`, the Mission history reference, the capability source, and
-any extension member a companion profile adds. It excludes only the
-request's volatile machinery: the `supported_obligations` declaration
-and transport metadata. A new companion context member is
-authorization-relevant, and so included, by default; a companion
-narrows the fingerprint only by amending this enumeration.
+The idempotency claim ({{I-D.draft-mcguinness-mission-runtime}}),
+permit retransmission and reuse, and the deviation and binding
+language elsewhere in this profile each turn on a different relation
+over the normalized evaluation request; one fingerprint cannot serve
+all three without conflating them. This section defines three
+INTERNAL canonical projections instead. Each is `sha-256:` followed
+by the base64url, no padding, SHA-256 {{RFC6234}} digest of the JCS
+{{RFC8785}} serialization of its defined subset of the normalized
+request. None is a wire parameter: a decision-API binding computes
+each internally from the request and response members it already
+carries, and this document adds none of them to the AuthZEN
+extension-data registrations of {{iana}}.
+
+Operation identity:
+: The action, the resource, and the normalized effectful parameters.
+  This is what an idempotency key identifies one execution of.
+
+Authorization binding:
+: The subject, the actor, credential-derived facts, the Mission
+  reference, the authority and view identity, the approval, and
+  every policy-relevant context input, including `taint`, the
+  Mission history reference, the capability source, and any
+  extension member a companion profile adds. This is what a permit
+  is bound to. A new companion context member is part of the
+  authorization binding by default; a companion narrows it only by
+  amending this enumeration. It excludes only the request's volatile
+  machinery: the `supported_obligations` declaration and transport
+  metadata.
+
+Cache key:
+: The authorization binding plus the explicit state generation the
+  decision consulted (the PDP's tracked `mission_state_version`, or
+  an equivalent status-issuance generation marker where the
+  deployment does not track one), EXCLUDING observation telemetry:
+  `freshness_at`, retrieval or issuance timestamps, and other
+  volatile machinery.
+
+State generation is cache-relevant; observation telemetry never is:
+a decision computed against an unchanged authorization binding and an
+unchanged state generation is the same decision regardless of when
+either side observed it. Permit retransmission and permit reuse
+therefore test the cache key for equality ({{permit-binding-split}}).
+The idempotency claim identifies one execution rather than one
+decision, so it tests operation identity instead
+({{I-D.draft-mcguinness-mission-runtime}}). Deviation and binding
+language elsewhere in this profile, what a permit is bound to and
+what a re-presented request must match to rely on that binding, means
+the authorization binding.
 
 ## Worked PDP request
 
 The `policy_view_id` values in this document's examples
 (`sha-256:kP3xR9sQ...`) differ from the runtime profile's worked
-materialized-view value (`sha-256:fuMqn6Nb...`): this deployment's
-view payload includes the engine-evaluable form, so it hashes
-differently. Both are valid views of the same Mission.
+materialized-view value (`sha-256:kFxuopgt...`): the two manifests
+name different compilers. Both are valid views of the same Mission.
 
 For the ERP reconciliation Mission:
 
@@ -877,10 +928,13 @@ A PDP that also serves non-Mission AuthZEN traffic MUST NOT downgrade:
 for an action within a runtime enforcement scope it mediates, a request
 whose `context` lacks the `mission` member ({{context-mission}}) is
 malformed under this binding, and the PDP MUST refuse it rather than
-evaluate it against non-Mission policy alone. A permit issued to an
-in-scope consequential action without Mission evaluation is an
-enforcement bypass, not a decision
-({{I-D.draft-mcguinness-mission-runtime}}).
+evaluate it against non-Mission policy alone, and MUST record the
+refusal as a Refusal Record with `denial_reason`
+`mission_context_missing`
+({{I-D.draft-mcguinness-mission-runtime-evidence}}), populating the
+members the PDP itself can attest. A permit issued to an in-scope
+consequential action without Mission evaluation is an enforcement
+bypass, not a decision ({{I-D.draft-mcguinness-mission-runtime}}).
 
 In addition to evaluating the decision inputs the runtime profile
 requires, the PDP MUST verify that the AuthZEN-carried envelope is
@@ -1212,22 +1266,36 @@ This profile defines the following AuthZEN response `context` members:
     `valid_until`:
     : REQUIRED. An RFC 3339 {{RFC3339}} timestamp. The permit's
       validity bound, past which the permit MUST NOT be used.
-      `valid_until` MUST NOT exceed the minimum of: the freshness time
-      or lease of the Mission state view the decision relied on
-      ({{I-D.draft-mcguinness-mission-runtime}}), in particular a
+      `valid_until` MUST NOT exceed:
+
+        ~~~
+        min(
+          the presented credential's expiry;
+          the approval's `approved_until`, where the permit
+            satisfied an approval requirement;
+          the state valid-through;
+          any policy-defined maximum permit lifetime for the
+            action's class
+        )
+        ~~~
+
+      The presented credential's expiry is
+      `context.credential.expires_at` ({{context-credential}}), when
+      present. The approval's `approved_until` applies where the
+      permit satisfies `approval_required` ({{context-approval}}).
+      The state valid-through is defined by source: a signed Mission
+      Status Response's expiry, or a lease's end, both carried in a
       supplied
       `context.mission_state_observation.mission_status_expires_at`;
-      the presented credential's expiry
-      (`context.credential.expires_at`, {{context-credential}}), when
-      present; where the permit satisfies `approval_required`, the
-      satisfying approval's `approved_until` ({{context-approval}});
-      and any policy-defined maximum permit lifetime for the action's
-      class. No mode leaves this window unbounded on the wire. In
-      `fresh` mode with no supplied `mission_status_expires_at`, the
-      PDP derives the state-freshness component of the bound from its
-      own state view: the view's freshness time or lease where the
-      source reports one, otherwise the deployment's published
-      staleness bound for the action's class.
+      or, for a polled observation reporting neither, `freshness_at`
+      plus the deployment's published maximum staleness bound for the
+      action's class. The state valid-through is never the
+      observation timestamp (`freshness_at`) by itself: an
+      observation only bounds the window in combination with the
+      deployment's published staleness. No mode leaves this window
+      unbounded on the wire. In `fresh` mode with no supplied
+      `mission_status_expires_at`, the PDP derives the state
+      valid-through from its own state view under the same rule.
 
     `use_limit`:
     : OPTIONAL. An integer. A consumption bound on `evaluation_id`.
@@ -1319,34 +1387,56 @@ execution composes its own audit mechanism.
 
 The `supported_obligations` declaration below is a usability
 optimization on that fail-closed baseline, not a precondition for it:
-it lets a PDP avoid attaching an obligation it already knows the PEP
-cannot discharge, sparing a guaranteed-fail round trip, never a
-dependency the model needs to stay safe. A PDP that supports the
-step-up obligation advertises it in its metadata
-`supported_obligations`
-array, and a PEP MAY declare its own `supported_obligations` in the
-request context, as the obligations profile defines {{AUTHZEN-OBL}};
-the declaration is advisory. A PDP MUST NOT rely on an obligation the
-PEP has not declared: this profile mandates correct obligation
-processing, not any particular obligation type, and a PEP that
-cannot perform an attached obligation treats it as unfulfillable, an
-effective deny ({{conformance}}).
+a PDP that supports the step-up obligation advertises it in its
+metadata `supported_obligations` array. A PEP MAY declare
+`supported_obligations` in the request context, as the obligations
+profile defines {{AUTHZEN-OBL}}; the declaration is advisory. A PDP
+MAY use the declaration to avoid attaching an obligation that is
+guaranteed to fail, sparing a round trip. A PDP MAY nonetheless
+attach an obligation the PEP did not declare. The PEP always fails
+closed on an obligation it cannot fulfill: this profile mandates
+correct obligation processing, not any particular obligation type,
+and a PEP that cannot perform an attached obligation treats it as
+unfulfillable, an effective deny ({{conformance}}).
 
 The PDP MAY attach the {{AUTHZEN-OBL}} step-up obligation
 (authentication-context properties such as `acr_value` and
-`amr_values`, per that profile) to a permit when Resource policy
-requires a stronger authentication context than the actor presents.
-The PEP MUST achieve the required context before release; on an OAuth
-resource surface it does so through RFC 9470 step-up authentication
-{{RFC9470}} at the protected resource. Step-up is not a denial reason
-in this profile. The core's `mission_denial` value `step_up_required`
-remains the Resource Server's own challenge-surface signal
+`amr_values`, per that profile) when Resource policy requires a
+stronger authentication context than the actor presents. Two
+fulfillment shapes exist, both in this obligations lane:
+
+**In-process step-up**: the obligation rides a permit only when the
+PEP can establish the stronger authentication context without
+changing any credential-bound authorization input, for example a
+session re-verification or a local challenge. The PEP MUST achieve
+the required context before releasing the action's effect, and the
+original permit continues.
+
+**OAuth step-up (RFC 9470)**: obtaining a new access token changes
+credential-derived inputs, so this shape is not fulfillment of an
+obligation attached to a permit before release. The flow denies the
+original request: the PDP returns `decision: false` with `reason`
+`resource_policy` WITH the step-up obligation carrying the challenge
+parameters, an obligation on a denial being this profile's normal
+deny-obligation processing ({{response-context}}). The PEP challenges
+the actor, obtains a new access token through RFC 9470 step-up
+authentication {{RFC9470}} at the protected resource, and a fresh
+evaluation follows under the new credential. The original permit is
+never continued across an RFC 9470 step-up, and denial does not turn
+step-up into governance: no access request is submitted and no
+approval record is created ({{lanes}}).
+
+Authentication step-up has no dedicated denial-reason value under this
+profile: an in-process step-up rides the obligation on a permit, and
+an RFC 9470 step-up rides the obligation on a `resource_policy`
+denial. The core's `mission_denial` value `step_up_required` remains
+the Resource Server's own challenge-surface signal
 ({{I-D.draft-mcguinness-oauth-mission}}) and composes with, but is
-not, this obligation. The requirement is Resource policy, never a
-Mission constraint: the issuance profile's `acr` is an approval-time
-requirement on the Approver, recorded on the Mission and neither
-carried on derived tokens nor evaluated per action, and the issuance
-profile defines no per-action `amr` constraint
+not, either shape of this obligation. The requirement is Resource
+policy, never a Mission constraint: the issuance profile's `acr` is
+an approval-time requirement on the Approver, recorded on the Mission
+and neither carried on derived tokens nor evaluated per action, and
+the issuance profile defines no per-action `amr` constraint
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
 A deployment MAY define further obligation types for genuine attached
@@ -1439,12 +1529,22 @@ carried in Decision Evidence:
 - `out_of_authority`: the action is not within the Authority Set.
 - `approval_required`: deployment or Resource policy requires an
   action-bound approval for this action
-  ({{I-D.draft-mcguinness-mission-runtime}}) and a valid fresh
-  approval bound to the action's parameters is not present, is older
-  than the deployment's maximum approval age, or is bound to a different
-  `parameter_digest`. The PEP carries any such approval in
-  `context.approval` ({{context-approval}}); this profile does
-  not define the approval artifact, which the runtime profile owns.
+  ({{I-D.draft-mcguinness-mission-runtime}}) and no `context.approval`
+  is presented. This is the first-evaluation reason. The PEP carries
+  any presented approval in `context.approval` ({{context-approval}});
+  this profile does not define the approval artifact, which the
+  runtime profile owns.
+- `approval_expired`, `out_of_scope`, `grant_pending`, `policy_denied`,
+  `approval_unverifiable`: ARAP's five registered re-evaluation
+  reasons {{ARAP}}, returned in `context.reason` when a re-evaluation
+  that presented `context.approval` fails a Mission or ARAP check
+  ({{context-approval}}). Their trigger conditions and default
+  `next_action` values (`request`, `request`, `retry`, `none`, and
+  `none` respectively) are ARAP's own; this profile carries them
+  under ARAP's extensibility rule rather than redefining them, except
+  that `approval_unverifiable` additionally covers the Mission check
+  of {{context-approval}}: an approval whose completion time cannot
+  be established.
 - `taint_context_missing`: the deployment declares PDP-enforced taint
   for the action's class, as the harness profile defines
   ({{I-D.draft-mcguinness-mission-harness}}), and the decision request
@@ -1473,30 +1573,33 @@ carried in Decision Evidence:
   evaluated, the recomputed digest does not match, or a required
   `parameter_digest` is absent for a parameter-bound action.
 - `duplicate_suppressed`: the request's `idempotency_key` and
-  authorization-relevant fingerprint ({{request-fingerprint}}) match a
-  prior decision whose execution outcome is unresolved or completed
-  within the reconciliation window, so the PDP suppresses a duplicate
-  execution of the same normalized action
-  ({{I-D.draft-mcguinness-mission-runtime}}). An unresolved duplicate
-  carries `next_action: retry` ({{response-context}}) with the
-  reconciliation window as its `retry_after` guidance: the condition
-  is transient and expected to clear. Reuse of an `idempotency_key`
-  never executes again; an intentional re-execution is a new
-  operation under a new key, which an action-bound approval MAY
-  authorize as such, never as re-execution under the consumed key.
-  This is distinct from `idempotency_conflict` below: here the
-  fingerprint matches the prior decision's; a mismatched fingerprint
+  operation identity ({{projections}}) match a prior claim whose
+  outcome is unresolved or completed
+  ({{I-D.draft-mcguinness-mission-runtime}}), so the PDP suppresses a
+  duplicate execution of the same normalized action rather than
+  issue a second permit. Its state follows the runtime profile's
+  idempotency claim-state table exactly: while the outcome is
+  unresolved the condition is transient, carrying `next_action: retry`
+  ({{response-context}}) with the reconciliation window as its
+  `retry_after` guidance; once the operation has completed the
+  condition is terminal, carrying `next_action: none`, and the prior
+  result is available from the resource under the Operation Profile,
+  never replayed by a fresh PDP decision. A consumed key never yields
+  a second execution; an intentional re-execution is a new operation
+  under a new key, which an action-bound approval MAY authorize as
+  such, never as re-execution under the consumed key. This is
+  distinct from `idempotency_conflict` below: here the operation
+  identity matches the prior claim's; a mismatched operation identity
   under the same key is a conflict, never a duplicate, and never
   transient.
 - `idempotency_conflict`: the request reused an `idempotency_key` with
-  a different authorization-relevant fingerprint ({{request-fingerprint}})
-  than the prior decision it was claimed under
-  ({{I-D.draft-mcguinness-mission-runtime}}). An idempotency key
-  identifies one intended execution of one normalized request, so
-  reuse with different content is a conflict, never a new execution.
-  This condition is terminal, carries `next_action: none`
-  ({{response-context}}), and is never marked requestable
-  ({{requestable-denials}}).
+  a different operation identity ({{projections}}) than the prior
+  claim it was made under ({{I-D.draft-mcguinness-mission-runtime}}).
+  An idempotency key identifies one intended execution of one
+  normalized request, so reuse with different content is a conflict,
+  never a new execution. This condition is terminal in every claim
+  state, carries `next_action: none` ({{response-context}}), and is
+  never marked requestable ({{requestable-denials}}).
 - `resource_policy`: Resource policy refuses the action independently
   of Mission authority.
 - `quota_exceeded`: a metered runtime bound is exhausted. The runtime
@@ -1523,16 +1626,30 @@ carried in Decision Evidence:
   unsatisfied and unavailable cases stay distinguishable after the
   fact.
 
-Authentication step-up is not a denial reason under this profile; it
-is the step-up obligation on a permit ({{obligations}}). A
-Resource-policy refusal not expressible as a permit-plus-obligation is
-`resource_policy`.
+Authentication step-up has no dedicated denial-reason value under
+this profile ({{obligations}}): an in-process step-up rides the
+obligation on a permit; an RFC 9470 step-up rides the obligation on a
+`resource_policy` denial, since obtaining a new access token changes
+credential-derived inputs the original permit cannot absorb. That
+denial carries no `next_action` value: the step-up obligation is the
+actionable instruction, distinct from the `request`/`retry`/`none`
+machinery below, and the fresh evaluation that follows depends on the
+PEP obtaining a new token, not on a timed retry or a requestable
+workflow. A Resource-policy refusal with no step-up path at all is
+likewise `resource_policy`.
 
-A terminal policy refusal SHOULD carry `next_action: none`; a denial
-the deployment exposes as requestable carries `next_action: request`
-with `context.access_request` ({{response-context}}).
+A terminal policy refusal SHOULD carry `next_action: none`, except a
+denial carrying the step-up obligation, which carries neither
+`next_action` value per above; a denial the deployment exposes as
+requestable carries `next_action: request` with
+`context.access_request` ({{response-context}}).
 
-This document defines no other denial-reason values. A companion
+This document defines no other denial-reason values of its own. ARAP's
+five re-evaluation reasons above are the one exception: they are
+values ARAP owns and registers under its own extensibility rule
+{{ARAP}}, carried here rather than redefined, and this profile does
+not require them to independently satisfy the collision-resistant or
+family-coordinated form below. Beyond that exception, a companion
 profile MAY extend the set by specification; an extension value MUST
 be either a collision-resistant name (following the Collision-Resistant
 Name guidance of {{RFC7519}} Section 4.2) or a name coordinated within
@@ -1692,16 +1809,19 @@ profile.
 Every runtime failure condition, whether named in the runtime profile's
 failure-mode table or in its other normative requirements
 ({{I-D.draft-mcguinness-mission-runtime}}), surfaces through exactly
-one of four carriers in this binding: a Refusal Record for a PEP
-refusal before any PDP decision
+one of four carriers in this binding: a Refusal Record for a PEP or
+PDP refusal before any PDP decision
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}), a PDP
 denial (`reason` in the decision context, `denial_reason` in Decision
 Evidence), a permit obligation ({{obligations}}), or an Execution
 Evidence `error` for a failure after a permit
-({{I-D.draft-mcguinness-mission-runtime-evidence}}). The table below
-is the normative mapping for the conditions it names; extension
-identifiers remain
-governed by each carrier's extensibility rule.
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). A PDP denial MAY
+additionally carry an obligation, the OAuth step-up composition of
+{{obligations}} being the one case this document defines; the row
+below marking that composite still names a single condition surfaced
+by one denial. The table below is the normative mapping for the
+conditions it names; extension identifiers remain governed by each
+carrier's extensibility rule.
 
 | Runtime failure condition | Carrier | Identifier |
 |---|---|---|
@@ -1710,10 +1830,13 @@ governed by each carrier's extensibility rule.
 | PEP-PDP channel authentication or integrity fails | Refusal Record | `channel_failure` |
 | PDP unreachable | Refusal Record | `pdp_unreachable` |
 | Mission state not establishable at the PEP | Refusal Record | `state_unavailable` |
+| In-scope request reaches the PDP without the Mission decision context | Refusal Record | `mission_context_missing` |
 | Action outside the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it | PDP denial | `out_of_authority` |
-| Resource policy requires a stronger authentication context, satisfiable via step-up | Obligation on permit | step-up obligation ({{AUTHZEN-OBL}}) |
-| Resource policy requires a stronger authentication context and refuses outright (not expressible as a permit-plus-obligation) | PDP denial | `resource_policy` |
-| Required action-bound approval absent, stale, or parameter-mismatched | PDP denial | `approval_required` |
+| Resource policy requires a stronger authentication context, satisfiable by in-process step-up with no change to credential-bound inputs | Obligation on permit | step-up obligation ({{AUTHZEN-OBL}}) |
+| Resource policy requires a stronger authentication context satisfiable only by a new access token (RFC 9470) | PDP denial (with obligation) | `resource_policy` with the step-up obligation ({{AUTHZEN-OBL}}) |
+| Resource policy requires a stronger authentication context and refuses outright, no step-up path available | PDP denial | `resource_policy` |
+| Required action-bound approval absent (first evaluation) | PDP denial | `approval_required` |
+| Re-evaluation's presented approval fails a Mission or ARAP check | PDP denial | ARAP's `approval_expired`, `out_of_scope`, `grant_pending`, `policy_denied`, or `approval_unverifiable` ({{ARAP}}) |
 | Mission state stale (freshness-window violation) | PDP denial | `stale_state` |
 | Request Mission `id`, `authority_hash`, or `policy_view_id` inconsistent with the loaded view | PDP denial | `view_inconsistent` |
 | Mission not `active`, including a passed `expires_at` | PDP denial | `mission_inactive` |
@@ -1721,8 +1844,8 @@ governed by each carrier's extensibility rule.
 | Required `act` chain missing or malformed | PDP denial | `actor_invalid` |
 | Credential facts expired or inconsistent | PDP denial | `credential_invalid` |
 | Parameter constraint violated, PDP digest mismatch, or required digest absent | PDP denial | `parameter_violation` |
-| Idempotency key and authorization-relevant fingerprint match a prior unresolved or completed decision | PDP denial | `duplicate_suppressed` |
-| Idempotency key reused with a different authorization-relevant fingerprint | PDP denial | `idempotency_conflict` |
+| Idempotency key and operation identity match a prior unresolved or completed claim | PDP denial | `duplicate_suppressed` |
+| Idempotency key reused with a different operation identity | PDP denial | `idempotency_conflict` |
 | Resource policy refuses the action | PDP denial | `resource_policy` |
 | Consumption bound exhausted | PDP denial | `quota_exceeded` |
 | Unsupported `authorization_details` type | PDP denial | `unsupported_authorization_type` |
@@ -1737,8 +1860,8 @@ governed by each carrier's extensibility rule.
 The `duplicate_suppressed` and `idempotency_conflict` rows key on the
 same (idempotency scope, `idempotency_key`) claim
 ({{I-D.draft-mcguinness-mission-runtime}}); which one applies turns on
-whether the new request's authorization-relevant fingerprint
-({{request-fingerprint}}) equals the one the claim was made under.
+whether the new request's operation identity ({{projections}}) equals
+the one the claim was made under.
 
 ## Permit binding in split topologies {#permit-binding-split}
 
@@ -1764,19 +1887,16 @@ honors the permit's conditions (the permit's `valid_until` and `use_limit`,
 rules ({{I-D.draft-mcguinness-mission-runtime}}), so a permit cannot
 be executed twice or after its lease.
 
-A PEP permit cache MUST key on the request's authorization-relevant
-fingerprint ({{request-fingerprint}}) and MUST NOT key on freshness
-telemetry (`freshness_at`, `mission_status_issued_at`,
-`mission_status_expires_at`), whose per-request variation would
-otherwise make the cache never hit. This binding does not echo the
-materialized view identifier on the response
-({{mission-to-policy-materialization}}), so a cache cannot key on it;
-reuse is instead bounded by the permit's own `valid_until` and
-`use_limit`, the same lifetime-bounded controls that already gate
+A PEP permit cache MUST key on the request's cache key
+({{projections}}), which already excludes observation telemetry by
+definition, so a per-request timestamp cannot prevent a cache hit.
+This binding does not echo the materialized view identifier on the
+response ({{mission-to-policy-materialization}}), so a cache cannot
+key on it; reuse is instead bounded by the permit's own `valid_until`
+and `use_limit`, the same lifetime-bounded controls that already gate
 execution, so a permit issued against a view the PDP has since
 retired cannot outlive its own lease regardless of cache key. A
-cached permit cannot be reused for a request whose fingerprint
-differs.
+cached permit cannot be reused for a request whose cache key differs.
 
 The envelope rule fixes what a permit cache is for. A parameter-bound
 class keys on `parameter_digest`, and a high-consequence permit is
@@ -1862,13 +1982,13 @@ Independent of anything the PDP returns, the PEP MUST emit one
 Execution Evidence Object
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for the final
 disposition of every consequential permit: `completed`, `failed`, or
-`suppressed` before release. The record is identified by its stable
-`execution_id`; delivery of that record MAY be retried (at-least-once
-delivery), and a consumer MUST deduplicate on `execution_id` rather
-than assume single delivery. A permit whose action is never released
-still ends in Execution Evidence with `outcome` `suppressed`; only a
-refusal before any PDP decision is a Refusal Record. This is a
-profile-level PEP requirement, not an obligation.
+`suppressed` before release. The record's delivery contract, keyed on
+its stable `execution_id`, is defined by the runtime evidence
+companion ({{I-D.draft-mcguinness-mission-runtime-evidence}}). A
+permit whose action is never released still ends in Execution
+Evidence with `outcome` `suppressed`; only a refusal before any PDP
+decision is a Refusal Record. This is a profile-level PEP requirement,
+not an obligation.
 
 If evidence emission fails after an irreversible effect, the effect
 stands: nothing retroactively permits or denies it. The PEP MUST
@@ -1947,8 +2067,8 @@ A PEP conforming to this binding MUST:
   same mutually authenticated channel, and never relay a permit or
   treat signed Decision Evidence as authorization to act
   ({{permit-binding-split}});
-- key permit caches on the request's authorization-relevant
-  fingerprint ({{permit-binding-split}}); and
+- key permit caches on the request's cache key
+  ({{permit-binding-split}}); and
 - emit a Refusal Record ({{I-D.draft-mcguinness-mission-runtime-evidence}})
   for a pre-decision refusal.
 
@@ -1962,17 +2082,21 @@ A PDP conforming to this binding MUST:
 - refuse an in-scope consequential request that lacks the Mission
   decision context, and perform the PDP-side consistency checks
   ({{pdp-request}});
-- advertise in its metadata `supported_obligations` array each
-  obligation type it supports, and MUST NOT rely on an obligation
-  type the PEP has not declared support for ({{obligations}});
 - classify every denial per {{runtime-denial-classification}};
 - return the decision context of {{response-context}}, including a
   `conditions` object on every consequential permit and an obligations
   array only when a genuine obligation applies ({{obligations}});
-- advertise the `mission-runtime` capability in its metadata
-  `capabilities` array ({{iana}}); and
+- advertise the `urn:ietf:params:authzen:mission-runtime` capability
+  URN in its metadata `capabilities` array ({{iana}});
 - emit the records of {{I-D.draft-mcguinness-mission-runtime-evidence}}
-  for every decision.
+  for every decision; and
+- emit a Refusal Record
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for an in-scope
+  request it refuses before evaluation ({{pdp-request}}).
+
+A PDP conforming to this binding SHOULD advertise in its metadata
+`supported_obligations` array each obligation type it supports
+({{obligations}}).
 
 A deployment whose requesting component and executing component
 differ is out of scope for conformance to this profile
@@ -2088,21 +2212,23 @@ itself and is not re-registered here.
 
 ## AuthZEN Policy Decision Point Capability Registration
 
-This document requests registration of one capability identifier,
-`mission-runtime`, in the AuthZEN Policy Decision Point Capabilities
+This document requests registration of one capability, using the
+registry's template, in the AuthZEN Policy Decision Point Capabilities
 registry {{AUTHZEN}} establishes, naming this profile's support in a
 PDP's metadata `capabilities` array. A PDP conforming to this binding
-MUST advertise the `mission-runtime` capability, so a PEP can
-discover profile support in-band before it evaluates a Mission-bound
-request ({{conformance}}). This in-band discovery complements, and
-does not replace, the deployment-established conformance gating this
-profile otherwise requires.
+MUST advertise the full URN, `urn:ietf:params:authzen:mission-runtime`,
+never the bare capability name, so a PEP can discover profile support
+in-band before it evaluates a Mission-bound request ({{conformance}}).
+This in-band discovery complements, and does not replace, the
+deployment-established conformance gating this profile otherwise
+requires.
 
-- Capability Name: mission-runtime
-- Description: support for the Mission-Bound Runtime Enforcement
-  AuthZEN binding of this document.
+- Capability Name: :mission-runtime
+- Capability URN: urn:ietf:params:authzen:mission-runtime
+- Capability Description: support for the Mission-Bound Runtime
+  Enforcement AuthZEN binding of this document.
 - Change Controller: the author of this document
-- Reference: this document
+- Specification Document: this document
 
 ## HTTP Field Name Registration
 
