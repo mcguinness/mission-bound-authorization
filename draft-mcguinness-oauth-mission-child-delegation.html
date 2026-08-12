@@ -1828,8 +1828,14 @@ Mission state, not of the expired token.<a href="#section-6.3-3.2.1" class="pilc
 <a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-completion" class="section-name selfRef">Completion</a>
         </h3>
 <p id="section-6.4-1">The child-creation token exchange completes in one of three modes,
-mirroring Mission Expansion
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>). The deferred token
+the family's shared completion pattern for Mission-creating
+exchanges. Child creation keeps the synchronous mode that Mission
+Expansion does not define: an expansion always widens and always
+takes fresh consent, so it completes only deferred or interactively
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), while a Child
+Mission is always a creation and a strict subset of its parent, so a
+policy-permitted synchronous completion is unambiguous
+(<a href="#strict-subset" class="auto internal xref">Section 8.1</a>). The deferred token
 response is a completion mode, not a replacement:<a href="#section-6.4-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-6.4-2">
           <dt id="section-6.4-2.1">Synchronous:</dt>
