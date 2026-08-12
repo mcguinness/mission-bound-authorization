@@ -221,6 +221,8 @@ async function expandViaExchange(subjectToken: string, goal: string, actions: st
     requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     mission_intent: intentJson(goal, actions),
     authorization_details: JSON.stringify(authority(actions)),
+    // @spec expansion#creation-request-id — REQUIRED on every initiation.
+    creation_request_id: crypto.randomUUID(),
   });
 }
 

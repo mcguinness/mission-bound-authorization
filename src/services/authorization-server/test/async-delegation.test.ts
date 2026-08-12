@@ -278,6 +278,7 @@ async function createChildViaExchange(subjectToken: string, parentId: string): P
     subject_token: subjectToken,
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     requested_token_type: JWT_TOKEN_TYPE,
+    creation_request_id: crypto.randomUUID(),
     parent: parentId,
     mission_intent: JSON.stringify({
       goal: "Extract Acme invoices",

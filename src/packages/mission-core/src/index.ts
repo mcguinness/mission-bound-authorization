@@ -5,6 +5,7 @@ export {
   computeAnchor,
   INTENT_TYP,
   intentHash,
+  MISSION_CREATION_FINGERPRINT_TYP,
   MISSION_TEMPLATE_TYP,
   PROPOSED_AUTHORITY_TYP,
   proposalHash,

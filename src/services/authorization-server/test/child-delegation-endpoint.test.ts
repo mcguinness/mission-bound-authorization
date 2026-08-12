@@ -283,6 +283,8 @@ async function createChildViaExchange(fields: {
     subject_token: fields.subjectToken,
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     requested_token_type: JWT_TOKEN_TYPE,
+    // @spec child-delegation#creation-request-id — REQUIRED on every creation.
+    creation_request_id: crypto.randomUUID(),
     mission_intent: JSON.stringify(
       fields.intent ?? {
         goal: "Extract Acme invoices",

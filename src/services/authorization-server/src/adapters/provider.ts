@@ -40,6 +40,8 @@ import {
   type ChildDenialReason,
   childMissionClaim,
 } from "../kernel/child-delegation.js";
+import { CreationIdempotencyStore } from "../kernel/creation-idempotency.js";
+import { type DpopProofReplay, newDpopProofReplay } from "./dpop-replay.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
 import {
   authorizationDetailsTypesMetadata,
@@ -60,6 +62,7 @@ import type { AuthorityEntry, LifecycleOperation, MissionIntent, MissionRecord }
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
 import {
   type ContinuationReplay,
+  freshProofJti,
   handleTokenExchangeGrant,
   type SubjectResolver,
   TOKEN_EXCHANGE_GRANT_TYPE,
@@ -189,6 +192,20 @@ export interface AdapterOptions {
    * Evidence. When unset, the ingestion endpoint replies 501.
    */
   issuerEvidence?: IssuerEvidenceStore;
+  /**
+   * @spec expansion#creation-request-id — the durable creation-idempotency
+   * store (child creation + expansion). Lives over the KERNEL database so the
+   * reservation commits atomically with Mission creation. Defaulted by
+   * buildProvider when unset (instances over the same kernel share the table).
+   */
+  creationIdempotency?: CreationIdempotencyStore;
+  /**
+   * @spec RFC 9449 — the shared proof-jti replay cache for the token
+   * endpoint's manually verified DPoP proofs (custom grants). Defaulted by
+   * buildProvider when unset; a reused jti within the window refuses with
+   * invalid_dpop_proof.
+   */
+  dpopProofReplay?: DpopProofReplay;
 }
 
 /**
@@ -261,6 +278,12 @@ interface KoaCtx {
 
 export function buildProvider(opts: AdapterOptions): Provider {
   const { kernel } = opts;
+  // @spec expansion#creation-request-id — idempotency is NOT optional wiring:
+  // default the store over the kernel database (any instance over the same
+  // kernel sees the same table, so a caller-supplied store is equivalent).
+  opts.creationIdempotency ??= new CreationIdempotencyStore(kernel);
+  // @spec RFC 9449 — proof-jti replay protection for the manual DPoP blocks.
+  opts.dpopProofReplay ??= newDpopProofReplay();
 
   // Containment refresh-path conformance: a stored oidc grant copies its rar
   // at issuance, so a refresh (or a late code redemption) could echo a
@@ -633,6 +656,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
       "mission_intent",
       "child_actor",
       "parent",
+      // @spec expansion#creation-request-id — the non-authoritative
+      // `predecessor` cross-check (mirrors `parent`) and the REQUIRED
+      // `creation_request_id`; each MUST be declared here or
+      // stripGrantIrrelevantParams removes it.
+      "predecessor",
+      "creation_request_id",
       "deferral_code",
     ]),
   );
@@ -781,6 +810,7 @@ async function mintDeferredToken(
   const proofJws = ctx.get("DPoP");
   if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
   let jkt: string;
+  let proofJti: unknown;
   try {
     const header = decodeProtectedHeader(proofJws);
     jkt = await calculateJwkThumbprint(header.jwk as JWK);
@@ -788,8 +818,16 @@ async function mintDeferredToken(
     if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
       throw new Error("DPoP htu/htm mismatch");
     }
+    proofJti = proof.jti;
   } catch {
     throw new errors.InvalidRequest("invalid DPoP proof");
+  }
+  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
+  if (!freshProofJti(opts, proofJti)) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
+    ctx.set("cache-control", "no-store");
+    return;
   }
 
   // Containment: derive the resource fallback from the EFFECTIVE set (a fresh
@@ -915,6 +953,7 @@ async function handleChildJwtBearerGrant(
   const proofJws = ctx.get("DPoP");
   if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
   let jkt: string;
+  let proofJti: unknown;
   try {
     const header = decodeProtectedHeader(proofJws);
     jkt = await calculateJwkThumbprint(header.jwk as JWK);
@@ -922,8 +961,16 @@ async function handleChildJwtBearerGrant(
     if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
       throw new Error("DPoP htu/htm mismatch");
     }
+    proofJti = proof.jti;
   } catch {
     throw new errors.InvalidRequest("invalid DPoP proof");
+  }
+  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
+  if (!freshProofJti(opts, proofJti)) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
+    ctx.set("cache-control", "no-store");
+    return;
   }
 
   // 6. Bind an oidc Grant to the child LAZILY (mirror the `decide` path). Do NOT
@@ -1777,10 +1824,21 @@ async function handleMissionDispatchGrant(
     ctx.body = { error: "invalid_request", error_description: "mission_intent required" };
     return;
   }
+  // @spec mission-template#dispatch — dispatch_event_id is REQUIRED (it is the
+  // dispatch grant's realization of the creation_request_id pattern: the
+  // client-held idempotency handle). The former crypto.randomUUID() fallback
+  // silently DEFEATED idempotency for a client that omitted it (every retry
+  // minted a fresh event id, so a lost response duplicated the instance);
+  // missing now refuses, aligning the code to the spec's REQUIRED.
   const dispatchEventId =
     typeof params.dispatch_event_id === "string" && params.dispatch_event_id
       ? params.dispatch_event_id
-      : crypto.randomUUID();
+      : "";
+  if (!dispatchEventId) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: "dispatch_event_id required" };
+    return;
+  }
 
   // Resolve the template FIRST: we need its approver (to establish the subject)
   // and its recipient BEFORE dispatch, and to control the unknown-template reply
@@ -1873,6 +1931,7 @@ async function handleMissionDispatchGrant(
   const proofJws = ctx.get("DPoP");
   if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
   let jkt: string;
+  let proofJti: unknown;
   try {
     const header = decodeProtectedHeader(proofJws);
     jkt = await calculateJwkThumbprint(header.jwk as JWK);
@@ -1880,8 +1939,16 @@ async function handleMissionDispatchGrant(
     if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
       throw new Error("DPoP htu/htm mismatch");
     }
+    proofJti = proof.jti;
   } catch {
     throw new errors.InvalidRequest("invalid DPoP proof");
+  }
+  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
+  if (!freshProofJti(opts, proofJti)) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
+    ctx.set("cache-control", "no-store");
+    return;
   }
 
   // Containment: every copy of the instance's authority into rar/authorization_

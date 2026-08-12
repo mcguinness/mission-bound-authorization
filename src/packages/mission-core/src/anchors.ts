@@ -42,6 +42,15 @@ export const UNWIND_PLAN_TYP = "mission-unwind-plan";
  * the resulting `template_hash` is carried on each dispatched instance's lineage.
  */
 export const MISSION_TEMPLATE_TYP = "mission-template";
+/**
+ * @spec expansion#creation-request-id (shared by child-delegation)
+ * The integrity-anchor `typ` for the creation-operation FINGERPRINT: the typed
+ * object a Mission Issuer binds to a `creation_request_id` so a repetition of
+ * the same Mission-creating operation (child creation / expansion) is
+ * recognized and recovered rather than re-created. Hashed under this domain
+ * separator via {@link computeAnchor} (no change to `computeAnchor` is needed).
+ */
+export const MISSION_CREATION_FINGERPRINT_TYP = "mission-creation-fingerprint";
 
 export function computeAnchor(typ: string, iss: string, value: JsonValue): string {
   const envelope: JsonValue = { typ, iss, value };

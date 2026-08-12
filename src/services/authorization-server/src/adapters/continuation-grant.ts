@@ -36,7 +36,14 @@ import {
 } from "../kernel/continuation-assertion.js";
 import { ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain.js";
 import { isSubsetSet } from "../kernel/derive.js";
-import { ExpansionDeferralError } from "../kernel/deferred.js";
+import { UniqueViolationError } from "@mission/store";
+import {
+  type CreationOperation,
+  type CreationReservation,
+  creationFingerprint,
+  isValidCreationRequestId,
+} from "../kernel/creation-idempotency.js";
+import { DEFERRAL_EXPIRES_IN, DEFERRAL_INTERVAL, ExpansionDeferralError } from "../kernel/deferred.js";
 import { ChildDelegationError, createChildMission } from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
@@ -94,6 +101,16 @@ function txError(ctx: KoaContextWithOIDC, status: number, error: string, descrip
   ctx.status = status;
   ctx.body = { error, error_description: description };
   ctx.set("cache-control", "no-store");
+}
+
+/**
+ * @spec RFC 9449 — record-and-check a manually verified DPoP proof's `jti` in
+ * the bounded replay cache: a missing/empty jti or a reuse within the window
+ * refuses (invalid_dpop_proof). Shared by every manual DPoP block at the token
+ * endpoint (the custom grants); exported for the provider.ts blocks.
+ */
+export function freshProofJti(opts: AdapterOptions, jti: unknown): boolean {
+  return typeof jti === "string" && jti !== "" && opts.dpopProofReplay?.check(jti) === true;
 }
 
 /**
@@ -192,6 +209,7 @@ export async function handleTokenExchangeGrant(
   }
   let jkt: string;
   let dpopJwk: JWK;
+  let proofJti: unknown;
   try {
     const header = decodeProtectedHeader(proofJws);
     dpopJwk = header.jwk as JWK;
@@ -200,8 +218,13 @@ export async function handleTokenExchangeGrant(
     if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
       throw new Error("DPoP htu/htm mismatch");
     }
+    proofJti = proof.jti;
   } catch {
     txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+    return;
+  }
+  if (!freshProofJti(opts, proofJti)) {
+    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
     return;
   }
 
@@ -416,6 +439,7 @@ export async function handleAsyncDelegationExchange(
     return;
   }
   let jkt: string;
+  let proofJti: unknown;
   try {
     const header = decodeProtectedHeader(proofJws);
     const dpopJwk = header.jwk as JWK;
@@ -424,8 +448,13 @@ export async function handleAsyncDelegationExchange(
     if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
       throw new Error("DPoP htu/htm mismatch");
     }
+    proofJti = proof.jti;
   } catch {
     txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+    return;
+  }
+  if (!freshProofJti(opts, proofJti)) {
+    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
     return;
   }
 
@@ -624,8 +653,8 @@ interface ResolvedSubject {
  * verify POSSESSION: the presenter's DPoP proof key MUST equal the subject_token's
  * OWN cnf.jkt. This is the inverse of {@link handleAsyncDelegationExchange}, which
  * deliberately re-binds to the acting client's key. The DPoP `jti` is single-use
- * per RFC 9449; NOTE the token endpoint does not maintain a proof-jti replay cache
- * for custom grants (the same limitation as every other manual DPoP block here).
+ * per RFC 9449, enforced by the shared bounded-TTL replay cache
+ * ({@link freshProofJti}) like every other manual DPoP block here.
  * Returns null after setting the ctx error body; the caller returns immediately.
  */
 async function verifySubjectPossession(
@@ -683,6 +712,7 @@ async function verifySubjectPossession(
   }
   let jkt: string;
   let dpopJwk: JWK;
+  let proofJti: unknown;
   try {
     const header = decodeProtectedHeader(proofJws);
     dpopJwk = header.jwk as JWK;
@@ -691,8 +721,13 @@ async function verifySubjectPossession(
     if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
       throw new Error("DPoP htu/htm mismatch");
     }
+    proofJti = proof.jti;
   } catch {
     txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+    return null;
+  }
+  if (!freshProofJti(opts, proofJti)) {
+    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
     return null;
   }
   if (jkt !== cnfJkt) {
@@ -832,6 +867,26 @@ async function mintMissionAccessToken(
  * invalid_authorization_details; resource containment / parse failures ->
  * invalid_request), mapped onto the exchange's error surface.
  */
+/**
+ * @spec expansion#creation-request-id (child-delegation cites it) — read the
+ * REQUIRED `creation_request_id`: the client-generated identifier of ONE
+ * Mission-creation operation across all completion modes. Missing or malformed
+ * -> invalid_request. Syntax: bounded ASCII (max 255 octets); opaque to the AS
+ * beyond equality.
+ */
+function readCreationRequestId(params: Record<string, unknown>): string {
+  const v = params.creation_request_id;
+  if (v === undefined) {
+    throw new errors.InvalidRequest("creation_request_id required");
+  }
+  if (!isValidCreationRequestId(v)) {
+    throw new errors.InvalidRequest(
+      "creation_request_id must be a visible-ASCII string of at most 255 octets",
+    );
+  }
+  return v;
+}
+
 function readProposalParam(
   opts: AdapterOptions,
   params: Record<string, unknown>,
@@ -868,6 +923,10 @@ export async function handleChildCreationExchange(
   // Step 4: acting agent (the authenticated parent client; carry actor_token).
   const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt);
   if (!acting) return;
+
+  // @spec child-delegation#creation-request-id — REQUIRED on every child
+  // creation, in every completion mode (missing -> invalid_request).
+  const creationRequestId = readCreationRequestId(params);
 
   // Non-authoritative `parent` cross-check (audit only): subject_token is the
   // selector, but a supplied `parent` that disagrees is refused (parent_mismatch).
@@ -909,22 +968,82 @@ export async function handleChildCreationExchange(
     throw new errors.InvalidRequest("child_actor must be a JSON object with a string sub");
   }
 
-  // Steps 5-6: SYNCHRONOUS, NON-derivation subset creation. Denials map through the
-  // shared childErrorCode + mission_denial_reason (set on ctx directly so err_out
-  // does not strip the reason).
+  // @spec expansion#creation-fingerprint (child-delegation members) — the typed
+  // operation fingerprint over the PARSED, VERIFIED inputs (never the raw
+  // subject_token, DPoP proof, or client-auth assertion; never
+  // creation_request_id itself).
+  const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+  const fingerprint = creationFingerprint({
+    op: "child-creation",
+    iss: opts.issuer,
+    client: client.clientId,
+    source: parent.id,
+    cnf: { jkt: resolved.jkt },
+    actor: acting,
+    intent,
+    ...(proposedAuthority ? { proposal: proposedAuthority } : {}),
+    child_actor: childActor,
+    requested_token_type: JWT_TOKEN_TYPE,
+    ...(typeof parentParam === "string" && parentParam ? { cross_check: parentParam } : {}),
+  });
+  const reservation: CreationReservation = {
+    clientId: client.clientId,
+    creationRequestId,
+    op: "child-creation",
+    fingerprint,
+    cnfJkt: resolved.jkt,
+    sourceMissionId: parent.id,
+  };
+  const idem = opts.creationIdempotency;
+  if (!idem) {
+    throw new errors.InvalidRequest("creation idempotency is not configured");
+  }
+
+  // @spec expansion#creation-lookup-order — the idempotency lookup runs AFTER
+  // client authentication and possession verification but BEFORE the parent
+  // lifecycle gate (inside createChildMission): the recoverable retry is exactly
+  // the one whose source Mission changed state when the first attempt succeeded.
+  const existing = idem.find(client.clientId, creationRequestId);
+  if (existing) {
+    await recoverChildCreation(opts, ctx, existing, fingerprint, resolved.jkt);
+    return;
+  }
+
+  // Steps 5-6: SYNCHRONOUS, NON-derivation subset creation, ATOMIC with the
+  // idempotency reservation (one kernel-db transaction: reserved -> insertRecord
+  // -> completed; the datastore uniqueness constraint — never read-before-insert
+  // — serializes concurrent duplicates). Denials map through the shared
+  // childErrorCode + mission_denial_reason (set on ctx directly so err_out
+  // does not strip the reason) and are recorded as a `failed` operation so a
+  // retry replays the refusal.
   let child: MissionRecord;
   try {
-    ({ child } = createChildMission(opts.kernel, {
-      parentId: parent.id,
-      intent,
-      ...(proposedAuthority ? { proposedAuthority } : {}),
-      childActor,
-    }));
+    child = idem.createCompleted(reservation, () => {
+      const created = createChildMission(opts.kernel, {
+        parentId: parent.id,
+        intent,
+        ...(proposedAuthority ? { proposedAuthority } : {}),
+        childActor,
+      });
+      return { missionId: created.child.id, value: created.child };
+    });
   } catch (e) {
+    if (e instanceof UniqueViolationError) {
+      // A concurrent duplicate won the reservation: recover its outcome.
+      const winner = idem.find(client.clientId, creationRequestId);
+      if (winner) {
+        await recoverChildCreation(opts, ctx, winner, fingerprint, resolved.jkt);
+        return;
+      }
+      throw e;
+    }
     if (e instanceof ChildDelegationError) {
       const code = childErrorCode(e.reason);
-      ctx.status = code === "access_denied" ? 403 : 400;
-      ctx.body = { error: code, mission_denial_reason: e.reason };
+      const status = code === "access_denied" ? 403 : 400;
+      const body = { error: code, mission_denial_reason: e.reason };
+      idem.recordFailure(reservation, { status, body });
+      ctx.status = status;
+      ctx.body = body;
       ctx.set("cache-control", "no-store");
       return;
     }
@@ -936,13 +1055,111 @@ export async function handleChildCreationExchange(
     ctx.body = { error: "child_delegation_unsupported" };
     return;
   }
+  // Credential generation AFTER the atomic creation commit: a crash between the
+  // commit and the response is recovered by the retry finding the completed
+  // operation and resuming DELIVERY (recovery = delivery, never re-creation).
   const { assertion } = await mintChildGrant(
     opts.kernel,
     { key: opts.childGrantKey, kid: opts.childGrantKid, alg: opts.childGrantAlg },
     { child, tokenEndpoint: `${opts.issuer}/token` },
   );
+  idem.recordDelivery(client.clientId, creationRequestId, {
+    mode: "synchronous",
+    assertion,
+    exp: decodeJwt(assertion).exp as number,
+  });
   // @spec RFC 8693 §2.2.1 — the (unchanged) child response: a grant reference, not
   // a token; token_type N_A because bearer semantics do not apply to an unredeemed grant.
+  ctx.status = 200;
+  ctx.set("cache-control", "no-store");
+  ctx.body = {
+    access_token: assertion,
+    issued_token_type: JWT_TOKEN_TYPE,
+    token_type: "N_A",
+    mission_id: child.id,
+    parent: child.parent,
+  };
+}
+
+/**
+ * @spec child-delegation#creation-request-id — recover a repeated child
+ * creation. A matching identifier NEVER bypasses verification: the fingerprint
+ * MUST match (the fingerprint binds the resolved source Mission, the acting
+ * actor, and every semantic input, so any divergence refuses), and the
+ * presenter MUST prove the RECORDED sender-constraint identity (no key-rotation
+ * recovery path is defined). Recovery is DELIVERY, never re-creation:
+ *  - reserved  -> retryable in-progress (a concurrent attempt holds the
+ *                 reservation; the client retries with the SAME identifier);
+ *  - failed    -> the recorded refusal is replayed verbatim;
+ *  - completed -> the stored child grant is returned while it is still valid;
+ *                 once expired (it is deliberately short-lived), a FRESH child
+ *                 grant is minted for the SAME child, provided the child
+ *                 remains active. The fresh mint is an ordinary issuance event:
+ *                 creation accounting is NOT repeated (no fan-out increment, no
+ *                 second lifecycle event, no second Child Evidence).
+ */
+async function recoverChildCreation(
+  opts: AdapterOptions,
+  ctx: KoaContextWithOIDC,
+  op: CreationOperation,
+  fingerprint: string,
+  presenterJkt: string,
+): Promise<void> {
+  if (op.op !== "child-creation" || op.fingerprint !== fingerprint) {
+    txError(
+      ctx,
+      400,
+      "invalid_request",
+      "creation_request_id was already used for a different creation request",
+    );
+    return;
+  }
+  if (presenterJkt !== op.cnfJkt) {
+    txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");
+    return;
+  }
+  if (op.state === "reserved") {
+    txError(ctx, 400, "invalid_request", "creation is in progress; retry with the same creation_request_id");
+    return;
+  }
+  if (op.state === "failed") {
+    ctx.status = op.failure?.status ?? 400;
+    ctx.body = op.failure?.body ?? { error: "invalid_request" };
+    ctx.set("cache-control", "no-store");
+    return;
+  }
+  const child = op.missionId ? opts.kernel.get(op.missionId) : undefined;
+  if (!child) {
+    txError(ctx, 400, "invalid_grant", "recorded child mission not found");
+    return;
+  }
+  const state = opts.kernel.applyExpiry(child).state;
+  if (state !== "active") {
+    txError(ctx, 400, "invalid_grant", `recorded child mission is ${state}`);
+    return;
+  }
+  const stored = op.delivery as { assertion?: string; exp?: number } | undefined;
+  const nowS = Math.floor(opts.kernel.nowDate().getTime() / 1000);
+  let assertion: string;
+  if (stored?.assertion && typeof stored.exp === "number" && stored.exp > nowS) {
+    assertion = stored.assertion;
+  } else {
+    if (!opts.childGrantKey || !opts.childGrantKid || !opts.childGrantAlg) {
+      ctx.status = 501;
+      ctx.body = { error: "child_delegation_unsupported" };
+      return;
+    }
+    ({ assertion } = await mintChildGrant(
+      opts.kernel,
+      { key: opts.childGrantKey, kid: opts.childGrantKid, alg: opts.childGrantAlg },
+      { child, tokenEndpoint: `${opts.issuer}/token` },
+    ));
+    opts.creationIdempotency?.recordDelivery(op.clientId, op.creationRequestId, {
+      mode: "synchronous",
+      assertion,
+      exp: decodeJwt(assertion).exp as number,
+    });
+  }
   ctx.status = 200;
   ctx.set("cache-control", "no-store");
   ctx.body = {
@@ -989,6 +1206,32 @@ export async function handleExpansionExchange(
   const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt);
   if (!acting) return;
 
+  // @spec expansion#creation-request-id — REQUIRED on every expansion
+  // initiation, in every completion mode: the client cannot know in advance
+  // whether the request completes synchronously, defers, or goes interactive
+  // (missing -> invalid_request).
+  const creationRequestId = readCreationRequestId(params);
+
+  // @spec expansion#request-binding — the non-authoritative `predecessor`
+  // cross-check (audit only; subject_token is the selector, mirroring the
+  // child path's `parent`): a supplied value that does not name the resolved
+  // Mission is refused. Per the profile this is NOT a denial reason (no
+  // mission_denial_reason): it fails with invalid_grant directly.
+  const predecessorParam = params.predecessor;
+  if (
+    typeof predecessorParam === "string" &&
+    predecessorParam &&
+    predecessorParam !== resolved.record.id
+  ) {
+    txError(
+      ctx,
+      400,
+      "invalid_grant",
+      "predecessor cross-check does not match the subject_token-resolved mission",
+    );
+    return;
+  }
+
   // The widened Intent (the fresh-approval basis).
   const missionIntentRaw = params.mission_intent;
   if (typeof missionIntentRaw !== "string" || !missionIntentRaw) {
@@ -1004,6 +1247,39 @@ export async function handleExpansionExchange(
   // proposal rides the standard authorization_details parameter of this
   // exchange (the widened Intent carries no authority members).
   const proposedAuthority = readProposalParam(opts, params, intent);
+
+  // @spec expansion#creation-fingerprint — the typed operation fingerprint over
+  // the PARSED, VERIFIED inputs.
+  const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+  const fingerprint = creationFingerprint({
+    op: "expansion",
+    iss: opts.issuer,
+    client: client.clientId,
+    source: resolved.record.id,
+    cnf: { jkt: resolved.jkt },
+    actor: acting,
+    intent,
+    ...(proposedAuthority ? { proposal: proposedAuthority } : {}),
+    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    ...(typeof predecessorParam === "string" && predecessorParam
+      ? { cross_check: predecessorParam }
+      : {}),
+  });
+  const idem = opts.creationIdempotency;
+  if (!idem) {
+    throw new errors.InvalidRequest("creation idempotency is not configured");
+  }
+
+  // @spec expansion#creation-lookup-order — the idempotency lookup runs AFTER
+  // client authentication and possession verification but BEFORE the
+  // predecessor lifecycle gate below: the recoverable retry is exactly the one
+  // whose predecessor moved to `superseded` when the first attempt succeeded;
+  // re-running "predecessor must be active" first would reject it.
+  const existing = idem.find(client.clientId, creationRequestId);
+  if (existing) {
+    await recoverExpansion(opts, provider, ctx, existing, fingerprint, resolved.jkt);
+    return;
+  }
 
   // The predecessor MUST be active at request time.
   const active = opts.kernel.applyExpiry(resolved.record);
@@ -1035,11 +1311,37 @@ export async function handleExpansionExchange(
       ...(proposedAuthority ? { proposedAuthority } : {}),
       clientId: acting.sub,
       jkt: resolved.jkt,
+      creationRequestId,
     });
   } catch (e) {
     if (e instanceof ExpansionDeferralError) {
       txError(ctx, 400, "invalid_grant", e.message);
       return;
+    }
+    throw e;
+  }
+  // @spec expansion#creation-request-id — reserve the operation at deferred
+  // INITIATION (state `reserved`; the deferral handle is the recorded delivery
+  // continuation). A repetition of the same (client, creation_request_id)
+  // returns the SAME deferral, never a second ceremony. A concurrent duplicate
+  // serializes on the uniqueness constraint and recovers the winner.
+  try {
+    idem.reserve({
+      clientId: client.clientId,
+      creationRequestId,
+      op: "expansion",
+      fingerprint,
+      cnfJkt: resolved.jkt,
+      sourceMissionId: active.id,
+      delivery: { mode: "deferred", deferral_code: pending.deferral_code },
+    });
+  } catch (e) {
+    if (e instanceof UniqueViolationError) {
+      const winner = idem.find(client.clientId, creationRequestId);
+      if (winner) {
+        await recoverExpansion(opts, provider, ctx, winner, fingerprint, resolved.jkt);
+        return;
+      }
     }
     throw e;
   }
@@ -1088,6 +1390,7 @@ async function pollDeferredExpansion(
     return;
   }
   let jkt: string;
+  let proofJti: unknown;
   try {
     const header = decodeProtectedHeader(proofJws);
     const dpopJwk = header.jwk as JWK;
@@ -1096,8 +1399,13 @@ async function pollDeferredExpansion(
     if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
       throw new Error("DPoP htu/htm mismatch");
     }
+    proofJti = proof.jti;
   } catch {
     txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+    return;
+  }
+  if (!freshProofJti(opts, proofJti)) {
+    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
     return;
   }
   const recordedJkt = store.recordedJkt(deferralCode);
@@ -1131,5 +1439,125 @@ async function pollDeferredExpansion(
     opts.kernel.effectiveAuthoritySet(r.successor),
     jkt,
   );
-  if (minted) opts.kernel.supersedeOnRedemption(r.successor.id);
+  if (minted) {
+    opts.kernel.supersedeOnRedemption(r.successor.id);
+    // @spec expansion#creation-request-id — attach the delivery artifact to the
+    // completed operation (redeem() already marked it completed atomically with
+    // successor creation): an initiation retry returns this token while it is
+    // valid, and re-mints for the SAME successor once it expires.
+    if (r.creationRequestId) {
+      const body = ctx.body as { access_token?: string; expires_in?: number };
+      if (typeof body?.access_token === "string") {
+        const nowS = Math.floor(opts.kernel.nowDate().getTime() / 1000);
+        opts.creationIdempotency?.recordDelivery(client.clientId, r.creationRequestId, {
+          mode: "deferred",
+          access_token: body.access_token,
+          exp: nowS + (typeof body.expires_in === "number" ? body.expires_in : 0),
+        });
+      }
+    }
+  }
+}
+
+/**
+ * @spec expansion#creation-request-id — recover a repeated expansion
+ * initiation. Same contract as {@link recoverChildCreation}: fingerprint match
+ * + proof of the RECORDED confirmation key are REQUIRED (a matching identifier
+ * never bypasses possession); recovery is DELIVERY, never re-creation.
+ *  - reserved  -> the SAME deferral continuation body is returned (the pending
+ *                 approval ceremony is the delivery artifact);
+ *  - failed    -> the recorded refusal is replayed;
+ *  - completed -> the stored successor token is returned while valid; once
+ *                 expired, a FRESH Mission access token is minted for the SAME
+ *                 successor (ordinary issuance accounting via extraTokenClaims;
+ *                 no second creation, no second lifecycle event).
+ * This path is reached by the retry whose predecessor moved to `superseded`
+ * when the first attempt succeeded (the lookup-order rule).
+ */
+async function recoverExpansion(
+  opts: AdapterOptions,
+  provider: Provider,
+  ctx: KoaContextWithOIDC,
+  op: CreationOperation,
+  fingerprint: string,
+  presenterJkt: string,
+): Promise<void> {
+  if (op.op !== "expansion" || op.fingerprint !== fingerprint) {
+    txError(
+      ctx,
+      400,
+      "invalid_request",
+      "creation_request_id was already used for a different creation request",
+    );
+    return;
+  }
+  if (presenterJkt !== op.cnfJkt) {
+    txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");
+    return;
+  }
+  if (op.state === "failed") {
+    ctx.status = op.failure?.status ?? 400;
+    ctx.body = op.failure?.body ?? { error: "invalid_request" };
+    ctx.set("cache-control", "no-store");
+    return;
+  }
+  if (op.state === "reserved") {
+    const code = typeof op.delivery?.deferral_code === "string" ? op.delivery.deferral_code : undefined;
+    if (!code) {
+      txError(ctx, 400, "invalid_request", "creation is in progress; retry with the same creation_request_id");
+      return;
+    }
+    ctx.status = 400;
+    ctx.body = {
+      error: "authorization_pending",
+      deferral_code: code,
+      expires_in: DEFERRAL_EXPIRES_IN,
+      interval: DEFERRAL_INTERVAL,
+    };
+    ctx.set("cache-control", "no-store");
+    return;
+  }
+  // completed: deliver for the ALREADY-CREATED successor.
+  const successor = op.missionId ? opts.kernel.get(op.missionId) : undefined;
+  if (!successor) {
+    txError(ctx, 400, "invalid_grant", "recorded successor mission not found");
+    return;
+  }
+  const state = opts.kernel.applyExpiry(successor).state;
+  if (state !== "active") {
+    txError(ctx, 400, "invalid_grant", `recorded successor mission is ${state}`);
+    return;
+  }
+  const stored = op.delivery as { access_token?: string; exp?: number } | undefined;
+  const nowS = Math.floor(opts.kernel.nowDate().getTime() / 1000);
+  if (stored?.access_token && typeof stored.exp === "number" && stored.exp > nowS) {
+    ctx.status = 200;
+    ctx.body = {
+      access_token: stored.access_token,
+      token_type: "DPoP",
+      expires_in: stored.exp - nowS,
+      scope: "payments",
+      authorization_details: opts.kernel.effectiveAuthoritySet(successor),
+    };
+    ctx.set("cache-control", "no-store");
+    return;
+  }
+  const minted = await mintMissionAccessToken(
+    opts,
+    provider,
+    ctx,
+    successor,
+    opts.kernel.effectiveAuthoritySet(successor),
+    presenterJkt,
+  );
+  if (minted) {
+    const body = ctx.body as { access_token?: string; expires_in?: number };
+    if (typeof body?.access_token === "string") {
+      opts.creationIdempotency?.recordDelivery(op.clientId, op.creationRequestId, {
+        mode: "deferred",
+        access_token: body.access_token,
+        exp: nowS + (typeof body.expires_in === "number" ? body.expires_in : 0),
+      });
+    }
+  }
 }
