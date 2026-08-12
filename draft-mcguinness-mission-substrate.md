@@ -180,7 +180,7 @@ In particular, the kernel does not require:
   authorization language;
 * one global Authority Set or a subset relation that applies across
   administrative or protocol boundaries;
-* `intent_hash`, `authority_hash`, or any pair of common integrity
+* `intent_hash`, `authority_hash`, or any common set of integrity
   anchors; or
 * disclosure of the approved context to a resource or other
   downstream consumer.
@@ -926,7 +926,7 @@ contract was generalized from.  The terms correspond as follows:
 | Controller | Mission Issuer, where the binding issues; natively the AS, MAS, UMA authorization server, or AAuth PS |
 | Actor | the authenticated acting client or agent |
 | Approver | Approver |
-| Approved Context | the Mission Intent and derived Authority Set |
+| Approved Context | the Mission Intent, the recorded authority proposal where one was submitted, and the derived Authority Set |
 | Ordered governance record | the Mission log, assessment log, or audit record |
 {: title="Family vocabulary mapping"}
 
