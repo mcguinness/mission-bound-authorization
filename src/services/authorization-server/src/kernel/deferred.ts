@@ -13,7 +13,8 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { openStore, type Database } from "@mission/store";
+import { openStore, withTransaction, type Database } from "@mission/store";
+import { CreationIdempotencyStore } from "./creation-idempotency.js";
 import { isSubsetSet } from "./derive.js";
 import { createExpansion } from "./expansion.js";
 import type { MissionKernel } from "./kernel.js";
@@ -36,9 +37,9 @@ CREATE TABLE deferrals (
 `;
 
 /** Deferral lifetime (seconds): the advertised expires_in; a poll after this is expired_token. */
-const DEFERRAL_EXPIRES_IN = 600;
+export const DEFERRAL_EXPIRES_IN = 600;
 /** Advertised poll cadence (seconds); RFC 8628: a poll faster than this is slow_down. */
-const DEFERRAL_INTERVAL = 5;
+export const DEFERRAL_INTERVAL = 5;
 
 export type DeferralState =
   | "authorization_pending"
@@ -111,10 +112,16 @@ export class DeferralStore {
         "requested authority exceeds the active Mission; use Expansion to widen",
       );
     }
-    const key = JSON.stringify({ m: input.missionId, r: input.requested });
+    // @spec expansion#creation-request-id (deferred mode, shared rule) — the
+    // dedup key is CLIENT-SCOPED: the same semantic request from two different
+    // clients MUST open two deferrals (per-client scoping prevents cross-client
+    // interference and replay). The previous {m, r} key omitted the client.
+    const key = JSON.stringify({ m: input.missionId, r: input.requested, c: input.clientId });
     const existing = this.db
-      .prepare("SELECT deferral_code FROM deferrals WHERE state = 'authorization_pending' AND requested_json = ? AND mission_id = ?")
-      .get(key, input.missionId) as { deferral_code: string } | undefined;
+      .prepare(
+        "SELECT deferral_code FROM deferrals WHERE state = 'authorization_pending' AND requested_json = ? AND mission_id = ? AND client_id = ?",
+      )
+      .get(key, input.missionId, input.clientId) as { deferral_code: string } | undefined;
     const code = existing?.deferral_code ?? `dfr_${randomBytes(18).toString("base64url")}`;
     if (!existing) {
       this.db
@@ -183,7 +190,7 @@ export class DeferralStore {
     if (row.state === "access_denied") return { error: "access_denied" };
     if (row.redeemed === 1) return { error: "invalid_grant" }; // already redeemed
 
-    const parsed = JSON.parse(row.requested_json as string) as { m: string; r: AuthorityEntry[] };
+    const parsed = JSON.parse(row.requested_json as string) as { m: string; r: AuthorityEntry[]; c?: string };
     // Read-only active check: revocation between approval and redemption reaches
     // AROP issuance, so a non-active Mission is refused here. The AUTHORITATIVE
     // derivation gate (active/cap check + derivation_count increment) runs once
@@ -227,6 +234,7 @@ CREATE TABLE expansion_deferrals (
   intent_json TEXT NOT NULL,
   client_id TEXT NOT NULL,
   jkt TEXT NOT NULL,
+  creation_request_id TEXT,
   pred_containment_version INTEGER NOT NULL,
   approver_json TEXT,
   approval_event_id TEXT,
@@ -249,6 +257,9 @@ export interface ExpansionApproval {
 export interface ExpansionDeferredResult {
   successor: MissionRecord;
   approvedUntil: string;
+  /** The creation_request_id recorded at initiation (the handler attaches the
+   *  delivery artifact to the completed idempotency operation). */
+  creationRequestId?: string;
 }
 
 export class ExpansionDeferralError extends Error {
@@ -280,11 +291,16 @@ export class ExpansionDeferralError extends Error {
  */
 export class ExpansionDeferralStore {
   readonly db: Database;
+  /** @spec expansion#creation-request-id — completion marks the reservation
+   *  completed ATOMICALLY with successor creation. Instances over the same
+   *  kernel share the table, so this internal instance needs no wiring. */
+  private readonly creationIdempotency: CreationIdempotencyStore;
   constructor(
     private readonly kernel: MissionKernel,
     private readonly now: () => Date = () => new Date(),
   ) {
     this.db = openStore(EXPANSION_SCHEMA);
+    this.creationIdempotency = new CreationIdempotencyStore(kernel);
   }
 
   /**
@@ -306,6 +322,13 @@ export class ExpansionDeferralStore {
     proposedAuthority?: AuthorityEntry[];
     clientId: string;
     jkt: string;
+    /**
+     * @spec expansion#creation-request-id — the REQUIRED creation identifier
+     * (the wire handler always passes it; optional here so kernel-level unit
+     * use stays valid). Part of the dedup key: distinct identifiers are
+     * distinct creation operations and open distinct deferrals.
+     */
+    creationRequestId?: string;
   }): DeferralPending {
     const predecessor = this.kernel.get(input.predecessorId);
     if (!predecessor || this.kernel.applyExpiry(predecessor).state !== "active") {
@@ -313,22 +336,27 @@ export class ExpansionDeferralStore {
     }
     const snapshotCv = predecessor.containment?.containment_version ?? 0;
     const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
+    // Client-scoped (the `c` member AND the explicit column predicate below):
+    // the same widening request from two different clients opens two deferrals.
+    // A creation_request_id, when carried, joins the key: one identifier is ONE
+    // creation operation, so distinct identifiers never coalesce.
     const key = JSON.stringify({
       p: input.predecessorId,
       i: input.intent,
       c: input.clientId,
       ...(proposal ? { pr: proposal } : {}),
+      ...(input.creationRequestId ? { crid: input.creationRequestId } : {}),
     });
     const existing = this.db
       .prepare(
-        "SELECT deferral_code FROM expansion_deferrals WHERE state = 'authorization_pending' AND intent_json = ?",
+        "SELECT deferral_code FROM expansion_deferrals WHERE state = 'authorization_pending' AND intent_json = ? AND client_id = ?",
       )
-      .get(key) as { deferral_code: string } | undefined;
+      .get(key, input.clientId) as { deferral_code: string } | undefined;
     const code = existing?.deferral_code ?? `xdfr_${randomBytes(18).toString("base64url")}`;
     if (!existing) {
       this.db
         .prepare(
-          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, pred_containment_version, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?)",
         )
         .run(
           code,
@@ -336,6 +364,7 @@ export class ExpansionDeferralStore {
           key,
           input.clientId,
           input.jkt,
+          input.creationRequestId ?? null,
           snapshotCv,
           this.now().getTime(),
         );
@@ -458,17 +487,40 @@ export class ExpansionDeferralStore {
     };
     const intent = recorded.i;
     const approver = JSON.parse(row.approver_json as string) as { iss: string; sub: string };
-    const { successor } = createExpansion(this.kernel, {
-      predecessorId: row.predecessor_id as string,
-      intent,
-      ...(recorded.pr ? { proposedAuthority: recorded.pr } : {}),
-      approver,
-      approvalEventId: row.approval_event_id as string,
-      approvedUntil: row.approved_until as string,
+    // @spec expansion#creation-request-id — the successor INSERT and the
+    // idempotency-reservation completion commit in ONE kernel-db transaction
+    // (createExpansion's insertRecord nests as a savepoint), so a lost response
+    // after this commit is recovered by an initiation retry finding the
+    // completed operation. Credential minting happens after, in the handler.
+    const creationRequestId =
+      typeof row.creation_request_id === "string" && row.creation_request_id
+        ? row.creation_request_id
+        : undefined;
+    const { successor } = withTransaction(this.kernel.db, () => {
+      const res = createExpansion(this.kernel, {
+        predecessorId: row.predecessor_id as string,
+        intent,
+        ...(recorded.pr ? { proposedAuthority: recorded.pr } : {}),
+        approver,
+        approvalEventId: row.approval_event_id as string,
+        approvedUntil: row.approved_until as string,
+      });
+      if (creationRequestId) {
+        this.creationIdempotency.completeInCallerTx(
+          row.client_id as string,
+          creationRequestId,
+          res.successor.id,
+        );
+      }
+      return res;
     });
     this.db
       .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ?")
       .run(deferralCode);
-    return { successor, approvedUntil: row.approved_until as string };
+    return {
+      successor,
+      approvedUntil: row.approved_until as string,
+      ...(creationRequestId ? { creationRequestId } : {}),
+    };
   }
 }
