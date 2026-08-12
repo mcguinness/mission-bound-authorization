@@ -2632,10 +2632,12 @@ to the decision-API binding, the issuance profile's expansion
 mechanism, and the deployment's own governance.<a href="#section-7-4" class="pilcrow">¶</a></p>
 <p id="section-7-5">A decision separates three response lanes, and a binding maps each
 lane to its wire. Obligations and advice are PEP work under the
-existing decision: obligations bind (request binding, permit expiry,
-use limits, evidence emission; failing one makes the effective result
-deny), and advice, where a binding defines it, is safely ignorable
-and never carries a mandatory control. Governance rides the
+existing decision: obligations bind (a step-up, a mandated
+notification; failing one makes the effective result deny), and
+advice, where a binding defines it, is safely ignorable and never
+carries a mandatory control. Decision conditions (request binding,
+validity bound, use limit) are not work but constraints of the
+decision itself, evaluated at every use (<a href="#decision-output" class="auto internal xref">Section 7.1</a>). Governance rides the
 request-approval loop, never the permit: an access request tracked by
 a task handle, resolved by an approval or another authority-state
 change. Partial evaluation, residual policy the PEP completes
@@ -2672,25 +2674,32 @@ decision with its evidence;<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></
             <p id="section-7.1-2.3.1">on a deny, a reason from the binding's failure classification;<a href="#section-7.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.1-2.4">
-            <p id="section-7.1-2.4.1">zero or more obligations: mandatory enforcement duties the PEP
-completes under the existing decision, where an unfulfilled or
-unrecognized obligation is an effective deny;<a href="#section-7.1-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-2.4.1">on a permit, decision conditions: declarative constraints on
+relying on the permit (a request binding, a validity bound, a use
+limit), evaluated at every use of the permit; a condition the
+enforcing component does not recognize makes the permit unusable,
+the reliance counterpart of the obligations rule;<a href="#section-7.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.1-2.5">
-            <p id="section-7.1-2.5.1">zero or more advice items, where the binding defines them: safely
-ignorable hints that never carry a mandatory control;<a href="#section-7.1-2.5.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-2.5.1">zero or more obligations: mandatory enforcement duties the PEP
+completes under the existing decision, where an unfulfilled or
+unrecognized obligation is an effective deny;<a href="#section-7.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.1-2.6">
-            <p id="section-7.1-2.6.1">optionally, an access-request signal marking a denial requestable
-through a governance workflow;<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-2.6.1">zero or more advice items, where the binding defines them: safely
+ignorable hints that never carry a mandatory control;<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.1-2.7">
-            <p id="section-7.1-2.7.1">optionally, a retry signal marking a denial transient, with a wait
-interval; and<a href="#section-7.1-2.7.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-2.7.1">optionally, an access-request signal marking a denial requestable
+through a governance workflow;<a href="#section-7.1-2.7.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.1-2.8">
-            <p id="section-7.1-2.8.1">a reserved residual-policy member for a future partial-evaluation
-composition, which this profile does not define.<a href="#section-7.1-2.8.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-2.8.1">optionally, a retry signal marking a denial transient, with a wait
+interval; and<a href="#section-7.1-2.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.9">
+            <p id="section-7.1-2.9.1">a reserved residual-policy member for a future partial-evaluation
+composition, which this profile does not define.<a href="#section-7.1-2.9.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-7.1-3">An approval produced by the governance workflow returns as decision
@@ -3480,12 +3489,22 @@ external-commitment, and privileged-administration classes, the
 Operation Profile <span class="bcp14">MUST</span> therefore also define an idempotency key.<a href="#section-8.4-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.4-2.2">
-            <p id="section-8.4-2.2.1">The PDP <span class="bcp14">MUST</span> refuse, or route to the action-bound approval
-requirement (<a href="#action-approval" class="auto internal xref">Section 4.4</a>), a permit request whose
-normalized parameters and idempotency key match a prior decision
-whose execution outcome is unresolved or completed within the
-reconciliation window (<a href="#evidence" class="auto internal xref">Section 11</a>). Legitimate re-execution of
-the same normalized action mints a new idempotency key.<a href="#section-8.4-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-8.4-2.2.1">The PDP <span class="bcp14">MUST</span> refuse a permit request whose normalized parameters
+and idempotency key match a prior decision whose execution outcome
+is unresolved or completed within the reconciliation window
+(<a href="#evidence" class="auto internal xref">Section 11</a>). An unresolved duplicate is a transient condition:
+the requester retries, or the outcome reconciles, within that
+window. An intentional re-execution of the same normalized action
+is a new operation under a new idempotency key, never a retry under
+the consumed one, and an action-bound approval
+(<a href="#action-approval" class="auto internal xref">Section 4.4</a>) authorizes that new operation as such, never
+re-execution under the consumed key. For the high-consequence
+classes the deployment <span class="bcp14">MUST</span> retain a durable consumed-key record (a
+tombstone) for at least its declared idempotency horizon, published
+in the Enforcement Scope Statement; within that horizon a consumed
+key never executes again. Outside those classes a deployment <span class="bcp14">MAY</span>
+scope the guarantee to the reconciliation window, and it <span class="bcp14">MUST</span>
+publish which posture applies.<a href="#section-8.4-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.4-2.3">
             <p id="section-8.4-2.3.1">A retransmission is distinguishable from a repeat: when the
@@ -3674,10 +3693,11 @@ or PDP unreachability) or after a PDP permit (for example, a
 <code>parameter_digest</code> mismatch), <span class="bcp14">MUST</span> likewise produce a runtime
 enforcement evidence record with the available fields and the failure
 condition. This document fixes the minimum record content and local
-integrity requirements. The concrete record schema, any interoperable
-canonical byte representation, separate Decision Evidence and
-Execution Evidence object schemas, and the Mission Receipt's portable
-schema (<a href="#mission-receipt" class="auto internal xref">Section 11.3</a>) are out of scope (<a href="#deferred" class="auto internal xref">Section 16</a>).<a href="#section-11-1" class="pilcrow">¶</a></p>
+integrity requirements; the concrete record schemas, canonical byte
+representation, and integrity envelope are defined by Mission Runtime
+Evidence (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>). The
+Mission Receipt's portable schema (<a href="#mission-receipt" class="auto internal xref">Section 11.3</a>) remains out
+of scope (<a href="#deferred" class="auto internal xref">Section 16</a>).<a href="#section-11-1" class="pilcrow">¶</a></p>
 <p id="section-11-2">A record captures decision inputs, the applicable policy and
 authority references, the result, and the failure condition. No
 requirement in this section asks for the model's internal reasoning,
@@ -3742,9 +3762,10 @@ authority or sensitive policy;<a href="#section-11.1-4.5.1" class="pilcrow">¶</
             <p id="section-11.1-4.8.1">the identity and role of the emitting enforcement component; and<a href="#section-11.1-4.8.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.1-4.9">
-            <p id="section-11.1-4.9.1"><span class="bcp14">OPTIONAL</span>, a <code>compensates_decision_id</code> member linking a compensating
-action's decision to the original decision identifier it reverses, so
-a compensation can be reconciled against the action it undoes.<a href="#section-11.1-4.9.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-4.9.1"><span class="bcp14">OPTIONAL</span>, a <code>compensates_evaluation_id</code> member linking a
+compensating action's decision to the original evaluation
+identifier it reverses, so a compensation can be reconciled against
+the action it undoes.<a href="#section-11.1-4.9.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-11.1-5">For a token-validation failure, the record <span class="bcp14">MUST NOT</span> describe
@@ -3764,12 +3785,14 @@ record them, consistent with <span>[<a href="#I-D.draft-mcguinness-oauth-mission
         </h3>
 <p id="section-11.2-1">For an action in the high-consequence classes, the executing PEP <span class="bcp14">MUST</span>
 also produce, after it acts, an
-execution-outcome record keyed to the permit's decision identifier,
+execution-outcome record keyed to the permit's evaluation identifier,
 recording at least success or failure and the <code>parameter_digest</code>
 actually executed. This lets a decision and its execution be reconciled
 one to one, so a permit that was obtained but executed more than once,
-or executed for different parameters, is detectable after the fact. The
-detailed object schema is deferred (<a href="#deferred" class="auto internal xref">Section 16</a>).<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+or executed for different parameters, is detectable after the fact.
+The detailed object schema is the Execution Evidence Object, defined
+by the runtime evidence companion
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 <p id="section-11.2-2">Reconciliation is bounded in time by the reconciliation window,
 orphan-detection component, and alerting obligation the Enforcement
 Scope Statement declares (<a href="#runtime-conformance" class="auto internal xref">Section 4.2</a>): an
@@ -3843,8 +3866,12 @@ only that a refusal happened.<a href="#section-11.4-2.3.1" class="pilcrow">¶</a
 </li>
           <li class="normal" id="section-11.4-2.4">
             <p id="section-11.4-2.4.1">Records for one Mission <span class="bcp14">MUST</span> carry a deployment-defined sequence
-indicator so decision order can be reconstructed without relying on
-wall-clock time alone.<a href="#section-11.4-2.4.1" class="pilcrow">¶</a></p>
+indicator, scoped per emitter, so gaps are detectable and one
+emitter's records order without relying on wall-clock time alone.
+This does not by itself reconstruct Mission-wide decision order
+across emitters; that ordering is best-effort, from the
+correlation members and each record's timestamps together
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-11.4-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.4-2.5">
             <p id="section-11.4-2.5.1">The retention window declared in the Enforcement Scope Statement
@@ -4247,56 +4274,56 @@ identity);<a href="#section-16-2.2.1" class="pilcrow">¶</a></p>
           <p id="section-16-2.3.1">the Mission Receipt's portable schema and canonical byte
 representation (<a href="#mission-receipt" class="auto internal xref">Section 11.3</a>: this profile fixes the term,
 its minimum binding, and the local runtime enforcement evidence
-record);<a href="#section-16-2.3.1" class="pilcrow">¶</a></p>
+record). The concrete Decision Evidence, Execution Evidence, and
+Refusal Record object schemas, canonicalization, integrity
+envelope, and media types are, by contrast, no longer deferred:
+they are defined by the runtime evidence companion
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>);<a href="#section-16-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.4">
-          <p id="section-16-2.4.1">separate Decision Evidence and Execution Evidence object schemas and
-media types;<a href="#section-16-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-16-2.5">
-          <p id="section-16-2.5.1">actor provenance beyond the <code>act</code> chain and attestation of the
+          <p id="section-16-2.4.1">actor provenance beyond the <code>act</code> chain and attestation of the
 execution environment: actor-signed hop proofs
 (<span>[<a href="#I-D.draft-mcguinness-oauth-actor-proofs" class="cite xref">I-D.draft-mcguinness-oauth-actor-proofs</a>]</span>), issuer-signed hop
 receipts (<span>[<a href="#I-D.draft-mcguinness-oauth-actor-receipts" class="cite xref">I-D.draft-mcguinness-oauth-actor-receipts</a>]</span>), and
 attested agent-instance identity
 (<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>) specify these,
 and this profile consumes their results as token-derived facts
-where present;<a href="#section-16-2.5.1" class="pilcrow">¶</a></p>
+where present;<a href="#section-16-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-2.5">
+          <p id="section-16-2.5.1">a purpose registry;<a href="#section-16-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.6">
-          <p id="section-16-2.6.1">a purpose registry;<a href="#section-16-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.6.1">compilation of the Mission into an engine-native policy artifact
+(Cedar, OpenFGA, or equivalent) and standardization of PDP
+deployment modes;<a href="#section-16-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.7">
-          <p id="section-16-2.7.1">compilation of the Mission into an engine-native policy artifact
-(Cedar, OpenFGA, or equivalent) and standardization of PDP
-deployment modes;<a href="#section-16-2.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-16-2.8">
-          <p id="section-16-2.8.1">offline or partitioned PDP operation (a PDP that decides while
+          <p id="section-16-2.7.1">offline or partitioned PDP operation (a PDP that decides while
 disconnected from its Mission state source); fail-closed
 (<a href="#failure-modes" class="auto internal xref">Section 10</a>) remains the base rule when state cannot be
-established;<a href="#section-16-2.8.1" class="pilcrow">¶</a></p>
+established;<a href="#section-16-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-2.8">
+          <p id="section-16-2.8.1">action-hierarchy and resource-containment subset extensions (this
+profile uses the flat subset rule of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-16-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.9">
-          <p id="section-16-2.9.1">action-hierarchy and resource-containment subset extensions (this
-profile uses the flat subset rule of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-16-2.9.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-16-2.10">
-          <p id="section-16-2.10.1">evaluation-context binding: an extension letting a high-assurance
+          <p id="section-16-2.9.1">evaluation-context binding: an extension letting a high-assurance
 permit commit the resource version, policy-view version, and
 decision time it was evaluated against, hardening the
-target-drift residual of the TOCTOU considerations;<a href="#section-16-2.10.1" class="pilcrow">¶</a></p>
+target-drift residual of the TOCTOU considerations;<a href="#section-16-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-2.10">
+          <p id="section-16-2.10.1">risk-signal and semantic intent-alignment inputs to the decision,
+which are advisory and deployment-defined (<a href="#inspection-controls" class="auto internal xref">Section 17.4</a>);
+and<a href="#section-16-2.10.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.11">
-          <p id="section-16-2.11.1">risk-signal and semantic intent-alignment inputs to the decision,
-which are advisory and deployment-defined (<a href="#inspection-controls" class="auto internal xref">Section 17.4</a>);
-and<a href="#section-16-2.11.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-16-2.12">
-          <p id="section-16-2.12.1">integrity of the result a tool returns as the application relays it to
+          <p id="section-16-2.11.1">integrity of the result a tool returns as the application relays it to
 the agent's model, and binding an executed action to the model's own
-decision (<a href="#inspection-controls" class="auto internal xref">Section 17.4</a>).<a href="#section-16-2.12.1" class="pilcrow">¶</a></p>
+decision (<a href="#inspection-controls" class="auto internal xref">Section 17.4</a>).<a href="#section-16-2.11.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-16-3">Structured per-argument attenuation of tool grants
@@ -4911,7 +4938,7 @@ cites the view of <a href="#policy-view-example" class="auto internal xref">Appe
 <div class="lang-json sourcecode" id="appendix-C-3">
 <pre>
 {
-  "result": "permit",
+  "decision": "permit",
   "request_time": "2026-11-02T09:03:12Z",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -4934,46 +4961,47 @@ cites the view of <a href="#policy-view-example" class="auto internal xref">Appe
   },
   "parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-  "decision_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
-  "policy_view_version":
+  "evaluation_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
+  "policy_view_id":
     "sha-256:fuMqn6Nb5LfyziflJuYj8VgHHH1bskZ0SrMDxdQ8CaA",
   "sequence": 17
 }
 </pre><a href="#appendix-C-3" class="pilcrow">¶</a>
 </div>
 <p id="appendix-C-4">The execution-outcome record the executing PEP produces after it acts,
-keyed to the permit's decision identifier (<a href="#evidence" class="auto internal xref">Section 11</a>):<a href="#appendix-C-4" class="pilcrow">¶</a></p>
+keyed to the permit's evaluation identifier (<a href="#evidence" class="auto internal xref">Section 11</a>):<a href="#appendix-C-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="appendix-C-5">
 <pre>
 {
-  "result": "executed",
-  "outcome": "success",
-  "decision_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
+  "outcome": "completed",
+  "evaluation_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com"
   },
   "parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-  "outcome_time": "2026-11-02T09:03:14Z",
+  "outcome_at": "2026-11-02T09:03:14Z",
   "sequence": 18
 }
 </pre><a href="#appendix-C-5" class="pilcrow">¶</a>
 </div>
-<p id="appendix-C-6">A PEP refusal record for a later attempt on the same operation. A
+<p id="appendix-C-6">Execution Evidence for a later attempt on the same operation. A
 permit (<code>dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA</code>) bound the digest of a
 423.50 entry; between check and use the parameters became 780.00
 (normalized object
 <code>{"amount_usd":"780.00","source_invoice_id":"inv_2026Q3_842"}</code>). The
 executing PEP recomputed the digest over the parameters it was about
-to use, found a mismatch, and refused (<a href="#parameter-binding" class="auto internal xref">Section 8</a>); the
-record carries the recomputed digest:<a href="#appendix-C-6" class="pilcrow">¶</a></p>
+to use, found a mismatch, and suppressed the release
+(<a href="#parameter-binding" class="auto internal xref">Section 8</a>); a post-decision suppression is a final
+disposition and is recorded as Execution Evidence, never as a
+Refusal Record. The record carries the recomputed digest:<a href="#appendix-C-6" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="appendix-C-7">
 <pre>
 {
-  "result": "refuse",
-  "failure_condition": "parameter_digest_mismatch",
-  "request_time": "2026-11-02T09:03:29Z",
+  "outcome": "suppressed",
+  "error": "parameter_mismatch",
+  "outcome_at": "2026-11-02T09:03:29Z",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
@@ -4985,7 +5013,7 @@ record carries the recomputed digest:<a href="#appendix-C-6" class="pilcrow">¶<
   "client_id": "s6BhdRkqt3",
   "action": "journal-entries.write",
   "resource": "je_2026Q3_inv_8421",
-  "decision_id": "dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA",
+  "evaluation_id": "dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA",
   "parameter_digest":
     "sha-256:UdG-TiebDHTiKRXUVURs1Jeq_vDJp_Ro8jWbBAD8hgM",
   "sequence": 19
