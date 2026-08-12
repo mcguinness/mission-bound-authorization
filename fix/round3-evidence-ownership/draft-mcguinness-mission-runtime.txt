@@ -1838,7 +1838,13 @@ Table of Contents
       is a new operation under a new idempotency key, never a retry
       under the consumed one, and an action-bound approval (Section 4.4)
       authorizes that new operation as such, never re-execution under
-      the consumed key.
+      the consumed key.  For the high-consequence classes the deployment
+      MUST retain a durable consumed-key record (a tombstone) for at
+      least its declared idempotency horizon, published in the
+      Enforcement Scope Statement; within that horizon a consumed key
+      never executes again.  Outside those classes a deployment MAY
+      scope the guarantee to the reconciliation window, and it MUST
+      publish which posture applies.
 
    *  A retransmission is distinguishable from a repeat: when the
       matching prior decision's permit is unexpired and its single-use
@@ -2004,10 +2010,10 @@ Table of Contents
    parameter_digest mismatch), MUST likewise produce a runtime
    enforcement evidence record with the available fields and the failure
    condition.  This document fixes the minimum record content and local
-   integrity requirements.  The concrete record schema, any
-   interoperable canonical byte representation, separate Decision
-   Evidence and Execution Evidence object schemas, and the Mission
-   Receipt's portable schema (Section 11.3) are out of scope
+   integrity requirements; the concrete record schemas, canonical byte
+   representation, and integrity envelope are defined by Mission Runtime
+   Evidence ([I-D.draft-mcguinness-mission-runtime-evidence]).  The
+   Mission Receipt's portable schema (Section 11.3) remains out of scope
    (Section 16).
 
    A record captures decision inputs, the applicable policy and
@@ -3146,19 +3152,21 @@ Appendix C.  Runtime Evidence Worked Examples
      "sequence": 18
    }
 
-   A PEP refusal record for a later attempt on the same operation.  A
+   Execution Evidence for a later attempt on the same operation.  A
    permit (dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA) bound the digest of a
    423.50 entry; between check and use the parameters became 780.00
    (normalized object
    {"amount_usd":"780.00","source_invoice_id":"inv_2026Q3_842"}).  The
    executing PEP recomputed the digest over the parameters it was about
-   to use, found a mismatch, and refused (Section 8); the record carries
+   to use, found a mismatch, and suppressed the release (Section 8); a
+   post-decision suppression is a final disposition and is recorded as
+   Execution Evidence, never as a Refusal Record.  The record carries
    the recomputed digest:
 
    {
-     "decision": "refuse",
-     "failure_condition": "parameter_digest_mismatch",
-     "request_time": "2026-11-02T09:03:29Z",
+     "outcome": "suppressed",
+     "error": "parameter_mismatch",
+     "outcome_at": "2026-11-02T09:03:29Z",
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",

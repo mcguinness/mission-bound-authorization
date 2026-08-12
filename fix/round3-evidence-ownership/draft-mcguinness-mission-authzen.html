@@ -1870,7 +1870,10 @@ action. When the key and the normalized parameters match a prior
 decision whose execution outcome is unresolved or completed within the
 reconciliation window, the PDP <span class="bcp14">MUST</span> deny with <code>duplicate_suppressed</code>
 (<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>); reuse of an <code>idempotency_key</code>
-never executes again.<a href="#section-5.5-2.6.1" class="pilcrow">¶</a></p>
+never executes again within the deployment's declared idempotency
+horizon, which for the high-consequence classes is backed by a
+durable consumed-key tombstone
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-5.5-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.5-2.7">
@@ -2543,8 +2546,6 @@ Evidence <code>contributing_constraints</code>:<a href="#section-5.14-5" class="
       "decision": true,
       "context": {
         "evaluation_id": "dec_2FpQ8kV5nR1tX7mB4sJ9eL6wYc",
-        "parameter_digest":
-          "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
         "conditions": {
           "parameter_digest":
             "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
@@ -2557,9 +2558,7 @@ Evidence <code>contributing_constraints</code>:<a href="#section-5.14-5" class="
       "decision": false,
       "context": {
         "evaluation_id": "dec_6JwN3xT9rQ4mV8kP1sB5eZ2yLd",
-        "reason": "parameter_violation",
-        "parameter_digest":
-          "sha-256:mzFwtXAT6_hY0v8_NFHMDJG39HFuWY2fRcOCSFGDyyE"
+        "reason": "parameter_violation"
       }
     }
   ]
@@ -2759,9 +2758,10 @@ as conforming to this profile.<a href="#section-6.1-2.10.4" class="pilcrow">¶</
           <dd style="margin-left: 1.5em" id="section-6.1-2.12">
             <p id="section-6.1-2.12.1"><span class="bcp14">OPTIONAL</span>. An object. Present on an <code>out_of_authority</code> or
 <code>approval_required</code> denial when the deployment exposes it as
-requestable under <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>. Its members are ARAP's requestable-denial
-context verbatim: the submission <code>endpoint</code>, the ARAP-required
-<code>expires_at</code>, and the PDP-signed <code>binding_token</code>. The denied
+requestable under <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>. The object is ARAP's requestable-denial
+context object, imported as ARAP defines it; this profile adds no
+members and no additional required members. The example below uses
+the PDP-signed <code>binding_token</code> form. The denied
 evaluation is identified by the top-level <code>context.evaluation_id</code>
 above, which the access request the PEP submits references as
 <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span> specifies. Its presence does not change the
@@ -2818,8 +2818,9 @@ Execution Evidence (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-eviden
 optimization on that fail-closed baseline, not a precondition for it:
 it lets a PDP avoid attaching an obligation it already knows the PEP
 cannot discharge, sparing a guaranteed-fail round trip, never a
-dependency the model needs to stay safe. A PDP supporting this
-profile advertises <code>step-up</code> in its metadata <code>supported_obligations</code>
+dependency the model needs to stay safe. A PDP that supports the
+step-up obligation advertises it in its metadata
+<code>supported_obligations</code>
 array, and a PEP <span class="bcp14">MAY</span> declare its own <code>supported_obligations</code> in the
 request context, as the obligations profile defines <span>[<a href="#AUTHZEN-OBL" class="cite xref">AUTHZEN-OBL</a>]</span>;
 the declaration is advisory. A PDP <span class="bcp14">MUST NOT</span> rely on an obligation the
@@ -2876,8 +2877,6 @@ obligation applies.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
   "decision": true,
   "context": {
     "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
-    "parameter_digest":
-      "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "conditions": {
       "parameter_digest":
         "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
@@ -3122,8 +3121,6 @@ present, and the PDP marks the denial requestable under <span>[<a href="#ARAP" c
   "context": {
     "evaluation_id": "dec_7YbK4nQ9tR2xV6mL1sP8eJ3wZc",
     "reason": "approval_required",
-    "parameter_digest":
-      "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "access_request": {
       "endpoint": "https://requests.example.com/access-requests",
       "expires_at": "2026-11-02T09:14:00Z",
@@ -3570,8 +3567,12 @@ own registered media type
 <p id="section-7.1-1">Independent of anything the PDP returns, the PEP <span class="bcp14">MUST</span> emit the
 Execution Evidence Object
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>) once, and only
-once, the outcome of every released consequential action is known.
-This is a profile-level PEP requirement, not an obligation.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+once, for the final disposition of every consequential permit:
+<code>completed</code>, <code>failed</code>, or <code>suppressed</code> before release. A permit
+whose action is never released still ends in Execution Evidence with
+<code>outcome</code> <code>suppressed</code>; only a refusal before any PDP decision is a
+Refusal Record. This is a profile-level PEP requirement, not an
+obligation.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
 <p id="section-7.1-2">If evidence emission fails after an irreversible effect, the effect
 stands: nothing retroactively permits or denies it. The PEP <span class="bcp14">MUST</span>
 record the emission failure durably and surface it on its operational
