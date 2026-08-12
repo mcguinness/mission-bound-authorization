@@ -962,7 +962,7 @@ self-consistent:
 ## Clock skew {#clock-skew}
 
 The time comparisons this binding performs (the permit's
-`expires_at` at the PEP, {{response-context}}, the
+`valid_until` at the PEP, {{response-context}}, the
 `context.mission_state_observation` freshness window and
 `context.credential.expires_at` at the PDP, and the approval maximum
 age, {{context-approval}}) MAY allow
@@ -1115,9 +1115,8 @@ Evidence `contributing_constraints`:
         "evaluation_id": "dec_2FpQ8kV5nR1tX7mB4sJ9eL6wYc",
         "parameter_digest":
           "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-        "critical": ["conditions"],
         "conditions": {
-          "request_digest":
+          "parameter_digest":
             "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
           "valid_until": "2026-11-02T08:15:00Z",
           "use_limit": 1
@@ -1207,10 +1206,6 @@ This profile defines the following AuthZEN response `context` members:
   `reason` is ARAP's response member ({{ARAP}}); the value set below
   includes ARAP's `approval_required`.
 
-`parameter_digest`:
-: REQUIRED when the request was parameter-bound. A string. The digest
-  bound to the decision.
-
 `obligations`:
 : OPTIONAL. Present when the decision carries a genuine attached
   obligation, on either a permit or a denial. An array of obligation
@@ -1228,12 +1223,12 @@ This profile defines the following AuthZEN response `context` members:
   ({{I-D.draft-mcguinness-mission-runtime}}): declarative constraints
   on relying on the permit, each evaluated at every use. Members:
 
-    `request_digest`:
+    `parameter_digest`:
     : CONDITIONAL. A string. The parameter binding the permit is
       bound to; REQUIRED, and equal to the request's
       `action.properties.parameter_digest`, when the action was
       parameter-bound. The PEP MUST enforce the exact request
-      binding.
+      binding. This is the response's only carriage of the digest.
 
     `valid_until`:
     : REQUIRED. An RFC 3339 {{RFC3339}} timestamp. The permit's
@@ -1276,15 +1271,13 @@ This profile defines the following AuthZEN response `context` members:
   conditions or must-understand response semantics, that mechanism
   governs and this profile aligns with it.
 
-`critical`:
-: OPTIONAL. An array of strings naming response context members the
-  PEP MUST recognize and process in order to rely on this decision;
-  a PEP that does not recognize a named member MUST treat the
-  decision as an effective deny. A PDP conforming to this profile
-  MUST list `conditions` in `critical` on every response that carries
-  it. This member is profiled here in the shape proposed for AuthZEN
-  standardization; a standardized must-understand mechanism, once
-  defined, governs.
+  A must-understand marker cannot be bootstrapped from inside the
+  response: a component that predates the marker ignores the marker
+  too, so this profile defines none. The guarantee is
+  deployment-established instead: a PDP MUST NOT return a permit
+  carrying `conditions` to a PEP it has not established, through
+  deployment configuration and the mutually authenticated channel,
+  as conforming to this profile.
 
 `access_request`:
 : OPTIONAL. An object. Present on an `out_of_authority` or
@@ -1316,13 +1309,12 @@ This profile defines the following AuthZEN response `context` members:
 An obligation is mandatory PEP work under the existing decision,
 whichever it is. It confers no authority, has no approver, and
 creates no governance state: unlike Lane 2's governance workflow
-({{lanes}}), it is safe unilaterally, with no round trip to another
-party required for correctness. The PEP satisfies it from something
-it already holds or can produce locally (a stronger authentication
-context it obtains directly, a watermark it applies, a notification
-it sends), not by acquiring new authority from an external
-adjudicator, and fail-closed operation does not depend on any prior
-negotiation: a PDP MAY attach an obligation the PEP has not declared
+({{lanes}}), it involves no governance adjudication, no new
+authority, no approval record, and no task handle. An obligation MAY
+involve subject interaction or an external side effect (a step-up
+challenge to the subject, a notification to another system); what it
+never does is acquire authority from an adjudicator. Fail-closed
+operation does not depend on any prior negotiation: a PDP MAY attach an obligation the PEP has not declared
 support for, and an unfulfillable or unrecognized obligation simply
 becomes an effective deny. An obligation MAY accompany a permit or a
 denial ({{response-context}}): on a permit the PEP MUST fulfill each
@@ -1342,11 +1334,10 @@ profile advertises `step-up` in its metadata `supported_obligations`
 array, and a PEP MAY declare its own `supported_obligations` in the
 request context, as the obligations profile defines {{AUTHZEN-OBL}};
 the declaration is advisory. A PDP MUST NOT rely on an obligation the
-PEP has not declared or is not required to support: this profile's
-conformance floor requires every conforming PEP to support `step-up`
-unconditionally ({{conformance}});
-for any other obligation type, the PDP relies on it only when the
-PEP has declared it.
+PEP has not declared: this profile mandates correct obligation
+processing, not any particular obligation type, and a PEP that
+cannot perform an attached obligation treats it as unfulfillable, an
+effective deny ({{conformance}}).
 
 The PDP MAY attach the {{AUTHZEN-OBL}} step-up obligation
 (authentication-context properties such as `acr_value` and
@@ -1385,11 +1376,11 @@ mandatory notification are never advice.
 
 When the PDP permits an action, it returns AuthZEN `decision: true`
 and the context needed by the PEP to enforce the permit. The
-`evaluation_id` and any `parameter_digest` bind the response to the
-Decision Evidence and to the request inputs the PDP evaluated.
-`permit` carries the permit lifetime controls the PEP MUST enforce
-before releasing the effect; `obligations` is present only when a
-genuine obligation applies.
+`evaluation_id` binds the response to the Decision Evidence.
+`conditions` carries the permit's decision conditions, including the
+`parameter_digest` that binds the permit to the request inputs the
+PDP evaluated; `obligations` is present only when a genuine
+obligation applies.
 
 ~~~ json
 {
@@ -1398,9 +1389,8 @@ genuine obligation applies.
     "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
     "parameter_digest":
       "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
-    "critical": ["conditions"],
     "conditions": {
-      "request_digest":
+      "parameter_digest":
         "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
       "valid_until": "2026-11-02T08:15:00Z",
       "use_limit": 1
@@ -1842,7 +1832,7 @@ Decision Evidence `mission`, `subject`, `resource`, `action`,
 and `mission_history` members are populated from the correspondingly
 named members of this binding's PDP request and response
 ({{pdp-request}}, {{pdp-response}}); the `conditions` member is
-populated from the response `context.permit`
+populated from the response `context.conditions`
 ({{response-context}}); the `denial_reason` member carries the value
 returned in `context.reason` ({{runtime-denial-classification}}).
 The Decision Evidence `action_class`, `class_source`, and
@@ -1921,10 +1911,12 @@ A PEP conforming to this binding MUST:
   ({{parameter-digest}}), and, where the deployment adopts Mission
   Capability Binding, `context.capability_source` as that companion
   requires ({{I-D.draft-mcguinness-mission-capability-binding}});
-- support `step-up` unconditionally, whatever it declares in
-  `supported_obligations` ({{obligations}});
-- enforce every permit control present (`request_digest`,
-  `expires_at`, `use_limit`) before releasing the action's effect,
+- process obligations correctly: fulfill each attached obligation it
+  can perform, treat one it cannot perform or does not recognize as
+  unfulfillable (an effective deny on a permit), and advertise what
+  it can perform in `supported_obligations` ({{obligations}});
+- honor every decision condition present (`parameter_digest`,
+  `valid_until`, `use_limit`) at every use of the permit,
   applying its own deployment classification floor to that duty
   independent of any class the PDP applied internally
   ({{response-context}}), fulfill every obligation attached to a
@@ -2101,8 +2093,8 @@ The `action.properties.parameters`,
 AuthZEN `action` object, and the `resource.properties.audience` member
 carried inside the AuthZEN `resource` object ({{pdp-request}}), are
 likewise AuthZEN extension data. The response `context.evaluation_id`,
-`context.evaluated_at`, `context.reason`, `context.parameter_digest`,
-`context.obligations`, `context.permit`, `context.access_request`,
+`context.evaluated_at`, `context.reason`,
+`context.obligations`, `context.conditions`, `context.access_request`,
 `context.next_action`, and `context.retry_after` members
 ({{response-context}}) are likewise AuthZEN extension
 data. The Mission-bound token claims this profile consumes are

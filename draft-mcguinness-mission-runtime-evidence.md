@@ -296,11 +296,11 @@ canonicalization, and integrity envelope a deployment emits.
   {{I-D.draft-mcguinness-mission-authzen}}).
 
 `mission_state_version`:
-: OPTIONAL. An integer. Mirrors the decision-API response's Mission
-  state version member, when the PDP tracks Mission state version
-  ({{I-D.draft-mcguinness-mission-authzen}}). Distinct from the
-  `mission` sub-member `policy_view_id`, which commits to authority
-  only ({{I-D.draft-mcguinness-mission-authzen}}).
+: OPTIONAL. An integer. The Mission lifecycle-state version the
+  decision consulted, when the PDP tracks one: the mutable-state
+  counterpart of the compiled-authority `policy_view_id`
+  ({{I-D.draft-mcguinness-mission-runtime}}). The PDP computes and
+  records it directly; no decision-API wire echo is required.
 
 `action_class`:
 : REQUIRED. A string. The runtime action class the PDP applied to the
@@ -344,7 +344,7 @@ canonicalization, and integrity envelope a deployment emits.
 `conditions`:
 : REQUIRED when `decision` is `permit` for a consequential action. An
   object recording the permit's decision conditions as returned to
-  the PEP: `request_digest` (the parameter binding the permit is
+  the PEP: `parameter_digest` (the parameter binding the permit is
   bound to), `valid_until` (the validity bound), and
   `use_limit` (the consumption bound on `evaluation_id`). The PDP
   MUST set `use_limit: 1` for a permit in the high-consequence
@@ -359,9 +359,8 @@ canonicalization, and integrity envelope a deployment emits.
   `parameter_digest` is absent for a consequential action, so the closed
   object still carries the request digest the runtime profile requires
   of every decision record ({{I-D.draft-mcguinness-mission-runtime}}).
-  Distinct from the `conditions` member's `request_digest`: that
-  member
-  records the parameter binding a granted permit is bound to;
+  Distinct from the `conditions` member's `parameter_digest`: that
+  member records the parameter binding a granted permit is bound to;
   `evaluation_request_digest` is this record's fallback digest of the
   whole evaluation request, present whether the decision was a permit
   or a deny.
@@ -728,7 +727,7 @@ envelopes with unsupported formats.
   "action_class": "irreversible_action",
   "class_source": "deployment",
   "conditions": {
-    "request_digest":
+    "parameter_digest":
       "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "valid_until": "2026-11-02T08:15:00Z",
     "use_limit": 1
