@@ -551,8 +551,14 @@ commit:
 ## Completion {#completion}
 
 The child-creation token exchange completes in one of three modes,
-mirroring Mission Expansion
-({{I-D.draft-mcguinness-oauth-mission-expansion}}). The deferred token
+the family's shared completion pattern for Mission-creating
+exchanges. Child creation keeps the synchronous mode that Mission
+Expansion does not define: an expansion always widens and always
+takes fresh consent, so it completes only deferred or interactively
+({{I-D.draft-mcguinness-oauth-mission-expansion}}), while a Child
+Mission is always a creation and a strict subset of its parent, so a
+policy-permitted synchronous completion is unambiguous
+({{strict-subset}}). The deferred token
 response is a completion mode, not a replacement:
 
 Synchronous:

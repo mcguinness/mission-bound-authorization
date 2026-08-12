@@ -293,6 +293,22 @@ or, when narrowed, a recomputed `ceiling_hash`. Any change to either
 beyond narrowing requires a fresh human approval, never policy
 adjudication.
 
+A policy-adjudicated in-ceiling successor is rooted in a
+standing-consent `approval_basis`, under the core profile's open
+`type` set ({{I-D.draft-mcguinness-oauth-mission}}), with `type`
+`ceiling_drawdown`, defined and owned by this profile: its
+`consent_principal` is the Approver who consented the ceiling, its
+`activation` is an object with exactly two members, `policy_id` (the
+drawdown policy identifier, the Mission's `drawdown_policy` value)
+and `policy_version` (the deployment's version identifier for that
+policy's content as applied at this adjudication), its
+`activation_actor` is the requesting client, and its
+`root_commitment` is the `ceiling_hash`. The child delegation
+profile's `policy_drawdown` basis
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is not
+reused: that value names policy-approved child creation, not a
+ceiling drawdown.
+
 When the adjudication is by the pre-consented drawdown policy, the
 Mission Issuer MAY complete the authorization request without prompting
 the Approver, issuing the authorization code directly on redemption of
