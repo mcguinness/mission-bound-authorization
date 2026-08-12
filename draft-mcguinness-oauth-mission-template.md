@@ -356,7 +356,8 @@ consented authority ceiling
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}). A dispatched
 Mission commits its own `intent_hash` and `authority_hash` over its own
 Intent and final Authority Set ({{dispatch}}); the template commits the
-ceiling once, under `template_hash`. The two anchors are never merged.
+ceiling once, under `template_hash`. The Mission's anchors and the
+template's anchor are never merged.
 
 ## Template lifecycle {#template-lifecycle}
 

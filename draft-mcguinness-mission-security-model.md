@@ -1022,12 +1022,14 @@ limits most likely to matter and most often overstated away elsewhere:
   ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). Proof of
   comprehension stays out of reach; no electronic-consent scheme
   provides it.
-- **Anchor semantics.** The two integrity anchors commit two objects,
-  not the relationship between them: `intent_hash` commits the
-  approved intent, `authority_hash` the consented Authority Set, and
+- **Anchor semantics.** The integrity anchors commit objects,
+  not the relationships between them: `intent_hash` commits the
+  approved intent, `authority_hash` the consented Authority Set,
+  `proposal_hash`, where an authority proposal was submitted, the
+  authority the client asked for, and
   that the authority faithfully serves the intent is a derivation
   policy fact (a recommendation, auditable via `policy_version`), not
-  something either hash proves. And `authority_hash` commits the full
+  something any of the hashes proves. And `authority_hash` commits the full
   consented set, which a per-Resource-Server token, carrying a
   narrowed subset, does not contain: at such a Resource Server the
   anchor is an audit correlator, not an enforcement input, and the

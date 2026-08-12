@@ -1465,7 +1465,7 @@ ledger with the Mission Issuer and its enforcement plane.
 | Execution ledger | Authorization ledger |
 |---|---|
 | Step execution, retries, failure loops | Mission lifecycle state and expiry |
-| Memory, context windows, prompt state | The committed record: `intent_hash` and `authority_hash` |
+| Memory, context windows, prompt state | The committed record: `intent_hash`, `authority_hash`, and `proposal_hash` where recorded |
 | Sub-agent spawning mechanics | Child-Mission adjudication: lineage, subset, depth, cascade |
 | Tool connections and caches | Credential issuance and custody; counters and latches |
 | Scheduling and queue management | Per-action permits and their evidence |
