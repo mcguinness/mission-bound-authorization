@@ -83,6 +83,17 @@ this matrix and the `@spec` tags to the affected code and tests.
 
 ## Notes
 
+- SUPERSESSION (2026-08-12, issue #475 / D67, PRs #477/#479/#478): the core's
+  authority-proposal carriage changed. `proposed_authority`-inside-`mission_intent`
+  is retired; the proposal rides the standard top-level `authorization_details`
+  parameter (PAR); `intent_hash` input is now the task-only Intent (BREAKING for
+  any vector whose intent carried a proposal; the repo's four existing vectors
+  were unaffected and a fifth `proposal_hash` vector was added); new anchor
+  `proposal_hash` (`typ: mission-proposed-authority`, present iff submitted,
+  record + introspection, not the claim). The core rows above pin `c2053e5`,
+  which predates this; the `@spec` surfaces `mission#submission-via-par` /
+  `mission#authorization-derivation` now realize the new carriage in code
+  (PR #478). The core pin bump remains deliberate-deferred per D25/D41.
 - DTR (`-00`) initiation is folded into the deferred grant type rather than
   carried as `completion_mode=deferred` on the originating grant:
   node-oidc-provider offers no pre-issuance defer hook for built-in grants. A
