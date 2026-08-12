@@ -4,10 +4,11 @@
  *
  * The AS's single source of truth for which `authorization_details` types it
  * advertises/supports, each with its published JSON Schema. Both the AS
- * metadata endpoint (provider.ts) and the proposed_authority type check
- * (intent.ts) consult the SAME key set exported here, so "an entry whose type
- * is not an advertised type" (@spec mission#other-types) cannot drift out of
- * sync with what the metadata endpoint actually publishes.
+ * metadata endpoint (provider.ts) and the authority-proposal intake check
+ * (intent.ts, @spec mission#authority-proposal) consult the SAME key set
+ * exported here, so "an entry whose type is not an advertised type"
+ * (@spec mission#other-types) cannot drift out of sync with what the metadata
+ * endpoint actually publishes.
  */
 
 import type { JsonValue } from "@mission/core";
@@ -114,7 +115,7 @@ export const AUTHORIZATION_DETAILS_TYPES_METADATA: Readonly<Record<string, Autho
   [MISSION_RESOURCE_ACCESS_TYPE]: {
     version: "1",
     description:
-      "A Mission's Authority Set entry: one (resource, actions[]) grant plus its Common Constraints and delegation policy. Issuer-derived (@spec mission#authorization-derivation); a client MAY propose one via mission_intent.proposed_authority but MUST NOT submit it directly on an authorization request.",
+      "A Mission's Authority Set entry: one (resource, actions[]) grant plus its Common Constraints and delegation policy. A client MAY submit entries of this type on the standard authorization_details parameter alongside mission_intent, as a proposal subject to derivation (@spec mission#authority-proposal); granted entries on issued tokens are issuer-derived, never the submission carried through by right.",
     documentation_uri: "https://github.com/mcguinness/mission-bound-authorization",
     schema: MISSION_RESOURCE_ACCESS_SCHEMA,
     examples: [
@@ -129,7 +130,7 @@ export const AUTHORIZATION_DETAILS_TYPES_METADATA: Readonly<Record<string, Autho
 
 /**
  * The advertised/supported authorization_details type identifiers — the SAME
- * set the metadata endpoint publishes and the proposed_authority type check
+ * set the metadata endpoint publishes and the authority-proposal intake check
  * (intent.ts) consults. Single source of truth (@spec mission#other-types):
  * an entry of a type not in this set is refused, never silently carried.
  */

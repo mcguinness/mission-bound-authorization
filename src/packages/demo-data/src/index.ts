@@ -106,6 +106,14 @@ function reqEnum<T extends string>(
   return v as T;
 }
 
+function reqBoolean(file: string, obj: Record<string, unknown>, key: string, ctx: string): boolean {
+  const v = obj[key];
+  if (typeof v !== "boolean") {
+    throw new ConfigError(file, `${ctx}.${key} must be a boolean`);
+  }
+  return v;
+}
+
 function reqNumber(file: string, obj: Record<string, unknown>, key: string, ctx: string): number {
   const v = obj[key];
   if (typeof v !== "number" || !Number.isFinite(v)) {
@@ -664,6 +672,12 @@ interface ClientSeed {
   token_endpoint_auth_signing_alg: string;
   scope: string;
   authorization_details_types: string[];
+  /**
+   * @spec mission#downgrade-by-omission — the per-client Mission-governance
+   * registration flag: the AS rejects a bare authorization_details request (no
+   * mission_intent) from a client registered with `mission_governed: true`.
+   */
+  mission_governed?: boolean;
   key: { kid: string; alg: string };
 }
 
@@ -692,6 +706,9 @@ function loadClients(): [ClientSeed, ...ClientSeed[]] {
         "authorization_details_types",
         `clients[${i}]`,
       ),
+      ...(c.mission_governed !== undefined
+        ? { mission_governed: reqBoolean(file, c, "mission_governed", `clients[${i}]`) }
+        : {}),
       key: {
         kid: reqString(file, key, "kid", `clients[${i}].key`),
         alg: reqString(file, key, "alg", `clients[${i}].key`),
@@ -724,6 +741,7 @@ async function buildSeededClient(client: ClientSeed): Promise<SeededClient> {
       jwks: { keys: [pub] },
       scope: client.scope,
       authorization_details_types: client.authorization_details_types,
+      ...(client.mission_governed !== undefined ? { mission_governed: client.mission_governed } : {}),
     },
     privateJwk: priv as Record<string, unknown>,
   };
@@ -744,6 +762,20 @@ export async function seedChildClient(): Promise<SeededClient> {
   const seed = CLIENTS.find((c) => c.client_id === "subagent-invoice-extractor");
   if (!seed) {
     throw new ConfigError("clients.json", "child client 'subagent-invoice-extractor' not found");
+  }
+  return buildSeededClient(seed);
+}
+
+/**
+ * @spec mission#downgrade-by-omission — the demo client registered
+ * Mission-governed (`mission_governed: true`): the AS rejects its bare
+ * authorization_details requests (no mission_intent), so a governed client
+ * cannot strip the Intent from its submission to obtain ungoverned tokens.
+ */
+export async function seedGovernedClient(): Promise<SeededClient> {
+  const seed = CLIENTS.find((c) => c.client_id === "governed-agent");
+  if (!seed) {
+    throw new ConfigError("clients.json", "governed client 'governed-agent' not found");
   }
   return buildSeededClient(seed);
 }

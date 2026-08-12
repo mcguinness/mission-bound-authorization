@@ -8,6 +8,7 @@ import {
   DERIVATION_POLICY,
   seedAgentClient,
   seedChildClient,
+  seedGovernedClient,
   seedTrustedSources,
   type SeededTrustedSource,
   TOPOLOGY,
@@ -283,6 +284,12 @@ export interface BuiltAs {
    * child-bound RFC 7523 grant AS ITSELF.
    */
   childClientJwk: Record<string, unknown>;
+  /**
+   * @spec mission#downgrade-by-omission — the Mission-governed client's private
+   * JWK, so a test can push a bare authorization_details request as the
+   * governed client and observe the AS-side rejection.
+   */
+  governedClientJwk: Record<string, unknown>;
   canonicalResource: string;
   /**
    * @spec id-continuation-assertion — the continuation handle store, exposed so a
@@ -374,6 +381,9 @@ export async function buildAuthorizationServer(opts: {
 
   const agent = await seedAgentClient();
   const child = await seedChildClient();
+  // @spec mission#downgrade-by-omission — the Mission-governed demo client:
+  // registered so the AS-side anti-downgrade hook is exercisable end to end.
+  const governed = await seedGovernedClient();
   // @spec containment#protected-events — the trusted protected-event source
   // registry: config seeds kid+alg per source (D25), the ES256 keypair is
   // generated per boot. The registry resolves the report's payload `source`
@@ -499,7 +509,7 @@ export async function buildAuthorizationServer(opts: {
     deferrals,
     expansionDeferrals,
     statusListPublisher,
-    clients: [agent.metadata, child.metadata],
+    clients: [agent.metadata, child.metadata, governed.metadata],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
@@ -547,6 +557,7 @@ export async function buildAuthorizationServer(opts: {
     issuer: opts.issuer,
     agentClientJwk: agent.privateJwk,
     childClientJwk: child.privateJwk,
+    governedClientJwk: governed.privateJwk,
     canonicalResource: CANONICAL_RESOURCE,
     continuationStore,
     delegationFamilyStore,

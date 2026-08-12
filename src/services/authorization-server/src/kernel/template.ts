@@ -267,9 +267,14 @@ export function dispatchFromTemplate(
   // template ceiling refusing the intent.
   let final: AuthorityEntry[];
   try {
+    // The policy-derived set plays the PROPOSAL role for the second
+    // derivation (the third parameter, @spec mission#authority-proposal
+    // carriage: the Intent itself carries no authority members), narrowing it
+    // under the template ceiling.
     final = deriveAuthoritySet(
-      { ...input.intent, proposed_authority: derived },
+      input.intent,
       { policy_version: template.template_version, ceiling: template.ceiling },
+      derived,
     );
   } catch (e) {
     if (e instanceof IntentError) {

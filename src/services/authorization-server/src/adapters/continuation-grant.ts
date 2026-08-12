@@ -38,10 +38,11 @@ import { ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain
 import { isSubsetSet } from "../kernel/derive.js";
 import { ExpansionDeferralError } from "../kernel/deferred.js";
 import { ChildDelegationError, createChildMission } from "../kernel/child-delegation.js";
+import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
 import type { AuthorityEntry, MissionIntent, MissionRecord } from "../kernel/types.js";
 import { mintChildGrant } from "./child-grant.js";
-import { childErrorCode, newResourceServer, resourceServerInfoFor } from "./provider.js";
+import { childErrorCode, InvalidAuthorizationDetails, newResourceServer, resourceServerInfoFor } from "./provider.js";
 import type { AdapterOptions } from "./provider.js";
 
 /** @spec RFC 8693 §2.1 — the token-exchange grant type. */
@@ -822,6 +823,38 @@ async function mintMissionAccessToken(
  * authorization grant is returned, redeemable only by the named child actor AS
  * ITSELF (handleChildJwtBearerGrant), so conveying it through the parent is safe.
  */
+/**
+ * @spec mission#authority-proposal — parse and validate the OPTIONAL authority
+ * proposal riding the standard `authorization_details` parameter of a
+ * possession-fixed delegation exchange (child creation / expansion), the same
+ * carriage the core fixes for PAR. Returns undefined when absent. The D60
+ * intake rules apply (advertised type + published schema ->
+ * invalid_authorization_details; resource containment / parse failures ->
+ * invalid_request), mapped onto the exchange's error surface.
+ */
+function readProposalParam(
+  opts: AdapterOptions,
+  params: Record<string, unknown>,
+  intent: MissionIntent,
+): AuthorityEntry[] | undefined {
+  const raw = params.authorization_details;
+  if (raw === undefined) return undefined;
+  if (typeof raw !== "string" || !raw) {
+    throw new errors.InvalidRequest("authorization_details must be a JSON array");
+  }
+  try {
+    const proposal = opts.kernel.validateProposal(raw, intent.resources);
+    return proposal.length ? proposal : undefined;
+  } catch (e) {
+    if (e instanceof IntentError) {
+      throw e.code === "invalid_request"
+        ? new errors.InvalidRequest(e.message)
+        : new InvalidAuthorizationDetails(e.message);
+    }
+    throw e;
+  }
+}
+
 export async function handleChildCreationExchange(
   opts: AdapterOptions,
   _provider: Provider,
@@ -857,6 +890,10 @@ export async function handleChildCreationExchange(
   } catch (e) {
     throw new errors.InvalidRequest(e instanceof Error ? e.message : "invalid mission_intent");
   }
+  // @spec mission#authority-proposal — the child's concrete authority proposal
+  // rides the standard authorization_details parameter of this exchange (the
+  // child Intent carries no authority members).
+  const proposedAuthority = readProposalParam(opts, params, intent);
   const childActorRaw = params.child_actor;
   if (typeof childActorRaw !== "string" || !childActorRaw) {
     throw new errors.InvalidRequest("child_actor required");
@@ -877,7 +914,12 @@ export async function handleChildCreationExchange(
   // does not strip the reason).
   let child: MissionRecord;
   try {
-    ({ child } = createChildMission(opts.kernel, { parentId: parent.id, intent, childActor }));
+    ({ child } = createChildMission(opts.kernel, {
+      parentId: parent.id,
+      intent,
+      ...(proposedAuthority ? { proposedAuthority } : {}),
+      childActor,
+    }));
   } catch (e) {
     if (e instanceof ChildDelegationError) {
       const code = childErrorCode(e.reason);
@@ -958,6 +1000,10 @@ export async function handleExpansionExchange(
   } catch (e) {
     throw new errors.InvalidRequest(e instanceof Error ? e.message : "invalid mission_intent");
   }
+  // @spec mission#authority-proposal — the widened request's concrete authority
+  // proposal rides the standard authorization_details parameter of this
+  // exchange (the widened Intent carries no authority members).
+  const proposedAuthority = readProposalParam(opts, params, intent);
 
   // The predecessor MUST be active at request time.
   const active = opts.kernel.applyExpiry(resolved.record);
@@ -967,7 +1013,7 @@ export async function handleExpansionExchange(
   }
 
   // Step 5: subset-derivation vs fresh-approval-required.
-  const requested = opts.kernel.derive(intent);
+  const requested = opts.kernel.derive(intent, proposedAuthority);
   const effective = opts.kernel.effectiveAuthoritySet(active);
   if (isSubsetSet(requested, effective)) {
     // Step 6 (synchronous): a pure subset is an ordinary confined derivation on the
@@ -983,7 +1029,13 @@ export async function handleExpansionExchange(
   }
   let pending: ReturnType<typeof store.open>;
   try {
-    pending = store.open({ predecessorId: active.id, intent, clientId: acting.sub, jkt: resolved.jkt });
+    pending = store.open({
+      predecessorId: active.id,
+      intent,
+      ...(proposedAuthority ? { proposedAuthority } : {}),
+      clientId: acting.sub,
+      jkt: resolved.jkt,
+    });
   } catch (e) {
     if (e instanceof ExpansionDeferralError) {
       txError(ctx, 400, "invalid_grant", e.message);
