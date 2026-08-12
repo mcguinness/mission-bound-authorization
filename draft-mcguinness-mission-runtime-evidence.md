@@ -508,7 +508,7 @@ only facts the PEP verified:
   when `parameter_digest` is absent, so the record meets the runtime
   profile's record minimum
   ({{I-D.draft-mcguinness-mission-runtime}}). Distinct from a granted
-  permit's `request_digest` parameter binding
+  permit's `parameter_digest` condition
   ({{decision-evidence-object}}): a Refusal Record has no PDP decision
   and no permit.
 
