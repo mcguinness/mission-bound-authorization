@@ -46,21 +46,23 @@ async function main(): Promise<void> {
 
   // Real issuance: PAR -> authorize -> approve -> token, DPoP-bound. The proposal
   // is untrusted; the AS derives + bounds authority (read + under-cap execute for
-  // acme). The resulting access token is what crosses IN the MCP `_meta`.
+  // acme). The resulting access token is what crosses IN the MCP `_meta`. The
+  // authority proposal rides the standard RFC 9396 authorization_details
+  // parameter, pushed through PAR alongside mission_intent.
   const missionIntent = JSON.stringify({
     goal,
     resources: [CANONICAL_RESOURCE],
     expires_at: "2027-01-01T00:00:00Z",
-    proposed_authority: [
-      {
-        type: "mission_resource_access",
-        resource: CANONICAL_RESOURCE,
-        actions: ["payments:invoice.read", "payments:invoice.list", "payments:payment.execute"],
-        constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme", "globex"] },
-      },
-    ],
   });
-  const issued = await issueMissionToken(as.asUrl, as.agentClientJwk, { missionIntent, scope: "payments" });
+  const authorizationDetails = JSON.stringify([
+    {
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: ["payments:invoice.read", "payments:invoice.list", "payments:payment.execute"],
+      constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme", "globex"] },
+    },
+  ]);
+  const issued = await issueMissionToken(as.asUrl, as.agentClientJwk, { missionIntent, authorizationDetails, scope: "payments" });
   const missionClaim = decodeClaims(issued.accessToken).mission as { id: string; authority_hash: string };
   const missionId = missionClaim.id;
 

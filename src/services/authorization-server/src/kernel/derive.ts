@@ -1,9 +1,11 @@
 /**
  * @spec mission#authorization-derivation
  * @spec mission#subset
- * Mechanical derivation of the Authority Set from the Intent under the
- * derivation policy ceiling. The Intent is untrusted: nothing it proposes
- * can widen past the ceiling (the compromised-shaper property).
+ * Mechanical derivation of the Authority Set from the Intent (and the
+ * authority proposal, where one was submitted on the standard
+ * `authorization_details` parameter, @spec mission#authority-proposal) under
+ * the derivation policy ceiling. Intent and proposal are untrusted: nothing
+ * they propose can widen past the ceiling (the compromised-shaper property).
  */
 
 import { compareAmounts, isValidAmount } from "@mission/core";
@@ -61,9 +63,22 @@ export interface DerivationPolicy {
   ceiling: readonly AuthorityEntry[];
 }
 
-export function deriveAuthoritySet(intent: MissionIntent, policy: DerivationPolicy): AuthorityEntry[] {
-  const proposals = intent.proposed_authority?.length
-    ? intent.proposed_authority
+/**
+ * @spec mission#authority-proposal — `proposal` is the client-submitted
+ * `authorization_details` array (the standard request parameter pushed
+ * alongside `mission_intent`), already validated at intake
+ * (validateAuthorityProposal). Narrowing mode (RECOMMENDED) applies when a
+ * proposal is present; template mode (no proposal) derives from task + policy
+ * alone. Semantics are unchanged from the retired Intent-carried member: the
+ * proposal is untrusted and can never widen past the policy ceiling.
+ */
+export function deriveAuthoritySet(
+  intent: MissionIntent,
+  policy: DerivationPolicy,
+  proposal?: readonly AuthorityEntry[],
+): AuthorityEntry[] {
+  const proposals = proposal?.length
+    ? proposal
     : // Template mode: no concrete proposal derives the full policy ceiling
       // narrowed to the Intent's resources.
       policy.ceiling.filter((c) => intent.resources.includes(c.resource));

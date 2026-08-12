@@ -50,11 +50,11 @@ const approve = (n: number): MissionRecord =>
         goal: "Post journal entries to LedgerCloud",
         resources: [RESOURCE],
         expires_at: "2027-01-01T00:00:00Z",
-        proposed_authority: [
-          { type: "mission_resource_access", resource: RESOURCE, actions: ["ledger:journal.write"] },
-        ],
       }),
     ),
+    proposedAuthority: [
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["ledger:journal.write"] },
+    ],
     subject: { iss: AS_ISS, sub: "alice" }, // the GLOBAL subject
     approver: { iss: AS_ISS, sub: "bob" },
     clientId: "ap-agent",

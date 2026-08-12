@@ -28,7 +28,7 @@
 
 import { randomBytes } from "node:crypto";
 import { type ActObject, ActorChainError, extendChain, validateActChain } from "@mission/actor-chain";
-import { authorityHash, canonicalize, intentHash, type JsonValue } from "@mission/core";
+import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash } from "@mission/core";
 import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
 import { isSubsetEntry, isSubsetSet } from "./derive.js";
 import type { MissionKernel } from "./kernel.js";
@@ -102,6 +102,13 @@ export interface CreateChildInput {
   parentId: string;
   /** The proposed Child Mission Intent. */
   intent: MissionIntent;
+  /**
+   * @spec mission#authority-proposal — the authority proposal submitted on the
+   * standard `authorization_details` parameter of the child-creation exchange
+   * (already validated at intake). Recorded on the child and committed by
+   * `proposal_hash` iff present; absent means template-mode derivation.
+   */
+  proposedAuthority?: AuthorityEntry[];
   /** The child actor that holds/executes under the Child Mission. */
   childActor: ChildActor;
   /** The recorded cascade mode. Defaults to (and today only supports) `immediate`. */
@@ -245,7 +252,8 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // than silent clamping. Reusing the core isSubsetEntry: a child that OMITS a
   // constraint the parent narrowed (max_amount / vendors) is refused, so a child
   // MUST restate constraints at or below the parent's.
-  const childAuthority = kernel.derive(input.intent);
+  const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
+  const childAuthority = kernel.derive(input.intent, proposal);
 
   // The prospective child identity, computed BEFORE the fan-out gates so a deny
   // Child Evidence record carries a real `child` member (REQUIRED unconditionally,
@@ -427,8 +435,10 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     issuer: parent.issuer,
     state: "active",
     intent: input.intent,
+    ...(proposal ? { proposed_authority: proposal } : {}),
     authority_set: childAuthority,
     intent_hash: intentHash(parent.issuer, input.intent as never),
+    ...(proposal ? { proposal_hash: proposalHash(parent.issuer, proposal as never) } : {}),
     // @spec child-delegation#attenuation — authority_hash over the CHILD set.
     authority_hash: childAuthorityHash,
     // Subject and human accountability are inherited from the Parent Mission

@@ -24,8 +24,9 @@ import {
 import Provider, { errors, type Configuration, type KoaContextWithOIDC, type ResourceServer } from "oidc-provider";
 
 // @types/oidc-provider (9.5) predates InvalidAuthorizationDetails, present at
-// runtime in 9.10 (spec traceability: SPEC_VERSIONS O-2 note). Typed alias.
-const InvalidAuthorizationDetails = (errors as unknown as {
+// runtime in 9.10 (spec traceability: SPEC_VERSIONS O-2 note). Typed alias
+// (exported for the token-exchange proposal intake in continuation-grant.ts).
+export const InvalidAuthorizationDetails = (errors as unknown as {
   InvalidAuthorizationDetails: new (message?: string) => Error;
 }).InvalidAuthorizationDetails;
 import {
@@ -40,7 +41,10 @@ import {
   childMissionClaim,
 } from "../kernel/child-delegation.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
-import { authorizationDetailsTypesMetadata } from "../kernel/authorization-details-metadata.js";
+import {
+  authorizationDetailsTypesMetadata,
+  validateMissionResourceAccessSchema,
+} from "../kernel/authorization-details-metadata.js";
 import { UnknownProtectedEventError } from "../kernel/containment.js";
 import { isSubsetSet } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
@@ -307,6 +311,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
     issueRefreshToken: async (_ctx, client) => client.grantTypeAllowed("refresh_token"),
     pkce: { required: () => true },
     interactions: { url: (_ctx, interaction) => `/interaction/${interaction.uid}` },
+    // @spec mission#downgrade-by-omission — the per-client Mission-governance
+    // flag (a deployment MAY register a client as Mission-governed). Declared so
+    // oidc-provider retains it on the client registration; read by the RAR
+    // validate hook below to reject a governed client's bare
+    // authorization_details request.
+    extraClientMetadata: { properties: ["mission_governed"] },
     async findAccount(_ctx, id) {
       const user = USERS.find((u) => u.sub === id);
       return {
@@ -335,13 +345,55 @@ export function buildProvider(opts: AdapterOptions): Provider {
           rarThroughContainment(ctx.oidc.grant) as never,
         types: {
           mission_resource_access: {
-            validate: () => {
-              // Raw client submission of the issuer-derived type is refused;
-              // authority is proposed only inside the Intent.
-              // @spec mission#submission-via-par
-              throw new InvalidAuthorizationDetails(
-                "mission_resource_access is issuer-derived; propose authority via mission_intent",
-              );
+            // @spec mission#authority-proposal — a client MAY submit entries of
+            // this advertised type on the standard authorization_details
+            // parameter alongside mission_intent, as a PROPOSAL subject to
+            // derivation. The submission is never authority: ISSUED details stay
+            // issuer-derived (the rarFor* projections above read grant.rar, the
+            // Mission's derived Authority Set, never this input). An entry of an
+            // unadvertised type is already refused by oidc-provider's own
+            // checkRar (no `types` config entry -> invalid_authorization_details),
+            // which is the D60 advertised-type rule.
+            // @types/oidc-provider (9.5) has no richAuthorizationRequests
+            // types; parameters typed to the runtime 9.10 contract
+            // (checkRar: validate(ctx, detail, client)).
+            validate: (ctx: unknown, detail: unknown, client: unknown) => {
+              const oidc = (ctx as unknown as {
+                oidc: { params: Record<string, unknown>; route?: string };
+              }).oidc;
+              // @spec mission#downgrade-by-omission — the AS-side anti-downgrade
+              // hook: a client registered Mission-governed (mission_governed on
+              // its registration) MUST NOT obtain ungoverned tokens by stripping
+              // the Intent, so its bare authorization_details AUTHORIZATION
+              // request (no mission_intent) is rejected. The spec deliberately
+              // pins no error code for this rejection (mirroring the AAuth
+              // missionless-request rule, #459); this implementation chooses
+              // invalid_request. Scoped to the authorization-request routes:
+              // this same hook also runs at the token endpoint, where
+              // authorization_details is an RFC 9396 subset request under an
+              // already-Mission-bound grant, not a bare request.
+              const governed = (client as unknown as { mission_governed?: unknown })
+                .mission_governed === true;
+              const authorizationRoute =
+                oidc.route === "pushed_authorization_request" ||
+                oidc.route === "authorization" ||
+                oidc.route === "resume";
+              if (governed && authorizationRoute && oidc.params.mission_intent === undefined) {
+                throw new errors.InvalidRequest(
+                  "client is Mission-governed: authorization_details is accepted only as a proposal alongside mission_intent",
+                );
+              }
+              // @spec mission#authority-proposal (the D60 intake rule, re-pointed
+              // at the standard parameter): each submitted entry MUST validate
+              // against the type's published JSON Schema; a failing entry is
+              // refused invalid_authorization_details, never silently kept. The
+              // resource-containment cross-check against the Intent's resources
+              // runs in the mission_intent extraParams handler below (it needs
+              // the parsed Intent).
+              const schemaError = validateMissionResourceAccessSchema(detail);
+              if (schemaError) {
+                throw new InvalidAuthorizationDetails(schemaError);
+              }
             },
           },
         },
@@ -357,15 +409,27 @@ export function buildProvider(opts: AdapterOptions): Provider {
       },
     },
     extraParams: {
-      // @spec mission#submission-via-par — PAR-only carriage + exclusions.
+      // @spec mission#submission-via-par — PAR-only carriage. Concrete authority
+      // is proposed via the standard authorization_details parameter pushed
+      // alongside mission_intent (@spec mission#authority-proposal); the Intent
+      // itself carries no authority members (an Intent with the retired
+      // proposed_authority member fails the closed-top-level rule in
+      // validateIntent).
       async mission_intent(ctx, value) {
         if (value === undefined) return;
         const params = (ctx as { oidc: { params: Record<string, unknown> } }).oidc.params;
-        if (params.authorization_details !== undefined) {
-          throw new errors.InvalidRequest("mission_intent and authorization_details are mutually exclusive");
-        }
         try {
-          kernel.validateIntent(String(value));
+          const intent = kernel.validateIntent(String(value));
+          // @spec mission#authority-proposal — the intake cross-check that needs
+          // the parsed Intent: each proposed entry's resource MUST be among the
+          // Intent's resources (invalid_request), the array strict-parses
+          // (duplicate member names rejected before canonicalization), and each
+          // entry is of an advertised type + schema-valid (the per-entry RAR
+          // validate hook above also enforces the latter two).
+          const proposalRaw = params.authorization_details;
+          if (typeof proposalRaw === "string") {
+            kernel.validateProposal(proposalRaw, intent.resources);
+          }
         } catch (e) {
           if (e instanceof IntentError) {
             throw e.code === "invalid_request"
@@ -528,7 +592,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
   provider.registerGrantType(
     MISSION_DISPATCH_GRANT_TYPE,
     (ctx) => handleMissionDispatchGrant(provider, opts, ctx),
-    new Set(["template_id", "mission_intent", "dispatch_event_id"]),
+    // `authorization_details` carries the dispatcher's authority proposal
+    // (@spec mission#authority-proposal), the same standard carriage as PAR
+    // and the child/expansion exchanges; it MUST be declared here or
+    // stripGrantIrrelevantParams removes it.
+    new Set(["template_id", "mission_intent", "dispatch_event_id", "authorization_details"]),
   );
 
   // @spec id-continuation-assertion — the RFC 8693 token-exchange grant: an ICA
@@ -940,12 +1008,20 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     const interactionMatch = ctx.path.match(/^\/interaction\/([^/]+)$/);
     if (interactionMatch && ctx.method === "GET") {
       const details = await provider.interactionDetails(ctx.req, ctx.res);
-      const raw = (details.params as Record<string, unknown>).mission_intent;
-      const intent = kernel.validateIntent(String(raw));
-      const authority = kernel.derive(intent);
+      const params = details.params as Record<string, unknown>;
+      const intent = kernel.validateIntent(String(params.mission_intent));
+      // @spec mission#authority-proposal — the proposal rides the pushed
+      // authorization_details parameter; the rendering distinguishes the
+      // submitted proposal (untrusted) from the derived Authority Set (what
+      // approval grants).
+      const proposal =
+        typeof params.authorization_details === "string"
+          ? kernel.validateProposal(params.authorization_details, intent.resources)
+          : undefined;
+      const authority = kernel.derive(intent, proposal);
       ctx.status = 200;
       ctx.set("content-type", "text/html; charset=utf-8");
-      ctx.body = renderApprovalPage(interactionMatch[1] as string, intent, authority);
+      ctx.body = renderApprovalPage(interactionMatch[1] as string, intent, authority, proposal);
       return;
     }
     const decideMatch = ctx.path.match(/^\/interaction\/([^/]+)\/decide$/);
@@ -1731,6 +1807,31 @@ async function handleMissionDispatchGrant(
     return;
   }
 
+  // @spec mission#authority-proposal — the dispatcher's authority proposal
+  // rides the standard authorization_details parameter of this grant (the
+  // instance Intent carries no authority members). Optional: absent means
+  // template-mode derivation under the double intersection.
+  let proposedAuthority: AuthorityEntry[] | undefined;
+  const proposalRaw = params.authorization_details;
+  if (proposalRaw !== undefined) {
+    if (typeof proposalRaw !== "string" || !proposalRaw) {
+      ctx.status = 400;
+      ctx.body = { error: "invalid_request", error_description: "authorization_details must be a JSON array" };
+      return;
+    }
+    try {
+      const proposal = kernel.validateProposal(proposalRaw, intent.resources);
+      proposedAuthority = proposal.length ? proposal : undefined;
+    } catch (e) {
+      if (e instanceof IntentError) {
+        ctx.status = 400;
+        ctx.body = { error: e.code, error_description: e.message };
+        return;
+      }
+      throw e;
+    }
+  }
+
   // Core-consistency: the Dispatcher does NOT name the Subject; the Issuer
   // establishes it. The template carries the consenting human (approver); the
   // subject is established from it (decide() defaults subject to approver, and
@@ -1743,6 +1844,7 @@ async function handleMissionDispatchGrant(
       dispatcher: client.clientId,
       recipient,
       intent,
+      ...(proposedAuthority ? { proposedAuthority } : {}),
       subject: { iss: template.issuer, sub: template.approver.sub },
       policyVersion: DERIVATION_POLICY.policy_version,
       dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,
@@ -1843,6 +1945,18 @@ async function decide(
   const details = await provider.interactionDetails(ctx.req, ctx.res);
   const params = details.params as Record<string, unknown>;
   const intent = opts.kernel.validateIntent(String(params.mission_intent));
+  // @spec mission#authority-proposal, mission#integrity-anchors (TOCTOU) — the
+  // task and the proposal are re-read from the interaction's pushed parameters
+  // (immutable for the life of the interaction uid) and the Authority Set is
+  // re-derived HERE, at the decision: kernel.approve() then computes all three
+  // commitments (intent_hash, proposal_hash, authority_hash) together over
+  // exactly this context, so a change to any of task, proposal, or derived set
+  // between rendering and decision is a NEW interaction context and recomputes
+  // every anchor.
+  const proposedAuthority =
+    typeof params.authorization_details === "string"
+      ? opts.kernel.validateProposal(params.authorization_details, intent.resources)
+      : undefined;
   const approver = String(body.approver ?? "");
   const subject = String(body.subject ?? approver);
 
@@ -1854,7 +1968,7 @@ async function decide(
     return;
   }
 
-  const authority = opts.kernel.derive(intent);
+  const authority = opts.kernel.derive(intent, proposedAuthority);
   // Governance (D37): write-bearing missions require subject != approver
   // with the approver role; read-only may self-approve.
   const writeBearing = authority.some((e) => e.actions.some((a) => WRITE_ACTIONS.has(a)));
@@ -1866,6 +1980,7 @@ async function decide(
 
   const record = opts.kernel.approve({
     intent: intent as MissionIntent,
+    ...(proposedAuthority ? { proposedAuthority } : {}),
     subject: { iss: opts.issuer, sub: subject },
     approver: { iss: opts.issuer, sub: approver },
     clientId: String(params.client_id),
@@ -1892,10 +2007,17 @@ async function decide(
   });
 }
 
-function renderApprovalPage(uid: string, intent: unknown, authority: unknown): string {
+function renderApprovalPage(uid: string, intent: unknown, authority: unknown, proposal?: unknown): string {
+  // @spec mission#approval-event — the rendering distinguishes the submitted
+  // proposal (untrusted client input) from the derived Authority Set (what
+  // approval grants); the proposal section appears only when one was submitted.
+  const proposalSection = proposal
+    ? `<h2>Proposed authority (submitted, untrusted)</h2><pre>${escapeHtml(JSON.stringify(proposal, null, 2))}</pre>`
+    : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
-<h2>Intent (proposal, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
+<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
+${proposalSection}
 <h2>Derived authority (what approval grants)</h2><pre>${escapeHtml(JSON.stringify(authority, null, 2))}</pre>
 <form method="post" action="/interaction/${uid}/decide" enctype="application/json">
 <button name="decision" value="approve">Approve</button>

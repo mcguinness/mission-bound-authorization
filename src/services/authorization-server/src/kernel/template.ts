@@ -22,7 +22,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { authorityHash, computeAnchor, intentHash, type JsonValue, MISSION_TEMPLATE_TYP } from "@mission/core";
+import { authorityHash, computeAnchor, intentHash, type JsonValue, MISSION_TEMPLATE_TYP, proposalHash } from "@mission/core";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
@@ -157,6 +157,15 @@ export interface DispatchInput {
   recipient: string;
   /** The instance's OWN Mission Intent (untrusted, derived under policy first). */
   intent: MissionIntent;
+  /**
+   * @spec mission#authority-proposal — the dispatcher's authority proposal,
+   * submitted on the standard `authorization_details` parameter of the
+   * dispatch grant (already validated at intake). Bounds the FIRST derivation
+   * (narrowing mode under the policy ceiling); the template ceiling then
+   * intersects as before. Recorded on the instance and committed by
+   * `proposal_hash` iff present; absent means template-mode derivation.
+   */
+  proposedAuthority?: AuthorityEntry[];
   /** The subject the instance acts for. */
   subject: { iss: string; sub: string };
   /**
@@ -257,19 +266,27 @@ export function dispatchFromTemplate(
   }
 
   // c. Double intersection. FIRST: derive under the kernel's derivation policy
-  // (the untrusted intent). An intent empty under the POLICY throws IntentError
-  // here and is deliberately NOT caught — it must surface exactly as it would
-  // from kernel.approve, not be mislabeled out_of_template_ceiling.
-  const derived = kernel.derive(input.intent);
+  // (the untrusted intent, bounded by the dispatcher's proposal where one was
+  // submitted, @spec mission#authority-proposal). An intent empty under the
+  // POLICY throws IntentError here and is deliberately NOT caught — it must
+  // surface exactly as it would from kernel.approve, not be mislabeled
+  // out_of_template_ceiling.
+  const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
+  const derived = kernel.derive(input.intent, proposal);
   // SECOND: re-derive that set under a synthetic policy whose ceiling is the
   // template's. Reusing deriveAuthoritySet gives a result that is a subset of
   // both the derived set and the template ceiling. An empty result here IS the
   // template ceiling refusing the intent.
   let final: AuthorityEntry[];
   try {
+    // The policy-derived set plays the PROPOSAL role for the second
+    // derivation (the third parameter, @spec mission#authority-proposal
+    // carriage: the Intent itself carries no authority members), narrowing it
+    // under the template ceiling.
     final = deriveAuthoritySet(
-      { ...input.intent, proposed_authority: derived },
+      input.intent,
       { policy_version: template.template_version, ceiling: template.ceiling },
+      derived,
     );
   } catch (e) {
     if (e instanceof IntentError) {
@@ -342,8 +359,10 @@ export function dispatchFromTemplate(
     issuer: template.issuer,
     state: "active",
     intent: input.intent,
+    ...(proposal ? { proposed_authority: proposal } : {}),
     authority_set: final,
     intent_hash: intentHash(template.issuer, input.intent as never),
+    ...(proposal ? { proposal_hash: proposalHash(template.issuer, proposal as never) } : {}),
     authority_hash: authorityHash(template.issuer, final as never),
     subject: input.subject,
     approver: template.approver,

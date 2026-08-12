@@ -148,7 +148,8 @@ export interface EnforceResult {
    * graduated-challenge remediation (composes with, does not replace,
    * access_request/access_challenge above and the AuthZEN ARAP requestable
    * denial): the actionable authorization_details the client could propose
-   * next via mission_intent.proposed_authority.
+   * next on the standard authorization_details request parameter
+   * (@spec mission#authority-proposal).
    */
   insufficient_authorization?: InsufficientAuthorization;
 }

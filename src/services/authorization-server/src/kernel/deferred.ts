@@ -296,6 +296,14 @@ export class ExpansionDeferralStore {
   open(input: {
     predecessorId: string;
     intent: MissionIntent;
+    /**
+     * @spec mission#authority-proposal — the authority proposal submitted on
+     * the standard `authorization_details` parameter of the widening exchange
+     * (already validated at intake). Part of the deferral's idempotency key: a
+     * changed proposal is a changed approval context and opens a NEW deferral,
+     * so all three commitments recompute together at successor creation.
+     */
+    proposedAuthority?: AuthorityEntry[];
     clientId: string;
     jkt: string;
   }): DeferralPending {
@@ -304,7 +312,13 @@ export class ExpansionDeferralStore {
       throw new ExpansionDeferralError("predecessor_not_active", "predecessor mission is not active");
     }
     const snapshotCv = predecessor.containment?.containment_version ?? 0;
-    const key = JSON.stringify({ p: input.predecessorId, i: input.intent, c: input.clientId });
+    const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
+    const key = JSON.stringify({
+      p: input.predecessorId,
+      i: input.intent,
+      c: input.clientId,
+      ...(proposal ? { pr: proposal } : {}),
+    });
     const existing = this.db
       .prepare(
         "SELECT deferral_code FROM expansion_deferrals WHERE state = 'authorization_pending' AND intent_json = ?",
@@ -438,11 +452,16 @@ export class ExpansionDeferralStore {
       return { error: "access_denied" };
     }
 
-    const intent = JSON.parse(row.intent_json as string).i as MissionIntent;
+    const recorded = JSON.parse(row.intent_json as string) as {
+      i: MissionIntent;
+      pr?: AuthorityEntry[];
+    };
+    const intent = recorded.i;
     const approver = JSON.parse(row.approver_json as string) as { iss: string; sub: string };
     const { successor } = createExpansion(this.kernel, {
       predecessorId: row.predecessor_id as string,
       intent,
+      ...(recorded.pr ? { proposedAuthority: recorded.pr } : {}),
       approver,
       approvalEventId: row.approval_event_id as string,
       approvedUntil: row.approved_until as string,

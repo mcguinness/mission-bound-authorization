@@ -144,8 +144,8 @@ const authority = (actions: string[]) => [
   },
 ];
 
-const intentJson = (goal: string, actions: string[]): string =>
-  JSON.stringify({ goal, resources: [RESOURCE], expires_at: FAR_EXP, proposed_authority: authority(actions) });
+const intentJson = (goal: string, _actions: string[]): string =>
+  JSON.stringify({ goal, resources: [RESOURCE], expires_at: FAR_EXP });
 
 /**
  * Full PAR -> interactive approval -> code -> token dance yielding an ACTIVE
@@ -170,6 +170,7 @@ async function issuePredecessor(actions: string[]): Promise<{ missionId: string;
       code_challenge: challenge,
       code_challenge_method: "S256",
       mission_intent: intentJson("Pay Acme invoices", actions),
+      authorization_details: JSON.stringify(authority(actions)),
       client_assertion: await clientAssertion(),
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
     }).toString(),
@@ -219,6 +220,7 @@ async function expandViaExchange(subjectToken: string, goal: string, actions: st
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     mission_intent: intentJson(goal, actions),
+    authorization_details: JSON.stringify(authority(actions)),
   });
 }
 
@@ -417,6 +419,7 @@ describe("expansion wire: possession (@spec expansion, #448)", () => {
       subject_token_type: REFRESH_TOKEN_TOKEN_TYPE,
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       mission_intent: intentJson("Widen", ["payments:invoice.read"]),
+      authorization_details: JSON.stringify(authority(["payments:invoice.read"])),
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
@@ -433,6 +436,7 @@ describe("expansion wire: possession (@spec expansion, #448)", () => {
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       mission_intent: intentJson("Read invoices only", ["payments:invoice.read"]),
+      authorization_details: JSON.stringify(authority(["payments:invoice.read"])),
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);

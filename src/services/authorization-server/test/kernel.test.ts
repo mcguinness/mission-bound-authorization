@@ -10,6 +10,7 @@ import {
   LifecycleConflictError,
   MissionKernel,
   type MissionRecord,
+  validateAuthorityProposal,
   validateMissionIntent,
 } from "../src/index.js";
 
@@ -62,25 +63,23 @@ describe("intent validation (@spec mission#submission-via-par)", () => {
   });
   it("rejects proposed_authority resources outside the Intent's resources", () => {
     expect(() =>
-      validateMissionIntent(
-        intent({
-          proposed_authority: [
-            { type: "mission_resource_access", resource: "https://other.example", actions: ["x"] },
-          ],
-        }),
+      validateAuthorityProposal(
+        JSON.stringify([
+          { type: "mission_resource_access", resource: "https://other.example", actions: ["x"] },
+        ]),
+        [RESOURCE],
       ),
     ).toThrow(/not among Intent resources/);
   });
 
   // @spec mission#other-types, I-D.draft-zehavi-oauth-rar-metadata: a
-  // proposed_authority entry whose type is not one this AS advertises via the
+  // proposal entry whose type is not one this AS advertises via the
   // authorization_details_types_metadata_endpoint MUST be refused.
   it("refuses a proposed_authority entry of an unadvertised type with invalid_authorization_details", () => {
     try {
-      validateMissionIntent(
-        intent({
-          proposed_authority: [{ type: "payment_initiation", resource: RESOURCE, actions: ["x"] }],
-        }),
+      validateAuthorityProposal(
+        JSON.stringify([{ type: "payment_initiation", resource: RESOURCE, actions: ["x"] }]),
+        [RESOURCE],
       );
       expect.unreachable();
     } catch (e) {
@@ -94,18 +93,16 @@ describe("intent validation (@spec mission#submission-via-par)", () => {
   // same-type entry that fails its published JSON Schema MUST be refused too
   // (never silently carried into derivation with a malformed constraint).
   it("refuses a same-type proposed_authority entry that fails its published schema", () => {
-    const badVendors = intent({
-      proposed_authority: [
-        {
-          type: "mission_resource_access",
-          resource: RESOURCE,
-          actions: ["payments:invoice.read"],
-          constraints: { vendors: "acme" },
-        },
-      ],
-    });
+    const badVendors = JSON.stringify([
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { vendors: "acme" },
+      },
+    ]);
     try {
-      validateMissionIntent(badVendors);
+      validateAuthorityProposal(badVendors, [RESOURCE]);
       expect.unreachable();
     } catch (e) {
       expect(e).toBeInstanceOf(IntentError);
@@ -113,56 +110,57 @@ describe("intent validation (@spec mission#submission-via-par)", () => {
       expect((e as IntentError).message).toMatch(/fails its published schema/);
     }
 
-    const badMaxAmount = intent({
-      proposed_authority: [
-        {
-          type: "mission_resource_access",
-          resource: RESOURCE,
-          actions: ["payments:invoice.read"],
-          constraints: { max_amount: 100 },
-        },
-      ],
-    });
-    expect(() => validateMissionIntent(badMaxAmount)).toThrow(/fails its published schema/);
+    const badMaxAmount = JSON.stringify([
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { max_amount: 100 },
+      },
+    ]);
+    expect(() => validateAuthorityProposal(badMaxAmount, [RESOURCE])).toThrow(
+      /fails its published schema/,
+    );
   });
 
   // Regression: a schema-conformant proposal (the shape the published schema
   // and this check both accept) still validates and derives unchanged.
   it("still accepts a schema-conformant proposed_authority entry", () => {
-    const ok = intent({
-      proposed_authority: [
+    const proposal = validateAuthorityProposal(
+      JSON.stringify([
         {
           type: "mission_resource_access",
           resource: RESOURCE,
           actions: ["payments:invoice.read"],
           constraints: { max_amount: { amount: "10.00", currency: "USD" }, vendors: ["acme"] },
         },
-      ],
-    });
-    const validated = validateMissionIntent(ok);
-    const derived = deriveAuthoritySet(validated, DERIVATION_POLICY as never);
+      ]),
+      [RESOURCE],
+    );
+    const validated = validateMissionIntent(intent());
+    const derived = deriveAuthoritySet(validated, DERIVATION_POLICY as never, proposal);
     expect(derived[0]?.constraints?.vendors).toEqual(["acme"]);
   });
 });
 
 describe("derivation (@spec mission#authorization-derivation)", () => {
   it("compromised shaper: an over-broad proposal never widens past the ceiling", () => {
-    const broad = validateMissionIntent(
-      intent({
-        proposed_authority: [
-          {
-            type: "mission_resource_access",
-            resource: RESOURCE,
-            actions: ["payments:payment.execute", "payments:vendor.delete", "payments:invoice.read"],
-            constraints: {
-              max_amount: { amount: "999999.00", currency: "USD" },
-              vendors: ["acme", "globex", "evilcorp"],
-            },
+    const broad = validateMissionIntent(intent());
+    const proposal = validateAuthorityProposal(
+      JSON.stringify([
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:payment.execute", "payments:vendor.delete", "payments:invoice.read"],
+          constraints: {
+            max_amount: { amount: "999999.00", currency: "USD" },
+            vendors: ["acme", "globex", "evilcorp"],
           },
-        ],
-      }),
+        },
+      ]),
+      [RESOURCE],
     );
-    const derived = deriveAuthoritySet(broad, DERIVATION_POLICY as never);
+    const derived = deriveAuthoritySet(broad, DERIVATION_POLICY as never, proposal);
     expect(isSubsetSet(derived, DERIVATION_POLICY.ceiling as never)).toBe(true);
     const entry = derived[0];
     expect(entry?.actions).not.toContain("payments:vendor.delete");
@@ -171,15 +169,15 @@ describe("derivation (@spec mission#authorization-derivation)", () => {
   });
 
   it("refuses an Intent yielding no authority with invalid_authorization_details", () => {
-    const bad = validateMissionIntent(
-      intent({
-        proposed_authority: [
-          { type: "mission_resource_access", resource: RESOURCE, actions: ["not:allowed"] },
-        ],
-      }),
+    const bad = validateMissionIntent(intent());
+    const proposal = validateAuthorityProposal(
+      JSON.stringify([
+        { type: "mission_resource_access", resource: RESOURCE, actions: ["not:allowed"] },
+      ]),
+      [RESOURCE],
     );
     try {
-      deriveAuthoritySet(bad, DERIVATION_POLICY as never);
+      deriveAuthoritySet(bad, DERIVATION_POLICY as never, proposal);
       expect.unreachable();
     } catch (e) {
       expect((e as IntentError).code).toBe("invalid_authorization_details");

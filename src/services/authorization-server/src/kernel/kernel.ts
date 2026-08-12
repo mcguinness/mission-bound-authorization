@@ -5,7 +5,7 @@
  */
 
 import { randomBytes, randomInt } from "node:crypto";
-import { authorityHash, intentHash } from "@mission/core";
+import { authorityHash, intentHash, proposalHash } from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { SignJWT, type CryptoKey } from "jose";
 import {
@@ -16,7 +16,7 @@ import {
 } from "./containment.js";
 import type { DerivationPolicy } from "./derive.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
-import { validateMissionIntent } from "./intent.js";
+import { validateAuthorityProposal, validateMissionIntent } from "./intent.js";
 import {
   signStatusListToken,
   STATUS_LIST_SIZE,
@@ -50,8 +50,10 @@ CREATE TABLE IF NOT EXISTS missions (
   issuer TEXT NOT NULL,
   state TEXT NOT NULL,
   intent_json TEXT NOT NULL,
+  proposed_authority_json TEXT,
   authority_set_json TEXT NOT NULL,
   intent_hash TEXT NOT NULL,
+  proposal_hash TEXT,
   authority_hash TEXT NOT NULL,
   subject_iss TEXT NOT NULL,
   subject_sub TEXT NOT NULL,
@@ -95,6 +97,14 @@ export class GateError extends Error {
 
 export interface ApproveInput {
   intent: MissionIntent;
+  /**
+   * @spec mission#authority-proposal — the client-submitted
+   * `authorization_details` array (already validated at intake), recorded on
+   * the Mission exactly as submitted and committed by `proposal_hash`. Absent
+   * (or empty) means no proposal was submitted: template-mode derivation, and
+   * the record carries neither `proposed_authority` nor `proposal_hash`.
+   */
+  proposedAuthority?: AuthorityEntry[];
   subject: { iss: string; sub: string };
   approver: { iss: string; sub: string };
   clientId: string;
@@ -156,8 +166,13 @@ export class MissionKernel {
     return validateMissionIntent(raw);
   }
 
-  derive(intent: MissionIntent): AuthorityEntry[] {
-    return deriveAuthoritySet(intent, this.opts.policy);
+  derive(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): AuthorityEntry[] {
+    return deriveAuthoritySet(intent, this.opts.policy, proposal);
+  }
+
+  /** @spec mission#authority-proposal — intake of the submitted proposal. */
+  validateProposal(raw: string, resources: string[]): AuthorityEntry[] {
+    return validateAuthorityProposal(raw, resources);
   }
 
   /**
@@ -176,9 +191,21 @@ export class MissionKernel {
    * with both anchors; approval_event_id is the idempotency key.
    */
   approve(input: ApproveInput): MissionRecord {
-    const authoritySet = this.derive(input.intent);
+    // @spec mission#authority-proposal — normalize: an empty proposal is no
+    // proposal (matches the wire, where an empty authorization_details array
+    // is treated as absent). Present iff submitted: template-mode Missions
+    // carry neither `proposed_authority` nor `proposal_hash`.
+    const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
+    const authoritySet = this.derive(input.intent, proposal);
     // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy.
     const id = `msn_${randomBytes(18).toString("base64url")}`;
+    // @spec mission#integrity-anchors (TOCTOU) — all three commitments
+    // (intent_hash, proposal_hash, authority_hash) are computed TOGETHER here,
+    // at the approval decision, over the exact context being recorded: a task,
+    // proposal, or derived-set change between approval rendering and the
+    // decision re-enters this method with the changed inputs and recomputes
+    // every anchor, so a swapped proposal under an unchanged intent_hash
+    // cannot equivocate.
     const authorityHashValue = authorityHash(this.opts.issuer, authoritySet as never);
     // @spec mission#approval-basis — direct: the human approval event itself
     // creates the record; consent_principal == activation_actor == approver,
@@ -195,8 +222,10 @@ export class MissionKernel {
       issuer: this.opts.issuer,
       state: "active",
       intent: input.intent,
+      ...(proposal ? { proposed_authority: proposal } : {}),
       authority_set: authoritySet,
       intent_hash: intentHash(this.opts.issuer, input.intent as never),
+      ...(proposal ? { proposal_hash: proposalHash(this.opts.issuer, proposal as never) } : {}),
       authority_hash: authorityHashValue,
       subject: input.subject,
       approver: input.approver,
@@ -230,21 +259,26 @@ export class MissionKernel {
     withTransaction(this.db, () => {
       this.db
         .prepare(
-          `INSERT INTO missions (id, issuer, state, intent_json, authority_set_json, intent_hash,
+          `INSERT INTO missions (id, issuer, state, intent_json, proposed_authority_json,
+           authority_set_json, intent_hash, proposal_hash,
            authority_hash, subject_iss, subject_sub, approver_iss, approver_sub,
            approval_basis_json, client_id,
            policy_version, approval_event_id, created_at, expires_at, version, max_derivations,
            derivation_count, grant_id, predecessor, parent_id, parent_json, template_id,
            template_json, projected_from)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
           record.issuer,
           record.state,
           JSON.stringify(record.intent),
+          // @spec mission#mission-record — the submitted proposal exactly as
+          // recorded (null when none: template mode), with its commitment.
+          record.proposed_authority ? JSON.stringify(record.proposed_authority) : null,
           JSON.stringify(record.authority_set),
           record.intent_hash,
+          record.proposal_hash ?? null,
           record.authority_hash,
           record.subject.iss,
           record.subject.sub,
@@ -881,6 +915,11 @@ export class MissionKernel {
       ...this.missionClaim(fresh),
       state: fresh.state,
       version: fresh.version,
+      // @spec mission#introspection — issuer-only, like `state`: when the
+      // Mission records an authority proposal, its `proposal_hash` is surfaced
+      // for audit. Approval-time provenance, never carried on the `mission`
+      // token claim (missionClaim above deliberately omits it).
+      ...(fresh.proposal_hash ? { proposal_hash: fresh.proposal_hash } : {}),
       // Absent means no containment was ever applied (absent-means-none).
       ...(fresh.containment ? { containment_version: fresh.containment.containment_version } : {}),
       ...this.statusListRef(fresh),
@@ -1023,8 +1062,12 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     issuer: row.issuer as string,
     state: row.state as MissionState,
     intent: JSON.parse(row.intent_json as string) as MissionIntent,
+    ...(row.proposed_authority_json
+      ? { proposed_authority: JSON.parse(row.proposed_authority_json as string) as AuthorityEntry[] }
+      : {}),
     authority_set: JSON.parse(row.authority_set_json as string) as AuthorityEntry[],
     intent_hash: row.intent_hash as string,
+    ...(row.proposal_hash ? { proposal_hash: row.proposal_hash as string } : {}),
     authority_hash: row.authority_hash as string,
     subject: { iss: row.subject_iss as string, sub: row.subject_sub as string },
     approver: { iss: row.approver_iss as string, sub: row.approver_sub as string },

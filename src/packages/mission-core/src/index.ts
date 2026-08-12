@@ -6,6 +6,8 @@ export {
   INTENT_TYP,
   intentHash,
   MISSION_TEMPLATE_TYP,
+  PROPOSED_AUTHORITY_TYP,
+  proposalHash,
   UNWIND_PLAN_TYP,
   verifyAnchor,
 } from "./anchors.js";

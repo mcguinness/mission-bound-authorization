@@ -10,7 +10,11 @@
  * OpenFGA-free.
  */
 
-import { type LifecycleCommit, MissionKernel } from "@mission/authorization-server";
+import {
+  type AuthorityEntry,
+  type LifecycleCommit,
+  MissionKernel,
+} from "@mission/authorization-server";
 import { type EvaluationRequest, evaluate, type Fga, type MissionView } from "@mission/pdp";
 import { exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
@@ -38,10 +42,11 @@ const INTENT = {
   goal: "Read approved invoices",
   resources: [RESOURCE],
   expires_at: EXPIRES_AT,
-  proposed_authority: [
-    { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
-  ],
 };
+
+const PROPOSED_AUTHORITY: AuthorityEntry[] = [
+  { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
+];
 
 /** A stub PDP authority backend: authority is granted, so the decision turns on
  *  Mission state (step 2), which is exactly what the signal drives. */
@@ -83,6 +88,7 @@ async function bootstrap() {
 
   const record = kernel.approve({
     intent: INTENT as never,
+    proposedAuthority: PROPOSED_AUTHORITY,
     subject: { iss: ISS, sub: "alice" },
     approver: { iss: ISS, sub: "bob" },
     clientId: "ap-agent",

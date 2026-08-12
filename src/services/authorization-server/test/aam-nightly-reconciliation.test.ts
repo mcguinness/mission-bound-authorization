@@ -68,7 +68,7 @@ import { buildScopeStatement, scopeDigest } from "../../agent/src/harness-scope.
 import { ConsoleBff } from "../../console-bff/src/index.js";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
-import { type BuiltAs, buildAuthorizationServer } from "../src/index.js";
+import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 
 const PORT = 14501;
 const ISSUER = `http://localhost:${PORT}`;
@@ -184,12 +184,17 @@ async function createTemplateAdmin(body: unknown): Promise<Response> {
   });
 }
 
-async function dispatch(params: { intent: string; dispatchEventId: string }): Promise<Response> {
+async function dispatch(params: {
+  intent: string;
+  dispatchEventId: string;
+  authorizationDetails?: string;
+}): Promise<Response> {
   return tokenRequest({
     grant_type: MISSION_DISPATCH_GRANT_TYPE,
     template_id: templateId,
     mission_intent: params.intent,
     dispatch_event_id: params.dispatchEventId,
+    ...(params.authorizationDetails ? { authorization_details: params.authorizationDetails } : {}),
   });
 }
 
@@ -217,10 +222,11 @@ async function refreshFamily(refreshToken: string): Promise<Response> {
  * never a Dispatcher, never a Template. This is the "human path" the
  * prohibited-class rule requires for payments:remittance.send.
  */
-function approveHumanMission(intentJson: string): { id: string } {
+function approveHumanMission(intentJson: string, proposedAuthority?: AuthorityEntry[]): { id: string } {
   const intent = as.kernel.validateIntent(intentJson);
   const record = as.kernel.approve({
     intent,
+    ...(proposedAuthority ? { proposedAuthority } : {}),
     subject: { iss: ISSUER, sub: "alice" },
     approver: { iss: ISSUER, sub: "bob" },
     clientId: "ap-agent",
@@ -274,19 +280,22 @@ function reconciliationTemplateBody(): Record<string, unknown> {
  * The LOW-CONSEQUENCE dispatch intent: read only. This is the only intent a
  * machine-speed Dispatch of this Template ever successfully instantiates.
  */
+function lowConsequenceProposal(): AuthorityEntry[] {
+  return [
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: ["payments:invoice.read"],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ];
+}
+
 function lowConsequenceIntent(): string {
   return JSON.stringify({
     goal: "nightly reconciliation of Acme invoices (read-only)",
     resources: [RESOURCE],
     expires_at: FAR_FUTURE,
-    proposed_authority: [
-      {
-        type: "mission_resource_access",
-        resource: RESOURCE,
-        actions: ["payments:invoice.read"],
-        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-      },
-    ],
   });
 }
 
@@ -298,37 +307,43 @@ function lowConsequenceIntent(): string {
  * ordinary human approval below: one intent, two paths, one of which the
  * Template refuses and one of which a human approves.
  */
+function reconciliationProposal(): AuthorityEntry[] {
+  return [
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: ["payments:invoice.read", "payments:remittance.send"],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ];
+}
+
 function reconciliationIntent(): string {
   return JSON.stringify({
     goal: "nightly reconciliation of Acme invoices",
     resources: [RESOURCE],
     expires_at: FAR_FUTURE,
-    proposed_authority: [
-      {
-        type: "mission_resource_access",
-        resource: RESOURCE,
-        actions: ["payments:invoice.read", "payments:remittance.send"],
-        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-      },
-    ],
   });
 }
 
 /** An intent that exceeds the read/post ceiling (payment.schedule is in POLICY
  *  but was filtered out of this template's ceiling). */
+function overCeilingProposal(): AuthorityEntry[] {
+  return [
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: ["payments:payment.schedule"],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ];
+}
+
 function overCeilingIntent(): string {
   return JSON.stringify({
     goal: "schedule a payment (exceeds the reconciliation ceiling)",
     resources: [RESOURCE],
     expires_at: FAR_FUTURE,
-    proposed_authority: [
-      {
-        type: "mission_resource_access",
-        resource: RESOURCE,
-        actions: ["payments:payment.schedule"],
-        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-      },
-    ],
   });
 }
 
@@ -443,7 +458,11 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
 
   // STEP 2: Machine-speed dispatch, kept low-consequence. AAM Agent Identity Broker.
   it("step 2 (machine-speed dispatch): only the low-consequence read intent is admitted; remittance and over-ceiling are both refused", async () => {
-    const res = await dispatch({ intent: lowConsequenceIntent(), dispatchEventId: `evt-dispatch-${seq++}` });
+    const res = await dispatch({
+      intent: lowConsequenceIntent(),
+      dispatchEventId: `evt-dispatch-${seq++}`,
+      authorizationDetails: JSON.stringify(lowConsequenceProposal()),
+    });
     const body = (await res.json()) as {
       access_token?: string;
       token_type?: string;
@@ -473,7 +492,11 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     // consented ceiling entry) is still refused, because it is a prohibited
     // class. This is what closes the finding: config now covers the class the
     // PEP classifies external_commitment, so no Dispatch can grant it.
-    const prohibited = await dispatch({ intent: reconciliationIntent(), dispatchEventId: `evt-prohibited-${seq++}` });
+    const prohibited = await dispatch({
+      intent: reconciliationIntent(),
+      dispatchEventId: `evt-prohibited-${seq++}`,
+      authorizationDetails: JSON.stringify(reconciliationProposal()),
+    });
     const prohibitedBody = (await prohibited.json()) as { mission_denial_reason?: string };
     expect(prohibited.status, JSON.stringify(prohibitedBody)).toBe(400);
     expect(prohibitedBody.mission_denial_reason).toBe("dispatch_prohibited_class");
@@ -481,7 +504,11 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     // A dispatch exceeding the ceiling is refused out_of_template_ceiling (a
     // DIFFERENT reason, distinguishing "not consented" from "consented but
     // too consequential for machine-speed dispatch").
-    const refused = await dispatch({ intent: overCeilingIntent(), dispatchEventId: `evt-over-${seq++}` });
+    const refused = await dispatch({
+      intent: overCeilingIntent(),
+      dispatchEventId: `evt-over-${seq++}`,
+      authorizationDetails: JSON.stringify(overCeilingProposal()),
+    });
     const refusedBody = (await refused.json()) as { mission_denial_reason?: string };
     expect(refused.status, JSON.stringify(refusedBody)).toBe(400);
     expect(refusedBody.mission_denial_reason).toBe("out_of_template_ceiling");
@@ -569,7 +596,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
   // never a Dispatch) for the external-commitment capability the Template may
   // not confer.
   it("step 5 (human path): the SAME intent a Dispatch refused is approved directly by a human, with a direct approval_basis", async () => {
-    const { id } = approveHumanMission(reconciliationIntent());
+    const { id } = approveHumanMission(reconciliationIntent(), reconciliationProposal());
     humanMissionId = id;
     const record = as.kernel.get(humanMissionId);
     expect(record).toBeDefined();
@@ -644,7 +671,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
   // STEP 7: Restore only in a new task. AAM: capability returns via a fresh
   // human approval (a Dispatch can never restore a prohibited class either).
   it("step 7 (restore in a new task): a fresh human approval restores remittance.send; the contained Mission never does", async () => {
-    const { id } = approveHumanMission(reconciliationIntent());
+    const { id } = approveHumanMission(reconciliationIntent(), reconciliationProposal());
     restoredHumanMissionId = id;
     expect(restoredHumanMissionId).not.toBe(humanMissionId);
     const record = as.kernel.get(restoredHumanMissionId);

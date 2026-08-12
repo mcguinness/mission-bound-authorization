@@ -1,12 +1,19 @@
 import type { JsonValue } from "@mission/core";
 
-/** @spec mission#mission-intent */
+/**
+ * @spec mission#mission-intent — pure TASK context. The Intent carries no
+ * authority members: the client's concrete authority proposal rides the
+ * standard top-level `authorization_details` request parameter pushed
+ * alongside `mission_intent` (@spec mission#authority-proposal), and an
+ * Intent carrying the retired `proposed_authority` member is refused as an
+ * unknown top-level member under the closed-top-level rule
+ * (@spec mission#submission-via-par).
+ */
 export interface MissionIntent {
   goal: string;
   resources: string[];
   expires_at: string;
   constraints?: string[];
-  proposed_authority?: AuthorityEntry[];
   success_criteria?: string[];
   purpose?: string;
   controls?: { acr?: string; max_derivations?: number; [k: string]: JsonValue | undefined };
@@ -313,9 +320,26 @@ export interface MissionRecord {
   issuer: string;
   state: MissionState;
   intent: MissionIntent;
+  /**
+   * @spec mission#mission-record — the `authorization_details` array the
+   * client submitted as its authority proposal
+   * (@spec mission#authority-proposal), recorded exactly as submitted.
+   * Present iff a proposal was submitted; a Mission derived in template mode
+   * records none.
+   */
+  proposed_authority?: AuthorityEntry[];
   authority_set: AuthorityEntry[];
   intent_hash: string;
   authority_hash: string;
+  /**
+   * @spec mission#mission-record — the integrity commitment over the recorded
+   * `proposed_authority` (@spec mission#integrity-anchors, typ
+   * `mission-proposed-authority`). Present iff `proposed_authority` is
+   * present. Approval-time provenance, not enforcement input: like
+   * `approval_basis`, it is surfaced on the record and through introspection
+   * and is NOT carried on the `mission` token claim.
+   */
+  proposal_hash?: string;
   subject: { iss: string; sub: string };
   approver: { iss: string; sub: string };
   /**

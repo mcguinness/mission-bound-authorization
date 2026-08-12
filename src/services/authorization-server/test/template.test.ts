@@ -72,16 +72,19 @@ const intentOf = (actions: string[], opts: { maxAmount?: string; expiresAt?: str
       goal: "reconcile Acme",
       resources: [RESOURCE],
       expires_at: opts.expiresAt ?? "2027-01-01T00:00:00Z",
-      proposed_authority: [
-        {
-          type: "mission_resource_access",
-          resource: RESOURCE,
-          actions,
-          constraints: { max_amount: { amount: opts.maxAmount ?? "500.00", currency: "USD" }, vendors: ["acme"] },
-        },
-      ],
     }),
   );
+
+/** @spec mission#authority-proposal — a dispatcher proposal on the standard
+ *  carriage: the entries previously carried inside the Intent. */
+const proposalOf = (actions: string[], maxAmount = "500.00"): AuthorityEntry[] => [
+  {
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions,
+    constraints: { max_amount: { amount: maxAmount, currency: "USD" } },
+  },
+];
 
 const dispatch = (templateId: string, over: Partial<DispatchInput> = {}) =>
   dispatchFromTemplate(kernel, store, {
@@ -160,7 +163,10 @@ describe("dispatchFromTemplate double intersection (@spec mission-template#dispa
     // second intersection.
     const t = mkTemplate({ ceiling: [ceilEntry(["payments:invoice.read"], "200.00")] });
     try {
-      dispatch(t.id, { intent: intentOf(["payments:payment.schedule"]) });
+      dispatch(t.id, {
+        intent: intentOf(["payments:payment.schedule"]),
+        proposedAuthority: proposalOf(["payments:payment.schedule"]),
+      });
       expect.unreachable();
     } catch (e) {
       expect(e).toBeInstanceOf(DispatchError);
@@ -172,7 +178,12 @@ describe("dispatchFromTemplate double intersection (@spec mission-template#dispa
     const t = mkTemplate();
     // A bogus action is in neither policy nor template: the first derivation
     // (kernel.derive) throws IntentError, which must propagate unmapped.
-    expect(() => dispatch(t.id, { intent: intentOf(["payments:bogus.action"]) })).toThrow(IntentError);
+    expect(() =>
+      dispatch(t.id, {
+        intent: intentOf(["payments:bogus.action"]),
+        proposedAuthority: proposalOf(["payments:bogus.action"]),
+      }),
+    ).toThrow(IntentError);
   });
 
   it("asserts final is a subset of both ceilings and recomputes authority_hash over final (differs from template_hash)", () => {

@@ -11,6 +11,15 @@ import { canonicalize, type JsonValue } from "./canonicalize.js";
 export const INTENT_TYP = "mission-intent";
 export const AUTHORITY_SET_TYP = "mission-authority-set";
 /**
+ * @spec mission#authority-proposal, mission#integrity-anchors
+ * The integrity-anchor `typ` for the client-submitted authority proposal: the
+ * `authorization_details` array pushed alongside `mission_intent`
+ * (@spec mission#authority-proposal), committed exactly as recorded. The
+ * resulting `proposal_hash` exists iff a proposal was submitted; a
+ * template-mode Mission has none.
+ */
+export const PROPOSED_AUTHORITY_TYP = "mission-proposed-authority";
+/**
  * @spec authzen#decision-evidence-object (`entry_digest`)
  * The integrity-anchor `typ` for a single Authority Set entry, so a decision
  * record can cite the entry it was evaluated against by digest via
@@ -47,6 +56,14 @@ export function intentHash(iss: string, intent: JsonValue): string {
 
 export function authorityHash(iss: string, authoritySet: JsonValue[]): string {
   return computeAnchor(AUTHORITY_SET_TYP, iss, authoritySet);
+}
+
+/**
+ * @spec mission#authority-proposal — `proposal_hash`: the commitment over the
+ * submitted `authorization_details` array exactly as recorded on the Mission.
+ */
+export function proposalHash(iss: string, proposedAuthority: JsonValue[]): string {
+  return computeAnchor(PROPOSED_AUTHORITY_TYP, iss, proposedAuthority);
 }
 
 /**

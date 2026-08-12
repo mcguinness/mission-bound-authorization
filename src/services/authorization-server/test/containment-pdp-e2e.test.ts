@@ -21,7 +21,7 @@ import {
   stalenessBoundSeconds,
 } from "@mission/pdp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type BuiltAs, buildAuthorizationServer, createExpansion, validateMissionIntent } from "../src/index.js";
+import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer, createExpansion, validateMissionIntent } from "../src/index.js";
 
 const PORT = 14495;
 const ISSUER = `http://localhost:${PORT}`;
@@ -51,7 +51,7 @@ let server: Server;
 let fga: Fga;
 let modelId: string;
 
-const authority = () => [
+const authority = (): AuthorityEntry[] => [
   {
     type: "mission_resource_access",
     resource: RESOURCE,
@@ -66,7 +66,6 @@ const intent = (goal: string) =>
       goal,
       resources: [RESOURCE],
       expires_at: EXPIRES_AT,
-      proposed_authority: authority(),
     }),
   );
 
@@ -122,6 +121,7 @@ d("containment end-to-end: taint -> contain -> authority_contained -> expansion 
     // An active Mission approved for invoice.read + remittance.send.
     const mission = as.kernel.approve({
       intent: intent("Pay Acme invoices and send remittance"),
+      proposedAuthority: authority(),
       subject: { iss: ISSUER, sub: "alice" },
       approver: { iss: ISSUER, sub: "bob" },
       clientId: "ap-agent",
@@ -168,6 +168,7 @@ d("containment end-to-end: taint -> contain -> authority_contained -> expansion 
     const expansion = createExpansion(as.kernel, {
       predecessorId: mission.id,
       intent: intent("Pay Acme invoices and send remittance (restored after containment review)"),
+      proposedAuthority: authority(),
       approver: { iss: ISSUER, sub: "bob" },
       approvalEventId: "apev-cnt-e2e-succ",
       approvedUntil: EXPIRES_AT,
@@ -188,6 +189,7 @@ d("containment end-to-end: taint -> contain -> authority_contained -> expansion 
   it("a SIGNED protected event (JWS source-verified) drives the same PDP denial", async () => {
     const mission = as.kernel.approve({
       intent: intent("Pay Acme invoices via a signed protected-event path"),
+      proposedAuthority: authority(),
       subject: { iss: ISSUER, sub: "alice" },
       approver: { iss: ISSUER, sub: "bob" },
       clientId: "ap-agent",

@@ -58,9 +58,9 @@ describe("intersect carries and narrows delegation (@spec mission#authorization-
       goal: "g",
       resources: [ceilingEntry.resource],
       expires_at: EXP,
-      proposed_authority: [entry()], // no delegation on the proposal
     };
-    const derived = deriveAuthoritySet(intent, policy);
+    const proposal = [entry()]; // no delegation on the proposal
+    const derived = deriveAuthoritySet(intent, policy, proposal);
     const del = derived[0]?.delegation;
     expect(del).toBeDefined();
     expect(del?.max_depth).toBe(2);
@@ -75,9 +75,9 @@ describe("intersect carries and narrows delegation (@spec mission#authorization-
       goal: "g",
       resources: ["https://r.example/mcp"],
       expires_at: EXP,
-      proposed_authority: [entry({ delegation: delegation(9) })], // proposal TRIES to add it
     };
-    const derived = deriveAuthoritySet(intent, freePolicy);
+    const proposal = [entry({ delegation: delegation(9) })]; // proposal TRIES to add it
+    const derived = deriveAuthoritySet(intent, freePolicy, proposal);
     expect(derived[0]?.delegation).toBeUndefined();
   });
 
@@ -86,16 +86,16 @@ describe("intersect carries and narrows delegation (@spec mission#authorization-
       goal: "g",
       resources: [ceilingEntry.resource],
       expires_at: EXP,
-      proposed_authority: [
-        entry({
-          delegation: {
-            max_depth: 5, // wider than the ceiling's 2
-            allowed_delegates: [{ sub_profile: "ai_agent" }, { sub: "not-allowed" }],
-          },
-        }),
-      ],
     };
-    const derived = deriveAuthoritySet(intent, policy);
+    const proposal = [
+      entry({
+        delegation: {
+          max_depth: 5, // wider than the ceiling's 2
+          allowed_delegates: [{ sub_profile: "ai_agent" }, { sub: "not-allowed" }],
+        },
+      }),
+    ];
+    const derived = deriveAuthoritySet(intent, policy, proposal);
     expect(derived[0]?.delegation?.max_depth).toBe(2); // min(5, 2)
     // proposal ∩ ceiling on delegate identity: only ai_agent survives.
     expect(derived[0]?.delegation?.allowed_delegates).toEqual([{ sub_profile: "ai_agent" }]);
@@ -171,9 +171,9 @@ describe("regression: delegation-free entries are fully additive (unchanged beha
       goal: "g",
       resources: ["https://r.example/mcp"],
       expires_at: EXP,
-      proposed_authority: [entry({ constraints: { vendors: ["acme"] } })],
     };
-    const derived = deriveAuthoritySet(intent, policy);
+    const proposal = [entry({ constraints: { vendors: ["acme"] } })];
+    const derived = deriveAuthoritySet(intent, policy, proposal);
     expect(derived[0]?.delegation).toBeUndefined();
   });
 
@@ -322,14 +322,14 @@ describe("intersect fails closed on a registered-but-unimplemented Common Constr
       goal: "g",
       resources: [ceilingEntry.resource],
       expires_at: EXP,
-      proposed_authority: [
-        entry({
-          constraints: { time_window: { not_before: "2026-01-01T00:00:00Z" } } as never,
-        }),
-      ],
     };
-    expect(() => deriveAuthoritySet(intent, policy)).toThrow(IntentError);
-    expect(() => deriveAuthoritySet(intent, policy)).toThrow(/time_window/);
+    const proposal = [
+      entry({
+        constraints: { time_window: { not_before: "2026-01-01T00:00:00Z" } } as never,
+      }),
+    ];
+    expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(IntentError);
+    expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(/time_window/);
   });
 
   it("refuses when the CEILING carries an unimplemented registered constraint (never silently vanishes)", () => {
@@ -341,9 +341,9 @@ describe("intersect fails closed on a registered-but-unimplemented Common Constr
       goal: "g",
       resources: [ceilingEntry.resource],
       expires_at: EXP,
-      proposed_authority: [entry()],
     };
-    expect(() => deriveAuthoritySet(intent, policy)).toThrow(/time_window/);
+    const proposal = [entry()];
+    expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(/time_window/);
   });
 
   it("max_amount and vendors (implemented Common/deployment-defined constraints) still narrow normally", () => {
@@ -355,11 +355,11 @@ describe("intersect fails closed on a registered-but-unimplemented Common Constr
       goal: "g",
       resources: [ceilingEntry.resource],
       expires_at: EXP,
-      proposed_authority: [
-        entry({ constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] } }),
-      ],
     };
-    const derived = deriveAuthoritySet(intent, policy);
+    const proposal = [
+      entry({ constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] } }),
+    ];
+    const derived = deriveAuthoritySet(intent, policy, proposal);
     expect(derived[0]?.constraints?.max_amount?.amount).toBe("100.00");
     expect(derived[0]?.constraints?.vendors).toEqual(["acme"]);
   });
@@ -402,8 +402,8 @@ describe("isSubsetEntry compares max_amount by exact decimal value, not IEEE-754
       goal: "g",
       resources: [ceilingEntry.resource],
       expires_at: EXP,
-      proposed_authority: [entry({ constraints: { max_amount: { amount: "1e300", currency: "USD" } } })],
     };
-    expect(() => deriveAuthoritySet(intent, policy)).toThrow(IntentError);
+    const proposal = [entry({ constraints: { max_amount: { amount: "1e300", currency: "USD" } } })];
+    expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(IntentError);
   });
 });

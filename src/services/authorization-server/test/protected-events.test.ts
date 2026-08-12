@@ -14,7 +14,7 @@ import type { Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, type SeededTrustedSource } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type BuiltAs, buildAuthorizationServer, validateMissionIntent } from "../src/index.js";
+import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer, validateMissionIntent } from "../src/index.js";
 import type { MissionRecord } from "../src/kernel/types.js";
 
 const PORT = 14496;
@@ -28,7 +28,7 @@ let server: Server;
 let soc: SeededTrustedSource; // trusted for content.tainted_read (has a rule)
 let harness: SeededTrustedSource; // advisory, trusted for egress.* (no rule)
 
-const authority = () => [
+const authority = (): AuthorityEntry[] => [
   {
     type: "mission_resource_access",
     resource: RESOURCE,
@@ -38,15 +38,14 @@ const authority = () => [
 ];
 
 const intent = (goal: string) =>
-  validateMissionIntent(
-    JSON.stringify({ goal, resources: [RESOURCE], expires_at: EXPIRES_AT, proposed_authority: authority() }),
-  );
+  validateMissionIntent(JSON.stringify({ goal, resources: [RESOURCE], expires_at: EXPIRES_AT }));
 
 let seq = 0;
 function approve(): MissionRecord {
   seq += 1;
   return as.kernel.approve({
     intent: intent(`Pay Acme invoices ${seq}`),
+    proposedAuthority: authority(),
     subject: { iss: ISSUER, sub: "alice" },
     approver: { iss: ISSUER, sub: "bob" },
     clientId: "ap-agent",

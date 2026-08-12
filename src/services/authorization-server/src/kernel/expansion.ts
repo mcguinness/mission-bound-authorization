@@ -9,7 +9,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { authorityHash, intentHash } from "@mission/core";
+import { authorityHash, intentHash, proposalHash } from "@mission/core";
 import type { MissionKernel } from "./kernel.js";
 import type { ApprovalBasis, AuthorityEntry, MissionIntent, MissionRecord } from "./types.js";
 
@@ -17,6 +17,13 @@ export interface ExpansionInput {
   predecessorId: string;
   /** The widened intent (fresh approval basis); must be derivable under policy. */
   intent: MissionIntent;
+  /**
+   * @spec mission#authority-proposal — the authority proposal submitted on the
+   * standard `authorization_details` parameter of the expansion exchange
+   * (already validated at intake). Recorded on the successor and committed by
+   * `proposal_hash` iff present; absent means template-mode derivation.
+   */
+  proposedAuthority?: AuthorityEntry[];
   approver: { iss: string; sub: string };
   approvalEventId: string;
   /** Bounds the successor credential; MUST NOT be exceeded (approved_until). */
@@ -81,7 +88,8 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     throw new Error("predecessor is not active");
   }
 
-  const authoritySet = kernel.derive(input.intent);
+  const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
+  const authoritySet = kernel.derive(input.intent, proposal);
   // @spec expansion: successor expiry MUST NOT exceed the recorded approval
   // expiry (approved_until) -- the credential is bounded by the approval.
   const expiresAt =
@@ -107,8 +115,10 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     issuer: predecessor.issuer,
     state: "active",
     intent: input.intent,
+    ...(proposal ? { proposed_authority: proposal } : {}),
     authority_set: authoritySet,
     intent_hash: intentHash(predecessor.issuer, input.intent as never),
+    ...(proposal ? { proposal_hash: proposalHash(predecessor.issuer, proposal as never) } : {}),
     authority_hash: authorityHashValue,
     subject: predecessor.subject,
     approver: input.approver,

@@ -22,5 +22,18 @@
     "scope": "payments",
     "authorization_details_types": ["mission_resource_access"],
     "key": { "kid": "subagent-invoice-extractor-auth", "alg": "ES256" }
+  },
+  {
+    "client_id": "governed-agent",
+    "client_name": "Governed Agent (Mission-governed registration)",
+    "grant_types": ["authorization_code", "refresh_token"],
+    "response_types": ["code"],
+    "redirect_uris": ["http://localhost:9999/cb"],
+    "token_endpoint_auth_method": "private_key_jwt",
+    "token_endpoint_auth_signing_alg": "ES256",
+    "scope": "openid profile email payments",
+    "authorization_details_types": ["mission_resource_access"],
+    "mission_governed": true,
+    "key": { "kid": "governed-agent-auth", "alg": "ES256" }
   }
 ]

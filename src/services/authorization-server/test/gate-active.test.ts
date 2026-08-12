@@ -58,10 +58,10 @@ const approve = (over: Record<string, unknown> = {}) =>
         goal: "Pay Acme invoices for Q3",
         resources: [RESOURCE],
         expires_at: PARENT_EXP,
-        proposed_authority: proposed(["payments:invoice.read", "payments:payment.execute"]),
         ...over,
       }),
     ),
+    proposedAuthority: proposed(["payments:invoice.read", "payments:payment.execute"]),
     subject: { iss: ISS, sub: "alice" },
     approver: { iss: ISS, sub: "bob" },
     clientId: "parent-agent",
@@ -102,9 +102,9 @@ describe("kernel.gateActive (@spec mission#lifecycle)", () => {
           goal: "Read Acme invoices",
           resources: [RESOURCE],
           expires_at: PARENT_EXP,
-          proposed_authority: proposed(["payments:invoice.read"]),
         }),
       ),
+      proposedAuthority: proposed(["payments:invoice.read"]),
       childActor: { sub: "subagent-reader", sub_profile: "ai_agent" },
     });
     // Raw UPDATE bypasses setState, so NO cascade fires and the child stays

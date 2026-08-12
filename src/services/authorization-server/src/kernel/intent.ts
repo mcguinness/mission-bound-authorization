@@ -1,9 +1,13 @@
 /**
  * @spec mission#submission-via-par
  * @spec mission#mission-intent
+ * @spec mission#authority-proposal
  * Mission Intent intake: strict parse (duplicate member names rejected),
- * closed top level, required members, bounded size, proposed_authority
- * resources contained in the Intent's resources.
+ * closed top level, required members, bounded size. The Intent is pure task
+ * context; the authority proposal rides the standard `authorization_details`
+ * parameter and is validated by {@link validateAuthorityProposal} (advertised
+ * type + published schema + resource containment), the same intake rules that
+ * previously applied to the retired `proposed_authority` Intent member.
  */
 
 import { DuplicateMemberError, type JsonValue, parseStrictJson } from "@mission/core";
@@ -13,12 +17,15 @@ import {
 } from "./authorization-details-metadata.js";
 import type { AuthorityEntry, MissionIntent } from "./types.js";
 
+// @spec mission#authority-proposal — `proposed_authority` is deliberately NOT
+// in this set: the Intent carries no authority members, and an Intent carrying
+// the retired member is refused as an unknown top-level member by the
+// closed-top-level rule below (@spec mission#submission-via-par).
 const TOP_LEVEL = new Set([
   "goal",
   "resources",
   "expires_at",
   "constraints",
-  "proposed_authority",
   "success_criteria",
   "purpose",
   "controls",
@@ -100,53 +107,72 @@ export function validateMissionIntent(raw: string): MissionIntent {
     }
   }
 
-  const proposed = obj.proposed_authority;
-  if (proposed !== undefined) {
-    if (!Array.isArray(proposed) || proposed.length > MAX_ARRAY_LEN) {
-      throw new IntentError("invalid_request", "proposed_authority must be an array");
-    }
-    for (const entry of proposed) {
-      validateProposedEntry(entry, resources);
-    }
-  }
-
   return obj as unknown as MissionIntent;
+}
+
+/**
+ * @spec mission#authority-proposal — intake of the client-submitted authority
+ * proposal: the standard `authorization_details` request parameter pushed
+ * alongside `mission_intent`. The proposal rides the Intent's carriage rules
+ * (PAR-only, bounded size, strict parse: duplicate member names are rejected
+ * before canonicalization, @spec mission#canonicalization). Each entry MUST be
+ * of an advertised type and MUST validate against that type's published JSON
+ * Schema (refused `invalid_authorization_details`, never silently kept), and
+ * each entry's `resource` MUST be among the Intent's `resources` (refused
+ * `invalid_request`).
+ */
+export function validateAuthorityProposal(raw: string, resources: string[]): AuthorityEntry[] {
+  if (Buffer.byteLength(raw, "utf8") > MAX_INTENT_BYTES) {
+    throw new IntentError("invalid_request", "authorization_details exceeds size bound");
+  }
+  let parsed: JsonValue;
+  try {
+    parsed = parseStrictJson(raw);
+  } catch (e) {
+    if (e instanceof DuplicateMemberError) {
+      throw new IntentError("invalid_request", e.message);
+    }
+    throw new IntentError("invalid_request", "authorization_details must be valid JSON");
+  }
+  if (!Array.isArray(parsed) || parsed.length > MAX_ARRAY_LEN) {
+    throw new IntentError("invalid_request", "authorization_details must be a JSON array");
+  }
+  for (const entry of parsed) {
+    validateProposedEntry(entry, resources);
+  }
+  return parsed as unknown as AuthorityEntry[];
 }
 
 function validateProposedEntry(entry: JsonValue, resources: string[]): void {
   if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
-    throw new IntentError("invalid_request", "proposed_authority entries must be objects");
+    throw new IntentError("invalid_request", "authorization_details entries must be objects");
   }
   const e = entry as Record<string, JsonValue>;
-  // @spec mission#other-types, I-D.draft-zehavi-oauth-rar-metadata — the type
-  // MUST be one this AS advertises via authorization_details_types_metadata_endpoint;
+  // @spec mission#authority-proposal, I-D.draft-zehavi-oauth-rar-metadata — the
+  // type MUST be one this AS advertises via
+  // authorization_details_types_metadata_endpoint;
   // SUPPORTED_AUTHORIZATION_DETAILS_TYPES is that SAME key set (single source of
   // truth), so this can never drift from what the metadata endpoint publishes. An
   // unadvertised type is refused here, never silently carried into derivation.
   if (typeof e.type !== "string" || !SUPPORTED_AUTHORIZATION_DETAILS_TYPES.has(e.type)) {
     throw new IntentError("invalid_authorization_details", `unsupported authorization details type: ${String(e.type)}`);
   }
-  if (typeof e.resource !== "string") {
-    throw new IntentError("invalid_request", "proposed_authority entry requires resource");
-  }
-  // @spec mission#mission-intent: each entry's resource MUST be among resources.
-  if (!resources.includes(e.resource)) {
-    throw new IntentError("invalid_request", `proposed_authority resource not among Intent resources: ${e.resource}`);
-  }
-  if (!isStringArray(e.actions) || e.actions.length === 0) {
-    throw new IntentError("invalid_request", "proposed_authority entry requires actions");
-  }
-  // @spec mission#other-types, I-D.draft-zehavi-oauth-rar-metadata — the entry
-  // MUST also validate against that type's published JSON Schema. Only
+  // @spec mission#authority-proposal, I-D.draft-zehavi-oauth-rar-metadata — the
+  // entry MUST also validate against that type's published JSON Schema. Only
   // mission_resource_access is implemented (the type check above already
-  // refused anything else), so this checks the mission_resource_access shape
-  // (constraints/delegation) the resource/actions checks above do not cover.
+  // refused anything else); a failing entry is refused
+  // invalid_authorization_details, never silently kept.
   const schemaError = validateMissionResourceAccessSchema(e);
   if (schemaError) {
     throw new IntentError(
       "invalid_authorization_details",
-      `proposed_authority entry fails its published schema: ${schemaError}`,
+      `authorization_details entry fails its published schema: ${schemaError}`,
     );
+  }
+  // @spec mission#authority-proposal: each proposed entry carrying `resource`
+  // MUST have it among the Intent's `resources`; violated -> invalid_request.
+  if (typeof e.resource === "string" && !resources.includes(e.resource)) {
+    throw new IntentError("invalid_request", `authorization_details resource not among Intent resources: ${e.resource}`);
   }
 }
 

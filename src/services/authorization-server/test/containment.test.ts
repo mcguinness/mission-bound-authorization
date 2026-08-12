@@ -373,14 +373,14 @@ describe("delegation surfaces bound to the effective set", () => {
         parentId: parent.id,
         intent: intent({
           resources: [RES_PAY],
-          proposed_authority: [
-            {
-              type: "mission_resource_access",
-              resource: RES_PAY,
-              actions: ["payments:payment.execute"],
-            },
-          ],
         }),
+        proposedAuthority: [
+          {
+            type: "mission_resource_access",
+            resource: RES_PAY,
+            actions: ["payments:payment.execute"],
+          },
+        ],
         childActor: { sub: "subagent", sub_profile: "ai_agent" },
       });
       expect.unreachable("child needing the contained capability must be refused");
@@ -393,10 +393,10 @@ describe("delegation surfaces bound to the effective set", () => {
       parentId: parent.id,
       intent: intent({
         resources: [RES_PAY],
-        proposed_authority: [
-          { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:invoice.read"] },
-        ],
       }),
+      proposedAuthority: [
+        { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:invoice.read"] },
+      ],
       childActor: { sub: "subagent", sub_profile: "ai_agent" },
     });
     expect(child.authority_set[0]?.actions).toEqual(["payments:invoice.read"]);
@@ -443,14 +443,14 @@ describe("containment propagates entry-wise to existing children (@spec child-de
       parentId: parent.id,
       intent: intent({
         resources: [RES_PAY],
-        proposed_authority: [
-          {
-            type: "mission_resource_access",
-            resource: RES_PAY,
-            actions: ["payments:invoice.read", "payments:payment.execute"],
-          },
-        ],
       }),
+      proposedAuthority: [
+        {
+          type: "mission_resource_access",
+          resource: RES_PAY,
+          actions: ["payments:invoice.read", "payments:payment.execute"],
+        },
+      ],
       childActor: { sub: "subagent-both", sub_profile: "ai_agent" },
     });
     const commitsBefore = commits.length;
@@ -493,10 +493,10 @@ describe("containment propagates entry-wise to existing children (@spec child-de
         parentId: childBoth.id,
         intent: intent({
           resources: [RES_PAY],
-          proposed_authority: [
-            { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
-          ],
         }),
+        proposedAuthority: [
+          { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
+        ],
         childActor: { sub: "grandchild-agent", sub_profile: "ai_agent" },
       });
       expect.unreachable("a grandchild must not re-derive contained authority");
@@ -514,10 +514,10 @@ describe("containment propagates entry-wise to existing children (@spec child-de
       parentId: parent.id,
       intent: intent({
         resources: [RES_PAY],
-        proposed_authority: [
-          { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:invoice.read"] },
-        ],
       }),
+      proposedAuthority: [
+        { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:invoice.read"] },
+      ],
       childActor: { sub: "subagent-pay-only", sub_profile: "ai_agent" },
     });
 
@@ -545,10 +545,10 @@ describe("containment propagates entry-wise to existing children (@spec child-de
       parentId: parent.id,
       intent: intent({
         resources: [RES_PAY],
-        proposed_authority: [
-          { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
-        ],
       }),
+      proposedAuthority: [
+        { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
+      ],
       childActor: { sub: "subagent-exec", sub_profile: "ai_agent" },
     });
 
@@ -575,20 +575,20 @@ describe("containment propagates entry-wise to existing children (@spec child-de
       parentId: parentA.id,
       intent: intent({
         resources: [RES_PAY],
-        proposed_authority: [
-          { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
-        ],
       }),
+      proposedAuthority: [
+        { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
+      ],
       childActor: { sub: "subagent-a", sub_profile: "ai_agent" },
     });
     const { child: childOfB } = createChildMission(kernel, {
       parentId: parentB.id,
       intent: intent({
         resources: [RES_PAY],
-        proposed_authority: [
-          { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
-        ],
       }),
+      proposedAuthority: [
+        { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
+      ],
       childActor: { sub: "subagent-b", sub_profile: "ai_agent" },
     });
 
@@ -613,28 +613,28 @@ describe("containment propagates entry-wise to existing children (@spec child-de
       parentId: parent.id,
       intent: intent({
         resources: [RES_PAY],
-        proposed_authority: [
-          {
-            type: "mission_resource_access",
-            resource: RES_PAY,
-            actions: ["payments:invoice.read", "payments:payment.execute"],
-          },
-        ],
       }),
+      proposedAuthority: [
+        {
+          type: "mission_resource_access",
+          resource: RES_PAY,
+          actions: ["payments:invoice.read", "payments:payment.execute"],
+        },
+      ],
       childActor: { sub: "child-agent", sub_profile: "ai_agent" },
     });
     const { child: grandchild } = createChildMission(kernel, {
       parentId: child.id,
       intent: intent({
         resources: [RES_PAY],
-        proposed_authority: [
-          {
-            type: "mission_resource_access",
-            resource: RES_PAY,
-            actions: ["payments:invoice.read", "payments:payment.execute"],
-          },
-        ],
       }),
+      proposedAuthority: [
+        {
+          type: "mission_resource_access",
+          resource: RES_PAY,
+          actions: ["payments:invoice.read", "payments:payment.execute"],
+        },
+      ],
       childActor: { sub: "grandchild-agent", sub_profile: "ai_agent" },
     });
 
@@ -658,10 +658,10 @@ describe("containment propagates entry-wise to existing children (@spec child-de
       parentId: parent.id,
       intent: intent({
         resources: [RES_PAY],
-        proposed_authority: [
-          { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
-        ],
       }),
+      proposedAuthority: [
+        { type: "mission_resource_access", resource: RES_PAY, actions: ["payments:payment.execute"] },
+      ],
       childActor: { sub: "subagent-term", sub_profile: "ai_agent" },
     });
     kernel.transition(child.id, "revoke");

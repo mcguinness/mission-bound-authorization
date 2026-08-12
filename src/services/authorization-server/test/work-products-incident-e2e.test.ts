@@ -32,6 +32,7 @@ import {
 } from "@mission/pdp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  type AuthorityEntry,
   bindWorkProduct,
   type BuiltAs,
   buildAuthorizationServer,
@@ -80,7 +81,7 @@ let modelId: string;
 
 /** A restated ceiling entry for the given actions, so the derived entry carries
  * the Common Constraints (max_amount/vendors) and inherits the ceiling delegation. */
-const proposed = (actions: string[]) => [
+const proposed = (actions: string[]): AuthorityEntry[] => [
   {
     type: "mission_resource_access",
     resource: RESOURCE,
@@ -89,10 +90,8 @@ const proposed = (actions: string[]) => [
   },
 ];
 
-const intent = (goal: string, actions: string[]) =>
-  validateMissionIntent(
-    JSON.stringify({ goal, resources: [RESOURCE], expires_at: EXPIRES_AT, proposed_authority: proposed(actions) }),
-  );
+const intent = (goal: string) =>
+  validateMissionIntent(JSON.stringify({ goal, resources: [RESOURCE], expires_at: EXPIRES_AT }));
 
 /** The PDP's view of a Mission (the demo stack's viewFor mapping). */
 function viewFor(missionId: string): MissionView {
@@ -145,7 +144,8 @@ d("work products: information may propagate, authority may not", () => {
     // Mission A (agent A1): an active Mission that legitimately holds the
     // capability, did the remittance, and wrote the result to shared state.
     const missionA = as.kernel.approve({
-      intent: intent("Pay Acme and send remittance", ["payments:invoice.read", "payments:remittance.send"]),
+      intent: intent("Pay Acme and send remittance"),
+      proposedAuthority: proposed(["payments:invoice.read", "payments:remittance.send"]),
       subject: { iss: ISSUER, sub: "alice" },
       approver: { iss: ISSUER, sub: "bob" },
       clientId: "agent-A1",
@@ -155,7 +155,8 @@ d("work products: information may propagate, authority may not", () => {
     // Parent P: the standing authority that HOLDS the remittance capability (its
     // derived entry inherits the ceiling delegation on-switch, so it is delegable).
     const parentP = as.kernel.approve({
-      intent: intent("Acme payments program", ["payments:invoice.read", "payments:remittance.send"]),
+      intent: intent("Acme payments program"),
+      proposedAuthority: proposed(["payments:invoice.read", "payments:remittance.send"]),
       subject: { iss: ISSUER, sub: "alice" },
       approver: { iss: ISSUER, sub: "bob" },
       clientId: "parent-P",
@@ -166,7 +167,8 @@ d("work products: information may propagate, authority may not", () => {
     // only). agent-B1 is the agent under Mission B that will read the artifact.
     const { child: missionB } = createChildMission(as.kernel, {
       parentId: parentP.id,
-      intent: intent("Reconcile Acme invoices", ["payments:invoice.read"]),
+      intent: intent("Reconcile Acme invoices"),
+      proposedAuthority: proposed(["payments:invoice.read"]),
       childActor: { sub: "agent-B1", sub_profile: "ai_agent" },
     });
     expect(missionB.parent?.id).toBe(parentP.id);
@@ -266,7 +268,8 @@ d("work products: information may propagate, authority may not", () => {
     try {
       createChildMission(as.kernel, {
         parentId: missionB.id,
-        intent: intent("Escalate: send remittance from what I read", [ARTIFACT_ACTION]),
+        intent: intent("Escalate: send remittance from what I read"),
+        proposedAuthority: proposed([ARTIFACT_ACTION]),
         childActor: { sub: "agent-B1", sub_profile: "ai_agent" },
       });
       expect.unreachable("B minted remittance authority from an artifact it merely read");
@@ -281,7 +284,8 @@ d("work products: information may propagate, authority may not", () => {
     // the artifact, so "the agent got authority only through the plane" is literal.
     const { child: childC, evidence } = createChildMission(as.kernel, {
       parentId: parentP.id,
-      intent: intent("Send the approved Acme remittance", [ARTIFACT_ACTION]),
+      intent: intent("Send the approved Acme remittance"),
+      proposedAuthority: proposed([ARTIFACT_ACTION]),
       childActor: { sub: "agent-B1", sub_profile: "ai_agent" },
     });
     expect(evidence.decision).toBe("created");
@@ -312,10 +316,8 @@ d("work products: information may propagate, authority may not", () => {
     };
 
     const missionA = as.kernel.approve({
-      intent: intent("Pay Acme and send remittance", [
-        "payments:invoice.read",
-        "payments:remittance.send",
-      ]),
+      intent: intent("Pay Acme and send remittance"),
+      proposedAuthority: proposed(["payments:invoice.read", "payments:remittance.send"]),
       subject: { iss: ISSUER, sub: "alice" },
       approver: { iss: ISSUER, sub: "bob" },
       clientId: "agent-A1",

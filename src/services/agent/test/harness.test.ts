@@ -60,16 +60,20 @@ describe("M12 agent: EMA capability and untrusted shaper", () => {
 
   it("a shaper proposal is only a proposal -- the AS derivation still bounds it", async () => {
     const k = await kernel();
-    // Compromised shaper proposes an over-broad action set + huge scope.
-    const raw = shapeIntent({
+    // Compromised shaper proposes an over-broad action set + huge scope. The
+    // proposal rides the standard authorization_details carriage beside the
+    // task-only intent (@spec mission#authority-proposal).
+    const { missionIntent, authorizationDetails } = shapeIntent({
       goal: "pay everything",
       resources: [DERIVATION_POLICY.ceiling[0].resource],
       expiresAt: "2027-01-01T00:00:00Z",
       proposedActions: ["payments:payment.execute", "payments:vendor.delete"],
       vendors: ["acme", "evilcorp"],
     });
+    const intent = validateMissionIntent(missionIntent);
     const m = k.approve({
-      intent: validateMissionIntent(raw),
+      intent,
+      proposedAuthority: k.validateProposal(authorizationDetails as string, intent.resources),
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
       clientId: "ap-agent",

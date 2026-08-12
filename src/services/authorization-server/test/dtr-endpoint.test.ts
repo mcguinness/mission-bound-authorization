@@ -108,15 +108,15 @@ async function issueBaseMissionToken(): Promise<{ token: string; missionId: stri
     goal: "Pay Acme invoices and send remittance",
     resources: [RESOURCE],
     expires_at: "2027-01-01T00:00:00Z",
-    proposed_authority: [
-      {
-        type: "mission_resource_access",
-        resource: RESOURCE,
-        actions: ["payments:invoice.read", "payments:remittance.send"],
-        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-      },
-    ],
   });
+  const authorizationDetails = JSON.stringify([
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: ["payments:invoice.read", "payments:remittance.send"],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ]);
   const par = await fetch(`${ISSUER}/request`, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -129,6 +129,7 @@ async function issueBaseMissionToken(): Promise<{ token: string; missionId: stri
       code_challenge: challenge,
       code_challenge_method: "S256",
       mission_intent: intent,
+      authorization_details: authorizationDetails,
       client_assertion: await clientAssertion(),
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
     }).toString(),

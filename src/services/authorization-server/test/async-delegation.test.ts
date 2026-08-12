@@ -158,7 +158,6 @@ async function issueBaseMission(expiresAt: string = FAR_EXP): Promise<{
     goal: "Pay Acme invoices and send remittance",
     resources: [RESOURCE],
     expires_at: expiresAt,
-    proposed_authority: fullAuthority(),
   });
   const par = await fetch(`${ISSUER}/request`, {
     method: "POST",
@@ -172,6 +171,7 @@ async function issueBaseMission(expiresAt: string = FAR_EXP): Promise<{
       code_challenge: challenge,
       code_challenge_method: "S256",
       mission_intent: intent,
+      authorization_details: JSON.stringify(fullAuthority()),
       client_assertion: await clientAssertion(),
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
     }).toString(),
@@ -283,8 +283,8 @@ async function createChildViaExchange(subjectToken: string, parentId: string): P
       goal: "Extract Acme invoices",
       resources: [RESOURCE],
       expires_at: FAR_EXP,
-      proposed_authority: confinedAuthority(),
     }),
+    authorization_details: JSON.stringify(confinedAuthority()),
     child_actor: JSON.stringify({ sub: "subagent-invoice-extractor", sub_profile: "ai_agent" }),
   });
 }

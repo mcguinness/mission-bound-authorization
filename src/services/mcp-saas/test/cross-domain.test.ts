@@ -12,6 +12,7 @@
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
+  type AuthorityEntry,
   GateError,
   issueCrossDomainGrant,
   MissionKernel,
@@ -50,15 +51,17 @@ const intent = () =>
       goal: "Post journal entries to LedgerCloud",
       resources: [SAAS_RESOURCE],
       expires_at: "2027-01-01T00:00:00Z",
-      proposed_authority: [
-        { type: "mission_resource_access", resource: SAAS_RESOURCE, actions: ["ledger:vendor.read", "ledger:journal.write"] },
-      ],
     }),
   );
+
+const PROPOSED_AUTHORITY: AuthorityEntry[] = [
+  { type: "mission_resource_access", resource: SAAS_RESOURCE, actions: ["ledger:vendor.read", "ledger:journal.write"] },
+];
 
 const approve = (n: number) =>
   kernel.approve({
     intent: intent(),
+    proposedAuthority: PROPOSED_AUTHORITY,
     subject: { iss: AS_ISS, sub: "alice" },
     approver: { iss: AS_ISS, sub: "bob" },
     clientId: "ap-agent",
@@ -186,9 +189,9 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
           goal: "Read only",
           resources: [SAAS_RESOURCE],
           expires_at: "2027-01-01T00:00:00Z",
-          proposed_authority: [{ type: "mission_resource_access", resource: SAAS_RESOURCE, actions: ["ledger:vendor.read"] }],
         }),
       ),
+      proposedAuthority: [{ type: "mission_resource_access", resource: SAAS_RESOURCE, actions: ["ledger:vendor.read"] }],
       subject: { iss: AS_ISS, sub: "alice" },
       approver: { iss: AS_ISS, sub: "bob" },
       clientId: "ap-agent",
