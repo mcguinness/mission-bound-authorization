@@ -23,6 +23,7 @@ import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
 import { ContinuationStore } from "./kernel/continuation-store.js";
 import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
 import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
+import { CreationIdempotencyStore } from "./kernel/creation-idempotency.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
@@ -276,6 +277,11 @@ export interface BuiltAs {
    * (drive open/approve/deny headlessly, mirroring `deferrals`).
    */
   expansionDeferrals: ExpansionDeferralStore;
+  /**
+   * @spec expansion#creation-request-id — the creation-idempotency store
+   * (observe recorded operations; perturb delivery artifacts in tests).
+   */
+  creationIdempotency: CreationIdempotencyStore;
   issuer: string;
   agentClientJwk: Record<string, unknown>;
   /**
@@ -490,6 +496,10 @@ export async function buildAuthorizationServer(opts: {
   // @spec expansion — the DTR deferred-completion store for Mission EXPANSION
   // (widening; distinct from AROP, which never widens).
   const expansionDeferrals = new ExpansionDeferralStore(kernel);
+  // @spec expansion#creation-request-id — the creation-idempotency store over
+  // the kernel database (instances over the same kernel share the table; this
+  // one is exposed for tests/exhibit to observe or perturb recorded operations).
+  const creationIdempotency = new CreationIdempotencyStore(kernel);
 
   // @spec id-continuation-assertion — continuation-grant defaults. The AS is its
   // OWN Chain Authority in the demo (ICAs trusted when signed by a key on its
@@ -508,6 +518,7 @@ export async function buildAuthorizationServer(opts: {
     kernel,
     deferrals,
     expansionDeferrals,
+    creationIdempotency,
     statusListPublisher,
     clients: [agent.metadata, child.metadata, governed.metadata],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
@@ -554,6 +565,7 @@ export async function buildAuthorizationServer(opts: {
     kernel,
     deferrals,
     expansionDeferrals,
+    creationIdempotency,
     issuer: opts.issuer,
     agentClientJwk: agent.privateJwk,
     childClientJwk: child.privateJwk,
