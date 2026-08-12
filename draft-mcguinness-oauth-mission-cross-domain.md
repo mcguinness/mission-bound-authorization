@@ -469,14 +469,17 @@ A Mission-bound cross-domain grant:
   RECOMMENDED profile that mechanism is the ID-JAG's own
   proof-of-possession
   ({{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}): a `cnf`
-  claim ({{RFC7800}}) confirming the presenting client's key, control
-  of which the client proves either with a DPoP proof (`jkt`
-  thumbprint, {{RFC9449}}) or over an mTLS session (`x5t#S256`
-  certificate thumbprint, {{RFC8705}}); ID-JAG's `cnf` supports both
-  key-confirmation methods. That `cnf` is OPTIONAL in the ID-JAG
-  profile; for Mission-bound cross-domain use it is REQUIRED, so the
-  grant is never a bearer credential at the trust boundary
-  ({{grant-at-boundary}}). Binding and verification MUST use the same
+  claim ({{RFC7800}}) carrying the `jkt` thumbprint ({{RFC9449}}) of
+  the presenting client's key, control of which the client proves with
+  a DPoP proof. That `cnf` is OPTIONAL in the ID-JAG profile; for
+  Mission-bound cross-domain use it is REQUIRED, so the grant is never
+  a bearer credential at the trust boundary ({{grant-at-boundary}}). A
+  deployment MAY additionally sender-constrain the grant to a client
+  certificate, a Mission profile of certificate-bound key confirmation
+  aligning with the mTLS support ID-JAG is expected to add: for such a
+  grant the `cnf` carries the certificate's `x5t#S256` thumbprint
+  ({{RFC8705}}) in place of a `jkt`, and the client proves control over
+  an mTLS session. Binding and verification MUST use the same
   mechanism;
 - MUST carry a `jti` for one-time use, so the bound party cannot
   replay it within its lifetime ({{validation-at-resource-as}},
@@ -500,12 +503,12 @@ The client obtains the grant with an {{RFC8693}} token exchange. The
 `urn:ietf:params:oauth:token-type:refresh_token`, and the `audience`
 identifies the target Resource AS.
 
-The refresh-token subject is this profile's deviation from the
-ID-JAG issuance request, which that
-specification defines over an identity-assertion `subject_token`
-(`id_token` or `saml2`); a Mission-bound deployment substitutes the
-Mission's grant so the exchange resolves a Mission rather than a bare
-subject assertion. This refresh-token mode is what
+ID-JAG defines the refresh-token subject mode
+({{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}) alongside
+its identity-assertion `subject_token` modes (`id_token` or `saml2`);
+this profile REQUIRES the refresh-token mode and restricts Mission
+cross-domain projection to it, so the exchange resolves a Mission
+rather than a bare subject assertion. This refresh-token mode is what
 binds the request to a Mission: the AS resolves the Mission from the
 presented grant per the issuance profile's grant binding
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding the Mission
@@ -513,7 +516,7 @@ to the Grant"), exactly as on any other refresh, and the grant
 therefore projects the agent's full Mission authority
 (audience-scoped), never a narrowed delegate's.
 
-The refresh-token subject mode is the only mode this profile defines,
+The refresh-token subject mode is the only mode this profile permits,
 and fixing it is deliberate: the refresh token resolves to exactly
 one Mission and its full authority, where an access token or
 delegated token could carry a narrowed or actor-specific subset that
@@ -599,13 +602,15 @@ A Resource AS consuming a Mission-bound cross-domain grant:
     active at issuance; the short grant lifetime bounds the staleness.
 - MUST verify the grant's sender-constraint by the proof-of-possession
   mechanism the cross-domain grant profile defines. For the ID-JAG
-  profile the Resource AS accepts either a DPoP proof ({{RFC9449}}) for
-  its own token endpoint, presenting the key whose `jkt` thumbprint the
-  grant's `cnf` claim ({{RFC7800}}) carries, or an mTLS connection
-  ({{RFC8705}}) presenting the certificate whose `x5t#S256` thumbprint
-  that `cnf` carries
-  ({{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}). It MUST
-  reject with `invalid_grant` a cross-domain grant that is not
+  profile this is a DPoP proof ({{RFC9449}}) for the Resource AS's own
+  token endpoint, presenting the key whose `jkt` thumbprint the grant's
+  `cnf` claim ({{RFC7800}}) carries
+  ({{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}). Where the
+  deployment uses the certificate-bound option of
+  {{cross-domain-grant}}, the `cnf` carries an `x5t#S256` thumbprint
+  instead, and the Resource AS verifies that the presented mTLS client
+  certificate's `x5t#S256` ({{RFC8705}}) matches it. It MUST reject
+  with `invalid_grant` a cross-domain grant that is not
   sender-constrained or whose proof-of-possession does not verify. A
   bearer grant MUST NOT be accepted: accepting one unbound would let
   any party that captured it mint a local token ({{grant-at-boundary}}).
