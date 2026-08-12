@@ -37,8 +37,8 @@ At a glance:
   High-Assurance Agent) are the adoption ladder: what to deploy, in
   the order deployments build it. What may be claimed is the
   orthogonal set of named assurance claims a deployment lists in its
-  Deployment Profile. The first three levels run entirely on ratified
-  dependencies.
+  Deployment Profile. The first three levels run on ratified
+  dependencies and the tracked in-progress ones noted below.
 - **Three authorization bindings, an AAuth context binding, and one
   sketch.** The OAuth Authorization Server and standalone Mission
   Authority Server carry the family's portable-authority model. The
@@ -260,7 +260,7 @@ satisfy the levels' structured-authority or runtime proof obligations.
 | Level | Drafts | What you get |
 |---|---|---|
 | **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance where the binding places the Mission authority on the issuance path; a possession-independent kill switch there (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). The cutoff is binding-dependent: the standalone MAS has no issuance gate, and AAuth gates PS-asserted and federated access but not direct identity-based or resource-managed decisions. With token lifetimes sized to the declared staleness bound (lifetime-bounded reliance), revocation takes effect within one lifetime on gated paths; what this level lacks is per-action enforcement and parameter binding. OAuth day-one AS prerequisites are PAR, RAR, and JWT access tokens; the standalone MAS and AAuth binding do not inherit them. |
-| **Runtime-Enforced** | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and every dependency it needs is ratified. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
+| **Runtime-Enforced** | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and its dependencies are ratified apart from the tracked in-progress ones noted below. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
 | **Governed Agent** (recommended for AI agents) | Runtime-Enforced + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. Add child-delegation for sub-agents and expansion for mid-task growth, orchestration (experimental) for safe unwinding of in-flight work, and discovery (experimental, with progressive) for agents that meet resources their approval could not name. |
 | **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness, agent-isolated approval rendering | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |
 
@@ -387,8 +387,12 @@ sit outside the ordering.
 Outside the family itself, every normative dependency is a ratified
 RFC, a finalized OpenID specification, or (for the **uma** sketch) a
 final Kantara Initiative Recommendation, with these tracked
-exceptions: the **core**'s one Internet-Draft reference (the OAuth
-Actor Profile) is informative and confined to its OPTIONAL Delegation
+exceptions: the **core** has a normative dependency on an
+unratified individual draft (OAuth 2.0 RAR Metadata and Error
+Remediation): an AS that advertises Mission-bound authorization
+support MUST advertise the authorization-details type-metadata
+endpoint that draft defines, and its reference to the OAuth Actor
+Profile is informative and confined to its OPTIONAL Delegation
 capability; **status** depends on the OAuth Status List (a
 working-group document); **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
@@ -416,8 +420,9 @@ anchors the AAuth binding and its management companion; and the
 these. The substrate contract publishes before or with any binding
 that claims conformance to it.
 
-In short: steps 1 through 3 are built entirely on ratified
-dependencies; everything experimental is additive and can wait.
+In short: steps 1 through 3 rest on ratified dependencies and the
+tracked in-progress ones noted above; everything experimental is
+additive and can wait.
 
 ## The standardization ask
 
