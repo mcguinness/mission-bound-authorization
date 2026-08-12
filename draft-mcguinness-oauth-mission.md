@@ -672,8 +672,11 @@ This document maps principals onto native OAuth constructs:
   is governance state this document does not model
   ({{multi-party-approval}}).
 
-On a derived token the `sub` claim is the Subject's `sub` and the
-token `iss` is the AS; within the issuing AS's namespace this
+On a derived token the `sub` claim is the AS-local `sub` the AS
+maps the Subject to under the injective mapping of
+{{approval-event}}, verbatim adoption of the external `sub` being
+the common case, and the token `iss` is the AS; within the issuing
+AS's namespace this
 (`iss`, `sub`) pair is the AS-local subject principal, authoritative
 for the Subject, and Resource Servers authorize against it. The
 Mission separately records the Subject's home issuer and identifier
@@ -987,14 +990,18 @@ validate against that type's published JSON Schema ({{other-types}},
 {{discovery}}); where a deployment arranges Mission-bound
 authorization out of band rather than advertising the metadata
 endpoint, the supported types and their schemas are established out
-of band, and this rule applies over that knowledge the same way. An
-entry of an unadvertised type, or one that fails its schema, MUST
-NOT be carried into the Authority Set unexamined: the AS refuses the
-request with `invalid_authorization_details`, or omits the entry; it
-MUST NOT keep the entry silently, and where the AS omits the entry
-the granted `authorization_details` echo ({{mission-bound-tokens}})
-MUST reflect the omission, so no entry is ever represented as
-granted when it was not.
+of band, and this rule applies over that knowledge the same way.
+This is the {{RFC9396}} Section 5 validation of the standard
+parameter: the AS MUST refuse a request carrying an entry of an
+unadvertised type, or an entry that fails its type's schema, with
+`invalid_authorization_details`; a validation failure is never
+repaired by omitting the entry. Policy narrowing is distinct.
+During derivation the AS MAY narrow or omit a syntactically valid
+entry that policy cannot accept ({{authorization-derivation}}); it
+MUST NOT keep such an entry silently, and the granted
+`authorization_details` echo ({{mission-bound-tokens}}) MUST
+reflect every narrowing and omission, so no entry is ever
+represented as granted when it was not.
 
 When a proposal is present, the AS MUST derive each Authority Set
 entry as a subset ({{subset}}) of some proposed entry of the *same
@@ -1067,9 +1074,11 @@ derivation policy then in force, in one of two modes:
   authority proposal ({{authority-proposal}}), and the Authority Set
   is the proposal narrowed to policy. Each derived entry MUST be a
   subset ({{subset}}) of some proposed entry of the same type
-  ({{authority-proposal}}); a proposed entry of an unadvertised
-  type, one that fails its schema, or one policy otherwise cannot
-  accept, is narrowed or omitted ({{authority-proposal}}).
+  ({{authority-proposal}}). An entry of an unadvertised type, or one
+  that fails its schema, was refused at validation and never reaches
+  derivation ({{authority-proposal}}); a valid proposed entry that
+  policy cannot accept is narrowed or omitted, and the granted echo
+  reflects it ({{authority-proposal}}).
 - **Template mode**: no authority proposal was submitted, and
   a deployment-configured mapping, keyed on the Intent's `purpose` or
   `resources`, yields the candidate entries, which are then narrowed
@@ -1669,8 +1678,8 @@ At the approval event the AS MUST, in order:
 1. Authenticate the Approver. If the Mission Intent's
    `controls.acr` is present, the authentication MUST satisfy it.
 2. Establish the Subject: the principal the task is for, recorded as
-   the Mission's `subject` and set as the `sub` of every derived token
-   ({{mission-bound-tokens}}). When the Approver is the Subject
+   the Mission's `subject` and mapped to the `sub` of every derived
+   token ({{mission-bound-tokens}}). When the Approver is the Subject
    (self-approval), this is the authenticated Approver. When the
    Approver is a different principal (for example, an administrator or
    manager approving on a user's behalf), the AS MUST itself establish
@@ -1680,15 +1689,15 @@ At the approval event the AS MUST, in order:
    wire parameter for the Subject; how the AS establishes it
    (administrative selection, a directory, an authenticated reference)
    is a deployment matter. When the Subject's home issuer
-   (`subject.iss`) differs from the AS, the AS MUST ensure the `sub`
-   it adopts is unique within its own issuer namespace and does not
-   collide with a different principal's `sub`, so a derived token's
-   (`iss`, `sub`) pair unambiguously denotes the Subject. This is the
-   mapping between the external subject identity and the AS-local
-   principal: the AS adopts `subject.sub` as the local `sub`, and the
-   uniqueness requirement above is what makes that adoption
-   injective, so one AS-local principal denotes one external
-   Subject.
+   (`subject.iss`) differs from the AS, the AS MUST map the external
+   (`subject.iss`, `subject.sub`) pair to an AS-local `sub` under an
+   injective mapping: one external Subject maps to exactly one
+   AS-local `sub`, and no two distinct external Subjects map to the
+   same local `sub`, so a derived token's (`iss`, `sub`) pair
+   unambiguously denotes the Subject. Adopting the external `sub`
+   string verbatim as the local `sub` is one permitted deployment
+   choice, valid exactly where it collides with no other principal's
+   `sub`; the injectivity, not the verbatim adoption, is the rule.
 3. Render for consent the derived Authority Set in human-meaningful
    terms, with the `goal`, `constraints`, `expires_at`, and any
    `controls` bounds (notably `max_derivations`) as context:
@@ -1788,8 +1797,9 @@ recompute it and treats it as an audit anchor (see
 
 If the task, the authority proposal, or the derived Authority Set
 changes between approval rendering and the approval decision, the AS
-MUST recompute all three commitments (`intent_hash`,
-`proposal_hash`, and `authority_hash`) and MUST NOT create the
+MUST recompute the anchors the Mission records (`intent_hash` and
+`authority_hash`, and `proposal_hash` where a proposal was
+submitted) and MUST NOT create the
 Mission without the Approver's consent to the changed context, each
 anchor computed over the context actually approved (the
 approval-event rule of {{I-D.draft-mcguinness-mission-substrate}},
@@ -2217,7 +2227,8 @@ profile requires, a derived token:
   `authorization_details` ({{RFC9396}}); this MAY be the full Authority
   Set or a narrowed subset ({{subset}});
 - carries a `mission` claim ({{mission-claim}});
-- sets `sub` to the Mission's Subject `sub`;
+- sets `sub` to the AS-local `sub` the AS maps the Mission's
+  Subject to ({{approval-event}});
 - carries `client_id` per its ordinary {{RFC8693}} Section 4.3 and
   {{RFC9068}} Section 2.2 meaning, the client that requested this
   particular token; the Mission's originally-approved agent is not
@@ -4555,8 +4566,8 @@ resolve before interoperating.
   (`typ` `mission-proposed-authority`) commits the submitted
   proposal, recorded on the Mission and surfaced through
   introspection, never on the `mission` claim. Worked examples and
-  test vectors are recomputed; a tri-anchor recomputation rule at
-  the approval event and a Mission-governed-client bare-request
+  test vectors are recomputed; an approval-event rule recomputing
+  every recorded anchor and a Mission-governed-client bare-request
   rejection accompany the change.
 - Derivation is mechanical, in two modes: narrowing (RECOMMENDED)
   and template. The deterministic-reproducibility and
