@@ -507,11 +507,11 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   `state_unavailable` (where the deployment's state-source placement
   has the PEP supply state, and it cannot establish it). For a PDP
   refusal of an in-scope request that reaches it without the Mission
-  decision context, `mission_context_missing`
-  ({{I-D.draft-mcguinness-mission-authzen}}). These name pre-evaluation
-  conditions, PEP-side or PDP-side, and are disjoint from the runtime
-  profile's PDP denial reasons for an evaluated decision (for example,
-  as carried by the AuthZEN binding,
+  decision context a runtime enforcement scope requires,
+  `mission_context_missing`. These name pre-evaluation conditions,
+  PEP-side or PDP-side, and are disjoint from the runtime profile's
+  PDP denial reasons for an evaluated decision (for example, as
+  carried by the AuthZEN binding,
   {{I-D.draft-mcguinness-mission-authzen}}); a record that can
   populate the PDP-derived members of an evaluated decision is a
   Decision Evidence Object instead.

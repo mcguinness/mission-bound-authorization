@@ -1630,15 +1630,26 @@ Authentication step-up has no dedicated denial-reason value under
 this profile ({{obligations}}): an in-process step-up rides the
 obligation on a permit; an RFC 9470 step-up rides the obligation on a
 `resource_policy` denial, since obtaining a new access token changes
-credential-derived inputs the original permit cannot absorb. A
-Resource-policy refusal with no step-up path at all is likewise
-`resource_policy`.
+credential-derived inputs the original permit cannot absorb. That
+denial carries no `next_action` value: the step-up obligation is the
+actionable instruction, distinct from the `request`/`retry`/`none`
+machinery below, and the fresh evaluation that follows depends on the
+PEP obtaining a new token, not on a timed retry or a requestable
+workflow. A Resource-policy refusal with no step-up path at all is
+likewise `resource_policy`.
 
-A terminal policy refusal SHOULD carry `next_action: none`; a denial
-the deployment exposes as requestable carries `next_action: request`
-with `context.access_request` ({{response-context}}).
+A terminal policy refusal SHOULD carry `next_action: none`, except a
+denial carrying the step-up obligation, which carries neither
+`next_action` value per above; a denial the deployment exposes as
+requestable carries `next_action: request` with
+`context.access_request` ({{response-context}}).
 
-This document defines no other denial-reason values. A companion
+This document defines no other denial-reason values of its own. ARAP's
+five re-evaluation reasons above are the one exception: they are
+values ARAP owns and registers under its own extensibility rule
+{{ARAP}}, carried here rather than redefined, and this profile does
+not require them to independently satisfy the collision-resistant or
+family-coordinated form below. Beyond that exception, a companion
 profile MAY extend the set by specification; an extension value MUST
 be either a collision-resistant name (following the Collision-Resistant
 Name guidance of {{RFC7519}} Section 4.2) or a name coordinated within
@@ -1798,16 +1809,19 @@ profile.
 Every runtime failure condition, whether named in the runtime profile's
 failure-mode table or in its other normative requirements
 ({{I-D.draft-mcguinness-mission-runtime}}), surfaces through exactly
-one of four carriers in this binding: a Refusal Record for a PEP
-refusal before any PDP decision
+one of four carriers in this binding: a Refusal Record for a PEP or
+PDP refusal before any PDP decision
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}), a PDP
 denial (`reason` in the decision context, `denial_reason` in Decision
 Evidence), a permit obligation ({{obligations}}), or an Execution
 Evidence `error` for a failure after a permit
-({{I-D.draft-mcguinness-mission-runtime-evidence}}). The table below
-is the normative mapping for the conditions it names; extension
-identifiers remain
-governed by each carrier's extensibility rule.
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). A PDP denial MAY
+additionally carry an obligation, the OAuth step-up composition of
+{{obligations}} being the one case this document defines; the row
+below marking that composite still names a single condition surfaced
+by one denial. The table below is the normative mapping for the
+conditions it names; extension identifiers remain governed by each
+carrier's extensibility rule.
 
 | Runtime failure condition | Carrier | Identifier |
 |---|---|---|
@@ -1819,7 +1833,7 @@ governed by each carrier's extensibility rule.
 | In-scope request reaches the PDP without the Mission decision context | Refusal Record | `mission_context_missing` |
 | Action outside the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it | PDP denial | `out_of_authority` |
 | Resource policy requires a stronger authentication context, satisfiable by in-process step-up with no change to credential-bound inputs | Obligation on permit | step-up obligation ({{AUTHZEN-OBL}}) |
-| Resource policy requires a stronger authentication context satisfiable only by a new access token (RFC 9470) | PDP denial + obligation | `resource_policy` with the step-up obligation ({{AUTHZEN-OBL}}) |
+| Resource policy requires a stronger authentication context satisfiable only by a new access token (RFC 9470) | PDP denial (with obligation) | `resource_policy` with the step-up obligation ({{AUTHZEN-OBL}}) |
 | Resource policy requires a stronger authentication context and refuses outright, no step-up path available | PDP denial | `resource_policy` |
 | Required action-bound approval absent (first evaluation) | PDP denial | `approval_required` |
 | Re-evaluation's presented approval fails a Mission or ARAP check | PDP denial | ARAP's `approval_expired`, `out_of_scope`, `grant_pending`, `policy_denied`, or `approval_unverifiable` ({{ARAP}}) |
