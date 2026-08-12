@@ -143,7 +143,7 @@ export async function handleTokenExchangeGrant(
   // checked BEFORE the ICA hard-checks below, so the ICA continuation path is
   // byte-for-byte unchanged whenever neither value is present:
   //   - child-creation issues a child-bound RFC 7523 JWT authorization grant (jwt);
-  //   - expansion issues (synchronously) or defers a Mission access token.
+  //   - expansion defers a Mission access token (or refuses a non-widening request).
   // The subject_token possession rule (control the subject_token's OWN cnf) is the
   // inverse of the async transport's deliberate re-binding; see verifySubjectPossession.
   if (params.requested_token_type === JWT_TOKEN_TYPE) {
@@ -791,8 +791,8 @@ function secondsUntil(iso: string): number {
  * the AccessToken and its Grant to name the same client, the acting client MUST be
  * the mission's own client_id (a Mission derivation is performed by the Mission's
  * own agent); a mismatch refuses. `tokenRar` is the authorization the token
- * carries (a confined subset for a subset-derivation, the full effective set for a
- * successor). Sets the RFC 8693-shaped success body on ctx.
+ * carries (the successor's full effective set at both call sites). Sets the
+ * RFC 8693-shaped success body on ctx.
  */
 async function mintMissionAccessToken(
   opts: AdapterOptions,
@@ -1174,13 +1174,16 @@ async function recoverChildCreation(
 /**
  * @spec expansion — the EXPANSION exchange (a real back-channel wire path; expansion
  * previously had none). The predecessor is resolved FROM `subject_token`; possession
- * is control of that token's cnf key. Completion modes:
- *   - SYNCHRONOUS when the requested authority is a pure subset of the predecessor's
- *     EFFECTIVE set (an ordinary confined derivation, no fresh consent, NO successor);
- *   - DEFERRED via the DTR substrate ({@link ExpansionDeferralStore}) when the
- *     request WIDENS (a fresh approval is required and is asynchronous);
+ * is control of that token's cnf key. Expansion ALWAYS widens and ALWAYS requires a
+ * fresh approval; TWO completion modes:
+ *   - DEFERRED via the DTR substrate ({@link ExpansionDeferralStore}): the fresh
+ *     approval is asynchronous;
  *   - INTERACTIVE (the deployment's existing front-channel approval) is RETAINED as
- *     an alternative for the widening case and is untouched here.
+ *     an alternative and is untouched here.
+ * A NON-WIDENING request (the derived requested authority is a subset of the
+ * predecessor's own effective Authority Set) is REFUSED — nothing to expand;
+ * ordinary token derivation already serves it. There is no synchronous exchange
+ * completion: an expansion response must never ambiguously be a non-successor (#486).
  * A poll (deferral_code, no subject_token) completes a deferred expansion.
  */
 export async function handleExpansionExchange(
@@ -1207,9 +1210,9 @@ export async function handleExpansionExchange(
   if (!acting) return;
 
   // @spec expansion#creation-request-id — REQUIRED on every expansion
-  // initiation, in every completion mode: the client cannot know in advance
-  // whether the request completes synchronously, defers, or goes interactive
-  // (missing -> invalid_request).
+  // initiation, in every completion mode: initiation is mode-agnostic (the
+  // client cannot know in advance whether the request defers or goes
+  // interactive; missing -> invalid_request).
   const creationRequestId = readCreationRequestId(params);
 
   // @spec expansion#request-binding — the non-authoritative `predecessor`
@@ -1288,13 +1291,19 @@ export async function handleExpansionExchange(
     return;
   }
 
-  // Step 5: subset-derivation vs fresh-approval-required.
+  // Step 5: widening check. @spec expansion#nothing-to-expand — a NON-WIDENING
+  // request (the derived requested authority is a subset of the predecessor's
+  // own effective Authority Set) is REFUSED: there is nothing to expand, and
+  // ordinary token derivation already serves it (an expansion response must
+  // never ambiguously be a non-successor; #486). Nothing is created or
+  // reserved and the predecessor is untouched. Set on ctx directly (err_out
+  // would strip mission_denial_reason).
   const requested = opts.kernel.derive(intent, proposedAuthority);
   const effective = opts.kernel.effectiveAuthoritySet(active);
   if (isSubsetSet(requested, effective)) {
-    // Step 6 (synchronous): a pure subset is an ordinary confined derivation on the
-    // predecessor (no fresh consent, no successor). gate + claim run in extraTokenClaims.
-    await mintMissionAccessToken(opts, provider, ctx, active, requested, resolved.jkt);
+    ctx.status = 400;
+    ctx.body = { error: "invalid_grant", mission_denial_reason: "nothing_to_expand" };
+    ctx.set("cache-control", "no-store");
     return;
   }
 
