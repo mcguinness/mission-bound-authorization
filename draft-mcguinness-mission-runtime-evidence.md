@@ -51,6 +51,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-mission-authzen:
@@ -217,6 +225,46 @@ shape of the OpenID AuthZEN Authorization API binding
 {{I-D.draft-mcguinness-mission-authzen}}, the family's reference
 producer; a deployment using a different decision-API binding
 produces the same records from its own wire inputs.
+
+# Mission Substrate {#mission-substrate}
+
+This document is defined against the Mission model rather than
+against OAuth 2.0 mechanics: it is a substrate-neutral consumer, and
+this section is its consumption declaration under the rule of Mission
+Substrate Requirements ({{I-D.draft-mcguinness-mission-substrate}})
+that a substrate-neutral profile declare the kernel functions and
+optional capabilities it consumes.
+
+It is a kernel-only consumer with one conditional capability. From
+the contextual-governance kernel it consumes the Mission identifier
+and issuer, the kernel's Mission Reference and Controller, carried in
+every record's `mission` object; and the ordered governance record:
+`evaluation_id` correlates every record and wire artifact of one
+evaluation, `sequence` gives one emitter's stream a verifiable
+per-Mission order, and records are retained no shorter than the
+Mission's audit horizon ({{decision-evidence-object}},
+{{execution-evidence-object}}).
+
+It consumes these optional capabilities:
+
+| Capability | Consumption | Scope of consumption |
+| --- | --- | --- |
+| Structured Authority | conditional | Consumed where a record's authority basis names it: `contributing_constraints` records the constraint keys and `authorization_details` entry types a decision turned on, and the `mission` object cites `authority_hash` and `intent_hash` as the issuing AS's commitments, anchors the PDP does not recompute ({{decision-evidence-object}}) |
+| Lifecycle-Gated Authorization | not consumed | The decision contract, action classification, and failure conditions are the runtime profile's; this document records decisions, it does not gate them ({{I-D.draft-mcguinness-mission-runtime}}) |
+| State-Observable | not consumed | `mission_state_version` records the state version a decision consulted, when the PDP tracks one; establishing Mission state is the runtime profile's concern ({{decision-evidence-object}}) |
+| Monotonic Derivation | not consumed | No record derives or narrows authority; anchors are cited for correlation, never compared |
+| Credential-Bound | not consumed | The Mission enters a record as the decision request's Mission reference object; this document verifies no credential binding ({{decision-evidence-object}}) |
+| Independently Verifiable, Portable Evidence | not consumed | This document produces evidence rather than consuming either capability: verification is anchored in the Enforcement Scope Statement's published keys, and portability beyond a party with access to those keys requires the transparency mechanisms of the audit profile ({{evidence-integrity-signing-keys}}, {{I-D.draft-mcguinness-mission-audit}}) |
+{: title="Runtime evidence capability consumption"}
+
+This document is defined against the runtime profile's abstract
+decision contract and is independent of any one decision-API
+binding's wire ({{conventions-and-definitions}}). The portability
+claim is capability-scoped rather than substrate-wide for the reason
+the substrate's Capability Confusion consideration states: every
+property this document requires matches an explicit capability claim
+and its scope, never the generic statement that a binding supports
+Missions.
 
 # Decision Evidence Object {#decision-evidence-object}
 
