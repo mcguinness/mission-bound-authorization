@@ -1783,17 +1783,19 @@ An AS SHOULD make clear to the Approver which rendered bounds its
 deployment actually enforces, so consent is not given to a limit that
 binds nowhere.
 
-The `authority_hash` is the **authority commitment**: it binds, by
+The `authority_hash` is the **authority commitment**: it commits, by
 cryptographic digest, exactly the authority the Approver approved. It
 commits the approved authority, not the way that authority was
 rendered to the Approver; this profile commits no separate consent
-disclosure object (see {{consent-binding}}). Every token derived
-under the
-Mission carries this value ({{mission-bound-tokens}}), so a party
-holding the full Authority Set can verify a token's authority against
-what was approved. A party holding only a narrowed subset cannot
-recompute it and treats it as an audit anchor (see
-{{consent-binding}}).
+disclosure object (see {{consent-binding}}). Every token derived under
+the Mission carries this value ({{mission-bound-tokens}}). A party
+holding the full Authority Set can recompute the commitment and verify
+that the token's carried authority is a subset of that set. A party
+holding only a narrowed subset cannot recompute the commitment and
+treats it as an audit anchor. For that party, `authority_hash` alone
+does not prove that the carried entries belong to the approved set;
+the relationship is asserted by the AS's signed token and depends on
+the AS applying the subset rule correctly (see {{consent-binding}}).
 
 If the task, the authority proposal, or the derived Authority Set
 changes between approval rendering and the approval decision, the AS
@@ -2413,7 +2415,10 @@ The `mission` claim is a JSON object:
 
 `authority_hash`:
 : REQUIRED. A string. The Mission's
-  `authority_hash`, binding the token to the consented authority.
+  `authority_hash`, identifying the commitment to the complete
+  consented Authority Set. The value alone is not a cryptographic
+  proof that a narrowed token's carried `authorization_details` are a
+  subset of that set ({{rs-enforcement}}).
 
 `expires_at`:
 : OPTIONAL. A string. The Mission's `expires_at`
@@ -2592,11 +2597,13 @@ be Mission-aware in this sense.
 A `constraints` member narrows authority, so treating an
 unenforceable key as absent, or reducing it to disclosure-only, would
 silently widen the grant; that is why an unrecognized or
-unenforceable key fails closed. At a Resource Server that holds only
-a narrowed token, `mission.authority_hash` is an audit correlator,
-not an enforcement input: the subset relationship between the carried
-entries and the approved set rests on trust in the AS's signature,
-not on a per-token cryptographic subset proof.
+unenforceable key fails closed. A Resource Server that holds only a
+narrowed token MUST treat `mission.authority_hash` as an audit
+correlator, not an enforcement input, and MUST NOT treat it as a
+cryptographic proof that the carried entries are a subset of the
+approved set. That subset relationship is an assertion by the AS,
+authenticated by the token signature, and depends on the AS applying
+the subset rule correctly.
 
 Three denials above are byte-identical `403`s to a client, and
 misrouting them turns a step-up into an authority-widening ceremony
@@ -3504,10 +3511,13 @@ starting point and creates no new conformance class.
 ## Consent Binding {#consent-binding}
 
 The security goal of this document is that a user's approval of a
-task bounds every token derived for it. The `authority_hash` is the
-mechanism: it commits the exact Authority Set the Approver
-consented to, and every derived token carries it in the `mission`
-claim.
+task bounds every token derived for it. The `authority_hash` commits
+the exact Authority Set the Approver consented to, and every derived
+token carries it in the `mission` claim. The complete mechanism also
+requires the AS to issue only subsets of that set and the Resource
+Server to verify the AS's token signature and enforce the carried
+authority. The hash alone does not prove containment of a narrowed
+token's authority.
 
 The requirements that uphold the commitment live at the approval
 event ({{approval-event}}): the AS computes `authority_hash` over
@@ -3522,7 +3532,9 @@ optional, and its rules live with the Resource Server's other duties
 set treats `authority_hash` as a whole-Mission audit and correlation
 anchor ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) while
 enforcing the token's `authorization_details` directly
-({{mission-bound-tokens}}).
+({{mission-bound-tokens}}). It relies on the signed token as the AS's
+assertion that the carried authority was correctly projected from the
+approved set; `authority_hash` supplies no independent subset proof.
 
 `intent_hash` extends the same protection to the task itself: it
 commits the approved Mission Intent, so an auditor can detect any
