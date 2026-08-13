@@ -196,27 +196,35 @@ optional capabilities it consumes.
 
 From the contextual-governance kernel it consumes the Mission
 Identifier and issuer, the kernel's Mission Reference and Controller,
-which key every consumption counter; and the integrity-anchor
-envelope, through which the bounds are committed by `intent_hash` as
-Mission Intent `controls` members.
+which key every consumption counter; and the immutable Approved
+Context, of which the bounds are part as Mission Intent `controls`
+members. The kernel requires no particular integrity anchors:
+`intent_hash` is the OAuth binding's commitment to that approved
+value, and it commits the bounds like any other Intent member
+({{relationship}}).
 
 It consumes these optional capabilities:
 
 | Capability | Consumption | Scope of consumption |
 | --- | --- | --- |
 | Lifecycle-Gated Authorization | required | Inherited scope: metering is performed by the runtime profile's PDP within a documented enforcement scope ({{relationship}}), so every metered decision is already gated on the only-`active`-permits rule; this document adds counters to that gate and defines no second one |
-| Structured Authority | conditional | A `call_class` value SHOULD be drawn from the `actions` identifiers of the entry's `mission_resource_access`, so the metered class maps to evaluated actions; a deployment that meters a coarser or cross-entry class defines that class's membership, and such a class is not interoperable ({{bounds}}) |
+| Structured Authority | conditional | Two consumers. A `call_class` value SHOULD be drawn from the `actions` identifiers of the entry's `mission_resource_access`, so the metered class maps to evaluated actions; a deployment that meters a coarser or cross-entry class defines that class's membership, and such a class is not interoperable ({{bounds}}). The `exclusive` control consumes it even then: its selectors are interpreted in the identifier space of the approved Authority Set entries and compared with each consequential action, `resource` by equality and the invoked action by membership in `actions`, per group and per Mission; selector semantics are owned by this document ({{bounds}}, {{exclusivity}}) |
 | State-Observable | not consumed | Mission state is established by the runtime decision this document adds counters to, under that profile's freshness rules, not by this document ({{I-D.draft-mcguinness-mission-runtime}}) |
 | Monotonic Derivation | not consumed | A lineage-keyed budget identifier correlates a root Mission and its Child Missions to one shared counter ({{aggregate-bounds}}); lineage counters are correlation, not narrowing, and this document defines no no-broader-than comparison |
 | Credential-Bound | not consumed | This document defines no binding of its own: enforcement composes through the runtime profile's Mission binding establishment step ({{I-D.draft-mcguinness-mission-runtime}}) |
-| Independently Verifiable, Portable Evidence | not consumed | This document defines no evidence artifact of its own; metered refusals and settlement are carried in the runtime evidence records ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
+| Independently Verifiable | not consumed | This document defines no verification artifact of its own; metered outcomes enter the runtime evidence records and inherit their verification ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
+| Portable Evidence | not consumed | This document defines no evidence artifact of its own; metered refusals and settlement are carried in the runtime evidence records ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
 {: title="Metering profile capability consumption"}
 
 The portability claim is capability-scoped rather than substrate-wide
 for the reason the substrate's Capability Confusion consideration
 states: every property this profile requires matches an explicit
 capability claim and its scope, never the generic statement that a
-binding supports Missions.
+binding supports Missions. Hosting under another binding also
+requires a representation mapping: the bounds carried inside the
+binding's own Approved Context and covered by its own commitment
+mechanism, as the OAuth binding carries them in the Mission Intent
+and commits them through `intent_hash`.
 
 # Consumption Bounds {#bounds}
 

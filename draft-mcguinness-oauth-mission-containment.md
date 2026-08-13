@@ -349,10 +349,14 @@ From the contextual-governance kernel it consumes the Mission
 identifier and issuer, the kernel's Mission Reference and Controller,
 which key the overlay and its evidence; the lifecycle state space,
 the kernel's governance gate, whose states bound a contain
-transition's legality ({{contain-transition}}); the integrity-anchor
-envelope, which the overlay never enters ({{overlay}}); and the
-ordered governance record, into which each contain transition commits
-as a state-version increment.
+transition's legality ({{contain-transition}}); the immutable
+Approved Context, whose boundary the overlay respects: contained
+capability is evaluated state, never a change to the approved value
+({{overlay}}); and the ordered governance record, into which each
+contain transition commits as a state-version increment. The kernel
+requires no particular integrity anchors: `intent_hash` and
+`authority_hash` are the OAuth binding's commitment to the Approved
+Context, and the overlay stays outside that commitment ({{overlay}}).
 
 It consumes these optional capabilities:
 
@@ -363,16 +367,19 @@ It consumes these optional capabilities:
 | Lifecycle-Gated Authorization | required | The Baseline property is what a lifecycle-gated substrate provides: no derivation, delegation, projection, or attenuation root minted after the transition carries contained capability ({{containment-properties}}) |
 | State-Observable | conditional | Consumed only for the Runtime-Enforced property: a consumer that checks a fresh, authenticated state source at or near action time denies contained capability whether or not its credential predates the transition; a consumer that never consults such a source gets Baseline only ({{containment-properties}}) |
 | Credential-Bound | conditional | Consumed where derivation issues Mission-bound tokens; a token issued before the transition is the same residual that revocation carries, bounded by its own `exp` and the deployment's freshness rules ({{derivation-gating}}) |
-| Independently Verifiable, Portable Evidence | not consumed | This document consumes neither capability; it produces audit material of its own, the Containment Evidence object and the Protected Event Receipt, which an audit or transparency profile registers by their canonical bytes ({{containment-evidence}}, {{protected-event-receipt}}) |
+| Independently Verifiable | not consumed | This document defines no offline verification artifact or trust-anchor discovery; its evidence objects are the Mission Issuer's own audit material ({{containment-evidence}}) |
+| Portable Evidence | not consumed | This document produces audit material of its own, the Containment Evidence object and the Protected Event Receipt, whose canonical bytes and type identifiers an audit or transparency profile registers ({{evidence-canonical}}, {{protected-event-receipt}}) |
 {: title="Containment profile capability consumption"}
 
 The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
 version's normative substrate: it defines each consumed kernel
 function and capability for OAuth 2.0, and every OAuth artifact named
 in this document enters through it. A binding that provides the
-required capabilities above hosts this profile's Baseline property;
-the Runtime-Enforced property additionally requires State-Observable
-({{containment-properties}}). The portability claim is
+required capabilities above, and maps this document's representations
+onto its own, the Authority Set entries the overlay names and the
+approved-context commitment the overlay stays outside, hosts this
+profile's Baseline property; the Runtime-Enforced property
+additionally requires State-Observable ({{containment-properties}}). The portability claim is
 capability-scoped rather than substrate-wide for the reason the
 substrate's Capability Confusion consideration states: every property
 this profile requires matches an explicit capability claim and its

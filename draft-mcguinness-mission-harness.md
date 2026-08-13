@@ -289,7 +289,8 @@ It consumes these optional capabilities:
 | Credential-Bound | conditional | The Mission-bound credentials the harness holds or mediates, with their sender-constraint custody, when the binding in use provides them; under a binding without them, the harness binds governed work items to the externally established Mission reference of the runtime profile's Mission binding establishment step ({{I-D.draft-mcguinness-mission-runtime}}), and the custody duties of {{cached-access}} apply to whatever acting credentials the deployment uses |
 | Structured Authority | conditional | Consumed where the harness scopes the tool catalog and schemas to the Mission's Authority Set ({{mediated-egress}}), records `authority_hash` on the Mission binding when known ({{mission-binding}}), and, on continuation across supersession, proceeds only for the actions the successor's Authority Set authorizes ({{supersession-continuity}}) |
 | Monotonic Derivation | not consumed | The Mission binding grants no authority ({{mission-binding}}), and binding inheritance copies or narrows a pointer, not an Authority Set ({{binding-inheritance}}); the harness derives no authority to compare |
-| Independently Verifiable, Portable Evidence | not consumed | This document consumes neither capability; it produces Harness Evidence of its own, registrable on the Mission's transparency feed ({{harness-evidence}}, {{I-D.draft-mcguinness-mission-audit}}) |
+| Independently Verifiable | not consumed | The harness establishes Mission state through online or event-driven sources ({{resume-checks}}); it verifies no Mission property offline |
+| Portable Evidence | not consumed | This document produces Harness Evidence of its own, registrable on the Mission's transparency feed ({{harness-evidence}}, {{I-D.draft-mcguinness-mission-audit}}) |
 {: title="Harness profile capability consumption"}
 
 The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this

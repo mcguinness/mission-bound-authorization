@@ -525,8 +525,13 @@ optional capabilities it consumes.
 From the contextual-governance kernel it consumes the Mission
 identifier and issuer, the kernel's Mission Reference and Controller;
 the lifecycle state space with its only-`active`-permits rule, the
-kernel's governance gate; the integrity-anchor envelope; and the
+kernel's governance gate; the immutable Approved Context, the
+approval-time fixity behind every anchor its records cite; and the
 Mission's audit horizon, which bounds the ordered governance record.
+The kernel requires no particular integrity anchors: `intent_hash`
+and `authority_hash` are the OAuth binding's commitment to the
+Approved Context, supplied by the issuance profile, not by the
+kernel.
 
 It consumes these optional capabilities:
 
@@ -537,7 +542,8 @@ It consumes these optional capabilities:
 | State-Observable | conditional | An authenticated freshness source with a stated staleness bound, consumed wherever an enforcement scope's published staleness bound is tighter than the credential lifetime ({{state-freshness}}) |
 | Monotonic Derivation | conditional | Consumed where delegation, attenuation, or containment narrowing is enforced at action time through effective-set evaluation ({{input-authority}}) |
 | Credential-Bound | conditional | Consumed when the binding provides the Mission-bound credential carrying the `mission` claim; a binding that does not provide it supplies an externally established Mission reference instead, under the binding-establishment step of {{mission-binding}} |
-| Independently Verifiable, Portable Evidence | not consumed | Evidence portability and offline verification are the audit profile's concern ({{I-D.draft-mcguinness-mission-audit}}); the runtime evidence companion defines the records themselves ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
+| Independently Verifiable | not consumed | Offline verification is the audit profile's concern ({{I-D.draft-mcguinness-mission-audit}}); the runtime evidence companion defines the records and their scoped verification ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
+| Portable Evidence | not consumed | Evidence portability is the audit profile's concern ({{I-D.draft-mcguinness-mission-audit}}); the records themselves are the runtime evidence companion's ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
 {: title="Runtime profile capability consumption"}
 
 The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
@@ -545,8 +551,11 @@ version's normative substrate: it defines each consumed kernel
 function and capability for OAuth 2.0, and every OAuth artifact named
 in this document enters through it. A binding that provides the
 required capabilities above, and whichever conditional capabilities
-the deployment's enforcement scopes require, can host this profile;
-such a binding is defined by that substrate, not here, and its
+the deployment's enforcement scopes require, can host this profile,
+given a mapping of this profile's representations onto the binding's
+own: the authority representation the decision contract evaluates and
+the Approved Context commitment its records cite. Such a binding is
+defined by that substrate, not here, and its
 Mission Substrate Statement declares what it provides (the AAuth
 binding {{I-D.draft-mcguinness-mission-aauth}} is one example). A
 binding that does not provide Structured Authority does not host this

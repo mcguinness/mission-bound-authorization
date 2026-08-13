@@ -235,26 +235,30 @@ Substrate Requirements ({{I-D.draft-mcguinness-mission-substrate}})
 that a substrate-neutral profile declare the kernel functions and
 optional capabilities it consumes.
 
-It is a kernel-only consumer with one conditional capability. From
-the contextual-governance kernel it consumes the Mission identifier
-and issuer, the kernel's Mission Reference and Controller, carried in
-every record's `mission` object; and the ordered governance record:
-`evaluation_id` correlates every record and wire artifact of one
-evaluation, `sequence` gives one emitter's stream a verifiable
-per-Mission order, and records are retained no shorter than the
-Mission's audit horizon ({{decision-evidence-object}},
-{{execution-evidence-object}}).
+It is a kernel-only consumer. From the contextual-governance kernel
+it consumes the Mission identifier and issuer, the kernel's Mission
+Reference and Controller, carried in every record's `mission` object.
+Its records are not the kernel's ordered governance record: that
+record is the Controller's own ordered record of governance events,
+where this document's records form PDP, PEP, and executor emitter
+streams, ordered per emitter by `sequence`, correlated per evaluation
+by `evaluation_id`, and joinable to the Mission through the `mission`
+object ({{decision-evidence-object}}). They are a separate, joinable
+evidence stream, retained no shorter than the Mission's audit horizon
+({{execution-evidence-object}}), which the audit profile may
+incorporate ({{I-D.draft-mcguinness-mission-audit}}).
 
-It consumes these optional capabilities:
+Its declaration against the optional capabilities:
 
 | Capability | Consumption | Scope of consumption |
 | --- | --- | --- |
-| Structured Authority | conditional | Consumed where a record's authority basis names it: `contributing_constraints` records the constraint keys and `authorization_details` entry types a decision turned on, and the `mission` object cites `authority_hash` and `intent_hash` as the issuing AS's commitments, anchors the PDP does not recompute ({{decision-evidence-object}}) |
+| Structured Authority | not consumed | Recording `contributing_constraints`, `authorization_details` entry types, and cited anchors is correlation, not machine-evaluable authority consumption; the runtime profile consumes Structured Authority and supplies the decision facts these records carry ({{I-D.draft-mcguinness-mission-runtime}}, {{decision-evidence-object}}) |
 | Lifecycle-Gated Authorization | not consumed | The decision contract, action classification, and failure conditions are the runtime profile's; this document records decisions, it does not gate them ({{I-D.draft-mcguinness-mission-runtime}}) |
 | State-Observable | not consumed | `mission_state_version` records the state version a decision consulted, when the PDP tracks one; establishing Mission state is the runtime profile's concern ({{decision-evidence-object}}) |
 | Monotonic Derivation | not consumed | No record derives or narrows authority; anchors are cited for correlation, never compared |
 | Credential-Bound | not consumed | The Mission enters a record as the decision request's Mission reference object; this document verifies no credential binding ({{decision-evidence-object}}) |
-| Independently Verifiable, Portable Evidence | not consumed | This document produces evidence rather than consuming either capability: verification is anchored in the Enforcement Scope Statement's published keys, and portability beyond a party with access to those keys requires the transparency mechanisms of the audit profile ({{evidence-integrity-signing-keys}}, {{I-D.draft-mcguinness-mission-audit}}) |
+| Independently Verifiable | not consumed | Not consumed, and supplied in scoped form: verification is anchored in the Enforcement Scope Statement's published keys, so a party with access to that statement verifies a record independently of the deployment that emitted it ({{evidence-integrity-signing-keys}}) |
+| Portable Evidence | not consumed | Not supplied by this document alone: portability beyond a party with access to the deployment's published keys requires the transparency mechanisms of the audit profile ({{evidence-integrity-signing-keys}}, {{I-D.draft-mcguinness-mission-audit}}) |
 {: title="Runtime evidence capability consumption"}
 
 This document is defined against the runtime profile's abstract
