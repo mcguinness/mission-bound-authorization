@@ -893,8 +893,9 @@ and `policy_denied` accompanies `access_denied`. In an error response
 body the symbolic reason rides, alongside the OAuth `error` member, in
 the `mission_denial_reason` member, the shared adjudication-denial
 carrier defined and registered by the expansion profile
-({{I-D.draft-mcguinness-oauth-mission-expansion}}); these seven reasons
-populate that profile's Mission Denial Reasons registry. On a deferred
+({{I-D.draft-mcguinness-oauth-mission-expansion}}); this document
+requests these seven reasons' registration in that profile's Mission
+Denial Reasons registry ({{iana-registrations}}). On a deferred
 completion ({{completion}}) a denial surfaces as the deferred
 substrate's `access_denied` resolution. The possession proof is
 presented only on the token endpoint's authenticated back channel and
@@ -1684,10 +1685,26 @@ member defined by this profile, carried inside the already-registered
 This document defines one closed set of symbolic codes: the child
 creation denial reasons ({{denial-reasons}}). They ride the shared
 `mission_denial_reason` member the expansion profile defines and
-registers ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and are
-registered in the Mission Denial Reasons registry that profile
-pre-drafts, not in a registry of this document's own; this document
-requests no separate registration for them.
+registers ({{I-D.draft-mcguinness-oauth-mission-expansion}}). This
+document establishes no registry of its own; it requests these
+registrations in the registries its siblings establish
+({{iana-registrations}}).
+
+## Registry Registrations {#iana-registrations}
+
+This document requests registration of its seven denial reasons in
+the expansion profile's Mission Denial Reasons registry, one row per
+reason of {{denial-reasons}}, each with its semantics as defined
+there, Change Controller IETF, and Reference this document,
+{{denial-reasons}}.
+
+It requests registration of one state in the issuance profile's
+Mission Lifecycle States registry
+({{I-D.draft-mcguinness-oauth-mission}}):
+
+| Value | Terminal | Semantics | Change Controller | Reference |
+|---|---|---|---|---|
+| `cascaded` | yes | A terminal state a Child Mission enters when a terminal cascade trigger on its Parent Mission terminates it under `immediate` cascade. | IETF | this document, {{child-state}} |
 
 ## Media Type Registration
 

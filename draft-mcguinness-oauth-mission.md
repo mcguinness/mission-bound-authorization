@@ -3060,7 +3060,7 @@ The transitions are:
 | `active` | `expires_at` reached | `expired` |
 
 These three states are the mandatory core of the Mission lifecycle
-state space. This profile owns that state space and pre-drafts its
+state space. This profile owns that state space and establishes its
 registry, the Mission Lifecycle States registry
 ({{iana-lifecycle-states}}); an OPTIONAL companion profile MAY register
 an additional state for a lifecycle it introduces (for example, a
@@ -3698,7 +3698,7 @@ where it needs discovery, its own metadata. The extensibility of the
 `typ` value space and the `mission` claim rests on collision-resistant
 naming and the fail-safe rules above rather than on central
 registration; the lifecycle state space is additionally backed by the
-pre-drafted Mission Lifecycle States registry ({{iana-lifecycle-states}}).
+Mission Lifecycle States registry ({{iana-lifecycle-states}}).
 {{namespace-taxonomy}} states the general rule this section's extension
 points follow.
 
@@ -3708,12 +3708,15 @@ The family's extensible namespaces follow one of three postures:
 
 - **Registry-backed.** A namespace whose values are load-bearing for
   fail-closed behavior and span multiple documents is backed by an
-  IANA registry: the registry is pre-drafted in the document that
-  owns the namespace and requested by the eventual defining RFC.
+  IANA registry: the document that owns the namespace carries the
+  IANA creation instruction and seeds the registry with the values it
+  itself defines, and every further document that defines a value
+  requests that value's registration, carrying any Internet-Draft
+  reference as a publication dependency under the registry's policy.
   Mission Common Constraints ({{iana-common-constraints}}) and
   Mission Lifecycle States ({{iana-lifecycle-states}}) are this
   document's two; the Mission Authority Server Metadata registry and
-  the Mission Denial Reasons registry are pre-drafted where those
+  the Mission Denial Reasons registry are established where those
   namespaces are defined.
 - **Specification-defined.** A namespace with a defined fail-safe for
   unknown values and no demonstrated third-party extension demand
@@ -3725,15 +3728,21 @@ The family's extensible namespaces follow one of three postures:
   collision-resistant naming rules of this section and are never
   registered.
 
-Every typed artifact that crosses a protocol boundary is named by an
-`application/mission-*` media type, and its defining document carries
-the RFC 6838 registration template at definition time. The JOSE
-protected `typ` of such an artifact is the registered media type,
-with the `application/` prefix omitted where JWS permits the
-shortened form; an HTTP `Content-Type` carries the full media type. A
-`typ` inside a JCS commitment envelope names a hash domain, not a
-representation crossing a boundary, and is deliberately not a media
-type ({{integrity-anchors}}).
+A newly defined, family-specific typed artifact that crosses a
+protocol boundary is named by an `application/mission-*` media type,
+and its defining document carries the RFC 6838 registration template
+at definition time. An artifact typed by a standard this family
+composes (an access token profile, a Security Event Token) keeps
+that standard's type. A defining document MAY instead record a
+local-use identifier as a transitional reservation where cross-domain
+interoperability is not yet claimed, registering the type when the
+claim is made; the audit profile's deferred evidence types are this
+class. The JOSE protected `typ` of a family-typed artifact is the
+registered media type, with the `application/` prefix omitted where
+JWS permits the shortened form; an HTTP `Content-Type` carries the
+full media type. A `typ` inside a JCS commitment envelope names a
+hash domain, not a representation crossing a boundary, and is
+deliberately not a media type ({{integrity-anchors}}).
 
 # Authorization Server Metadata {#discovery}
 
@@ -4695,18 +4704,17 @@ registry.
 
 ## Mission Lifecycle States Registry {#iana-lifecycle-states}
 
-This document pre-drafts the "Mission Lifecycle States" registry; the
-registry is requested by the eventual RFC that standardizes this
-specification, not created, activated, or assigned a change controller
-at working group adoption. The registration policy is Specification
+IANA is requested to create the "Mission Lifecycle States" registry.
+The registration policy is Specification
 Required {{RFC8126}}. A Designated Expert reviews a submission for the
 discipline {{lifecycle}} requires: a `Value` matching
 `^[a-z][a-z0-9_]*$` not already registered; a `Terminal` designation of
 `yes` or `no` consistent with the transitions the registrant's
 specification defines (a `yes` state admits no further transition; a
-`no` state does); and a `Semantics` sentence precise enough that an
-implementation can decide, from the sentence alone, whether a Mission
-in that state is available for reliance. Registration does not require
+`no` state does); and a `Semantics` sentence precise enough to
+distinguish the state from every registered state. Whether a Mission
+in any state is available for reliance is fixed by the governing rule
+below, never per row. Registration does not require
 IETF review or a Standards Track document; a Specification Required
 reference that a Designated Expert can review against these criteria
 suffices.
@@ -4729,24 +4737,18 @@ Each registration records:
   registration.
 - **Reference**: the specification defining the state.
 
-This document populates the registry with the lifecycle states
-currently defined across the family:
+This document seeds the registry with the states it defines:
 
 | Value | Terminal | Semantics | Change Controller | Reference |
 |---|---|---|---|---|
 | `active` | no | Tokens MAY be derived; the only state from which issuance proceeds. | IETF | this document, {{lifecycle}} |
 | `revoked` | yes | Terminated by the Subject, Approver, or policy. | IETF | this document, {{lifecycle}} |
 | `expired` | yes | The Mission's `expires_at` has passed. | IETF | this document, {{lifecycle}} |
-| `suspended` | no | A paused Mission that derives no tokens until resumed. | IETF | {{I-D.draft-mcguinness-oauth-mission-status}}, Section "Mission Lifecycle Endpoint" |
-| `completed` | yes | Records successful completion of the Mission. | IETF | {{I-D.draft-mcguinness-oauth-mission-status}}, Section "Mission Lifecycle Endpoint" |
-| `superseded` | yes | A predecessor Mission that a successor has replaced through a replacement expansion. | IETF | {{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The Superseded Predecessor State" |
-| `cascaded` | yes | A terminal state a Child Mission enters when a terminal cascade trigger on its Parent Mission terminates it under `immediate` cascade. | IETF | {{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section "Child Mission State" |
 
-`suspended` and `completed` are defined by the Mission Status profile;
-`superseded` by the Mission Expansion profile; `cascaded` by the
-Mission Child Delegation profile. Each is a companion registration
-under this registry's policy, not a member of this document's own
-lifecycle ({{lifecycle}}).
+Each further document that defines a lifecycle state requests that
+state's registration in its own IANA considerations, carrying its
+Internet-Draft reference as a publication dependency under this
+registry's policy until it is published.
 
 --- back
 

@@ -1284,7 +1284,8 @@ specification-defined Common Constraint under the issuance profile's
 naming convention ({{iana}}).
 
 `terminal_when`:
-: OPTIONAL. An array of completion conditions. When any condition is
+: OPTIONAL. An array of one or more completion conditions. When any
+  condition is
   met, the entry is discharged ({{discharge}}). Each condition is an
   object with these members:
 
@@ -1305,7 +1306,13 @@ naming convention ({{iana}}).
 
 The `terminal_when` array is part of the entry's `constraints` and so of
 the Authority Set: it is committed by `authority_hash` and reproducible
-under derivation ({{I-D.draft-mcguinness-oauth-mission}}). Whether a
+under derivation ({{I-D.draft-mcguinness-oauth-mission}}). Condition
+identity is byte equality of the condition object's canonical form
+under the issuance profile's canonicalization; an AS refuses a value
+carrying two identical conditions, and an intersection of two arrays
+deduplicates by that identity and sorts by the lexicographic order of
+the canonical bytes ({{iana-terminal-when}}), so the intersected entry
+is one reproducible array. Whether a
 condition has fired is evaluated state, not part of `authority_hash`;
 folding fired status into the anchor would make the committed authority
 time-varying.
@@ -1990,6 +1997,18 @@ IANA is requested to register one media type per {{RFC6838}}.
 - Intended usage: COMMON
 - Author/Change controller: IETF
 
+## Mission Lifecycle States Registrations {#iana-lifecycle-registrations}
+
+This document requests registration of two states in the issuance
+profile's Mission Lifecycle States registry
+({{I-D.draft-mcguinness-oauth-mission}}), under that registry's
+Specification Required policy:
+
+| Value | Terminal | Semantics | Change Controller | Reference |
+|---|---|---|---|---|
+| `suspended` | no | A paused Mission that derives no tokens until resumed. | IETF | this document, {{mission-lifecycle-endpoint}} |
+| `completed` | yes | Records successful completion of the Mission. | IETF | this document, {{mission-lifecycle-endpoint}} |
+
 ## Common Constraints Registry: terminal_when {#iana-terminal-when}
 
 The completion capability ({{completion}}) registers one Common
@@ -1999,16 +2018,24 @@ registry's Specification Required policy. This document supplies the
 registration's required fields:
 
 - Key Name: `terminal_when`
-- Value Space: a JSON array of completion-condition objects, each with a
+- Value Space: a JSON array of one or more completion-condition
+  objects, each with a
   REQUIRED `event_type` (string), an OPTIONAL `event_source` (string, a
-  URI), and an OPTIONAL `max_staleness` (string, an ISO 8601 duration)
+  URI), and an OPTIONAL `max_staleness` (string, an ISO 8601 duration);
+  no two conditions in one array share a canonical form
   ({{terminal-when}}).
 - Subset Rule: a candidate value is no broader than a reference value
   when the candidate's condition array contains every condition of the
   reference, compared structurally after the issuance profile's
   canonicalization; the candidate MAY add further conditions
   ({{subset-extension}}).
-- Intersection Rule: the union of the two condition arrays.
+- Intersection Rule: the union of the two condition arrays, where
+  condition identity is byte equality of each condition object's
+  canonical form under the issuance profile's canonicalization
+  ({{I-D.draft-mcguinness-oauth-mission}}): byte-identical conditions
+  collapse to one, and the union is sorted by the lexicographic order
+  of those canonical bytes, so two implementations produce the
+  identical array and the identical `authority_hash`.
 - Change Controller: IETF
 - Reference: this document, {{terminal-when}}
 

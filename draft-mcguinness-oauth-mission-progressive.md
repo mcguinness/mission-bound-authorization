@@ -605,7 +605,7 @@ parties with a governance need.
 # IANA Considerations {#iana}
 
 This document requests one registration in the expansion profile's
-pre-drafted Mission Denial Reasons registry
+Mission Denial Reasons registry
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}): `out_of_ceiling`,
 with the semantics of {{denial-reason}} and Reference this
 document. Beyond that,

@@ -628,8 +628,9 @@ At the token endpoint the denial uses the issuance profile's error
 vocabulary for a request outside the derivable authority and MAY
 additionally carry `authority_contained` in the shared
 `mission_denial_reason` member the expansion profile registers
-({{I-D.draft-mcguinness-oauth-mission-expansion}}); this document adds
-that value to the Mission Denial Reasons registry that member carries.
+({{I-D.draft-mcguinness-oauth-mission-expansion}}); this document
+requests that value's registration in the Mission Denial Reasons
+registry that member carries ({{iana}}).
 A runtime enforcement deployment separately carries it as a
 denial-reason identifier alongside the classification set of
 {{I-D.draft-mcguinness-mission-authzen}}, a distinct
@@ -1035,11 +1036,11 @@ introspection Mission projection,
 {{I-D.draft-mcguinness-oauth-mission-status}}); consistent with those
 surfaces' rules, a consumer ignores an unrecognized member.
 
-`authority_contained` is registered in the Mission Denial Reasons
-registry the expansion profile pre-drafts
-({{I-D.draft-mcguinness-oauth-mission-expansion}}): it rides the
-shared `mission_denial_reason` member that registry covers, and this
-document requests no separate registration for it. The same string
+This document requests registration of `authority_contained` in the
+Mission Denial Reasons registry the expansion profile establishes
+({{I-D.draft-mcguinness-oauth-mission-expansion}}), with its semantics
+as defined in this document and Reference this document: it rides the
+shared `mission_denial_reason` member that registry covers. The same string
 also names a denial-reason identifier in the AuthZEN decision-context
 classification set
 ({{I-D.draft-mcguinness-mission-authzen}}); that is a separate

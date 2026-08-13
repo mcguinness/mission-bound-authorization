@@ -862,7 +862,7 @@ action. Following the restraint of the sibling profiles:
   carried inside the already-open `mission` claim and needs no separate
   registration;
 - `out_of_template_ceiling` and `dispatch_prohibited_class` are
-  requested as registrations in the expansion profile's pre-drafted
+  requested as registrations in the expansion profile's
   Mission Denial Reasons registry
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}), each with its
   semantics as defined in this document and Reference this document;

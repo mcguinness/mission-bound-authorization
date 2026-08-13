@@ -2058,9 +2058,8 @@ registry {{RFC8615}}:
 
 ## Mission Authority Server Metadata Registry
 
-This document pre-drafts the "Mission Authority Server Metadata"
-registry; the registry is requested by the eventual RFC that
-standardizes this specification. The registration policy is
+IANA is requested to create the "Mission Authority Server Metadata"
+registry. The registration policy is
 Specification Required {{RFC8126}}. A Designated Expert reviews a
 submission for: a Member Name following the metadata naming
 conventions of {{discovery}} and not already registered; a definition

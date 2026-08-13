@@ -1300,7 +1300,8 @@ untouched. Such a denial surfaces per the completion mode
 derive a valid Authority Set from), as the deferred substrate's
 `access_denied` resolution on a deferred poll, or through the
 interactive approval's own decline path. It MAY additionally carry one
-machine-readable reason code from the closed set below:
+machine-readable reason code from the Mission Denial Reasons registry
+({{iana-denial-reasons}}); this document defines four:
 
 `out_of_policy`:
 : The Mission Issuer's governance policy refuses the requested
@@ -1696,8 +1697,9 @@ object for which the issuance profile establishes no member registry.
 No new claim, parameter, or token-introspection registration is
 required for the lineage link.
 
-This document defines two closed sets of symbolic codes: the expansion
-reconciliation status codes ({{reconciliation}}), conveyed in
+This document defines two sets of symbolic codes: the expansion
+reconciliation status codes ({{reconciliation}}), a closed set
+conveyed in
 `mission_expansion_status`, and the expansion denial reasons
 ({{denial-reasons}}), conveyed in the shared `mission_denial_reason`
 member. As members of the OAuth error response JSON body at the token
@@ -1711,16 +1713,28 @@ revision MAY establish a "Mission Expansion Reconciliation Status"
 registry for it with a Specification Required {{RFC8126}} policy; until
 then this document is the value space.
 
-The denial reasons are pre-drafted below as the Mission Denial Reasons
-registry ({{iana-denial-reasons}}), the one registry-backed carrier for
-adjudication-denial values across the family.
+The denial reasons are registry-backed: this document establishes the
+Mission Denial Reasons registry ({{iana-denial-reasons}}), the one
+registry-backed carrier for adjudication-denial values across the
+family, seeds it with the four values it defines, and each further
+document that defines a value on the carrier requests its own
+registration in it.
+
+## Mission Lifecycle States Registration {#iana-lifecycle-registration}
+
+This document requests registration of one state in the issuance
+profile's Mission Lifecycle States registry
+({{I-D.draft-mcguinness-oauth-mission}}), under that registry's
+Specification Required policy:
+
+| Value | Terminal | Semantics | Change Controller | Reference |
+|---|---|---|---|---|
+| `superseded` | yes | A predecessor Mission that a successor has replaced through a replacement expansion; terminal and non-active. | IETF | this document, {{superseded-state}} |
 
 ## Mission Denial Reasons Registry {#iana-denial-reasons}
 
-This document pre-drafts the "Mission Denial Reasons" registry; the
-registry is requested by the eventual RFC that standardizes this
-specification, not created, activated, or assigned a change controller
-at working group adoption. The registration policy is Specification
+IANA is requested to create the "Mission Denial Reasons" registry.
+The registration policy is Specification
 Required {{RFC8126}}. A Designated Expert reviews a submission for the
 discipline {{denial-reasons}} requires: a `Value` matching
 `^[a-z][a-z0-9_]*$` not already registered, a `Semantics` sentence
@@ -1755,9 +1769,8 @@ Each registration records:
   registration.
 - **Reference**: the specification defining the value.
 
-This document populates the registry with the values it defines
-({{denial-reasons}}), plus the values four further profiles define on
-the same carrier:
+This document seeds the registry with the values it defines
+({{denial-reasons}}):
 
 | Value | Semantics | Change Controller | Reference |
 |---|---|---|---|
@@ -1765,24 +1778,12 @@ the same carrier:
 | `approver_rejected` | The Approver declined the expansion at the consent step. | IETF | this document, {{denial-reasons}} |
 | `out_of_scope_for_purpose` | The requested authority is incompatible with the Mission's recorded `purpose`. | IETF | this document, {{denial-reasons}} |
 | `nothing_to_expand` | The derived requested authority is a subset of the predecessor's own effective Authority Set, so there is nothing to expand. | IETF | this document, {{denial-reasons}} |
-| `parent_not_active` | The Parent Mission is not active. | IETF | {{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section "Child Creation Denial Reasons" |
-| `parent_mismatch` | The caller-supplied `parent` cross-check does not match the Mission resolved from `subject_token`. | IETF | {{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section "Child Creation Denial Reasons" |
-| `delegation_not_permitted` | The applicable parent Authority Set entry's `delegation` member carries no `children` object, so it permits no child creation. | IETF | {{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section "Child Creation Denial Reasons" |
-| `child_actor_not_allowed` | The child actor does not satisfy the parent entry's `allowed_child_actors` or equivalent policy. | IETF | {{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section "Child Creation Denial Reasons" |
-| `not_strict_subset` | The proposed child authority is not a strict subset of parent authority. | IETF | {{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section "Child Creation Denial Reasons" |
-| `fanout_exceeded` | Creating the child would exceed a fan-out control. | IETF | {{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section "Child Creation Denial Reasons" |
-| `policy_denied` | Deployment policy denied child creation. | IETF | {{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section "Child Creation Denial Reasons" |
-| `authority_contained` | The requested capability was approved for this Mission and is currently contained. | IETF | {{I-D.draft-mcguinness-oauth-mission-containment}}, Section "The authority_contained Denial Reason" |
-| `out_of_ceiling` | The requested authority is not a subset of the Mission's consented authority ceiling, so it cannot be granted by policy drawdown. | IETF | {{I-D.draft-mcguinness-oauth-mission-progressive}}, Section "The out_of_ceiling Denial Reason" |
-| `out_of_template_ceiling` | The dispatched instance's Authority Set is not within the Template Ceiling, so it cannot be instantiated by policy. | IETF | {{I-D.draft-mcguinness-oauth-mission-template}}, Section "The Denial Reasons" |
-| `dispatch_prohibited_class` | The dispatched instance would grant a high-consequence class, which a Dispatch never auto-approves. | IETF | {{I-D.draft-mcguinness-oauth-mission-template}}, Section "The Denial Reasons" |
 
-The child delegation profile is Standards Track; containment, the
-progressive authorization profile that registers `out_of_ceiling`, and
-the template dispatch profile that registers
-`out_of_template_ceiling` and `dispatch_prohibited_class` are
-Experimental, consistent with this registry's Specification Required
-policy, which does not require Standards Track maturity.
+Each further document that defines a value on this carrier requests
+that value's registration in its own IANA considerations, carrying its
+Internet-Draft reference as a publication dependency under this
+registry's policy until it is published; Specification Required does
+not require Standards Track maturity of the registrant.
 
 The expansion request is an {{RFC8693}} token exchange carrying the
 already-registered `mission_intent` request parameter and the
