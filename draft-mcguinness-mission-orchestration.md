@@ -70,6 +70,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-mission-architecture:
@@ -227,21 +235,49 @@ format.
 # Mission Substrate {#mission-substrate}
 
 This profile is defined against the Mission model rather than against
-OAuth 2.0 mechanics. It consumes these substrate primitives:
+OAuth 2.0 mechanics: it is a substrate-neutral consumer, and this
+section is its consumption declaration under the rule of Mission
+Substrate Requirements ({{I-D.draft-mcguinness-mission-substrate}})
+that a substrate-neutral profile declare the kernel functions and
+optional capabilities it consumes.
 
-- the Mission identifier;
-- the lifecycle state space with its only-`active`-permits rule;
-- the runtime enforcement evidence its records link;
-- the integrity-anchor envelope, used for `unwind_plan_hash`; and
-- the substrate's Mission state, against which a compensation
-  authority basis resolves ({{compensation-authority}}): a
-  `separate_mission` basis requires a Mission that is `active` under
-  the binding in use, and a `resource_policy` basis lies outside
-  Mission authority entirely.
+From the contextual-governance kernel it consumes the Mission
+identifier and issuer, the kernel's Mission Reference and Controller;
+and the lifecycle state space with its only-`active`-permits rule,
+the kernel's governance gate, which drives state-change behavior
+({{state-change-behavior}}). `unwind_plan_hash` is a commitment
+mechanism this profile defines for its own artifact
+({{unwind-plan-integrity}}), not a kernel function: the kernel
+requires no particular integrity anchors. The runtime enforcement
+evidence its records link
+({{I-D.draft-mcguinness-mission-runtime-evidence}}) is a companion
+dependency, not a substrate primitive.
+
+It consumes these optional capabilities:
+
+| Capability | Consumption | Scope of consumption |
+| --- | --- | --- |
+| Lifecycle-Gated Authorization | required | When the orchestrator learns a Mission is no longer `active`, or cannot establish active state within the deployment's staleness bound, it stops dispatching new governed steps, suppresses or pauses queued work, and evaluates in-flight steps; post-completion behavior runs only on an established non-active state ({{state-change-behavior}}) |
+| State-Observable | required | The orchestration profile MUST define the source of Mission state used by the orchestrator and a staleness bound per action class, calibrated against the runtime profile's non-normative freshness table ({{orchestration-profile}}) |
+| Structured Authority | conditional | Consumed only for a successor's or remedial Mission's own Authority Set: a `separate_mission` compensation basis requires a distinct `active` Mission whose Authority Set is scoped to compensation actions for the terminated Mission's committed steps, and a `resource_policy` basis lies outside Mission authority entirely ({{compensation-authority}}) |
+| Monotonic Derivation | not consumed | The orchestrator derives no authority; a superseded Mission's continued work proceeds through a fresh derivation from the successor's grant, not by rebinding the predecessor's authority ({{state-change-behavior}}) |
+| Credential-Bound | not consumed | The runtime profile still governs each consequential action at the last controllable boundary ({{relationship}}); under a `resource_policy` compensation basis the orchestrator presents no Mission-bound credential ({{compensation-authority}}) |
+| Independently Verifiable | not consumed | The orchestrator establishes Mission state through its declared trigger sources ({{trigger-sources}}); it verifies no Mission property offline |
+| Portable Evidence | not consumed | This document produces Orchestration Evidence of its own, under the record integrity and retention requirements imported from the runtime profile ({{orchestration-evidence}}, {{evidence-integrity}}) |
+{: title="Orchestration profile capability consumption"}
 
 The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
-version's normative substrate; another substrate that provides the
-same primitives can host this profile unchanged.
+version's normative substrate: it defines each consumed kernel
+function and capability for OAuth 2.0. A binding that provides the
+required capabilities above, and Structured Authority where a
+deployment compensates under a `separate_mission` basis, can host
+this profile, provided it also supplies a commitment mechanism for
+the unwind plan: this document's `unwind_plan_hash`, or a declared
+adapter in the substrate's sense ({{unwind-plan-integrity}}). The portability claim is capability-scoped rather than
+substrate-wide for the reason the substrate's Capability Confusion
+consideration states: every property this profile requires matches an
+explicit capability claim and its scope, never the generic statement
+that a binding supports Missions.
 
 # Reversibility Classes {#reversibility}
 

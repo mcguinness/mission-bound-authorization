@@ -51,6 +51,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-mission-authzen:
@@ -217,6 +225,50 @@ shape of the OpenID AuthZEN Authorization API binding
 {{I-D.draft-mcguinness-mission-authzen}}, the family's reference
 producer; a deployment using a different decision-API binding
 produces the same records from its own wire inputs.
+
+# Mission Substrate {#mission-substrate}
+
+This document is defined against the Mission model rather than
+against OAuth 2.0 mechanics: it is a substrate-neutral consumer, and
+this section is its consumption declaration under the rule of Mission
+Substrate Requirements ({{I-D.draft-mcguinness-mission-substrate}})
+that a substrate-neutral profile declare the kernel functions and
+optional capabilities it consumes.
+
+It is a kernel-only consumer. From the contextual-governance kernel
+it consumes the Mission identifier and issuer, the kernel's Mission
+Reference and Controller, carried in every record's `mission` object.
+Its records are not the kernel's ordered governance record: that
+record is the Controller's own ordered record of governance events,
+where this document's records form PDP, PEP, and executor emitter
+streams, ordered per emitter by `sequence`, correlated per evaluation
+by `evaluation_id`, and joinable to the Mission through the `mission`
+object ({{decision-evidence-object}}). They are a separate, joinable
+evidence stream, retained no shorter than the Mission's audit horizon
+({{execution-evidence-object}}), which the audit profile may
+incorporate ({{I-D.draft-mcguinness-mission-audit}}).
+
+Its declaration against the optional capabilities:
+
+| Capability | Consumption | Scope of consumption |
+| --- | --- | --- |
+| Structured Authority | not consumed | Recording `contributing_constraints`, `authorization_details` entry types, and cited anchors is correlation, not machine-evaluable authority consumption; the runtime profile consumes Structured Authority and supplies the decision facts these records carry ({{I-D.draft-mcguinness-mission-runtime}}, {{decision-evidence-object}}) |
+| Lifecycle-Gated Authorization | not consumed | The decision contract, action classification, and failure conditions are the runtime profile's; this document records decisions, it does not gate them ({{I-D.draft-mcguinness-mission-runtime}}) |
+| State-Observable | not consumed | `mission_state_version` records the state version a decision consulted, when the PDP tracks one; establishing Mission state is the runtime profile's concern ({{decision-evidence-object}}) |
+| Monotonic Derivation | not consumed | No record derives or narrows authority; anchors are cited for correlation, never compared |
+| Credential-Bound | not consumed | The Mission enters a record as the decision request's Mission reference object; this document verifies no credential binding ({{decision-evidence-object}}) |
+| Independently Verifiable | not consumed | Not consumed, and supplied in scoped form: verification is anchored in the Enforcement Scope Statement's published keys, so a party with access to that statement verifies a record independently of the deployment that emitted it ({{evidence-integrity-signing-keys}}) |
+| Portable Evidence | not consumed | Not supplied by this document alone: portability beyond a party with access to the deployment's published keys requires the transparency mechanisms of the audit profile ({{evidence-integrity-signing-keys}}, {{I-D.draft-mcguinness-mission-audit}}) |
+{: title="Runtime evidence capability consumption"}
+
+This document is defined against the runtime profile's abstract
+decision contract and is independent of any one decision-API
+binding's wire ({{conventions-and-definitions}}). The portability
+claim is capability-scoped rather than substrate-wide for the reason
+the substrate's Capability Confusion consideration states: every
+property this document requires matches an explicit capability claim
+and its scope, never the generic statement that a binding supports
+Missions.
 
 # Decision Evidence Object {#decision-evidence-object}
 
