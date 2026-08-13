@@ -369,7 +369,14 @@ considerations assume; a different binding re-derives only the
 substrate-specific entries of this model.
 {{I-D.draft-mcguinness-mission-substrate}} consolidates the primitives
 a further binding provides and points at where each is normatively
-defined.
+defined; it names the seven optional capabilities the consuming
+profiles declare against (Lifecycle-Gated Authorization,
+State-Observable, Structured Authority, Monotonic Derivation,
+Credential-Bound, Independently Verifiable, and Portable Evidence),
+and as an Informational analysis rather than a substrate-neutral
+profile this document is not bound by the substrate's rule that a
+consumer declare the capabilities it consumes; each profile's own
+consumption declaration is authoritative.
 
 # The Untrusted Agent {#untrusted-agent}
 
