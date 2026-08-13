@@ -1351,6 +1351,11 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
             <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-extensibility" class="internal xref">Extensibility</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-namespace-taxonomy" class="internal xref">Namespace Taxonomy</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
             <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-authorization-server-metada" class="internal xref">Authorization Server Metadata</a></p>
@@ -1460,6 +1465,9 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.8">
                 <p id="section-toc.1-1.18.2.8.1"><a href="#section-18.8" class="auto internal xref">18.8</a>.  <a href="#name-common-constraints-registry" class="internal xref">Common Constraints Registry</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.9">
+                <p id="section-toc.1-1.18.2.9.1"><a href="#section-18.9" class="auto internal xref">18.9</a>.  <a href="#name-mission-lifecycle-states-re" class="internal xref">Mission Lifecycle States Registry</a></p>
 </li>
             </ul>
 </li>
@@ -2266,7 +2274,9 @@ whose policy cannot accept the proposed <code>expires_at</code> refuses with
 document defines the members below; others <span class="bcp14">MAY</span> be added by
 deployments or defined by companion profiles (an extension member
 follows the collision-resistant naming and fail-safe rules of
-<a href="#extensibility" class="auto internal xref">Section 12</a>):<a href="#section-4-3.14.1" class="pilcrow">¶</a></p>
+<a href="#extensibility" class="auto internal xref">Section 12</a>). A future revision <span class="bcp14">MAY</span> establish a registry for
+these members on demonstrated third-party extension demand; until
+then they are specification-defined.<a href="#section-4-3.14.1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-4-3.14.2">
             <dt id="section-4-3.14.2.1">
 <code>acr</code>:</dt>
@@ -3850,8 +3860,9 @@ without a registry, a new <code>typ</code> value <span class="bcp14">MUST</span>
 (for example, a short name prefixed within a namespace the defining
 profile controls, following the Collision-Resistant Name guidance of
 <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Section 4.2). The <code>mission-</code> prefixed values defined by
-profiles that extend this document share an author-coordinated
-namespace for this reason.<a href="#section-6.3-4" class="pilcrow">¶</a></p>
+profiles that extend this document share a namespace coordinated
+through this document series' change controller, or a registry a
+future revision establishes, for this reason.<a href="#section-6.3-4" class="pilcrow">¶</a></p>
 <p id="section-6.3-5">SHA-256 is the only digest algorithm this document defines; the
 <code>sha-256:</code> prefix identifies it. Algorithm agility is future work.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
 <p id="section-6.3-6">A verifier <span class="bcp14">MUST</span> reject an integrity anchor whose algorithm prefix it
@@ -3927,8 +3938,10 @@ describe a signed artifact's own envelope, or identify a party in an
 additional members set at creation using short names coordinated with
 it (for example, a lineage member linking the Mission to a
 predecessor or parent); any other extension <span class="bcp14">MUST</span> use
-collision-resistant names. The members below are the ones this
-profile defines:<a href="#section-7-3" class="pilcrow">¶</a></p>
+collision-resistant names. A future revision <span class="bcp14">MAY</span> establish a registry
+for these members on demonstrated third-party extension demand; until
+then they are specification-defined. The members below are the ones
+this profile defines:<a href="#section-7-3" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-7-4">
         <dt id="section-7-4.1">
 <code>id</code>:</dt>
@@ -4560,7 +4573,10 @@ the extension controls, per the Collision-Resistant Name guidance of
 <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Section 4.2) and is defined by the profile that introduces
 it. A consumer <span class="bcp14">MUST</span> ignore members it does not understand and <span class="bcp14">MUST NOT</span>
 use any additional member to grant or widen authority; the
-members above remain authoritative.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+members above remain authoritative. A future revision <span class="bcp14">MAY</span> establish a
+claim-member registry (the JWT Confirmation Methods registry of
+<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span> is the structural precedent); until then the members are
+specification-defined.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
 <p id="section-8.1-4"><code>intent_hash</code> and <code>authority_hash</code> are independent commitments to
 independent objects. That the approved task bounds the derived
 authority is a governance assertion, made by derivation policy and
@@ -4903,18 +4919,19 @@ policy. Terminal.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
         </tbody>
       </table>
 <p id="section-9-5">These three states are the mandatory core of the Mission lifecycle
-state space. This profile owns that state space; an <span class="bcp14">OPTIONAL</span> companion
-profile <span class="bcp14">MAY</span> define an additional state for a lifecycle it introduces
-(for example, a paused or a superseded state), but only <code>active</code> ever
-permits issuance. To keep the state space extensible without a registry,
-a consumer <span class="bcp14">MUST</span> apply this forward-compatibility rule wherever a Mission
-state is reported, including the Mission record and the introspection
-<code>mission</code> member: only the exact value <code>active</code> permits
-derivation or continued reliance, and every other value, including a
-value the consumer does not recognize, <span class="bcp14">MUST</span> be treated as non-active and
-non-deriving. A consumer <span class="bcp14">MUST NOT</span> fail open on an unrecognized state.
-This makes a state added by a companion profile fail safe for a consumer
-that predates it.<a href="#section-9-5" class="pilcrow">¶</a></p>
+state space. This profile owns that state space and establishes its
+registry, the Mission Lifecycle States registry
+(<a href="#iana-lifecycle-states" class="auto internal xref">Section 18.9</a>); an <span class="bcp14">OPTIONAL</span> companion profile <span class="bcp14">MAY</span> register
+an additional state for a lifecycle it introduces (for example, a
+paused or a superseded state), but only <code>active</code> ever permits
+issuance. A consumer <span class="bcp14">MUST</span> apply this forward-compatibility rule
+wherever a Mission state is reported, including the Mission record and
+the introspection <code>mission</code> member: only the exact value <code>active</code>
+permits derivation or continued reliance, and every other value,
+including a value the consumer does not recognize, <span class="bcp14">MUST</span> be treated as
+non-active and non-deriving. A consumer <span class="bcp14">MUST NOT</span> fail open on an
+unrecognized state. This makes a registered state added by a companion
+profile fail safe for a consumer that predates it.<a href="#section-9-5" class="pilcrow">¶</a></p>
 <div id="issuance-gating">
 <section id="section-9.1">
         <h3 id="name-issuance-gating">
@@ -5596,10 +5613,12 @@ members and never derive authority from them.<a href="#section-12-4.4.1" class="
 </li>
         <li class="normal" id="section-12-4.5">
           <p id="section-12-4.5.1"><strong>Lifecycle state.</strong> The lifecycle state space (<a href="#lifecycle" class="auto internal xref">Section 9</a>) is open
-to additional states defined by companion profiles for lifecycles they
-introduce. The forward-compatibility rule in <a href="#lifecycle" class="auto internal xref">Section 9</a> keeps this
-safe without a registry: only <code>active</code> permits issuance, and a consumer
-treats every other state, recognized or not, as non-active.<a href="#section-12-4.5.1" class="pilcrow">¶</a></p>
+to additional states registered by companion profiles for lifecycles
+they introduce, in the Mission Lifecycle States registry
+(<a href="#iana-lifecycle-states" class="auto internal xref">Section 18.9</a>). The forward-compatibility rule in
+<a href="#lifecycle" class="auto internal xref">Section 9</a> keeps this safe regardless: only <code>active</code> permits
+issuance, and a consumer treats every other state, recognized or not,
+as non-active.<a href="#section-12-4.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-4.6">
           <p id="section-12-4.6.1"><strong>Approval-event sequencing.</strong> The approval-event steps, their
@@ -5614,12 +5633,67 @@ Mission Deferred Approval companion is such a profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>).<a href="#section-12-4.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-12-5">This document defines no extension registry, capability-negotiation
-mechanism, or profile-version field; an extension declares its own
-identifiers and, where it needs discovery, its own metadata. The
-extensibility of the <code>typ</code> value space, the <code>mission</code> claim, and the
-lifecycle state space rests on collision-resistant naming and the
-fail-safe rules above rather than on central registration.<a href="#section-12-5" class="pilcrow">¶</a></p>
+<p id="section-12-5">This document defines no capability-negotiation mechanism or
+profile-version field; an extension declares its own identifiers and,
+where it needs discovery, its own metadata. The extensibility of the
+<code>typ</code> value space and the <code>mission</code> claim rests on collision-resistant
+naming and the fail-safe rules above rather than on central
+registration; the lifecycle state space is additionally backed by the
+Mission Lifecycle States registry (<a href="#iana-lifecycle-states" class="auto internal xref">Section 18.9</a>).
+<a href="#namespace-taxonomy" class="auto internal xref">Section 12.1</a> states the general rule this section's extension
+points follow.<a href="#section-12-5" class="pilcrow">¶</a></p>
+<div id="namespace-taxonomy">
+<section id="section-12.1">
+        <h3 id="name-namespace-taxonomy">
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-namespace-taxonomy" class="section-name selfRef">Namespace Taxonomy</a>
+        </h3>
+<p id="section-12.1-1">The family's extensible namespaces follow one of three postures:<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12.1-2.1">
+            <p id="section-12.1-2.1.1"><strong>Registry-backed.</strong> A namespace whose values are load-bearing for
+fail-closed behavior and span multiple documents is backed by an
+IANA registry: the document that owns the namespace carries the
+IANA creation instruction and seeds the registry with the values it
+itself defines, and every further document that defines a value
+requests that value's registration, carrying any Internet-Draft
+reference as a publication dependency under the registry's policy.
+Mission Common Constraints (<a href="#iana-common-constraints" class="auto internal xref">Section 18.8</a>) and
+Mission Lifecycle States (<a href="#iana-lifecycle-states" class="auto internal xref">Section 18.9</a>) are this
+document's two; the Mission Authority Server Metadata registry and
+the Mission Denial Reasons registry are established where those
+namespaces are defined.<a href="#section-12.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.1-2.2">
+            <p id="section-12.1-2.2.1"><strong>Specification-defined.</strong> A namespace with a defined fail-safe for
+unknown values and no demonstrated third-party extension demand
+stays specification-defined, coordinated through this document
+series' change controller. A future revision <span class="bcp14">MAY</span> establish a
+registry for such a set; until one exists, the defining documents
+are the value space.<a href="#section-12.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.1-2.3">
+            <p id="section-12.1-2.3.1"><strong>Collision-resistant.</strong> Deployment-defined names follow the
+collision-resistant naming rules of this section and are never
+registered.<a href="#section-12.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-12.1-3">A newly defined, family-specific typed artifact that crosses a
+protocol boundary is named by an <code>application/mission-*</code> media type,
+and its defining document carries the RFC 6838 registration template
+at definition time. An artifact typed by a standard this family
+composes (an access token profile, a Security Event Token) keeps
+that standard's type. A defining document <span class="bcp14">MAY</span> instead record a
+local-use identifier as a transitional reservation where cross-domain
+interoperability is not yet claimed, registering the type when the
+claim is made; the audit profile's deferred evidence types are this
+class. The JOSE protected <code>typ</code> of a family-typed artifact is the
+registered media type, with the <code>application/</code> prefix omitted where
+JWS permits the shortened form; an HTTP <code>Content-Type</code> carries the
+full media type. A <code>typ</code> inside a JCS commitment envelope names a
+hash domain, not a representation crossing a boundary, and is
+deliberately not a media type (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>).<a href="#section-12.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="discovery">
@@ -6986,6 +7060,103 @@ Rule and Intersection Rule text is there, not restated in the table:<a href="#se
 coordinated through this registry, and any other name is either
 collision-resistant or remains deployment-defined and outside the
 registry.<a href="#section-18.8-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana-lifecycle-states">
+<section id="section-18.9">
+        <h3 id="name-mission-lifecycle-states-re">
+<a href="#section-18.9" class="section-number selfRef">18.9. </a><a href="#name-mission-lifecycle-states-re" class="section-name selfRef">Mission Lifecycle States Registry</a>
+        </h3>
+<p id="section-18.9-1">IANA is requested to create the "Mission Lifecycle States" registry.
+The registration policy is Specification
+Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>. A Designated Expert reviews a submission for the
+discipline <a href="#lifecycle" class="auto internal xref">Section 9</a> requires: a <code>Value</code> matching
+<code>^[a-z][a-z0-9_]*$</code> not already registered; a <code>Terminal</code> designation of
+<code>yes</code> or <code>no</code> consistent with the transitions the registrant's
+specification defines (a <code>yes</code> state admits no further transition; a
+<code>no</code> state does); and a <code>Semantics</code> sentence precise enough to
+distinguish the state from every registered state. Whether a Mission
+in any state is available for reliance is fixed by the governing rule
+below, never per row. Registration does not require
+IETF review or a Standards Track document; a Specification Required
+reference that a Designated Expert can review against these criteria
+suffices.<a href="#section-18.9-1" class="pilcrow">¶</a></p>
+<p id="section-18.9-2">Only the exact value <code>active</code> permits token derivation or continued
+reliance; a consumer treats every other value, including one it does
+not recognize, as non-<code>active</code> and never widens on it (<a href="#lifecycle" class="auto internal xref">Section 9</a>).
+A Designated Expert <span class="bcp14">MUST</span> reject a registration whose governing
+specification attempts to redefine this interaction rather than adding
+a new value bound by it.<a href="#section-18.9-2" class="pilcrow">¶</a></p>
+<p id="section-18.9-3">Each registration records:<a href="#section-18.9-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-18.9-4.1">
+            <p id="section-18.9-4.1.1"><strong>Value</strong>: the lifecycle state's string value.<a href="#section-18.9-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.9-4.2">
+            <p id="section-18.9-4.2.1"><strong>Terminal</strong>: <code>yes</code> if the state admits no further transition, <code>no</code>
+otherwise.<a href="#section-18.9-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.9-4.3">
+            <p id="section-18.9-4.3.1"><strong>Semantics</strong>: one sentence stating what the state means and, for a
+non-terminal state, what a Mission in that state cannot do.<a href="#section-18.9-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.9-4.4">
+            <p id="section-18.9-4.4.1"><strong>Change Controller</strong>: IETF, or the registrant for any other
+registration.<a href="#section-18.9-4.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.9-4.5">
+            <p id="section-18.9-4.5.1"><strong>Reference</strong>: the specification defining the state.<a href="#section-18.9-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-18.9-5">This document seeds the registry with the states it defines:<a href="#section-18.9-5" class="pilcrow">¶</a></p>
+<table class="center" id="table-4">
+          <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Value</th>
+              <th class="text-left" rowspan="1" colspan="1">Terminal</th>
+              <th class="text-left" rowspan="1" colspan="1">Semantics</th>
+              <th class="text-left" rowspan="1" colspan="1">Change Controller</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>active</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">no</td>
+              <td class="text-left" rowspan="1" colspan="1">Tokens <span class="bcp14">MAY</span> be derived; the only state from which issuance proceeds.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#lifecycle" class="auto internal xref">Section 9</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>revoked</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">yes</td>
+              <td class="text-left" rowspan="1" colspan="1">Terminated by the Subject, Approver, or policy.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#lifecycle" class="auto internal xref">Section 9</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>expired</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">yes</td>
+              <td class="text-left" rowspan="1" colspan="1">The Mission's <code>expires_at</code> has passed.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#lifecycle" class="auto internal xref">Section 9</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-18.9-7">Each further document that defines a lifecycle state requests that
+state's registration in its own IANA considerations, carrying its
+Internet-Draft reference as a publication dependency under this
+registry's policy until it is published.<a href="#section-18.9-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

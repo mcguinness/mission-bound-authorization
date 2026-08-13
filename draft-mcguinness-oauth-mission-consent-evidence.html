@@ -2453,7 +2453,12 @@ in <a href="#integrity" class="auto internal xref">Section 7.1</a>.<a href="#sec
 <span class="bcp14">MUST</span> carry a <code>typ</code> of <code>mission-consent-evidence+jws</code> and a <code>kid</code> that
 resolves in the Mission Issuer's published key material (its <code>jwks_uri</code>),
 identifying a signing key controlled by the Mission Issuer or an evidence
-service authorized by the Mission Issuer. A verifier:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+service authorized by the Mission Issuer. The <code>typ</code> names the secured
+representation, the JWS itself rather than its payload: the payload's
+identifier stays <code>application/mission-consent-evidence+json</code>, the value
+the audit profile's evidence-type table and its
+<code>payload-preimage-content-type</code> carry
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). A verifier:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-7.1-2">
 <li id="section-7.1-2.1">
             <p id="section-7.1-2.1.1">removes <code>evidence_envelope</code>;<a href="#section-7.1-2.1.1" class="pilcrow">¶</a></p>

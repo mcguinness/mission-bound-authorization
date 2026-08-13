@@ -86,24 +86,25 @@ Table of Contents
      5.3.  Worked example: parameter deviation
      5.4.  TOCTOU and parameter binding
      5.5.  Retention
-   6.  Extension Members
-   7.  Conformance
-   8.  Security Considerations
-     8.1.  Decision Evidence versus Execution Evidence
-     8.2.  Evidence integrity and signing keys
-     8.3.  Transport
-   9.  Privacy Considerations
-     9.1.  Evidence as PII sinks
-     9.2.  Parameter exposure
-     9.3.  Actor chain and Mission correlation
-   10. IANA Considerations
-     10.1.  Media Type Registry
-       10.1.1.  Decision Evidence Media Type
-       10.1.2.  Execution Evidence Media Type
-       10.1.3.  Refusal Record Media Type
-   11. References
-     11.1.  Normative References
-     11.2.  Informative References
+   6.  Evidence Properties
+   7.  Extension Members
+   8.  Conformance
+   9.  Security Considerations
+     9.1.  Decision Evidence versus Execution Evidence
+     9.2.  Evidence integrity and signing keys
+     9.3.  Transport
+   10. Privacy Considerations
+     10.1.  Evidence as PII sinks
+     10.2.  Parameter exposure
+     10.3.  Actor chain and Mission correlation
+   11. IANA Considerations
+     11.1.  Media Type Registry
+       11.1.1.  Decision Evidence Media Type
+       11.1.2.  Execution Evidence Media Type
+       11.1.3.  Refusal Record Media Type
+   12. References
+     12.1.  Normative References
+     12.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -268,13 +269,13 @@ Table of Contents
    |             |           |keys, so a party with access to that    |
    |             |           |statement verifies a record             |
    |             |           |independently of the deployment that    |
-   |             |           |emitted it (Section 8.2)                |
+   |             |           |emitted it (Section 9.2)                |
    +-------------+-----------+----------------------------------------+
    |Portable     |not        |Not supplied by this document alone:    |
    |Evidence     |consumed   |portability beyond a party with access  |
    |             |           |to the deployment's published keys      |
    |             |           |requires the transparency mechanisms of |
-   |             |           |the audit profile (Section 8.2,         |
+   |             |           |the audit profile (Section 9.2,         |
    |             |           |[I-D.draft-mcguinness-mission-audit])   |
    +-------------+-----------+----------------------------------------+
 
@@ -500,7 +501,7 @@ Table of Contents
       (string, required).
 
    A Decision Evidence Object is closed to uncoordinated extension; see
-   Section 6 for the extension rule and the coordinated extension
+   Section 7 for the extension rule and the coordinated extension
    members a deployment following the AuthZEN binding commonly carries
    (taint, mission_history, capability_source, hop_reference).
 
@@ -599,17 +600,17 @@ Table of Contents
       scope and audience the record serves (Section 4.3).
 
    hop_reference:  OPTIONAL.  An object, in the coordinated extension
-      form Section 6 defines.  Present only when the refusing component
+      form Section 7 defines.  Present only when the refusing component
       verified enough of the presented credential, before the failure,
       to establish it was a continued credential.
 
    evidence_envelope:  REQUIRED.  An object.  Integrity protection in
       the form of Section 4.3, emitted by the refusing component, whose
       JWS protected typ is application/mission-refusal-record+json
-      (Section 10).
+      (Section 11).
 
    A Refusal Record is closed to uncoordinated extension under the same
-   rule as Decision Evidence (Section 6).
+   rule as Decision Evidence (Section 7).
 
    Refusal Records are per-attempt, immutable, and append-only: a
    sustained failure condition with a retrying agent yields one signed
@@ -725,7 +726,7 @@ Table of Contents
    The JWS protected header MUST carry:
 
    *  kid: a key identifier resolvable in the emitter's published JWKS
-      (Section 8.2), so a verifier can select the emitter's signing key
+      (Section 9.2), so a verifier can select the emitter's signing key
       independently.
 
    *  alg: ES256 [RFC7518] is mandatory to implement; an implementation
@@ -735,7 +736,7 @@ Table of Contents
       (application/mission-decision-evidence+json for Decision Evidence,
       application/mission-execution-evidence+json for Execution
       Evidence, application/mission-refusal-record+json for Refusal
-      Records, Section 10).  A verifier MUST reject a JWS whose
+      Records, Section 11).  A verifier MUST reject a JWS whose
       protected typ is not the media type of the object it is verifying,
       so signatures over one record kind cannot be cross-used for
       another.
@@ -955,7 +956,7 @@ Table of Contents
       audience the record serves (Section 4.3).
 
    hop_reference:  OPTIONAL.  An object, in the coordinated extension
-      form Section 6 defines.  Present when the linked Decision Evidence
+      form Section 7 defines.  Present when the linked Decision Evidence
       carries one.
 
    attempted_at:  OPTIONAL.  An RFC 3339 timestamp.  Timing context.
@@ -971,7 +972,7 @@ Table of Contents
       format (string, required) and a value (string, required).
 
    An Execution Evidence Object is closed to uncoordinated extension
-   under the same rule as Decision Evidence (Section 6): coordinated
+   under the same rule as Decision Evidence (Section 7): coordinated
    companion members (for example, the metering companion's
    measured_duration) are permitted, any other extension MUST use a
    collision-resistant name, and a consumer MUST ignore members it does
@@ -1085,7 +1086,119 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission].  Regulated deployments MAY
    require longer retention.
 
-6.  Extension Members
+6.  Evidence Properties
+
+   This section is informative: it names a property vocabulary for the
+   records of this document and the conditions under which the records
+   support each property, so the cluster is citable as one anchor.  It
+   is a conditional capability map, not a checklist: each row separates
+   what base evidence conformance proves, the additional mechanism a
+   stronger reading requires, and what no reading proves.  It adds no
+   requirement to this document or the runtime profile.
+
+   +===========+=============+=========================================+============+
+   |Property   |What the base|Additional mechanism or condition        |What it does|
+   |           |evidence     |                                         |not prove   |
+   |           |proves       |                                         |            |
+   +===========+=============+=========================================+============+
+   |Parameter- |A verified   |Binding to what a human approved holds   |That the    |
+   |bound      |Decision     |where action-bound approval is required  |human       |
+   |           |Evidence     |and used, the rendering derives from the |understood  |
+   |           |record       |same normalized parameters by a trusted  |the         |
+   |           |authenticates|component, and the dynamic link verifies |rendering,  |
+   |           |the digest of|([I-D.draft-mcguinness-mission-runtime]) |or that the |
+   |           |the          |                                         |action      |
+   |           |parameters   |                                         |occurred:   |
+   |           |evaluated    |                                         |the outcome |
+   |           |(Section 4), |                                         |record is   |
+   |           |and linked   |                                         |the         |
+   |           |Execution    |                                         |emitter's   |
+   |           |Evidence     |                                         |signed      |
+   |           |authenticates|                                         |assertion   |
+   |           |the          |                                         |            |
+   |           |authorized   |                                         |            |
+   |           |and effective|                                         |            |
+   |           |digest pair, |                                         |            |
+   |           |exposing     |                                         |            |
+   |           |equality or  |                                         |            |
+   |           |deviation    |                                         |            |
+   |           |(Section 5); |                                         |            |
+   |           |the link to  |                                         |            |
+   |           |the          |                                         |            |
+   |           |parameters   |                                         |            |
+   |           |themselves is|                                         |            |
+   |           |established  |                                         |            |
+   |           |by           |                                         |            |
+   |           |recomputing  |                                         |            |
+   |           |the digest   |                                         |            |
+   |           |over the     |                                         |            |
+   |           |normalized   |                                         |            |
+   |           |parameter    |                                         |            |
+   |           |object       |                                         |            |
+   +-----------+-------------+-----------------------------------------+------------+
+   |Key-       |Origin and   |None in the current profiles.  No        |That the    |
+   |isolated   |integrity:   |requirement places the evidence-signing  |agent's     |
+   |           |each record  |private key outside the agent's runtime; |runtime     |
+   |           |is signed by |the runtime profile's custody rules      |could not   |
+   |           |the emitter's|govern the credential's confirmation key,|access the  |
+   |           |published    |a different key                          |signing key |
+   |           |key, bound to|([I-D.draft-mcguinness-mission-runtime]).|or emit     |
+   |           |its scope and|A deployment that isolates evidence-     |records     |
+   |           |audience     |signing keys does so by local mechanism  |under the   |
+   |           |(Section 4.3)|and declares it in its Enforcement Scope |emitter's   |
+   |           |             |Statement                                |identity    |
+   +-----------+-------------+-----------------------------------------+------------+
+   |Session-   |A verifier   |None                                     |That the    |
+   |independent|can verify a |                                         |session or  |
+   |           |retained     |                                         |credential  |
+   |           |record       |                                         |was valid at|
+   |           |without a    |                                         |decision or |
+   |           |live session |                                         |execution   |
+   |           |and without  |                                         |time, or    |
+   |           |possession or|                                         |that the    |
+   |           |validity of  |                                         |Mission is  |
+   |           |the          |                                         |active now: |
+   |           |credential   |                                         |those are   |
+   |           |that carried |                                         |record      |
+   |           |the action   |                                         |contents and|
+   |           |(Section     |                                         |linked state|
+   |           |9.2); retired|                                         |evidence,   |
+   |           |keys stay    |                                         |not         |
+   |           |resolvable   |                                         |consequences|
+   |           |for the      |                                         |of signature|
+   |           |retention    |                                         |verification|
+   |           |window, and  |                                         |            |
+   |           |evidence     |                                         |            |
+   |           |signed after |                                         |            |
+   |           |a declared   |                                         |            |
+   |           |key          |                                         |            |
+   |           |compromise is|                                         |            |
+   |           |unverifiable |                                         |            |
+   |           |rather than  |                                         |            |
+   |           |verified     |                                         |            |
+   +-----------+-------------+-----------------------------------------+------------+
+   |Third-     |Scoped       |Durable offline verification: a party    |That an     |
+   |party-     |independent  |holding retained or configured producer  |unknown     |
+   |verifiable |verification:|and Transparency Service trust anchors   |producer key|
+   |           |a party with |verifies without contacting either       |is trusted, |
+   |           |access to the|operator, where a Receipt and the        |that the    |
+   |           |Enforcement  |evidence bytes are retained; cross-domain|signed      |
+   |           |Scope        |verifiability additionally requires the  |assertion is|
+   |           |Statement's  |audit profile's independent-operator     |true, or    |
+   |           |published    |condition                                |that the    |
+   |           |keys verifies|([I-D.draft-mcguinness-mission-audit])   |evidence    |
+   |           |a record     |                                         |feed is     |
+   |           |independently|                                         |complete    |
+   |           |of the       |                                         |            |
+   |           |emitting     |                                         |            |
+   |           |deployment   |                                         |            |
+   |           |(Section 9.2)|                                         |            |
+   +-----------+-------------+-----------------------------------------+------------+
+
+   Table 2: Evidence properties: what the records prove, and under which
+                                 conditions
+
+7.  Extension Members
 
    A Decision Evidence Object, Execution Evidence Object, and Refusal
    Record are each closed to uncoordinated extension: a companion or
@@ -1143,7 +1256,7 @@ Table of Contents
       reference; this member formalizes that requirement as a
       coordinated extension.
 
-7.  Conformance
+8.  Conformance
 
    This document defines conformance for two roles: a PRODUCER that
    emits the records themselves, and a CONSUMER, or VERIFIER, that reads
@@ -1170,17 +1283,17 @@ Table of Contents
 
    A CONSUMER or VERIFIER conforming to this document MUST perform the
    byte-equality verification procedure and key checks of Section 4.3
-   against the emitter's published keys (Section 8.2), and classify
+   against the emitter's published keys (Section 9.2), and classify
    orphaned Decision Evidence and cross-record digest divergence as
-   Section 8 and Section 5 require, never as proof of action.
+   Section 9 and Section 5 require, never as proof of action.
 
-8.  Security Considerations
+9.  Security Considerations
 
    The runtime profile's Security Considerations
    ([I-D.draft-mcguinness-mission-runtime]) apply in full.  This section
    addresses only threats specific to these records.
 
-8.1.  Decision Evidence versus Execution Evidence
+9.1.  Decision Evidence versus Execution Evidence
 
    Decision Evidence is not proof an action occurred.  Implementations
    MUST emit Execution Evidence to record outcomes, and auditors MUST
@@ -1190,7 +1303,7 @@ Table of Contents
    undetermined-outcome or, per deployment policy, as action-attempted;
    it MUST NOT treat it as proof of action.
 
-8.2.  Evidence integrity and signing keys
+9.2.  Evidence integrity and signing keys
 
    The evidence_envelope binds each record to the emitting PDP or PEP.
    The PDP's jws-compact signing key MUST be resolvable, by the JWS
@@ -1225,19 +1338,19 @@ Table of Contents
    profile ([I-D.draft-mcguinness-mission-audit]), where a deployment
    adopts them.
 
-8.3.  Transport
+9.3.  Transport
 
    Audit channels carrying Decision Evidence and Execution Evidence MUST
    be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED).  Evidence at
    rest MUST be encrypted per the deployment's data-protection posture.
 
-9.  Privacy Considerations
+10.  Privacy Considerations
 
    The runtime profile's evidence-privacy guidance
    ([I-D.draft-mcguinness-mission-runtime]) applies in full.  This
    section addresses the concrete records this document defines.
 
-9.1.  Evidence as PII sinks
+10.1.  Evidence as PII sinks
 
    Decision Evidence, Execution Evidence, and Refusal Records carry the
    authenticated subject, actor chain, resource and action identifiers,
@@ -1248,7 +1361,7 @@ Table of Contents
    to audit consumers with a legitimate need, encrypted at rest, and
    retained per the window of Section 5.
 
-9.2.  Parameter exposure
+10.2.  Parameter exposure
 
    This restates, for the privacy reader, the action member's rule
    (Section 4): the durable Decision Evidence record MUST NOT contain
@@ -1263,7 +1376,7 @@ Table of Contents
    class policy without observing the raw values.  The Execution
    Evidence result_summary MUST NOT carry user-content payloads.
 
-9.3.  Actor chain and Mission correlation
+10.3.  Actor chain and Mission correlation
 
    The actor member carries the delegation chain, which MAY reveal
    service accounts, client instances, and organizational structure.
@@ -1273,15 +1386,15 @@ Table of Contents
    that require unlinkability need an additional privacy design outside
    this document.
 
-10.  IANA Considerations
+11.  IANA Considerations
 
    This document requests the following IANA actions.
 
-10.1.  Media Type Registry
+11.1.  Media Type Registry
 
    This document registers three media types per [RFC6838].
 
-10.1.1.  Decision Evidence Media Type
+11.1.1.  Decision Evidence Media Type
 
    *  Type name: application
 
@@ -1293,7 +1406,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 8
+   *  Security considerations: see Section 9
 
    *  Interoperability considerations: see this document
 
@@ -1326,7 +1439,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-10.1.2.  Execution Evidence Media Type
+11.1.2.  Execution Evidence Media Type
 
    *  Type name: application
 
@@ -1338,7 +1451,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 8
+   *  Security considerations: see Section 9
 
    *  Interoperability considerations: see this document
 
@@ -1371,7 +1484,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-10.1.3.  Refusal Record Media Type
+11.1.3.  Refusal Record Media Type
 
    *  Type name: application
 
@@ -1383,7 +1496,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 8
+   *  Security considerations: see Section 9
 
    *  Interoperability considerations: see this document
 
@@ -1416,9 +1529,9 @@ Table of Contents
 
    *  Change controller: IETF
 
-11.  References
+12.  References
 
-11.1.  Normative References
+12.1.  Normative References
 
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
@@ -1480,7 +1593,7 @@ Table of Contents
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
-11.2.  Informative References
+12.2.  Informative References
 
    [I-D.draft-mcguinness-mission-audit]
               McGuinness, K., "Mission Audit Transparency", 2026,

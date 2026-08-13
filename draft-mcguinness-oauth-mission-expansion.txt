@@ -125,6 +125,8 @@ Table of Contents
      16.2.  Related-work correlation
      16.3.  Disclosure of the broadened task
    17. IANA Considerations
+     17.1.  Mission Lifecycle States Registration
+     17.2.  Mission Denial Reasons Registry
    Acknowledgments
    References
      Normative References
@@ -1111,7 +1113,11 @@ Table of Contents
    and whose committed value is the object below: the anchor envelope is
    canonicalized with JCS [RFC8785], hashed with SHA-256, and encoded as
    sha-256: followed by the base64url, no-padding, encoding of the
-   digest, exactly as for the profile's other anchors.
+   digest, exactly as for the profile's other anchors.  As a JCS
+   commitment-envelope typ, mission-creation-fingerprint names a hash
+   domain, not a representation crossing a protocol boundary, and is
+   deliberately not a media type ([I-D.draft-mcguinness-oauth-mission],
+   Section "Namespace Taxonomy").
 
    The fingerprint object carries exactly these members:
 
@@ -1277,7 +1283,8 @@ Table of Contents
    derive a valid Authority Set from), as the deferred substrate's
    access_denied resolution on a deferred poll, or through the
    interactive approval's own decline path.  It MAY additionally carry
-   one machine-readable reason code from the closed set below:
+   one machine-readable reason code from the Mission Denial Reasons
+   registry (Section 17.2); this document defines four:
 
    out_of_policy:  The Mission Issuer's governance policy refuses the
       requested authority class for this Mission, independent of who
@@ -1299,11 +1306,15 @@ Table of Contents
       the predecessor, so an expansion response is never ambiguously a
       non-successor.
 
-   A companion profile MAY extend this set by specification (the
-   experimental progressive authorization companion defines
-   out_of_ceiling, [I-D.draft-mcguinness-oauth-mission-progressive]); a
-   consumer MUST treat an unrecognized reason code as a denial with no
-   further semantics.
+   A companion profile registers an extension to this set in the Mission
+   Denial Reasons registry (Section 17.2) rather than defining it here
+   (for example, the experimental progressive authorization companion
+   registers out_of_ceiling,
+   [I-D.draft-mcguinness-oauth-mission-progressive], and the
+   experimental template dispatch companion registers
+   out_of_template_ceiling and dispatch_prohibited_class,
+   [I-D.draft-mcguinness-oauth-mission-template]); a consumer MUST treat
+   an unrecognized reason code as a denial with no further semantics.
 
    A Mission Issuer MUST NOT use a reason code to disclose policy
    boundaries beyond the adjudicated request (Section 15.7); omitting
@@ -1672,20 +1683,143 @@ Table of Contents
    profile establishes no member registry.  No new claim, parameter, or
    token-introspection registration is required for the lineage link.
 
-   This document defines two closed sets of symbolic codes, the
-   expansion reconciliation status codes (Section 10), conveyed in
+   This document defines two sets of symbolic codes: the expansion
+   reconciliation status codes (Section 10), a closed set conveyed in
    mission_expansion_status, and the expansion denial reasons
    (Section 12), conveyed in the shared mission_denial_reason member.
    As members of the OAuth error response JSON body at the token
    endpoint, both are namespaced to their error responses and require no
    registration; their authorization error response parameter forms,
-   used on the retained interactive path, are registered below.  This
-   document creates no registry for the codes: the closed sets are small
-   and fully specified in their defining specifications.  Should
-   interoperable extension prove necessary, a future revision can create
-   a "Mission Expansion Reconciliation Status" registry and a shared
-   "Mission Denial Reason" registry with a Specification Required
-   [RFC8126] policy.
+   used on the retained interactive path, are registered below.
+
+   The reconciliation status codes remain specification-defined: the
+   closed set is small and fully specified in Section 10.  A future
+   revision MAY establish a "Mission Expansion Reconciliation Status"
+   registry for it with a Specification Required [RFC8126] policy; until
+   then this document is the value space.
+
+   The denial reasons are registry-backed: this document establishes the
+   Mission Denial Reasons registry (Section 17.2), the one registry-
+   backed carrier for adjudication-denial values across the family,
+   seeds it with the four values it defines, and each further document
+   that defines a value on the carrier requests its own registration in
+   it.
+
+17.1.  Mission Lifecycle States Registration
+
+   This document requests registration of one state in the issuance
+   profile's Mission Lifecycle States registry
+   ([I-D.draft-mcguinness-oauth-mission]), under that registry's
+   Specification Required policy:
+
+   +============+==========+==================+============+===========+
+   | Value      | Terminal | Semantics        | Change     | Reference |
+   |            |          |                  | Controller |           |
+   +============+==========+==================+============+===========+
+   | superseded | yes      | A predecessor    | IETF       | this      |
+   |            |          | Mission that     |            | document, |
+   |            |          | a successor      |            | Section 7 |
+   |            |          | has replaced     |            |           |
+   |            |          | through a        |            |           |
+   |            |          | replacement      |            |           |
+   |            |          | expansion;       |            |           |
+   |            |          | terminal and     |            |           |
+   |            |          | non-active.      |            |           |
+   +------------+----------+------------------+------------+-----------+
+
+                                  Table 2
+
+17.2.  Mission Denial Reasons Registry
+
+   IANA is requested to create the "Mission Denial Reasons" registry.
+   The registration policy is Specification Required [RFC8126].  A
+   Designated Expert reviews a submission for the discipline Section 12
+   requires: a Value matching ^[a-z][a-z0-9_]*$ not already registered,
+   a Semantics sentence precise enough that a consumer can tell the
+   denial from every other registered value, and a Reference that fixes
+   which specification defines it.  Registration does not require IETF
+   review or a Standards Track document; a Specification Required
+   reference that a Designated Expert can review against these criteria
+   suffices.
+
+   The registry covers values of the mission_denial_reason parameter
+   only (Section 12); the Resource Server WWW-Authenticate
+   mission_denial attribute ([I-D.draft-mcguinness-oauth-mission],
+   Section "Resource Server Enforcement") and AuthZEN decision-context
+   denial reasons ([I-D.draft-mcguinness-mission-authzen]) are separate
+   specification-defined value spaces, outside this registry's scope.  A
+   companion that adds a denial value states whether it adds a row to
+   this carrier's registry or defines a value in a separate space; a
+   shared spelling across carriers is a coincidence, never shared
+   semantics, unless the defining documents state the mapping.
+
+   A consumer MUST treat an unrecognized value as a denial with no
+   further semantics (Section 12).  A Designated Expert MUST reject a
+   registration whose governing specification attempts to redefine this
+   interaction rather than adding a value bound by it.
+
+   Each registration records:
+
+   *  *Value*: the mission_denial_reason symbolic string.
+
+   *  *Semantics*: one sentence stating what the denial means.
+
+   *  *Change Controller*: IETF, or the registrant for any other
+      registration.
+
+   *  *Reference*: the specification defining the value.
+
+   This document seeds the registry with the values it defines
+   (Section 12):
+
+   +==========================+================+============+=========+
+   | Value                    | Semantics      | Change     |Reference|
+   |                          |                | Controller |         |
+   +==========================+================+============+=========+
+   | out_of_policy            | The Mission    | IETF       |this     |
+   |                          | Issuer's       |            |document,|
+   |                          | governance     |            |Section  |
+   |                          | policy refuses |            |12       |
+   |                          | the requested  |            |         |
+   |                          | authority      |            |         |
+   |                          | class for this |            |         |
+   |                          | Mission,       |            |         |
+   |                          | independent of |            |         |
+   |                          | who approves.  |            |         |
+   +--------------------------+----------------+------------+---------+
+   | approver_rejected        | The Approver   | IETF       |this     |
+   |                          | declined the   |            |document,|
+   |                          | expansion at   |            |Section  |
+   |                          | the consent    |            |12       |
+   |                          | step.          |            |         |
+   +--------------------------+----------------+------------+---------+
+   | out_of_scope_for_purpose | The requested  | IETF       |this     |
+   |                          | authority is   |            |document,|
+   |                          | incompatible   |            |Section  |
+   |                          | with the       |            |12       |
+   |                          | Mission's      |            |         |
+   |                          | recorded       |            |         |
+   |                          | purpose.       |            |         |
+   +--------------------------+----------------+------------+---------+
+   | nothing_to_expand        | The derived    | IETF       |this     |
+   |                          | requested      |            |document,|
+   |                          | authority is a |            |Section  |
+   |                          | subset of the  |            |12       |
+   |                          | predecessor's  |            |         |
+   |                          | own effective  |            |         |
+   |                          | Authority Set, |            |         |
+   |                          | so there is    |            |         |
+   |                          | nothing to     |            |         |
+   |                          | expand.        |            |         |
+   +--------------------------+----------------+------------+---------+
+
+                                 Table 3
+
+   Each further document that defines a value on this carrier requests
+   that value's registration in its own IANA considerations, carrying
+   its Internet-Draft reference as a publication dependency under this
+   registry's policy until it is published; Specification Required does
+   not require Standards Track maturity of the registrant.
 
    The expansion request is an [RFC8693] token exchange carrying the
    already-registered mission_intent request parameter and the already-
@@ -1815,6 +1949,12 @@ Informative References
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-authority-server.html>.
 
+   [I-D.draft-mcguinness-mission-authzen]
+              McGuinness, K., "Mission-Bound Runtime Enforcement:
+              AuthZEN Profile", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              authzen.html>.
+
    [I-D.draft-mcguinness-mission-harness]
               McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -1864,6 +2004,11 @@ Informative References
               McGuinness, K., "Mission Status and Lifecycle for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-status.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-template]
+              McGuinness, K., "Mission Template for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-template.html>.
 
    [RFC8126]  Cotton, M., Leiba, B., and T. Narten, "Guidelines for
               Writing an IANA Considerations Section in RFCs", BCP 26,

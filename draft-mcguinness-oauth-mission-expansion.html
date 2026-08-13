@@ -1329,6 +1329,14 @@ Mission is unaffected by this document.<a href="#section-abstract-1" class="pilc
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
             <p id="section-toc.1-1.17.1"><a href="#section-17" class="auto internal xref">17</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.1">
+                <p id="section-toc.1-1.17.2.1.1"><a href="#section-17.1" class="auto internal xref">17.1</a>.  <a href="#name-mission-lifecycle-states-re" class="internal xref">Mission Lifecycle States Registration</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.2">
+                <p id="section-toc.1-1.17.2.2.1"><a href="#section-17.2" class="auto internal xref">17.2</a>.  <a href="#name-mission-denial-reasons-regi" class="internal xref">Mission Denial Reasons Registry</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
             <p id="section-toc.1-1.18.1"><a href="#section-18" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
@@ -2573,7 +2581,11 @@ collision-resistant <code>typ</code> convention, and whose committed value is
 the object below: the anchor envelope is canonicalized with JCS
 <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>, hashed with SHA-256, and encoded as <code>sha-256:</code> followed
 by the base64url, no-padding, encoding of the digest, exactly as for
-the profile's other anchors.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+the profile's other anchors. As a JCS commitment-envelope <code>typ</code>,
+<code>mission-creation-fingerprint</code> names a hash domain, not a
+representation crossing a protocol boundary, and is deliberately not a
+media type (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Namespace
+Taxonomy").<a href="#section-11.1-1" class="pilcrow">¶</a></p>
 <p id="section-11.1-2">The fingerprint object carries exactly these members:<a href="#section-11.1-2" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-11.1-3">
           <dt id="section-11.1-3.1">
@@ -2824,7 +2836,8 @@ untouched. Such a denial surfaces per the completion mode
 derive a valid Authority Set from), as the deferred substrate's
 <code>access_denied</code> resolution on a deferred poll, or through the
 interactive approval's own decline path. It <span class="bcp14">MAY</span> additionally carry one
-machine-readable reason code from the closed set below:<a href="#section-12-1" class="pilcrow">¶</a></p>
+machine-readable reason code from the Mission Denial Reasons registry
+(<a href="#iana-denial-reasons" class="auto internal xref">Section 17.2</a>); this document defines four:<a href="#section-12-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-12-2">
         <dt id="section-12-2.1">
 <code>out_of_policy</code>:</dt>
@@ -2861,11 +2874,16 @@ non-successor.<a href="#section-12-2.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-12-3">A companion profile <span class="bcp14">MAY</span> extend this set by specification (the
-experimental progressive authorization companion defines
-<code>out_of_ceiling</code>, <span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>);
-a consumer <span class="bcp14">MUST</span> treat an unrecognized reason code as a denial with no
-further semantics.<a href="#section-12-3" class="pilcrow">¶</a></p>
+<p id="section-12-3">A companion profile registers an extension to this set in the Mission
+Denial Reasons registry (<a href="#iana-denial-reasons" class="auto internal xref">Section 17.2</a>) rather than defining
+it here (for example, the experimental progressive authorization
+companion registers <code>out_of_ceiling</code>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>, and the
+experimental template dispatch companion registers
+<code>out_of_template_ceiling</code> and <code>dispatch_prohibited_class</code>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>); a consumer <span class="bcp14">MUST</span>
+treat an unrecognized reason code as a denial with no further
+semantics.<a href="#section-12-3" class="pilcrow">¶</a></p>
 <p id="section-12-4">A Mission Issuer <span class="bcp14">MUST NOT</span> use a reason code to disclose policy
 boundaries beyond the adjudicated request (<a href="#policy-probing" class="auto internal xref">Section 15.7</a>);
 omitting the reason code is always permitted, with one exception:
@@ -3329,20 +3347,164 @@ is carried inside the already-registered <code>mission</code> claim, an open
 object for which the issuance profile establishes no member registry.
 No new claim, parameter, or token-introspection registration is
 required for the lineage link.<a href="#section-17-1" class="pilcrow">¶</a></p>
-<p id="section-17-2">This document defines two closed sets of symbolic codes, the expansion
-reconciliation status codes (<a href="#reconciliation" class="auto internal xref">Section 10</a>), conveyed in
+<p id="section-17-2">This document defines two sets of symbolic codes: the expansion
+reconciliation status codes (<a href="#reconciliation" class="auto internal xref">Section 10</a>), a closed set
+conveyed in
 <code>mission_expansion_status</code>, and the expansion denial reasons
 (<a href="#denial-reasons" class="auto internal xref">Section 12</a>), conveyed in the shared <code>mission_denial_reason</code>
 member. As members of the OAuth error response JSON body at the token
 endpoint, both are namespaced to their error responses and require no
 registration; their authorization error response parameter forms, used
-on the retained interactive path, are registered below. This document
-creates no registry for the codes: the closed sets are small and fully
-specified in their defining specifications. Should interoperable
-extension prove necessary, a future revision can create a "Mission
-Expansion Reconciliation Status" registry and a shared "Mission Denial
-Reason" registry with a Specification Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> policy.<a href="#section-17-2" class="pilcrow">¶</a></p>
-<p id="section-17-3">The expansion request is an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange carrying the
+on the retained interactive path, are registered below.<a href="#section-17-2" class="pilcrow">¶</a></p>
+<p id="section-17-3">The reconciliation status codes remain specification-defined: the
+closed set is small and fully specified in <a href="#reconciliation" class="auto internal xref">Section 10</a>. A future
+revision <span class="bcp14">MAY</span> establish a "Mission Expansion Reconciliation Status"
+registry for it with a Specification Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> policy; until
+then this document is the value space.<a href="#section-17-3" class="pilcrow">¶</a></p>
+<p id="section-17-4">The denial reasons are registry-backed: this document establishes the
+Mission Denial Reasons registry (<a href="#iana-denial-reasons" class="auto internal xref">Section 17.2</a>), the one
+registry-backed carrier for adjudication-denial values across the
+family, seeds it with the four values it defines, and each further
+document that defines a value on the carrier requests its own
+registration in it.<a href="#section-17-4" class="pilcrow">¶</a></p>
+<div id="iana-lifecycle-registration">
+<section id="section-17.1">
+        <h3 id="name-mission-lifecycle-states-re">
+<a href="#section-17.1" class="section-number selfRef">17.1. </a><a href="#name-mission-lifecycle-states-re" class="section-name selfRef">Mission Lifecycle States Registration</a>
+        </h3>
+<p id="section-17.1-1">This document requests registration of one state in the issuance
+profile's Mission Lifecycle States registry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), under that registry's
+Specification Required policy:<a href="#section-17.1-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-2">
+          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Value</th>
+              <th class="text-left" rowspan="1" colspan="1">Terminal</th>
+              <th class="text-left" rowspan="1" colspan="1">Semantics</th>
+              <th class="text-left" rowspan="1" colspan="1">Change Controller</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>superseded</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">yes</td>
+              <td class="text-left" rowspan="1" colspan="1">A predecessor Mission that a successor has replaced through a replacement expansion; terminal and non-active.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#superseded-state" class="auto internal xref">Section 7</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+</section>
+</div>
+<div id="iana-denial-reasons">
+<section id="section-17.2">
+        <h3 id="name-mission-denial-reasons-regi">
+<a href="#section-17.2" class="section-number selfRef">17.2. </a><a href="#name-mission-denial-reasons-regi" class="section-name selfRef">Mission Denial Reasons Registry</a>
+        </h3>
+<p id="section-17.2-1">IANA is requested to create the "Mission Denial Reasons" registry.
+The registration policy is Specification
+Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>. A Designated Expert reviews a submission for the
+discipline <a href="#denial-reasons" class="auto internal xref">Section 12</a> requires: a <code>Value</code> matching
+<code>^[a-z][a-z0-9_]*$</code> not already registered, a <code>Semantics</code> sentence
+precise enough that a consumer can tell the denial from every other
+registered value, and a <code>Reference</code> that fixes which specification
+defines it. Registration does not require IETF review or a Standards
+Track document; a Specification Required reference that a Designated
+Expert can review against these criteria suffices.<a href="#section-17.2-1" class="pilcrow">¶</a></p>
+<p id="section-17.2-2">The registry covers values of the <code>mission_denial_reason</code> parameter
+only (<a href="#denial-reasons" class="auto internal xref">Section 12</a>); the Resource Server <code>WWW-Authenticate</code>
+          <code>mission_denial</code> attribute
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Resource Server
+Enforcement") and AuthZEN decision-context denial reasons
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) are separate
+specification-defined value spaces, outside this registry's scope. A
+companion that adds a denial value states whether it adds a row to
+this carrier's registry or defines a value in a separate space; a
+shared spelling across carriers is a coincidence, never shared
+semantics, unless the defining documents state the mapping.<a href="#section-17.2-2" class="pilcrow">¶</a></p>
+<p id="section-17.2-3">A consumer <span class="bcp14">MUST</span> treat an unrecognized value as a denial with no further
+semantics (<a href="#denial-reasons" class="auto internal xref">Section 12</a>). A Designated Expert <span class="bcp14">MUST</span> reject a
+registration whose governing specification attempts to redefine this
+interaction rather than adding a value bound by it.<a href="#section-17.2-3" class="pilcrow">¶</a></p>
+<p id="section-17.2-4">Each registration records:<a href="#section-17.2-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-17.2-5.1">
+            <p id="section-17.2-5.1.1"><strong>Value</strong>: the <code>mission_denial_reason</code> symbolic string.<a href="#section-17.2-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-17.2-5.2">
+            <p id="section-17.2-5.2.1"><strong>Semantics</strong>: one sentence stating what the denial means.<a href="#section-17.2-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-17.2-5.3">
+            <p id="section-17.2-5.3.1"><strong>Change Controller</strong>: IETF, or the registrant for any other
+registration.<a href="#section-17.2-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-17.2-5.4">
+            <p id="section-17.2-5.4.1"><strong>Reference</strong>: the specification defining the value.<a href="#section-17.2-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-17.2-6">This document seeds the registry with the values it defines
+(<a href="#denial-reasons" class="auto internal xref">Section 12</a>):<a href="#section-17.2-6" class="pilcrow">¶</a></p>
+<table class="center" id="table-3">
+          <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Value</th>
+              <th class="text-left" rowspan="1" colspan="1">Semantics</th>
+              <th class="text-left" rowspan="1" colspan="1">Change Controller</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>out_of_policy</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The Mission Issuer's governance policy refuses the requested authority class for this Mission, independent of who approves.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#denial-reasons" class="auto internal xref">Section 12</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>approver_rejected</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The Approver declined the expansion at the consent step.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#denial-reasons" class="auto internal xref">Section 12</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>out_of_scope_for_purpose</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The requested authority is incompatible with the Mission's recorded <code>purpose</code>.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#denial-reasons" class="auto internal xref">Section 12</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>nothing_to_expand</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The derived requested authority is a subset of the predecessor's own effective Authority Set, so there is nothing to expand.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#denial-reasons" class="auto internal xref">Section 12</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-17.2-8">Each further document that defines a value on this carrier requests
+that value's registration in its own IANA considerations, carrying its
+Internet-Draft reference as a publication dependency under this
+registry's policy until it is published; Specification Required does
+not require Standards Track maturity of the registrant.<a href="#section-17.2-8" class="pilcrow">¶</a></p>
+<p id="section-17.2-9">The expansion request is an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange carrying the
 already-registered <code>mission_intent</code> request parameter and the
 already-registered token-exchange parameters <code>subject_token</code>,
 <code>subject_token_type</code>, <code>requested_token_type</code>, <code>actor_token</code>, and
@@ -3353,70 +3515,72 @@ uses the deferred token response substrate
 nothing here. This document removes the earlier revision's registration
 request for a <code>predecessor_token</code> parameter: the predecessor is
 resolved from <code>subject_token</code>, so no dedicated predecessor-token
-parameter exists.<a href="#section-17-3" class="pilcrow">¶</a></p>
-<p id="section-17-4">This document registers the following parameters in the "OAuth
-Parameters" registry:<a href="#section-17-4" class="pilcrow">¶</a></p>
+parameter exists.<a href="#section-17.2-9" class="pilcrow">¶</a></p>
+<p id="section-17.2-10">This document registers the following parameters in the "OAuth
+Parameters" registry:<a href="#section-17.2-10" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-17-5.1">
-          <p id="section-17-5.1.1">Name: <code>predecessor</code><a href="#section-17-5.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-17.2-11.1">
+            <p id="section-17.2-11.1.1">Name: <code>predecessor</code><a href="#section-17.2-11.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.2">
-          <p id="section-17-5.2.1">Parameter Usage Location: token request, authorization request<a href="#section-17-5.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-17.2-11.2">
+            <p id="section-17.2-11.2.1">Parameter Usage Location: token request, authorization request<a href="#section-17.2-11.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.3">
-          <p id="section-17-5.3.1">Change Controller: IETF<a href="#section-17-5.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-17.2-11.3">
+            <p id="section-17.2-11.3.1">Change Controller: IETF<a href="#section-17.2-11.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.4">
-          <p id="section-17-5.4.1">Reference: this document, <a href="#submission" class="auto internal xref">Section 4.1</a><a href="#section-17-5.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-17.2-11.4">
+            <p id="section-17.2-11.4.1">Reference: this document, <a href="#submission" class="auto internal xref">Section 4.1</a><a href="#section-17.2-11.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.5">
-          <p id="section-17-5.5.1">Name: <code>mission_expansion_status</code><a href="#section-17-5.5.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-17.2-11.5">
+            <p id="section-17.2-11.5.1">Name: <code>mission_expansion_status</code><a href="#section-17.2-11.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.6">
-          <p id="section-17-5.6.1">Parameter Usage Location: token response, authorization response<a href="#section-17-5.6.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-17.2-11.6">
+            <p id="section-17.2-11.6.1">Parameter Usage Location: token response, authorization response<a href="#section-17.2-11.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.7">
-          <p id="section-17-5.7.1">Change Controller: IETF<a href="#section-17-5.7.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-17.2-11.7">
+            <p id="section-17.2-11.7.1">Change Controller: IETF<a href="#section-17.2-11.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.8">
-          <p id="section-17-5.8.1">Reference: this document, <a href="#reconciliation" class="auto internal xref">Section 10</a><a href="#section-17-5.8.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-17.2-11.8">
+            <p id="section-17.2-11.8.1">Reference: this document, <a href="#reconciliation" class="auto internal xref">Section 10</a><a href="#section-17.2-11.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.9">
-          <p id="section-17-5.9.1">Name: <code>mission_denial_reason</code><a href="#section-17-5.9.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-17.2-11.9">
+            <p id="section-17.2-11.9.1">Name: <code>mission_denial_reason</code><a href="#section-17.2-11.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.10">
-          <p id="section-17-5.10.1">Parameter Usage Location: token response, authorization response<a href="#section-17-5.10.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-17.2-11.10">
+            <p id="section-17.2-11.10.1">Parameter Usage Location: token response, authorization response<a href="#section-17.2-11.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.11">
-          <p id="section-17-5.11.1">Change Controller: IETF<a href="#section-17-5.11.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-17.2-11.11">
+            <p id="section-17.2-11.11.1">Change Controller: IETF<a href="#section-17.2-11.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.12">
-          <p id="section-17-5.12.1">Reference: this document, <a href="#denial-reasons" class="auto internal xref">Section 12</a>; also carried by the
+          <li class="normal" id="section-17.2-11.12">
+            <p id="section-17.2-11.12.1">Reference: this document, <a href="#denial-reasons" class="auto internal xref">Section 12</a>; also carried by the
 child delegation profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)<a href="#section-17-5.12.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)<a href="#section-17.2-11.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.13">
-          <p id="section-17-5.13.1">Name: <code>creation_request_id</code><a href="#section-17-5.13.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-17.2-11.13">
+            <p id="section-17.2-11.13.1">Name: <code>creation_request_id</code><a href="#section-17.2-11.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.14">
-          <p id="section-17-5.14.1">Parameter Usage Location: token request<a href="#section-17-5.14.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-17.2-11.14">
+            <p id="section-17.2-11.14.1">Parameter Usage Location: token request<a href="#section-17.2-11.14.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.15">
-          <p id="section-17-5.15.1">Change Controller: IETF<a href="#section-17-5.15.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-17.2-11.15">
+            <p id="section-17.2-11.15.1">Change Controller: IETF<a href="#section-17.2-11.15.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-17-5.16">
-          <p id="section-17-5.16.1">Reference: this document, <a href="#submission" class="auto internal xref">Section 4.1</a>, <a href="#creation-idempotency" class="auto internal xref">Section 11</a>;
+          <li class="normal" id="section-17.2-11.16">
+            <p id="section-17.2-11.16.1">Reference: this document, <a href="#submission" class="auto internal xref">Section 4.1</a>, <a href="#creation-idempotency" class="auto internal xref">Section 11</a>;
 also carried by the child delegation profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)<a href="#section-17-5.16.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)<a href="#section-17.2-11.16.1" class="pilcrow">¶</a></p>
 </li>
-      </ul>
-<p id="section-17-6">The <code>predecessor</code> cross-check rides the token exchange request at the
+        </ul>
+<p id="section-17.2-12">The <code>predecessor</code> cross-check rides the token exchange request at the
 token endpoint and, on the retained interactive path, the authorization
 request; the reconciliation status and denial reason ride the token
 error response and, on the interactive path, the authorization error
 response. The <code>creation_request_id</code> identifier rides the token
 exchange request at the token endpoint in every completion mode and
-never appears on a front channel.<a href="#section-17-6" class="pilcrow">¶</a></p>
+never appears on a front channel.<a href="#section-17.2-12" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="acknowledgments">
@@ -3493,6 +3657,10 @@ composition with the issuance flow.<a href="#section-18-1" class="pilcrow">¶</a
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
@@ -3528,6 +3696,10 @@ composition with the issuance flow.<a href="#section-18-1" class="pilcrow">¶</a
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-template">[I-D.draft-mcguinness-oauth-mission-template]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Template for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8126">[RFC8126]</dt>
         <dd>
