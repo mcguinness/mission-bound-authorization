@@ -432,17 +432,20 @@ export function buildProvider(opts: AdapterOptions): Provider {
       },
     },
     extraParams: {
-      // @spec mission#submission-via-par — PAR-only carriage. Concrete authority
-      // is proposed via the standard authorization_details parameter pushed
-      // alongside mission_intent (@spec mission#authority-proposal); the Intent
-      // itself carries no authority members (an Intent with the retired
-      // proposed_authority member fails the closed-top-level rule in
-      // validateIntent).
+      // @spec mission#submission-via-par — PAR-only carriage. The parameter
+      // VALUE is the Mission Intent Submission envelope {intent, evidence?}:
+      // the bare-Intent shape is refused, presented evidence is typed and
+      // bounded (unknown type refused, never silently ignored), and
+      // intent_hash commits exactly the inner semantic `intent`. Concrete
+      // authority is proposed via the standard authorization_details parameter
+      // pushed alongside mission_intent (@spec mission#authority-proposal);
+      // the Intent itself carries no authority members (an Intent with the
+      // retired proposed_authority member fails the closed-top-level rule).
       async mission_intent(ctx, value) {
         if (value === undefined) return;
         const params = (ctx as { oidc: { params: Record<string, unknown> } }).oidc.params;
         try {
-          const intent = kernel.validateIntent(String(value));
+          const { intent } = kernel.validateSubmission(String(value));
           // @spec mission#authority-proposal — the intake cross-check that needs
           // the parsed Intent: each proposed entry's resource MUST be among the
           // Intent's resources (invalid_request), the array strict-parses
@@ -1056,7 +1059,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     if (interactionMatch && ctx.method === "GET") {
       const details = await provider.interactionDetails(ctx.req, ctx.res);
       const params = details.params as Record<string, unknown>;
-      const intent = kernel.validateIntent(String(params.mission_intent));
+      // @spec mission#submission-via-par — the pushed parameter is the
+      // Submission envelope; the approval renders the SEMANTIC intent (the
+      // object intent_hash commits), never the envelope.
+      const { intent } = kernel.validateSubmission(String(params.mission_intent));
       // @spec mission#authority-proposal — the proposal rides the pushed
       // authorization_details parameter; the rendering distinguishes the
       // submitted proposal (untrusted) from the derived Authority Set (what
@@ -1856,9 +1862,11 @@ async function handleMissionDispatchGrant(
     return;
   }
 
+  // @spec mission#submission-via-par — this carrier adopts the Submission
+  // envelope: `mission_intent` carries {intent, evidence?}.
   let intent: MissionIntent;
   try {
-    intent = kernel.validateIntent(missionIntentRaw);
+    intent = kernel.validateSubmission(missionIntentRaw).intent;
   } catch (e) {
     ctx.status = 400;
     ctx.body = { error: "invalid_request", error_description: e instanceof Error ? e.message : "invalid mission_intent" };
@@ -2011,7 +2019,9 @@ async function decide(
 ) {
   const details = await provider.interactionDetails(ctx.req, ctx.res);
   const params = details.params as Record<string, unknown>;
-  const intent = opts.kernel.validateIntent(String(params.mission_intent));
+  // @spec mission#submission-via-par — re-parse the pushed Submission envelope;
+  // approval and intent_hash cover exactly the semantic `intent`.
+  const { intent } = opts.kernel.validateSubmission(String(params.mission_intent));
   // @spec mission#authority-proposal, mission#integrity-anchors (TOCTOU) — the
   // task and the proposal are re-read from the interaction's pushed parameters
   // (immutable for the life of the interaction uid) and the Authority Set is

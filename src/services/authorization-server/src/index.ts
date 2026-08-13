@@ -46,7 +46,17 @@ export {
   type IngestionEvidenceInput,
 } from "./kernel/issuer-evidence.js";
 export type { ProtectedEventSource } from "./adapters/provider.js";
-export { validateAuthorityProposal, validateMissionIntent, IntentError } from "./kernel/intent.js";
+export {
+  DEFAULT_MAX_EVIDENCE_ENTRIES,
+  DEFAULT_MAX_EVIDENCE_ENTRY_BYTES,
+  INTENT_SUBMISSION_EVIDENCE_TYPES,
+  IntentError,
+  type SubmissionEvidenceBounds,
+  validateAuthorityProposal,
+  validateIntentSubmissionEvidence,
+  validateMissionIntent,
+  validateMissionIntentSubmission,
+} from "./kernel/intent.js";
 export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
 export { delegatePermitted, type DelegateCandidate } from "./kernel/delegate-matcher.js";
 export {

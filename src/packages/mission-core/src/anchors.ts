@@ -59,6 +59,9 @@ export function computeAnchor(typ: string, iss: string, value: JsonValue): strin
   return `sha-256:${digest.toString("base64url")}`;
 }
 
+/** Commits exactly the SEMANTIC Mission Intent: the `intent` member of the
+ *  Mission Intent Submission envelope, never the envelope or its `evidence`
+ *  array (so intent-bound evidence can name this hash without self-reference). */
 export function intentHash(iss: string, intent: JsonValue): string {
   return computeAnchor(INTENT_TYP, iss, intent);
 }

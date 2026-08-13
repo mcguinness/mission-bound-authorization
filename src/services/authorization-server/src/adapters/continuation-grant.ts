@@ -47,7 +47,7 @@ import { DEFERRAL_EXPIRES_IN, DEFERRAL_INTERVAL, ExpansionDeferralError } from "
 import { ChildDelegationError, createChildMission } from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
-import type { AuthorityEntry, MissionIntent, MissionRecord } from "../kernel/types.js";
+import type { AuthorityEntry, MissionIntent, MissionIntentSubmission, MissionRecord } from "../kernel/types.js";
 import { mintChildGrant } from "./child-grant.js";
 import { childErrorCode, InvalidAuthorizationDetails, newResourceServer, resourceServerInfoFor } from "./provider.js";
 import type { AdapterOptions } from "./provider.js";
@@ -1250,17 +1250,21 @@ export async function handleChildCreationExchange(
     return;
   }
 
-  // The child Intent + child actor (untrusted request input; parsed + validated here).
+  // The child Submission envelope + child actor (untrusted request input;
+  // parsed + validated here). @spec mission#submission-via-par — this carrier
+  // adopts the envelope: `mission_intent` carries {intent, evidence?}; the
+  // bare-Intent shape and any invalid evidence entry are refused here.
   const missionIntentRaw = params.mission_intent;
   if (typeof missionIntentRaw !== "string" || !missionIntentRaw) {
-    throw new errors.InvalidRequest("mission_intent (the child intent) required");
+    throw new errors.InvalidRequest("mission_intent (the child intent submission) required");
   }
-  let intent: MissionIntent;
+  let submission: MissionIntentSubmission;
   try {
-    intent = opts.kernel.validateIntent(missionIntentRaw);
+    submission = opts.kernel.validateSubmission(missionIntentRaw);
   } catch (e) {
     throw new errors.InvalidRequest(e instanceof Error ? e.message : "invalid mission_intent");
   }
+  const intent = submission.intent;
   // @spec mission#authority-proposal — the child's concrete authority proposal
   // rides the standard authorization_details parameter of this exchange (the
   // child Intent carries no authority members).
@@ -1294,6 +1298,11 @@ export async function handleChildCreationExchange(
     actor: acting,
     intent,
     ...(proposedAuthority ? { proposal: proposedAuthority } : {}),
+    // @spec mission#intent-submission-evidence — presented evidence is part of
+    // the creation fingerprint: same creation_request_id + different evidence
+    // is a mismatch, never a silent replay. (Unreachable today — no registered
+    // evidence types, so any presented entry was already refused above.)
+    ...(submission.evidence ? { evidence: submission.evidence } : {}),
     child_actor: childActor,
     requested_token_type: JWT_TOKEN_TYPE,
     ...(typeof parentParam === "string" && parentParam ? { cross_check: parentParam } : {}),
@@ -1547,17 +1556,21 @@ export async function handleExpansionExchange(
     return;
   }
 
-  // The widened Intent (the fresh-approval basis).
+  // The widened Submission envelope (the fresh-approval basis).
+  // @spec mission#submission-via-par — this carrier adopts the envelope:
+  // `mission_intent` carries {intent, evidence?}; the bare-Intent shape and
+  // any invalid evidence entry are refused here.
   const missionIntentRaw = params.mission_intent;
   if (typeof missionIntentRaw !== "string" || !missionIntentRaw) {
-    throw new errors.InvalidRequest("mission_intent (the widened intent) required for expansion");
+    throw new errors.InvalidRequest("mission_intent (the widened intent submission) required for expansion");
   }
-  let intent: MissionIntent;
+  let submission: MissionIntentSubmission;
   try {
-    intent = opts.kernel.validateIntent(missionIntentRaw);
+    submission = opts.kernel.validateSubmission(missionIntentRaw);
   } catch (e) {
     throw new errors.InvalidRequest(e instanceof Error ? e.message : "invalid mission_intent");
   }
+  const intent = submission.intent;
   // @spec mission#authority-proposal — the widened request's concrete authority
   // proposal rides the standard authorization_details parameter of this
   // exchange (the widened Intent carries no authority members).
@@ -1575,6 +1588,9 @@ export async function handleExpansionExchange(
     actor: acting,
     intent,
     ...(proposedAuthority ? { proposal: proposedAuthority } : {}),
+    // @spec mission#intent-submission-evidence — presented evidence is part of
+    // the creation fingerprint (see the child-creation exchange above).
+    ...(submission.evidence ? { evidence: submission.evidence } : {}),
     requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     ...(typeof predecessorParam === "string" && predecessorParam
       ? { cross_check: predecessorParam }
