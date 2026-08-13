@@ -656,14 +656,11 @@ Table of Contents
        prefix the verifier does not recognize, and never treat an
        unrecognized prefix as sha-256, per the issuance profile.
 
-   9.  *Existence proof.* Before relying on a Mandate for a high-
-       consequence decision, confirm an audit-registration Receipt
-       (Section 8.3) that proves the Mandate's independent existence at
-       a committed time.  A Mandate a key-holding attacker minted after
-       a compromise and backdated has no Receipt predating the
-       compromise.  A verifier that cannot obtain such a Receipt MUST
-       treat the Mandate as unverifiable (Section 7.1) for high-
-       consequence reliance.
+   Where the deployment runs the audit transparency profile, a verifier
+   MAY additionally confirm an audit-registration Receipt (Section 8.3)
+   before high-consequence reliance; the issuer-key-compromise
+   consideration states what this optional hardening bounds and what its
+   absence leaves open (Section 11).
 
 7.1.  Failure Taxonomy
 
@@ -798,8 +795,9 @@ Table of Contents
       MUST equal it, which holds by construction since a Mandate's iss
       is mission.issuer (Section 10).
 
-   Registration gives a Mandate an independent existence proof, which
-   bounds a later issuer key compromise (Section 11).
+   Registration is an optional hardening: verification (Section 7) does
+   not require it.  It gives a Mandate an independent existence proof,
+   which bounds a later issuer key compromise (Section 11).
 
 9.  Non-Goals and Deferred Work
 
@@ -847,12 +845,13 @@ Table of Contents
       routine retirement (Section 5.4);
 
    *  provision a recipient's standing to a state surface when its
-      reliance requires an active Mission (Section 5.4);
-
-   *  register a Mandate as Mission evidence when it feeds high-
-      consequence decisions (Section 8.3); and
+      reliance requires an active Mission (Section 5.4); and
 
    *  issue jti values it never reuses.
+
+   A Mandate Issuer running the audit transparency profile SHOULD
+   register a Mandate as Mission evidence when it feeds high-consequence
+   decisions (Section 8.3).
 
    A *Mandate Verifier* MUST:
 
@@ -912,11 +911,13 @@ Table of Contents
    dropping the key from the published set without also breaking the
    genuine Mandates that key signed.
 
-   Audit registration (Section 8.3) is the bound.  A deployment whose
-   Mandates feed high-consequence decisions SHOULD register them: a
-   genuine Mandate has an independent, timestamped existence proof, and
-   a forged one either goes unregistered or leaves a permanent,
-   attributable trace.
+   The residual is explicit: a signature-only Mandate cannot prove it
+   existed before an issuer-key compromise.  Audit registration
+   (Section 8.3), where the deployment runs the transparency profile, is
+   the bound.  A deployment whose Mandates feed high-consequence
+   decisions SHOULD register them: a genuine Mandate has an independent,
+   timestamped existence proof, and a forged one either goes
+   unregistered or leaves a permanent, attributable trace.
 
    An issuer that learns a signing key was compromised SHOULD record and
    publish the compromise time.  A verifier then treats an unregistered

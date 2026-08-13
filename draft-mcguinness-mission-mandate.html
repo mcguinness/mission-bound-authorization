@@ -1996,17 +1996,13 @@ current state within the freshness bound of
 prefix the verifier does not recognize, and never treat an
 unrecognized prefix as <code>sha-256</code>, per the issuance profile.<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-7-2.9">
-          <p id="section-7-2.9.1"><strong>Existence proof.</strong> Before relying on a Mandate for a
-high-consequence decision, confirm an audit-registration Receipt
-(<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>) that proves the Mandate's independent
-existence at a committed time. A Mandate a key-holding attacker
-minted after a compromise and backdated has no Receipt predating
-the compromise. A verifier that cannot obtain such a Receipt <span class="bcp14">MUST</span>
-treat the Mandate as unverifiable (<a href="#failures" class="auto internal xref">Section 7.1</a>) for
-high-consequence reliance.<a href="#section-7-2.9.1" class="pilcrow">¶</a></p>
-</li>
       </ol>
+<p id="section-7-3">Where the deployment runs the audit transparency profile, a verifier
+<span class="bcp14">MAY</span> additionally confirm an audit-registration Receipt
+(<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>) before high-consequence reliance; the
+issuer-key-compromise consideration states what this optional
+hardening bounds and what its absence leaves open
+(<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-7-3" class="pilcrow">¶</a></p>
 <div id="failures">
 <section id="section-7.1">
         <h3 id="name-failure-taxonomy">
@@ -2187,7 +2183,9 @@ as-is (an already-signed object is not re-canonicalized).<a href="#section-8.3-2
 <code>iss</code> is <code>mission.issuer</code> (<a href="#conformance" class="auto internal xref">Section 10</a>).<a href="#section-8.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-8.3-3">Registration gives a Mandate an independent existence proof, which
+<p id="section-8.3-3">Registration is an optional hardening: verification
+(<a href="#verification" class="auto internal xref">Section 7</a>) does not require it. It gives a Mandate an
+independent existence proof, which
 bounds a later issuer key compromise (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-8.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2262,32 +2260,31 @@ retirement (<a href="#minting" class="auto internal xref">Section 5.4</a>);<a hr
 </li>
         <li class="normal" id="section-10-2.8">
           <p id="section-10-2.8.1">provision a recipient's standing to a state surface when its
-reliance requires an active Mission (<a href="#minting" class="auto internal xref">Section 5.4</a>);<a href="#section-10-2.8.1" class="pilcrow">¶</a></p>
+reliance requires an active Mission (<a href="#minting" class="auto internal xref">Section 5.4</a>); and<a href="#section-10-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.9">
-          <p id="section-10-2.9.1">register a Mandate as Mission evidence when it feeds
-high-consequence decisions (<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>); and<a href="#section-10-2.9.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-10-2.10">
-          <p id="section-10-2.10.1">issue <code>jti</code> values it never reuses.<a href="#section-10-2.10.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.9.1">issue <code>jti</code> values it never reuses.<a href="#section-10-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-10-3">A <strong>Mandate Verifier</strong> <span class="bcp14">MUST</span>:<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-3">A Mandate Issuer running the audit transparency profile <span class="bcp14">SHOULD</span>
+register a Mandate as Mission evidence when it feeds
+high-consequence decisions (<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>).<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4">A <strong>Mandate Verifier</strong> <span class="bcp14">MUST</span>:<a href="#section-10-4" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-10-4.1">
-          <p id="section-10-4.1.1">perform the steps of <a href="#verification" class="auto internal xref">Section 7</a> before reliance;<a href="#section-10-4.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-10-5.1">
+          <p id="section-10-5.1.1">perform the steps of <a href="#verification" class="auto internal xref">Section 7</a> before reliance;<a href="#section-10-5.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-4.2">
-          <p id="section-10-4.2.1">classify failures per <a href="#failures" class="auto internal xref">Section 7.1</a> and treat only the invalid class
-as evidence against the artifact;<a href="#section-10-4.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-5.2">
+          <p id="section-10-5.2.1">classify failures per <a href="#failures" class="auto internal xref">Section 7.1</a> and treat only the invalid class
+as evidence against the artifact;<a href="#section-10-5.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-4.3">
-          <p id="section-10-4.3.1">obtain current state within its freshness bound whenever reliance
-requires an active Mission; and<a href="#section-10-4.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-5.3">
+          <p id="section-10-5.3.1">obtain current state within its freshness bound whenever reliance
+requires an active Mission; and<a href="#section-10-5.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-4.4">
-          <p id="section-10-4.4.1">never grant access, mint credentials, or widen authority on
-presentation of a Mandate (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-10-4.4.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-5.4">
+          <p id="section-10-5.4.1">never grant access, mint credentials, or widen authority on
+presentation of a Mandate (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-10-5.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2348,7 +2345,10 @@ resolvable (<a href="#minting" class="auto internal xref">Section 5.4</a>), so a
 verifies exactly as a genuine one does, and an issuer cannot recover
 by simply dropping the key from the published set without also
 breaking the genuine Mandates that key signed.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
-<p id="section-11.3-2">Audit registration (<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>) is the bound. A deployment
+<p id="section-11.3-2">The residual is explicit: a signature-only Mandate cannot prove it
+existed before an issuer-key compromise. Audit registration
+(<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>), where the deployment runs the transparency
+profile, is the bound. A deployment
 whose Mandates feed high-consequence decisions <span class="bcp14">SHOULD</span> register them:
 a genuine Mandate has an independent, timestamped existence proof,
 and a forged one either goes unregistered or leaves a permanent,
