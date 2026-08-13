@@ -55,6 +55,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-oauth-mission-signals:
@@ -108,14 +116,6 @@ informative:
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-substrate:
-    title: "Mission Substrate Requirements"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
     author:
       -
         ins: K. McGuinness
@@ -335,6 +335,48 @@ executes a Mission's work. The two compose but neither implies the
 other: a Mission can be contained under this document without trifecta
 containment holding, and trifecta containment can hold for a Mission
 that this document has never contained.
+
+# Mission Substrate {#mission-substrate}
+
+This profile is defined against the Mission model rather than against
+OAuth 2.0 mechanics: it is a substrate-neutral consumer, and this
+section is its consumption declaration under the rule of Mission
+Substrate Requirements ({{I-D.draft-mcguinness-mission-substrate}})
+that a substrate-neutral profile declare the kernel functions and
+optional capabilities it consumes.
+
+From the contextual-governance kernel it consumes the Mission
+identifier and issuer, the kernel's Mission Reference and Controller,
+which key the overlay and its evidence; the lifecycle state space,
+the kernel's governance gate, whose states bound a contain
+transition's legality ({{contain-transition}}); the integrity-anchor
+envelope, which the overlay never enters ({{overlay}}); and the
+ordered governance record, into which each contain transition commits
+as a state-version increment.
+
+It consumes these optional capabilities:
+
+| Capability | Consumption | Scope of consumption |
+| --- | --- | --- |
+| Structured Authority | required | The Effective Authority Set is what every derivation, delegation, projection, and attenuation root is gated on after a contain transition ({{derivation-gating}}); a contained capability names an approved Authority Set entry or its actions ({{overlay}}) |
+| Monotonic Derivation | required | Scoped to removal-only narrowing: a contain transition only adds contained capability, so monotonicity is trivially decidable, set union over entries, with no per-constraint comparator ({{removal-only}}, {{contain-transition}}) |
+| Lifecycle-Gated Authorization | required | The Baseline property is what a lifecycle-gated substrate provides: no derivation, delegation, projection, or attenuation root minted after the transition carries contained capability ({{containment-properties}}) |
+| State-Observable | conditional | Consumed only for the Runtime-Enforced property: a consumer that checks a fresh, authenticated state source at or near action time denies contained capability whether or not its credential predates the transition; a consumer that never consults such a source gets Baseline only ({{containment-properties}}) |
+| Credential-Bound | conditional | Consumed where derivation issues Mission-bound tokens; a token issued before the transition is the same residual that revocation carries, bounded by its own `exp` and the deployment's freshness rules ({{derivation-gating}}) |
+| Independently Verifiable, Portable Evidence | not consumed | This document consumes neither capability; it produces audit material of its own, the Containment Evidence object and the Protected Event Receipt, which an audit or transparency profile registers by their canonical bytes ({{containment-evidence}}, {{protected-event-receipt}}) |
+{: title="Containment profile capability consumption"}
+
+The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
+version's normative substrate: it defines each consumed kernel
+function and capability for OAuth 2.0, and every OAuth artifact named
+in this document enters through it. A binding that provides the
+required capabilities above hosts this profile's Baseline property;
+the Runtime-Enforced property additionally requires State-Observable
+({{containment-properties}}). The portability claim is
+capability-scoped rather than substrate-wide for the reason the
+substrate's Capability Confusion consideration states: every property
+this profile requires matches an explicit capability claim and its
+scope, never the generic statement that a binding supports Missions.
 
 # The Containment Overlay {#overlay}
 
