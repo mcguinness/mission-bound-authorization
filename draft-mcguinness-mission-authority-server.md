@@ -28,6 +28,7 @@ author:
 
 normative:
   RFC3339:
+  RFC6838:
   RFC7519:
   RFC7638:
   RFC7662:
@@ -2061,9 +2062,17 @@ registry {{RFC8615}}:
 ## Mission Authority Server Metadata Registry
 
 IANA is requested to create the "Mission Authority Server Metadata"
-registry, with a registration policy of Specification Required
-{{RFC8126}}. Each entry has: Member Name, Change Controller, and
-Reference. The registry is seeded with the members of {{discovery}};
+registry. The registration policy is
+Specification Required {{RFC8126}}. A Designated Expert reviews a
+submission for: a Member Name following the metadata naming
+conventions of {{discovery}} and not already registered; a definition
+precise enough that a client can consume the member from its
+specification alone; and no overlap with an existing member's
+semantics (a refinement belongs in the defining specification, not a
+parallel member). Registration does not require IETF review or a
+Standards Track document. Each entry has: Member Name, Change
+Controller, and Reference. The registry is seeded with the members of
+{{discovery}};
 for each, Change Controller IETF and Reference this document:
 
 - `issuer`
@@ -2076,6 +2085,35 @@ for each, Change Controller IETF and Reference this document:
 - `mission_event_stream_endpoint`
 - `mission_max_stale_seconds`
 - `jwks_uri`
+
+## Media Type Registration
+
+This document registers one media type per {{RFC6838}}.
+
+### Mission Join Assertion Media Type
+
+- Type name: application
+- Subtype name: mission-join+jwt
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; JWS Compact Serialization
+- Security considerations: see {{sec-join-assertion}}
+- Interoperability considerations: see this document
+- Published specification: this document
+- Applications that use this media type: Mission Authority Server
+  deployments and PDPs consuming Mission Join Assertions
+- Fragment identifier considerations: not applicable
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): none
+  - Macintosh file type code(s): none
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
 
 ## Runtime Denial Reason
 

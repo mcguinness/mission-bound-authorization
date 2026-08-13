@@ -1145,6 +1145,24 @@ defined in the Mission Record section of
 {{I-D.draft-mcguinness-oauth-mission}}. Regulated deployments MAY
 require longer retention.
 
+# Evidence Properties {#evidence-properties}
+
+This section is informative: it names a property vocabulary for the
+records of this document and the conditions under which the records
+support each property, so the cluster is citable as one anchor. It
+is a conditional capability map, not a checklist: each row separates
+what base evidence conformance proves, the additional mechanism a
+stronger reading requires, and what no reading proves. It adds no
+requirement to this document or the runtime profile.
+
+| Property | What the base evidence proves | Additional mechanism or condition | What it does not prove |
+|---|---|---|---|
+| Parameter-bound | A verified Decision Evidence record authenticates the digest of the parameters evaluated ({{decision-evidence-object}}), and linked Execution Evidence authenticates the authorized and effective digest pair, exposing equality or deviation ({{execution-evidence-object}}); the link to the parameters themselves is established by recomputing the digest over the normalized parameter object | Binding to what a human approved holds where action-bound approval is required and used, the rendering derives from the same normalized parameters by a trusted component, and the dynamic link verifies ({{I-D.draft-mcguinness-mission-runtime}}) | That the human understood the rendering, or that the action occurred: the outcome record is the emitter's signed assertion |
+| Key-isolated | Origin and integrity: each record is signed by the emitter's published key, bound to its scope and audience ({{decision-evidence-integrity}}) | None in the current profiles. No requirement places the evidence-signing private key outside the agent's runtime; the runtime profile's custody rules govern the credential's confirmation key, a different key ({{I-D.draft-mcguinness-mission-runtime}}). A deployment that isolates evidence-signing keys does so by local mechanism and declares it in its Enforcement Scope Statement | That the agent's runtime could not access the signing key or emit records under the emitter's identity |
+| Session-independent | A verifier can verify a retained record without a live session and without possession or validity of the credential that carried the action ({{evidence-integrity-signing-keys}}); retired keys stay resolvable for the retention window, and evidence signed after a declared key compromise is unverifiable rather than verified | None | That the session or credential was valid at decision or execution time, or that the Mission is active now: those are record contents and linked state evidence, not consequences of signature verification |
+| Third-party-verifiable | Scoped independent verification: a party with access to the Enforcement Scope Statement's published keys verifies a record independently of the emitting deployment ({{evidence-integrity-signing-keys}}) | Durable offline verification: a party holding retained or configured producer and Transparency Service trust anchors verifies without contacting either operator, where a Receipt and the evidence bytes are retained; cross-domain verifiability additionally requires the audit profile's independent-operator condition ({{I-D.draft-mcguinness-mission-audit}}) | That an unknown producer key is trusted, that the signed assertion is true, or that the evidence feed is complete |
+{: title="Evidence properties: what the records prove, and under which conditions"}
+
 # Extension Members {#evidence-extensions}
 
 A Decision Evidence Object, Execution Evidence Object, and Refusal

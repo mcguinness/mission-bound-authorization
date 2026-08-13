@@ -381,7 +381,9 @@ facts are the next subsection.
    live Mission's effective authority without ending it),
    **mission-continuation** (authorization continuity over ICA /
    async-delegation / cross-domain transports), **uma** (the UMA 2.0
-   binding sketch, the first written against the substrate contract).
+   binding sketch, the first written against the substrate contract),
+   **aam** (Cloudflare's Agent Access Model realized component by
+   component on existing mechanisms).
    Each names a stable path to prefer where one exists.
 
 The architecture and security model are Informational companions and
@@ -475,6 +477,22 @@ Informational; it defines no mechanism, and the profiles remain
 authoritative. Read this first.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html)
+
+#### Mission-Bound Authorization for the Agent Access Model
+
+Experimental sketch. Maps Cloudflare's Agent Access Model onto the
+family: each of AAM's six components is realized by an existing
+mechanism (approval-gated issuance on two paths, the stateless PDP,
+the mediated harness plus egress gate, Containment as the trust
+ratchet, Mission Templates as the task template and capability
+ceiling, and the Activity Log as a read-model join over family
+evidence), and the grant review loop is deliberately not adopted
+because Missions are not standing grants. The honesty boundaries are
+stated plainly: an in-process egress gate claims no containment, and
+authenticated protected events are never assumed honest. It defines
+no binding and no new mechanism.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aam.html)
 
 ### The core
 

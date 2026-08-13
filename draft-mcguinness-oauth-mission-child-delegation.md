@@ -29,6 +29,7 @@ author:
 normative:
   RFC3339:
   RFC6755:
+  RFC6838:
   RFC7523:
   RFC8259:
   RFC8414:
@@ -889,14 +890,16 @@ layered on the OAuth error codes the issuance profile uses:
 `delegation_not_permitted`, `child_actor_not_allowed`,
 `not_strict_subset`, and `fanout_exceeded` accompany `invalid_request`;
 and `policy_denied` accompanies `access_denied`. In an error response
-body the symbolic reason rides in the `mission_denial_reason` member,
-the shared adjudication-denial carrier defined and registered by the
-expansion profile ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
-alongside the OAuth `error` member. On a deferred completion
-({{completion}}) a denial surfaces as the deferred substrate's
-`access_denied` resolution. The possession proof is presented only on
-the token endpoint's authenticated back channel and MUST NOT appear on
-any front channel ({{child-creation}}).
+body the symbolic reason rides, alongside the OAuth `error` member, in
+the `mission_denial_reason` member, the shared adjudication-denial
+carrier defined and registered by the expansion profile
+({{I-D.draft-mcguinness-oauth-mission-expansion}}); this document
+requests these seven reasons' registration in that profile's Mission
+Denial Reasons registry ({{iana-registrations}}). On a deferred
+completion ({{completion}}) a denial surfaces as the deferred
+substrate's `access_denied` resolution. The possession proof is
+presented only on the token endpoint's authenticated back channel and
+MUST NOT appear on any front channel ({{child-creation}}).
 
 For example, a child Mission Intent that drops the parent entry's
 `resource_issued_before` constraint proposes a relaxation, not a
@@ -1483,9 +1486,8 @@ Example:
 
 A Child Evidence object's canonical bytes are its JCS {{RFC8785}}
 canonicalization, and its type identifier is
-`application/mission-child-evidence+json`, used by local agreement
-pending registration. An audit or transparency profile registers the
-object by these values.
+`application/mission-child-evidence+json`, registered by this document
+({{iana}}).
 
 # Relationship to Expansion
 
@@ -1681,19 +1683,57 @@ member defined by this profile, carried inside the already-registered
 `mission` claim.
 
 This document defines one closed set of symbolic codes: the child
-creation denial reasons ({{denial-reasons}}). Like the issuance
-profile's restraint with `mission` members, these are documented in
-this specification rather than placed in a new IANA registry: they ride
-in the shared `mission_denial_reason` member defined and registered by
-the expansion profile
-({{I-D.draft-mcguinness-oauth-mission-expansion}}) and in evidence,
-inside existing OAuth error responses rather than on a new wire
-surface, and the closed set is small and fully specified here. This
-document therefore requires no registration for the member. Should
-interoperable extension prove necessary, the expansion profile's IANA
-considerations anticipate a shared "Mission Denial Reason" registry
-with a Specification Required {{RFC8126}} policy; this document does
-not create it.
+creation denial reasons ({{denial-reasons}}). They ride the shared
+`mission_denial_reason` member the expansion profile defines and
+registers ({{I-D.draft-mcguinness-oauth-mission-expansion}}). This
+document establishes no registry of its own; it requests these
+registrations in the registries its siblings establish
+({{iana-registrations}}).
+
+## Registry Registrations {#iana-registrations}
+
+This document requests registration of its seven denial reasons in
+the expansion profile's Mission Denial Reasons registry, one row per
+reason of {{denial-reasons}}, each with its semantics as defined
+there, Change Controller IETF, and Reference this document,
+{{denial-reasons}}.
+
+It requests registration of one state in the issuance profile's
+Mission Lifecycle States registry
+({{I-D.draft-mcguinness-oauth-mission}}):
+
+| Value | Terminal | Semantics | Change Controller | Reference |
+|---|---|---|---|---|
+| `cascaded` | yes | A terminal state a Child Mission enters when a terminal cascade trigger on its Parent Mission terminates it under `immediate` cascade. | IETF | this document, {{child-state}} |
+
+## Media Type Registration
+
+This document registers one media type per {{RFC6838}}.
+
+### Child Evidence Media Type
+
+- Type name: application
+- Subtype name: mission-child-evidence+json
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; JSON encoded in UTF-8
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
+- Published specification: this document
+- Applications that use this media type: Mission child delegation
+  deployments
+- Fragment identifier considerations: same as for `application/json`
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): `.json`
+  - Macintosh file type code(s): TEXT
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
 
 Child creation uses the already-registered {{RFC8693}}
 `urn:ietf:params:oauth:grant-type:token-exchange` grant type, selected

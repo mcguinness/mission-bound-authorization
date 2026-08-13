@@ -24,7 +24,7 @@
     "Experimental",
     "outside-ordering"
   ],
-  "count": 37,
+  "count": 38,
   "drafts": [
     {
       "file": "draft-mcguinness-aauth-mission-expiry.md",
@@ -37,6 +37,32 @@
       "adoption_alias": "aauth-expiry",
       "is_published_core": false,
       "deps": []
+    },
+    {
+      "file": "draft-mcguinness-mission-aam.md",
+      "slug": "draft-mcguinness-mission-aam",
+      "title": "Mission-Bound Authorization for the Agent Access Model",
+      "category": "exp",
+      "maturity": "sketch",
+      "group": "architecture",
+      "adoption_rung": "Experimental",
+      "is_published_core": false,
+      "deps": [
+        "draft-mcguinness-mission-architecture",
+        "draft-mcguinness-mission-audit",
+        "draft-mcguinness-mission-authzen",
+        "draft-mcguinness-mission-harness",
+        "draft-mcguinness-mission-runtime",
+        "draft-mcguinness-oauth-mission",
+        "draft-mcguinness-oauth-mission-approval",
+        "draft-mcguinness-oauth-mission-approval-revision",
+        "draft-mcguinness-oauth-mission-containment",
+        "draft-mcguinness-oauth-mission-continuation",
+        "draft-mcguinness-oauth-mission-expansion",
+        "draft-mcguinness-oauth-mission-issuance-grant",
+        "draft-mcguinness-oauth-mission-management",
+        "draft-mcguinness-oauth-mission-template"
+      ]
     },
     {
       "file": "draft-mcguinness-mission-aauth.md",

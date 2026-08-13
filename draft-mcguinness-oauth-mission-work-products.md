@@ -516,6 +516,15 @@ artifact is fixed by `artifact_digest`, and the provenance object
 describing it is fixed by `provenance_digest`, so under the mediator's
 signature neither can be substituted for the other.
 
+The binding is registrable Mission evidence under the audit profile's
+evidence-type catalog ({{I-D.draft-mcguinness-mission-audit}}): the
+canonical bytes are the JWS Compact Serialization as issued, the
+`payload-preimage-content-type` is
+`application/mission-work-product-binding+jwt`, and the authoritative
+producer is the signing mediator, its key resolved as in
+{{binding-object}}. The protected `typ` names the same media type,
+prefix omitted ({{RFC7515}}).
+
 ## Guardrails {#binding-guardrails}
 
 - The binding proves attribution integrity, never authority. A content
