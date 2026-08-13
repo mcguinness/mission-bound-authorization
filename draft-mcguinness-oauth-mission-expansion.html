@@ -1320,7 +1320,10 @@ Mission is unaffected by this document.<a href="#section-abstract-1" class="pilc
                 <p id="section-toc.1-1.16.2.1.1"><a href="#section-16.1" class="auto internal xref">16.1</a>.  <a href="#name-predecessor-chain-correlati" class="internal xref">Predecessor-chain correlation</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.2">
-                <p id="section-toc.1-1.16.2.2.1"><a href="#section-16.2" class="auto internal xref">16.2</a>.  <a href="#name-disclosure-of-the-broadened" class="internal xref">Disclosure of the broadened task</a></p>
+                <p id="section-toc.1-1.16.2.2.1"><a href="#section-16.2" class="auto internal xref">16.2</a>.  <a href="#name-related-work-correlation" class="internal xref">Related-work correlation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.3">
+                <p id="section-toc.1-1.16.2.3.1"><a href="#section-16.3" class="auto internal xref">16.3</a>.  <a href="#name-disclosure-of-the-broadened" class="internal xref">Disclosure of the broadened task</a></p>
 </li>
             </ul>
 </li>
@@ -2407,12 +2410,16 @@ Mission (<a href="#predecessor-member" class="auto internal xref">Section 6</a>)
 correlation metadata, not client-asserted authority: this document
 defines no client request parameter for it, and <code>mission_intent</code> is
 task-only; the input that causes it to be recorded is authenticated
-and authorized under the Mission Issuer's management or local policy;
-the Mission Issuer resolves the reference in its own namespace, and a
-cross-issuer relationship requires a structured extension; an
-unauthorized, absent, or unknown reference is handled without
-disclosing whether the referenced Mission exists. The member asserts
-related work only, neither mutual recognition nor replacement.<a href="#section-9-4" class="pilcrow">¶</a></p>
+and authorized under the Mission Issuer's management or local policy.
+The Mission Issuer <span class="bcp14">MUST</span> authorize and resolve the reference, in its
+own namespace, before the new Mission's approval completes (a
+cross-issuer relationship requires a structured extension); <span class="bcp14">MUST</span> set
+<code>related_to</code> atomically when the Mission record is created; and <span class="bcp14">MUST NOT</span> add or change it afterward. An unresolved or unauthorized
+reference is never recorded: deployment policy either rejects the
+creation uniformly or proceeds without the relationship, applied
+consistently across requests, and neither behavior discloses whether
+the referenced Mission exists. The member asserts related work only,
+neither mutual recognition nor replacement.<a href="#section-9-4" class="pilcrow">¶</a></p>
 <p id="section-9-5">A Mission created this way <span class="bcp14">MUST NOT</span> carry the <code>predecessor</code> member,
 which asserts the supersession semantics only replacement expansion
 provides. Independent continuation does not satisfy any profile that
@@ -2542,7 +2549,12 @@ retry from starting a second ceremony (<a href="#creation-recovery" class="auto 
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) carries the
 same parameter with the same semantics on its child-creation
 exchange, as <code>mission_denial_reason</code> is shared across the profiles
-that mint a Mission related to an existing one (<a href="#denial-reasons" class="auto internal xref">Section 12</a>).<a href="#section-11-3" class="pilcrow">¶</a></p>
+that mint a Mission related to an existing one (<a href="#denial-reasons" class="auto internal xref">Section 12</a>).
+Delegation-family-creating exchanges adopt the same definitions by
+reference, each under its own domain-separating <code>op</code> value
+(<a href="#creation-fingerprint" class="auto internal xref">Section 11.1</a>); the continuation profile's
+async-delegation exchange does so
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>).<a href="#section-11-3" class="pilcrow">¶</a></p>
 <div id="creation-fingerprint">
 <section id="section-11.1">
         <h3 id="name-the-operation-fingerprint">
@@ -2940,70 +2952,79 @@ delta.<a href="#section-13-5" class="pilcrow">¶</a></p>
 <a href="#section-14" class="section-number selfRef">14. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
       </h2>
 <p id="section-14-1">An implementation claims conformance to this document only in the
-Mission Issuer role and only when it adjudicates expansion. A
-conforming <strong>expansion-capable Mission Issuer</strong> <span class="bcp14">MUST</span>:<a href="#section-14-1" class="pilcrow">¶</a></p>
+Mission Issuer role, under one of two targets: as an
+expansion-capable Mission Issuer when it adjudicates expansion, or
+under the optional <code>related_to</code> correlation target below.<a href="#section-14-1" class="pilcrow">¶</a></p>
+<p id="section-14-2">A Mission Issuer that records <code>related_to</code> without adjudicating
+expansion conforms to the <strong><code>related_to</code> correlation</strong> target when it
+meets every rule of <a href="#independent-continuation" class="auto internal xref">Section 9</a>: authenticated and
+authorized input, pre-approval resolution, creation-time atomic
+recording, immutability, consistent non-disclosing failure behavior,
+and no <code>predecessor</code> member. Nothing else in this section applies to
+that target.<a href="#section-14-2" class="pilcrow">¶</a></p>
+<p id="section-14-3">A conforming <strong>expansion-capable Mission Issuer</strong> <span class="bcp14">MUST</span>:<a href="#section-14-3" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-14-2.1">
-          <p id="section-14-2.1.1">accept an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange whose <code>subject_token</code> is the
+<li class="normal" id="section-14-4.1">
+          <p id="section-14-4.1.1">accept an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange whose <code>subject_token</code> is the
 predecessor's Mission-bound access token, with <code>subject_token_type</code>
 of <code>access_token</code>, treating it as an expansion (<a href="#submission" class="auto internal xref">Section 4.1</a>), and
-reject a refresh token as the <code>subject_token</code>;<a href="#section-14-2.1.1" class="pilcrow">¶</a></p>
+reject a refresh token as the <code>subject_token</code>;<a href="#section-14-4.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-14-2.2">
-          <p id="section-14-2.2.1">resolve the predecessor from <code>subject_token</code>, verify possession
+        <li class="normal" id="section-14-4.2">
+          <p id="section-14-4.2.1">resolve the predecessor from <code>subject_token</code>, verify possession
 against the token's own confirmation key, refuse a <code>predecessor</code>
 cross-check that does not match the resolved Mission or a predecessor
 that is not <code>active</code> with <code>invalid_grant</code>, and evaluate the request in
 the verification order of <a href="#verification-order" class="auto internal xref">Section 5.1</a>
-(<a href="#request-binding" class="auto internal xref">Section 4.2</a>, <a href="#predecessor-active" class="auto internal xref">Section 4.3</a>);<a href="#section-14-2.2.1" class="pilcrow">¶</a></p>
+(<a href="#request-binding" class="auto internal xref">Section 4.2</a>, <a href="#predecessor-active" class="auto internal xref">Section 4.3</a>);<a href="#section-14-4.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-14-2.3">
-          <p id="section-14-2.3.1">require a <code>creation_request_id</code> on every expansion exchange,
+        <li class="normal" id="section-14-4.3">
+          <p id="section-14-4.3.1">require a <code>creation_request_id</code> on every expansion exchange,
 refusing a missing one with <code>invalid_request</code>, and recover a
 repeated one under the reservation, recovery, revalidation, and
-retention rules of <a href="#creation-idempotency" class="auto internal xref">Section 11</a>;<a href="#section-14-2.3.1" class="pilcrow">¶</a></p>
+retention rules of <a href="#creation-idempotency" class="auto internal xref">Section 11</a>;<a href="#section-14-4.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-14-2.4">
-          <p id="section-14-2.4.1">refuse an exchange whose derived requested authority is a subset of
+        <li class="normal" id="section-14-4.4">
+          <p id="section-14-4.4.1">refuse an exchange whose derived requested authority is a subset of
 the predecessor's own effective Authority Set, carrying the
 <code>nothing_to_expand</code> denial reason (<a href="#verification-order" class="auto internal xref">Section 5.1</a>,
-<a href="#denial-reasons" class="auto internal xref">Section 12</a>);<a href="#section-14-2.4.1" class="pilcrow">¶</a></p>
+<a href="#denial-reasons" class="auto internal xref">Section 12</a>);<a href="#section-14-4.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-14-2.5">
-          <p id="section-14-2.5.1">complete the expansion in one of the modes of <a href="#completion-modes" class="auto internal xref">Section 5.2</a>,
+        <li class="normal" id="section-14-4.5">
+          <p id="section-14-4.5.1">complete the expansion in one of the modes of <a href="#completion-modes" class="auto internal xref">Section 5.2</a>,
 obtaining new consent for the successor's authority through the
 deferred token response or the retained interactive approval
 (<a href="#adjudication" class="auto internal xref">Section 5</a>) and enforcing the successor-expiry rule
-(<a href="#successor-expiry" class="auto internal xref">Section 5.4</a>);<a href="#section-14-2.5.1" class="pilcrow">¶</a></p>
+(<a href="#successor-expiry" class="auto internal xref">Section 5.4</a>);<a href="#section-14-4.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-14-2.6">
-          <p id="section-14-2.6.1">record the <code>predecessor</code> member on the successor's <code>mission</code> claim
-and Mission record (<a href="#predecessor-member" class="auto internal xref">Section 6</a>);<a href="#section-14-2.6.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-14-4.6">
+          <p id="section-14-4.6.1">record the <code>predecessor</code> member on the successor's <code>mission</code> claim
+and Mission record (<a href="#predecessor-member" class="auto internal xref">Section 6</a>);<a href="#section-14-4.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-14-2.7">
-          <p id="section-14-2.7.1">activate the successor and transition the predecessor to <code>superseded</code>
+        <li class="normal" id="section-14-4.7">
+          <p id="section-14-4.7.1">activate the successor and transition the predecessor to <code>superseded</code>
 atomically when the successor's authority is issued, leaving the
 predecessor <code>active</code> until then, re-verifying predecessor state at
 completion (<a href="#deferred-window" class="auto internal xref">Section 5.3</a>), and refuse further derivation under
-a <code>superseded</code> Mission (<a href="#superseded-state" class="auto internal xref">Section 7</a>); and<a href="#section-14-2.7.1" class="pilcrow">¶</a></p>
+a <code>superseded</code> Mission (<a href="#superseded-state" class="auto internal xref">Section 7</a>); and<a href="#section-14-4.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-14-2.8">
-          <p id="section-14-2.8.1">serialize concurrent expansions against the same predecessor with the
-reconciliation semantics of <a href="#reconciliation" class="auto internal xref">Section 10</a>.<a href="#section-14-2.8.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-14-4.8">
+          <p id="section-14-4.8.1">serialize concurrent expansions against the same predecessor with the
+reconciliation semantics of <a href="#reconciliation" class="auto internal xref">Section 10</a>.<a href="#section-14-4.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-14-3">An expansion-capable Mission Issuer is also a conforming issuance-profile
+<p id="section-14-5">An expansion-capable Mission Issuer is also a conforming issuance-profile
 Mission Issuer (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); this document
 adds the expansion surface to that role. A Resource Server requires no
 new behavior: it enforces a successor's tokens exactly as it enforces
 any Mission-bound token, and treats the <code>predecessor</code> member, if it
 reads it at all, as audit context it <span class="bcp14">MUST NOT</span> use to grant authority
-(<a href="#predecessor-member" class="auto internal xref">Section 6</a>).<a href="#section-14-3" class="pilcrow">¶</a></p>
-<p id="section-14-4">Every expansion this document defines is adjudicated as a fresh
+(<a href="#predecessor-member" class="auto internal xref">Section 6</a>).<a href="#section-14-5" class="pilcrow">¶</a></p>
+<p id="section-14-6">Every expansion this document defines is adjudicated as a fresh
 approval event (<a href="#adjudication" class="auto internal xref">Section 5</a>). The experimental progressive
 authorization companion defines a further <span class="bcp14">OPTIONAL</span> capability,
 <strong>Expansion with Progressive Authorization</strong>, with its own conformance
-requirements (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-14-4" class="pilcrow">¶</a></p>
+requirements (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-14-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -3254,16 +3275,29 @@ credential audience. The issuance profile's Mission Identifier
 correlation considerations apply to each Mission in the chain.<a href="#section-16.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="broadened-task">
+<div id="related-to-correlation">
 <section id="section-16.2">
-        <h3 id="name-disclosure-of-the-broadened">
-<a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-disclosure-of-the-broadened" class="section-name selfRef">Disclosure of the broadened task</a>
+        <h3 id="name-related-work-correlation">
+<a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-related-work-correlation" class="section-name selfRef">Related-work correlation</a>
         </h3>
-<p id="section-16.2-1">The expansion Mission Intent and the consent disclosure rendered at the
+<p id="section-16.2-1"><code>related_to</code> correlates independently approved tasks the way the
+<code>predecessor</code> chain correlates a succession, without the authority
+linkage. The same scoping applies: deployments <span class="bcp14">SHOULD</span> disclose the
+member only to audiences that require the governance relationship,
+and the issuance profile's Mission Identifier correlation
+considerations apply to both Missions it names.<a href="#section-16.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="broadened-task">
+<section id="section-16.3">
+        <h3 id="name-disclosure-of-the-broadened">
+<a href="#section-16.3" class="section-number selfRef">16.3. </a><a href="#name-disclosure-of-the-broadened" class="section-name selfRef">Disclosure of the broadened task</a>
+        </h3>
+<p id="section-16.3-1">The expansion Mission Intent and the consent disclosure rendered at the
 expansion approval event reveal how the approved task is evolving. The
 Mission Issuer <span class="bcp14">SHOULD</span> render that disclosure only to the Approver and
 authorized governance consumers, consistent with the issuance profile's
-treatment of consent disclosure.<a href="#section-16.2-1" class="pilcrow">¶</a></p>
+treatment of consent disclosure.<a href="#section-16.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3462,6 +3496,10 @@ composition with the issuance flow.<a href="#section-18-1" class="pilcrow">¶</a
 <dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-continuation">[I-D.draft-mcguinness-oauth-mission-continuation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Continuation: Authorization Continuity for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
         <dd>

@@ -1506,6 +1506,54 @@ the trigger. This is the "scheduled continuation roots in durable
 authorization" case: the Mission is that durable authorization. Successive
 refreshes within one family are one delegation and are not counted again
 against <code>max_derivations</code> (<a href="#authorization-continuity" class="auto internal xref">Section 5</a>).<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">Establishing the family is a delegation-family-creating exchange, and a
+client that loses the response retries with a fresh, valid proof; without
+an idempotency identifier that retry mints a second live refresh-token
+family. The exchange therefore carries <code>creation_request_id</code>, the
+creation idempotency identifier of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>. The parameter is
+<span class="bcp14">REQUIRED</span>; a Mission Issuer <span class="bcp14">MUST</span> refuse an exchange missing it with
+<code>invalid_request</code>. Its syntax, the <code>(client, creation_request_id)</code>
+key uniqueness, fingerprint comparison, reservation ownership,
+tombstone retention against the published retry horizon, and the
+revalidation rules are that profile's, applied by reference and not
+redefined here. A refresh-token family is not a Mission: its delivery
+and recovery are defined below, not by that profile's
+Mission-creation recovery.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+<p id="section-7.2-3">In the operation fingerprint, <code>op</code> is <code>async-delegation</code>; <code>iss</code> and
+<code>client</code> are as the expansion profile defines them; <code>source</code> is the
+<code>mission_id</code> of the base Mission resolved from <code>subject_token</code>, never
+the raw token; <code>cnf</code> is the acting client's verified confirmation,
+since this exchange deliberately re-binds the family to the acting
+key rather than proving possession of the subject token's own
+confirmation; <code>proposal</code> is the parsed <code>authorization_details</code> array
+naming the requested confined subset, when present; <code>resource</code> is the
+target the family is audienced to; and <code>request_refresh_token</code> is the
+parameter selecting this exchange. A repetition whose fingerprint
+differs is refused with <code>invalid_request</code>.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-4">The operation passes through three states. It is reserved when the
+<code>(client, creation_request_id)</code> reservation is acquired, before any
+side effect; family-created once the family and its single derivation
+count exist, committed atomically, with the family's identity
+recorded on the reservation; and completed once the response is
+delivered. A derivation-gate rejection or creation failure
+invalidates the provisional family and records the refusal, replayed
+to a matching retry.<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+<p id="section-7.2-5">Recovery is delivery of the recorded family, never a second family
+and never a second derivation count. A revalidated retry (the same
+authenticated client proving possession of the recorded <code>cnf</code>, with a
+matching fingerprint) recovers by state: a reserved operation yields
+a retryable in-progress result; a family-created operation resumes
+delivery, issuing the recorded family's initial tokens; a completed
+operation returns the stored response while the initial refresh
+token is unissued or unconsumed.<a href="#section-7.2-5" class="pilcrow">¶</a></p>
+<p id="section-7.2-6">Consumption of the initial refresh token proves delivery: the client
+held the response and rotated on it. Once it is consumed, the
+operation is delivered and creation recovery <span class="bcp14">MUST</span> be refused with
+<code>invalid_grant</code>; the client continues on the family's current refresh
+token. A rotating refresh-token family is a single lineage
+(<span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span>); recovery <span class="bcp14">MUST NOT</span> mint an independent sibling refresh
+token into it.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transport-xdomain">
@@ -1647,6 +1695,10 @@ constrains their use and introduces none of its own.<a href="#section-12-1" clas
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
@@ -1709,8 +1761,12 @@ constrains their use and introduces none of its own.<a href="#section-12-1" clas
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-zhu-oauth-async-delegation">[I-D.draft-zhu-oauth-async-delegation]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Zhu, L.</span> and <span class="refAuthor">Z. Berg</span>, <span class="refTitle">"Delegated Refresh Tokens for OAuth 2.0 Token Exchange"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-zhu-oauth-async-delegation-05</span>, <time datetime="2026-08-03" class="refDate">3 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05">https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9700">[RFC9700]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Labunets, A.</span>, and <span class="refAuthor">D. Fett</span>, <span class="refTitle">"Best Current Practice for OAuth 2.0 Security"</span>, <span class="seriesInfo">BCP 240</span>, <span class="seriesInfo">RFC 9700</span>, <span class="seriesInfo">DOI 10.17487/RFC9700</span>, <time datetime="2025-01" class="refDate">January 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9700">https://www.rfc-editor.org/rfc/rfc9700</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>

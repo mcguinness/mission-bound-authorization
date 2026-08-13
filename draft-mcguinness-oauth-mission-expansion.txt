@@ -122,7 +122,8 @@ Table of Contents
      15.8.  Audit linkage
    16. Privacy Considerations
      16.1.  Predecessor-chain correlation
-     16.2.  Disclosure of the broadened task
+     16.2.  Related-work correlation
+     16.3.  Disclosure of the broadened task
    17. IANA Considerations
    Acknowledgments
    References
@@ -971,10 +972,15 @@ Table of Contents
    metadata, not client-asserted authority: this document defines no
    client request parameter for it, and mission_intent is task-only; the
    input that causes it to be recorded is authenticated and authorized
-   under the Mission Issuer's management or local policy; the Mission
-   Issuer resolves the reference in its own namespace, and a cross-
-   issuer relationship requires a structured extension; an unauthorized,
-   absent, or unknown reference is handled without disclosing whether
+   under the Mission Issuer's management or local policy.  The Mission
+   Issuer MUST authorize and resolve the reference, in its own
+   namespace, before the new Mission's approval completes (a cross-
+   issuer relationship requires a structured extension); MUST set
+   related_to atomically when the Mission record is created; and MUST
+   NOT add or change it afterward.  An unresolved or unauthorized
+   reference is never recorded: deployment policy either rejects the
+   creation uniformly or proceeds without the relationship, applied
+   consistently across requests, and neither behavior discloses whether
    the referenced Mission exists.  The member asserts related work only,
    neither mutual recognition nor replacement.
 
@@ -1085,7 +1091,11 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]) carries the
    same parameter with the same semantics on its child-creation
    exchange, as mission_denial_reason is shared across the profiles that
-   mint a Mission related to an existing one (Section 12).
+   mint a Mission related to an existing one (Section 12).  Delegation-
+   family-creating exchanges adopt the same definitions by reference,
+   each under its own domain-separating op value (Section 11.1); the
+   continuation profile's async-delegation exchange does so
+   ([I-D.draft-mcguinness-oauth-mission-continuation]).
 
 11.1.  The operation fingerprint
 
@@ -1374,8 +1384,19 @@ Table of Contents
 14.  Conformance
 
    An implementation claims conformance to this document only in the
-   Mission Issuer role and only when it adjudicates expansion.  A
-   conforming *expansion-capable Mission Issuer* MUST:
+   Mission Issuer role, under one of two targets: as an expansion-
+   capable Mission Issuer when it adjudicates expansion, or under the
+   optional related_to correlation target below.
+
+   A Mission Issuer that records related_to without adjudicating
+   expansion conforms to the *related_to correlation* target when it
+   meets every rule of Section 9: authenticated and authorized input,
+   pre-approval resolution, creation-time atomic recording,
+   immutability, consistent non-disclosing failure behavior, and no
+   predecessor member.  Nothing else in this section applies to that
+   target.
+
+   A conforming *expansion-capable Mission Issuer* MUST:
 
    *  accept an [RFC8693] token exchange whose subject_token is the
       predecessor's Mission-bound access token, with subject_token_type
@@ -1614,7 +1635,16 @@ Table of Contents
    every credential audience.  The issuance profile's Mission Identifier
    correlation considerations apply to each Mission in the chain.
 
-16.2.  Disclosure of the broadened task
+16.2.  Related-work correlation
+
+   related_to correlates independently approved tasks the way the
+   predecessor chain correlates a succession, without the authority
+   linkage.  The same scoping applies: deployments SHOULD disclose the
+   member only to audiences that require the governance relationship,
+   and the issuance profile's Mission Identifier correlation
+   considerations apply to both Missions it names.
+
+16.3.  Disclosure of the broadened task
 
    The expansion Mission Intent and the consent disclosure rendered at
    the expansion approval event reveal how the approved task is
@@ -1799,6 +1829,12 @@ Informative References
               McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-containment.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-continuation]
+              McGuinness, K., "Mission Continuation: Authorization
+              Continuity for Mission-Bound Authorization", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-continuation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-progressive]
               McGuinness, K., "Mission Progressive Authorization for

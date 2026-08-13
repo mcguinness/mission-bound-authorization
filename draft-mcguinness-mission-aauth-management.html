@@ -1666,8 +1666,8 @@ session protocol.  The PS <span class="bcp14">MUST</span> bind that authenticate
 person represented by the mission and <span class="bcp14">MUST</span> prevent tenant or account
 selection from being supplied solely by the request body.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
 <p id="section-5.2-2">The Person <span class="bcp14">MAY</span> read status and delegation data, and <span class="bcp14">MAY</span> terminate with
-reason <code>completed</code>, <code>revoked</code>, or <code>superseded</code>.  For <code>superseded</code>, the PS
-<span class="bcp14">SHOULD</span> require the replacement's <code>mission_s256</code> and verify that the
+reason <code>completed</code>, <code>revoked</code>, or <code>superseded</code>.  For <code>superseded</code>,
+<code>replacement_s256</code> is <span class="bcp14">REQUIRED</span>, and the PS <span class="bcp14">SHOULD</span> verify that the
 same Person authorized both missions before recording the relationship.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1785,7 +1785,7 @@ collision-resistant entropy encoded as a string.<a href="#section-7.1-1" class="
 Owning Agent or Person and <span class="bcp14">REQUIRED</span> for an administrator.  <code>purpose</code> is
 an audit string, not executable policy, and <span class="bcp14">MUST</span> be rendered as
 untrusted text.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
-<p id="section-7.1-4">For <code>superseded</code>, a Person or administrator <span class="bcp14">MAY</span> include:<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+<p id="section-7.1-4">For <code>superseded</code>, the request <span class="bcp14">MUST</span> include the replacement:<a href="#section-7.1-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-7.1-5">
 <pre>
 "replacement_s256": "QmV0dGVyTWlzc2lvbkRpZ2VzdFZhbHVlMTIzNDU2Nzg5MDE"
@@ -1793,11 +1793,14 @@ untrusted text.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
 </div>
 <p id="section-7.1-6">The replacement is related evidence, not an alternate key for the
 target operation.  It <span class="bcp14">MUST</span> identify an already approved mission that
-the caller is authorized to reference.  Replacement validation is
-subject to <a href="#errors" class="auto internal xref">Section 9</a>: a replacement that is absent, unapproved, or
-outside the caller's authorization fails uniformly with
-<code>invalid_request</code>, and the failure <span class="bcp14">MUST NOT</span> disclose which condition
-held or anything else about the referenced mission.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
+the caller is authorized to reference; it is validated before, and
+committed in, the atomic transition.  A <code>superseded</code> request without
+<code>replacement_s256</code> fails with <code>invalid_request</code> as a missing member.
+Replacement validation is subject to <a href="#errors" class="auto internal xref">Section 9</a>: a replacement that
+is unresolvable, unapproved, or outside the caller's authorization
+fails uniformly with <code>invalid_request</code>, and the failure <span class="bcp14">MUST NOT</span>
+disclose which condition held or anything else about the referenced
+mission.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="atomic-transition">

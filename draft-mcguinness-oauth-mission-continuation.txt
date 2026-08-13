@@ -318,6 +318,59 @@ Table of Contents
    are one delegation and are not counted again against max_derivations
    (Section 5).
 
+   Establishing the family is a delegation-family-creating exchange, and
+   a client that loses the response retries with a fresh, valid proof;
+   without an idempotency identifier that retry mints a second live
+   refresh-token family.  The exchange therefore carries
+   creation_request_id, the creation idempotency identifier of
+   [I-D.draft-mcguinness-oauth-mission-expansion].  The parameter is
+   REQUIRED; a Mission Issuer MUST refuse an exchange missing it with
+   invalid_request.  Its syntax, the (client, creation_request_id) key
+   uniqueness, fingerprint comparison, reservation ownership, tombstone
+   retention against the published retry horizon, and the revalidation
+   rules are that profile's, applied by reference and not redefined
+   here.  A refresh-token family is not a Mission: its delivery and
+   recovery are defined below, not by that profile's Mission-creation
+   recovery.
+
+   In the operation fingerprint, op is async-delegation; iss and client
+   are as the expansion profile defines them; source is the mission_id
+   of the base Mission resolved from subject_token, never the raw token;
+   cnf is the acting client's verified confirmation, since this exchange
+   deliberately re-binds the family to the acting key rather than
+   proving possession of the subject token's own confirmation; proposal
+   is the parsed authorization_details array naming the requested
+   confined subset, when present; resource is the target the family is
+   audienced to; and request_refresh_token is the parameter selecting
+   this exchange.  A repetition whose fingerprint differs is refused
+   with invalid_request.
+
+   The operation passes through three states.  It is reserved when the
+   (client, creation_request_id) reservation is acquired, before any
+   side effect; family-created once the family and its single derivation
+   count exist, committed atomically, with the family's identity
+   recorded on the reservation; and completed once the response is
+   delivered.  A derivation-gate rejection or creation failure
+   invalidates the provisional family and records the refusal, replayed
+   to a matching retry.
+
+   Recovery is delivery of the recorded family, never a second family
+   and never a second derivation count.  A revalidated retry (the same
+   authenticated client proving possession of the recorded cnf, with a
+   matching fingerprint) recovers by state: a reserved operation yields
+   a retryable in-progress result; a family-created operation resumes
+   delivery, issuing the recorded family's initial tokens; a completed
+   operation returns the stored response while the initial refresh token
+   is unissued or unconsumed.
+
+   Consumption of the initial refresh token proves delivery: the client
+   held the response and rotated on it.  Once it is consumed, the
+   operation is delivered and creation recovery MUST be refused with
+   invalid_grant; the client continues on the family's current refresh
+   token.  A rotating refresh-token family is a single lineage
+   ([RFC9700]); recovery MUST NOT mint an independent sibling refresh
+   token into it.
+
 7.3.  Cross-Domain Projection Transport
 
    Cross-domain projection
@@ -437,6 +490,11 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-expansion]
+              McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-expansion.html>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -511,6 +569,11 @@ Table of Contents
               draft-zhu-oauth-async-delegation-05, 3 August 2026,
               <https://datatracker.ietf.org/doc/html/draft-zhu-oauth-
               async-delegation-05>.
+
+   [RFC9700]  Lodderstedt, T., Bradley, J., Labunets, A., and D. Fett,
+              "Best Current Practice for OAuth 2.0 Security", BCP 240,
+              RFC 9700, DOI 10.17487/RFC9700, January 2025,
+              <https://www.rfc-editor.org/rfc/rfc9700>.
 
 Author's Address
 
