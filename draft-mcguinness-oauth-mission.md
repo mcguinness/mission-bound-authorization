@@ -2969,6 +2969,26 @@ approved set. That subset relationship is an assertion by the AS,
 authenticated by the token signature, and depends on the AS applying
 the subset rule correctly.
 
+A worked contrast, using the two-entry Authority Set of the test
+vectors ({{test-vectors}}), shows what each party can verify. A
+single-audience token carries one narrowed entry:
+`journal-entries.write` with the approved `max_amount` of `500.00`
+USD tightened to `250.00`. The Resource Server verifies the token
+signature and `cnf`, checks `aud`, enforces the carried entry,
+checks the anchor's algorithm prefix ({{integrity-anchors}}), and
+logs the `mission` claim for correlation. It cannot recompute
+`authority_hash`: hashing the carried entry digests a one-entry
+array the anchor never committed, and the tightened `max_amount`
+makes the entry a semantic narrowing, not a byte-level member, of
+the approved set. Whether `250.00` sits within the approved ceiling
+is the subset test ({{subset}}), and that test needs the approved
+entry to compare against. A party holding the full Authority Set (a
+Resource Server provisioned with it, or a policy decision point
+holding the Mission record) recomputes the commitment over the held
+two-entry set, matches `mission.authority_hash`, and verifies the
+carried entry as a subset of the held `journal-entries.write` entry;
+only that party has verified approval-time containment.
+
 Three denials above are byte-identical `403`s to a client, and
 misrouting them turns a step-up into an authority-widening ceremony
 or a fail-closed mismatch into a retry loop. A Mission-aware Resource
@@ -3908,6 +3928,26 @@ enforcing the token's `authorization_details` directly
 ({{mission-bound-tokens}}). It relies on the signed token as the AS's
 assertion that the carried authority was correctly projected from the
 approved set; `authority_hash` supplies no independent subset proof.
+
+No mechanism closes that gap locally, and the omission is
+deliberate. A containment proof produced by the AS, whether an
+Authority Set retrieval response or an inclusion proof carried on
+the token, is issued under the same trust root as the token itself,
+so it adds nothing against a compromised or malicious issuer. A
+retrieval surface returning the complete Authority Set to a
+single-audience Resource Server would disclose entries addressed to
+other audiences, which the introspection minimization rules forbid
+({{caller-authorization-and-minimization}}). And because a carried
+entry may be a semantic narrowing of an approved entry rather than a
+byte-identical member, a containment proof is a proof system per
+`authorization_details` type ({{subset}}), not a hash-membership
+check. A deployment that needs assurance independent of the token
+signature provisions the verifying party with the full Authority Set
+out of band, the Resource Server itself or a policy decision point
+holding a materialized view of the Mission record, and uses the
+recomputation path of {{rs-enforcement}}: recompute the commitment
+over the held set, match `mission.authority_hash`, and apply the
+subset rule to the carried entries.
 
 `intent_hash` extends the same protection to the task itself: it
 commits the approved Mission Intent, so an auditor can detect any
