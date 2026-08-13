@@ -194,7 +194,7 @@ export interface AdapterOptions {
   issuerEvidence?: IssuerEvidenceStore;
   /**
    * @spec expansion#creation-request-id — the durable creation-idempotency
-   * store (child creation + expansion). Lives over the KERNEL database so the
+   * store (child creation + expansion + async-delegation). Lives over the KERNEL database so the
    * reservation commits atomically with Mission creation. Defaulted by
    * buildProvider when unset (instances over the same kernel share the table).
    */

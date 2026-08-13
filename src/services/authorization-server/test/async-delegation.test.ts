@@ -216,6 +216,8 @@ async function issueBaseMission(expiresAt: string = FAR_EXP): Promise<{
 interface ExchangeOpts {
   authorizationDetails?: unknown;
   resource?: string;
+  /** @spec continuation#transport-async — REQUIRED; `null` omits it (the missing-param test). */
+  creationRequestId?: string | null;
 }
 
 /** POST /token: token-exchange + request_refresh_token=true (the async transport). */
@@ -227,6 +229,9 @@ async function asyncDelegate(baseAccessToken: string, opts: ExchangeOpts = {}): 
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     resource: opts.resource ?? RESOURCE,
   };
+  if (opts.creationRequestId !== null) {
+    params.creation_request_id = opts.creationRequestId ?? crypto.randomUUID();
+  }
   if (opts.authorizationDetails !== undefined) {
     params.authorization_details = JSON.stringify(opts.authorizationDetails);
   }
@@ -615,6 +620,203 @@ describe("async-delegation blast-radius isolation (@spec async-delegation)", () 
     expect(createdBody.mission_id).toBeTruthy();
 
     void grantId;
+  });
+});
+
+describe("async-delegation creation idempotency (@spec continuation#transport-async — #485)", () => {
+  type ExchangeBody = {
+    access_token?: string;
+    refresh_token?: string;
+    authorization_details?: unknown;
+    error?: string;
+    error_description?: string;
+  };
+
+  it("lost-response retry returns the SAME family (stored response verbatim); derivation_count consumed ONCE; no second family", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const before = as.kernel.get(missionId)?.derivation_count as number;
+    const creationRequestId = crypto.randomUUID();
+
+    const first = await asyncDelegate(baseAccessToken, {
+      authorizationDetails: confinedAuthority(),
+      creationRequestId,
+    });
+    const firstBody = (await first.json()) as ExchangeBody;
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+
+    // The lost-response retry: same creation_request_id, fresh DPoP proof
+    // (same acting key), same inputs.
+    const retry = await asyncDelegate(baseAccessToken, {
+      authorizationDetails: confinedAuthority(),
+      creationRequestId,
+    });
+    const retryBody = (await retry.json()) as ExchangeBody;
+    expect(retry.status, JSON.stringify(retryBody)).toBe(200);
+    // The initial refresh token is unconsumed: the STORED response is returned.
+    expect(retryBody.access_token).toBe(firstBody.access_token);
+    expect(retryBody.refresh_token).toBe(firstBody.refresh_token);
+    expect(retryBody.authorization_details).toEqual(confinedAuthority());
+
+    // ONE family, ONE derivation across both presentations.
+    expect(as.delegationFamilyStore.familiesForMission(missionId)).toHaveLength(1);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(before + 1);
+
+    // The recovered refresh token is live: a native refresh succeeds.
+    const refreshed = await refreshFamily(retryBody.refresh_token as string);
+    expect(refreshed.status).toBe(200);
+  });
+
+  it("retry after the initial refresh token was consumed is REFUSED: consumption proves delivery; the rotated head stays the sole live lineage", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const before = as.kernel.get(missionId)?.derivation_count as number;
+    const creationRequestId = crypto.randomUUID();
+
+    const first = (await (
+      await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority(), creationRequestId })
+    ).json()) as ExchangeBody;
+    // A -> B: consume the initial refresh token (the family's native rotation).
+    const rotated = (await (await refreshFamily(first.refresh_token as string)).json()) as ExchangeBody;
+    expect(rotated.refresh_token).toBeTruthy();
+
+    // Creation recovery is REFUSED: a rotating family is a single lineage and
+    // recovery must never mint an independent sibling refresh token into it.
+    const retry = await asyncDelegate(baseAccessToken, {
+      authorizationDetails: confinedAuthority(),
+      creationRequestId,
+    });
+    const retryBody = (await retry.json()) as ExchangeBody;
+    expect(retry.status, JSON.stringify(retryBody)).toBe(400);
+    expect(retryBody.error).toBe("invalid_grant");
+    expect(retryBody.error_description).toContain("already delivered");
+
+    // ONE family, ONE derivation; nothing new was minted.
+    expect(as.delegationFamilyStore.familiesForMission(missionId)).toHaveLength(1);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(before + 1);
+
+    // B stays the SOLE live head: the rotated token still refreshes (no reuse
+    // wipe, no sibling), audienced to the target and bound to the acting key.
+    const refreshed = await refreshFamily(rotated.refresh_token as string);
+    const refreshedBody = (await refreshed.json()) as ExchangeBody;
+    expect(refreshed.status, JSON.stringify(refreshedBody)).toBe(200);
+    const { payload } = await jwtVerify(refreshedBody.access_token as string, remoteJwks, {
+      issuer: ISSUER,
+      audience: RESOURCE,
+    });
+    expect((payload.cnf as { jkt?: string }).jkt).toBe(actingJkt);
+    expect((payload.mission as { id?: string }).id).toBe(missionId);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(before + 1);
+  });
+
+  it("concurrent first presentations of the same creation_request_id: exactly ONE family + one derivation count; every response is coherent or in-progress", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const before = as.kernel.get(missionId)?.derivation_count as number;
+    const creationRequestId = crypto.randomUUID();
+
+    const results = await Promise.all([
+      asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority(), creationRequestId }),
+      asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority(), creationRequestId }),
+    ]);
+    const bodies = (await Promise.all(results.map((r) => r.json()))) as ExchangeBody[];
+
+    // Exactly ONE family and ONE derivation, however the race resolved.
+    expect(as.delegationFamilyStore.familiesForMission(missionId)).toHaveLength(1);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(before + 1);
+
+    // Each response is a coherent delivery (200 with a live family refresh
+    // token) or the retryable in-progress result; at least one delivered.
+    let delivered = 0;
+    for (const [i, res] of results.entries()) {
+      const body = bodies[i] as ExchangeBody;
+      if (res.status === 200) {
+        delivered += 1;
+        expect(body.refresh_token, JSON.stringify(body)).toBeTruthy();
+        expect(body.authorization_details).toEqual(confinedAuthority());
+      } else {
+        expect(res.status, JSON.stringify(body)).toBe(400);
+        expect(body.error).toBe("invalid_request");
+        expect(body.error_description).toContain("in progress");
+      }
+    }
+    expect(delivered).toBeGreaterThanOrEqual(1);
+  });
+
+  it("crash simulation: a family-created reservation without completion RESUMES delivery of the SAME family (no second family, no recount)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const creationRequestId = crypto.randomUUID();
+    const first = (await (
+      await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority(), creationRequestId })
+    ).json()) as ExchangeBody;
+    const after = as.kernel.get(missionId)?.derivation_count as number;
+    const grantId = as.delegationFamilyStore.familiesForMission(missionId)[0] as string;
+
+    // Rewind the operation to FAMILY-CREATED: as if the process crashed after
+    // the atomic family-created transition (family + single count committed)
+    // but before the response was delivered.
+    as.kernel.db
+      .prepare(
+        "UPDATE creation_idempotency SET state = 'reserved', mission_id = NULL, completed_at = NULL, delivery_json = ? WHERE creation_request_id = ?",
+      )
+      .run(JSON.stringify({ grant_id: grantId, target: RESOURCE }), creationRequestId);
+
+    const retry = await asyncDelegate(baseAccessToken, {
+      authorizationDetails: confinedAuthority(),
+      creationRequestId,
+    });
+    const body = (await retry.json()) as ExchangeBody;
+    expect(retry.status, JSON.stringify(body)).toBe(200);
+    // Freshly issued initial tokens for the RECORDED family.
+    expect(body.refresh_token).toBeTruthy();
+    expect(body.refresh_token).not.toBe(first.refresh_token);
+    expect(body.authorization_details).toEqual(confinedAuthority());
+
+    // The SAME family, no recount.
+    expect(as.delegationFamilyStore.familiesForMission(missionId)).toHaveLength(1);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(after);
+
+    // The resumed delivery is live: it refreshes under the recorded family.
+    const refreshed = await refreshFamily(body.refresh_token as string);
+    expect(refreshed.status).toBe(200);
+    // And the operation is completed again: a further retry returns the
+    // resumed response verbatim while its refresh token is unconsumed... but
+    // the refresh above consumed it, so creation recovery now refuses.
+    const post = await asyncDelegate(baseAccessToken, {
+      authorizationDetails: confinedAuthority(),
+      creationRequestId,
+    });
+    const postBody = (await post.json()) as ExchangeBody;
+    expect(post.status, JSON.stringify(postBody)).toBe(400);
+    expect(postBody.error).toBe("invalid_grant");
+    expect(postBody.error_description).toContain("already delivered");
+  });
+
+  it("same creation_request_id + different fingerprint -> invalid_request (identifier reuse, not a retry)", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const creationRequestId = crypto.randomUUID();
+    const first = await asyncDelegate(baseAccessToken, {
+      authorizationDetails: confinedAuthority(),
+      creationRequestId,
+    });
+    expect(first.status).toBe(200);
+
+    // Same identifier, DIFFERENT requested confined subset (the full set).
+    const reused = await asyncDelegate(baseAccessToken, { creationRequestId });
+    const body = (await reused.json()) as ExchangeBody;
+    expect(reused.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("different creation request");
+  });
+
+  it("missing creation_request_id -> invalid_request", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const before = as.kernel.get(missionId)?.derivation_count as number;
+    const res = await asyncDelegate(baseAccessToken, { creationRequestId: null });
+    const body = (await res.json()) as ExchangeBody;
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("creation_request_id");
+    // Nothing was created or counted.
+    expect(as.delegationFamilyStore.familiesForMission(missionId)).toHaveLength(0);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(before);
   });
 });
 

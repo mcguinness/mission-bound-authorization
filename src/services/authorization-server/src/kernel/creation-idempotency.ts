@@ -1,9 +1,10 @@
 /**
- * @spec expansion#creation-request-id (owner), child-delegation#creation-request-id
+ * @spec expansion#creation-request-id (owner), child-delegation#creation-request-id,
+ * continuation#transport-async
  *
  * The durable creation-idempotency store: `creation_request_id` identifies ONE
- * Mission-creation operation (child creation / expansion) across all completion
- * modes. The Mission Issuer durably binds the authenticated client, the
+ * creation operation (child creation / expansion / async-delegation family
+ * establishment) across all completion modes. The Mission Issuer durably binds the authenticated client, the
  * identifier, the semantic operation FINGERPRINT, and the resulting Mission or
  * continuation, ATOMICALLY with the creation decision; repetition recovers that
  * operation and never repeats Mission creation or its creation-side effects
@@ -27,6 +28,12 @@
  *    delivery resumes).
  *  - Deferred expansion reserves at initiation (delivery = the deferral handle)
  *    and completes atomically with successor creation at redemption.
+ *  - Async-delegation interposes a FAMILY-CREATED stage, encoded as `reserved`
+ *    with the family identity recorded in `delivery_json`
+ *    ({@link advanceReserved}): reserved (no side effects yet) ->
+ *    family-created (family exists, the single derivation counted, atomically)
+ *    -> completed with the delivered response ({@link completeDelivered}). A
+ *    retry finding family-created RESUMES delivery of the recorded family.
  *
  * Retention (two tiers): the delivery ARTIFACT (the child grant / access token)
  * expires on its own short lifetime; the idempotency TOMBSTONE (this row)
@@ -80,8 +87,9 @@ export function isValidCreationRequestId(v: unknown): v is string {
   return typeof v === "string" && CREATION_REQUEST_ID_RE.test(v);
 }
 
-/** The two Mission-creating token exchanges (domain separation member `op`). */
-export type CreationOp = "child-creation" | "expansion";
+/** The Mission-creating token exchanges plus the delegation-family-creating
+ *  async-delegation exchange (domain separation member `op`). */
+export type CreationOp = "child-creation" | "expansion" | "async-delegation";
 
 /**
  * @spec expansion#creation-fingerprint — the EXACT typed fingerprint object.
@@ -108,8 +116,8 @@ export type CreationOp = "child-creation" | "expansion";
  * Extension rule: a new parameter affecting authorization, derivation,
  * approval, output, or side effects of the creation MUST extend this object.
  */
-export interface CreationFingerprintInput {
-  op: CreationOp;
+export interface MissionCreationFingerprintInput {
+  op: "child-creation" | "expansion";
   iss: string;
   client: string;
   source: string;
@@ -122,7 +130,50 @@ export interface CreationFingerprintInput {
   cross_check?: string;
 }
 
+/**
+ * @spec continuation#transport-async — the async-delegation exchange's
+ * fingerprint (same anchor idiom, same `typ`). Members:
+ *  - `op`: `async-delegation`.
+ *  - `iss` / `client`: as the expansion profile defines them.
+ *  - `source`: the RESOLVED base Mission identifier (from subject_token
+ *    resolution) — never the raw subject_token.
+ *  - `cnf`: the ACTING client's verified confirmation — this exchange
+ *    deliberately re-binds the family to the acting key rather than proving
+ *    possession of the subject token's own confirmation.
+ *  - `proposal`: the parsed `authorization_details` array naming the requested
+ *    confined subset, when present.
+ *  - `resource`: the target the family is audienced to.
+ *  - `request_refresh_token`: the parameter selecting this exchange.
+ */
+export interface AsyncDelegationFingerprintInput {
+  op: "async-delegation";
+  iss: string;
+  client: string;
+  source: string;
+  cnf: { jkt: string };
+  proposal?: AuthorityEntry[];
+  resource: string;
+  request_refresh_token: true;
+}
+
+export type CreationFingerprintInput =
+  | MissionCreationFingerprintInput
+  | AsyncDelegationFingerprintInput;
+
 export function creationFingerprint(input: CreationFingerprintInput): string {
+  if (input.op === "async-delegation") {
+    const value = {
+      op: input.op,
+      iss: input.iss,
+      client: input.client,
+      source: input.source,
+      cnf: input.cnf,
+      ...(input.proposal ? { proposal: input.proposal } : {}),
+      resource: input.resource,
+      request_refresh_token: true,
+    };
+    return computeAnchor(MISSION_CREATION_FINGERPRINT_TYP, input.iss, value as unknown as JsonValue);
+  }
   const value = {
     op: input.op,
     iss: input.iss,
@@ -304,6 +355,61 @@ export class CreationIdempotencyStore {
    */
   reserve(res: CreationReservation): void {
     withTransaction(this.db, () => this.insertRow(res, "reserved"));
+  }
+
+  /**
+   * @spec continuation#transport-async — advance a `reserved` operation to
+   * FAMILY-CREATED: record the created family's identity (`delivery`) on the
+   * reservation, atomically with the caller's creation-side accounting
+   * (`accompany`, e.g. the single gateDerivation, runs inside the same
+   * kernel-db transaction; its throw rolls the whole transition back and the
+   * reservation stays plain `reserved`).
+   */
+  advanceReserved(
+    clientId: string,
+    creationRequestId: string,
+    delivery: Record<string, unknown>,
+    accompany?: () => void,
+  ): void {
+    withTransaction(this.db, () => {
+      accompany?.();
+      this.db
+        .prepare(
+          "UPDATE creation_idempotency SET delivery_json = ? WHERE client_id = ? AND creation_request_id = ? AND state = 'reserved'",
+        )
+        .run(JSON.stringify(delivery), clientId, creationRequestId);
+    });
+  }
+
+  /**
+   * Mark a `reserved` operation FAILED in place (a definitive refusal after
+   * the reservation was acquired, e.g. a derivation-gate rejection), replayed
+   * verbatim on a matching retry.
+   */
+  failReserved(clientId: string, creationRequestId: string, failure: CreationFailure): void {
+    this.db
+      .prepare(
+        "UPDATE creation_idempotency SET state = 'failed', failure_json = ?, completed_at = ? WHERE client_id = ? AND creation_request_id = ? AND state = 'reserved'",
+      )
+      .run(JSON.stringify(failure), this.now().getTime(), clientId, creationRequestId);
+  }
+
+  /**
+   * @spec continuation#transport-async — mark an operation COMPLETED with its
+   * delivered response (the stable outcome + the delivery artifact in one
+   * UPDATE). Used at delivery time, after the family-created stage.
+   */
+  completeDelivered(
+    clientId: string,
+    creationRequestId: string,
+    missionId: string,
+    delivery: Record<string, unknown>,
+  ): void {
+    this.db
+      .prepare(
+        "UPDATE creation_idempotency SET state = 'completed', mission_id = ?, delivery_json = ?, completed_at = ? WHERE client_id = ? AND creation_request_id = ?",
+      )
+      .run(missionId, JSON.stringify(delivery), this.now().getTime(), clientId, creationRequestId);
   }
 
   /**
