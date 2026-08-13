@@ -302,13 +302,15 @@ Transparent Statement as the transparency substrate defines them.
 
 The transparency substrate's Receipt, the Transparency Service's proof
 of inclusion, is distinct from the runtime profile's Mission Receipt,
-portable evidence of an action taken under a Mission
+portable evidence of a decision, an executed action's outcome, or a
+refusal under a Mission
 ({{I-D.draft-mcguinness-mission-runtime}}); this document uses
 Receipt in the SCITT sense only. Registering a Mission Receipt's
 underlying evidence on the Mission's feed provides tamper-evident
-ordering and inclusion; the receipt-chaining alternative, each
-Mission Receipt binding its predecessor's digest, is for a deployment
-without a Transparency Service.
+ordering and inclusion; receipt chaining
+({{I-D.draft-mcguinness-mission-runtime-evidence}}) is OPTIONAL,
+gives view-local tamper evidence within one issuer's stream, and is
+never a substitute for those properties.
 
 # Mission Substrate {#mission-substrate}
 
@@ -484,6 +486,7 @@ defined, and registered where it is, by the profile the row cites.
 | Decision evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-decision-evidence+json` | `application/mission-decision-evidence+json` | PDP key |
 | Execution evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-execution-evidence+json` | `application/mission-execution-evidence+json` | PEP key |
 | Refusal Record | complete object, `evidence_envelope` included (JCS) | `application/mission-refusal-record+json` | `application/mission-refusal-record+json` | PEP key |
+| Mission Receipt | complete object, `evidence_envelope` included (JCS) | `application/mission-receipt+json` | `application/mission-receipt+json` | receipt issuer key |
 | Mission Mandate | plain form: JWS Compact Serialization, as issued; SD-JWT form: issuer-signed JWT component, as issued | `application/mission-mandate+jwt`, else `application/mission-mandate+sd-jwt` | `mission-mandate+jwt`, else `mission-mandate+sd-jwt` | `issuer` |
 | Work Product Binding | JWS Compact Serialization, as issued | `application/mission-work-product-binding+jwt` | `mission-work-product-binding+jwt` | signing `mediator` principal |
 | Child Evidence | Child Evidence object (JCS), as the child-delegation profile fixes | `application/mission-child-evidence+json` | none | `issuer` |
@@ -537,9 +540,9 @@ canonicalization rules ({{I-D.draft-mcguinness-oauth-mission}}). An
 artifact whose retained form is itself a compact serialization (the
 Signals SET, the Mandate, the Work Product Binding) is hashed as
 issued, not re-canonicalized. A JSON object that carries a nested
-signature envelope (the consent, decision, execution, and refusal
-evidence) is hashed as the JCS canonical bytes of the complete
-retained object, envelope included, the same shape as the
+signature envelope (the consent, decision, execution, refusal, and
+receipt evidence) is hashed as the JCS canonical bytes of the
+complete retained object, envelope included, the same shape as the
 approval-governance record digest: hashing received octets instead
 would let a reserialization outside the envelope change the audit
 digest while the operational signature stayed valid.
@@ -562,8 +565,8 @@ The media types and type identifiers are defined as follows:
 
 - the approval-event, lifecycle-transition, and derivation-record
   media types are defined by this profile ({{iana}});
-- the consent, decision, execution, and refusal evidence types are
-  registered by the profiles that define those objects
+- the consent, decision, execution, refusal, and receipt evidence
+  types are registered by the profiles that define those objects
   ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}},
   {{I-D.draft-mcguinness-mission-runtime-evidence}});
 - the Approval governance media type by Mission Approval Governance
