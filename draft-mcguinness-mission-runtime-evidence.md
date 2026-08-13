@@ -1145,6 +1145,171 @@ defined in the Mission Record section of
 {{I-D.draft-mcguinness-oauth-mission}}. Regulated deployments MAY
 require longer retention.
 
+# Mission Receipt Object {#mission-receipt-object}
+
+A **Mission Receipt** is the portable, tamper-evident projection of
+a Decision Evidence Object and, where an execution leg exists, its
+linked Execution Evidence Object: one signed object a deployment can
+hand to a party that will never query its evidence stores. The
+runtime profile fixes the term and the minimum binding
+({{I-D.draft-mcguinness-mission-runtime}}); this section defines the
+portable schema, canonical bytes, integrity, and chaining. A Mission
+Receipt is not a Receipt in the SCITT sense; the audit profile keeps
+that disambiguation ({{I-D.draft-mcguinness-mission-audit}}).
+
+An enforcement scope emits at most one Mission Receipt per
+evaluation, from the component its Enforcement Scope Statement
+names: the executing PEP, or the PDP for a decision with no
+execution leg. Emitting receipts at all is a deployment choice the
+Enforcement Scope Statement declares; a deployment that emits them
+MUST emit them as this section defines.
+
+## Members
+
+`receipt_id`:
+: REQUIRED. A string. Unique receipt identifier, the deduplication
+  key across delivery retries. ABNF:
+  `1*64( ALPHA / DIGIT / "-" / "_" )`. At least 128 bits of entropy.
+
+`mission`:
+: REQUIRED. An object with `id` and `issuer`: the Mission the action
+  was authorized under. A verifiable Mission projection (the
+  cross-domain grant's `mission` claim) travels beside the receipt
+  at the carriage layer where used; it does not replace this member.
+
+`evaluation_id`:
+: REQUIRED. A string. The projected records' shared correlation
+  identifier ({{decision-evidence-object}}).
+
+`audience`:
+: REQUIRED. A string. Mirrored from the projected Decision Evidence,
+  the input to the verifier's key-to-audience binding
+  ({{decision-evidence-integrity}}).
+
+`emitter`:
+: REQUIRED. An object with `id` and `role` (`pdp` or `pep`), the
+  emitting component; the verifier's key binding resolves against
+  it ({{decision-evidence-integrity}}).
+
+`decision`:
+: REQUIRED. An object with `result`, the decision result as the
+  projected Decision Evidence recorded it.
+
+`policy`:
+: REQUIRED. An object with `pdp_policy_view` and
+  `mission_policy_version`: the policy state the decision was made
+  under.
+
+`executor`:
+: REQUIRED. An object with `actor` (the authenticated acting
+  principal) and, where present on the projected records, the `act`
+  chain.
+
+`custody`:
+: REQUIRED. A string: `mediated` where a mediating PEP held the
+  credential, `direct` otherwise (the runtime profile's custody
+  boundary, {{I-D.draft-mcguinness-mission-runtime}}).
+
+`target`:
+: REQUIRED. A string. The resource the action addressed; the
+  audience rides the `audience` member.
+
+`decided_at`:
+: REQUIRED. An RFC 3339 {{RFC3339}} timestamp of the decision.
+
+`outcome`:
+: CONDITIONAL. A string: `completed`, `failed`, or `suppressed`,
+  mirrored from the projected Execution Evidence. REQUIRED where
+  that record exists; absent otherwise.
+
+`outcome_at`:
+: CONDITIONAL. An RFC 3339 {{RFC3339}} timestamp of the final
+  outcome; present exactly where `outcome` is.
+
+`evidence`:
+: REQUIRED. An object linking the projection to its sources:
+  `decision_sha256` (REQUIRED) and `execution_sha256` (REQUIRED
+  where the execution leg exists). Each value is the `sha-256:`
+  digest of the JCS canonical bytes of the complete retained record,
+  `evidence_envelope` included: the same bytes the audit profile
+  registers, so one digest serves retention, projection, and
+  transparency.
+
+`previous_receipt`:
+: CONDITIONAL. A string. The `sha-256:` digest of the predecessor
+  receipt ({{receipt-chaining}}). After the first receipt of a
+  chain, REQUIRED where the Enforcement Scope Statement declares
+  receipt chaining as its tamper-evidence path (no Transparency
+  Service adopted), OPTIONAL otherwise; the first receipt of a chain
+  omits it.
+
+`evidence_envelope`:
+: REQUIRED. The integrity envelope of
+  {{decision-evidence-integrity}}, applied with the emitter being
+  the receipt's emitting component and the JWS protected `typ`
+  `application/mission-receipt+json`.
+
+## Chaining {#receipt-chaining}
+
+`previous_receipt` is the `sha-256:` digest of the JCS canonical
+bytes of the predecessor Mission Receipt, `evidence_envelope`
+included, so the chain is tamper-evident over the predecessor's
+signature, not only its payload. The chain scope is one Mission and
+one emitter: receipts chain in emission order per emitter, and
+cross-emitter ordering stays best-effort under the runtime profile's
+record-integrity rule. A consumer verifying a chain recomputes each
+predecessor digest and treats a mismatch or a missing predecessor as
+a sequence gap ({{I-D.draft-mcguinness-mission-runtime}}), never as
+reordering evidence.
+
+## Worked example
+
+~~~ json
+{
+  "receipt_id": "rcp_7Kq2mV9xL4nY1pB8sD3fJ6wZ",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com"
+  },
+  "evaluation_id": "eval_5T2nQ8rV1wL6yM3kX0pJ",
+  "audience": "https://erp.example.com",
+  "emitter": { "id": "pep.erp.example.com", "role": "pep" },
+  "decision": { "result": "permit" },
+  "policy": {
+    "pdp_policy_view": "pdp-view:2026-11-02T08:00:00Z",
+    "mission_policy_version": "deploy-policy:v17"
+  },
+  "executor": {
+    "actor": { "iss": "https://as.example.com",
+      "sub": "agent_9Q4xR2tY7nL" }
+  },
+  "custody": "mediated",
+  "target": "https://erp.example.com/journal-entries",
+  "decided_at": "2026-11-02T08:14:03Z",
+  "outcome": "completed",
+  "outcome_at": "2026-11-02T08:14:06Z",
+  "evidence": {
+    "decision_sha256":
+      "sha-256:qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYokT2mR7vX4",
+    "execution_sha256":
+      "sha-256:D8fJ6wZ3hC0aGeUoNvSqMrYokT2mR7vX4qL9nY5pB1s"
+  },
+  "previous_receipt":
+    "sha-256:Z3hC0aGeUoNvSqMrYokT2mR7vX4qL9nY5pB1sD8fJ6w",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXkt..."
+  }
+}
+~~~
+
+## Retention
+
+A Mission Receipt MUST be retained at least as long as the records
+it projects: the retention floor of the sibling objects applies
+unchanged, and a receipt outliving its underlying records still
+verifies against their recorded digests without them.
+
 # Evidence Properties {#evidence-properties}
 
 This section is informative: it names a property vocabulary for the
@@ -1364,7 +1529,7 @@ This document requests the following IANA actions.
 
 ## Media Type Registry
 
-This document registers three media types per {{RFC6838}}.
+This document registers four media types per {{RFC6838}}.
 
 ### Decision Evidence Media Type
 
@@ -1395,6 +1560,31 @@ This document registers three media types per {{RFC6838}}.
 
 - Type name: application
 - Subtype name: mission-execution-evidence+json
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; JSON encoded in UTF-8
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
+- Published specification: this document
+- Applications that use this media type: Mission-bound runtime
+  enforcement deployments
+- Fragment identifier considerations: same as for `application/json`
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): `.json`
+  - Macintosh file type code(s): TEXT
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
+
+### Mission Receipt Media Type
+
+- Type name: application
+- Subtype name: mission-receipt+json
 - Required parameters: none
 - Optional parameters: none
 - Encoding considerations: binary; JSON encoded in UTF-8

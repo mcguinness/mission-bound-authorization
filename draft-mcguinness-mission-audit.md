@@ -307,8 +307,10 @@ portable evidence of an action taken under a Mission
 Receipt in the SCITT sense only. Registering a Mission Receipt's
 underlying evidence on the Mission's feed provides tamper-evident
 ordering and inclusion; the receipt-chaining alternative, each
-Mission Receipt binding its predecessor's digest, is for a deployment
-without a Transparency Service.
+Mission Receipt binding its predecessor's digest under the chaining
+rule the runtime evidence companion defines
+({{I-D.draft-mcguinness-mission-runtime-evidence}}), is for a
+deployment without a Transparency Service.
 
 # Mission Substrate {#mission-substrate}
 
@@ -484,6 +486,7 @@ defined, and registered where it is, by the profile the row cites.
 | Decision evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-decision-evidence+json` | `application/mission-decision-evidence+json` | PDP key |
 | Execution evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-execution-evidence+json` | `application/mission-execution-evidence+json` | PEP key |
 | Refusal Record | complete object, `evidence_envelope` included (JCS) | `application/mission-refusal-record+json` | `application/mission-refusal-record+json` | PEP key |
+| Mission Receipt | complete retained receipt, `evidence_envelope` included (JCS) | `application/mission-receipt+json` | `application/mission-receipt+json` | emitting PDP or PEP key |
 | Mission Mandate | plain form: JWS Compact Serialization, as issued; SD-JWT form: issuer-signed JWT component, as issued | `application/mission-mandate+jwt`, else `application/mission-mandate+sd-jwt` | `mission-mandate+jwt`, else `mission-mandate+sd-jwt` | `issuer` |
 | Work Product Binding | JWS Compact Serialization, as issued | `application/mission-work-product-binding+jwt` | `mission-work-product-binding+jwt` | signing `mediator` principal |
 | Child Evidence | Child Evidence object (JCS), as the child-delegation profile fixes | `application/mission-child-evidence+json` | none | `issuer` |

@@ -2176,10 +2176,11 @@ boundary (whether a mediating PEP held the credential, {{custody}}),
 the downstream target (the resource and audience), the outcome, the
 timestamps, and, where receipt chaining substitutes for a
 transparency feed ({{I-D.draft-mcguinness-mission-audit}}), the
-digest of the previous Mission Receipt. The portable schema and
-canonical byte representation are deferred ({{deferred}}); the
-members above are the minimum a deployment-defined Mission Receipt
-binds.
+digest of the previous Mission Receipt. The portable schema,
+canonical bytes, integrity envelope, and chaining rule are defined
+by the runtime evidence companion's Mission Receipt Object
+({{I-D.draft-mcguinness-mission-runtime-evidence}}); the members
+above are the minimum binding that schema projects.
 
 ## Record Integrity and Retention {#record-integrity}
 
@@ -2513,13 +2514,13 @@ work and are not required to enforce it:
 - cross-format capability-source binding beyond per-capability
   definition-digest drift (signed capability manifests, cross-catalog
   identity);
-- the Mission Receipt's portable schema and canonical byte
-  representation ({{mission-receipt}}: this profile fixes the term,
-  its minimum binding, and the local runtime enforcement evidence
-  record). The concrete Decision Evidence, Execution Evidence, and
-  Refusal Record object schemas, canonicalization, integrity
-  envelope, and media types are, by contrast, no longer deferred:
-  they are defined by the runtime evidence companion
+- evidence object schemas: this profile fixes the Mission Receipt's
+  term and minimum binding ({{mission-receipt}}) and the local
+  runtime enforcement evidence record. The concrete Decision
+  Evidence, Execution Evidence, Refusal Record, and Mission Receipt
+  schemas, canonicalization, integrity envelope, chaining rule, and
+  media types are no longer deferred: they are defined by the
+  runtime evidence companion
   ({{I-D.draft-mcguinness-mission-runtime-evidence}});
 - actor provenance beyond the `act` chain and attestation of the
   execution environment: actor-signed hop proofs
