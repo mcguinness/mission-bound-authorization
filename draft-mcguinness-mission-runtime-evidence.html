@@ -14,10 +14,12 @@ classified failure. This document defines the records a deployment
 emits to make that decision durable and verifiable: the Decision
 Evidence Object, the Execution Evidence Object, and the Refusal
 Record, together with their integrity envelope, media types, and
-retention rules. The records are defined against the runtime
-profile's abstract decision output and failure classification, so
-any decision-API binding produces the same records; the OpenID
-AuthZEN binding is one such producer. 
+retention rules. It also defines the Mission Receipt, a signed
+manifest projecting these records into one portable object a holder
+can present without shipping a log. The records are defined against
+the runtime profile's abstract decision output and failure
+classification, so any decision-API binding produces the same
+records; the OpenID AuthZEN binding is one such producer. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
@@ -1098,10 +1100,12 @@ classified failure. This document defines the records a deployment
 emits to make that decision durable and verifiable: the Decision
 Evidence Object, the Execution Evidence Object, and the Refusal
 Record, together with their integrity envelope, media types, and
-retention rules. The records are defined against the runtime
-profile's abstract decision output and failure classification, so
-any decision-API binding produces the same records; the OpenID
-AuthZEN binding is one such producer.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+retention rules. It also defines the Mission Receipt, a signed
+manifest projecting these records into one portable object a holder
+can present without shipping a log. The records are defined against
+the runtime profile's abstract decision output and failure
+classification, so any decision-API binding produces the same
+records; the OpenID AuthZEN binding is one such producer.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1212,77 +1216,115 @@ AuthZEN binding is one such producer.<a href="#section-abstract-1" class="pilcro
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
-            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-evidence-properties" class="internal xref">Evidence Properties</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
-            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-extension-members" class="internal xref">Extension Members</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
-            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-conformance" class="internal xref">Conformance</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-mission-receipt" class="internal xref">Mission Receipt</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
-                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-decision-evidence-versus-ex" class="internal xref">Decision Evidence versus Execution Evidence</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-receipt-kinds" class="internal xref">Receipt Kinds</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
-                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-evidence-integrity-and-sign" class="internal xref">Evidence integrity and signing keys</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-members-3" class="internal xref">Members</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
-                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-transport" class="internal xref">Transport</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-evidence-references" class="internal xref">Evidence References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.4">
+                <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-receipt-chaining" class="internal xref">Receipt Chaining</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.5">
+                <p id="section-toc.1-1.6.2.5.1"><a href="#section-6.5" class="auto internal xref">6.5</a>.  <a href="#name-receipt-verification" class="internal xref">Receipt Verification</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.6">
+                <p id="section-toc.1-1.6.2.6.1"><a href="#section-6.6" class="auto internal xref">6.6</a>.  <a href="#name-retention-2" class="internal xref">Retention</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.7">
+                <p id="section-toc.1-1.6.2.7.1"><a href="#section-6.7" class="auto internal xref">6.7</a>.  <a href="#name-worked-example-3" class="internal xref">Worked example</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.8">
+                <p id="section-toc.1-1.6.2.8.1"><a href="#section-6.8" class="auto internal xref">6.8</a>.  <a href="#name-digest-vector" class="internal xref">Digest vector</a></p>
 </li>
             </ul>
 </li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-evidence-properties" class="internal xref">Evidence Properties</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-extension-members" class="internal xref">Extension Members</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
-                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-evidence-as-pii-sinks" class="internal xref">Evidence as PII sinks</a></p>
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-decision-evidence-versus-ex" class="internal xref">Decision Evidence versus Execution Evidence</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
-                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-parameter-exposure" class="internal xref">Parameter exposure</a></p>
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-evidence-integrity-and-sign" class="internal xref">Evidence integrity and signing keys</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
-                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-actor-chain-and-mission-cor" class="internal xref">Actor chain and Mission correlation</a></p>
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-transport" class="internal xref">Transport</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.4">
+                <p id="section-toc.1-1.10.2.4.1"><a href="#section-10.4" class="auto internal xref">10.4</a>.  <a href="#name-mission-receipt-2" class="internal xref">Mission Receipt</a></p>
 </li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
-                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-media-type-registry" class="internal xref">Media Type Registry</a></p>
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-evidence-as-pii-sinks" class="internal xref">Evidence as PII sinks</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-parameter-exposure" class="internal xref">Parameter exposure</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.3">
+                <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-actor-chain-and-mission-cor" class="internal xref">Actor chain and Mission correlation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.4">
+                <p id="section-toc.1-1.11.2.4.1"><a href="#section-11.4" class="auto internal xref">11.4</a>.  <a href="#name-mission-receipt-3" class="internal xref">Mission Receipt</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1.2.1">
-                    <p id="section-toc.1-1.11.2.1.2.1.1"><a href="#section-11.1.1" class="auto internal xref">11.1.1</a>.  <a href="#name-decision-evidence-media-typ" class="internal xref">Decision Evidence Media Type</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-media-type-registry" class="internal xref">Media Type Registry</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1.2.1">
+                    <p id="section-toc.1-1.12.2.1.2.1.1"><a href="#section-12.1.1" class="auto internal xref">12.1.1</a>.  <a href="#name-decision-evidence-media-typ" class="internal xref">Decision Evidence Media Type</a></p>
 </li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1.2.2">
-                    <p id="section-toc.1-1.11.2.1.2.2.1"><a href="#section-11.1.2" class="auto internal xref">11.1.2</a>.  <a href="#name-execution-evidence-media-ty" class="internal xref">Execution Evidence Media Type</a></p>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1.2.2">
+                    <p id="section-toc.1-1.12.2.1.2.2.1"><a href="#section-12.1.2" class="auto internal xref">12.1.2</a>.  <a href="#name-execution-evidence-media-ty" class="internal xref">Execution Evidence Media Type</a></p>
 </li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1.2.3">
-                    <p id="section-toc.1-1.11.2.1.2.3.1"><a href="#section-11.1.3" class="auto internal xref">11.1.3</a>.  <a href="#name-refusal-record-media-type" class="internal xref">Refusal Record Media Type</a></p>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1.2.3">
+                    <p id="section-toc.1-1.12.2.1.2.3.1"><a href="#section-12.1.3" class="auto internal xref">12.1.3</a>.  <a href="#name-refusal-record-media-type" class="internal xref">Refusal Record Media Type</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1.2.4">
+                    <p id="section-toc.1-1.12.2.1.2.4.1"><a href="#section-12.1.4" class="auto internal xref">12.1.4</a>.  <a href="#name-mission-receipt-media-type" class="internal xref">Mission Receipt Media Type</a></p>
 </li>
                 </ul>
 </li>
             </ul>
 </li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-references" class="internal xref">References</a></p>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-references" class="internal xref">References</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
-                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
-                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
 </li>
             </ul>
 </li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
-</li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
-            <p id="section-toc.1-1.14.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.14.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1316,7 +1358,10 @@ family's Standards-Track binding and the reference producer this
 document's examples are drawn from. <code>evaluation_id</code> is the
 correlation key across every record and wire artifact of one
 evaluation; each record additionally carries its own record
-identifier (<code>evidence_id</code>, <code>execution_id</code>, or <code>refusal_id</code>).<a href="#section-1-2" class="pilcrow">¶</a></p>
+identifier (<code>evidence_id</code>, <code>execution_id</code>, or <code>refusal_id</code>). This
+document additionally defines the Mission Receipt
+(<a href="#mission-receipt" class="auto internal xref">Section 6</a>), the portable projection over these records
+that a holder presents in place of the records themselves.<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">This document does not restate the runtime profile's decision
 contract, action classification, or failure conditions; those are
 normatively defined in <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> and
@@ -1342,9 +1387,14 @@ integrity-anchor encoded form of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>: <code>sha-256:</code> followed by the
 base64url, no-padding encoding of the digest. Every digest this
 document defines (<code>evaluation_request_digest</code>, <code>entry_digest</code>,
-<code>effective_parameter_digest</code>) is a canonical-object digest under the
+<code>effective_parameter_digest</code>, the Mission Receipt's evidence-reference
+and chain-predecessor digests, <a href="#mission-receipt" class="auto internal xref">Section 6</a>) is a
+canonical-object digest under the
 substrate's default commitment construction, which this document
-imports normatively (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-2-3" class="pilcrow">¶</a></p>
+imports normatively (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>),
+except that an evidence reference to a compact-serialized artifact is
+a raw-octet digest over the exact serialization octets
+(<a href="#receipt-evidence" class="auto internal xref">Section 6.3</a>).<a href="#section-2-3" class="pilcrow">¶</a></p>
 <p id="section-2-4">The terms Policy Enforcement Point (PEP), Policy Decision Point
 (PDP), consequential action, action class (and the action-class
 names consequential read, consequential write, irreversible action,
@@ -1478,12 +1528,12 @@ incorporate (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xr
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>
             <td class="text-left" rowspan="1" colspan="1">not consumed</td>
-            <td class="text-left" rowspan="1" colspan="1">Not consumed, and supplied in scoped form: verification is anchored in the Enforcement Scope Statement's published keys, so a party with access to that statement verifies a record independently of the deployment that emitted it (<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 9.2</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Not consumed, and supplied in scoped form: verification is anchored in the Enforcement Scope Statement's published keys, so a party with access to that statement verifies a record independently of the deployment that emitted it (<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 10.2</a>)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Portable Evidence</td>
             <td class="text-left" rowspan="1" colspan="1">not consumed</td>
-            <td class="text-left" rowspan="1" colspan="1">Not supplied by this document alone: portability beyond a party with access to the deployment's published keys requires the transparency mechanisms of the audit profile (<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 9.2</a>, <span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Not supplied by this document alone: portability beyond a party with access to the deployment's published keys requires the transparency mechanisms of the audit profile (<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 10.2</a>, <span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>)</td>
           </tr>
         </tbody>
       </table>
@@ -1830,7 +1880,7 @@ required) and a <code>value</code> (string, required).<a href="#section-4.1-1.52
         <dd class="break"></dd>
 </dl>
 <p id="section-4.1-2">A Decision Evidence Object is closed to uncoordinated extension; see
-<a href="#evidence-extensions" class="auto internal xref">Section 7</a> for the extension rule and the coordinated
+<a href="#evidence-extensions" class="auto internal xref">Section 8</a> for the extension rule and the coordinated
 extension members a deployment following the AuthZEN binding
 commonly carries (<code>taint</code>, <code>mission_history</code>, <code>capability_source</code>,
 <code>hop_reference</code>).<a href="#section-4.1-2" class="pilcrow">¶</a></p>
@@ -1990,7 +2040,7 @@ scope and audience the record serves
 <code>hop_reference</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-4.2-2.28">
             <p id="section-4.2-2.28.1"><span class="bcp14">OPTIONAL</span>. An object, in the coordinated extension form
-<a href="#evidence-extensions" class="auto internal xref">Section 7</a> defines. Present only when the refusing
+<a href="#evidence-extensions" class="auto internal xref">Section 8</a> defines. Present only when the refusing
 component verified enough of the presented credential, before the
 failure, to establish it was a continued credential.<a href="#section-4.2-2.28.1" class="pilcrow">¶</a></p>
 </dd>
@@ -2001,12 +2051,12 @@ failure, to establish it was a continued credential.<a href="#section-4.2-2.28.1
             <p id="section-4.2-2.30.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection in the form of
 <a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>, emitted by the refusing component,
 whose JWS protected <code>typ</code> is <code>application/mission-refusal-record+json</code>
-(<a href="#iana" class="auto internal xref">Section 11</a>).<a href="#section-4.2-2.30.1" class="pilcrow">¶</a></p>
+(<a href="#iana" class="auto internal xref">Section 12</a>).<a href="#section-4.2-2.30.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
 <p id="section-4.2-3">A Refusal Record is closed to uncoordinated extension under the same
-rule as Decision Evidence (<a href="#evidence-extensions" class="auto internal xref">Section 7</a>).<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+rule as Decision Evidence (<a href="#evidence-extensions" class="auto internal xref">Section 8</a>).<a href="#section-4.2-3" class="pilcrow">¶</a></p>
 <p id="section-4.2-4">Refusal Records are per-attempt, immutable, and append-only: a
 sustained failure condition with a retrying agent yields one signed
 record per attempt, never a record amended or replaced in place. A
@@ -2132,7 +2182,7 @@ scope it does not serve.<a href="#section-4.3-5" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-4.3-7.1">
             <p id="section-4.3-7.1.1"><code>kid</code>: a key identifier resolvable in the emitter's published JWKS
-(<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 9.2</a>), so a verifier can select the
+(<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 10.2</a>), so a verifier can select the
 emitter's signing key independently.<a href="#section-4.3-7.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.3-7.2">
@@ -2145,7 +2195,8 @@ implementation <span class="bcp14">MAY</span> offer other JOSE algorithms but <s
 (<code>application/mission-decision-evidence+json</code> for Decision Evidence,
 <code>application/mission-execution-evidence+json</code> for Execution Evidence,
 <code>application/mission-refusal-record+json</code> for Refusal Records,
-<a href="#iana" class="auto internal xref">Section 11</a>). A verifier <span class="bcp14">MUST</span> reject a JWS whose protected <code>typ</code> is not
+<code>application/mission-receipt+json</code> for Mission Receipts,
+<a href="#iana" class="auto internal xref">Section 12</a>). A verifier <span class="bcp14">MUST</span> reject a JWS whose protected <code>typ</code> is not
 the media type of the object it is verifying, so signatures over one
 record kind cannot be cross-used for another.<a href="#section-4.3-7.3.1" class="pilcrow">¶</a></p>
 </li>
@@ -2445,7 +2496,7 @@ and audience the record serves (<a href="#decision-evidence-integrity" class="au
 <code>hop_reference</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.1-1.26">
             <p id="section-5.1-1.26.1"><span class="bcp14">OPTIONAL</span>. An object, in the coordinated extension form
-<a href="#evidence-extensions" class="auto internal xref">Section 7</a> defines. Present when the linked Decision
+<a href="#evidence-extensions" class="auto internal xref">Section 8</a> defines. Present when the linked Decision
 Evidence carries one.<a href="#section-5.1-1.26.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
@@ -2480,7 +2531,7 @@ required).<a href="#section-5.1-1.34.1" class="pilcrow">¶</a></p>
         <dd class="break"></dd>
 </dl>
 <p id="section-5.1-2">An Execution Evidence Object is closed to uncoordinated extension
-under the same rule as Decision Evidence (<a href="#evidence-extensions" class="auto internal xref">Section 7</a>):
+under the same rule as Decision Evidence (<a href="#evidence-extensions" class="auto internal xref">Section 8</a>):
 coordinated companion members (for example, the metering companion's
 <code>measured_duration</code>) are permitted, any other extension <span class="bcp14">MUST</span> use a
 collision-resistant name, and a consumer <span class="bcp14">MUST</span> ignore members it does
@@ -2621,18 +2672,553 @@ require longer retention.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="evidence-properties">
+<div id="mission-receipt">
 <section id="section-6">
-      <h2 id="name-evidence-properties">
-<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-evidence-properties" class="section-name selfRef">Evidence Properties</a>
+      <h2 id="name-mission-receipt">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-mission-receipt" class="section-name selfRef">Mission Receipt</a>
       </h2>
-<p id="section-6-1">This section is informative: it names a property vocabulary for the
+<p id="section-6-1">A Mission Receipt is the portable, tamper-evident projection of a
+Mission's runtime enforcement evidence: one signed object a holder
+can present to answer what was decided, and for an executed action
+what happened, without shipping a log.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">A Mission Receipt is a signed manifest, never a second source of
+truth. Its signer attests exactly two things: that it assembled the
+stated projection, and that it verified every referenced evidence
+record under the declared profile at assembly time. The emitters of
+the referenced Decision Evidence, Execution Evidence, and Refusal
+Records remain authoritative for their facts. A verifier <span class="bcp14">MUST</span>
+verify the referenced records and the cross-record joins of
+<a href="#receipt-verification" class="auto internal xref">Section 6.5</a> before relying on any copied field; where
+transparency is claimed for a record, it additionally verifies the
+transparency commitment, which proves registration and never
+substitutes for verifying the record itself
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). A deployment <span class="bcp14">MAY</span> instead
+accept a copied field on the receipt signer's authority alone, but
+only under an explicit policy that names the receipt issuer as
+attesting that fact directly; that policy is the one path that
+forgoes source verification. A receipt whose underlying evidence is
+unavailable within its retention obligations is an integrity
+reference, not portable proof: hashes alone do not make erased
+evidence available.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">A Mission Receipt is not a SCITT Receipt: the audit transparency
+profile uses Receipt in the SCITT sense alone (an inclusion proof),
+and the qualified names keep the two apart
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-6-3" class="pilcrow">¶</a></p>
+<div id="receipt-kinds">
+<section id="section-6.1">
+        <h3 id="name-receipt-kinds">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-receipt-kinds" class="section-name selfRef">Receipt Kinds</a>
+        </h3>
+<p id="section-6.1-1">A <code>kind</code> member fixes what a receipt may claim, with exactly three
+values and the required evidence combination for each:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.1-2">
+          <dt id="section-6.1-2.1">
+<code>decision</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-2.2">
+            <p id="section-6.1-2.2.1">The receipt projects a Decision Evidence record alone. It claims
+an authorization decision was rendered; it claims nothing about
+execution, and a verifier <span class="bcp14">MUST NOT</span> treat it as evidence that an
+action occurred.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-2.3">
+<code>execution</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-2.4">
+            <p id="section-6.1-2.4.1">The receipt projects a permit Decision Evidence record and the
+final Execution Evidence record of the same action. Its <code>outcome</code>
+is copied from the Execution Evidence and carries that document's
+semantics unchanged; an action whose outcome is not yet terminal
+has no <code>execution</code> receipt, and an unresolved action <span class="bcp14">MUST NOT</span> be
+rewritten as terminal to issue one.<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-2.5">
+<code>refusal</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-2.6">
+            <p id="section-6.1-2.6.1">The receipt projects a Refusal Record alone. A refusal is
+exclusively pre-decision (<a href="#pre-decision-refusal" class="auto internal xref">Section 4.2</a>), so there is no
+Decision Evidence for the same evaluation to project beside it. A
+<code>refusal</code> receipt exists only for a Refusal Record whose own
+<code>mission</code> member carries the verified Mission reference the
+receipt's <span class="bcp14">REQUIRED</span> <code>mission</code> member repeats; a pre-decision refusal
+without an established Mission (a <code>mission_context_missing</code>
+refusal) remains a Refusal Record and never becomes a Mission
+Receipt.<a href="#section-6.1-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="members-2">
+<section id="section-6.2">
+        <h3 id="name-members-3">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-members-3" class="section-name selfRef">Members</a>
+        </h3>
+<p id="section-6.2-1">A Mission Receipt is a JSON object. <span class="bcp14">REQUIRED</span> members:<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.2-2">
+          <dt id="section-6.2-2.1">
+<code>evidence_envelope</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-2.2">
+            <p id="section-6.2-2.2.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection in the same form as
+Decision Evidence (<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>), carrying a
+<code>format</code> (string, required) and a <code>value</code> (string, required). The
+default <code>format</code> is <code>jws-compact</code>; the JWS protected <code>typ</code> is
+<code>application/mission-receipt+json</code> (<a href="#iana" class="auto internal xref">Section 12</a>).<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-2.3">
+<code>kind</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-2.4">
+            <p id="section-6.2-2.4.1"><span class="bcp14">REQUIRED</span>. A string. One of <code>decision</code>, <code>execution</code>, or <code>refusal</code>
+(<a href="#receipt-kinds" class="auto internal xref">Section 6.1</a>).<a href="#section-6.2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-2.5">
+<code>mission</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-2.6">
+            <p id="section-6.2-2.6.1"><span class="bcp14">REQUIRED</span>. An object, with <code>id</code> (<span class="bcp14">REQUIRED</span>) and <code>issuer</code> (<span class="bcp14">REQUIRED</span>),
+plus <code>authority_hash</code> (<span class="bcp14">OPTIONAL</span>). The member is this exact object,
+never a union with another projection. A cross-domain grant or a
+Mandate that proves the tuple travels beside the receipt at its
+carriage layer, outside the closed evidence-reference type set of
+<a href="#receipt-evidence" class="auto internal xref">Section 6.3</a>, which a future profile <span class="bcp14">MAY</span> extend.<a href="#section-6.2-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-2.7">
+<code>emitter</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-2.8">
+            <p id="section-6.2-2.8.1"><span class="bcp14">REQUIRED</span>. An object, in the form Decision Evidence's <code>emitter</code>
+member defines (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>): <code>id</code> (a string
+identifying the receipt issuer) and <code>role</code> (a string; <code>receipt_issuer</code>,
+a role this document registers under that member's extensibility
+rule). Receipt issuance is limited to components the deployment's
+enforcement scope statement already names (the PDP, or an executing
+PEP), and the statement declares which of them issue receipts; the
+verifier resolves the signing key through that statement's
+published key sets (<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 10.2</a>) and
+rejects an emitter the statement does not name as a receipt
+issuer. A self-published key presenting <code>role</code> <code>receipt_issuer</code>
+establishes nothing (<a href="#receipt-verification" class="auto internal xref">Section 6.5</a>).<a href="#section-6.2-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-2.9">
+<code>evidence</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-2.10">
+            <p id="section-6.2-2.10.1"><span class="bcp14">REQUIRED</span>. An array of evidence references (<a href="#receipt-evidence" class="auto internal xref">Section 6.3</a>).<a href="#section-6.2-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-2.11">
+<code>issued_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-2.12">
+            <p id="section-6.2-2.12.1"><span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-6.2-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-2.13">
+<code>outcome</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-2.14">
+            <p id="section-6.2-2.14.1"><span class="bcp14">REQUIRED</span> when <code>kind</code> is <code>execution</code>; absent otherwise. A string,
+copied from the projected Execution Evidence's <code>outcome</code>
+(<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>), carrying that member's semantics
+unchanged: one of <code>completed</code>, <code>failed</code>, or <code>suppressed</code>.<a href="#section-6.2-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-6.2-3">Everything beyond the join and integrity core is optional and
+selected, never defaulted: a projection profile or a recipient
+agreement names the optional members a receipt carries, and an
+issuer minimizes to that selection. Actor chains, policy versions,
+target detail, and custody topology are correlation surfaces; a
+receipt carries them when its recipient needs them, not because the
+underlying evidence has them. A Mission Receipt is evidence, never
+reusable authorization, and confers no authority on its holder.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-4"><span class="bcp14">OPTIONAL</span> members, each a projection from the evidence a receipt of
+that content already carries:<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.2-5">
+          <dt id="section-6.2-5.1">
+<code>decision</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-5.2">
+            <p id="section-6.2-5.2.1"><span class="bcp14">OPTIONAL</span>. An object, with <code>id</code> (the projected Decision Evidence's
+own <code>evidence_id</code>) and <code>result</code> (its <code>decision</code> member, <code>permit</code> or
+<code>deny</code>) (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>).<a href="#section-6.2-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-5.3">
+<code>policy</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-5.4">
+            <p id="section-6.2-5.4.1"><span class="bcp14">OPTIONAL</span>. An object, with <code>pdp_policy_view</code> (the projected Decision
+Evidence's <code>mission.policy_view_id</code>) and <code>mission_policy_version</code>
+(its <code>mission.policy_version</code>, when the Decision Evidence carries
+it) (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>).<a href="#section-6.2-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-5.5">
+<code>executor</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-5.6">
+            <p id="section-6.2-5.6.1"><span class="bcp14">OPTIONAL</span>. An object, the projected Decision Evidence's <code>actor</code>
+member: the authenticated actor and any <code>act</code> chain
+(<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>).<a href="#section-6.2-5.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-5.7">
+<code>target</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-5.8">
+            <p id="section-6.2-5.8.1"><span class="bcp14">OPTIONAL</span>. An object, with <code>resource</code> (the projected Decision
+Evidence's <code>resource</code> member) and <code>audience</code> (its <code>audience</code>
+member) (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>).<a href="#section-6.2-5.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-5.9">
+<code>profile</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-5.10">
+            <p id="section-6.2-5.10.1"><span class="bcp14">OPTIONAL</span>. A string, a URI naming the projection profile in force:
+the profile that selected the optional members this receipt
+carries and defines the semantics of any <code>issuer_assertions</code>
+members. <span class="bcp14">REQUIRED</span> when <code>issuer_assertions</code> is present.<a href="#section-6.2-5.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-5.11">
+<code>issuer_assertions</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-5.12">
+            <p id="section-6.2-5.12.1"><span class="bcp14">OPTIONAL</span>. An object. Facts the receipt issuer asserts on its own
+authority, structurally separate from the projections above:
+every member's name and semantics come from the <code>profile</code>, and
+relying on any of them takes the trust model's explicit-policy
+path, never the verified-projection path. The credential custody
+mode (whether a mediating PEP held the credential,
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) is the motivating
+member: no Decision or Execution Evidence record carries it, so a
+profile that needs it defines it here.<a href="#section-6.2-5.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-5.13">
+<code>chain</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-5.14">
+            <p id="section-6.2-5.14.1"><span class="bcp14">OPTIONAL</span>. An object (<a href="#receipt-chaining" class="auto internal xref">Section 6.4</a>).<a href="#section-6.2-5.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="receipt-evidence">
+<section id="section-6.3">
+        <h3 id="name-evidence-references">
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-evidence-references" class="section-name selfRef">Evidence References</a>
+        </h3>
+<p id="section-6.3-1">Each <code>evidence</code> entry is an object. All members <span class="bcp14">REQUIRED</span>:<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.3-2">
+          <dt id="section-6.3-2.1">
+<code>type</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.2">
+            <p id="section-6.3-2.2.1"><span class="bcp14">REQUIRED</span>. A string. The referenced record's registered media type:
+<code>application/mission-decision-evidence+json</code>,
+<code>application/mission-execution-evidence+json</code>, or
+<code>application/mission-refusal-record+json</code> (<a href="#iana" class="auto internal xref">Section 12</a>,
+<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>, <a href="#execution-evidence-object" class="auto internal xref">Section 5</a>,
+<a href="#pre-decision-refusal" class="auto internal xref">Section 4.2</a>).<a href="#section-6.3-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.3-2.3">
+<code>digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.4">
+            <p id="section-6.3-2.4.1"><span class="bcp14">REQUIRED</span>. A string. A <code>sha-256:</code> prefixed digest, classified under
+the core's commitment taxonomy
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) as a canonical-object
+digest for a JSON evidence record and a raw-octet digest for a
+JWS- or JWT-shaped artifact. For a JSON evidence record the digest
+input is the exact canonical bytes the convention fixes for that
+record: the complete object, <code>evidence_envelope</code> included, JCS
+<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonicalized (<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>). For a
+compact-serialized artifact the digest input is the exact
+serialization octets, as issued.<a href="#section-6.3-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.3-2.5">
+<code>evidence_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.6">
+            <p id="section-6.3-2.6.1"><span class="bcp14">REQUIRED</span>. A string. The referenced record's own identifier member:
+<code>evidence_id</code> for a Decision Evidence record
+(<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>), <code>execution_id</code> for an Execution
+Evidence record (<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>), or <code>refusal_id</code>
+for a Refusal Record (<a href="#pre-decision-refusal" class="auto internal xref">Section 4.2</a>).<a href="#section-6.3-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.3-2.7">
+<code>emitter</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.8">
+            <p id="section-6.3-2.8.1"><span class="bcp14">REQUIRED</span>. An object, in the form Decision Evidence's <code>emitter</code>
+member defines (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>): <code>id</code> and <code>role</code>.
+Enough to select the emitting component's published key set before
+the referenced record is resolved; the specific signing key is
+selected, once resolved, by that record's own JWS <code>kid</code>.<a href="#section-6.3-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-6.3-3">An <code>evidence</code> array carries the combination <a href="#receipt-kinds" class="auto internal xref">Section 6.1</a> fixes
+for the receipt's <code>kind</code>: one Decision Evidence reference alone for
+<code>decision</code>; a permit Decision Evidence reference and the final
+Execution Evidence reference of the same action for <code>execution</code>; one
+Refusal Record reference alone for <code>refusal</code>. A reference to a record type
+the verifier does not implement fails verification; it is not
+skipped.<a href="#section-6.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="receipt-chaining">
+<section id="section-6.4">
+        <h3 id="name-receipt-chaining">
+<a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-receipt-chaining" class="section-name selfRef">Receipt Chaining</a>
+        </h3>
+<p id="section-6.4-1">Chaining is <span class="bcp14">OPTIONAL</span>, orthogonal to transparency, and never a
+substitute for it: a signer-controlled hash chain can be truncated,
+forked, or presented differently to different verifiers, so it
+gives tamper-evident linkage within the view a verifier is shown,
+never global ordering or inclusion. A deployment that needs those
+properties runs the audit transparency profile or anchors the chain
+head independently; a deployment without either still <span class="bcp14">MAY</span> chain, or
+<span class="bcp14">MAY</span> not.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+<p id="section-6.4-2">A chain is scoped to one (Mission, receipt issuer, stream): the
+<code>chain</code> member carries <code>stream</code> (an issuer-chosen identifier),
+<code>sequence</code> (an integer, strictly increasing per stream), and
+<code>previous</code> (an array of one or more digests of predecessor
+receipts in the same scope, present on every receipt after the
+stream's first). Concurrent issuance either serializes per stream
+or records multiple predecessors; a verifier treats the result as a
+DAG and checks only linkage and sequence monotonicity, never
+completeness. The scope's receipt issuer is the <code>emitter</code> the
+predecessor and successor receipts carry (<a href="#receipt-verification" class="auto internal xref">Section 6.5</a>).<a href="#section-6.4-2" class="pilcrow">¶</a></p>
+<p id="section-6.4-3">A predecessor digest is a canonical-object digest
+(<a href="#receipt-evidence" class="auto internal xref">Section 6.3</a>): the complete predecessor Mission Receipt
+object, <code>evidence_envelope</code> included, JCS canonicalized, the same
+construction an evidence reference's digest uses over a Decision,
+Execution, or Refusal record, so this digest too covers the signature
+rather than only the unsigned payload. The predecessor object is
+itself a Mission Receipt, typed <code>application/mission-receipt+json</code>,
+so the digest cannot be read as committing to any other record type.<a href="#section-6.4-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="receipt-verification">
+<section id="section-6.5">
+        <h3 id="name-receipt-verification">
+<a href="#section-6.5" class="section-number selfRef">6.5. </a><a href="#name-receipt-verification" class="section-name selfRef">Receipt Verification</a>
+        </h3>
+<p id="section-6.5-1">A verifier <span class="bcp14">MUST</span> perform the following steps, in order, and <span class="bcp14">MUST NOT</span>
+rely on a receipt if any step fails:<a href="#section-6.5-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6.5-2">
+<li id="section-6.5-2.1">
+            <p id="section-6.5-2.1.1">Verify the receipt's <code>evidence_envelope</code>: decode the JWS payload,
+compute the JCS canonical bytes of the receipt with
+<code>evidence_envelope</code> removed, and require byte-for-byte equality,
+rejecting on any difference (<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>).
+Confirm the JWS protected <code>typ</code> is <code>application/mission-receipt+json</code>
+and verify the signature against the published key resolved by the
+JWS <code>kid</code> for the party named in <code>emitter</code>, through the
+enforcement scope statement's published key sets
+(<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 10.2</a>). Confirm that statement
+names the <code>emitter</code> as a receipt issuer; the receipt's Mission
+binding is established by the verified records and the joins of
+step 4, never by key publication alone.<a href="#section-6.5-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.5-2.2">
+            <p id="section-6.5-2.2.1">Confirm the <code>kind</code>'s required evidence combination is present
+(<a href="#receipt-kinds" class="auto internal xref">Section 6.1</a>, <a href="#receipt-evidence" class="auto internal xref">Section 6.3</a>).<a href="#section-6.5-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.5-2.3">
+            <p id="section-6.5-2.3.1">Resolve each evidence reference. Verify each resolved record under
+its own rules (<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>). Recompute each
+digest over the defined bytes (<a href="#receipt-evidence" class="auto internal xref">Section 6.3</a>) and require
+equality. Require the resolved record's own identifier to equal
+<code>evidence_id</code> and its emitter and key to match <code>emitter</code>.<a href="#section-6.5-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.5-2.4">
+            <p id="section-6.5-2.4.1">Join the records: the same <code>mission.id</code> and <code>mission.issuer</code> as
+the receipt's <code>mission</code>; the Execution Evidence joins the Decision
+Evidence on <code>evaluation_id</code> (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>,
+<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>); audience and target, and the
+authorized and effective parameter digests, are consistent across
+the records per the runtime's rules
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); for <code>execution</code>, the
+receipt's <code>outcome</code> equals the Execution Evidence's terminal
+<code>outcome</code>.<a href="#section-6.5-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.5-2.5">
+            <p id="section-6.5-2.5.1">Require every copied optional member to equal the corresponding
+member of the record it projects.<a href="#section-6.5-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.5-2.6">
+            <p id="section-6.5-2.6.1">When <code>chain</code> is present (<a href="#receipt-chaining" class="auto internal xref">Section 6.4</a>): resolve each
+<code>previous</code> digest to a predecessor receipt, verify the
+predecessor's own envelope, require the same <code>mission</code>, <code>emitter</code>,
+and <code>chain.stream</code> as this receipt, recompute the predecessor
+digest over its complete canonical bytes and require equality, and
+require each predecessor's <code>chain.sequence</code> to be strictly less
+than this receipt's. Monotonicity is relative to the receipt's
+predecessors, never a claim of a globally serialized stream. A
+predecessor unresolvable within the retention obligations of
+<a href="#receipt-retention" class="auto internal xref">Section 6.6</a> fails chain verification.<a href="#section-6.5-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.5-2.7">
+            <p id="section-6.5-2.7.1">Reject on: a missing required record, a record of an unimplemented
+type, digest mismatch, emitter or key mismatch, join failure, a
+chain-linkage failure, or a copied field that differs. A verifier
+<span class="bcp14">MUST NOT</span> treat the receipt as verified if any step fails
+(<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>).<a href="#section-6.5-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+</section>
+</div>
+<div id="receipt-retention">
+<section id="section-6.6">
+        <h3 id="name-retention-2">
+<a href="#section-6.6" class="section-number selfRef">6.6. </a><a href="#name-retention-2" class="section-name selfRef">Retention</a>
+        </h3>
+<p id="section-6.6-1">A Mission Receipt inherits the runtime's record-integrity and
+retention floor (<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>). A receipt is
+retained at least as long as the records it projects; conversely, the
+referenced evidence and the historical verification keys <span class="bcp14">MUST</span> remain
+retained or resolvable for as long as verifiers are expected to
+validate the receipt (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6.6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="worked-example-2">
+<section id="section-6.7">
+        <h3 id="name-worked-example-3">
+<a href="#section-6.7" class="section-number selfRef">6.7. </a><a href="#name-worked-example-3" class="section-name selfRef">Worked example</a>
+        </h3>
+<p id="section-6.7-1">A complete <code>execution</code> receipt, projecting records carrying the
+identifiers of <a href="#decision-evidence-object" class="auto internal xref">Section 4</a> and
+<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>'s worked examples;
+<a href="#mission-receipt-digest-worked" class="auto internal xref">Section 6.8</a> fixes the exact bytes verified for
+the execution reference:<a href="#section-6.7-1" class="pilcrow">¶</a></p>
+<div class="breakable lang-json sourcecode" id="section-6.7-2">
+<pre>
+{
+  "kind": "execution",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "emitter": { "id": "receipts.example.com", "role": "receipt_issuer" },
+  "evidence": [
+    {
+      "type": "application/mission-decision-evidence+json",
+      "digest":
+        "sha-256:fS_yB6-Yit7Gsz-6vw73q7YphoiRm3VwC-3Pk8xW9J0",
+      "evidence_id": "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA",
+      "emitter": { "id": "pdp.example.com", "role": "pdp" }
+    },
+    {
+      "type": "application/mission-execution-evidence+json",
+      "digest":
+        "sha-256:Ims1Xx5FAPYfFB6c6Y2gbqybB-Z2PxCi93yWPcIHmC8",
+      "evidence_id": "exe_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+      "emitter": { "id": "pep.example.com", "role": "executor" }
+    }
+  ],
+  "issued_at": "2026-11-02T08:14:06Z",
+  "outcome": "completed",
+  "decision": {
+    "id": "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA",
+    "result": "permit"
+  },
+  "policy": {
+    "pdp_policy_view":
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+    "mission_policy_version": "deploy-policy:v17"
+  },
+  "executor": {
+    "client_id": "s6BhdRkqt3",
+    "client_instance_id": "inst_macbook_7f3a",
+    "act": [
+      { "iss": "https://as.example.com", "sub": "s6BhdRkqt3" }
+    ]
+  },
+  "target": {
+    "resource": {
+      "type": "journal-entry",
+      "id": "je_2026Q3_inv_8421"
+    },
+    "audience": "https://erp.example.com"
+  },
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InJlY2VpcHQta2V5..."
+  }
+}
+</pre><a href="#section-6.7-2" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="mission-receipt-digest-worked">
+<section id="section-6.8">
+        <h3 id="name-digest-vector">
+<a href="#section-6.8" class="section-number selfRef">6.8. </a><a href="#name-digest-vector" class="section-name selfRef">Digest vector</a>
+        </h3>
+<p id="section-6.8-1">A reproducible digest for the <code>execution</code> evidence reference above.
+The referenced record is a minimal Execution Evidence stand-in
+carrying only the members <a href="#execution-evidence-object" class="auto internal xref">Section 5</a> requires,
+consistent with that section's worked example's identifiers. This is
+a digest-only vector: the stand-in's <code>evidence_envelope.value</code> is an
+illustrative placeholder, not a signature over these bytes, so the
+object fixes digest computation alone and would fail the
+byte-equality verification of <a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a> by
+design:<a href="#section-6.8-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.8-2">
+<pre>
+{
+  "audience": "https://erp.example.com",
+  "emitter": { "id": "pep.example.com", "role": "executor" },
+  "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value":
+      "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXktMSJ9.dGhlLXNpZ25lZC1wYXlsb2FkLWJ5dGVzLWFib3Zl.RVMyNTZfc2lnbmF0dXJlX2J5dGVzX2lsbHVzdHJhdGl2ZQ"
+  },
+  "execution_id": "exe_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "outcome": "completed",
+  "outcome_at": "2026-11-02T08:14:05Z",
+  "sequence": 43
+}
+</pre><a href="#section-6.8-2" class="pilcrow">¶</a>
+</div>
+<p id="section-6.8-3">The digest input is the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of that
+object, member names sorted, no whitespace (one line, 506 bytes,
+shown here wrapped for layout only; remove the layout line breaks,
+adding no characters, to recover the canonical form):<a href="#section-6.8-3" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-6.8-4">
+<pre>
+{"audience":"https://erp.example.com","emitter":{"id":"pep.example.
+com","role":"executor"},"evaluation_id":"dec_8K2nP4qV9rL3tY6sB1zN0e
+F7jB","evidence_envelope":{"format":"jws-compact","value":"eyJhbGci
+OiJFUzI1NiIsImtpZCI6InBlcC1rZXktMSJ9.dGhlLXNpZ25lZC1wYXlsb2FkLWJ5dG
+VzLWFib3Zl.RVMyNTZfc2lnbmF0dXJlX2J5dGVzX2lsbHVzdHJhdGl2ZQ"},"execut
+ion_id":"exe_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w","mission_id":"msn_8R
+fX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","outcome":"completed","outcome_at":
+"2026-11-02T08:14:05Z","sequence":43}
+</pre><a href="#section-6.8-4" class="pilcrow">¶</a>
+</div>
+<div class="lang-text sourcecode" id="section-6.8-5">
+<pre>
+digest = sha-256:Ims1Xx5FAPYfFB6c6Y2gbqybB-Z2PxCi93yWPcIHmC8
+</pre><a href="#section-6.8-5" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="evidence-properties">
+<section id="section-7">
+      <h2 id="name-evidence-properties">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-evidence-properties" class="section-name selfRef">Evidence Properties</a>
+      </h2>
+<p id="section-7-1">This section is informative: it names a property vocabulary for the
 records of this document and the conditions under which the records
 support each property, so the cluster is citable as one anchor. It
 is a conditional capability map, not a checklist: each row separates
 what base evidence conformance proves, the additional mechanism a
 stronger reading requires, and what no reading proves. It adds no
-requirement to this document or the runtime profile.<a href="#section-6-1" class="pilcrow">¶</a></p>
+requirement to this document or the runtime profile.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <span id="name-evidence-properties-what-th"></span><table class="center" id="table-2">
         <caption>
 <a href="#table-2" class="selfRef">Table 2</a>:
@@ -2656,18 +3242,18 @@ requirement to this document or the runtime profile.<a href="#section-6-1" class
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Key-isolated</td>
             <td class="text-left" rowspan="1" colspan="1">Origin and integrity: each record is signed by the emitter's published key, bound to its scope and audience (<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>)</td>
-            <td class="text-left" rowspan="1" colspan="1">None in the current profiles. No requirement places the evidence-signing private key outside the agent's runtime; the runtime profile's custody rules govern the credential's confirmation key, a different key (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). A deployment that isolates evidence-signing keys does so by local mechanism and declares it in its Enforcement Scope Statement</td>
-            <td class="text-left" rowspan="1" colspan="1">That the agent's runtime could not access the signing key or emit records under the emitter's identity</td>
+            <td class="text-left" rowspan="1" colspan="1">The runtime profile's agent-isolated evidence-emission condition, claimed per emitter and scope in the Enforcement Scope Statement (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>): the key is non-exportable to and inaccessible from the agent, signing is invocable only by the emitter's authenticated emission path, and the record is constructed by that path from its authoritative state and independently validated request inputs, with the caller unable to supply the completed record or assert the authoritative facts</td>
+            <td class="text-left" rowspan="1" colspan="1">The truth of the emitter's assertion; the correctness or non-compromise of the PDP, PEP, executor, harness, signer, or their inputs; the completeness or ordering of the evidence stream; or that an effect occurred because a signed outcome asserts it</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Session-independent</td>
-            <td class="text-left" rowspan="1" colspan="1">A verifier can verify a retained record without a live session and without possession or validity of the credential that carried the action (<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 9.2</a>); retired keys stay resolvable for the retention window, and evidence signed after a declared key compromise is unverifiable rather than verified</td>
+            <td class="text-left" rowspan="1" colspan="1">A verifier can verify a retained record without a live session and without possession or validity of the credential that carried the action (<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 10.2</a>); retired keys stay resolvable for the retention window, and evidence signed after a declared key compromise is unverifiable rather than verified</td>
             <td class="text-left" rowspan="1" colspan="1">None</td>
             <td class="text-left" rowspan="1" colspan="1">That the session or credential was valid at decision or execution time, or that the Mission is active now: those are record contents and linked state evidence, not consequences of signature verification</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Third-party-verifiable</td>
-            <td class="text-left" rowspan="1" colspan="1">Scoped independent verification: a party with access to the Enforcement Scope Statement's published keys verifies a record independently of the emitting deployment (<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 9.2</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Scoped independent verification: a party with access to the Enforcement Scope Statement's published keys verifies a record independently of the emitting deployment (<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 10.2</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">Durable offline verification: a party holding retained or configured producer and Transparency Service trust anchors verifies without contacting either operator, where a Receipt and the evidence bytes are retained; cross-domain verifiability additionally requires the audit profile's independent-operator condition (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>)</td>
             <td class="text-left" rowspan="1" colspan="1">That an unknown producer key is trusted, that the signed assertion is true, or that the evidence feed is complete</td>
           </tr>
@@ -2676,40 +3262,40 @@ requirement to this document or the runtime profile.<a href="#section-6-1" class
 </section>
 </div>
 <div id="evidence-extensions">
-<section id="section-7">
+<section id="section-8">
       <h2 id="name-extension-members">
-<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-extension-members" class="section-name selfRef">Extension Members</a>
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-extension-members" class="section-name selfRef">Extension Members</a>
       </h2>
-<p id="section-7-1">A Decision Evidence Object, Execution Evidence Object, and Refusal
+<p id="section-8-1">A Decision Evidence Object, Execution Evidence Object, and Refusal
 Record are each closed to uncoordinated extension: a companion or
 binding specification <span class="bcp14">MAY</span> add a member, under a name coordinated
 with this document or a collision-resistant name, and a consumer
 <span class="bcp14">MUST</span> ignore a member it does not understand and <span class="bcp14">MUST NOT</span> derive
 authority from any member it does not recognize. An extension member
 is recorded as presented; this document does not otherwise define
-its semantics.<a href="#section-7-1" class="pilcrow">¶</a></p>
-<p id="section-7-2">The following members are coordinated extensions a deployment
+its semantics.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">The following members are coordinated extensions a deployment
 following the family's Standards-Track AuthZEN binding commonly
 carries. Each is registered and owned by the specification named,
 not by this document or by the AuthZEN binding merely because it is
-a common wire carrier.<a href="#section-7-2" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-7-3">
-        <dt id="section-7-3.1">
+a common wire carrier.<a href="#section-8-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-8-3">
+        <dt id="section-8-3.1">
 <code>taint</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-7-3.2">
-          <p id="section-7-3.2.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence as presented.
+        <dd style="margin-left: 1.5em" id="section-8-3.2">
+          <p id="section-8-3.2.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence as presented.
 <span class="bcp14">REQUIRED</span> when the decision request carried a taint context. What
 taints a session and when a taint requirement applies are defined
 by the harness profile (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>),
 which owns this member's semantics; the AuthZEN binding is one wire
 carrier of the context this member records
-(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-7-3.2.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-8-3.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-7-3.3">
+<dt id="section-8-3.3">
 <code>mission_history</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-7-3.4">
-          <p id="section-7-3.4.1"><span class="bcp14">OPTIONAL</span>. An array of objects, recorded on Decision Evidence: the
+        <dd style="margin-left: 1.5em" id="section-8-3.4">
+          <p id="section-8-3.4.1"><span class="bcp14">OPTIONAL</span>. An array of objects, recorded on Decision Evidence: the
 policy-selected history predicates the PDP evaluated, each with its
 <code>predicate</code> (and <code>action_class</code>, where applicable) and an <code>outcome</code>
 member (<code>satisfied</code>, <code>not_satisfied</code> for an established-false
@@ -2719,22 +3305,22 @@ evidence store that could not be consulted within its bound).
 <span class="bcp14">REQUIRED</span> when policy selected any history predicate for the
 decision, whether or not the request carried a Mission history
 member. Registered and owned by the AuthZEN binding
-(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-7-3.4.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-8-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-7-3.5">
+<dt id="section-8-3.5">
 <code>capability_source</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-7-3.6">
-          <p id="section-7-3.6.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence: the
+        <dd style="margin-left: 1.5em" id="section-8-3.6">
+          <p id="section-8-3.6.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence: the
 catalog-source binding the PDP evaluated for a catalog-sourced
 action. Registered and owned by the Mission Capability Binding
-companion (<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>).<a href="#section-7-3.6.1" class="pilcrow">¶</a></p>
+companion (<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>).<a href="#section-8-3.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-7-3.7">
+<dt id="section-8-3.7">
 <code>hop_reference</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-7-3.8">
-          <p id="section-7-3.8.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence, Execution
+        <dd style="margin-left: 1.5em" id="section-8-3.8">
+          <p id="section-8-3.8.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence, Execution
 Evidence, or a Refusal Record when the action or refusal concerns a
 credential authorized under a continuation profile's continued
 credential, attributing the record to the specific hop that carried
@@ -2747,89 +3333,120 @@ by the Mission Continuation profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>), which
 requires execution-time evidence to record the continuation hop
 reference; this member formalizes that requirement as a coordinated
-extension.<a href="#section-7-3.8.1" class="pilcrow">¶</a></p>
+extension.<a href="#section-8-3.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
 </section>
 </div>
 <div id="conformance">
-<section id="section-8">
+<section id="section-9">
       <h2 id="name-conformance">
-<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
       </h2>
-<p id="section-8-1">This document defines conformance for two roles: a PRODUCER that
-emits the records themselves, and a CONSUMER, or VERIFIER, that reads
-and checks them after the fact. A decision-API binding's own
-conformance statement, such as the AuthZEN binding's
-(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), incorporates this
-document's PRODUCER role for its PDP, PEP, and executor.<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">A PRODUCER conforming to this document <span class="bcp14">MUST</span>:<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-9-1">This document defines conformance for four roles: a PRODUCER that
+emits the records themselves; a CONSUMER, or VERIFIER, that reads
+and checks them after the fact; a RECEIPT ISSUER that assembles and
+signs a Mission Receipt over them; and a RECEIPT VERIFIER that
+verifies one. A decision-API binding's own conformance statement,
+such as the AuthZEN binding's (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>),
+incorporates this document's PRODUCER role for its PDP, PEP, and
+executor.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">A PRODUCER conforming to this document <span class="bcp14">MUST</span>:<a href="#section-9-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-8-3.1">
-          <p id="section-8-3.1.1">emit a Decision Evidence Object for every PDP decision on a
-consequential action (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>);<a href="#section-8-3.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-9-3.1">
+          <p id="section-9-3.1.1">emit a Decision Evidence Object for every PDP decision on a
+consequential action (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>);<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-8-3.2">
-          <p id="section-8-3.2.1">emit a Refusal Record for a PEP or PDP refusal that occurs before
-any PDP decision (<a href="#pre-decision-refusal" class="auto internal xref">Section 4.2</a>);<a href="#section-8-3.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-9-3.2">
+          <p id="section-9-3.2.1">emit a Refusal Record for a PEP or PDP refusal that occurs before
+any PDP decision (<a href="#pre-decision-refusal" class="auto internal xref">Section 4.2</a>);<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-8-3.3">
-          <p id="section-8-3.3.1">emit an Execution Evidence Object for the classes the runtime
+        <li class="normal" id="section-9-3.3">
+          <p id="section-9-3.3.1">emit an Execution Evidence Object for the classes the runtime
 profile's transaction-assurance tier covers
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>)
-(<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>); and<a href="#section-8-3.3.1" class="pilcrow">¶</a></p>
+(<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>); and<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-8-3.4">
-          <p id="section-8-3.4.1">sign every record with the integrity envelope of
+        <li class="normal" id="section-9-3.4">
+          <p id="section-9-3.4.1">sign every record with the integrity envelope of
 <a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>, with a <code>kid</code> resolvable in its
-published key set and a <code>typ</code> matching the record's own media type.<a href="#section-8-3.4.1" class="pilcrow">¶</a></p>
+published key set and a <code>typ</code> matching the record's own media type.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-8-4">A CONSUMER or VERIFIER conforming to this document <span class="bcp14">MUST</span> perform the
+<p id="section-9-4">A CONSUMER or VERIFIER conforming to this document <span class="bcp14">MUST</span> perform the
 byte-equality verification procedure and key checks of
 <a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a> against the emitter's published keys
-(<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 9.2</a>), and classify orphaned Decision
+(<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 10.2</a>), and classify orphaned Decision
 Evidence and cross-record digest divergence as
-<a href="#security-considerations" class="auto internal xref">Section 9</a> and <a href="#execution-evidence-object" class="auto internal xref">Section 5</a>
-require, never as proof of action.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<a href="#security-considerations" class="auto internal xref">Section 10</a> and <a href="#execution-evidence-object" class="auto internal xref">Section 5</a>
+require, never as proof of action.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-5">A RECEIPT ISSUER conforming to this document <span class="bcp14">MUST</span>:<a href="#section-9-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-6.1">
+          <p id="section-9-6.1.1">verify every referenced Decision Evidence, Execution Evidence, and
+Refusal Record under <a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a> before
+assembling a Mission Receipt that projects it;<a href="#section-9-6.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-6.2">
+          <p id="section-9-6.2.1">minimize the receipt to the optional members a projection profile
+or recipient agreement selects, never defaulting to every available
+member (<a href="#mission-receipt" class="auto internal xref">Section 6</a>);<a href="#section-9-6.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-6.3">
+          <p id="section-9-6.3.1">assemble only the evidence combination <a href="#receipt-kinds" class="auto internal xref">Section 6.1</a> fixes for
+the receipt's <code>kind</code> (<a href="#receipt-evidence" class="auto internal xref">Section 6.3</a>);<a href="#section-9-6.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-6.4">
+          <p id="section-9-6.4.1">publish the signing key resolvable by <code>kid</code> for the <code>mission.id</code> and
+<code>mission.issuer</code> the receipt names (<a href="#receipt-verification" class="auto internal xref">Section 6.5</a>); and<a href="#section-9-6.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-6.5">
+          <p id="section-9-6.5.1">when chaining, maintain a strictly increasing <code>sequence</code> per
+(Mission, issuer, stream) and carry the predecessor digests
+<a href="#receipt-chaining" class="auto internal xref">Section 6.4</a> requires.<a href="#section-9-6.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-9-7">A RECEIPT VERIFIER conforming to this document <span class="bcp14">MUST</span> perform the
+algorithm of <a href="#receipt-verification" class="auto internal xref">Section 6.5</a> and reject a Mission Receipt on
+any of its failure conditions.<a href="#section-9-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
-<section id="section-9">
+<section id="section-10">
       <h2 id="name-security-considerations">
-<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
-<p id="section-9-1">The runtime profile's Security Considerations
+<p id="section-10-1">The runtime profile's Security Considerations
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) apply in full. This
-section addresses only threats specific to these records.<a href="#section-9-1" class="pilcrow">¶</a></p>
+section addresses only threats specific to these records.<a href="#section-10-1" class="pilcrow">¶</a></p>
 <div id="decision-evidence-versus-execution-evidence">
-<section id="section-9.1">
+<section id="section-10.1">
         <h3 id="name-decision-evidence-versus-ex">
-<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-decision-evidence-versus-ex" class="section-name selfRef">Decision Evidence versus Execution Evidence</a>
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-decision-evidence-versus-ex" class="section-name selfRef">Decision Evidence versus Execution Evidence</a>
         </h3>
-<p id="section-9.1-1">Decision Evidence is not proof an action occurred. Implementations <span class="bcp14">MUST</span>
+<p id="section-10.1-1">Decision Evidence is not proof an action occurred. Implementations <span class="bcp14">MUST</span>
 emit Execution Evidence to record outcomes, and auditors <span class="bcp14">MUST NOT</span> treat
 Decision Evidence alone as evidence of action. An audit consumer <span class="bcp14">MUST</span>
 classify orphaned Decision Evidence (no matching Execution Evidence
 within the deployment's reconciliation window) as undetermined-outcome
 or, per deployment policy, as action-attempted; it <span class="bcp14">MUST NOT</span> treat it as
-proof of action.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+proof of action.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="evidence-integrity-signing-keys">
-<section id="section-9.2">
+<section id="section-10.2">
         <h3 id="name-evidence-integrity-and-sign">
-<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-evidence-integrity-and-sign" class="section-name selfRef">Evidence integrity and signing keys</a>
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-evidence-integrity-and-sign" class="section-name selfRef">Evidence integrity and signing keys</a>
         </h3>
-<p id="section-9.2-1">The <code>evidence_envelope</code> binds each record to the emitting PDP or PEP.
+<p id="section-10.2-1">The <code>evidence_envelope</code> binds each record to the emitting PDP or PEP.
 The PDP's <code>jws-compact</code> signing key <span class="bcp14">MUST</span> be resolvable, by the JWS
 protected <code>kid</code>, in the PDP's published JWKS so a verifier can check
 Decision Evidence independently. The PEP or executor signing key used
 for Execution Evidence and Refusal Records <span class="bcp14">MUST</span> be resolvable the same
 way through a
-deployment-published key set.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
-<p id="section-9.2-2">This document fixes one concrete discovery convention: the PDP
+deployment-published key set.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-2">This document fixes one concrete discovery convention: the PDP
 publishes its JWKS at a deployment-published location named in the
 enforcement scope statement (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>),
 and the PEP or executor key set is published and named there
@@ -2841,45 +3458,67 @@ so records signed before a rotation stay verifiable after it. The
 compromise exception carries over with it: a key known or suspected
 compromised is published as revoked or marked with a compromise time,
 per the core rule, and evidence signed under it after that time is
-unverifiable rather than verified.<a href="#section-9.2-2" class="pilcrow">¶</a></p>
-<p id="section-9.2-3">Implementations <span class="bcp14">MUST</span> reject evidence whose <code>format</code> is unsupported
-rather than accepting it unverified.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
-<p id="section-9.2-4">Verification under this section is anchored in the Enforcement Scope
+unverifiable rather than verified.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+<p id="section-10.2-3">Implementations <span class="bcp14">MUST</span> reject evidence whose <code>format</code> is unsupported
+rather than accepting it unverified.<a href="#section-10.2-3" class="pilcrow">¶</a></p>
+<p id="section-10.2-4">Verification under this section is anchored in the Enforcement Scope
 Statement's published keys: a party with access to that statement can
 verify a record independently of the deployment that emitted it.
 Portability beyond that, to a party without access to the deployment's
 own published keys, is not a property this document provides; it
 requires the transparency mechanisms of the audit profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>), where a deployment adopts
-them.<a href="#section-9.2-4" class="pilcrow">¶</a></p>
+them.<a href="#section-10.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transport">
-<section id="section-9.3">
+<section id="section-10.3">
         <h3 id="name-transport">
-<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-transport" class="section-name selfRef">Transport</a>
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-transport" class="section-name selfRef">Transport</a>
         </h3>
-<p id="section-9.3-1">Audit channels carrying Decision Evidence and Execution Evidence <span class="bcp14">MUST</span>
+<p id="section-10.3-1">Audit channels carrying Decision Evidence and Execution Evidence <span class="bcp14">MUST</span>
 be served over TLS 1.2 or later (TLS 1.3 <span class="bcp14">RECOMMENDED</span>). Evidence at
-rest <span class="bcp14">MUST</span> be encrypted per the deployment's data-protection posture.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+rest <span class="bcp14">MUST</span> be encrypted per the deployment's data-protection posture.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="receipt-security-considerations">
+<section id="section-10.4">
+        <h3 id="name-mission-receipt-2">
+<a href="#section-10.4" class="section-number selfRef">10.4. </a><a href="#name-mission-receipt-2" class="section-name selfRef">Mission Receipt</a>
+        </h3>
+<p id="section-10.4-1">A Mission Receipt that copies fields from its underlying evidence
+invites a verifier to treat the receipt signer as authoritative for
+those facts; the trust model (<a href="#mission-receipt" class="auto internal xref">Section 6</a>) and the
+verification algorithm (<a href="#receipt-verification" class="auto internal xref">Section 6.5</a>) are the control,
+not the receipt's signature alone.<a href="#section-10.4-1" class="pilcrow">¶</a></p>
+<p id="section-10.4-2">Chaining gives view-local linkage only: a signer-controlled chain can
+be truncated, forked, or presented differently to different
+verifiers (<a href="#receipt-chaining" class="auto internal xref">Section 6.4</a>); a deployment that needs global
+ordering or inclusion runs the audit transparency profile or anchors
+the chain head independently.<a href="#section-10.4-2" class="pilcrow">¶</a></p>
+<p id="section-10.4-3">A compromised receipt-issuer signing key inherits the emitter-key
+considerations of <a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 10.2</a>: a key known or
+suspected compromised is published as revoked or marked with a
+compromise time, and a receipt signed under it after that time is
+unverifiable rather than verified.<a href="#section-10.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="privacy-considerations">
-<section id="section-10">
+<section id="section-11">
       <h2 id="name-privacy-considerations">
-<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-10-1">The runtime profile's evidence-privacy guidance
+<p id="section-11-1">The runtime profile's evidence-privacy guidance
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) applies in full. This
-section addresses the concrete records this document defines.<a href="#section-10-1" class="pilcrow">¶</a></p>
+section addresses the concrete records this document defines.<a href="#section-11-1" class="pilcrow">¶</a></p>
 <div id="evidence-as-pii-sinks">
-<section id="section-10.1">
+<section id="section-11.1">
         <h3 id="name-evidence-as-pii-sinks">
-<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-evidence-as-pii-sinks" class="section-name selfRef">Evidence as PII sinks</a>
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-evidence-as-pii-sinks" class="section-name selfRef">Evidence as PII sinks</a>
         </h3>
-<p id="section-10.1-1">Decision Evidence, Execution Evidence, and Refusal Records carry the
+<p id="section-11.1-1">Decision Evidence, Execution Evidence, and Refusal Records carry the
 authenticated
 <code>subject</code>, actor chain, resource and action identifiers,
 credential-derived correlators, capability-source identifiers,
@@ -2888,15 +3527,15 @@ credential-derived correlators, capability-source identifiers,
 timing. These records are PII sinks and <span class="bcp14">SHOULD</span>
 be access-controlled to audit consumers with a legitimate need,
 encrypted at rest, and retained per the window of
-<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="parameter-exposure">
-<section id="section-10.2">
+<section id="section-11.2">
         <h3 id="name-parameter-exposure">
-<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-parameter-exposure" class="section-name selfRef">Parameter exposure</a>
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-parameter-exposure" class="section-name selfRef">Parameter exposure</a>
         </h3>
-<p id="section-10.2-1">This restates, for the privacy reader, the <code>action</code> member's rule
+<p id="section-11.2-1">This restates, for the privacy reader, the <code>action</code> member's rule
 (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>): the durable Decision Evidence record
 <span class="bcp14">MUST NOT</span> contain the raw <code>properties.parameters</code> object under any
 name; it carries only <code>parameter_digest</code> and, at most,
@@ -2908,252 +3547,338 @@ held in a separately access-controlled store keyed by
 are themselves PII, the PEP <span class="bcp14">SHOULD</span> supply only a parameter digest to
 the PDP, omitting the raw parameters, so the PDP evaluates against
 parameter-class policy without observing the raw values. The Execution
-Evidence <code>result_summary</code> <span class="bcp14">MUST NOT</span> carry user-content payloads.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+Evidence <code>result_summary</code> <span class="bcp14">MUST NOT</span> carry user-content payloads.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="actor-chain-and-mission-correlation">
-<section id="section-10.3">
+<section id="section-11.3">
         <h3 id="name-actor-chain-and-mission-cor">
-<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-actor-chain-and-mission-cor" class="section-name selfRef">Actor chain and Mission correlation</a>
+<a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-actor-chain-and-mission-cor" class="section-name selfRef">Actor chain and Mission correlation</a>
         </h3>
-<p id="section-10.3-1">The <code>actor</code> member carries the delegation chain, which <span class="bcp14">MAY</span> reveal
+<p id="section-11.3-1">The <code>actor</code> member carries the delegation chain, which <span class="bcp14">MAY</span> reveal
 service accounts, client instances, and organizational structure.
 Evidence carrying the same Mission <code>id</code> and <code>authority_hash</code> across
 resource boundaries can correlate a subject's activity; this is
 inherent to the Mission's role as a governance handle. Deployments that
 require unlinkability need an additional privacy design outside this
-document.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+document.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="receipt-privacy-considerations">
+<section id="section-11.4">
+        <h3 id="name-mission-receipt-3">
+<a href="#section-11.4" class="section-number selfRef">11.4. </a><a href="#name-mission-receipt-3" class="section-name selfRef">Mission Receipt</a>
+        </h3>
+<p id="section-11.4-1">The Mission Receipt's optional members (<a href="#mission-receipt" class="auto internal xref">Section 6</a>) are
+correlation surfaces, the same as the evidence they project from.
+Minimization to the selection a projection profile or recipient
+agreement names is the rule, not a default. A receipt crosses a trust
+boundary by design, so an issuer carries only the members its
+recipient needs.<a href="#section-11.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="iana">
-<section id="section-11">
+<section id="section-12">
       <h2 id="name-iana-considerations">
-<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-11-1">This document requests the following IANA actions.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-12-1">This document requests the following IANA actions.<a href="#section-12-1" class="pilcrow">¶</a></p>
 <div id="media-type-registry">
-<section id="section-11.1">
+<section id="section-12.1">
         <h3 id="name-media-type-registry">
-<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-media-type-registry" class="section-name selfRef">Media Type Registry</a>
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-media-type-registry" class="section-name selfRef">Media Type Registry</a>
         </h3>
-<p id="section-11.1-1">This document registers three media types per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<p id="section-12.1-1">This document registers four media types per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
 <div id="decision-evidence-media-type">
-<section id="section-11.1.1">
+<section id="section-12.1.1">
           <h4 id="name-decision-evidence-media-typ">
-<a href="#section-11.1.1" class="section-number selfRef">11.1.1. </a><a href="#name-decision-evidence-media-typ" class="section-name selfRef">Decision Evidence Media Type</a>
+<a href="#section-12.1.1" class="section-number selfRef">12.1.1. </a><a href="#name-decision-evidence-media-typ" class="section-name selfRef">Decision Evidence Media Type</a>
           </h4>
 <ul class="normal">
-<li class="normal" id="section-11.1.1-1.1">
-              <p id="section-11.1.1-1.1.1">Type name: application<a href="#section-11.1.1-1.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-12.1.1-1.1">
+              <p id="section-12.1.1-1.1.1">Type name: application<a href="#section-12.1.1-1.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.2">
-              <p id="section-11.1.1-1.2.1">Subtype name: mission-decision-evidence+json<a href="#section-11.1.1-1.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.2">
+              <p id="section-12.1.1-1.2.1">Subtype name: mission-decision-evidence+json<a href="#section-12.1.1-1.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.3">
-              <p id="section-11.1.1-1.3.1">Required parameters: none<a href="#section-11.1.1-1.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.3">
+              <p id="section-12.1.1-1.3.1">Required parameters: none<a href="#section-12.1.1-1.3.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.4">
-              <p id="section-11.1.1-1.4.1">Optional parameters: none<a href="#section-11.1.1-1.4.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.4">
+              <p id="section-12.1.1-1.4.1">Optional parameters: none<a href="#section-12.1.1-1.4.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.5">
-              <p id="section-11.1.1-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-11.1.1-1.5.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.5">
+              <p id="section-12.1.1-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-12.1.1-1.5.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.6">
-              <p id="section-11.1.1-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 9</a><a href="#section-11.1.1-1.6.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.6">
+              <p id="section-12.1.1-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 10</a><a href="#section-12.1.1-1.6.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.7">
-              <p id="section-11.1.1-1.7.1">Interoperability considerations: see this document<a href="#section-11.1.1-1.7.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.7">
+              <p id="section-12.1.1-1.7.1">Interoperability considerations: see this document<a href="#section-12.1.1-1.7.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.8">
-              <p id="section-11.1.1-1.8.1">Published specification: this document<a href="#section-11.1.1-1.8.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.8">
+              <p id="section-12.1.1-1.8.1">Published specification: this document<a href="#section-12.1.1-1.8.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.9">
-              <p id="section-11.1.1-1.9.1">Applications that use this media type: Mission-bound runtime
-enforcement deployments<a href="#section-11.1.1-1.9.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.9">
+              <p id="section-12.1.1-1.9.1">Applications that use this media type: Mission-bound runtime
+enforcement deployments<a href="#section-12.1.1-1.9.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.10">
-              <p id="section-11.1.1-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-11.1.1-1.10.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.10">
+              <p id="section-12.1.1-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-12.1.1-1.10.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.11">
-              <p id="section-11.1.1-1.11.1">Additional information:<a href="#section-11.1.1-1.11.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.11">
+              <p id="section-12.1.1-1.11.1">Additional information:<a href="#section-12.1.1-1.11.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11.1.1-1.11.2.1">
-                  <p id="section-11.1.1-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-11.1.1-1.11.2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-12.1.1-1.11.2.1">
+                  <p id="section-12.1.1-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-12.1.1-1.11.2.1.1" class="pilcrow">¶</a></p>
 </li>
-                <li class="normal" id="section-11.1.1-1.11.2.2">
-                  <p id="section-11.1.1-1.11.2.2.1">Magic number(s): none<a href="#section-11.1.1-1.11.2.2.1" class="pilcrow">¶</a></p>
+                <li class="normal" id="section-12.1.1-1.11.2.2">
+                  <p id="section-12.1.1-1.11.2.2.1">Magic number(s): none<a href="#section-12.1.1-1.11.2.2.1" class="pilcrow">¶</a></p>
 </li>
-                <li class="normal" id="section-11.1.1-1.11.2.3">
-                  <p id="section-11.1.1-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-11.1.1-1.11.2.3.1" class="pilcrow">¶</a></p>
+                <li class="normal" id="section-12.1.1-1.11.2.3">
+                  <p id="section-12.1.1-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-12.1.1-1.11.2.3.1" class="pilcrow">¶</a></p>
 </li>
-                <li class="normal" id="section-11.1.1-1.11.2.4">
-                  <p id="section-11.1.1-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-11.1.1-1.11.2.4.1" class="pilcrow">¶</a></p>
+                <li class="normal" id="section-12.1.1-1.11.2.4">
+                  <p id="section-12.1.1-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-12.1.1-1.11.2.4.1" class="pilcrow">¶</a></p>
 </li>
               </ul>
 </li>
-            <li class="normal" id="section-11.1.1-1.12">
-              <p id="section-11.1.1-1.12.1">Person &amp; email address to contact for further information:
-Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-11.1.1-1.12.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.12">
+              <p id="section-12.1.1-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-12.1.1-1.12.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.13">
-              <p id="section-11.1.1-1.13.1">Intended usage: COMMON<a href="#section-11.1.1-1.13.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.13">
+              <p id="section-12.1.1-1.13.1">Intended usage: COMMON<a href="#section-12.1.1-1.13.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.14">
-              <p id="section-11.1.1-1.14.1">Restrictions on usage: none<a href="#section-11.1.1-1.14.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.14">
+              <p id="section-12.1.1-1.14.1">Restrictions on usage: none<a href="#section-12.1.1-1.14.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.15">
-              <p id="section-11.1.1-1.15.1">Author: IETF<a href="#section-11.1.1-1.15.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.15">
+              <p id="section-12.1.1-1.15.1">Author: IETF<a href="#section-12.1.1-1.15.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.1-1.16">
-              <p id="section-11.1.1-1.16.1">Change controller: IETF<a href="#section-11.1.1-1.16.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.1-1.16">
+              <p id="section-12.1.1-1.16.1">Change controller: IETF<a href="#section-12.1.1-1.16.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </section>
 </div>
 <div id="execution-evidence-media-type">
-<section id="section-11.1.2">
+<section id="section-12.1.2">
           <h4 id="name-execution-evidence-media-ty">
-<a href="#section-11.1.2" class="section-number selfRef">11.1.2. </a><a href="#name-execution-evidence-media-ty" class="section-name selfRef">Execution Evidence Media Type</a>
+<a href="#section-12.1.2" class="section-number selfRef">12.1.2. </a><a href="#name-execution-evidence-media-ty" class="section-name selfRef">Execution Evidence Media Type</a>
           </h4>
 <ul class="normal">
-<li class="normal" id="section-11.1.2-1.1">
-              <p id="section-11.1.2-1.1.1">Type name: application<a href="#section-11.1.2-1.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-12.1.2-1.1">
+              <p id="section-12.1.2-1.1.1">Type name: application<a href="#section-12.1.2-1.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.2">
-              <p id="section-11.1.2-1.2.1">Subtype name: mission-execution-evidence+json<a href="#section-11.1.2-1.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.2">
+              <p id="section-12.1.2-1.2.1">Subtype name: mission-execution-evidence+json<a href="#section-12.1.2-1.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.3">
-              <p id="section-11.1.2-1.3.1">Required parameters: none<a href="#section-11.1.2-1.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.3">
+              <p id="section-12.1.2-1.3.1">Required parameters: none<a href="#section-12.1.2-1.3.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.4">
-              <p id="section-11.1.2-1.4.1">Optional parameters: none<a href="#section-11.1.2-1.4.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.4">
+              <p id="section-12.1.2-1.4.1">Optional parameters: none<a href="#section-12.1.2-1.4.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.5">
-              <p id="section-11.1.2-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-11.1.2-1.5.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.5">
+              <p id="section-12.1.2-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-12.1.2-1.5.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.6">
-              <p id="section-11.1.2-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 9</a><a href="#section-11.1.2-1.6.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.6">
+              <p id="section-12.1.2-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 10</a><a href="#section-12.1.2-1.6.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.7">
-              <p id="section-11.1.2-1.7.1">Interoperability considerations: see this document<a href="#section-11.1.2-1.7.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.7">
+              <p id="section-12.1.2-1.7.1">Interoperability considerations: see this document<a href="#section-12.1.2-1.7.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.8">
-              <p id="section-11.1.2-1.8.1">Published specification: this document<a href="#section-11.1.2-1.8.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.8">
+              <p id="section-12.1.2-1.8.1">Published specification: this document<a href="#section-12.1.2-1.8.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.9">
-              <p id="section-11.1.2-1.9.1">Applications that use this media type: Mission-bound runtime
-enforcement deployments<a href="#section-11.1.2-1.9.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.9">
+              <p id="section-12.1.2-1.9.1">Applications that use this media type: Mission-bound runtime
+enforcement deployments<a href="#section-12.1.2-1.9.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.10">
-              <p id="section-11.1.2-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-11.1.2-1.10.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.10">
+              <p id="section-12.1.2-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-12.1.2-1.10.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.11">
-              <p id="section-11.1.2-1.11.1">Additional information:<a href="#section-11.1.2-1.11.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.11">
+              <p id="section-12.1.2-1.11.1">Additional information:<a href="#section-12.1.2-1.11.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11.1.2-1.11.2.1">
-                  <p id="section-11.1.2-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-11.1.2-1.11.2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-12.1.2-1.11.2.1">
+                  <p id="section-12.1.2-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-12.1.2-1.11.2.1.1" class="pilcrow">¶</a></p>
 </li>
-                <li class="normal" id="section-11.1.2-1.11.2.2">
-                  <p id="section-11.1.2-1.11.2.2.1">Magic number(s): none<a href="#section-11.1.2-1.11.2.2.1" class="pilcrow">¶</a></p>
+                <li class="normal" id="section-12.1.2-1.11.2.2">
+                  <p id="section-12.1.2-1.11.2.2.1">Magic number(s): none<a href="#section-12.1.2-1.11.2.2.1" class="pilcrow">¶</a></p>
 </li>
-                <li class="normal" id="section-11.1.2-1.11.2.3">
-                  <p id="section-11.1.2-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-11.1.2-1.11.2.3.1" class="pilcrow">¶</a></p>
+                <li class="normal" id="section-12.1.2-1.11.2.3">
+                  <p id="section-12.1.2-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-12.1.2-1.11.2.3.1" class="pilcrow">¶</a></p>
 </li>
-                <li class="normal" id="section-11.1.2-1.11.2.4">
-                  <p id="section-11.1.2-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-11.1.2-1.11.2.4.1" class="pilcrow">¶</a></p>
+                <li class="normal" id="section-12.1.2-1.11.2.4">
+                  <p id="section-12.1.2-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-12.1.2-1.11.2.4.1" class="pilcrow">¶</a></p>
 </li>
               </ul>
 </li>
-            <li class="normal" id="section-11.1.2-1.12">
-              <p id="section-11.1.2-1.12.1">Person &amp; email address to contact for further information:
-Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-11.1.2-1.12.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.12">
+              <p id="section-12.1.2-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-12.1.2-1.12.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.13">
-              <p id="section-11.1.2-1.13.1">Intended usage: COMMON<a href="#section-11.1.2-1.13.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.13">
+              <p id="section-12.1.2-1.13.1">Intended usage: COMMON<a href="#section-12.1.2-1.13.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.14">
-              <p id="section-11.1.2-1.14.1">Restrictions on usage: none<a href="#section-11.1.2-1.14.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.14">
+              <p id="section-12.1.2-1.14.1">Restrictions on usage: none<a href="#section-12.1.2-1.14.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.15">
-              <p id="section-11.1.2-1.15.1">Author: IETF<a href="#section-11.1.2-1.15.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.15">
+              <p id="section-12.1.2-1.15.1">Author: IETF<a href="#section-12.1.2-1.15.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.2-1.16">
-              <p id="section-11.1.2-1.16.1">Change controller: IETF<a href="#section-11.1.2-1.16.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.2-1.16">
+              <p id="section-12.1.2-1.16.1">Change controller: IETF<a href="#section-12.1.2-1.16.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </section>
 </div>
 <div id="refusal-record-media-type">
-<section id="section-11.1.3">
+<section id="section-12.1.3">
           <h4 id="name-refusal-record-media-type">
-<a href="#section-11.1.3" class="section-number selfRef">11.1.3. </a><a href="#name-refusal-record-media-type" class="section-name selfRef">Refusal Record Media Type</a>
+<a href="#section-12.1.3" class="section-number selfRef">12.1.3. </a><a href="#name-refusal-record-media-type" class="section-name selfRef">Refusal Record Media Type</a>
           </h4>
 <ul class="normal">
-<li class="normal" id="section-11.1.3-1.1">
-              <p id="section-11.1.3-1.1.1">Type name: application<a href="#section-11.1.3-1.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-12.1.3-1.1">
+              <p id="section-12.1.3-1.1.1">Type name: application<a href="#section-12.1.3-1.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.2">
-              <p id="section-11.1.3-1.2.1">Subtype name: mission-refusal-record+json<a href="#section-11.1.3-1.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.2">
+              <p id="section-12.1.3-1.2.1">Subtype name: mission-refusal-record+json<a href="#section-12.1.3-1.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.3">
-              <p id="section-11.1.3-1.3.1">Required parameters: none<a href="#section-11.1.3-1.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.3">
+              <p id="section-12.1.3-1.3.1">Required parameters: none<a href="#section-12.1.3-1.3.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.4">
-              <p id="section-11.1.3-1.4.1">Optional parameters: none<a href="#section-11.1.3-1.4.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.4">
+              <p id="section-12.1.3-1.4.1">Optional parameters: none<a href="#section-12.1.3-1.4.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.5">
-              <p id="section-11.1.3-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-11.1.3-1.5.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.5">
+              <p id="section-12.1.3-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-12.1.3-1.5.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.6">
-              <p id="section-11.1.3-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 9</a><a href="#section-11.1.3-1.6.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.6">
+              <p id="section-12.1.3-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 10</a><a href="#section-12.1.3-1.6.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.7">
-              <p id="section-11.1.3-1.7.1">Interoperability considerations: see this document<a href="#section-11.1.3-1.7.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.7">
+              <p id="section-12.1.3-1.7.1">Interoperability considerations: see this document<a href="#section-12.1.3-1.7.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.8">
-              <p id="section-11.1.3-1.8.1">Published specification: this document<a href="#section-11.1.3-1.8.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.8">
+              <p id="section-12.1.3-1.8.1">Published specification: this document<a href="#section-12.1.3-1.8.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.9">
-              <p id="section-11.1.3-1.9.1">Applications that use this media type: Mission-bound runtime
-enforcement deployments<a href="#section-11.1.3-1.9.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.9">
+              <p id="section-12.1.3-1.9.1">Applications that use this media type: Mission-bound runtime
+enforcement deployments<a href="#section-12.1.3-1.9.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.10">
-              <p id="section-11.1.3-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-11.1.3-1.10.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.10">
+              <p id="section-12.1.3-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-12.1.3-1.10.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.11">
-              <p id="section-11.1.3-1.11.1">Additional information:<a href="#section-11.1.3-1.11.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.11">
+              <p id="section-12.1.3-1.11.1">Additional information:<a href="#section-12.1.3-1.11.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11.1.3-1.11.2.1">
-                  <p id="section-11.1.3-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-11.1.3-1.11.2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-12.1.3-1.11.2.1">
+                  <p id="section-12.1.3-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-12.1.3-1.11.2.1.1" class="pilcrow">¶</a></p>
 </li>
-                <li class="normal" id="section-11.1.3-1.11.2.2">
-                  <p id="section-11.1.3-1.11.2.2.1">Magic number(s): none<a href="#section-11.1.3-1.11.2.2.1" class="pilcrow">¶</a></p>
+                <li class="normal" id="section-12.1.3-1.11.2.2">
+                  <p id="section-12.1.3-1.11.2.2.1">Magic number(s): none<a href="#section-12.1.3-1.11.2.2.1" class="pilcrow">¶</a></p>
 </li>
-                <li class="normal" id="section-11.1.3-1.11.2.3">
-                  <p id="section-11.1.3-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-11.1.3-1.11.2.3.1" class="pilcrow">¶</a></p>
+                <li class="normal" id="section-12.1.3-1.11.2.3">
+                  <p id="section-12.1.3-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-12.1.3-1.11.2.3.1" class="pilcrow">¶</a></p>
 </li>
-                <li class="normal" id="section-11.1.3-1.11.2.4">
-                  <p id="section-11.1.3-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-11.1.3-1.11.2.4.1" class="pilcrow">¶</a></p>
+                <li class="normal" id="section-12.1.3-1.11.2.4">
+                  <p id="section-12.1.3-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-12.1.3-1.11.2.4.1" class="pilcrow">¶</a></p>
 </li>
               </ul>
 </li>
-            <li class="normal" id="section-11.1.3-1.12">
-              <p id="section-11.1.3-1.12.1">Person &amp; email address to contact for further information:
-Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-11.1.3-1.12.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.12">
+              <p id="section-12.1.3-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-12.1.3-1.12.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.13">
-              <p id="section-11.1.3-1.13.1">Intended usage: COMMON<a href="#section-11.1.3-1.13.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.13">
+              <p id="section-12.1.3-1.13.1">Intended usage: COMMON<a href="#section-12.1.3-1.13.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.14">
-              <p id="section-11.1.3-1.14.1">Restrictions on usage: none<a href="#section-11.1.3-1.14.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.14">
+              <p id="section-12.1.3-1.14.1">Restrictions on usage: none<a href="#section-12.1.3-1.14.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.15">
-              <p id="section-11.1.3-1.15.1">Author: IETF<a href="#section-11.1.3-1.15.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.15">
+              <p id="section-12.1.3-1.15.1">Author: IETF<a href="#section-12.1.3-1.15.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11.1.3-1.16">
-              <p id="section-11.1.3-1.16.1">Change controller: IETF<a href="#section-11.1.3-1.16.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-12.1.3-1.16">
+              <p id="section-12.1.3-1.16.1">Change controller: IETF<a href="#section-12.1.3-1.16.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+<div id="mission-receipt-media-type">
+<section id="section-12.1.4">
+          <h4 id="name-mission-receipt-media-type">
+<a href="#section-12.1.4" class="section-number selfRef">12.1.4. </a><a href="#name-mission-receipt-media-type" class="section-name selfRef">Mission Receipt Media Type</a>
+          </h4>
+<ul class="normal">
+<li class="normal" id="section-12.1.4-1.1">
+              <p id="section-12.1.4-1.1.1">Type name: application<a href="#section-12.1.4-1.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.2">
+              <p id="section-12.1.4-1.2.1">Subtype name: mission-receipt+json<a href="#section-12.1.4-1.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.3">
+              <p id="section-12.1.4-1.3.1">Required parameters: none<a href="#section-12.1.4-1.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.4">
+              <p id="section-12.1.4-1.4.1">Optional parameters: none<a href="#section-12.1.4-1.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.5">
+              <p id="section-12.1.4-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-12.1.4-1.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.6">
+              <p id="section-12.1.4-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 10</a><a href="#section-12.1.4-1.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.7">
+              <p id="section-12.1.4-1.7.1">Interoperability considerations: see this document<a href="#section-12.1.4-1.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.8">
+              <p id="section-12.1.4-1.8.1">Published specification: this document<a href="#section-12.1.4-1.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.9">
+              <p id="section-12.1.4-1.9.1">Applications that use this media type: Mission-bound runtime
+enforcement deployments<a href="#section-12.1.4-1.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.10">
+              <p id="section-12.1.4-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-12.1.4-1.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.11">
+              <p id="section-12.1.4-1.11.1">Additional information:<a href="#section-12.1.4-1.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12.1.4-1.11.2.1">
+                  <p id="section-12.1.4-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-12.1.4-1.11.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-12.1.4-1.11.2.2">
+                  <p id="section-12.1.4-1.11.2.2.1">Magic number(s): none<a href="#section-12.1.4-1.11.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-12.1.4-1.11.2.3">
+                  <p id="section-12.1.4-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-12.1.4-1.11.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-12.1.4-1.11.2.4">
+                  <p id="section-12.1.4-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-12.1.4-1.11.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-12.1.4-1.12">
+              <p id="section-12.1.4-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-12.1.4-1.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.13">
+              <p id="section-12.1.4-1.13.1">Intended usage: COMMON<a href="#section-12.1.4-1.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.14">
+              <p id="section-12.1.4-1.14.1">Restrictions on usage: none<a href="#section-12.1.4-1.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.15">
+              <p id="section-12.1.4-1.15.1">Author: IETF<a href="#section-12.1.4-1.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.4-1.16">
+              <p id="section-12.1.4-1.16.1">Change controller: IETF<a href="#section-12.1.4-1.16.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </section>
@@ -3163,14 +3888,14 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 </section>
 </div>
 <div id="sec-combined-references">
-<section id="section-12">
+<section id="section-13">
       <h2 id="name-references">
-<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-references" class="section-name selfRef">References</a>
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-12.1">
+<section id="section-13.1">
         <h3 id="name-normative-references">
-<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
@@ -3229,9 +3954,9 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-12.2">
+<section id="section-13.2">
         <h3 id="name-informative-references">
-<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>

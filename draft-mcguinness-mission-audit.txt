@@ -199,13 +199,15 @@ Table of Contents
 
    The transparency substrate's Receipt, the Transparency Service's
    proof of inclusion, is distinct from the runtime profile's Mission
-   Receipt, portable evidence of an action taken under a Mission
+   Receipt, portable evidence of a decision, an executed action's
+   outcome, or a refusal under a Mission
    ([I-D.draft-mcguinness-mission-runtime]); this document uses Receipt
    in the SCITT sense only.  Registering a Mission Receipt's underlying
    evidence on the Mission's feed provides tamper-evident ordering and
-   inclusion; the receipt-chaining alternative, each Mission Receipt
-   binding its predecessor's digest, is for a deployment without a
-   Transparency Service.
+   inclusion; receipt chaining
+   ([I-D.draft-mcguinness-mission-runtime-evidence]) is OPTIONAL, gives
+   view-local tamper evidence within one issuer's stream, and is never a
+   substitute for those properties.
 
 5.  Mission Substrate
 
@@ -423,6 +425,10 @@ Table of Contents
    |           |included (JCS)   |refusal-       |refusal-       |         |
    |           |                 |record+json    |record+json    |         |
    +-----------+-----------------+---------------+---------------+---------+
+   |Mission    |complete object, |application/   |application/   |receipt  |
+   |Receipt    |evidence_envelope|mission-       |mission-       |issuer   |
+   |           |included (JCS)   |receipt+json   |receipt+json   |key      |
+   +-----------+-----------------+---------------+---------------+---------+
    |Mission    |plain form: JWS  |application/   |mission-       |issuer   |
    |Mandate    |Compact          |mission-       |mandate+jwt,   |         |
    |           |Serialization, as|mandate+jwt,   |else mission-  |         |
@@ -522,12 +528,12 @@ Table of Contents
    artifact whose retained form is itself a compact serialization (the
    Signals SET, the Mandate, the Work Product Binding) is hashed as
    issued, not re-canonicalized.  A JSON object that carries a nested
-   signature envelope (the consent, decision, execution, and refusal
-   evidence) is hashed as the JCS canonical bytes of the complete
-   retained object, envelope included, the same shape as the approval-
-   governance record digest: hashing received octets instead would let a
-   reserialization outside the envelope change the audit digest while
-   the operational signature stayed valid.
+   signature envelope (the consent, decision, execution, refusal, and
+   receipt evidence) is hashed as the JCS canonical bytes of the
+   complete retained object, envelope included, the same shape as the
+   approval-governance record digest: hashing received octets instead
+   would let a reserialization outside the envelope change the audit
+   digest while the operational signature stayed valid.
 
    The operational typ column records the protected typ of the signature
    envelope a type's retained form carries, none where the type is
@@ -547,8 +553,8 @@ Table of Contents
    *  the approval-event, lifecycle-transition, and derivation-record
       media types are defined by this profile (Section 15);
 
-   *  the consent, decision, execution, and refusal evidence types are
-      registered by the profiles that define those objects
+   *  the consent, decision, execution, refusal, and receipt evidence
+      types are registered by the profiles that define those objects
       ([I-D.draft-mcguinness-oauth-mission-consent-evidence],
       [I-D.draft-mcguinness-mission-runtime-evidence]);
 

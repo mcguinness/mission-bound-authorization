@@ -1389,13 +1389,15 @@ defines them, and Transparency Service, Signed Statement, Receipt, and
 Transparent Statement as the transparency substrate defines them.<a href="#section-4-3" class="pilcrow">¶</a></p>
 <p id="section-4-4">The transparency substrate's Receipt, the Transparency Service's proof
 of inclusion, is distinct from the runtime profile's Mission Receipt,
-portable evidence of an action taken under a Mission
+portable evidence of a decision, an executed action's outcome, or a
+refusal under a Mission
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); this document uses
 Receipt in the SCITT sense only. Registering a Mission Receipt's
 underlying evidence on the Mission's feed provides tamper-evident
-ordering and inclusion; the receipt-chaining alternative, each
-Mission Receipt binding its predecessor's digest, is for a deployment
-without a Transparency Service.<a href="#section-4-4" class="pilcrow">¶</a></p>
+ordering and inclusion; receipt chaining
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>) is <span class="bcp14">OPTIONAL</span>,
+gives view-local tamper evidence within one issuer's stream, and is
+never a substitute for those properties.<a href="#section-4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-substrate">
@@ -1699,6 +1701,17 @@ defined, and registered where it is, by the profile the row cites.<a href="#sect
               <td class="text-left" rowspan="1" colspan="1">PEP key</td>
             </tr>
             <tr>
+              <td class="text-left" rowspan="1" colspan="1">Mission Receipt</td>
+              <td class="text-left" rowspan="1" colspan="1">complete object, <code>evidence_envelope</code> included (JCS)</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-receipt+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-receipt+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">receipt issuer key</td>
+            </tr>
+            <tr>
               <td class="text-left" rowspan="1" colspan="1">Mission Mandate</td>
               <td class="text-left" rowspan="1" colspan="1">plain form: JWS Compact Serialization, as issued; SD-JWT form: issuer-signed JWT component, as issued</td>
               <td class="text-left" rowspan="1" colspan="1">
@@ -1838,9 +1851,9 @@ canonicalization rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" cla
 artifact whose retained form is itself a compact serialization (the
 Signals SET, the Mandate, the Work Product Binding) is hashed as
 issued, not re-canonicalized. A JSON object that carries a nested
-signature envelope (the consent, decision, execution, and refusal
-evidence) is hashed as the JCS canonical bytes of the complete
-retained object, envelope included, the same shape as the
+signature envelope (the consent, decision, execution, refusal, and
+receipt evidence) is hashed as the JCS canonical bytes of the
+complete retained object, envelope included, the same shape as the
 approval-governance record digest: hashing received octets instead
 would let a reserialization outside the envelope change the audit
 digest while the operational signature stayed valid.<a href="#section-6.3-6" class="pilcrow">¶</a></p>
@@ -1864,8 +1877,8 @@ or the compact JWS.<a href="#section-6.3-7" class="pilcrow">¶</a></p>
 media types are defined by this profile (<a href="#iana" class="auto internal xref">Section 15</a>);<a href="#section-6.3-9.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.3-9.2">
-            <p id="section-6.3-9.2.1">the consent, decision, execution, and refusal evidence types are
-registered by the profiles that define those objects
+            <p id="section-6.3-9.2.1">the consent, decision, execution, refusal, and receipt evidence
+types are registered by the profiles that define those objects
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>);<a href="#section-6.3-9.2.1" class="pilcrow">¶</a></p>
 </li>

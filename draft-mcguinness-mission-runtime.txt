@@ -97,7 +97,8 @@ Table of Contents
      4.4.  Action-Bound Approval
      4.5.  PEP Placement
      4.6.  Credential Custody and Mediated Execution
-     4.7.  Least Exposure
+     4.7.  Agent-Isolated Evidence Emission
+     4.8.  Least Exposure
    5.  Resource Server Runtime Profile
    6.  Token Presentation and Validation
    7.  The Runtime Decision
@@ -585,7 +586,9 @@ Table of Contents
 
    *  the locations of the deployment-published evidence signing key
       sets (the runtime evidence companion's PDP and PEP key sets,
-      [I-D.draft-mcguinness-mission-runtime-evidence], resolve here);
+      [I-D.draft-mcguinness-mission-runtime-evidence], resolve here),
+      and, where the agent-isolated evidence-emission condition is
+      claimed, its per-emitter declaration (Section 4.7);
 
    *  the reconciliation window for matching execution-outcome evidence
       to decisions, the component responsible for orphaned-evidence and
@@ -1020,7 +1023,123 @@ Table of Contents
    naturally at the mediating PEP, the one component that sees the full
    payload after the decision and before presentation.
 
-4.7.  Least Exposure
+4.7.  Agent-Isolated Evidence Emission
+
+   An evidence-signing key is not an authorization credential, and its
+   signature MUST NOT be accepted as a grant or as widening the
+   Authority Set. Its compromise corrupts the record plane and, where
+   signed history is a decision input (Section 7.2.8), can also corrupt
+   later authorization outcomes within that envelope: a forged record is
+   a forged precondition (Section 17).  The record plane is what a post-
+   compromise investigation relies on, so the property that the agent
+   cannot emit records under an emitter's identity has an owner here, as
+   a standalone condition a deployment claims per emitter and scope.  No
+   named claim of this document includes it; a composition that wants
+   both prevention and post-compromise evidence assurance names it
+   explicitly alongside the claims of Section 12.
+
+   A deployment claims the *agent-isolated evidence-emission condition*
+   for a named emitter (a PDP, a mediating or executing PEP, or a
+   companion-defined executor-side emitter) and scope only when all of
+   the following hold:
+
+   *  the evidence-signing private key is generated inside the declared
+      trusted holder boundary, or imported through a trusted procedure
+      in which the agent never possesses plaintext key material, and is
+      non-exportable to, and inaccessible from, the agent component,
+      with that property preserved across rotation, backup, replication,
+      restore, and migration;
+
+   *  only an authenticated identity for the named emitter's trusted
+      emission path can invoke the signing operation;
+
+   *  the agent cannot submit a complete evidence object, or an
+      arbitrary digest, for signature;
+
+   *  the trusted emission path constructs the record from its
+      authoritative decision, refusal, or execution state and from
+      request inputs it independently validates and normalizes; the
+      caller cannot supply the completed record or directly assert the
+      emitter identity or role, the decision or outcome, the protected
+      record type, the sequence position, the evaluation or execution
+      identifiers, or the authoritative interpretation of the Mission,
+      scope, audience, and digests; and
+
+   *  a signing result cannot be relabeled or reused for another
+      emitter, role, scope, audience, or evidence type.
+
+   The load-bearing property is the authenticated construction-and-
+   signing path, not the storage technology: an HSM or KMS whose API the
+   agent can invoke over arbitrary bytes is a signing oracle, a separate
+   process the agent controls is not isolated, and an in-process signer
+   inside a trusted PEP can be isolated where the control boundary is
+   real.  A signing service MAY accept a digest rather than the record,
+   only over an authenticated channel from the trusted emission path
+   with the record type and protected scope bound to the request; the
+   signer is not required to parse the record schema.
+
+   The condition bounds forgery, not activity: the agent can still
+   trigger real decisions and effects that cause the emitter to create
+   its own records of them; it cannot invent or alter a record under the
+   emitter's identity.  The condition establishes neither the truth of
+   an emitter's assertion nor the completeness or ordering of the
+   evidence stream; those remain the concern of reconciliation,
+   sequence-gap detection, and the transparency mechanisms (Section 11,
+   [I-D.draft-mcguinness-mission-audit]).
+
+   Key separation is not part of this condition: an evidence-signing key
+   SHOULD be cryptographically distinct from every sender-constraint,
+   token-issuance, approval, and other authority-bearing key; a
+   composing profile MAY require that separation; and isolation of one
+   key plane MUST NOT be inferred from separation or custody of another.
+
+   A deployment SHOULD satisfy this condition for every emitter whose
+   records cover the high-consequence classes.  Signer unavailability
+   MUST NOT fall back to an agent-held key, to an unsigned record
+   represented as verified, or to an unconstrained signing path, and it
+   relaxes neither Section 11 nor the runtime evidence companion's
+   required envelope.  Enforcement MAY continue through an outage only
+   where the trusted emission path durably commits every required record
+   for signing and publication under a declared recovery bound,
+   preserving ordering and this condition; otherwise the deployment is
+   not conforming for the affected decision or refusal and MUST NOT
+   represent the condition as continuously satisfied.  An execution
+   outcome discovered after its effect is durably queued and reconciled,
+   never synthesized or silently omitted (Section 10).
+
+   On a declared compromise of an evidence-signing key, the runtime
+   evidence companion's key-set lifecycle applies
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).  The declared
+   boundary is deployment-declared semantics and does not by itself
+   resist backdating: a holder of the key can sign records carrying
+   earlier timestamps.  A record under a compromised key can be shown to
+   have existed before the declared boundary only by an independent
+   existence proof (a trusted timestamp, a transparency inclusion, or a
+   Receipt, [I-D.draft-mcguinness-mission-audit]); even then the proof
+   establishes existence before the declared boundary, not that the key
+   or emitter was uncompromised earlier, and not that the assertion is
+   true.
+
+   The Enforcement Scope Statement declaration for this condition is per
+   covered emitter, together with its key set and custody policy
+   (optionally naming kid coverage): the emitter identity and role, the
+   holder's trust boundary, the authorized invocation path, the
+   mechanism class (separate process or service, HSM or KMS, attested
+   environment), the custody and replica class across rotation, backup,
+   replication, restore, and migration, the covered action classes,
+   scope, and audience, whether the key is shared, the key-separation
+   posture, and an audit or attestation reference (Section 4.2).
+   Routine rotation under the same holder and invocation policy does not
+   require a new declaration; a change in trust boundary or signer
+   policy does.  The declaration discloses no operational secret.  At
+   base the declaration is declared-only; under a named claim that
+   composes this condition, the attested or audited material covers the
+   workload identity, the signer policy, and the trusted emission path,
+   not merely the private key's location, and the weakest self-declared
+   or organizationally audited term is named plainly, as Section 12.1
+   does for path scope.
+
+4.8.  Least Exposure
 
    A Mission bounds exposure as well as authority.  An agent exceeds the
    Mission envelope by invoking an action outside the Authority Set, but
@@ -2171,6 +2290,12 @@ Table of Contents
     |                        | outage: executing-PEP reverification   |
     |                        | needs no PDP                           |
     +------------------------+----------------------------------------+
+    | A required evidence    | Fail closed, or durably commit the     |
+    | record cannot be       | record for signing and publication     |
+    | signed or emitted for  | under a declared recovery bound        |
+    | a consequential        | (Section 4.7)                          |
+    | decision or refusal    |                                        |
+    +------------------------+----------------------------------------+
     | Mission not active     | Refuse; work already initiated         |
     |                        | reconciles under Section 11, never re- |
     |                        | executes                               |
@@ -2226,10 +2351,9 @@ Table of Contents
    enforcement evidence record with the available fields and the failure
    condition.  This document fixes the minimum record content and local
    integrity requirements; the concrete record schemas, canonical byte
-   representation, and integrity envelope are defined by Mission Runtime
-   Evidence ([I-D.draft-mcguinness-mission-runtime-evidence]).  The
-   Mission Receipt's portable schema (Section 11.3) remains out of scope
-   (Section 16).
+   representation, and integrity envelope, together with the Mission
+   Receipt's portable schema (Section 11.3), are defined by Mission
+   Runtime Evidence ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
    A record captures decision inputs, the applicable policy and
    authority references, the result, and the failure condition.  No
@@ -2344,28 +2468,32 @@ Table of Contents
 
 11.3.  Mission Receipt
 
-   A *Mission Receipt* is the portable, tamper-evident projection of a
-   runtime enforcement evidence record and, for a high-consequence
-   action, its execution-outcome record: portable evidence of a material
-   action taken under a Mission, as a Mandate
+   A *Mission Receipt* is the portable, tamper-evident projection of
+   runtime enforcement evidence: portable evidence of exactly what its
+   kind claims (a rendered decision, an executed action's terminal
+   outcome, or a pre-decision refusal,
+   [I-D.draft-mcguinness-mission-runtime-evidence]), as a Mandate
    ([I-D.draft-mcguinness-mission-mandate]) is portable evidence about
    the Mission itself.
 
    A Mission Receipt MUST identify the Mission the action was authorized
-   under: mission.id and mission.issuer, or a verifiable Mission
+   under, as mission.id and mission.issuer; a verifiable Mission
    projection such as the cross-domain grant's mission claim
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]).  It SHOULD bind
-   the policy decision (the decision identifier and result), the policy
-   state it was decided under (the PDP's policy-view version and the
-   Mission's policy_version), the executor (the authenticated actor and
-   any act chain), the custody boundary (whether a mediating PEP held
-   the credential, Section 4.6), the downstream target (the resource and
-   audience), the outcome, the timestamps, and, where receipt chaining
-   substitutes for a transparency feed
-   ([I-D.draft-mcguinness-mission-audit]), the digest of the previous
-   Mission Receipt.  The portable schema and canonical byte
-   representation are deferred (Section 16); the members above are the
-   minimum a deployment-defined Mission Receipt binds.
+   ([I-D.draft-mcguinness-oauth-mission-cross-domain]) travels beside
+   the receipt at its carriage layer, never in place of the tuple.  It
+   MAY project the policy decision (the decision identifier and result),
+   the policy state it was decided under (the PDP's policy-view version
+   and the Mission's policy_version), the executor (the authenticated
+   actor and any act chain), the custody boundary (whether a mediating
+   PEP held the credential, Section 4.6, carried as a profiled issuer
+   assertion), the downstream target (the resource and audience), the
+   outcome, the timestamps, and, where a deployment chains receipts, the
+   digest of a predecessor Mission Receipt.  The portable schema,
+   receipt kinds, evidence references, verification, and chaining are
+   defined by [I-D.draft-mcguinness-mission-runtime-evidence], which
+   fixes the minimum join and integrity core every Mission Receipt
+   carries; the members above are what a receipt MAY project beyond that
+   core.
 
 11.4.  Record Integrity and Retention
 
@@ -2554,7 +2682,7 @@ Table of Contents
    Mission's governed work only when all of the following hold, each
    MUST under this claim regardless of its base-profile level:
 
-   *  *Private-data exposure.* Least exposure (Section 4.7) is applied:
+   *  *Private-data exposure.* Least exposure (Section 4.8) is applied:
       the context surfaced to the agent is scoped to the active Mission,
       and credential material stays out of the agent for every mediated
       class (Section 4.6).
@@ -2641,6 +2769,46 @@ Table of Contents
    These are the observable form of the requirements stated normatively
    above; a deployment's Enforcement Scope Statement (Section 4.2) names
    which it enforces and which paths it excludes.
+
+   The agent-isolated evidence-emission condition (Section 4.7) has its
+   own observable form; a deployment claiming it SHOULD demonstrate, per
+   covered emitter:
+
+       +===========================+===============================+
+       | Bypass attempt            | Required outcome              |
+       +===========================+===============================+
+       | Agent attempts to export  | Refused                       |
+       | or read an evidence-      |                               |
+       | signing private key       |                               |
+       +---------------------------+-------------------------------+
+       | Agent submits a complete  | Refused                       |
+       | evidence object, or a raw |                               |
+       | digest, for signature     |                               |
+       +---------------------------+-------------------------------+
+       | An authenticated emitter  | Refused                       |
+       | requests a signature for  |                               |
+       | a different record type,  |                               |
+       | role, scope, or audience  |                               |
+       +---------------------------+-------------------------------+
+       | One emitter identity      | Refused                       |
+       | invokes another emitter's |                               |
+       | key or emission path      |                               |
+       +---------------------------+-------------------------------+
+       | A separated evidence key  | Refused, where the deployment |
+       | is presented for use as a | claims key separation         |
+       | cnf or token-issuance key |                               |
+       +---------------------------+-------------------------------+
+       | The evidence signer is    | No fallback to an agent-held  |
+       | unavailable               | key, an unsigned record       |
+       |                           | represented as verified, or   |
+       |                           | an unconstrained signing path |
+       +---------------------------+-------------------------------+
+
+                                  Table 10
+
+   These tests demonstrate the exposed control surface; they do not
+   prove the absence of a hidden bypass, which remains an attestation,
+   audit, and path-completeness property.
 
 14.  Deployment Considerations
 
@@ -2740,15 +2908,6 @@ Table of Contents
       definition-digest drift (signed capability manifests, cross-
       catalog identity);
 
-   *  the Mission Receipt's portable schema and canonical byte
-      representation (Section 11.3: this profile fixes the term, its
-      minimum binding, and the local runtime enforcement evidence
-      record).  The concrete Decision Evidence, Execution Evidence, and
-      Refusal Record object schemas, canonicalization, integrity
-      envelope, and media types are, by contrast, no longer deferred:
-      they are defined by the runtime evidence companion
-      ([I-D.draft-mcguinness-mission-runtime-evidence]);
-
    *  actor provenance beyond the act chain and attestation of the
       execution environment: actor-signed hop proofs
       ([I-D.draft-mcguinness-oauth-actor-proofs]), issuer-signed hop
@@ -2842,7 +3001,7 @@ Table of Contents
    hold the egress credential.  This is the architectural defense, gate
    the exfiltration against an authority the injection cannot widen,
    rather than make the agent injection-proof.  Least exposure
-   (Section 4.7) is the input-side complement: it shrinks what an
+   (Section 4.8) is the input-side complement: it shrinks what an
    injected agent can read and what within-scope laundering can draw
    from, without changing the limits below.
 
