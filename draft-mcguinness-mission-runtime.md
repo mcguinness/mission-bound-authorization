@@ -2157,22 +2157,26 @@ by expiry into a fresh claim.
 
 ## Mission Receipt {#mission-receipt}
 
-A **Mission Receipt** is the portable, tamper-evident projection of a
-runtime enforcement evidence record and, for a high-consequence
-action, its execution-outcome record: portable evidence of a material
-action taken under a Mission, as a Mandate
+A **Mission Receipt** is the portable, tamper-evident projection of
+runtime enforcement evidence: portable evidence of exactly what its
+kind claims (a rendered decision, an executed action's terminal
+outcome, or a pre-decision refusal,
+{{I-D.draft-mcguinness-mission-runtime-evidence}}), as a Mandate
 ({{I-D.draft-mcguinness-mission-mandate}}) is portable evidence about
 the Mission itself.
 
 A Mission Receipt MUST identify the Mission the action was authorized
-under: `mission.id` and `mission.issuer`, or a verifiable Mission
+under, as `mission.id` and `mission.issuer`; a verifiable Mission
 projection such as the cross-domain grant's `mission` claim
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). It MAY project
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) travels beside
+the receipt at its carriage layer, never in place of the tuple. It
+MAY project
 the policy decision (the decision identifier and result), the policy
 state it was decided under (the PDP's policy-view version and the
 Mission's `policy_version`), the
 executor (the authenticated actor and any `act` chain), the custody
-boundary (whether a mediating PEP held the credential, {{custody}}),
+boundary (whether a mediating PEP held the credential, {{custody}},
+carried as a profiled issuer assertion),
 the downstream target (the resource and audience), the outcome, the
 timestamps, and, where a deployment chains receipts, the digest of a
 predecessor Mission Receipt. The portable schema, receipt kinds,
@@ -2513,14 +2517,6 @@ work and are not required to enforce it:
 - cross-format capability-source binding beyond per-capability
   definition-digest drift (signed capability manifests, cross-catalog
   identity);
-- the Mission Receipt's portable schema and canonical byte
-  representation ({{mission-receipt}}: this profile fixes the term,
-  its minimum binding, and the local runtime enforcement evidence
-  record), together with the concrete Decision Evidence, Execution
-  Evidence, and Refusal Record object schemas, canonicalization,
-  integrity envelope, and media types, are no longer deferred: all
-  are defined by the runtime evidence companion
-  ({{I-D.draft-mcguinness-mission-runtime-evidence}});
 - actor provenance beyond the `act` chain and attestation of the
   execution environment: actor-signed hop proofs
   ({{I-D.draft-mcguinness-oauth-actor-proofs}}), issuer-signed hop
