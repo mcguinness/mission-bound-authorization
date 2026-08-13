@@ -1,0 +1,2383 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Template for OAuth 2.0</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       An agent that dispatches work at machine speed cannot pause for a fresh
+human approval at every run, and a standing Mission broad enough to
+cover every run over-provisions authority the agent holds the whole
+time. This document defines an experimental option between those two:
+the Mission Template. A human consents once to a task template, a
+ceiling of resources, actions, and constraints, a dispatch policy, and
+a set of bounds. Each dispatch then instantiates an ordinary Mission
+from the template by policy, at machine speed, with no fresh human
+approval. The instance is an ordinary Mission: it is bounded by its own
+freshly derived Authority Set, is independently gated and revocable,
+and never exceeds the template ceiling. High-consequence authority
+classes are never dispatched by policy: they stay on a fresh human
+decision. Consent is given once, to the ceiling; dispatch draws within
+it deterministically. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="template" name="keyword">
+<meta content="dispatch" name="keyword">
+<meta content="draft-mcguinness-oauth-mission-template-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.11.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-oauth-mission-template.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">OAuth Mission Template</td>
+<td class="right">August 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 14 February 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Web Authorization Protocol</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-oauth-mission-template-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-08-13" class="published">13 August 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Experimental</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-02-14">14 February 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Template for OAuth 2.0</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">An agent that dispatches work at machine speed cannot pause for a fresh
+human approval at every run, and a standing Mission broad enough to
+cover every run over-provisions authority the agent holds the whole
+time. This document defines an experimental option between those two:
+the Mission Template. A human consents once to a task template, a
+ceiling of resources, actions, and constraints, a dispatch policy, and
+a set of bounds. Each dispatch then instantiates an ordinary Mission
+from the template by policy, at machine speed, with no fresh human
+approval. The instance is an ordinary Mission: it is bounded by its own
+freshly derived Authority Set, is independently gated and revocable,
+and never exceeds the template ceiling. High-consequence authority
+classes are never dispatched by policy: they stay on a fresh human
+decision. Consent is given once, to the ceiling; dispatch draws within
+it deterministically.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-template/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-template/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 14 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-status-an-experimental-exte" class="internal xref">Status: An Experimental Extension</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-relationship-to-other-profi" class="internal xref">Relationship to Other Profiles</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-the-mission-template" class="internal xref">The Mission Template</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-template-integrity-anchor" class="internal xref">Template integrity anchor</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-template-lifecycle" class="internal xref">Template lifecycle</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-template-consent" class="internal xref">Template Consent</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-dispatch" class="internal xref">Dispatch</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-the-template-lineage-member" class="internal xref">The template lineage member</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-grant-type" class="internal xref">Grant Type</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-prohibited-classes" class="internal xref">Prohibited Classes</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-the-denial-reasons" class="internal xref">The Denial Reasons</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-instance-composition" class="internal xref">Instance Composition</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-audit-linkage" class="internal xref">Audit Linkage</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1">
+                <p id="section-toc.1-1.16.2.1.1"><a href="#section-16.1" class="auto internal xref">16.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.2">
+                <p id="section-toc.1-1.16.2.2.1"><a href="#section-16.2" class="auto internal xref">16.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">An agent that runs a recurring task dispatches it many times: once per
+ticket, per document, per scheduled window. Mission-Bound Authorization
+for OAuth 2.0 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance
+profile") commits a Mission's authority at a single human approval
+event. Requiring that event at every dispatch does not scale to machine
+speed, and the alternative, a single standing Mission broad enough to
+cover every dispatch, over-provisions: the agent holds the full breadth
+the whole time, and a fresh approval per run is what the deployment was
+trying to avoid.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document defines an experimental third option: the Mission
+Template. A human consents once to a template, which fixes a ceiling of
+resources, actions, and constraints, names a dispatch policy, and
+publishes a set of bounds. Each <strong>dispatch</strong> then instantiates an
+ordinary Mission from the template by that policy, at machine speed,
+with no fresh human approval. Consent is given once, to the ceiling;
+each instance draws within it deterministically.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">This concretizes the blessed semantics the architecture's Approve verb
+states: a deterministic, versioned policy can approve at machine speed
+within a ceiling a human consented to, because the policy approves the
+instance and a human approved the policy, with a policy version keeping
+that chain re-checkable (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).
+The accountable principal for every dispatched Mission is the human who
+approved the template. The high-consequence classes stay on a fresh
+human decision, exactly as that verb requires
+(<a href="#prohibited-classes" class="auto internal xref">Section 8</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="optional-status">
+<section id="section-2">
+      <h2 id="name-status-an-experimental-exte">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-experimental-exte" class="section-name selfRef">Status: An Experimental Extension</a>
+      </h2>
+<p id="section-2-1">This document is optional and experimental: adopt it for evaluation,
+not as a stable interface. It removes the per-dispatch human from a
+consented template, which is a high-consequence capability. This
+document therefore conditions the capability on the ceiling, the
+bounds, the prohibited-class rule, and the audit linkage it requires,
+and an ordinary human-approved Mission (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)
+remains the better fit where each run can carry its own approval. No
+Standards-Track document depends on this one.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">A Mission Issuer that does not implement this document creates every
+Mission through a fresh human approval and is a fully conforming
+issuance-profile Mission Issuer (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).
+Nothing here places a new requirement back on the issuance profile.<a href="#section-2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="relationship">
+<section id="section-3">
+      <h2 id="name-relationship-to-other-profi">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-relationship-to-other-profi" class="section-name selfRef">Relationship to Other Profiles</a>
+      </h2>
+<p id="section-3-1">This document depends normatively on the issuance profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and on the Consent Evidence
+profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>, and is
+not implementable alone. It reuses, without restating, the issuance
+profile's approval event, integrity-anchor envelope, subset rule,
+Authority Set derivation, Mission record, and <code>active</code>/<code>revoked</code>/<code>expired</code>
+lifecycle; and the Consent Evidence profile's rule that a consented
+object's disclosure is committed. It uses Agent, Subject, Approver,
+Mission Issuer, Mission Intent, Authority Set, and Mission as the
+issuance profile defines them.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">The runtime enforcement profile <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>
+is a normative dependency for its action classes, which the
+prohibited-class rule tests against (<a href="#prohibited-classes" class="auto internal xref">Section 8</a>).<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3">Progressive authorization
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>) and expansion
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>) are informative
+siblings. Progressive removes the per-expansion human from a consented
+authority ceiling on a single evolving Mission; this document removes
+the per-dispatch human from a consented template that mints many
+independent Missions. Both concentrate one considered human consent to
+a ceiling in place of many hurried consents, and both hold the
+high-consequence classes back for a human. Where progressive draws a
+successor within one chain, a template dispatches independent
+instances.<a href="#section-3-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3-4">
+        <dt id="section-3-4.1">Terminology disambiguation:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-4.2">
+          <p id="section-3-4.2.1">The Consent Evidence profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>) already uses
+<code>template_id</code> and <code>template_version</code> to name a <strong>disclosure-rendering
+template</strong>, the presentation template a Consent Disclosure object was
+rendered from. The <strong>Mission Template</strong> of this document is a
+different object on a different surface: a consented ceiling and
+dispatch policy that instances are minted from, not a rendering of a
+disclosure. The two never share a member. Where this document commits
+a Mission Template's disclosure under Consent Evidence, that
+disclosure carries the Consent Evidence profile's <code>template_id</code> and
+<code>template_version</code> for its own rendering template, which are unrelated
+to the Mission Template being disclosed.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="conventions-and-terminology">
+<section id="section-4">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-4-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">All JSON shown in this document is non-normative and illustrative; the
+member definitions in the surrounding text are authoritative.<a href="#section-4-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4-3">
+        <dt id="section-4-3.1">Mission Template:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.2">
+          <p id="section-4-3.2.1">A consented object that fixes a Template Ceiling, a Dispatch Policy,
+the allowed dispatchers and recipients, per-instance bounds, and a
+review cadence, and from which Missions are dispatched by policy
+without a fresh human approval (<a href="#the-mission-template" class="auto internal xref">Section 5</a>).<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.3">Template Ceiling:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.4">
+          <p id="section-4-3.4.1">The pre-consented maximum authority any Mission dispatched from a
+Mission Template may reach: an array of authorization-details-shaped
+entries, each the shape of an Authority Set entry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), that every dispatched
+instance <span class="bcp14">MUST</span> be within (<a href="#dispatch" class="auto internal xref">Section 7</a>).<a href="#section-4-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.5">Dispatch:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.6">
+          <p id="section-4-3.6.1">The act of instantiating an ordinary Mission from a Mission Template
+by policy, at machine speed, with no fresh human approval
+(<a href="#dispatch" class="auto internal xref">Section 7</a>).<a href="#section-4-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.7">Dispatcher:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.8">
+          <p id="section-4-3.8.1">The authenticated principal that requests a Dispatch. A Dispatcher is
+not an Approver: it triggers instantiation within a template a human
+already approved, and its authority to do so is fixed by the
+template's allowed dispatchers.<a href="#section-4-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.9">Dispatch Policy:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.10">
+          <p id="section-4-3.10.1">The deployment-defined policy, identified and versioned, under which
+the Mission Issuer instantiates a Mission from a Mission Template. It
+is the policy the human approved when consenting to the template
+(<a href="#the-mission-template" class="auto internal xref">Section 5</a>), and it is trusted governance held by the
+Mission Issuer.<a href="#section-4-3.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.11">Mission Deployment Profile:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.12">
+          <p id="section-4-3.12.1">The deployment-level manifest the architecture defines
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>). The bounds, the
+action-class mapping, and the review cadence this document requires a
+deployment to publish are published there.<a href="#section-4-3.12.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="the-mission-template">
+<section id="section-5">
+      <h2 id="name-the-mission-template">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-the-mission-template" class="section-name selfRef">The Mission Template</a>
+      </h2>
+<p id="section-5-1">A Mission Template is a consented object with these members:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-2">
+        <dt id="section-5-2.1">
+<code>id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.2">
+          <p id="section-5-2.2.1"><span class="bcp14">REQUIRED</span>. A string. The Mission Template Identifier, stable across the
+template's lifetime.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.3">
+<code>issuer</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.4">
+          <p id="section-5-2.4.1"><span class="bcp14">REQUIRED</span>. A string. The Mission Issuer that holds and dispatches from
+the template.<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.5">
+<code>template_version</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.6">
+          <p id="section-5-2.6.1"><span class="bcp14">REQUIRED</span>. A string. The version of this template's consented content.
+A change to any consented member is a new <code>template_version</code> and, per
+<a href="#template-consent" class="auto internal xref">Section 6</a>, a new human approval.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.7">
+<code>ceiling</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.8">
+          <p id="section-5-2.8.1"><span class="bcp14">REQUIRED</span>. An array of authorization-details-shaped entries, each the
+shape of an Authority Set entry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). This is the Template
+Ceiling: the pre-consented maximum any dispatched instance may reach.
+A ceiling entry <span class="bcp14">MAY</span> name a resource family rather than a single
+resource, under the resource-narrowing semantics the subset rule fixes
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.9">
+<code>dispatch_policy</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.10">
+          <p id="section-5-2.10.1"><span class="bcp14">REQUIRED</span>. An object carrying <code>id</code> and <code>version</code>, identifying the
+Dispatch Policy under which the Mission Issuer instantiates from this
+template. Its content is deployment-defined. Committing only <code>id</code> and
+<code>version</code> leaves the policy body itself uncommitted, so a change to
+its logic between template consent and a given dispatch is not
+detectable from the template alone. A deployment <span class="bcp14">SHOULD</span> additionally
+commit the Dispatch Policy body under an integrity anchor, computed
+the way the issuance profile computes <code>authority_hash</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), or disclose it under
+Consent Evidence
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>), so a
+machine-speed dispatch decision stays auditable against the policy
+content a human actually consented to, not only its identifier.<a href="#section-5-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.11">
+<code>allowed_dispatchers</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.12">
+          <p id="section-5-2.12.1"><span class="bcp14">REQUIRED</span>. An array identifying the principals permitted to dispatch
+from this template. A Dispatch request from a principal not in this
+set is refused (<a href="#dispatch" class="auto internal xref">Section 7</a>).<a href="#section-5-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.13">
+<code>allowed_recipients</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.14">
+          <p id="section-5-2.14.1"><span class="bcp14">REQUIRED</span>. An array bounding which Subjects and Agents a Mission
+dispatched from this template may be created for. The Mission Issuer
+establishes the instance's Subject as the issuance profile requires,
+never from Dispatcher input
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), and refuses a Dispatch whose
+established Subject or Agent falls outside this set, so a template
+cannot mint a Mission for a party the human did not consent to.<a href="#section-5-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.15">
+<code>instance_lifetime</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.16">
+          <p id="section-5-2.16.1"><span class="bcp14">REQUIRED</span>. A duration. The per-instance lifetime clamp: a dispatched
+Mission's <code>expires_at</code> is clamped to no more than this from its
+creation (<a href="#dispatch" class="auto internal xref">Section 7</a>).<a href="#section-5-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.17">
+<code>max_active</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.18">
+          <p id="section-5-2.18.1"><span class="bcp14">REQUIRED</span>. An integer. The maximum number of Missions dispatched from
+this template that may be <code>active</code> at once. A Dispatch that would
+exceed it is refused until an active instance terminates.<a href="#section-5-2.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.19">
+<code>dispatch_rate</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.20">
+          <p id="section-5-2.20.1"><span class="bcp14">REQUIRED</span>. A rate bound on Dispatch from this template per unit time.<a href="#section-5-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.21">
+<code>expires_at</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.22">
+          <p id="section-5-2.22.1"><span class="bcp14">REQUIRED</span>. The template's own expiry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).
+After it, the template dispatches nothing.<a href="#section-5-2.22.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.23">
+<code>review_cadence</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.24">
+          <p id="section-5-2.24.1"><span class="bcp14">REQUIRED</span>. The maximum age of the template's most recent human approval
+past which the Mission Issuer <span class="bcp14">MUST NOT</span> dispatch (<a href="#template-consent" class="auto internal xref">Section 6</a>).<a href="#section-5-2.24.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-5-3">The concrete values of <code>instance_lifetime</code>, <code>max_active</code>,
+<code>dispatch_rate</code>, and <code>review_cadence</code>, and the action-class mapping the
+prohibited-class rule needs (<a href="#prohibited-classes" class="auto internal xref">Section 8</a>), <span class="bcp14">MUST</span> be published
+in the Mission Deployment Profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-5-3" class="pilcrow">¶</a></p>
+<div id="template-hash">
+<section id="section-5.1">
+        <h3 id="name-template-integrity-anchor">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-template-integrity-anchor" class="section-name selfRef">Template integrity anchor</a>
+        </h3>
+<p id="section-5.1-1">The consented Mission Template is committed by a <code>template_hash</code>,
+computed with the issuance profile's integrity-anchor envelope
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.1-2.1">
+            <p id="section-5.1-2.1.1"><code>typ</code>: <code>mission-template</code>;<a href="#section-5.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.1-2.2">
+            <p id="section-5.1-2.2.1">hashed object: the Mission Template object above, canonicalized as
+the integrity-anchor envelope requires, so member order follows that
+canonicalization.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.1-3">It is an envelope anchor under the issuance profile's commitment
+mechanisms, which this document imports normatively.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.1-4"><code>template_hash</code> is to the template what <code>authority_hash</code> is to a
+Mission's Authority Set: the anchor over the consented object. It plays
+the same role the progressive profile's <code>ceiling_hash</code> plays for a
+consented authority ceiling
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>). A dispatched
+Mission commits its own <code>intent_hash</code> and <code>authority_hash</code> over its own
+Intent and final Authority Set (<a href="#dispatch" class="auto internal xref">Section 7</a>); the template commits the
+ceiling once, under <code>template_hash</code>. The Mission's anchors and the
+template's anchor are never merged.<a href="#section-5.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="template-lifecycle">
+<section id="section-5.2">
+        <h3 id="name-template-lifecycle">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-template-lifecycle" class="section-name selfRef">Template lifecycle</a>
+        </h3>
+<p id="section-5.2-1">A Mission Template has the issuance profile's Mission lifecycle
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), interpreted for a template:<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.2-2.1">
+            <p id="section-5.2-2.1.1"><code>active</code>: the template dispatches, subject to its bounds and review
+cadence;<a href="#section-5.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-2.2">
+            <p id="section-5.2-2.2.1"><code>revoked</code>: a human or administrator has retired the template; it
+dispatches nothing;<a href="#section-5.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-2.3">
+            <p id="section-5.2-2.3.1"><code>expired</code>: the template is past its <code>expires_at</code>; it dispatches
+nothing.<a href="#section-5.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.2-3">Revoking or expiring a template stops further dispatch. It does not
+retroactively terminate Missions already dispatched: each runs to its
+own clamped <code>expires_at</code> and is independently revocable
+(<a href="#instance-composition" class="auto internal xref">Section 10</a>). A deployment that needs a faster cutoff on
+outstanding instances uses a short <code>instance_lifetime</code> or revokes the
+instances directly, exactly as the issuance profile bounds an ordinary
+Mission's outstanding tokens.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="template-consent">
+<section id="section-6">
+      <h2 id="name-template-consent">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-template-consent" class="section-name selfRef">Template Consent</a>
+      </h2>
+<p id="section-6-1">Creating a Mission Template is itself a human approval event under the
+issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Its consent
+object is the Mission Template: the human consents to the ceiling, the
+dispatch policy, the allowed dispatchers and recipients, and the
+bounds, and the approval commits them under <code>template_hash</code>
+(<a href="#template-hash" class="auto internal xref">Section 5.1</a>), the anchor over the object consented to.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">Where Consent Evidence is claimed, the template-creation approval's
+disclosure is committed as that profile commits any disclosure
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>). The template
+is consented before any Mission exists, so, as the Consent Evidence
+profile already handles for an approval that commits no Mission, the
+disclosure and its evidence carry the Mission Issuer's <code>issuer</code> and the
+committed anchor and no Mission <code>id</code>.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">The consent disclosure <span class="bcp14">MUST</span> render, at minimum:<a href="#section-6-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6-4.1">
+          <p id="section-6-4.1.1">the Template Ceiling, as the maximum authority any dispatched Mission
+may reach;<a href="#section-6-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-4.2">
+          <p id="section-6-4.2.1">that instances issue at machine speed, by policy, with no
+per-instance human approval; and<a href="#section-6-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-4.3">
+          <p id="section-6-4.3.1">that the high-consequence classes (<a href="#prohibited-classes" class="auto internal xref">Section 8</a>) are never
+dispatched by policy and still require a fresh human decision.<a href="#section-6-4.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-6-5">A consent that does not render these is standing dispatch authority
+obtained by omission. A template the human did not knowingly consent to
+is not a Mission Template under this document.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">A Mission Template's consent is standing consent, and standing consent
+decays. The Mission Issuer <span class="bcp14">MUST NOT</span> dispatch from a template whose most
+recent human approval is older than the published <code>review_cadence</code>
+(<a href="#the-mission-template" class="auto internal xref">Section 5</a>): dispatch stops until a fresh human approval
+re-consents, or narrows, the template. The review approval is an
+ordinary template-creation approval; its disclosure <span class="bcp14">SHOULD</span> render the
+template's dispatch record since the prior review, so the reviewer sees
+the cycle they renew.<a href="#section-6-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="dispatch">
+<section id="section-7">
+      <h2 id="name-dispatch">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-dispatch" class="section-name selfRef">Dispatch</a>
+      </h2>
+<p id="section-7-1">A Dispatch instantiates an ordinary Mission from a Mission Template. It
+is submitted on the binding's existing Mission creation surface as a
+single authenticated back-channel request that references the template
+by <code>id</code> and carries the dispatch intent, and it is answered in one
+round trip. This document defines no new endpoint and no new
+Authorization Server metadata: dispatch is a non-interactive Mission
+creation under the pre-consented template, at the token endpoint under
+the grant type this document defines (<a href="#grant-type" class="auto internal xref">Section 7.2</a>).<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">Because the human decision was made once, at template creation, a
+Dispatch uses no Pushed Authorization Request, no front-channel
+authorization request, and no interactive consent surface, and the
+Mission Issuer never answers a Dispatch with <code>authorization_pending</code>:
+there is no pending human step to wait for. A deployment that needs a
+human in the loop for a given run does not dispatch it; it creates an
+ordinary Mission through a fresh approval.<a href="#section-7-2" class="pilcrow">¶</a></p>
+<p id="section-7-3">The Mission Issuer adjudicates a Dispatch in this order:<a href="#section-7-3" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-7-4">
+<li id="section-7-4.1">
+          <p id="section-7-4.1.1"><strong>Authenticate the Dispatcher.</strong> Resolve and authenticate the
+principal making the request.<a href="#section-7-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-4.2">
+          <p id="section-7-4.2.1"><strong>Authorize the Dispatcher.</strong> Verify the Dispatcher is in the
+template's <code>allowed_dispatchers</code>. Refuse a request from any other
+principal.<a href="#section-7-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-4.3">
+          <p id="section-7-4.3.1"><strong>Derive the instance Authority Set.</strong> Derive an Authority Set from
+the dispatch intent, and from the Dispatcher's authority proposal
+where one was submitted (<a href="#grant-type" class="auto internal xref">Section 7.2</a>), and bound it by the
+deployment's derivation
+policy, exactly as for any Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). This document adds no
+authority-derivation rule.<a href="#section-7-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-4.4">
+          <p id="section-7-4.4.1"><strong>Double intersection.</strong> The derived instance Authority Set <span class="bcp14">MUST</span> be a
+subset, under the issuance profile's subset rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), of <strong>both</strong> the
+deployment's derivation-policy ceiling <strong>and</strong> the Template Ceiling.
+Each surviving instance entry <span class="bcp14">MUST</span> be a subset of some <code>ceiling</code>
+entry. If no entry survives the intersection with the Template
+Ceiling, the Mission Issuer <span class="bcp14">MUST</span> refuse the Dispatch with
+<code>out_of_template_ceiling</code> (<a href="#denial-reasons" class="auto internal xref">Section 9</a>). Raising the ceiling
+is a new template consent, not a dispatch.<a href="#section-7-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-4.5">
+          <p id="section-7-4.5.1"><strong>Prohibited-class check.</strong> Apply the prohibited-class rule
+(<a href="#prohibited-classes" class="auto internal xref">Section 8</a>) to the surviving post-intersection set. If
+it would grant a high-consequence class, refuse the Dispatch with
+<code>dispatch_prohibited_class</code> (<a href="#denial-reasons" class="auto internal xref">Section 9</a>).<a href="#section-7-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-4.6">
+          <p id="section-7-4.6.1"><strong>Enforce the bounds.</strong> Refuse the Dispatch if it would exceed
+<code>max_active</code> or <code>dispatch_rate</code>, or if the instance's
+Mission-Issuer-established Subject or its Agent falls outside
+<code>allowed_recipients</code> (<a href="#the-mission-template" class="auto internal xref">Section 5</a>).<a href="#section-7-4.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-4.7">
+          <p id="section-7-4.7.1"><strong>Commit the instance.</strong> Commit an ordinary Mission whose Authority
+Set is the surviving set and whose:<a href="#section-7-4.7.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-4.7.2.1">
+              <p id="section-7-4.7.2.1.1"><code>approver</code> is the template's human approver, the accountable
+principal (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The Dispatcher
+is not the approver. The instance is rooted in the
+<code>approval_basis</code> authorization basis the issuance profile defines
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), with <code>type: "template"</code>:
+<code>consent_principal</code> is the template's human approver (equal to
+<code>approver</code>); <code>activation</code> carries the template's <code>id</code> (as
+<code>template_id</code>, the same value the Dispatch grant names
+<a href="#grant-type" class="auto internal xref">Section 7.2</a>), <code>template_version</code>, and <code>template_hash</code> (the
+<code>template</code> lineage member's fields, <a href="#template-member" class="auto internal xref">Section 7.1</a>), plus
+this Dispatch's <code>dispatch_event_id</code>; <code>activation_actor</code> is the
+Dispatcher, distinct from <code>consent_principal</code>; and
+<code>root_commitment</code> is <code>template_hash</code>. This makes the
+approver-of-record shift from a fresh human decision to policy
+adjudication under a prior human consent structured and flagged
+consistently across the family, superseding a bare
+policy-adjudicated marking. The <code>template</code> lineage member
+(<a href="#template-member" class="auto internal xref">Section 7.1</a>), present on every dispatched Mission and
+absent on an ordinarily approved one, remains the claim-carried
+record of which template and Dispatch Policy adjudicated the
+instance; <code>approval_basis</code> is the structured authorization-basis
+record, and the two are consistent by construction;<a href="#section-7-4.7.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-4.7.2.2">
+              <p id="section-7-4.7.2.2.1"><code>subject</code> is established as the issuance profile requires, never
+taken from Dispatcher input, and is within <code>allowed_recipients</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-7-4.7.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-4.7.2.3">
+              <p id="section-7-4.7.2.3.1"><code>intent_hash</code> and <code>authority_hash</code> are computed over the instance's
+own Intent and final Authority Set, never over the template; the
+template commits the ceiling under <code>template_hash</code>
+(<a href="#template-hash" class="auto internal xref">Section 5.1</a>);<a href="#section-7-4.7.2.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-4.7.2.4">
+              <p id="section-7-4.7.2.4.1"><code>expires_at</code> is clamped to the minimum of the dispatch intent's
+requested expiry, the template's <code>instance_lifetime</code> from creation,
+and the template's <code>expires_at</code>; and<a href="#section-7-4.7.2.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-4.7.2.5">
+              <p id="section-7-4.7.2.5.1"><code>template</code> lineage member is set (<a href="#template-member" class="auto internal xref">Section 7.1</a>).<a href="#section-7-4.7.2.5.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</li>
+      </ol>
+<p id="section-7-5">A Dispatch <span class="bcp14">MUST</span> be idempotent per dispatch event identifier. The
+Dispatcher supplies a dispatch event identifier with the request; a
+repeated request bearing an identifier the Mission Issuer has already
+committed returns the Mission it already committed, and instantiates no
+second Mission. This makes retry safe at machine speed and keeps
+<code>max_active</code> and <code>dispatch_rate</code> accounting exact. The dispatch event
+identifier is this grant's realization of the creation idempotency
+the expansion profile defines for the family's Mission-creating token
+exchanges (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-7-5" class="pilcrow">¶</a></p>
+<div id="template-member">
+<section id="section-7.1">
+        <h3 id="name-the-template-lineage-member">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-the-template-lineage-member" class="section-name selfRef">The template lineage member</a>
+        </h3>
+<p id="section-7.1-1">A dispatched Mission records a <code>template</code> lineage member, on both its
+<code>mission</code> claim and its Mission record, linking it to the Mission
+Template it was dispatched from:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7.1-2">
+          <dt id="section-7.1-2.1">
+<code>template</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-2.2">
+            <p id="section-7.1-2.2.1">An object carrying <code>id</code>, <code>issuer</code>, <code>template_version</code>,
+<code>template_hash</code>, and <code>dispatch_policy</code> (the policy <code>id</code> and
+<code>version</code>). Present on every dispatched Mission and absent on a
+Mission created by ordinary approval.<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-7.1-3">Consistent with the issuance profile's open-<code>mission</code>-claim rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the <code>template</code> member is
+lineage and audit context only: it <span class="bcp14">MUST NOT</span> grant or widen authority,
+and a consumer that does not understand it <span class="bcp14">MUST</span> ignore it. The
+instance's authority comes only from its own <code>authority_hash</code>. The
+<code>template</code> member exists so the dispatch is re-checkable in audit
+(<a href="#audit-linkage" class="auto internal xref">Section 11</a>).<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="grant-type">
+<section id="section-7.2">
+        <h3 id="name-grant-type">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-grant-type" class="section-name selfRef">Grant Type</a>
+        </h3>
+<p id="section-7.2-1">This document binds Dispatch to the token endpoint through a
+dedicated grant type, adding no new endpoint. A Dispatcher requests an
+instance with:<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7.2-2">
+          <dt id="section-7.2-2.1">
+<code>grant_type</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-2.2">
+            <p id="section-7.2-2.2.1"><span class="bcp14">REQUIRED</span>. <code>urn:ietf:params:oauth:grant-type:mission-dispatch</code>.<a href="#section-7.2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-2.3">
+<code>template_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-2.4">
+            <p id="section-7.2-2.4.1"><span class="bcp14">REQUIRED</span>. The Mission Template's <code>id</code> (<a href="#the-mission-template" class="auto internal xref">Section 5</a>).<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-2.5">
+<code>mission_intent</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-2.6">
+            <p id="section-7.2-2.6.1"><span class="bcp14">REQUIRED</span>. The dispatch submission, in the issuance profile's
+Mission Intent Submission envelope shape
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): its <code>intent</code> is the
+dispatch intent from which the instance Authority Set is derived
+(<a href="#dispatch" class="auto internal xref">Section 7</a>), and its <span class="bcp14">OPTIONAL</span> <code>evidence</code> array carries Intent
+Submission Evidence under that profile's dispatch, refusal, and
+never-authority rules.<a href="#section-7.2-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-2.7">
+<code>authorization_details</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-2.8">
+            <p id="section-7.2-2.8.1"><span class="bcp14">OPTIONAL</span>. The Dispatcher's authority proposal: the standard
+<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> parameter carried on the same token request, itself
+ordinary <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> token-request usage. This parameter is this
+grant's proposal carriage, replacing the issuance profile's
+PAR-only carriage rule; that profile's validation, derivation,
+recording, and hashing semantics apply unchanged
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). It is a proposal, never
+authority: it bounds the derivation of step 3 of <a href="#dispatch" class="auto internal xref">Section 7</a> in
+narrowing mode, and the double intersection of step 4 applies to
+the result unchanged, so a proposal narrows the instance and never
+widens it beyond the Template Ceiling. Absent a proposal, the
+instance derives from the dispatch intent alone. An instance
+created from a Dispatch carrying one records <code>proposed_authority</code>
+and <code>proposal_hash</code>.<a href="#section-7.2-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-2.9">
+<code>dispatch_event_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-2.10">
+            <p id="section-7.2-2.10.1"><span class="bcp14">REQUIRED</span>. The dispatch event identifier that makes the Dispatch
+idempotent (<a href="#dispatch" class="auto internal xref">Section 7</a>). A redemption bearing an identifier the
+Mission Issuer has already committed <span class="bcp14">MUST</span> return the previously
+committed instance and <span class="bcp14">MUST NOT</span> derive a second Mission.<a href="#section-7.2-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-7.2-3">The Dispatcher authenticates at the token endpoint with its own client
+credential; the Mission Issuer authorizes it against the template's
+<code>allowed_dispatchers</code> as step 2 of <a href="#dispatch" class="auto internal xref">Section 7</a> requires. This grant
+performs exactly one derivation per <code>dispatch_event_id</code>: the
+adjudication order of <a href="#dispatch" class="auto internal xref">Section 7</a> runs once for a new identifier, and
+a repeated identifier is gated to the previously committed instance
+rather than a fresh derivation. This is the single gated derivation
+this document permits per dispatch event.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-4">On success the Mission Issuer responds with an access token bound to
+the instance, sender-constrained to the Dispatcher's key:<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7.2-5">
+          <dt id="section-7.2-5.1">
+<code>access_token</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-5.2">
+            <p id="section-7.2-5.2.1"><span class="bcp14">REQUIRED</span>. A Mission-bound access token for the dispatched instance.<a href="#section-7.2-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-5.3">
+<code>token_type</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-5.4">
+            <p id="section-7.2-5.4.1"><span class="bcp14">REQUIRED</span>. The token type of the issued access token, reflecting the
+sender-constraining mechanism in use (<code>DPoP</code> where the deployment
+uses DPoP).<a href="#section-7.2-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-5.5">
+<code>expires_in</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-5.6">
+            <p id="section-7.2-5.6.1"><span class="bcp14">REQUIRED</span>. The access token's lifetime in seconds.<a href="#section-7.2-5.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-5.7">
+<code>mission_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-5.8">
+            <p id="section-7.2-5.8.1"><span class="bcp14">REQUIRED</span>. The dispatched Mission's identifier.<a href="#section-7.2-5.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-5.9">
+<code>authorization_details</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-5.10">
+            <p id="section-7.2-5.10.1"><span class="bcp14">REQUIRED</span>. The instance's effective Authority Set.<a href="#section-7.2-5.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-7.2-6">A Dispatch refused under <a href="#dispatch" class="auto internal xref">Section 7</a> or <a href="#prohibited-classes" class="auto internal xref">Section 8</a> carries
+the OAuth <code>error</code> member together with <code>mission_denial_reason</code>
+(<a href="#denial-reasons" class="auto internal xref">Section 9</a>), exactly as any other adjudication denial in this
+family.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="prohibited-classes">
+<section id="section-8">
+      <h2 id="name-prohibited-classes">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-prohibited-classes" class="section-name selfRef">Prohibited Classes</a>
+      </h2>
+<p id="section-8-1">Some authority classes are too consequential to activate without a
+human at the moment of the decision. A Dispatch <span class="bcp14">MUST NOT</span> instantiate a
+Mission that grants authority in any of these classes, even when the
+class is within the Template Ceiling:<a href="#section-8-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-2.1">
+          <p id="section-8-2.1.1">the irreversible, external-commitment, or privileged-administration
+class;<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.2">
+          <p id="section-8-2.2.1">authority satisfying the runtime profile's external-communication
+predicate, the exfiltration leg
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); or<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.3">
+          <p id="section-8-2.3.1">cross-domain authority.<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-8-3">This is the prohibited set the progressive profile holds back from
+policy adjudication (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>),
+applied here to dispatch. To make the rule testable, a deployment <span class="bcp14">MUST</span>
+publish in the Mission Deployment Profile a mapping from its action
+identifiers to the runtime profile's action classes
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), or an equivalent declared
+classification.<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">The deployment's configured dispatch-prohibited action set <span class="bcp14">MUST</span> cover
+every action the published mapping classifies as irreversible,
+external-commitment, or privileged-administration, as satisfying the
+runtime profile's external-communication predicate
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), or as cross-domain. A
+configured set narrower than the mapping is nonconformant: it lets a
+Dispatch confer a class the deployment's own mapping already
+identifies as prohibited, which is exactly the outcome this section
+forbids.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5">A Dispatch that would grant a prohibited class is refused with
+<code>dispatch_prohibited_class</code> (<a href="#denial-reasons" class="auto internal xref">Section 9</a>). Unlike the
+progressive profile, which falls back to a fresh human approval in
+band, a Dispatch has no interactive surface to escalate on: the human
+path is an ordinary Mission created through a fresh approval
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), requested out of band. The
+Dispatch Policy <span class="bcp14">MUST NOT</span> dispatch a Mission bearing a prohibited class.<a href="#section-8-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="denial-reasons">
+<section id="section-9">
+      <h2 id="name-the-denial-reasons">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-the-denial-reasons" class="section-name selfRef">The Denial Reasons</a>
+      </h2>
+<p id="section-9-1">This document defines a closed set of dispatch denial reasons, carried
+in the shared <code>mission_denial_reason</code> member that the expansion profile
+established for adjudication denials
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>):<a href="#section-9-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-2">
+        <dt id="section-9-2.1">
+<code>out_of_template_ceiling</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-2.2">
+          <p id="section-9-2.2.1">The dispatched instance's Authority Set is not within the Template
+Ceiling (<a href="#dispatch" class="auto internal xref">Section 7</a>), so it cannot be instantiated by policy.
+Raising the ceiling requires a fresh human template consent.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-2.3">
+<code>dispatch_prohibited_class</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-2.4">
+          <p id="section-9-2.4.1">The dispatched instance would grant a high-consequence class
+(<a href="#prohibited-classes" class="auto internal xref">Section 8</a>), which a Dispatch never auto-approves. The
+authority is available only through a fresh human approval.<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-9-3">A consumer that does not implement this document treats either value as
+it treats any unrecognized reason code: the Dispatch stays denied, with
+no further semantics.<a href="#section-9-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="instance-composition">
+<section id="section-10">
+      <h2 id="name-instance-composition">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-instance-composition" class="section-name selfRef">Instance Composition</a>
+      </h2>
+<p id="section-10-1">A dispatched Mission is an ordinary Mission. Nothing about its origin
+makes it special to the rest of the family; the template bounded its
+creation and then steps out of the way.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10-2.1">
+          <p id="section-10-2.1.1"><strong>Containable.</strong> A dispatched Mission is subject to Mission
+Containment (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>): its
+effective authority can be narrowed by event-triggered containment
+exactly as any Mission's can.<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.2">
+          <p id="section-10-2.2.1"><strong>Continuable.</strong> A dispatched Mission's work continues under the
+continuation profile's transports
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>). Async
+delegation is the natural scheduled-dispatch path: a scheduled run
+dispatches an instance and carries it forward on that transport.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.3">
+          <p id="section-10-2.3.1"><strong>Expandable, but not by the template.</strong> A dispatched Mission <span class="bcp14">MAY</span> be
+expanded through a human-approved expansion
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>). Such an expansion
+is <strong>not</strong> bound by the Template Ceiling: it is a fresh human consent
+that supersedes the instance, and its successor derives its authority
+from that new approval, not from the template. The successor
+therefore <span class="bcp14">MUST NOT</span> carry the <code>template</code> lineage member
+(<a href="#template-member" class="auto internal xref">Section 7.1</a>): it was not dispatched, and an auditor
+re-running the ceiling check (<a href="#audit-linkage" class="auto internal xref">Section 11</a>) <span class="bcp14">MUST NOT</span> be led to
+test a freshly consented successor against the template.<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.4">
+          <p id="section-10-2.4.1"><strong>Child-delegable within the ceiling.</strong> A dispatched Mission <span class="bcp14">MAY</span>
+create Child Missions
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). As a
+consequence of the child-delegation profile's strict-subset rule, a
+Child Mission is a strict subset of the instance's Authority Set,
+which is itself within the Template Ceiling, so the whole delegation
+tree stays within the ceiling without any new rule here.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="audit-linkage">
+<section id="section-11">
+      <h2 id="name-audit-linkage">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-audit-linkage" class="section-name selfRef">Audit Linkage</a>
+      </h2>
+<p id="section-11-1">A dispatched Mission is re-checkable in audit with no per-dispatch human
+in the record, because the human is at the template. For a dispatched
+Mission an authorized auditor can:<a href="#section-11-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-2.1">
+          <p id="section-11-2.1.1">recompute <code>template_hash</code>, the envelope anchor of <a href="#template-hash" class="auto internal xref">Section 5.1</a>,
+from the stored Mission Template object and match it to the committed
+anchor the template-creation consent evidence carries in its
+<code>source_hashes</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>;
+that disclosure's own <code>rendering_template_digest</code> commits the
+rendering template, a different object) and to the instance's
+<code>template</code> lineage member (<a href="#template-member" class="auto internal xref">Section 7.1</a>), so the ceiling the
+instance was checked against is the one the human consented to;<a href="#section-11-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.2">
+          <p id="section-11-2.2.1">re-run the subset check of the instance's Authority Set against the
+Template Ceiling (<a href="#dispatch" class="auto internal xref">Section 7</a>), confirming the instance is within the
+ceiling; and<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.3">
+          <p id="section-11-2.3.1">verify that the instance's <code>approver</code> equals the template's approver
+at the recorded <code>template_version</code>, so the accountable principal is
+the human who consented to that version of the template.<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-11-3">Each Dispatch <span class="bcp14">MUST</span> record the Dispatch Policy <code>id</code> and <code>version</code> that
+instantiated the Mission, and the dispatch event identifier
+(<a href="#dispatch" class="auto internal xref">Section 7</a>), so the policy chain the architecture's Approve verb
+requires stays re-checkable
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>). A deployment <span class="bcp14">MUST</span>
+retain the consented template, <code>template_hash</code>, and dispatch records for
+each instance's audit horizon
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so every dispatch is
+verifiable to have stayed within the consented template.<a href="#section-11-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-12">
+      <h2 id="name-security-considerations">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-12-1">The issuance profile's security considerations apply in full. This
+document adds the dispatch surface.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12-2.1">
+          <p id="section-12-2.1.1"><strong>Standing consent decays.</strong> A template consented once and dispatched
+from indefinitely is a standing grant with a calendar. The bounds
+(<code>instance_lifetime</code>, <code>max_active</code>, <code>dispatch_rate</code>) cap breadth and
+rate, not duration; the <code>review_cadence</code> (<a href="#template-consent" class="auto internal xref">Section 6</a>) is the
+temporal bound, and dispatch stops past it until a human re-consents.
+The tells of decay are checkable from the dispatch record: reviews
+that never narrow the ceiling, ceilings that only grow, and a
+<code>dispatch_rate</code> raised without a task that needs it. A review that
+cannot cite the cycle it renews has not reviewed it.<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.2">
+          <p id="section-12-2.2.1"><strong>A compromised Dispatcher is bounded.</strong> A Dispatcher is authenticated
+and is not an Approver: it can trigger instantiation only within the
+template a human approved. A compromised Dispatcher cannot exceed the
+Template Ceiling (double intersection, <a href="#dispatch" class="auto internal xref">Section 7</a>), cannot dispatch
+a high-consequence class (<a href="#prohibited-classes" class="auto internal xref">Section 8</a>), and cannot outrun
+<code>max_active</code> or <code>dispatch_rate</code>. Its blast radius is therefore bounded
+to no more than the human consented to when approving the template,
+and every instance it dispatched is independently gated, revocable,
+and enforced per action by the runtime layer
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-12-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.3">
+          <p id="section-12-2.3.1"><strong>The Dispatch Policy is authority-bearing governance.</strong> A
+misconfigured policy can over-instantiate within the ceiling, so it is
+reviewed and versioned like other approval policy, and its <code>id</code> and
+<code>version</code> are part of every dispatch record (<a href="#audit-linkage" class="auto internal xref">Section 11</a>).<a href="#section-12-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.4">
+          <p id="section-12-2.4.1"><strong>The template bounds, and does not eliminate, standing exposure.</strong> A
+deployment <span class="bcp14">SHOULD</span> pair a Mission Template with short
+<code>instance_lifetime</code> values, constraint-bounded ceilings, and runtime
+enforcement, so the authority any single dispatched Mission actively
+holds stays narrow.<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-13">
+      <h2 id="name-privacy-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-13-1">The Template Ceiling discloses, at template-consent time, the full
+envelope every future dispatch may draw within, which can reveal more
+about the anticipated recurring task than any single dispatched
+Mission's Authority Set. The <code>template</code> lineage member correlates every
+instance dispatched from one template across distinct Missions. Access
+to the template, its ceiling, and the dispatch records <span class="bcp14">SHOULD</span> be scoped
+to parties with a governance need. The issuance profile's Mission
+Identifier correlation considerations apply to each dispatched Mission.<a href="#section-13-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conformance">
+<section id="section-14">
+      <h2 id="name-conformance">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-14-1">A Mission Issuer that claims <strong>Dispatch from a Mission Template</strong> is a
+conforming issuance-profile Mission Issuer
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and <span class="bcp14">MUST</span>:<a href="#section-14-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14-2.1">
+          <p id="section-14-2.1.1">record a consented Mission Template with the required members and
+commit it under <code>template_hash</code> with <code>typ</code> <code>mission-template</code>
+(<a href="#the-mission-template" class="auto internal xref">Section 5</a>, <a href="#template-hash" class="auto internal xref">Section 5.1</a>), and treat template
+creation as a human approval event whose disclosure renders the
+ceiling, the no-per-instance-approval fact, and the prohibited-class
+reservation (<a href="#template-consent" class="auto internal xref">Section 6</a>);<a href="#section-14-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-2.2">
+          <p id="section-14-2.2.1">adjudicate a Dispatch in the order of <a href="#dispatch" class="auto internal xref">Section 7</a>: authenticate and
+authorize the Dispatcher, derive the instance Authority Set,
+double-intersect it with the derivation-policy ceiling and the
+Template Ceiling, apply the prohibited-class check, enforce the
+bounds, and commit an ordinary Mission whose <code>approver</code> is the
+template's human approver and whose anchors are over the instance's
+own Intent and Authority Set;<a href="#section-14-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-2.3">
+          <p id="section-14-2.3.1">record every dispatched Mission's <code>approval_basis</code> with <code>type:
+"template"</code>: <code>consent_principal</code> the template's human approver,
+<code>activation</code> the template lineage and this Dispatch's
+<code>dispatch_event_id</code>, <code>activation_actor</code> the Dispatcher, and
+<code>root_commitment</code> the <code>template_hash</code> (<a href="#dispatch" class="auto internal xref">Section 7</a>);<a href="#section-14-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-2.4">
+          <p id="section-14-2.4.1">refuse a Dispatch outside the ceiling with <code>out_of_template_ceiling</code>
+and a Dispatch of a prohibited class with <code>dispatch_prohibited_class</code>
+(<a href="#denial-reasons" class="auto internal xref">Section 9</a>);<a href="#section-14-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-2.5">
+          <p id="section-14-2.5.1">make every Dispatch idempotent per dispatch event identifier
+(<a href="#dispatch" class="auto internal xref">Section 7</a>);<a href="#section-14-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-2.6">
+          <p id="section-14-2.6.1">answer a Dispatch in one authenticated back-channel round trip, using
+no PAR, no interactive consent surface, and never
+<code>authorization_pending</code> (<a href="#dispatch" class="auto internal xref">Section 7</a>);<a href="#section-14-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-2.7">
+          <p id="section-14-2.7.1">record the <code>template</code> lineage member on the dispatched Mission
+(<a href="#template-member" class="auto internal xref">Section 7.1</a>);<a href="#section-14-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-2.8">
+          <p id="section-14-2.8.1">stop dispatch past the published <code>review_cadence</code> until a fresh human
+approval (<a href="#template-consent" class="auto internal xref">Section 6</a>); and<a href="#section-14-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-2.9">
+          <p id="section-14-2.9.1">publish the bounds and the action-class mapping in the Mission
+Deployment Profile (<a href="#the-mission-template" class="auto internal xref">Section 5</a>, <a href="#prohibited-classes" class="auto internal xref">Section 8</a>)
+and retain the audit linkage of <a href="#audit-linkage" class="auto internal xref">Section 11</a>.<a href="#section-14-2.9.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-14-3">A Resource Server requires no new behavior: it enforces a dispatched
+Mission's tokens exactly as it enforces any Mission-bound token, and
+treats the <code>template</code> member, if it reads it at all, as audit context
+it <span class="bcp14">MUST NOT</span> use to grant authority (<a href="#template-member" class="auto internal xref">Section 7.1</a>).<a href="#section-14-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana">
+<section id="section-15">
+      <h2 id="name-iana-considerations">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-15-1">This document requests registration of the following value in the
+"OAuth URI" registry established by <span>[<a href="#RFC6755" class="cite xref">RFC6755</a>]</span>:<a href="#section-15-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-15-2">
+        <dt id="section-15-2.1">URN:</dt>
+        <dd style="margin-left: 1.5em" id="section-15-2.2">
+          <p id="section-15-2.2.1"><code>urn:ietf:params:oauth:grant-type:mission-dispatch</code><a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-15-2.3">Common Name:</dt>
+        <dd style="margin-left: 1.5em" id="section-15-2.4">
+          <p id="section-15-2.4.1">Mission Dispatch Grant Type<a href="#section-15-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-15-2.5">Change Controller:</dt>
+        <dd style="margin-left: 1.5em" id="section-15-2.6">
+          <p id="section-15-2.6.1">IETF<a href="#section-15-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-15-2.7">Specification Document:</dt>
+        <dd style="margin-left: 1.5em" id="section-15-2.8">
+          <p id="section-15-2.8.1">this document, <a href="#grant-type" class="auto internal xref">Section 7.2</a><a href="#section-15-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-15-3">This is a proposed registration. The value is used under the reserved
+<code>urn:ietf:params:oauth</code> arc by implementations of this document in
+advance of registration completing; this document is the specification
+that names and defines it.<a href="#section-15-3" class="pilcrow">¶</a></p>
+<p id="section-15-4">Beyond that registration, this document requests no further IANA
+action. Following the restraint of the sibling profiles:<a href="#section-15-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-15-5.1">
+          <p id="section-15-5.1.1"><code>template_hash</code> is a Mission integrity anchor whose <code>typ</code>,
+<code>mission-template</code>, follows the issuance profile's collision-resistant
+<code>typ</code> convention (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and requires
+no registration;<a href="#section-15-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-5.2">
+          <p id="section-15-5.2.1">the <code>template</code> member of the <code>mission</code> claim (<a href="#template-member" class="auto internal xref">Section 7.1</a>) is
+carried inside the already-open <code>mission</code> claim and needs no separate
+registration;<a href="#section-15-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-5.3">
+          <p id="section-15-5.3.1"><code>out_of_template_ceiling</code> and <code>dispatch_prohibited_class</code> are
+requested as registrations in the expansion profile's
+Mission Denial Reasons registry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), each with its
+semantics as defined in this document and Reference this document;
+and<a href="#section-15-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-5.4">
+          <p id="section-15-5.4.1">the Mission Template's type identifier,
+<code>application/mission-template+json</code>, is used by local agreement
+pending registration; an audit or transparency profile registers the
+object by that value.<a href="#section-15-5.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-16">
+      <h2 id="name-references">
+<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-16.1">
+        <h3 id="name-normative-references">
+<a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6755">[RFC6755]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span> and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"An IETF URN Sub-Namespace for OAuth"</span>, <span class="seriesInfo">RFC 6755</span>, <span class="seriesInfo">DOI 10.17487/RFC6755</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6755">https://www.rfc-editor.org/rfc/rfc6755</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-16.2">
+        <h3 id="name-informative-references">
+<a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-continuation">[I-D.draft-mcguinness-oauth-mission-continuation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Continuation: Authorization Continuity for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Progressive Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
+work and expresses, in family terms, a define-a-template-once,
+dispatch-per-run lifecycle: one considered human consent to a ceiling
+in place of a fresh approval at every machine-speed run.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
