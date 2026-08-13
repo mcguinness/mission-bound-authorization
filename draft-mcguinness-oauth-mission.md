@@ -380,8 +380,9 @@ adopts the Mission model without standing up a GNAP grant endpoint or
 migrating its clients to it. Where a deployment starts from GNAP
 rather than from OAuth 2.0's authorization code grant, the Mission
 model, a durable, approval-anchored, integrity-bound task object
-gating derivation, is a candidate binding onto that substrate; this
-document does not define one.
+gating derivation, is the OAuth-native instantiation of a
+binding-neutral contextual-governance kernel that admits a candidate
+binding onto that substrate; this document does not define one.
 
 ## Capability-System Prior Art
 
@@ -503,9 +504,9 @@ profiles:
   Signals {{I-D.draft-mcguinness-oauth-mission-signals}}.
 
 A deployment implements this document without any of them. A
-substrate-neutral statement of the Mission model, generalizing it
-across non-OAuth authorization substrates, is specified separately
-and is out of scope for this document.
+binding-neutral contextual-governance kernel, of which this
+document's Mission model is the OAuth-native instantiation, is
+specified separately and is out of scope for this document.
 
 Remaining future work, not yet specified, includes:
 
