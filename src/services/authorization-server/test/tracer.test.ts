@@ -155,10 +155,13 @@ describe("M1 tracer slice", () => {
     const challenge = Buffer.from(
       await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
     ).toString("base64url");
+    // @spec mission#submission-via-par — the wire value is the Submission envelope.
     const intent = JSON.stringify({
-      goal: "Pay Acme invoices for Q3",
-      resources: [CANONICAL_RESOURCE],
-      expires_at: "2027-01-01T00:00:00Z",
+      intent: {
+        goal: "Pay Acme invoices for Q3",
+        resources: [CANONICAL_RESOURCE],
+        expires_at: "2027-01-01T00:00:00Z",
+      },
     });
     const authorizationDetails = JSON.stringify([
       {

@@ -146,8 +146,9 @@ const authority = (actions: string[]) => [
   },
 ];
 
+// @spec mission#submission-via-par — the wire value is the Submission envelope.
 const intentJson = (goal: string, _actions: string[]): string =>
-  JSON.stringify({ goal, resources: [RESOURCE], expires_at: FAR_EXP });
+  JSON.stringify({ intent: { goal, resources: [RESOURCE], expires_at: FAR_EXP } });
 
 /**
  * Full PAR -> interactive approval -> code -> token dance yielding an ACTIVE
@@ -308,6 +309,26 @@ describe("expansion wire: NON-WIDENING request is REFUSED (@spec expansion#nothi
     const after = as.kernel.get(pred.missionId);
     expect(after?.state).toBe("active");
     expect(after?.derivation_count).toBe(derivationCountBefore);
+  });
+});
+
+describe("expansion wire: Submission envelope (@spec mission#submission-via-par, issue #506)", () => {
+  it("refuses the retired bare-Intent mission_intent shape (the exchange carries the Submission envelope)", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const res = await tokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: pred.accessToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      // The pre-envelope bare shape, byte-for-byte what intentJson used to emit.
+      mission_intent: JSON.stringify({ goal: "Widen", resources: [RESOURCE], expires_at: FAR_EXP }),
+      authorization_details: JSON.stringify(authority(["payments:invoice.read", "payments:remittance.send"])),
+      creation_request_id: crypto.randomUUID(),
+    });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("bare Mission Intent shape");
   });
 });
 

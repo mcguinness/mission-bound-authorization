@@ -113,8 +113,9 @@ const authority = (actions: string[]) => [
   },
 ];
 
+// @spec mission#submission-via-par — the wire value is the Submission envelope.
 const intentJson = (goal: string): string =>
-  JSON.stringify({ goal, resources: [RESOURCE], expires_at: FAR_EXP });
+  JSON.stringify({ intent: { goal, resources: [RESOURCE], expires_at: FAR_EXP } });
 
 /** Full PAR -> approval -> code -> token dance: an ACTIVE Mission + its
  *  DPoP-bound (dpopKeys) Mission ACCESS token (parent or predecessor role). */
