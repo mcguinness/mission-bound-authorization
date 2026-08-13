@@ -2633,6 +2633,13 @@ reclassification, not by a stable document absorbing a dependency.
 : Normative requirements on any further binding of the model; the
   existing bindings and the core are unchanged by it.
 
+`mission-aam`:
+: Experimental sketch. Cloudflare's Agent Access Model realized on
+  the family: the six AAM components map onto issuance, the PDP, the
+  mediated harness, Containment, Mission Templates, and the evidence
+  join, and the grant review loop is deliberately not adopted. It
+  defines no binding and no new mechanism.
+
 **Approval time:**
 
 `mission-shaping`:

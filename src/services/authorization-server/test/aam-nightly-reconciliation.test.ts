@@ -3,7 +3,7 @@
  * in Mission vocabulary and driven end-to-end against the LIVE stack: the real
  * AS over HTTP, the OpenFGA-backed PDP, the real payments PEP, the real egress
  * gate, and the real console-bff activity-log join. Each `it()` is one AAM step;
- * the AAM -> Mission mapping is narrated in the names and comments. See AAM.md.
+ * the AAM -> Mission mapping is narrated in the names and comments. See notes/AAM.md.
  *
  * AAM component            -> Mission realization exercised here
  *   Task Template + ceiling ->  oauth-mission-template + POST /templates
@@ -116,7 +116,7 @@ let seq = 0;
 
 // The harness egress scope statement: inference_api is mediated to a single
 // destination; transport in_memory forces containment_claim: "none" (the honest
-// downgrade; see AAM.md). The gate itself is built in step 4, once the
+// downgrade; see notes/AAM.md). The gate itself is built in step 4, once the
 // dispatched Mission id exists.
 const SCOPE_STATEMENT = buildScopeStatement({
   isolation_mechanism: "in-process AAM reference demo (no isolation boundary)",
