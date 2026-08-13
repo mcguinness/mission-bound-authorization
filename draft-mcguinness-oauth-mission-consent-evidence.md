@@ -254,6 +254,15 @@ This profile separates three artifacts:
 Only the approved Mission grants authority. The disclosure and evidence
 objects prove the approval surface and are audit artifacts.
 
+This profile renders and records the approved semantic Intent, never
+the inbound Mission Intent Submission envelope: Intent Submission
+Evidence presented at admission
+({{I-D.draft-mcguinness-oauth-mission}}) is not ingested into the
+disclosure or the Consent Evidence object, and the verified facts it
+yields land on the Mission record's `submission_evidence`. Material
+verified provenance reaches the Approver as rendered facts, not as
+embedded artifacts.
+
 # Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}

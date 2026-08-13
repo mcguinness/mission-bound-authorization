@@ -486,11 +486,14 @@ endpoint's UMA grant, and this binding defines no new endpoint or
 parameter.
 
 A Mission Intent claim token is a JWT whose payload carries a
-`mission_intent` claim: a Mission Intent object as the issuance
-profile defines it, under that profile's syntactic rules (the object
-is closed at the top level, the authorization server MUST bound its
-size and array lengths, and it is untrusted client input, never
-authority). The payload MAY additionally carry an
+`mission_intent` claim: a Mission Intent Submission envelope as the
+issuance profile defines it, `intent` plus OPTIONAL `evidence`, under
+that profile's syntactic and Intent Submission Evidence rules (the
+envelope and the Intent are both closed at the top level, the
+authorization server MUST bound size, array lengths, evidence entry
+count, and evidence verification cost, presented evidence is
+dispatched by type and refused when unsupported or failing, and the
+submission is untrusted client input, never authority). The payload MAY additionally carry an
 `authorization_details` claim: the client's authority proposal, an
 array of `authorization_details` objects. This claim is this
 binding's proposal carriage, replacing the issuance profile's

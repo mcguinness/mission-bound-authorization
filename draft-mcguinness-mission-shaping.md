@@ -259,8 +259,10 @@ Mission requester:
 : The component or user that supplies the task request to be shaped.
 
 Mission Intent proposal:
-: The candidate `mission_intent` object the shaper emits for validation
-  and approval under the issuance profile.
+: The candidate Mission Intent object the shaper emits for validation
+  and approval under the issuance profile. The requesting client
+  submits it as the `intent` member of that profile's Mission Intent
+  Submission envelope.
 
 Capability source:
 : A resource-owning catalog, metadata endpoint, policy service, or other
@@ -406,8 +408,9 @@ resolve those details.
 
 # Mission Intent Construction {#mission-intent-proposal}
 
-A Mission Intent proposal MUST satisfy the syntactic requirements of the
-issuance profile's `mission_intent` object
+A Mission Intent proposal MUST satisfy the syntactic requirements of
+the issuance profile's Mission Intent object, the `intent` member of
+its `mission_intent` Submission envelope
 ({{I-D.draft-mcguinness-oauth-mission}}):
 
 - a `goal`;
@@ -922,10 +925,16 @@ retry.
 Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} defines a `mission_intent`
 parameter carried inside a Pushed Authorization Request (PAR)
-{{RFC9126}}. The Mission Intent the shaper produced is the value of that
-parameter; an authority proposal the shaper produced is the value of
-the standard `authorization_details` parameter pushed alongside it
-({{I-D.draft-mcguinness-oauth-mission}}). The Authorization Server {{RFC6749}} acts as the Mission
+{{RFC9126}}, whose value is that profile's Mission Intent Submission
+envelope. The Mission Intent the shaper produced is the envelope's
+`intent` member; an authority proposal the shaper produced is the
+value of the standard `authorization_details` parameter pushed
+alongside it ({{I-D.draft-mcguinness-oauth-mission}}). Intent
+Submission Evidence in the envelope's `evidence` array binds the
+exact `intent_hash` of the submitted Intent: evidence obtained for an
+earlier candidate does not admit a re-shaped Intent, so a shaping
+pass that changes the Intent needs evidence for the Intent it
+actually submits ({{I-D.draft-mcguinness-oauth-mission}}). The Authorization Server {{RFC6749}} acts as the Mission
 Issuer: it validates, narrows, renders the consent disclosure, records
 the approval event, and derives an Authority Set
 ({{I-D.draft-mcguinness-oauth-mission}}).
@@ -938,7 +947,8 @@ MAY also convey a `shaping_evidence_hash` so the Mission record can cite
 the evidence ({{evidence-hash}}).
 
 Because the issuance profile rejects
-an unrecognized top-level Mission Intent member
+an unrecognized top-level member of both the Submission envelope and
+the Mission Intent
 ({{I-D.draft-mcguinness-oauth-mission}}), the hash is not carried inside
 `mission_intent`; a deployment conveys it as a separate PAR {{RFC9126}}
 request parameter it registers (for example, a `shaping_evidence_hash`
