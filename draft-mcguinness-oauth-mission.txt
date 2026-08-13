@@ -95,7 +95,8 @@ Table of Contents
    2.  Conventions and Terminology
    3.  Overview
      3.1.  Principal Model
-     3.2.  Protocol Flow
+     3.2.  Authority Sources
+     3.3.  Protocol Flow
    4.  Mission Intent
      4.1.  Submission via PAR
      4.2.  The Authority Proposal
@@ -155,7 +156,8 @@ Table of Contents
      17.1.  Mission Identifier Correlation
      17.2.  Token Payload Disclosure
      17.3.  Intent Retention and Anchor Disclosure
-     17.4.  Mission Record and Evidence Access
+     17.4.  Third-Party Data Subjects
+     17.5.  Mission Record and Evidence Access
    18. IANA Considerations
      18.1.  OAuth Parameters Registration
      18.2.  OAuth Extensions Error Registration
@@ -365,13 +367,16 @@ Table of Contents
 1.7.  Applicability
 
    This profile targets OAuth deployments where authority serves a
-   durable, user-approved task that spans more than one token, request,
-   or audience: an agent pursuing a multi-step objective on a user's
+   durable, approved task that spans more than one token, request, or
+   audience: an agent pursuing a multi-step objective on a user's
    behalf, or a workflow whose audit must join activity across hops on a
    shared task.  It is not intended for, and adds cost without benefit
-   to, single-request user flows, machine-to-machine service
-   credentials, or short-lived authorizations where the credential's
-   lifetime is the task's lifetime; those use OAuth unchanged.
+   to, single-request user flows and short-lived authorizations where
+   the credential's lifetime is the task's lifetime, ordinary machine-
+   to-machine service credentials among them; those use OAuth unchanged.
+   The boundary is that lifetime equality, not the absence of a human: a
+   workload's durable multi-step task is in scope as a service-owned
+   Mission (Section 3.2).
 
    A Mission SHOULD be scoped to a concrete task, not to an agent's
    whole lifetime.  A deployment SHOULD prefer narrow, per-task
@@ -519,14 +524,14 @@ Table of Contents
    All JSON shown in this document is non-normative and illustrative;
    the member definitions in the surrounding text are authoritative.
 
-   Agent (Client):  The OAuth client acting on a user's behalf,
+   Agent (Client):  The OAuth client acting for the Mission's Subject,
       identified by client_id.  Agent identity is established per
       [I-D.draft-klrc-aiagent-auth] or ordinary OAuth client
       authentication.
 
-   Subject:  The user or system on whose behalf the Mission is approved,
-      identified by an (iss, sub) pair and carried in derived tokens'
-      sub claim.
+   Subject:  The user, workload, or organizational principal on whose
+      behalf the Mission is approved (Section 3.2), identified by an
+      (iss, sub) pair and carried in derived tokens' sub claim.
 
    Approver:  The single accountable principal who approves the Mission
       at the approval event.  Equal to the Subject for self-approval;
@@ -645,7 +650,43 @@ Table of Contents
    subject identifier formats (for example, the formats of [RFC9493])
    MAY be layered in future versions and are not required here.
 
-3.2.  Protocol Flow
+3.2.  Authority Sources
+
+   A Mission draws its authority from one of three sources: a delegating
+   person's own authority (*user-delegated*), a workload's own
+   provisioned authority (*service-owned*), or explicitly governed
+   organizational policy with a named accountable owner
+   (*organizational*).  The source names whose authority the approval
+   draws on, recorded immutably as the Mission's authority_source;
+   approval_basis records how drawing on it was activated (Section 7),
+   and the two compose: any source may activate through a direct
+   approval event or through a standing-consent basis a companion
+   defines.  Approval activates authority the source already holds and
+   manufactures none: the AS establishes the source and verifies the
+   derived Authority Set against it before approval (Section 6).
+
+   The subject-representation discipline is the same in every source:
+
+   *  The accountable principal is the record's approver, equal to
+      approval_basis.consent_principal, in every source; it is never
+      inferred from the token sub.
+
+   *  sub carries a delegating person only in the user-delegated source.
+      A service-owned or organizational Mission MUST record the workload
+      or organizational principal as subject and MUST NOT record a human
+      principal in its place: some work is not any one person's, and
+      borrowing a human subject for it blurs the actor, the subject, and
+      the accountable principal exactly where the record keeps them
+      distinct.  The injective mapping of Section 6 applies unchanged:
+      that principal receives its own AS-local sub, denotes itself, and
+      impersonates nobody.  It MUST be an authorization subject the AS
+      recognizes as a resource owner in its own right (the sub model of
+      [RFC9068]), not merely the task's beneficiary.
+
+   *  The actor model does not vary by source: client_id names the
+      Agent, and delegates ride the act chain (Section 11).
+
+3.3.  Protocol Flow
 
     Agent (client)                       Mission Issuer (AS)
          |                                     |
@@ -693,7 +734,9 @@ Table of Contents
    scope.  It has the following members:
 
    goal:  REQUIRED.  A string.  A human-readable statement of the task,
-      for rendering to the Approver.  Maximum 4096 characters.
+      for rendering to the Approver.  Maximum 4096 characters.  Prose
+      here persists on the record and can carry personal data about
+      third parties (Section 17.4).
 
    resources:  REQUIRED.  An array of strings.  The target resources the
       task needs, each an absolute URI identifying a protected resource
@@ -1839,7 +1882,9 @@ Table of Contents
        MUST NOT take the Subject from unauthenticated client input.
        This document defines no wire parameter for the Subject; how the
        AS establishes it (administrative selection, a directory, an
-       authenticated reference) is a deployment matter.  When the
+       authenticated reference) is a deployment matter.  The Subject may
+       be a workload or organizational principal (Section 3.2); its
+       establishment and the mapping below are unchanged.  When the
        Subject's home issuer (subject.iss) differs from the AS, the AS
        MUST map the external (subject.iss, subject.sub) pair to an AS-
        local sub under an injective mapping: one external Subject maps
@@ -1851,7 +1896,21 @@ Table of Contents
        principal's sub; the injectivity, not the verbatim adoption, is
        the rule.
 
-   3.  Render for consent the derived Authority Set in human-meaningful
+   3.  Establish the authority source: whose authority the approval
+       draws on, recorded as the Mission's authority_source
+       (Section 3.2, Section 7).  The AS MUST establish it from trusted
+       configuration or authenticated governance state, never from
+       client assertion.  The AS MUST verify the Approver is authorized
+       under local policy to activate the established source, and MUST
+       verify the derived Authority Set lies within that source's
+       authority (for organizational, within the governed policy
+       identified by authority_source.policy).  These are distinct
+       checks: an organizational owner may be authorized to activate
+       policy without personally holding every operational permission.
+       The AS MUST refuse when either relationship cannot be
+       established.
+
+   4.  Render for consent the derived Authority Set in human-meaningful
        terms, with the goal, constraints, expires_at, and any controls
        bounds (notably max_derivations) as context:
 
@@ -1865,6 +1924,11 @@ Table of Contents
        *  When the Approver is not the Subject, the rendering MUST
           identify the Subject the authority is granted for.
 
+       *  The rendering MUST identify the authority source and, for
+          organizational, the governed policy it draws on
+          (authority_source.policy).  A change to the established source
+          before the decision MUST force re-evaluation and re-rendering.
+
        *  When the client submitted an authority proposal (Section 4.2),
           the rendering MUST distinguish the entries the client proposed
           from any narrowing or restructuring the AS applied.
@@ -1873,13 +1937,13 @@ Table of Contents
        derivation is local policy: nothing commits that the derived
        authority faithfully reflects the goal the Approver read.
 
-   4.  Compute the integrity anchors (Section 6.3): authority_hash over
+   5.  Compute the integrity anchors (Section 6.3): authority_hash over
        the consented Authority Set, intent_hash over the approved
        Mission Intent, and, when an authority proposal was submitted
        (Section 4.2), proposal_hash over the submitted
        authorization_details array.
 
-   5.  Create the Mission record (Section 7) in the active state,
+   6.  Create the Mission record (Section 7) in the active state,
        atomically with issuance of the authorization code.
 
    The atomic coupling of the approval decision to authorization-code
@@ -2265,6 +2329,25 @@ Table of Contents
       claim MAY carry approval_basis.type (Section 8.1) as a wire
       signal; it MUST NOT be relied on to grant or widen authority.
 
+   authority_source:  REQUIRED.  An object.  The source of the authority
+      the approval draws on (Section 3.2), established at the approval
+      event (Section 6) and immutable thereafter, like approver and
+      approval_basis.  Members:
+
+      type:  REQUIRED.  A string: user_delegated, service_owned, or
+         organizational, subject to the forward-compatibility rule of
+         Section 9.
+
+      policy:  REQUIRED for organizational, absent otherwise.  An object
+         with id, version, and digest: the stable reference to, and
+         commitment over, the governed organizational policy the Mission
+         draws on.
+
+      authority_source is provenance like approval_basis: recorded
+      alongside it, folded into neither intent_hash nor authority_hash,
+      and not carried on access tokens; Resource Servers enforce
+      authorization_details and do not consult it.
+
    client_id:  REQUIRED.  A string.  The Agent (OAuth client) that
       submitted the Mission Intent.
 
@@ -2364,6 +2447,7 @@ Table of Contents
        "root_commitment":
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
      },
+     "authority_source": { "type": "user_delegated" },
      "client_id": "s6BhdRkqt3",
      "policy_version": "deploy-policy:v17",
      "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
@@ -2768,6 +2852,33 @@ Table of Contents
    subset relationship is an assertion by the AS, authenticated by the
    token signature, and depends on the AS applying the subset rule
    correctly.
+
+   A worked contrast, using the two-entry Authority Set of the test
+   vectors (Appendix B), shows what each party can verify.  A single-
+   audience token carries one narrowed entry: journal-entries.write with
+   the approved max_amount of 500.00 USD tightened to 250.00.  The
+   Resource Server verifies the token signature and cnf, checks aud,
+   enforces the carried entry, checks the anchor's algorithm prefix
+   (Section 6.3), and logs the mission claim for correlation.  It cannot
+   recompute authority_hash: hashing the carried entry digests a one-
+   entry array the anchor never committed, and the tightened max_amount
+   makes the entry a semantic narrowing, not a byte-level member, of the
+   approved set.  Whether 250.00 sits within the approved ceiling is the
+   subset test (Section 5.1), and that test needs the approved entry to
+   compare against.  A party holding the full Authority Set (a Resource
+   Server provisioned with it, or a policy decision point holding the
+   Mission record) recomputes the commitment over the held two-entry
+   set, matches mission.authority_hash, and verifies the carried entry
+   as a subset of the held journal-entries.write entry: containment
+   verified relative to the authenticated committed set.  For that
+   verification to be independent of the issuer, the deployment
+   provisions the set together with its provenance: the full Authority
+   Set, the Mission id and issuer it belongs to, the expected
+   authority_hash, and an authenticated approval-time source for all
+   three (trusted Mission or consent evidence, or an audit commitment
+   recorded before any compromise).  Without that pinning, a compromised
+   issuer signs a token carrying a replacement set's hash, and
+   recomputation confirms the replacement.
 
    Three denials above are byte-identical 403s to a client, and
    misrouting them turns a step-up into an authority-widening ceremony
@@ -3715,6 +3826,43 @@ Table of Contents
    correctly projected from the approved set; authority_hash supplies no
    independent subset proof.
 
+   This document's flat Authority Set commitment defines no selective
+   inclusion-proof mechanism: authority_hash digests the complete set as
+   a single array (Section 6.3), recomputation therefore needs the full
+   set, and the baseline defines neither a retrieval surface for that
+   set nor a proof format for anything less.  Both are undefined here,
+   not impossible.  Retrieval carries a real privacy and authorization
+   burden rather than an architectural prohibition: the minimization
+   rules of Section 10.1 keep other audiences' entries out of token
+   introspection, so a distinct control-plane surface serving a policy
+   decision point, auditor, or privileged Resource Server needs
+   authorization at least that strong.  A selective proof composes with
+   the existing subset rules: a profile could commit the approved
+   entries to a structure that supports inclusion proofs, prove the
+   approved parent entry against that approval-time root, and apply the
+   type-specific subset test (Section 5.1) between the carried narrowed
+   entry and the disclosed parent; the cryptography stays generic, and
+   only the semantic comparison is type-owned, the division this
+   document uses throughout.  Either mechanism is a future profile with
+   privacy, commitment, and trust-bootstrap requirements to meet.  Under
+   the baseline, a deployment that needs assurance independent of the
+   token signature provisions the verifying party out of band, the
+   Resource Server itself or a policy decision point holding a
+   materialized view of the Mission record, and uses the recomputation
+   path of Section 8.2.
+
+   What such verification buys depends on when the issuer is
+   compromised.  A proof or retrieval response issued under the same
+   trust root as the token adds nothing against an issuer malicious at
+   approval time: that issuer can approve and commit arbitrary
+   authority, and no containment mechanism changes that.  The same
+   checks do defend against projection implementation errors, against
+   corruption of the record after an independently anchored approval
+   commitment, and against post-approval signing-key compromise where
+   the original commitment is pinned outside the issuer.  The pinning is
+   what makes the difference; the worked example in Section 8.2 lists
+   what a deployment provisions to get it.
+
    intent_hash extends the same protection to the task itself: it
    commits the approved Mission Intent, so an auditor can detect any
    later alteration of the recorded task, independently of the authority
@@ -4172,7 +4320,7 @@ Table of Contents
    carry personal data (an originator identity, a consent reference);
    PAR keeps it off the front channel, and the record retains the
    designated verified facts under the same access governance as the
-   rest of the Mission's evidence (Section 17.4).
+   rest of the Mission's evidence (Section 17.5).
 
 17.1.  Mission Identifier Correlation
 
@@ -4224,7 +4372,54 @@ Table of Contents
    as one when the Intent itself is sensitive; the same confirmation
    channel exists for a candidate proposal against proposal_hash.
 
-17.4.  Mission Record and Evidence Access
+17.4.  Third-Party Data Subjects
+
+   A task can be about a person who holds no Mission role: in a
+   background check, the employer's agent queries a registrar about a
+   candidate who is neither Subject nor Approver nor resource owner.
+   Mission approval records the accountable Approver's authorization of
+   the undertaking (Section 6); it is not, by itself, evidence of such a
+   person's consent to disclosure or of any other legal basis a
+   disclosure requires, and whether a basis is required and what
+   satisfies it is deployment and legal policy outside this protocol.
+   Where the resource domain requires data-subject consent or another
+   basis, that disclosure policy MUST be satisfied in that domain's own
+   lane, wherever the deployment evaluates it (the Resource Server, a
+   gateway, a policy decision point, or an authorization server acting
+   for the domain) and through that lane's mechanisms (claims gathering,
+   a resource-domain consent artifact), and access MUST be refused while
+   required evidence is absent or invalid.  A conforming deployment
+   treats that refusal as the resource's answer, never as a Mission gap
+   to route around.  Mission approval and Mission authority MUST NOT be
+   treated as the data subject's consent; a Mission record MAY retain a
+   verified consent reference or facts as submission_evidence
+   (Section 7), and those facts are provenance and policy input only:
+   the resource domain validates them independently under its current
+   disclosure policy, and that policy remains authoritative.
+
+   Third-party personal data can enter through any Intent, proposal,
+   authority, or recorded-evidence member: the prose members (goal,
+   constraints, success_criteria), purpose, resources, deployment-
+   defined controls, any type-owned member of a proposed entry, the
+   derived Authority Set entries that reach tokens (Section 8), and
+   submission_evidence facts, including a consent reference.  Whatever
+   the member, it persists on the Mission record for its audit horizon
+   (Section 7) and concentrates at the AS with the record
+   (Section 17.5), and the committed members are confirmable through the
+   unsalted anchors by any party holding a candidate value (the
+   retention consideration above).  Clients SHOULD reference a third
+   party through resource-scoped or pseudonymous identifiers rather than
+   identifying prose; an opaque identifier is minimization, not
+   anonymity, and personal-data obligations follow it.  Retention and
+   erasure follow the deployment's policy.  Where approval-event
+   evidence was registered under the audit transparency profile, its
+   erasure record and data-subject-request basis are the transparency-
+   side mechanism ([I-D.draft-mcguinness-mission-audit]): it records an
+   erasure, it neither performs one nor overrides retention law, and the
+   operational Mission record and its audit-horizon retention floor
+   (Section 7) are untouched by it.
+
+17.5.  Mission Record and Evidence Access
 
    The Mission record concentrates the task, its authority, and its
    principals at the AS, and every evidence artifact joins on the

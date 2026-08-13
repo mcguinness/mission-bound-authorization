@@ -1952,13 +1952,18 @@ authorization code carries its own lifetime from there. All
 remaining redemption rules (subset, lifetime, state-gated refresh,
 no re-approval, and the error mapping of <a href="#redemption-errors" class="auto internal xref">Section 6.1</a>)
 apply at the token request unchanged.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
-<p id="section-6.2-5">The AS <span class="bcp14">MUST</span> bind the resource owner authenticated at the
-authorization endpoint to the grant's <code>sub</code>: it proceeds only where
-the authenticated user is the grant's Subject under the deployment's
-mapping policy (<a href="#issuance-join" class="auto internal xref">Section 3</a>). The AS <span class="bcp14">MUST</span> refuse when a
-different user authenticates, so the grant cannot mint tokens for
-the wrong resource owner. The authenticated client <span class="bcp14">MUST</span> still be the
-grant's <code>client_id</code> (<a href="#redemption" class="auto internal xref">Section 6</a>).<a href="#section-6.2-5" class="pilcrow">¶</a></p>
+<p id="section-6.2-5">This carriage serves user-delegated Missions
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), where an authenticated
+resource owner exists to bind. The AS <span class="bcp14">MUST</span> bind the resource owner
+authenticated at the authorization endpoint to the grant's <code>sub</code>: it
+proceeds only where the authenticated user is the grant's Subject
+under the deployment's mapping policy (<a href="#issuance-join" class="auto internal xref">Section 3</a>). The AS
+<span class="bcp14">MUST</span> refuse when a different user authenticates, so the grant cannot
+mint tokens for the wrong resource owner. For a service-owned or
+organizational Mission there is no delegating user to authenticate;
+such a grant is redeemed directly (<a href="#redemption" class="auto internal xref">Section 6</a>), not carried
+through the authorization code flow. The authenticated client <span class="bcp14">MUST</span>
+still be the grant's <code>client_id</code> (<a href="#redemption" class="auto internal xref">Section 6</a>).<a href="#section-6.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

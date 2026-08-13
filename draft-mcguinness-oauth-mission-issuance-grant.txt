@@ -575,13 +575,18 @@ Table of Contents
    re-approval, and the error mapping of Section 6.1) apply at the token
    request unchanged.
 
-   The AS MUST bind the resource owner authenticated at the
-   authorization endpoint to the grant's sub: it proceeds only where the
-   authenticated user is the grant's Subject under the deployment's
-   mapping policy (Section 3).  The AS MUST refuse when a different user
-   authenticates, so the grant cannot mint tokens for the wrong resource
-   owner.  The authenticated client MUST still be the grant's client_id
-   (Section 6).
+   This carriage serves user-delegated Missions
+   ([I-D.draft-mcguinness-oauth-mission]), where an authenticated
+   resource owner exists to bind.  The AS MUST bind the resource owner
+   authenticated at the authorization endpoint to the grant's sub: it
+   proceeds only where the authenticated user is the grant's Subject
+   under the deployment's mapping policy (Section 3).  The AS MUST
+   refuse when a different user authenticates, so the grant cannot mint
+   tokens for the wrong resource owner.  For a service-owned or
+   organizational Mission there is no delegating user to authenticate;
+   such a grant is redeemed directly (Section 6), not carried through
+   the authorization code flow.  The authenticated client MUST still be
+   the grant's client_id (Section 6).
 
 7.  Relationship to Other Artifacts
 
