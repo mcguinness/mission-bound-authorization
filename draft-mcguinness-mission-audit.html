@@ -1587,6 +1587,16 @@ record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶
 </td>
             </tr>
             <tr>
+              <td class="text-left" rowspan="1" colspan="1">Approval governance</td>
+              <td class="text-left" rowspan="1" colspan="1">complete record including <code>envelope</code> (JCS), the record-digest preimage</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-approval-governance+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>issuer</code>
+</td>
+            </tr>
+            <tr>
               <td class="text-left" rowspan="1" colspan="1">Decision evidence</td>
               <td class="text-left" rowspan="1" colspan="1">Decision Evidence object, as issued</td>
               <td class="text-left" rowspan="1" colspan="1">
@@ -1694,21 +1704,25 @@ registered by the profiles that define those objects
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>);<a href="#section-6.3-7.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.3-7.3">
-            <p id="section-6.3-7.3.1">the Signals SET media type by the Signals profile it is carried in
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>);<a href="#section-6.3-7.3.1" class="pilcrow">¶</a></p>
+            <p id="section-6.3-7.3.1">the Approval governance media type by Mission Approval Governance
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>);<a href="#section-6.3-7.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.3-7.4">
-            <p id="section-6.3-7.4.1">the Mandate media type by the Mandate profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>);<a href="#section-6.3-7.4.1" class="pilcrow">¶</a></p>
+            <p id="section-6.3-7.4.1">the Signals SET media type by the Signals profile it is carried in
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>);<a href="#section-6.3-7.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.3-7.5">
-            <p id="section-6.3-7.5.1">the Child Evidence canonical bytes and type identifier by the
-child-delegation profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>); and<a href="#section-6.3-7.5.1" class="pilcrow">¶</a></p>
+            <p id="section-6.3-7.5.1">the Mandate media type by the Mandate profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>);<a href="#section-6.3-7.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.3-7.6">
-            <p id="section-6.3-7.6.1">the Discovery Evidence canonical bytes and type identifier by the
-discovery profile (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>).<a href="#section-6.3-7.6.1" class="pilcrow">¶</a></p>
+            <p id="section-6.3-7.6.1">the Child Evidence canonical bytes and type identifier by the
+child-delegation profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>); and<a href="#section-6.3-7.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.3-7.7">
+            <p id="section-6.3-7.7.1">the Discovery Evidence canonical bytes and type identifier by the
+discovery profile (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>).<a href="#section-6.3-7.7.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-6.3-8">The approval event's canonical bytes are the whole Mission record at
@@ -2802,6 +2816,10 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
 <dt id="I-D.draft-mcguinness-mission-aauth">[I-D.draft-mcguinness-mission-aauth]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Context Binding for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Governance"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
         <dd>

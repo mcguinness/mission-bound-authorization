@@ -1190,7 +1190,7 @@ approval sequencing.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-pending-lifetime-and-stalen" class="internal xref">Pending Lifetime and Staleness</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
-                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-the-approval-decision-set" class="internal xref">The Approval Decision Set</a></p>
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-approval-governance-record" class="internal xref">Approval Governance Record</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6">
                 <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-queue-pressure" class="internal xref">Queue Pressure</a></p>
@@ -1499,96 +1499,21 @@ policy, never one derived under superseded policy.<a href="#section-5.4-1" class
 </div>
 <div id="decision-set">
 <section id="section-5.5">
-        <h3 id="name-the-approval-decision-set">
-<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-the-approval-decision-set" class="section-name selfRef">The Approval Decision Set</a>
+        <h3 id="name-approval-governance-record">
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-approval-governance-record" class="section-name selfRef">Approval Governance Record</a>
         </h3>
-<p id="section-5.5-1">This section is optional and experimental. The issuance profile
-records exactly one accountable Approver and defers approval-authority
-provenance to a governance layer
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). An enterprise review
-surface often is that governance layer: the decision may involve
-several principals, a threshold rule, and a delegation-of-authority
-policy, and an auditor later needs to prove not only who approved but
-under which authority the approval was valid. The decision set records
-that provenance as governance evidence, not as a wire artifact. The
-ordinary one-person approval is the degenerate case, a single human
-assertion, and need not be recorded at all.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
-<p id="section-5.5-2">A Mission Issuer <span class="bcp14">MAY</span> record an <strong>approval decision set</strong> alongside
-the approval event, retained with the Mission record for its audit
-horizon and joined by <code>approval_event_id</code>:<a href="#section-5.5-2" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-5.5-3.1">
-            <p id="section-5.5-3.1.1"><code>approval_policy</code>: an identifier and version for the policy
-governing who may approve this proposal (the deployment's
-delegation-of-authority matrix);<a href="#section-5.5-3.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-5.5-3.2">
-            <p id="section-5.5-3.2.1"><code>threshold</code>: the rule the recorded assertions satisfied; and<a href="#section-5.5-3.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-5.5-3.3">
-            <p id="section-5.5-3.3.1"><code>assertions</code>: one or more decision assertions, each carrying the
-asserting principal as an (<code>iss</code>, <code>sub</code>) pair, a <code>kind</code> of <code>human</code>,
-<code>service</code>, or <code>policy</code>, the decision, the decision time, and
-optionally the provenance under which that principal was authorized
-to decide and a reason.<a href="#section-5.5-3.3.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<p id="section-5.5-4">A recorded set is governed by these rules:<a href="#section-5.5-4" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-5.5-5.1">
-            <p id="section-5.5-5.1.1">The set never appears on tokens or in any protocol message.<a href="#section-5.5-5.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-5.5-5.2">
-            <p id="section-5.5-5.2.1">The Mission record still carries exactly one accountable
-<code>approver</code>: the principal the <code>approval_policy</code> designates as
-accountable for the committed decision. Every downstream projection
-is unchanged.<a href="#section-5.5-5.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-5.5-5.3">
-            <p id="section-5.5-5.3.1">An approval whose recorded assertions do not satisfy the declared
-<code>approval_policy</code> threshold <span class="bcp14">MUST NOT</span> commit.<a href="#section-5.5-5.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-5.5-5.4">
-            <p id="section-5.5-5.4.1">A committed set is immutable.<a href="#section-5.5-5.4.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-5.5-5.5">
-            <p id="section-5.5-5.5.1">Where consent evidence is claimed, each human assertion's
-disclosure is committed as the consent-evidence profile requires
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-5.5-5.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-5.5-5.6">
-            <p id="section-5.5-5.6.1">A <code>policy</code> assertion carries its policy identifier and version, the
-family's provenance chain for non-human approval (policy approves
-the instance because a human approved the policy).<a href="#section-5.5-5.6.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-5.5-5.7">
-            <p id="section-5.5-5.7.1">Consent evidence's <code>co_approvals</code> and <code>approval_authority</code> members
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>) are this
-record's consent-evidence projection. Where both are recorded they
-<span class="bcp14">MUST</span> agree, and the decision set governs.<a href="#section-5.5-5.7.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<div class="lang-json sourcecode" id="section-5.5-6">
-<pre>
-{
-  "approval_event_id": "ape_7Kq2mR9tW4xY",
-  "approval_policy": { "id": "dlg-matrix", "version": "v7" },
-  "threshold": "2-of-2",
-  "assertions": [
-    { "approver": { "iss": "https://login.example.com",
-        "sub": "manager@example.com" },
-      "kind": "human", "decision": "approve",
-      "decided_at": "2026-09-30T16:58:11Z",
-      "provenance": "role:finance-manager" },
-    { "approver": { "iss": "https://as.example.com",
-        "sub": "policy:finance-charter" },
-      "kind": "policy", "decision": "approve",
-      "decided_at": "2026-09-30T16:58:12Z",
-      "provenance": "dlg-matrix:v7#agent-charters" }
-  ]
-}
-</pre><a href="#section-5.5-6" class="pilcrow">¶</a>
-</div>
+<p id="section-5.5-1">An enterprise review surface is often a governance layer: several
+principals, a threshold rule, and a delegation-of-authority policy
+may stand behind one deferred approval. Mission Approval Governance
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>) defines the
+Approval Governance Record for exactly that state, and it is
+ceremony-independent: a deployment records it for a deferred approval
+under this profile precisely as for a synchronous one. Where that
+document's recording triggers hold for a deferred approval, the
+issuer records the Approval Governance Record joined by
+<code>approval_event_id</code> and committed atomically with the approval
+decision it governs; the pending window changes when the decision
+happens, never what is recorded about it.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="queue-pressure">
@@ -1748,20 +1673,11 @@ decision; and<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 <a href="#pending-staleness" class="auto internal xref">Section 5.4</a> and the queue bounds of <a href="#queue-pressure" class="auto internal xref">Section 5.6</a>.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-8-3">A Mission Issuer that records approval decision sets
-(<a href="#decision-set" class="auto internal xref">Section 5.5</a>) additionally <span class="bcp14">MUST</span>:<a href="#section-8-3" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-8-4.1">
-          <p id="section-8-4.1.1">commit only approvals whose assertions satisfy the declared
-<code>approval_policy</code> threshold; and<a href="#section-8-4.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-8-4.2">
-          <p id="section-8-4.2.1">retain each committed set, immutable, for the Mission's audit
-horizon.<a href="#section-8-4.2.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-8-5">A client conforming to this profile <span class="bcp14">MUST</span> treat every pending response
-as unapproved and poll the <code>deferral_code</code> per the deferred substrate.<a href="#section-8-5" class="pilcrow">¶</a></p>
+<p id="section-8-3">A Mission Issuer that records Approval Governance Records for
+deferred approvals does so under Mission Approval Governance's
+conformance (<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>).<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">A client conforming to this profile <span class="bcp14">MUST</span> treat every pending response
+as unapproved and poll the <code>deferral_code</code> per the deferred substrate.<a href="#section-8-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -1779,13 +1695,12 @@ the Approver and satisfying the Mission Intent's <code>controls.acr</code>
 the synchronous event sets. Approver routing and notification, how a
 Proposed Mission reaches a reviewer and how the reviewer is alerted, are
 deployment matters and are named as such here rather than specified.<a href="#section-9-2" class="pilcrow">¶</a></p>
-<p id="section-9-3">An approval decision set (<a href="#decision-set" class="auto internal xref">Section 5.5</a>) is evidence about the
-approval, never a second authorization surface: the accountable
-<code>approver</code> on the Mission record remains the principal every
-downstream check and projection uses, and a forged or padded
-assertion set changes nothing an enforcement point consumes. Its
-threat is to auditability, not authority, and its integrity rests on
-the issuer's record retention like the approval event itself.<a href="#section-9-3" class="pilcrow">¶</a></p>
+<p id="section-9-3">An Approval Governance Record (<a href="#decision-set" class="auto internal xref">Section 5.5</a>) participates in the
+approval before commitment and is evidence after it; its assertion
+authentication and atomic-commitment rules live in Mission Approval
+Governance (<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>).
+The accountable <code>approver</code> on the Mission record remains the
+principal every downstream check and projection uses.<a href="#section-9-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="privacy-considerations">
@@ -1823,6 +1738,10 @@ the deferred grant type are registered by the deferred substrate
 <dt id="I-D.draft-gerber-oauth-deferred-token-response">[I-D.draft-gerber-oauth-deferred-token-response]</dt>
         <dd>
 <span class="refAuthor">Jacobsen, F. K.</span>, <span class="refAuthor">de Oliveira Niero, G.</span>, and <span class="refAuthor">M. Gerber</span>, <span class="refTitle">"Deferred Token Response"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gerber-oauth-deferred-token-response-00</span>, <time datetime="2026-06-23" class="refDate">23 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00">https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Governance"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>

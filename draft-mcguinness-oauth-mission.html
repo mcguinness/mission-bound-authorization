@@ -1638,8 +1638,9 @@ adopts the Mission model without standing up a GNAP grant endpoint or
 migrating its clients to it. Where a deployment starts from GNAP
 rather than from OAuth 2.0's authorization code grant, the Mission
 model, a durable, approval-anchored, integrity-bound task object
-gating derivation, is a candidate binding onto that substrate; this
-document does not define one.<a href="#section-1.3-1" class="pilcrow">¶</a></p>
+gating derivation, is the OAuth-native instantiation of a
+binding-neutral contextual-governance kernel that admits a candidate
+binding onto that substrate; this document does not define one.<a href="#section-1.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="capability-system-prior-art">
@@ -1780,9 +1781,9 @@ Signals <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite
 </li>
         </ul>
 <p id="section-1.8-5">A deployment implements this document without any of them. A
-substrate-neutral statement of the Mission model, generalizing it
-across non-OAuth authorization substrates, is specified separately
-and is out of scope for this document.<a href="#section-1.8-5" class="pilcrow">¶</a></p>
+binding-neutral contextual-governance kernel, of which this
+document's Mission model is the OAuth-native instantiation, is
+specified separately and is out of scope for this document.<a href="#section-1.8-5" class="pilcrow">¶</a></p>
 <p id="section-1.8-6">Remaining future work, not yet specified, includes:<a href="#section-1.8-6" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1.8-7.1">
@@ -3334,17 +3335,20 @@ absent, is summarized in the enforcement table (<a href="#mission-intent" class=
 An AS <span class="bcp14">SHOULD</span> make clear to the Approver which rendered bounds its
 deployment actually enforces, so consent is not given to a limit that
 binds nowhere.<a href="#section-6-10" class="pilcrow">¶</a></p>
-<p id="section-6-11">The <code>authority_hash</code> is the <strong>authority commitment</strong>: it binds, by
+<p id="section-6-11">The <code>authority_hash</code> is the <strong>authority commitment</strong>: it commits, by
 cryptographic digest, exactly the authority the Approver approved. It
 commits the approved authority, not the way that authority was
 rendered to the Approver; this profile commits no separate consent
-disclosure object (see <a href="#consent-binding" class="auto internal xref">Section 16.1</a>). Every token derived
-under the
-Mission carries this value (<a href="#mission-bound-tokens" class="auto internal xref">Section 8</a>), so a party
-holding the full Authority Set can verify a token's authority against
-what was approved. A party holding only a narrowed subset cannot
-recompute it and treats it as an audit anchor (see
-<a href="#consent-binding" class="auto internal xref">Section 16.1</a>).<a href="#section-6-11" class="pilcrow">¶</a></p>
+disclosure object (see <a href="#consent-binding" class="auto internal xref">Section 16.1</a>). Every token derived under
+the Mission carries this value (<a href="#mission-bound-tokens" class="auto internal xref">Section 8</a>). A party
+holding the full Authority Set can recompute the commitment,
+confirming the set is the approved one, and then apply the subset
+rule to the token's carried authority. A party
+holding only a narrowed subset cannot recompute the commitment and
+treats it as an audit anchor. For that party, <code>authority_hash</code> alone
+does not prove that the carried entries belong to the approved set;
+the relationship is asserted by the AS's signed token and depends on
+the AS applying the subset rule correctly (see <a href="#consent-binding" class="auto internal xref">Section 16.1</a>).<a href="#section-6-11" class="pilcrow">¶</a></p>
 <p id="section-6-12">If the task, the authority proposal, or the derived Authority Set
 changes between approval rendering and the approval decision, the AS
 <span class="bcp14">MUST</span> recompute the anchors the Mission records (<code>intent_hash</code> and
@@ -4095,7 +4099,8 @@ deliberately differ for tokens minted in another trust domain
 <code>authority_hash</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-8.1-2.6">
             <p id="section-8.1-2.6.1"><span class="bcp14">REQUIRED</span>. A string. The Mission's
-<code>authority_hash</code>, binding the token to the consented authority.<a href="#section-8.1-2.6.1" class="pilcrow">¶</a></p>
+<code>authority_hash</code>, the commitment over the complete consented
+Authority Set (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>).<a href="#section-8.1-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-8.1-2.7">
@@ -4313,11 +4318,13 @@ be Mission-aware in this sense.<a href="#section-8.2-3" class="pilcrow">¶</a></
 <p id="section-8.2-4">A <code>constraints</code> member narrows authority, so treating an
 unenforceable key as absent, or reducing it to disclosure-only, would
 silently widen the grant; that is why an unrecognized or
-unenforceable key fails closed. At a Resource Server that holds only
-a narrowed token, <code>mission.authority_hash</code> is an audit correlator,
-not an enforcement input: the subset relationship between the carried
-entries and the approved set rests on trust in the AS's signature,
-not on a per-token cryptographic subset proof.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+unenforceable key fails closed. A Resource Server that holds only a
+narrowed token <span class="bcp14">MUST</span> treat <code>mission.authority_hash</code> as an audit
+correlator, not an enforcement input, and <span class="bcp14">MUST NOT</span> treat it as a
+cryptographic proof that the carried entries are a subset of the
+approved set. That subset relationship is an assertion by the AS,
+authenticated by the token signature, and depends on the AS applying
+the subset rule correctly.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
 <p id="section-8.2-5">Three denials above are byte-identical <code>403</code>s to a client, and
 misrouting them turns a step-up into an authority-widening ceremony
 or a fail-closed mismatch into a retry loop. A Mission-aware Resource
@@ -5393,10 +5400,13 @@ starting point and creates no new conformance class.<a href="#section-15-12" cla
 <a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-consent-binding" class="section-name selfRef">Consent Binding</a>
         </h3>
 <p id="section-16.1-1">The security goal of this document is that a user's approval of a
-task bounds every token derived for it. The <code>authority_hash</code> is the
-mechanism: it commits the exact Authority Set the Approver
-consented to, and every derived token carries it in the <code>mission</code>
-claim.<a href="#section-16.1-1" class="pilcrow">¶</a></p>
+task bounds every token derived for it. The <code>authority_hash</code> commits
+the exact Authority Set the Approver consented to, and every derived
+token carries it in the <code>mission</code> claim. The complete mechanism also
+requires the AS to issue only subsets of that set and the Resource
+Server to verify the AS's token signature and enforce the carried
+authority. The hash alone does not prove containment of a narrowed
+token's authority.<a href="#section-16.1-1" class="pilcrow">¶</a></p>
 <p id="section-16.1-2">The requirements that uphold the commitment live at the approval
 event (<a href="#approval-event" class="auto internal xref">Section 6</a>): the AS computes <code>authority_hash</code> over
 the same Authority Set it rendered for consent, and re-renders and
@@ -5409,7 +5419,9 @@ optional, and its rules live with the Resource Server's other duties
 set treats <code>authority_hash</code> as a whole-Mission audit and correlation
 anchor (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) while
 enforcing the token's <code>authorization_details</code> directly
-(<a href="#mission-bound-tokens" class="auto internal xref">Section 8</a>).<a href="#section-16.1-3" class="pilcrow">¶</a></p>
+(<a href="#mission-bound-tokens" class="auto internal xref">Section 8</a>). It relies on the signed token as the AS's
+assertion that the carried authority was correctly projected from the
+approved set; <code>authority_hash</code> supplies no independent subset proof.<a href="#section-16.1-3" class="pilcrow">¶</a></p>
 <p id="section-16.1-4"><code>intent_hash</code> extends the same protection to the task itself: it
 commits the approved Mission Intent, so an auditor can detect any
 later alteration of the recorded task, independently of the authority

@@ -589,8 +589,9 @@ Table of Contents
 
    *  the reconciliation window for matching execution-outcome evidence
       to decisions, the component responsible for orphaned-evidence and
-      sequence-gap detection, and that component's alerting obligation
-      (Section 11).
+      sequence-gap detection and for driving each unresolved outcome to
+      committed or failed within the window, and that component's
+      alerting obligation (Section 11).
 
    A deployment MUST NOT claim runtime enforcement for a resource,
    action class, authorization_details type, or execution path outside
@@ -2143,6 +2144,13 @@ Table of Contents
     +------------------------+----------------------------------------+
     | Mission not active     | Refuse                                 |
     +------------------------+----------------------------------------+
+    | Mission non-active     | The declared component resolves it to  |
+    | with an outcome        | committed or failed within the         |
+    | unresolved             | reconciliation window; no new effect   |
+    |                        | is admitted under the Mission;         |
+    |                        | identifier and claim state is retained |
+    |                        | (Section 11)                           |
+    +------------------------+----------------------------------------+
     | The Mission's          | Refuse                                 |
     | expires_at passed,     |                                        |
     | when known from the    |                                        |
@@ -2284,6 +2292,21 @@ Table of Contents
    component detects orphaned evidence (a decision with no matching
    execution-outcome record within it) and sequence gaps in a Mission's
    records (Section 11.4).
+
+   An unknown outcome has an owner and a deadline, not only a window:
+   the declared component MUST drive each unresolved outcome to
+   committed or failed before the window closes, and its alerting
+   obligation covers any outcome still unknown at the deadline.
+   Reconciliation survives the Mission: once the Mission is non-active,
+   it MAY resolve an in-flight outcome to committed or failed and MUST
+   NOT admit a new effect under that Mission (an action already
+   executing follows the run-to-completion rule of Section 8.5,
+   unchanged).  Consumed and reserved decision identifiers and
+   idempotency claims persist across Mission lifecycle transitions for
+   at least the reconciliation window, and any declared tombstone
+   horizon (Section 8.4): termination does not erase them, so a post-
+   termination retry resolves against the recorded claim rather than
+   executing again.
 
 11.3.  Mission Receipt
 

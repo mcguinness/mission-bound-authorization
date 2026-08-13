@@ -1608,6 +1608,20 @@ Table of Contents
       evidence retained for the audit horizon
       ([I-D.draft-mcguinness-mission-runtime]).
 
+   *  *Approval governance.* Where a recording trigger of Mission
+      Approval Governance holds for an approval event (the Approver
+      differs from the Subject, more than one principal contributes, a
+      non-human assertion contributes, a threshold, veto, or separation-
+      of-duty rule is evaluated, or validating an assertion requires
+      authority standing outside the Mission record), the MAS MUST
+      record the Approval Governance Record
+      ([I-D.draft-mcguinness-mission-approval-governance]), committed
+      atomically with the Mission's creation and retained for its audit
+      horizon.  The Mission record still carries exactly one accountable
+      approver, the only principal any projection or enforcement
+      consumes; direct self-approval by one authenticated human stays
+      the degenerate case the Mission record represents completely.
+
    The Join Assertion obligation is what separates the modes: the
    mapping join (Section 10) is the baseline compatibility mode, and the
    Join Assertion is the enterprise mode, because it centralizes subject
@@ -2090,6 +2104,11 @@ Table of Contents
 19.  References
 
 19.1.  Normative References
+
+   [I-D.draft-mcguinness-mission-approval-governance]
+              McGuinness, K., "Mission Approval Governance", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-approval-governance.html>.
 
    [I-D.draft-mcguinness-mission-authzen]
               McGuinness, K., "Mission-Bound Runtime Enforcement:

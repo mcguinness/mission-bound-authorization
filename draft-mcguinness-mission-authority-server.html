@@ -3196,6 +3196,21 @@ Statement.<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
 evidence retained for the audit horizon
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
 </li>
+        <li class="normal" id="section-13-2.7">
+          <p id="section-13-2.7.1"><strong>Approval governance.</strong> Where a recording trigger of Mission
+Approval Governance holds for an approval event (the Approver
+differs from the Subject, more than one principal contributes, a
+non-human assertion contributes, a threshold, veto, or
+separation-of-duty rule is evaluated, or validating an assertion
+requires authority standing outside the Mission record), the MAS
+<span class="bcp14">MUST</span> record the Approval Governance Record
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>), committed
+atomically with the Mission's creation and retained for its audit
+horizon. The Mission record still carries exactly one accountable
+<code>approver</code>, the only principal any projection or enforcement
+consumes; direct self-approval by one authenticated human stays the
+degenerate case the Mission record represents completely.<a href="#section-13-2.7.1" class="pilcrow">¶</a></p>
+</li>
       </ul>
 <p id="section-13-3">The Join Assertion obligation is what separates the modes: the
 mapping join (<a href="#mission-join" class="auto internal xref">Section 10</a>) is the baseline compatibility mode,
@@ -3860,6 +3875,10 @@ document requests no IANA action for it.<a href="#section-18.3-1" class="pilcrow
 <a href="#section-19.1" class="section-number selfRef">19.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Governance"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>

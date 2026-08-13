@@ -343,6 +343,11 @@ Table of Contents
    | evidence   | object, as issued    | mission-consent-   |          |
    |            |                      | evidence+json      |          |
    +------------+----------------------+--------------------+----------+
+   | Approval   | complete record      | application/       | issuer   |
+   | governance | including envelope   | mission-approval-  |          |
+   |            | (JCS), the record-   | governance+json    |          |
+   |            | digest preimage      |                    |          |
+   +------------+----------------------+--------------------+----------+
    | Decision   | Decision Evidence    | application/       | PDP key  |
    | evidence   | object, as issued    | mission-decision-  |          |
    |            |                      | evidence+json      |          |
@@ -420,6 +425,9 @@ Table of Contents
       registered by the profiles that define those objects
       ([I-D.draft-mcguinness-oauth-mission-consent-evidence],
       [I-D.draft-mcguinness-mission-runtime-evidence]);
+
+   *  the Approval governance media type by Mission Approval Governance
+      ([I-D.draft-mcguinness-mission-approval-governance]);
 
    *  the Signals SET media type by the Signals profile it is carried in
       ([I-D.draft-mcguinness-oauth-mission-signals]);
@@ -1371,6 +1379,11 @@ Table of Contents
               McGuinness, K., "Mission Context Binding for AAuth", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-aauth.html>.
+
+   [I-D.draft-mcguinness-mission-approval-governance]
+              McGuinness, K., "Mission Approval Governance", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-approval-governance.html>.
 
    [I-D.draft-mcguinness-mission-architecture]
               McGuinness, K., "An Architecture for Mission-Bound

@@ -2168,10 +2168,14 @@ carrying the co-approver's <code>iss</code> and <code>sub</code>, its <code>deci
 timestamp, all under the same <code>consent_rendering_hash</code>. This is an
 additive hook; the issuance profile records one accountable Approver
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and that model is unchanged.
-Where the deferred-approval profile's Approval Decision Set is
-recorded (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>), the
-decision set is authoritative for approval-governance facts and
-<code>co_approvals</code> is its consent-evidence projection.<a href="#section-7-2.16.1" class="pilcrow">¶</a></p>
+Where an Approval Governance Record is recorded
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>), that record
+is authoritative for approval-governance facts and this member is a
+deliberately partial presentation of it: each entry <span class="bcp14">MUST</span> correspond
+to one of the record's <code>human</code> assertions under the mapping that
+document fixes (its consent evidence relationship), presenting
+principals, decisions, and times only, never the policy, the
+evaluation, or per-assertion provenance.<a href="#section-7-2.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.17">
@@ -2179,96 +2183,107 @@ decision set is authoritative for approval-governance facts and
         <dd style="margin-left: 1.5em" id="section-7-2.18">
           <p id="section-7-2.18.1"><span class="bcp14">OPTIONAL</span>. A reference identifying the standing policy or delegation the
 Approver acted under. An additive hook that does not change the single
-accountable Approver (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-2.18.1" class="pilcrow">¶</a></p>
+accountable Approver (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Where
+an Approval Governance Record is recorded, this member, when
+present, <span class="bcp14">MUST</span> equal its <code>approval_policy.id</code>.<a href="#section-7-2.18.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.19">
-<code>rendering_attestation</code>:</dt>
+<code>approval_governance_digest</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.20">
-          <p id="section-7-2.20.1"><span class="bcp14">OPTIONAL</span> and experimental. An object. Evidence that an attested,
+          <p id="section-7-2.20.1"><span class="bcp14">OPTIONAL</span>. A string. The Approval Governance Record's record digest
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>), binding
+this evidence to the authoritative governance record; verified per
+<a href="#integrity" class="auto internal xref">Section 7.1</a>.<a href="#section-7-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.21">
+<code>rendering_attestation</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.22">
+          <p id="section-7-2.22.1"><span class="bcp14">OPTIONAL</span> and experimental. An object. Evidence that an attested,
 identified rendering
 component produced the rendering shown to the Approver (Rung 2,
 <a href="#experimental-rungs" class="auto internal xref">Appendix A</a>). Its members are deployment-defined and
 identify the attested component and its attestation; this profile
-fixes the role, not the attestation format.<a href="#section-7-2.20.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-7-2.21">
-<code>rendering_confirmation</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-7-2.22">
-          <p id="section-7-2.22.1"><span class="bcp14">OPTIONAL</span> and experimental. An object. A confirmation produced by the
-Approver's authenticator at approval (Rung 3,
-<a href="#experimental-rungs" class="auto internal xref">Appendix A</a>). To bind the trust to the Approver rather
-than the Authorization Server:<a href="#section-7-2.22.1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-7-2.22.2.1">
-              <p id="section-7-2.22.2.1.1">it <span class="bcp14">MUST</span> sign the <code>consent_rendering_hash</code> together with a
-per-approval value (the <code>evidence_id</code>, or a nonce echoed in
-<code>authentication_context</code>), so a captured confirmation cannot be
-replayed into another record; and<a href="#section-7-2.22.2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-7-2.22.2.2">
-              <p id="section-7-2.22.2.2.1">it <span class="bcp14">MUST</span> carry or reference an authenticator credential that the
-verifier can confirm is bound to the recorded <code>approver</code>.<a href="#section-7-2.22.2.2.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-<p id="section-7-2.22.3">This profile fixes what is signed and bound, not the authenticator
-protocol. A deployment <span class="bcp14">SHOULD</span> include it for a high-risk
-material-notice class (<a href="#material-notices" class="auto internal xref">Section 4.2</a>). Verification of a
-present confirmation, and the treatment of one that fails, is step 7
-of <a href="#integrity" class="auto internal xref">Section 7.1</a>.<a href="#section-7-2.22.3" class="pilcrow">¶</a></p>
+fixes the role, not the attestation format.<a href="#section-7-2.22.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.23">
-<code>approved_at</code>:</dt>
+<code>rendering_confirmation</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.24">
-          <p id="section-7-2.24.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>approved</code>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>
-timestamp.<a href="#section-7-2.24.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.24.1"><span class="bcp14">OPTIONAL</span> and experimental. An object. A confirmation produced by the
+Approver's authenticator at approval (Rung 3,
+<a href="#experimental-rungs" class="auto internal xref">Appendix A</a>). To bind the trust to the Approver rather
+than the Authorization Server:<a href="#section-7-2.24.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-2.24.2.1">
+              <p id="section-7-2.24.2.1.1">it <span class="bcp14">MUST</span> sign the <code>consent_rendering_hash</code> together with a
+per-approval value (the <code>evidence_id</code>, or a nonce echoed in
+<code>authentication_context</code>), so a captured confirmation cannot be
+replayed into another record; and<a href="#section-7-2.24.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-2.24.2.2">
+              <p id="section-7-2.24.2.2.1">it <span class="bcp14">MUST</span> carry or reference an authenticator credential that the
+verifier can confirm is bound to the recorded <code>approver</code>.<a href="#section-7-2.24.2.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-7-2.24.3">This profile fixes what is signed and bound, not the authenticator
+protocol. A deployment <span class="bcp14">SHOULD</span> include it for a high-risk
+material-notice class (<a href="#material-notices" class="auto internal xref">Section 4.2</a>). Verification of a
+present confirmation, and the treatment of one that fails, is step 7
+of <a href="#integrity" class="auto internal xref">Section 7.1</a>.<a href="#section-7-2.24.3" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.25">
-<code>declined_at</code>:</dt>
+<code>approved_at</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.26">
-          <p id="section-7-2.26.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>declined</code>. An RFC 3339 timestamp.<a href="#section-7-2.26.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.26.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>approved</code>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>
+timestamp.<a href="#section-7-2.26.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.27">
-<code>narrowed_at</code>:</dt>
+<code>declined_at</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.28">
-          <p id="section-7-2.28.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>narrowed</code>. An RFC 3339 timestamp.<a href="#section-7-2.28.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.28.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>declined</code>. An RFC 3339 timestamp.<a href="#section-7-2.28.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.29">
-<code>decision</code>:</dt>
+<code>narrowed_at</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.30">
-          <p id="section-7-2.30.1"><span class="bcp14">REQUIRED</span>. One of <code>approved</code>, <code>declined</code>, or <code>narrowed</code>. <code>narrowed</code>
-records a revision-required outcome (<a href="#revision-events" class="auto internal xref">Section 8.2</a>).<a href="#section-7-2.30.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.30.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>narrowed</code>. An RFC 3339 timestamp.<a href="#section-7-2.30.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.31">
-<code>decline_reason</code>:</dt>
+<code>decision</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.32">
-          <p id="section-7-2.32.1"><span class="bcp14">OPTIONAL</span>. A string. Present when <code>decision</code> is <code>declined</code> and the
-deployment records a reason.<a href="#section-7-2.32.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.32.1"><span class="bcp14">REQUIRED</span>. One of <code>approved</code>, <code>declined</code>, or <code>narrowed</code>. <code>narrowed</code>
+records a revision-required outcome (<a href="#revision-events" class="auto internal xref">Section 8.2</a>).<a href="#section-7-2.32.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.33">
-<code>acknowledgments</code>:</dt>
+<code>decline_reason</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.34">
-          <p id="section-7-2.34.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>approved</code> and the rendered disclosure
+          <p id="section-7-2.34.1"><span class="bcp14">OPTIONAL</span>. A string. Present when <code>decision</code> is <code>declined</code> and the
+deployment records a reason.<a href="#section-7-2.34.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.35">
+<code>acknowledgments</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.36">
+          <p id="section-7-2.36.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>approved</code> and the rendered disclosure
 carried acknowledgment actions (<a href="#material-notices" class="auto internal xref">Section 4.2</a>). An array with
 one entry per acknowledgment the
 Approver completed, each identifying the acknowledged notice by its
 <code>condition</code> and the Authority Set entry it applies to, and carrying an
 RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> completion timestamp. It makes per-notice
 acknowledgment auditable in the evidence itself, not only
-through the committed disclosure.<a href="#section-7-2.34.1" class="pilcrow">¶</a></p>
+through the committed disclosure.<a href="#section-7-2.36.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-7-2.35">
+<dt id="section-7-2.37">
 <code>interrogation</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-7-2.36">
-          <p id="section-7-2.36.1"><span class="bcp14">OPTIONAL</span>. An array recording the Approver's pre-decision questions at
+        <dd style="margin-left: 1.5em" id="section-7-2.38">
+          <p id="section-7-2.38.1"><span class="bcp14">OPTIONAL</span>. An array recording the Approver's pre-decision questions at
 the consent surface (<a href="#interrogation" class="auto internal xref">Section 4.5</a>), in the order asked. Each
 entry carries <code>question</code>, the question as asked or selected;
 <code>applies_to</code>, the Authority Set entry, constraint, or notice it
@@ -2277,68 +2292,70 @@ concerned, when one was identified; and <code>answer_source</code>, one of
 When <code>answer_source</code> is <code>agent</code>, the entry <span class="bcp14">MUST</span> also carry <code>answer</code>,
 the relayed text as rendered, which is committed nowhere else. For
 the other sources the grounding material is already recorded, and
-the entry <span class="bcp14">SHOULD</span> reference it.<a href="#section-7-2.36.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-7-2.37">
-<code>refused_dimensions</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-7-2.38">
-          <p id="section-7-2.38.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>narrowed</code>. An object identifying the
-dimensions the review refused. It carries one or both of:<a href="#section-7-2.38.1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-7-2.38.2.1">
-              <p id="section-7-2.38.2.1.1"><code>rejected_scope</code>, a string of space-delimited scope tokens naming
-the refused scope; and<a href="#section-7-2.38.2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-7-2.38.2.2">
-              <p id="section-7-2.38.2.2.1"><code>rejected_authorization_details</code>, an array of
-authorization-details-shaped subtrees the re-derived Authority Set
-excludes or narrows, each naming a <code>type</code> and the members within
-it that do not survive re-derivation unchanged.<a href="#section-7-2.38.2.2.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-<p id="section-7-2.38.3">These are the shapes the experimental approval-revision profile
-signals on its revision-required response
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>), recorded
-here as the review named them.<a href="#section-7-2.38.3" class="pilcrow">¶</a></p>
+the entry <span class="bcp14">SHOULD</span> reference it.<a href="#section-7-2.38.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.39">
-<code>predecessor_intent_hashes</code>:</dt>
+<code>refused_dimensions</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.40">
-          <p id="section-7-2.40.1"><span class="bcp14">OPTIONAL</span>. An array of <code>intent_hash</code> values committing the revision
-chain that preceded this decision. Carried on the final evidence for
-an approval reached through one or more <code>narrowed</code> outcomes.<a href="#section-7-2.40.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.40.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>narrowed</code>. An object identifying the
+dimensions the review refused. It carries one or both of:<a href="#section-7-2.40.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-2.40.2.1">
+              <p id="section-7-2.40.2.1.1"><code>rejected_scope</code>, a string of space-delimited scope tokens naming
+the refused scope; and<a href="#section-7-2.40.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-2.40.2.2">
+              <p id="section-7-2.40.2.2.1"><code>rejected_authorization_details</code>, an array of
+authorization-details-shaped subtrees the re-derived Authority Set
+excludes or narrows, each naming a <code>type</code> and the members within
+it that do not survive re-derivation unchanged.<a href="#section-7-2.40.2.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-7-2.40.3">These are the shapes the experimental approval-revision profile
+signals on its revision-required response
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>), recorded
+here as the review named them.<a href="#section-7-2.40.3" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.41">
-<code>policy_version</code>:</dt>
+<code>predecessor_intent_hashes</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.42">
-          <p id="section-7-2.42.1"><span class="bcp14">OPTIONAL</span>. A string. The approval policy version in effect at the
-approval event. The AS <span class="bcp14">MUST</span> record it when it possesses the value.
-Because the issuance profile records <code>policy_version</code> on the Mission
-record unconditionally (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the AS
-possesses it at an approval event, so it is present in practice.<a href="#section-7-2.42.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.42.1"><span class="bcp14">OPTIONAL</span>. An array of <code>intent_hash</code> values committing the revision
+chain that preceded this decision. Carried on the final evidence for
+an approval reached through one or more <code>narrowed</code> outcomes.<a href="#section-7-2.42.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.43">
-<code>sequence</code>:</dt>
+<code>approval_policy_version</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.44">
-          <p id="section-7-2.44.1"><span class="bcp14">REQUIRED</span>. An integer. A monotonic sequence value sufficient to
-reconstruct evidence order. A deployment <span class="bcp14">MAY</span> scope it per Mission
-Issuer, per Mission, or per audit scope, provided it is monotonic
-within the scope it chooses.<a href="#section-7-2.44.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.44.1"><span class="bcp14">OPTIONAL</span>. A string. The approval policy version in effect at the
+approval event; where an Approval Governance Record is recorded, it
+<span class="bcp14">MUST</span> equal that record's <code>approval_policy.version</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>). Distinct
+from the Mission record's <code>policy_version</code>, which names the
+derivation policy (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The AS
+<span class="bcp14">MUST</span> record it when it possesses the value.<a href="#section-7-2.44.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.45">
-<code>evidence_envelope</code>:</dt>
+<code>sequence</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.46">
-          <p id="section-7-2.46.1"><span class="bcp14">REQUIRED</span> when retained as a portable record. An object carrying
+          <p id="section-7-2.46.1"><span class="bcp14">REQUIRED</span>. An integer. A monotonic sequence value sufficient to
+reconstruct evidence order. A deployment <span class="bcp14">MAY</span> scope it per Mission
+Issuer, per Mission, or per audit scope, provided it is monotonic
+within the scope it chooses.<a href="#section-7-2.46.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.47">
+<code>evidence_envelope</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.48">
+          <p id="section-7-2.48.1"><span class="bcp14">REQUIRED</span> when retained as a portable record. An object carrying
 <code>format</code> and <code>value</code>. This document defines <code>jws-compact</code>, a JWS
 Compact Serialization <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> over the JCS canonical bytes of the
 Consent Evidence object with <code>evidence_envelope</code> removed. The
 protected-header requirements and the verification path are defined
-in <a href="#integrity" class="auto internal xref">Section 7.1</a>.<a href="#section-7-2.46.1" class="pilcrow">¶</a></p>
+in <a href="#integrity" class="auto internal xref">Section 7.1</a>.<a href="#section-7-2.48.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2374,7 +2391,7 @@ in <a href="#integrity" class="auto internal xref">Section 7.1</a>.<a href="#sec
         "action": "journal-entries.write" },
       "acknowledged_at": "2026-06-30T17:54:50Z" }
   ],
-  "policy_version": "approval-policy:v12",
+  "approval_policy_version": "approval-policy:v12",
   "sequence": 88127,
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
@@ -2443,12 +2460,22 @@ not verify, or whose authenticator is not bound to the recorded
 <code>approver</code>, as an integrity failure; and<a href="#section-7.1-2.7.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-7.1-2.8">
-            <p id="section-7.1-2.8.1">when <code>rendering_attestation</code> is present (<a href="#experimental-rungs" class="auto internal xref">Appendix A</a>),
+            <p id="section-7.1-2.8.1">when <code>approval_governance_digest</code> is present, retrieves the
+Approval Governance Record it names, verifies its envelope and
+Mission binding per that document
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>), recomputes
+the record digest, and compares it to the member: a mismatch is an
+integrity failure of this evidence, while a record unavailable
+within its retention obligation is an audit failure of the
+deployment, not an integrity failure of the evidence; and<a href="#section-7.1-2.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-7.1-2.9">
+            <p id="section-7.1-2.9.1">when <code>rendering_attestation</code> is present (<a href="#experimental-rungs" class="auto internal xref">Appendix A</a>),
 validates the attested component identity and its attestation against
 the verifier's configured trust anchors, and treats an attestation it
 cannot validate as unverified (the evidence then asserts no rung above
 the one the verifier can check, not an integrity failure of the
-record).<a href="#section-7.1-2.8.1" class="pilcrow">¶</a></p>
+record).<a href="#section-7.1-2.9.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 <p id="section-7.1-3">The absence of <code>rendering_confirmation</code> or <code>rendering_attestation</code> is
@@ -2987,6 +3014,10 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <div class="refInstance" id="RFC5646">
             <span class="refAuthor">Phillips, A., Ed.</span> and <span class="refAuthor">M. Davis, Ed.</span>, <span class="refTitle">"Tags for Identifying Languages"</span>, <span class="seriesInfo">BCP 47</span>, <span class="seriesInfo">RFC 5646</span>, <span class="seriesInfo">DOI 10.17487/RFC5646</span>, <time datetime="2009-09" class="refDate">September 2009</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc5646">https://www.rfc-editor.org/info/rfc5646</a>&gt;</span>. </div>
 </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Governance"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
