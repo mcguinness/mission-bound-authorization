@@ -984,7 +984,12 @@ When `evidence_envelope.format` is `jws-compact`, the protected header
 MUST carry a `typ` of `mission-consent-evidence+jws` and a `kid` that
 resolves in the Mission Issuer's published key material (its `jwks_uri`),
 identifying a signing key controlled by the Mission Issuer or an evidence
-service authorized by the Mission Issuer. A verifier:
+service authorized by the Mission Issuer. The `typ` names the secured
+representation, the JWS itself rather than its payload: the payload's
+identifier stays `application/mission-consent-evidence+json`, the value
+the audit profile's evidence-type table and its
+`payload-preimage-content-type` carry
+({{I-D.draft-mcguinness-mission-audit}}). A verifier:
 
 1. removes `evidence_envelope`;
 2. canonicalizes the remaining Consent Evidence object with JCS;

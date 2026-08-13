@@ -29,6 +29,7 @@ author:
 normative:
   RFC3339:
   RFC6234:
+  RFC7515:
   RFC8785:
   RFC9052:
   RFC9943:
@@ -65,26 +66,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
-  RFC8610:
-  I-D.draft-ietf-scitt-scrapi:
-  I-D.draft-mcguinness-oauth-mission-signals:
-    title: "Mission Lifecycle Signals for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
@@ -109,17 +90,53 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-aauth:
-    title: "Mission Context Binding for AAuth"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
+  I-D.draft-mcguinness-mission-discovery:
+    title: "Mission Open-World Discovery"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-discovery:
-    title: "Mission Open-World Discovery"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-work-products:
+    title: "Mission Work Products"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+
+informative:
+  RFC8610:
+  I-D.draft-ietf-scitt-scrapi:
+  I-D.draft-mcguinness-oauth-mission-signals:
+    title: "Mission Lifecycle Signals for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-aauth:
+    title: "Mission Context Binding for AAuth"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
     author:
       -
         ins: K. McGuinness
@@ -157,9 +174,17 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-containment:
-    title: "Mission Containment for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+  I-D.draft-mcguinness-mission-shaping:
+    title: "Mission Intent Shaping"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-orchestration:
+    title: "Mission Orchestration and Unwinding"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html
     author:
       -
         ins: K. McGuinness
@@ -321,10 +346,13 @@ is not the `sha-256:...` display string an integrity anchor uses
 themselves.
 
 The committed value is the SHA-256 {{RFC6234}} digest of the evidence
-bytes that {{evidence-types}} fixes for the evidence type. For an object
-that is already signed, those bytes are the retained object as issued,
-hashed as-is; for an object this profile canonicalizes, they are its JCS
-canonical bytes. The protected header carries:
+bytes that {{evidence-types}} fixes for the evidence type. For an
+artifact whose retained form is itself a compact serialization (a JWS,
+JWT, SET, or SD-JWT component), those bytes are the artifact as
+issued, hashed as-is; for a JSON object, including one that carries a
+nested signature envelope, they are the JCS {{RFC8785}} canonical
+bytes of the complete retained object, envelope included, unless its
+row fixes different bytes. The protected header carries:
 
 - `payload-hash-alg` (label 258): the COSE algorithm of the hash, `-16`
   for SHA-256 {{I-D.draft-ietf-cose-hash-envelope}}; and
@@ -375,38 +403,111 @@ that recognizes these member names by convention still MUST check a
 record's registered type identifier against the exact type it expects
 before treating the record as that type ({{registration-policy}}).
 
+A registrable evidence type is named at up to three layers, and the
+layers are distinct identifiers with distinct purposes, not spellings
+of one string. The media type, or local-use type identifier,
+identifies the retained representation: the payload schema for a
+`+json` object, the compact artifact itself for a `+jwt`, `+sd-jwt`,
+or SET form. The protected `typ` of an operational signature
+envelope, where the defining profile fixes one, names the signed
+object as that profile scopes it: either the payload, as the runtime
+evidence types do, or the secured representation itself, as Consent
+Evidence's `mission-consent-evidence+jws` names the JWS over the
+`application/mission-consent-evidence+json` payload. The
+`payload-preimage-content-type` identifies the media type of the
+preimage committed at the transparency boundary; the exact bytes are
+what the canonical-bytes column fixes ({{evidence-types}},
+{{hash-commitment}}). The evidence-type table fixes each type's
+operational `typ` explicitly; the identifiers are not derivable from
+one another in every case, and a consumer checks the identifier of
+the layer it is verifying. A new type that fixes an operational
+envelope SHOULD set its `typ` to its registered media type, the
+`application/` prefix retained or omitted (equivalent under JWS
+{{RFC7515}}); that equivalence never overrides a defining profile's
+exact-value rule, so a verifier of the runtime evidence types still
+rejects the omitted-prefix forms that profile does not permit. A
+`typ` naming the secured representation instead is a per-type mapping
+the table documents, not a divergent spelling of the media type.
+
+The layering is deliberate, and the layers compose rather than
+compete. The operational signature authenticates producer origin and
+record integrity to any verifier that resolves the producer's key; it
+is not inherently deployment-local. The Signed Statement is a typed
+hash commitment the producer submits for registration, itself a
+producer assertion over a digest ({{hash-commitment}}). What makes
+verification independent of the producer is neither of these but the
+Transparency Service's Receipt and inclusion proof, under a service
+key trusted and retained separately: they add registration and
+inclusion at a committed time and remove reliance on the producer's
+live records ({{receipts}}). Operator independence, or the
+second-service control of {{limits}}, is what carries the
+cross-domain claim; verification still requires the producer and
+service trust anchors, the Receipt, and the retrievable evidence, and
+proves neither that a record is true nor that a feed is complete
+({{verification-failures}}). The anti-cross-use rule above depends on
+keeping the identifiers' roles and checks distinct, not their string
+values: the runtime evidence rows deliberately carry the same media
+type string as operational `typ` and as
+`payload-preimage-content-type`. Collapsing the types into one
+envelope, one media type, or a shared `typ` list would relocate
+domain separation from the registered identifier into a payload
+member.
+
 ## Evidence Types {#evidence-types}
 
 Each registrable evidence type fixes the exact bytes that are hashed,
-the media type carried in `payload-preimage-content-type`, and the producer
-authoritative for it. A producer MUST commit to the canonical bytes
-named here. A relying party MUST verify the producer is
-authoritative for the type ({{registration-policy}}) before treating a
-record as part of the Mission's feed.
+the media type carried in `payload-preimage-content-type`, the
+operational `typ` its retained form carries (none where the retained
+object is unsigned), and the producer authoritative for it. A producer
+MUST commit to the canonical bytes named here. A relying party MUST
+verify the producer is authoritative for the type
+({{registration-policy}}) before treating a record as part of the
+Mission's feed. The table is a normative catalog of evidence types,
+not a registry: a row registers nothing, and its identifier is
+defined, and registered where it is, by the profile the row cites.
 
-| Evidence type | Canonical bytes (hashed) | `payload-preimage-content-type` | Producer |
-|---|---|---|---|
-| Approval event | Mission record at creation, `state` excluded, canonicalized | `application/mission-approval-record+json` | `issuer` |
-| Lifecycle transition | Signals SET as issued; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `issuer` |
-| Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | `issuer` |
-| Consent evidence | retained signed object, as issued | `application/mission-consent-evidence+json` | `issuer` |
-| Approval governance | complete record including `envelope` (JCS), the record-digest preimage | `application/mission-approval-governance+json` | `issuer` |
-| Decision evidence | Decision Evidence object, as issued | `application/mission-decision-evidence+json` | PDP key |
-| Execution evidence | Execution Evidence object, as issued | `application/mission-execution-evidence+json` | PEP key |
-| Refusal Record | Refusal Record object, as issued | `application/mission-refusal-record+json` | PEP key |
-| Mission Mandate | plain form: JWS Compact Serialization, as issued; SD-JWT form: issuer-signed JWT component, as issued | `application/mission-mandate+jwt`, else `application/mission-mandate+sd-jwt` | `issuer` |
-| Child Evidence | Child Evidence object (JCS), as the child-delegation profile fixes | `application/mission-child-evidence+json` | `issuer` |
-| Discovery Evidence | Discovery Evidence object (JCS), as the discovery profile fixes | `application/mission-discovery-evidence+json` | `issuer` |
-| Harness Evidence | Harness Evidence object (JCS), as the harness profile fixes | `application/mission-harness-evidence+json` | harness key |
-| Erasure record | {{erasure-record}} (JCS) | `application/mission-erasure-record+json` | producer of the erased record's type |
+| Evidence type | Canonical bytes (hashed) | `payload-preimage-content-type` | Operational `typ` | Producer |
+|---|---|---|---|---|
+| Approval event | Mission record at creation, `state` excluded, canonicalized | `application/mission-approval-record+json` | none | `issuer` |
+| Lifecycle transition | Signals SET as issued; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `secevent+jwt`, else none | `issuer` |
+| Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | none | `issuer` |
+| Consent evidence | complete retained object, `evidence_envelope` included (JCS) | `application/mission-consent-evidence+json` | `mission-consent-evidence+jws` | `issuer` |
+| Approval governance | complete record including `envelope` (JCS), the record-digest preimage | `application/mission-approval-governance+json` | `application/mission-approval-governance+json` | `issuer` |
+| Decision evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-decision-evidence+json` | `application/mission-decision-evidence+json` | PDP key |
+| Execution evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-execution-evidence+json` | `application/mission-execution-evidence+json` | PEP key |
+| Refusal Record | complete object, `evidence_envelope` included (JCS) | `application/mission-refusal-record+json` | `application/mission-refusal-record+json` | PEP key |
+| Mission Mandate | plain form: JWS Compact Serialization, as issued; SD-JWT form: issuer-signed JWT component, as issued | `application/mission-mandate+jwt`, else `application/mission-mandate+sd-jwt` | `mission-mandate+jwt`, else `mission-mandate+sd-jwt` | `issuer` |
+| Work Product Binding | JWS Compact Serialization, as issued | `application/mission-work-product-binding+jwt` | `mission-work-product-binding+jwt` | signing `mediator` principal |
+| Child Evidence | Child Evidence object (JCS), as the child-delegation profile fixes | `application/mission-child-evidence+json` | none | `issuer` |
+| Discovery Evidence | Discovery Evidence object (JCS), as the discovery profile fixes | `application/mission-discovery-evidence+json` | `mission-discovery-evidence+json` | `issuer` |
+| Harness Evidence | Harness Evidence object (JCS), as the harness profile fixes | `application/mission-harness-evidence+json` | none fixed | harness key |
+| Egress evidence | Egress Evidence object (JCS), as the harness profile fixes | `application/mission-egress-evidence+json` | none fixed | egress key |
+| Containment evidence | Containment Evidence object (JCS), as the containment profile fixes | `application/mission-containment-evidence+json` | none | `issuer` |
+| Protected event receipt | Protected Event Receipt object (JCS), as the containment profile fixes | `application/mission-protected-event-receipt+json` | none | `issuer` |
+| Erasure record | {{erasure-record}} (JCS) | `application/mission-erasure-record+json` | none | producer of the erased record's type |
 
 The table is extensible by specification: a profile MAY define an
 additional evidence type by fixing its canonical bytes, its
-`payload-preimage-content-type`, and its authoritative producer, as the
-Mandate profile does for the Mission Mandate
+`payload-preimage-content-type`, its operational `typ` together with
+the envelope that carries it, where its retained form has one, or an
+explicit none, and its authoritative producer, as the Mandate profile
+does for the Mission Mandate
 ({{I-D.draft-mcguinness-mission-mandate}}). A relying party admits an
 extension type it implements; it ignores records of a type it does
 not implement, and they are not audit failures.
+
+Two evidence producers stay outside the table by design. Shaping
+Evidence fixes no schema or media type; its commitment mechanism is
+the `shaping_evidence_hash` integrity anchor, the issuance profile's
+domain-separated `{typ, iss, value}` envelope with committed-object
+`typ` `mission-shaping-evidence`
+({{I-D.draft-mcguinness-mission-shaping}}), and the underlying record
+gains a row only when a profile fixes its canonical bytes and type
+identifier. Orchestration Evidence registers no media type and keeps
+`mission-orchestration-evidence` as a local-use identifier
+({{I-D.draft-mcguinness-mission-orchestration}}); a deployment MAY
+register it under deployment policy by fixing the values a row
+requires.
 
 The producer identifiers are principals the suite already names. For
 every record whose producer is the Mission `issuer`, the Signed
@@ -415,15 +516,39 @@ Statement's `iss` MUST equal that `issuer`
 in the deployment-published key sets the runtime profile and its
 runtime evidence companion require
 ({{I-D.draft-mcguinness-mission-runtime}},
-{{I-D.draft-mcguinness-mission-runtime-evidence}}).
+{{I-D.draft-mcguinness-mission-runtime-evidence}}); the harness and
+egress keys publish in the same deployment key sets under the harness
+profile's conventions ({{I-D.draft-mcguinness-mission-harness}}). The
+producer of a Work Product Binding is the `mediator` principal that
+signed it, projected onto these paths as {{registration-policy}}
+fixes ({{I-D.draft-mcguinness-oauth-mission-work-products}}).
 
 The approval event, the lifecycle-transition object, and the
-derivation record are canonicalized
-under the issuance profile's canonicalization rules
-({{I-D.draft-mcguinness-oauth-mission}}); an already-signed object (the
-consent, decision, execution, and refusal evidence, the Signals SET,
-and the Mandate) is
-hashed as issued, not re-canonicalized.
+derivation record are canonicalized under the issuance profile's
+canonicalization rules ({{I-D.draft-mcguinness-oauth-mission}}). An
+artifact whose retained form is itself a compact serialization (the
+Signals SET, the Mandate, the Work Product Binding) is hashed as
+issued, not re-canonicalized. A JSON object that carries a nested
+signature envelope (the consent, decision, execution, and refusal
+evidence) is hashed as the JCS canonical bytes of the complete
+retained object, envelope included, the same shape as the
+approval-governance record digest: hashing received octets instead
+would let a reserialization outside the envelope change the audit
+digest while the operational signature stayed valid.
+
+The operational `typ` column records the protected `typ` of the
+signature envelope a type's retained form carries, none where the
+type is retained unsigned. It is the per-type mapping named in
+{{evidence-base}}, checked when verifying the operational signature,
+never in place of `payload-preimage-content-type`. Harness and Egress
+Evidence fix none: their defining profile fixes the raw object's JCS
+bytes under integrity protection by a named mechanism, not a JWS
+envelope, and a deployment-local signature creates no portable
+mapping in this catalog. A harness revision that defines a JWS
+representation fixes, in that profile, the envelope and retained
+form, the protected `typ`, byte-equality verification, and whether
+transparency commits the JSON payload, the complete nested object,
+or the compact JWS.
 
 The media types and type identifiers are defined as follows:
 
@@ -441,9 +566,16 @@ The media types and type identifiers are defined as follows:
   ({{I-D.draft-mcguinness-mission-mandate}});
 - the Child Evidence canonical bytes and type identifier by the
   child-delegation profile
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}); and
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}});
 - the Discovery Evidence canonical bytes and type identifier by the
-  discovery profile ({{I-D.draft-mcguinness-mission-discovery}}).
+  discovery profile ({{I-D.draft-mcguinness-mission-discovery}});
+- the Work Product Binding media type by the work-products profile
+  ({{I-D.draft-mcguinness-oauth-mission-work-products}});
+- the Egress Evidence type identifier by the harness profile
+  ({{I-D.draft-mcguinness-mission-harness}}); and
+- the Containment Evidence and Protected Event Receipt type
+  identifiers by the containment profile
+  ({{I-D.draft-mcguinness-oauth-mission-containment}}).
 
 The approval event's canonical bytes are the whole Mission record at
 creation with `state` excluded, canonicalized ({{evidence-types}}):
@@ -463,9 +595,11 @@ evidence type from being read as another.
 Each companion-defined row binds only a deployment that produces that
 evidence, so the reference is consulted only where the profile is
 adopted. A row whose defining profile is Experimental (the Discovery
-Evidence row) stays on that profile's maturity: this document keeps
-that reference informative, and a deployment not running the
-Experimental profile omits the row. A deployment that does not run
+Evidence, Containment evidence, Protected event receipt, and Work
+Product Binding rows) stays on that profile's maturity: its reference
+is a conditional normative down-reference, binding only a deployment
+that produces that row's evidence, and a deployment not running an
+Experimental profile omits its rows. A deployment that does not run
 the Signals profile commits lifecycle transitions as the transition
 object ({{transition-object}}) instead of the Signals SET.
 
@@ -660,6 +794,159 @@ erasure, still not content-verified); an unexplained gap, in a
 deployment that registers erasures, remains worth recording
 ({{verification-failures}}).
 
+### Computed Nested-Envelope Example {#nested-envelope-vector}
+
+The consent, decision, execution, and refusal rows commit the JCS
+canonical bytes of the complete retained object, `evidence_envelope`
+included. This example fixes that rule against the two divergent
+readings, hashing the received JSON octets and hashing the object
+with the nested envelope stripped; an implementation that reproduces
+this digest has applied the row correctly. The retained Decision
+Evidence object ({{I-D.draft-mcguinness-mission-runtime-evidence}})
+is the following. Its `evidence_envelope.value` is a fixed
+illustrative JWS whose protected header and payload decode as that
+profile fixes and whose signature third segment is a fixed
+illustrative 64-byte value; every string is shown wrapped for layout
+only, so remove the layout line breaks within a string, adding no
+characters, to recover the exact value:
+
+~~~ json
+{
+  "evidence_id": "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA",
+  "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "policy_view_id":
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
+  },
+  "subject": { "type": "user", "id": "user_3p2q8mN1a0kV7tR" },
+  "resource": { "type": "journal-entry", "id": "je_2026Q3_inv_8421" },
+  "action": { "name": "journal-entries.write" },
+  "parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "audience": "https://erp.example.com",
+  "action_class": "irreversible_action",
+  "class_source": "deployment",
+  "conditions": {
+    "valid_until": "2026-11-02T08:15:00Z",
+    "use_limit": 1
+  },
+  "decision": "permit",
+  "contributing_constraints": [
+    "mission_resource_access", "max_amount"
+  ],
+  "sequence": 42,
+  "emitter": { "id": "pdp.example.com", "role": "pdp" },
+  "evaluated_at": "2026-11-02T08:14:03Z",
+  "entry_digest":
+    "sha-256:dPCNLHsZuzPXuhco_s21VTvDI4cagI_LMhPQsqfNJKQ",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value":
+      "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXktMjAyNiIsInR5cCI6ImFw
+      cGxpY2F0aW9uL21pc3Npb24tZGVjaXNpb24tZXZpZGVuY2UranNvbiJ9.eyJ
+      hY3Rpb24iOnsibmFtZSI6ImpvdXJuYWwtZW50cmllcy53cml0ZSJ9LCJhY3R
+      pb25fY2xhc3MiOiJpcnJldmVyc2libGVfYWN0aW9uIiwiYXVkaWVuY2UiOiJ
+      odHRwczovL2VycC5leGFtcGxlLmNvbSIsImNsYXNzX3NvdXJjZSI6ImRlcGx
+      veW1lbnQiLCJjb25kaXRpb25zIjp7InVzZV9saW1pdCI6MSwidmFsaWRfdW5
+      0aWwiOiIyMDI2LTExLTAyVDA4OjE1OjAwWiJ9LCJjb250cmlidXRpbmdfY29
+      uc3RyYWludHMiOlsibWlzc2lvbl9yZXNvdXJjZV9hY2Nlc3MiLCJtYXhfYW1
+      vdW50Il0sImRlY2lzaW9uIjoicGVybWl0IiwiZW1pdHRlciI6eyJpZCI6InB
+      kcC5leGFtcGxlLmNvbSIsInJvbGUiOiJwZHAifSwiZW50cnlfZGlnZXN0Ijo
+      ic2hhLTI1NjpkUENOTEhzWnV6UFh1aGNvX3MyMVZUdkRJNGNhZ0lfTE1oUFF
+      zcWZOSktRIiwiZXZhbHVhdGVkX2F0IjoiMjAyNi0xMS0wMlQwODoxNDowM1o
+      iLCJldmFsdWF0aW9uX2lkIjoiZGVjXzhLMm5QNHFWOXJMM3RZNnNCMXpOMGV
+      GN2pCIiwiZXZpZGVuY2VfaWQiOiJldmRfOU5xM1RtUjZ4TDJ2UDhrWTRzRDF
+      lQjdqSDB3QzV1QSIsIm1pc3Npb24iOnsiYXV0aG9yaXR5X2hhc2giOiJzaGE
+      tMjU2OmwzS3ZaNG1QNXgwd1FyUjZ0WTJuRDliTTdzWDFjRjhnSDJ2SjRrRTV
+      wTlEiLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyYk4xazBZcEVkSGM
+      5LSIsImlzc3VlciI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJwb2xpY3l
+      fdmlld19pZCI6InNoYS0yNTY6a1AzeFI5c1E3bk0ydkw0dFk2YkQxZUY4akM
+      1d0gwcFYyblIza1E0bVo3dCJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic2hhLTI
+      1NjpXUFZpNkVuUTdIOUZoLXFrOUFEeG1UZzh6cnVPZFZVWDFlc2wtdjNUZkN
+      JIiwicmVzb3VyY2UiOnsiaWQiOiJqZV8yMDI2UTNfaW52Xzg0MjEiLCJ0eXB
+      lIjoiam91cm5hbC1lbnRyeSJ9LCJzZXF1ZW5jZSI6NDIsInN1YmplY3QiOns
+      iaWQiOiJ1c2VyXzNwMnE4bU4xYTBrVjd0UiIsInR5cGUiOiJ1c2VyIn19.fo
+      eBPar5Zq5LGp7rFVQB5YBYaIJ3HeV0Mysvhkwe9Lx-
+      4z5KuH6nIgB9chzIMoCu1IBtmPq0eCi5YKa5OfccHg"
+  }
+}
+~~~
+
+The decoded protected header of the `evidence_envelope` value:
+
+~~~ json
+{
+  "alg": "ES256",
+  "kid": "pdp-key-2026",
+  "typ": "application/mission-decision-evidence+json"
+}
+~~~
+
+The evidence bytes are the JCS canonical bytes of that complete
+retained object, `evidence_envelope` included (one line; breaks are
+for display only):
+
+~~~ text
+{"action":{"name":"journal-entries.write"},"action_class":"irrever
+sible_action","audience":"https://erp.example.com","class_source":
+"deployment","conditions":{"use_limit":1,"valid_until":"2026-11-
+02T08:15:00Z"},"contributing_constraints":["mission_resource_acces
+s","max_amount"],"decision":"permit","emitter":{"id":"pdp.example.
+com","role":"pdp"},"entry_digest":"sha-
+256:dPCNLHsZuzPXuhco_s21VTvDI4cagI_LMhPQsqfNJKQ","evaluated_at":"2
+026-11-
+02T08:14:03Z","evaluation_id":"dec_8K2nP4qV9rL3tY6sB1zN0eF7jB","ev
+idence_envelope":{"format":"jws-compact","value":"eyJhbGciOiJFUzI1
+NiIsImtpZCI6InBkcC1rZXktMjAyNiIsInR5cCI6ImFwcGxpY2F0aW9uL21pc3Npb2
+4tZGVjaXNpb24tZXZpZGVuY2UranNvbiJ9.eyJhY3Rpb24iOnsibmFtZSI6ImpvdXJ
+uYWwtZW50cmllcy53cml0ZSJ9LCJhY3Rpb25fY2xhc3MiOiJpcnJldmVyc2libGVfY
+WN0aW9uIiwiYXVkaWVuY2UiOiJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImNsYXN
+zX3NvdXJjZSI6ImRlcGxveW1lbnQiLCJjb25kaXRpb25zIjp7InVzZV9saW1pdCI6M
+SwidmFsaWRfdW50aWwiOiIyMDI2LTExLTAyVDA4OjE1OjAwWiJ9LCJjb250cmlidXR
+pbmdfY29uc3RyYWludHMiOlsibWlzc2lvbl9yZXNvdXJjZV9hY2Nlc3MiLCJtYXhfY
+W1vdW50Il0sImRlY2lzaW9uIjoicGVybWl0IiwiZW1pdHRlciI6eyJpZCI6InBkcC5
+leGFtcGxlLmNvbSIsInJvbGUiOiJwZHAifSwiZW50cnlfZGlnZXN0Ijoic2hhLTI1N
+jpkUENOTEhzWnV6UFh1aGNvX3MyMVZUdkRJNGNhZ0lfTE1oUFFzcWZOSktRIiwiZXZ
+hbHVhdGVkX2F0IjoiMjAyNi0xMS0wMlQwODoxNDowM1oiLCJldmFsdWF0aW9uX2lkI
+joiZGVjXzhLMm5QNHFWOXJMM3RZNnNCMXpOMGVGN2pCIiwiZXZpZGVuY2VfaWQiOiJ
+ldmRfOU5xM1RtUjZ4TDJ2UDhrWTRzRDFlQjdqSDB3QzV1QSIsIm1pc3Npb24iOnsiY
+XV0aG9yaXR5X2hhc2giOiJzaGEtMjU2OmwzS3ZaNG1QNXgwd1FyUjZ0WTJuRDliTTd
+zWDFjRjhnSDJ2SjRrRTVwTlEiLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyY
+k4xazBZcEVkSGM5LSIsImlzc3VlciI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJ
+wb2xpY3lfdmlld19pZCI6InNoYS0yNTY6a1AzeFI5c1E3bk0ydkw0dFk2YkQxZUY4a
+kM1d0gwcFYyblIza1E0bVo3dCJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic2hhLTI1Njp
+XUFZpNkVuUTdIOUZoLXFrOUFEeG1UZzh6cnVPZFZVWDFlc2wtdjNUZkNJIiwicmVzb
+3VyY2UiOnsiaWQiOiJqZV8yMDI2UTNfaW52Xzg0MjEiLCJ0eXBlIjoiam91cm5hbC1
+lbnRyeSJ9LCJzZXF1ZW5jZSI6NDIsInN1YmplY3QiOnsiaWQiOiJ1c2VyXzNwMnE4b
+U4xYTBrVjd0UiIsInR5cGUiOiJ1c2VyIn19.foeBPar5Zq5LGp7rFVQB5YBYaIJ3He
+V0Mysvhkwe9Lx-
+4z5KuH6nIgB9chzIMoCu1IBtmPq0eCi5YKa5OfccHg"},"evidence_id":"evd_9N
+q3TmR6xL2vP8kY4sD1eB7jH0wC5uA","mission":{"authority_hash":"sha-
+256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ","id":"msn_8RfX2Lq
+v9TqMv4z7sA2bN1k0YpEdHc9-
+","issuer":"https://as.example.com","policy_view_id":"sha-
+256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"},"parameter_diges
+t":"sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-
+v3TfCI","resource":{"id":"je_2026Q3_inv_8421","type":"journal-entr
+y"},"sequence":42,"subject":{"id":"user_3p2q8mN1a0kV7tR","type":"u
+ser"}}
+~~~
+
+The committed digest is the SHA-256 of those bytes; its base64url
+form is `0qiDkwVoXwySxY32mS1NF_arp20x28leBo65z5PE5CQ`. The Signed
+Statement carries the digest bytes inline as its payload, with
+`payload-preimage-content-type`
+`application/mission-decision-evidence+json` in its protected header
+({{hash-commitment}}). A verifier that recomputes a different digest
+from the retrieved object has either re-serialized the object outside
+the envelope without recanonicalizing, or hashed the object with
+`evidence_envelope` removed, the signing preimage rather than the
+registered evidence bytes.
+
 ## Registration Policy and Authoritative Producers {#registration-policy}
 
 Each evidence type has one authoritative producer ({{evidence-types}}).
@@ -684,12 +971,25 @@ A relying party discovers a producer's key by the producer's role. The
 - the AAuth Person Server's existing `jwks_uri` in the AAuth binding
   ({{I-D.draft-mcguinness-mission-aauth}}).
 
-A PDP, PEP, or harness key is resolved through the
+A PDP, PEP, harness, or egress key is resolved through the
 deployment-published key sets the runtime profile and its runtime
 evidence companion require ({{I-D.draft-mcguinness-mission-runtime}},
 {{I-D.draft-mcguinness-mission-runtime-evidence}}); the harness
-profile requires the same publication of a harness that registers its
-evidence ({{I-D.draft-mcguinness-mission-harness}}).
+profile requires the same publication of a harness or egress gate that
+registers its evidence ({{I-D.draft-mcguinness-mission-harness}}). A Work Product Binding projects onto the producer rule rather than
+meeting it literally
+({{I-D.draft-mcguinness-oauth-mission-work-products}}). Its evidence
+producer is the `mediator` principal that signed the inner binding;
+the binding's own `iss` is the key-set authority that locates the
+mediator's key, not the mediator identity. A relying party verifies
+the inner JWS first, including that `mediator.id` and `mediator.role`
+correspond to the key its `kid` resolves; the Signed Statement's
+`iss` MUST equal the binding's `iss`, and the Signed Statement's
+signing key MUST be authorized for that same mediator principal and
+role under the deployment's published key material. The Mission
+Issuer does not register a harness-mediated binding as its own
+production: the producer stays the mediator principal, whichever
+component performs the registration.
 
 ## Registration Availability {#availability}
 
@@ -992,8 +1292,9 @@ the Mission Issuer. Protected header, in CBOR extended diagnostic notation
 }
 ~~~
 
-The payload is the SHA-256 digest of the retained Consent Evidence object
-as issued ({{evidence-types}}), carried inline as the raw digest whose
+The payload is the SHA-256 digest of the JCS canonical bytes of the
+retained Consent Evidence object, `evidence_envelope` included
+({{evidence-types}}), carried inline as the raw digest whose
 base64url form is `CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz`, not that
 display string. The Transparency Service appends the statement
 and returns a Receipt, a COSE_Sign1 with an inclusion proof in its
@@ -1252,8 +1553,13 @@ Service are defined elsewhere:
   ({{I-D.draft-mcguinness-mission-mandate}});
 - the Child Evidence type identifier by the child-delegation profile
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}});
-- the Harness Evidence type identifier by the harness profile
-  ({{I-D.draft-mcguinness-mission-harness}}); and
+- the Harness Evidence and Egress Evidence type identifiers by the
+  harness profile ({{I-D.draft-mcguinness-mission-harness}});
+- the Containment Evidence and Protected Event Receipt type
+  identifiers by the containment profile
+  ({{I-D.draft-mcguinness-oauth-mission-containment}});
+- the Work Product Binding media type by the work-products profile
+  ({{I-D.draft-mcguinness-oauth-mission-work-products}}); and
 - the Signals SET media type `application/secevent+jwt` by RFC 8417,
   which the Signals profile carries the event in
   ({{I-D.draft-mcguinness-oauth-mission-signals}}).
