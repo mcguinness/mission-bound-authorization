@@ -31,6 +31,7 @@ normative:
   RFC3339:
   RFC3986:
   RFC6234:
+  RFC7493:
   RFC6749:
   RFC6750:
   RFC7636:
@@ -61,6 +62,7 @@ normative:
       ISO: "4217:2015"
 
 informative:
+  RFC6920:
   RFC8126:
   RFC7009:
   RFC8935:
@@ -2238,13 +2240,11 @@ profile controls, following the Collision-Resistant Name guidance of
 profiles that extend this document share an author-coordinated
 namespace for this reason.
 
-SHA-256 is the only digest algorithm this document defines; the
-`sha-256:` prefix identifies it. Algorithm agility is future work.
-
-A verifier MUST reject an integrity anchor whose algorithm prefix it
-does not recognize. A verifier MUST NOT treat an unrecognized prefix as
-`sha-256`. This ensures that adding an algorithm later cannot be
-exploited as a downgrade.
+SHA-256 is the only digest algorithm this document defines and is
+mandatory to implement; the `sha-256:` prefix identifies it. The
+prefix is the algorithm-agility mechanism, and the reject-unknown,
+no-downgrade rule binding every prefixed digest is stated once in
+{{commitment-mechanisms}}.
 
 ## Canonicalization Rules {#canonicalization}
 
@@ -2257,8 +2257,9 @@ to computing an anchor and to comparing committed values:
   `proposed_authority` for `proposal_hash`, and the `authority_set`
   for `authority_hash`. An auditor reproduces a digest from the
   record alone.
-- The AS MUST reject an input object containing duplicate JSON member
-  names before canonicalization; such input is invalid.
+- The party computing or verifying a commitment MUST reject an input
+  object containing duplicate JSON member names before
+  canonicalization; such input is invalid.
 - JCS does not reorder array elements, and this document defines no
   element sorting, so array order is significant. The AS MUST emit
   each array in a fixed, reproducible order; that order is part of
@@ -2272,6 +2273,57 @@ to computing an anchor and to comparing committed values:
   over the recorded values.
 
 Test vectors for the anchors are provided in {{test-vectors}}.
+
+## Commitment Mechanisms {#commitment-mechanisms}
+
+This family commits to bytes in three ways, and every commitment a
+document in this family defines classifies itself as one of these
+species:
+
+- **Envelope anchor**: the domain-separated, issuer-bound envelope of
+  {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
+  `authority_hash`, and the companion-defined `typ` values).
+- **Canonical-object digest**: `sha-256:` over the JCS serialization
+  of a normalized JSON object without the envelope, where protocol
+  context already fixes what is committed (for example, a runtime
+  parameter digest).
+- **Raw-octet digest**: `sha-256:` over an artifact's exact octets as
+  exchanged, with no canonicalization (for example, a work-product
+  artifact digest).
+
+The prefix and agility rules below bind all three species. The
+I-JSON rule binds the two JSON species. The envelope and `typ`
+discipline of {{integrity-anchors}} binds envelope anchors alone.
+
+Every committed JSON value, and the envelope around it, MUST satisfy
+I-JSON {{RFC7493}}. The party computing or verifying a commitment
+MUST reject non-conformant input before canonicalization: duplicate
+member names ({{canonicalization}}), numbers outside the range JCS
+serializes exactly, and strings that are not Unicode-valid (unpaired
+surrogates). The security considerations of {{RFC8785}} apply to
+every JCS computation. Common Constraints already carry numeric
+quantities as decimal strings ({{common-constraints}}); that
+stricter convention for constraint values is unchanged.
+
+The algorithm prefix is the agility mechanism. `sha-256` is
+mandatory to implement and the only algorithm this family defines. A
+new algorithm enters only through a new prefix defined by a
+referencing specification, its name drawn from the Named Information
+Hash Algorithm Registry ({{RFC6920}}); this document defines no
+negotiation. A verifier MUST reject a digest whose algorithm prefix
+it does not recognize and MUST NOT treat an unrecognized prefix as
+`sha-256`, so an algorithm added later cannot be exploited as a
+downgrade. These rules bind every prefixed digest defined by this
+document or by a document that cites this section, whichever species
+it is.
+
+During an algorithm transition a record MAY carry parallel
+commitments over the same bytes under the old and new prefixes. A
+verifier verifies every commitment whose prefix it recognizes,
+rejects on a mismatch in any commitment it recognizes, and rejects
+when it recognizes none. This sketch is informative; a specification
+that introduces a new prefix defines its transition behavior
+normatively.
 
 # Mission Record {#mission-record}
 

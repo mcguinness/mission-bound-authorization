@@ -1742,6 +1742,10 @@ implementers of the same operation bind the same bytes:
 - set-like array handling and any other canonicalization beyond the
   issuance profile's rules;
 - exactly which fields enter the `parameter_digest`;
+- at least one digest test vector for the operation: a normalized
+  parameter object and its `parameter_digest`, so normalization
+  drift between the PDP and the executing PEP surfaces at profile
+  adoption rather than as a fail-closed outage;
 - whether a single-use decision identifier is required (versus a
   validity window plus idempotency key);
 - whether an execution lease is required; and
@@ -1780,6 +1784,10 @@ that digest immediately before acting
   canonicalization rules the issuance profile defines (duplicate
   member rejection, significant array order, byte-for-byte URI
   comparison); this document does not define a second canonicalization.
+  It is a canonical-object digest under the issuance profile's
+  commitment mechanisms: the I-JSON requirement and the
+  reject-unknown-prefix rule apply to computing and verifying it
+  unchanged ({{I-D.draft-mcguinness-oauth-mission}}).
 - Every parameter that influences the action's external effect (for
   example, the recipient, destination, amount, or target object) MUST
   enter the `parameter_digest`. A field the deployment excludes MUST be
