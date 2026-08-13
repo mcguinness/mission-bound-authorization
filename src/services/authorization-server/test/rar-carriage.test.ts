@@ -374,7 +374,9 @@ describe("Submission envelope carriage (@spec mission#submission-via-par, issue 
     });
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string; error_description?: string };
-    expect(body.error).toBe("invalid_request");
+    // Type-dispatch failures carry the core-registered code; structural
+    // envelope failures stay invalid_request (the two tests beside this one).
+    expect(body.error).toBe("invalid_mission_intent_evidence");
     expect(body.error_description).toContain("unknown evidence type");
   });
 

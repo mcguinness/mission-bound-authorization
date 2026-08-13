@@ -126,13 +126,16 @@ describe("Intent Submission Evidence intake (@spec mission#intent-submission-evi
     expect(INTENT_SUBMISSION_EVIDENCE_TYPES.size).toBe(0);
   });
 
-  it("refuses an unknown evidence type (every presented type today)", () => {
+  it("refuses an unknown evidence type (every presented type today) with the registered error code", () => {
     const e = refusal(() =>
       validateMissionIntentSubmission(
         JSON.stringify({ intent: TASK_INTENT, evidence: [EVIDENCE_ENTRY] }),
       ),
     );
-    expect(e.code).toBe("invalid_request");
+    // @spec mission#intent-submission-evidence — type-dispatch failures carry
+    // the core-registered invalid_mission_intent_evidence; STRUCTURAL envelope
+    // failures (bare shape, missing type, bounds) stay invalid_request.
+    expect(e.code).toBe("invalid_mission_intent_evidence");
     expect(e.message).toContain(`unknown evidence type: ${EVIDENCE_ENTRY.type}`);
   });
 

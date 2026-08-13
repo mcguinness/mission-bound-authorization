@@ -52,6 +52,16 @@ export const MISSION_TEMPLATE_TYP = "mission-template";
  */
 export const MISSION_CREATION_FINGERPRINT_TYP = "mission-creation-fingerprint";
 
+/**
+ * @spec mission#intent-submission-evidence — the `artifact_hash` of a verified
+ * Intent Submission Evidence entry as the Mission Record lands it: the family
+ * anchor idiom over the entry AS PRESENTED. Record-trusted provenance metadata
+ * (the approval_basis treatment), outside every integrity anchor; this typ is
+ * also the documented extension point were a threat model to select a
+ * verifiable association (a future provenance_hash).
+ */
+export const MISSION_INTENT_EVIDENCE_TYP = "mission-intent-evidence";
+
 export function computeAnchor(typ: string, iss: string, value: JsonValue): string {
   const envelope: JsonValue = { typ, iss, value };
   const canonical = canonicalize(envelope);

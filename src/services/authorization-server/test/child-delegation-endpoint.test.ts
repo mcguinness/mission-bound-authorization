@@ -475,7 +475,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_request");
+    expect(body.error).toBe("invalid_mission_intent_evidence");
     expect(body.error_description).toContain("unknown evidence type");
   });
 

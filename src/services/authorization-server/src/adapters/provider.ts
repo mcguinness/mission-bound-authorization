@@ -29,6 +29,31 @@ import Provider, { errors, type Configuration, type KoaContextWithOIDC, type Res
 export const InvalidAuthorizationDetails = (errors as unknown as {
   InvalidAuthorizationDetails: new (message?: string) => Error;
 }).InvalidAuthorizationDetails;
+
+/**
+ * @spec mission#intent-submission-evidence — `invalid_mission_intent_evidence`,
+ * the core-registered OAuth error for Intent Submission Evidence dispatch
+ * failures (an entry of an unsupported `type`, an entry failing its type's
+ * validation, a policy-required type absent). Envelope STRUCTURAL failures
+ * (bare shape, unknown member, missing `type`, bounds) stay invalid_request.
+ */
+export class InvalidMissionIntentEvidence extends errors.CustomOIDCProviderError {
+  constructor(description?: string) {
+    super("invalid_mission_intent_evidence", description);
+  }
+}
+
+/** Map an intake {@link IntentError} onto its OAuth error class. */
+export function intentErrorToOidc(e: IntentError): Error {
+  switch (e.code) {
+    case "invalid_authorization_details":
+      return new InvalidAuthorizationDetails(e.message);
+    case "invalid_mission_intent_evidence":
+      return new InvalidMissionIntentEvidence(e.message);
+    default:
+      return new errors.InvalidRequest(e.message);
+  }
+}
 import {
   DEFERRED_GRANT_TYPE,
   DeferralError,
@@ -458,9 +483,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           }
         } catch (e) {
           if (e instanceof IntentError) {
-            throw e.code === "invalid_request"
-              ? new errors.InvalidRequest(e.message)
-              : new InvalidAuthorizationDetails(e.message);
+            throw intentErrorToOidc(e);
           }
           throw e;
         }
@@ -1869,7 +1892,10 @@ async function handleMissionDispatchGrant(
     intent = kernel.validateSubmission(missionIntentRaw).intent;
   } catch (e) {
     ctx.status = 400;
-    ctx.body = { error: "invalid_request", error_description: e instanceof Error ? e.message : "invalid mission_intent" };
+    ctx.body = {
+      error: e instanceof IntentError ? e.code : "invalid_request",
+      error_description: e instanceof Error ? e.message : "invalid mission_intent",
+    };
     return;
   }
 

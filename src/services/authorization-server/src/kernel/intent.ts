@@ -80,7 +80,14 @@ export const INTENT_SUBMISSION_EVIDENCE_TYPES: ReadonlyMap<
 
 export class IntentError extends Error {
   constructor(
-    readonly code: "invalid_request" | "invalid_authorization_details",
+    readonly code:
+      | "invalid_request"
+      | "invalid_authorization_details"
+      // @spec mission#intent-submission-evidence — the core-registered error
+      // code for evidence-type dispatch failures (unknown type, an entry
+      // failing its type's validation, a policy-required type absent).
+      // Envelope STRUCTURAL failures stay invalid_request.
+      | "invalid_mission_intent_evidence",
     message: string,
   ) {
     super(message);
@@ -179,7 +186,7 @@ export function validateIntentSubmissionEvidence(
     }
     const validate = INTENT_SUBMISSION_EVIDENCE_TYPES.get(e.type);
     if (!validate) {
-      throw new IntentError("invalid_request", `unknown evidence type: ${e.type}`);
+      throw new IntentError("invalid_mission_intent_evidence", `unknown evidence type: ${e.type}`);
     }
     validate(e);
   }

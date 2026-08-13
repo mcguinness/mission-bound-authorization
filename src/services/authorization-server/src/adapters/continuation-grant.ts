@@ -49,7 +49,7 @@ import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
 import type { AuthorityEntry, MissionIntent, MissionIntentSubmission, MissionRecord } from "../kernel/types.js";
 import { mintChildGrant } from "./child-grant.js";
-import { childErrorCode, InvalidAuthorizationDetails, newResourceServer, resourceServerInfoFor } from "./provider.js";
+import { childErrorCode, intentErrorToOidc, InvalidAuthorizationDetails, newResourceServer, resourceServerInfoFor } from "./provider.js";
 import type { AdapterOptions } from "./provider.js";
 
 /** @spec RFC 8693 §2.1 — the token-exchange grant type. */
@@ -1262,6 +1262,7 @@ export async function handleChildCreationExchange(
   try {
     submission = opts.kernel.validateSubmission(missionIntentRaw);
   } catch (e) {
+    if (e instanceof IntentError) throw intentErrorToOidc(e);
     throw new errors.InvalidRequest(e instanceof Error ? e.message : "invalid mission_intent");
   }
   const intent = submission.intent;
@@ -1568,6 +1569,7 @@ export async function handleExpansionExchange(
   try {
     submission = opts.kernel.validateSubmission(missionIntentRaw);
   } catch (e) {
+    if (e instanceof IntentError) throw intentErrorToOidc(e);
     throw new errors.InvalidRequest(e instanceof Error ? e.message : "invalid mission_intent");
   }
   const intent = submission.intent;
