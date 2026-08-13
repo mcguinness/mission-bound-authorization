@@ -1751,6 +1751,14 @@ permit decision.<a href="#section-9.3-2.6.1" class="pilcrow">¶</a></p>
 artifact is fixed by <code>artifact_digest</code>, and the provenance object
 describing it is fixed by <code>provenance_digest</code>, so under the mediator's
 signature neither can be substituted for the other.<a href="#section-9.3-3" class="pilcrow">¶</a></p>
+<p id="section-9.3-4">The binding is registrable Mission evidence under the audit profile's
+evidence-type catalog (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>): the
+canonical bytes are the JWS Compact Serialization as issued, the
+<code>payload-preimage-content-type</code> is
+<code>application/mission-work-product-binding+jwt</code>, and the authoritative
+producer is the signing mediator, its key resolved as in
+<a href="#binding-object" class="auto internal xref">Section 9.2</a>. The protected <code>typ</code> names the same media type,
+prefix omitted (<span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>).<a href="#section-9.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="binding-guardrails">

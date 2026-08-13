@@ -1206,6 +1206,9 @@ commit to the evidence by hash rather than carrying it.<a href="#section-abstrac
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3.2.3">
                     <p id="section-toc.1-1.6.2.3.2.3.1"><a href="#section-6.3.3" class="auto internal xref">6.3.3</a>.  <a href="#name-the-erasure-record" class="internal xref">The Erasure Record</a></p>
 </li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3.2.4">
+                    <p id="section-toc.1-1.6.2.3.2.4.1"><a href="#section-6.3.4" class="auto internal xref">6.3.4</a>.  <a href="#name-computed-nested-envelope-ex" class="internal xref">Computed Nested-Envelope Example</a></p>
+</li>
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.4">
@@ -1462,10 +1465,13 @@ is not the <code>sha-256:...</code> display string an integrity anchor uses
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); it is the digest bytes
 themselves.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 <p id="section-6.1-2">The committed value is the SHA-256 <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span> digest of the evidence
-bytes that <a href="#evidence-types" class="auto internal xref">Section 6.3</a> fixes for the evidence type. For an object
-that is already signed, those bytes are the retained object as issued,
-hashed as-is; for an object this profile canonicalizes, they are its JCS
-canonical bytes. The protected header carries:<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+bytes that <a href="#evidence-types" class="auto internal xref">Section 6.3</a> fixes for the evidence type. For an
+artifact whose retained form is itself a compact serialization (a JWS,
+JWT, SET, or SD-JWT component), those bytes are the artifact as
+issued, hashed as-is; for a JSON object, including one that carries a
+nested signature envelope, they are the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical
+bytes of the complete retained object, envelope included, unless its
+row fixes different bytes. The protected header carries:<a href="#section-6.1-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6.1-3.1">
             <p id="section-6.1-3.1.1"><code>payload-hash-alg</code> (label 258): the COSE algorithm of the hash, <code>-16</code>
@@ -1521,6 +1527,54 @@ members a record happens to share with another type. A relying party
 that recognizes these member names by convention still <span class="bcp14">MUST</span> check a
 record's registered type identifier against the exact type it expects
 before treating the record as that type (<a href="#registration-policy" class="auto internal xref">Section 6.4</a>).<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-4">A registrable evidence type is named at up to three layers, and the
+layers are distinct identifiers with distinct purposes, not spellings
+of one string. The media type, or local-use type identifier,
+identifies the retained representation: the payload schema for a
+<code>+json</code> object, the compact artifact itself for a <code>+jwt</code>, <code>+sd-jwt</code>,
+or SET form. The protected <code>typ</code> of an operational signature
+envelope, where the defining profile fixes one, names the signed
+object as that profile scopes it: either the payload, as the runtime
+evidence types do, or the secured representation itself, as Consent
+Evidence's <code>mission-consent-evidence+jws</code> names the JWS over the
+<code>application/mission-consent-evidence+json</code> payload. The
+<code>payload-preimage-content-type</code> identifies the media type of the
+preimage committed at the transparency boundary; the exact bytes are
+what the canonical-bytes column fixes (<a href="#evidence-types" class="auto internal xref">Section 6.3</a>,
+<a href="#hash-commitment" class="auto internal xref">Section 6.1</a>). The evidence-type table fixes each type's
+operational <code>typ</code> explicitly; the identifiers are not derivable from
+one another in every case, and a consumer checks the identifier of
+the layer it is verifying. A new type that fixes an operational
+envelope <span class="bcp14">SHOULD</span> set its <code>typ</code> to its registered media type, the
+<code>application/</code> prefix retained or omitted (equivalent under JWS
+<span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>); that equivalence never overrides a defining profile's
+exact-value rule, so a verifier of the runtime evidence types still
+rejects the omitted-prefix forms that profile does not permit. A
+<code>typ</code> naming the secured representation instead is a per-type mapping
+the table documents, not a divergent spelling of the media type.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.2-5">The layering is deliberate, and the layers compose rather than
+compete. The operational signature authenticates producer origin and
+record integrity to any verifier that resolves the producer's key; it
+is not inherently deployment-local. The Signed Statement is a typed
+hash commitment the producer submits for registration, itself a
+producer assertion over a digest (<a href="#hash-commitment" class="auto internal xref">Section 6.1</a>). What makes
+verification independent of the producer is neither of these but the
+Transparency Service's Receipt and inclusion proof, under a service
+key trusted and retained separately: they add registration and
+inclusion at a committed time and remove reliance on the producer's
+live records (<a href="#receipts" class="auto internal xref">Section 9</a>). Operator independence, or the
+second-service control of <a href="#limits" class="auto internal xref">Section 11</a>, is what carries the
+cross-domain claim; verification still requires the producer and
+service trust anchors, the Receipt, and the retrievable evidence, and
+proves neither that a record is true nor that a feed is complete
+(<a href="#verification-failures" class="auto internal xref">Section 9.1</a>). The anti-cross-use rule above depends on
+keeping the identifiers' roles and checks distinct, not their string
+values: the runtime evidence rows deliberately carry the same media
+type string as operational <code>typ</code> and as
+<code>payload-preimage-content-type</code>. Collapsing the types into one
+envelope, one media type, or a shared <code>typ</code> list would relocate
+domain separation from the registered identifier into a payload
+member.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="evidence-types">
@@ -1529,11 +1583,15 @@ before treating the record as that type (<a href="#registration-policy" class="a
 <a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-evidence-types" class="section-name selfRef">Evidence Types</a>
         </h3>
 <p id="section-6.3-1">Each registrable evidence type fixes the exact bytes that are hashed,
-the media type carried in <code>payload-preimage-content-type</code>, and the producer
-authoritative for it. A producer <span class="bcp14">MUST</span> commit to the canonical bytes
-named here. A relying party <span class="bcp14">MUST</span> verify the producer is
-authoritative for the type (<a href="#registration-policy" class="auto internal xref">Section 6.4</a>) before treating a
-record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+the media type carried in <code>payload-preimage-content-type</code>, the
+operational <code>typ</code> its retained form carries (none where the retained
+object is unsigned), and the producer authoritative for it. A producer
+<span class="bcp14">MUST</span> commit to the canonical bytes named here. A relying party <span class="bcp14">MUST</span>
+verify the producer is authoritative for the type
+(<a href="#registration-policy" class="auto internal xref">Section 6.4</a>) before treating a record as part of the
+Mission's feed. The table is a normative catalog of evidence types,
+not a registry: a row registers nothing, and its identifier is
+defined, and registered where it is, by the profile the row cites.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
           <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -1541,6 +1599,7 @@ record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶
               <th class="text-left" rowspan="1" colspan="1">Evidence type</th>
               <th class="text-left" rowspan="1" colspan="1">Canonical bytes (hashed)</th>
               <th class="text-left" rowspan="1" colspan="1">payload-preimage-content-type</th>
+              <th class="text-left" rowspan="1" colspan="1">Operational typ</th>
               <th class="text-left" rowspan="1" colspan="1">Producer</th>
             </tr>
           </thead>
@@ -1551,6 +1610,7 @@ record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶
               <td class="text-left" rowspan="1" colspan="1">
                 <code>application/mission-approval-record+json</code>
 </td>
+              <td class="text-left" rowspan="1" colspan="1">none</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>issuer</code>
 </td>
@@ -1562,6 +1622,8 @@ record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶
                 <code>application/secevent+jwt</code>, else <code>application/mission-lifecycle-transition+json</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
+                <code>secevent+jwt</code>, else none</td>
+              <td class="text-left" rowspan="1" colspan="1">
                 <code>issuer</code>
 </td>
             </tr>
@@ -1572,15 +1634,19 @@ record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶
               <td class="text-left" rowspan="1" colspan="1">
                 <code>application/mission-derivation-record+json</code>
 </td>
+              <td class="text-left" rowspan="1" colspan="1">none</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>issuer</code>
 </td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Consent evidence</td>
-              <td class="text-left" rowspan="1" colspan="1">retained signed object, as issued</td>
+              <td class="text-left" rowspan="1" colspan="1">complete retained object, <code>evidence_envelope</code> included (JCS)</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>application/mission-consent-evidence+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>mission-consent-evidence+jws</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>issuer</code>
@@ -1593,12 +1659,18 @@ record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶
                 <code>application/mission-approval-governance+json</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-approval-governance+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
                 <code>issuer</code>
 </td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Decision evidence</td>
-              <td class="text-left" rowspan="1" colspan="1">Decision Evidence object, as issued</td>
+              <td class="text-left" rowspan="1" colspan="1">complete object, <code>evidence_envelope</code> included (JCS)</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-decision-evidence+json</code>
+</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>application/mission-decision-evidence+json</code>
 </td>
@@ -1606,7 +1678,10 @@ record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Execution evidence</td>
-              <td class="text-left" rowspan="1" colspan="1">Execution Evidence object, as issued</td>
+              <td class="text-left" rowspan="1" colspan="1">complete object, <code>evidence_envelope</code> included (JCS)</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-execution-evidence+json</code>
+</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>application/mission-execution-evidence+json</code>
 </td>
@@ -1614,7 +1689,10 @@ record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Refusal Record</td>
-              <td class="text-left" rowspan="1" colspan="1">Refusal Record object, as issued</td>
+              <td class="text-left" rowspan="1" colspan="1">complete object, <code>evidence_envelope</code> included (JCS)</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-refusal-record+json</code>
+</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>application/mission-refusal-record+json</code>
 </td>
@@ -1627,8 +1705,22 @@ record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶
                 <code>application/mission-mandate+jwt</code>, else <code>application/mission-mandate+sd-jwt</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
+                <code>mission-mandate+jwt</code>, else <code>mission-mandate+sd-jwt</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
                 <code>issuer</code>
 </td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Work Product Binding</td>
+              <td class="text-left" rowspan="1" colspan="1">JWS Compact Serialization, as issued</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-work-product-binding+jwt</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>mission-work-product-binding+jwt</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">signing <code>mediator</code> principal</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Child Evidence</td>
@@ -1636,6 +1728,7 @@ record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶
               <td class="text-left" rowspan="1" colspan="1">
                 <code>application/mission-child-evidence+json</code>
 </td>
+              <td class="text-left" rowspan="1" colspan="1">none</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>issuer</code>
 </td>
@@ -1647,6 +1740,9 @@ record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶
                 <code>application/mission-discovery-evidence+json</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
+                <code>mission-discovery-evidence+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
                 <code>issuer</code>
 </td>
             </tr>
@@ -1656,7 +1752,39 @@ record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶
               <td class="text-left" rowspan="1" colspan="1">
                 <code>application/mission-harness-evidence+json</code>
 </td>
+              <td class="text-left" rowspan="1" colspan="1">none fixed</td>
               <td class="text-left" rowspan="1" colspan="1">harness key</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Egress evidence</td>
+              <td class="text-left" rowspan="1" colspan="1">Egress Evidence object (JCS), as the harness profile fixes</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-egress-evidence+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">none fixed</td>
+              <td class="text-left" rowspan="1" colspan="1">egress key</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Containment evidence</td>
+              <td class="text-left" rowspan="1" colspan="1">Containment Evidence object (JCS), as the containment profile fixes</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-containment-evidence+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">none</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>issuer</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Protected event receipt</td>
+              <td class="text-left" rowspan="1" colspan="1">Protected Event Receipt object (JCS), as the containment profile fixes</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-protected-event-receipt+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">none</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>issuer</code>
+</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Erasure record</td>
@@ -1665,67 +1793,118 @@ record as part of the Mission's feed.<a href="#section-6.3-1" class="pilcrow">¶
               <td class="text-left" rowspan="1" colspan="1">
                 <code>application/mission-erasure-record+json</code>
 </td>
+              <td class="text-left" rowspan="1" colspan="1">none</td>
               <td class="text-left" rowspan="1" colspan="1">producer of the erased record's type</td>
             </tr>
           </tbody>
         </table>
 <p id="section-6.3-3">The table is extensible by specification: a profile <span class="bcp14">MAY</span> define an
 additional evidence type by fixing its canonical bytes, its
-<code>payload-preimage-content-type</code>, and its authoritative producer, as the
-Mandate profile does for the Mission Mandate
+<code>payload-preimage-content-type</code>, its operational <code>typ</code> together with
+the envelope that carries it, where its retained form has one, or an
+explicit none, and its authoritative producer, as the Mandate profile
+does for the Mission Mandate
 (<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>). A relying party admits an
 extension type it implements; it ignores records of a type it does
 not implement, and they are not audit failures.<a href="#section-6.3-3" class="pilcrow">¶</a></p>
-<p id="section-6.3-4">The producer identifiers are principals the suite already names. For
+<p id="section-6.3-4">Two evidence producers stay outside the table by design. Shaping
+Evidence fixes no schema or media type; its commitment mechanism is
+the <code>shaping_evidence_hash</code> integrity anchor, the issuance profile's
+domain-separated <code>{typ, iss, value}</code> envelope with committed-object
+<code>typ</code> <code>mission-shaping-evidence</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>), and the underlying record
+gains a row only when a profile fixes its canonical bytes and type
+identifier. Orchestration Evidence registers no media type and keeps
+<code>mission-orchestration-evidence</code> as a local-use identifier
+(<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>); a deployment <span class="bcp14">MAY</span>
+register it under deployment policy by fixing the values a row
+requires.<a href="#section-6.3-4" class="pilcrow">¶</a></p>
+<p id="section-6.3-5">The producer identifiers are principals the suite already names. For
 every record whose producer is the Mission <code>issuer</code>, the Signed
 Statement's <code>iss</code> <span class="bcp14">MUST</span> equal that <code>issuer</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The PDP and PEP keys are those
 in the deployment-published key sets the runtime profile and its
 runtime evidence companion require
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-6.3-4" class="pilcrow">¶</a></p>
-<p id="section-6.3-5">The approval event, the lifecycle-transition object, and the
-derivation record are canonicalized
-under the issuance profile's canonicalization rules
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); an already-signed object (the
-consent, decision, execution, and refusal evidence, the Signals SET,
-and the Mandate) is
-hashed as issued, not re-canonicalized.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
-<p id="section-6.3-6">The media types and type identifiers are defined as follows:<a href="#section-6.3-6" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>); the harness and
+egress keys publish in the same deployment key sets under the harness
+profile's conventions (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>). The
+producer of a Work Product Binding is the <code>mediator</code> principal that
+signed it, projected onto these paths as <a href="#registration-policy" class="auto internal xref">Section 6.4</a>
+fixes (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>).<a href="#section-6.3-5" class="pilcrow">¶</a></p>
+<p id="section-6.3-6">The approval event, the lifecycle-transition object, and the
+derivation record are canonicalized under the issuance profile's
+canonicalization rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). An
+artifact whose retained form is itself a compact serialization (the
+Signals SET, the Mandate, the Work Product Binding) is hashed as
+issued, not re-canonicalized. A JSON object that carries a nested
+signature envelope (the consent, decision, execution, and refusal
+evidence) is hashed as the JCS canonical bytes of the complete
+retained object, envelope included, the same shape as the
+approval-governance record digest: hashing received octets instead
+would let a reserialization outside the envelope change the audit
+digest while the operational signature stayed valid.<a href="#section-6.3-6" class="pilcrow">¶</a></p>
+<p id="section-6.3-7">The operational <code>typ</code> column records the protected <code>typ</code> of the
+signature envelope a type's retained form carries, none where the
+type is retained unsigned. It is the per-type mapping named in
+<a href="#evidence-base" class="auto internal xref">Section 6.2</a>, checked when verifying the operational signature,
+never in place of <code>payload-preimage-content-type</code>. Harness and Egress
+Evidence fix none: their defining profile fixes the raw object's JCS
+bytes under integrity protection by a named mechanism, not a JWS
+envelope, and a deployment-local signature creates no portable
+mapping in this catalog. A harness revision that defines a JWS
+representation fixes, in that profile, the envelope and retained
+form, the protected <code>typ</code>, byte-equality verification, and whether
+transparency commits the JSON payload, the complete nested object,
+or the compact JWS.<a href="#section-6.3-7" class="pilcrow">¶</a></p>
+<p id="section-6.3-8">The media types and type identifiers are defined as follows:<a href="#section-6.3-8" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-6.3-7.1">
-            <p id="section-6.3-7.1.1">the approval-event, lifecycle-transition, and derivation-record
-media types are defined by this profile (<a href="#iana" class="auto internal xref">Section 15</a>);<a href="#section-6.3-7.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-6.3-9.1">
+            <p id="section-6.3-9.1.1">the approval-event, lifecycle-transition, and derivation-record
+media types are defined by this profile (<a href="#iana" class="auto internal xref">Section 15</a>);<a href="#section-6.3-9.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-7.2">
-            <p id="section-6.3-7.2.1">the consent, decision, execution, and refusal evidence types are
+          <li class="normal" id="section-6.3-9.2">
+            <p id="section-6.3-9.2.1">the consent, decision, execution, and refusal evidence types are
 registered by the profiles that define those objects
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>);<a href="#section-6.3-7.2.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>);<a href="#section-6.3-9.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-7.3">
-            <p id="section-6.3-7.3.1">the Approval governance media type by Mission Approval Governance
-(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>);<a href="#section-6.3-7.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-6.3-9.3">
+            <p id="section-6.3-9.3.1">the Approval governance media type by Mission Approval Governance
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>);<a href="#section-6.3-9.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-7.4">
-            <p id="section-6.3-7.4.1">the Signals SET media type by the Signals profile it is carried in
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>);<a href="#section-6.3-7.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-6.3-9.4">
+            <p id="section-6.3-9.4.1">the Signals SET media type by the Signals profile it is carried in
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>);<a href="#section-6.3-9.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-7.5">
-            <p id="section-6.3-7.5.1">the Mandate media type by the Mandate profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>);<a href="#section-6.3-7.5.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-6.3-9.5">
+            <p id="section-6.3-9.5.1">the Mandate media type by the Mandate profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>);<a href="#section-6.3-9.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-7.6">
-            <p id="section-6.3-7.6.1">the Child Evidence canonical bytes and type identifier by the
+          <li class="normal" id="section-6.3-9.6">
+            <p id="section-6.3-9.6.1">the Child Evidence canonical bytes and type identifier by the
 child-delegation profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>); and<a href="#section-6.3-7.6.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>);<a href="#section-6.3-9.6.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.3-7.7">
-            <p id="section-6.3-7.7.1">the Discovery Evidence canonical bytes and type identifier by the
-discovery profile (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>).<a href="#section-6.3-7.7.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-6.3-9.7">
+            <p id="section-6.3-9.7.1">the Discovery Evidence canonical bytes and type identifier by the
+discovery profile (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>);<a href="#section-6.3-9.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.3-9.8">
+            <p id="section-6.3-9.8.1">the Work Product Binding media type by the work-products profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>);<a href="#section-6.3-9.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.3-9.9">
+            <p id="section-6.3-9.9.1">the Egress Evidence type identifier by the harness profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>); and<a href="#section-6.3-9.9.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.3-9.10">
+            <p id="section-6.3-9.10.1">the Containment Evidence and Protected Event Receipt type
+identifiers by the containment profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>).<a href="#section-6.3-9.10.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-6.3-8">The approval event's canonical bytes are the whole Mission record at
+<p id="section-6.3-10">The approval event's canonical bytes are the whole Mission record at
 creation with <code>state</code> excluded, canonicalized (<a href="#evidence-types" class="auto internal xref">Section 6.3</a>):
 every committed member is included, the record's own optional members
 where present (for example, <code>proposed_authority</code> and <code>proposal_hash</code>,
@@ -1738,19 +1917,21 @@ derivation record's <code>entries_digest</code> and <code>token_digest</code>
 signed <code>payload-preimage-content-type</code> in the COSE hash-envelope
 protected header (<a href="#hash-commitment" class="auto internal xref">Section 6.1</a>), which binds the committed hash
 to <code>application/mission-approval-record+json</code> and keeps a digest of one
-evidence type from being read as another.<a href="#section-6.3-8" class="pilcrow">¶</a></p>
-<p id="section-6.3-9">Each companion-defined row binds only a deployment that produces that
+evidence type from being read as another.<a href="#section-6.3-10" class="pilcrow">¶</a></p>
+<p id="section-6.3-11">Each companion-defined row binds only a deployment that produces that
 evidence, so the reference is consulted only where the profile is
 adopted. A row whose defining profile is Experimental (the Discovery
-Evidence row) stays on that profile's maturity: this document keeps
-that reference informative, and a deployment not running the
-Experimental profile omits the row. A deployment that does not run
+Evidence, Containment evidence, Protected event receipt, and Work
+Product Binding rows) stays on that profile's maturity: its reference
+is a conditional normative down-reference, binding only a deployment
+that produces that row's evidence, and a deployment not running an
+Experimental profile omits its rows. A deployment that does not run
 the Signals profile commits lifecycle transitions as the transition
-object (<a href="#transition-object" class="auto internal xref">Section 6.3.1</a>) instead of the Signals SET.<a href="#section-6.3-9" class="pilcrow">¶</a></p>
-<p id="section-6.3-10">A Child Evidence record registers on the Parent Mission's feed: the
+object (<a href="#transition-object" class="auto internal xref">Section 6.3.1</a>) instead of the Signals SET.<a href="#section-6.3-11" class="pilcrow">¶</a></p>
+<p id="section-6.3-12">A Child Evidence record registers on the Parent Mission's feed: the
 <code>sub</code> is the parent's (<a href="#feed" class="auto internal xref">Section 8</a>), its producer is the <code>issuer</code>, and
 the child Mission's <code>id</code> inside the evidence makes the delegation
-navigable from parent to child.<a href="#section-6.3-10" class="pilcrow">¶</a></p>
+navigable from parent to child.<a href="#section-6.3-12" class="pilcrow">¶</a></p>
 <div id="transition-object">
 <section id="section-6.3.1">
           <h4 id="name-the-lifecycle-transition-ob">
@@ -1997,6 +2178,163 @@ deployment that registers erasures, remains worth recording
 (<a href="#verification-failures" class="auto internal xref">Section 9.1</a>).<a href="#section-6.3.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="nested-envelope-vector">
+<section id="section-6.3.4">
+          <h4 id="name-computed-nested-envelope-ex">
+<a href="#section-6.3.4" class="section-number selfRef">6.3.4. </a><a href="#name-computed-nested-envelope-ex" class="section-name selfRef">Computed Nested-Envelope Example</a>
+          </h4>
+<p id="section-6.3.4-1">The consent, decision, execution, and refusal rows commit the JCS
+canonical bytes of the complete retained object, <code>evidence_envelope</code>
+included. This example fixes that rule against the two divergent
+readings, hashing the received JSON octets and hashing the object
+with the nested envelope stripped; an implementation that reproduces
+this digest has applied the row correctly. The retained Decision
+Evidence object (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>)
+is the following. Its <code>evidence_envelope.value</code> is a fixed
+illustrative JWS whose protected header and payload decode as that
+profile fixes and whose signature third segment is a fixed
+illustrative 64-byte value; every string is shown wrapped for layout
+only, so remove the layout line breaks within a string, adding no
+characters, to recover the exact value:<a href="#section-6.3.4-1" class="pilcrow">¶</a></p>
+<div class="breakable lang-json sourcecode" id="section-6.3.4-2">
+<pre>
+{
+  "evidence_id": "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA",
+  "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "policy_view_id":
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
+  },
+  "subject": { "type": "user", "id": "user_3p2q8mN1a0kV7tR" },
+  "resource": { "type": "journal-entry", "id": "je_2026Q3_inv_8421" },
+  "action": { "name": "journal-entries.write" },
+  "parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "audience": "https://erp.example.com",
+  "action_class": "irreversible_action",
+  "class_source": "deployment",
+  "conditions": {
+    "valid_until": "2026-11-02T08:15:00Z",
+    "use_limit": 1
+  },
+  "decision": "permit",
+  "contributing_constraints": [
+    "mission_resource_access", "max_amount"
+  ],
+  "sequence": 42,
+  "emitter": { "id": "pdp.example.com", "role": "pdp" },
+  "evaluated_at": "2026-11-02T08:14:03Z",
+  "entry_digest":
+    "sha-256:dPCNLHsZuzPXuhco_s21VTvDI4cagI_LMhPQsqfNJKQ",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value":
+      "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXktMjAyNiIsInR5cCI6ImFw
+      cGxpY2F0aW9uL21pc3Npb24tZGVjaXNpb24tZXZpZGVuY2UranNvbiJ9.eyJ
+      hY3Rpb24iOnsibmFtZSI6ImpvdXJuYWwtZW50cmllcy53cml0ZSJ9LCJhY3R
+      pb25fY2xhc3MiOiJpcnJldmVyc2libGVfYWN0aW9uIiwiYXVkaWVuY2UiOiJ
+      odHRwczovL2VycC5leGFtcGxlLmNvbSIsImNsYXNzX3NvdXJjZSI6ImRlcGx
+      veW1lbnQiLCJjb25kaXRpb25zIjp7InVzZV9saW1pdCI6MSwidmFsaWRfdW5
+      0aWwiOiIyMDI2LTExLTAyVDA4OjE1OjAwWiJ9LCJjb250cmlidXRpbmdfY29
+      uc3RyYWludHMiOlsibWlzc2lvbl9yZXNvdXJjZV9hY2Nlc3MiLCJtYXhfYW1
+      vdW50Il0sImRlY2lzaW9uIjoicGVybWl0IiwiZW1pdHRlciI6eyJpZCI6InB
+      kcC5leGFtcGxlLmNvbSIsInJvbGUiOiJwZHAifSwiZW50cnlfZGlnZXN0Ijo
+      ic2hhLTI1NjpkUENOTEhzWnV6UFh1aGNvX3MyMVZUdkRJNGNhZ0lfTE1oUFF
+      zcWZOSktRIiwiZXZhbHVhdGVkX2F0IjoiMjAyNi0xMS0wMlQwODoxNDowM1o
+      iLCJldmFsdWF0aW9uX2lkIjoiZGVjXzhLMm5QNHFWOXJMM3RZNnNCMXpOMGV
+      GN2pCIiwiZXZpZGVuY2VfaWQiOiJldmRfOU5xM1RtUjZ4TDJ2UDhrWTRzRDF
+      lQjdqSDB3QzV1QSIsIm1pc3Npb24iOnsiYXV0aG9yaXR5X2hhc2giOiJzaGE
+      tMjU2OmwzS3ZaNG1QNXgwd1FyUjZ0WTJuRDliTTdzWDFjRjhnSDJ2SjRrRTV
+      wTlEiLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyYk4xazBZcEVkSGM
+      5LSIsImlzc3VlciI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJwb2xpY3l
+      fdmlld19pZCI6InNoYS0yNTY6a1AzeFI5c1E3bk0ydkw0dFk2YkQxZUY4akM
+      1d0gwcFYyblIza1E0bVo3dCJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic2hhLTI
+      1NjpXUFZpNkVuUTdIOUZoLXFrOUFEeG1UZzh6cnVPZFZVWDFlc2wtdjNUZkN
+      JIiwicmVzb3VyY2UiOnsiaWQiOiJqZV8yMDI2UTNfaW52Xzg0MjEiLCJ0eXB
+      lIjoiam91cm5hbC1lbnRyeSJ9LCJzZXF1ZW5jZSI6NDIsInN1YmplY3QiOns
+      iaWQiOiJ1c2VyXzNwMnE4bU4xYTBrVjd0UiIsInR5cGUiOiJ1c2VyIn19.fo
+      eBPar5Zq5LGp7rFVQB5YBYaIJ3HeV0Mysvhkwe9Lx-
+      4z5KuH6nIgB9chzIMoCu1IBtmPq0eCi5YKa5OfccHg"
+  }
+}
+</pre><a href="#section-6.3.4-2" class="pilcrow">¶</a>
+</div>
+<p id="section-6.3.4-3">The decoded protected header of the <code>evidence_envelope</code> value:<a href="#section-6.3.4-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.3.4-4">
+<pre>
+{
+  "alg": "ES256",
+  "kid": "pdp-key-2026",
+  "typ": "application/mission-decision-evidence+json"
+}
+</pre><a href="#section-6.3.4-4" class="pilcrow">¶</a>
+</div>
+<p id="section-6.3.4-5">The evidence bytes are the JCS canonical bytes of that complete
+retained object, <code>evidence_envelope</code> included (one line; breaks are
+for display only):<a href="#section-6.3.4-5" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-6.3.4-6">
+<pre>
+{"action":{"name":"journal-entries.write"},"action_class":"irrever
+sible_action","audience":"https://erp.example.com","class_source":
+"deployment","conditions":{"use_limit":1,"valid_until":"2026-11-
+02T08:15:00Z"},"contributing_constraints":["mission_resource_acces
+s","max_amount"],"decision":"permit","emitter":{"id":"pdp.example.
+com","role":"pdp"},"entry_digest":"sha-
+256:dPCNLHsZuzPXuhco_s21VTvDI4cagI_LMhPQsqfNJKQ","evaluated_at":"2
+026-11-
+02T08:14:03Z","evaluation_id":"dec_8K2nP4qV9rL3tY6sB1zN0eF7jB","ev
+idence_envelope":{"format":"jws-compact","value":"eyJhbGciOiJFUzI1
+NiIsImtpZCI6InBkcC1rZXktMjAyNiIsInR5cCI6ImFwcGxpY2F0aW9uL21pc3Npb2
+4tZGVjaXNpb24tZXZpZGVuY2UranNvbiJ9.eyJhY3Rpb24iOnsibmFtZSI6ImpvdXJ
+uYWwtZW50cmllcy53cml0ZSJ9LCJhY3Rpb25fY2xhc3MiOiJpcnJldmVyc2libGVfY
+WN0aW9uIiwiYXVkaWVuY2UiOiJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImNsYXN
+zX3NvdXJjZSI6ImRlcGxveW1lbnQiLCJjb25kaXRpb25zIjp7InVzZV9saW1pdCI6M
+SwidmFsaWRfdW50aWwiOiIyMDI2LTExLTAyVDA4OjE1OjAwWiJ9LCJjb250cmlidXR
+pbmdfY29uc3RyYWludHMiOlsibWlzc2lvbl9yZXNvdXJjZV9hY2Nlc3MiLCJtYXhfY
+W1vdW50Il0sImRlY2lzaW9uIjoicGVybWl0IiwiZW1pdHRlciI6eyJpZCI6InBkcC5
+leGFtcGxlLmNvbSIsInJvbGUiOiJwZHAifSwiZW50cnlfZGlnZXN0Ijoic2hhLTI1N
+jpkUENOTEhzWnV6UFh1aGNvX3MyMVZUdkRJNGNhZ0lfTE1oUFFzcWZOSktRIiwiZXZ
+hbHVhdGVkX2F0IjoiMjAyNi0xMS0wMlQwODoxNDowM1oiLCJldmFsdWF0aW9uX2lkI
+joiZGVjXzhLMm5QNHFWOXJMM3RZNnNCMXpOMGVGN2pCIiwiZXZpZGVuY2VfaWQiOiJ
+ldmRfOU5xM1RtUjZ4TDJ2UDhrWTRzRDFlQjdqSDB3QzV1QSIsIm1pc3Npb24iOnsiY
+XV0aG9yaXR5X2hhc2giOiJzaGEtMjU2OmwzS3ZaNG1QNXgwd1FyUjZ0WTJuRDliTTd
+zWDFjRjhnSDJ2SjRrRTVwTlEiLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyY
+k4xazBZcEVkSGM5LSIsImlzc3VlciI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJ
+wb2xpY3lfdmlld19pZCI6InNoYS0yNTY6a1AzeFI5c1E3bk0ydkw0dFk2YkQxZUY4a
+kM1d0gwcFYyblIza1E0bVo3dCJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic2hhLTI1Njp
+XUFZpNkVuUTdIOUZoLXFrOUFEeG1UZzh6cnVPZFZVWDFlc2wtdjNUZkNJIiwicmVzb
+3VyY2UiOnsiaWQiOiJqZV8yMDI2UTNfaW52Xzg0MjEiLCJ0eXBlIjoiam91cm5hbC1
+lbnRyeSJ9LCJzZXF1ZW5jZSI6NDIsInN1YmplY3QiOnsiaWQiOiJ1c2VyXzNwMnE4b
+U4xYTBrVjd0UiIsInR5cGUiOiJ1c2VyIn19.foeBPar5Zq5LGp7rFVQB5YBYaIJ3He
+V0Mysvhkwe9Lx-
+4z5KuH6nIgB9chzIMoCu1IBtmPq0eCi5YKa5OfccHg"},"evidence_id":"evd_9N
+q3TmR6xL2vP8kY4sD1eB7jH0wC5uA","mission":{"authority_hash":"sha-
+256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ","id":"msn_8RfX2Lq
+v9TqMv4z7sA2bN1k0YpEdHc9-
+","issuer":"https://as.example.com","policy_view_id":"sha-
+256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"},"parameter_diges
+t":"sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-
+v3TfCI","resource":{"id":"je_2026Q3_inv_8421","type":"journal-entr
+y"},"sequence":42,"subject":{"id":"user_3p2q8mN1a0kV7tR","type":"u
+ser"}}
+</pre><a href="#section-6.3.4-6" class="pilcrow">¶</a>
+</div>
+<p id="section-6.3.4-7">The committed digest is the SHA-256 of those bytes; its base64url
+form is <code>0qiDkwVoXwySxY32mS1NF_arp20x28leBo65z5PE5CQ</code>. The Signed
+Statement carries the digest bytes inline as its payload, with
+<code>payload-preimage-content-type</code>
+            <code>application/mission-decision-evidence+json</code> in its protected header
+(<a href="#hash-commitment" class="auto internal xref">Section 6.1</a>). A verifier that recomputes a different digest
+from the retrieved object has either re-serialized the object outside
+the envelope without recanonicalizing, or hashed the object with
+<code>evidence_envelope</code> removed, the signing preimage rather than the
+registered evidence bytes.<a href="#section-6.3.4-7" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="registration-policy">
@@ -2030,12 +2368,25 @@ standalone binding
 (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-6.4-4.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-6.4-5">A PDP, PEP, or harness key is resolved through the
+<p id="section-6.4-5">A PDP, PEP, harness, or egress key is resolved through the
 deployment-published key sets the runtime profile and its runtime
 evidence companion require (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>); the harness
-profile requires the same publication of a harness that registers its
-evidence (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-6.4-5" class="pilcrow">¶</a></p>
+profile requires the same publication of a harness or egress gate that
+registers its evidence (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>). A Work Product Binding projects onto the producer rule rather than
+meeting it literally
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>). Its evidence
+producer is the <code>mediator</code> principal that signed the inner binding;
+the binding's own <code>iss</code> is the key-set authority that locates the
+mediator's key, not the mediator identity. A relying party verifies
+the inner JWS first, including that <code>mediator.id</code> and <code>mediator.role</code>
+correspond to the key its <code>kid</code> resolves; the Signed Statement's
+<code>iss</code> <span class="bcp14">MUST</span> equal the binding's <code>iss</code>, and the Signed Statement's
+signing key <span class="bcp14">MUST</span> be authorized for that same mediator principal and
+role under the deployment's published key material. The Mission
+Issuer does not register a harness-mediated binding as its own
+production: the producer stays the mediator principal, whichever
+component performs the registration.<a href="#section-6.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="availability">
@@ -2392,8 +2743,9 @@ the Mission Issuer. Protected header, in CBOR extended diagnostic notation
 }
 </pre><a href="#section-10-2" class="pilcrow">¶</a>
 </div>
-<p id="section-10-3">The payload is the SHA-256 digest of the retained Consent Evidence object
-as issued (<a href="#evidence-types" class="auto internal xref">Section 6.3</a>), carried inline as the raw digest whose
+<p id="section-10-3">The payload is the SHA-256 digest of the JCS canonical bytes of the
+retained Consent Evidence object, <code>evidence_envelope</code> included
+(<a href="#evidence-types" class="auto internal xref">Section 6.3</a>), carried inline as the raw digest whose
 base64url form is <code>CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz</code>, not that
 display string. The Transparency Service appends the statement
 and returns a Receipt, a COSE_Sign1 with an inclusion proof in its
@@ -2731,13 +3083,22 @@ runtime evidence companion
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>);<a href="#section-15-5.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-5.5">
-          <p id="section-15-5.5.1">the Harness Evidence type identifier by the harness profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>); and<a href="#section-15-5.5.1" class="pilcrow">¶</a></p>
+          <p id="section-15-5.5.1">the Harness Evidence and Egress Evidence type identifiers by the
+harness profile (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>);<a href="#section-15-5.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-5.6">
-          <p id="section-15-5.6.1">the Signals SET media type <code>application/secevent+jwt</code> by RFC 8417,
+          <p id="section-15-5.6.1">the Containment Evidence and Protected Event Receipt type
+identifiers by the containment profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>);<a href="#section-15-5.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-5.7">
+          <p id="section-15-5.7.1">the Work Product Binding media type by the work-products profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>); and<a href="#section-15-5.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-5.8">
+          <p id="section-15-5.8.1">the Signals SET media type <code>application/secevent+jwt</code> by RFC 8417,
 which the Signals profile carries the event in
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>).<a href="#section-15-5.6.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>).<a href="#section-15-5.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-15-6">The Signed Statement and Receipt media types are the transparency
@@ -2760,6 +3121,22 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
         <dd>
 <span class="refAuthor">Steele, O.</span>, <span class="refAuthor">Lasker, S.</span>, and <span class="refAuthor">H. Birkholz</span>, <span class="refTitle">"COSE Hash Envelope"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-cose-hash-envelope-10</span>, <time datetime="2025-11-15" class="refDate">15 November 2025</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-cose-hash-envelope-10">https://datatracker.ietf.org/doc/html/draft-ietf-cose-hash-envelope-10</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Governance"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-discovery">[I-D.draft-mcguinness-mission-discovery]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Open-World Discovery"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-runtime-evidence">[I-D.draft-mcguinness-mission-runtime-evidence]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Runtime Evidence"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html</a>&gt;</span>. </dd>
@@ -2780,6 +3157,14 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-work-products">[I-D.draft-mcguinness-oauth-mission-work-products]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Work Products"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
@@ -2791,6 +3176,10 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
 <dt id="RFC6234">[RFC6234]</dt>
         <dd>
 <span class="refAuthor">Eastlake 3rd, D.</span> and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"US Secure Hash Algorithms (SHA and SHA-based HMAC and HKDF)"</span>, <span class="seriesInfo">RFC 6234</span>, <span class="seriesInfo">DOI 10.17487/RFC6234</span>, <time datetime="2011-05" class="refDate">May 2011</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6234">https://www.rfc-editor.org/rfc/rfc6234</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8174">[RFC8174]</dt>
         <dd>
@@ -2825,10 +3214,6 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Context Binding for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Governance"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
@@ -2837,25 +3222,17 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-discovery">[I-D.draft-mcguinness-mission-discovery]</dt>
+<dt id="I-D.draft-mcguinness-mission-orchestration">[I-D.draft-mcguinness-mission-orchestration]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Open-World Discovery"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Orchestration and Unwinding"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+<dt id="I-D.draft-mcguinness-mission-shaping">[I-D.draft-mcguinness-mission-shaping]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Shaping"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>

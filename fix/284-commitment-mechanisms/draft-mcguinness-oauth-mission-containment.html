@@ -1273,6 +1273,19 @@ document.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.23">
             <p id="section-toc.1-1.23.1"><a href="#section-23" class="auto internal xref">23</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.23.2.1">
+                <p id="section-toc.1-1.23.2.1.1"><a href="#section-23.1" class="auto internal xref">23.1</a>.  <a href="#name-media-type-registration" class="internal xref">Media Type Registration</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.23.2.1.2.1">
+                    <p id="section-toc.1-1.23.2.1.2.1.1"><a href="#section-23.1.1" class="auto internal xref">23.1.1</a>.  <a href="#name-containment-evidence-media-" class="internal xref">Containment Evidence Media Type</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.23.2.1.2.2">
+                    <p id="section-toc.1-1.23.2.1.2.2.1"><a href="#section-23.1.2" class="auto internal xref">23.1.2</a>.  <a href="#name-protected-event-receipt-med" class="internal xref">Protected Event Receipt Media Type</a></p>
+</li>
+                </ul>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.24">
             <p id="section-toc.1-1.24.1"><a href="#section-24" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
@@ -1902,11 +1915,16 @@ an ordinary out-of-authority denial.<a href="#section-13-2" class="pilcrow">¶</
 vocabulary for a request outside the derivable authority and <span class="bcp14">MAY</span>
 additionally carry <code>authority_contained</code> in the shared
 <code>mission_denial_reason</code> member the expansion profile registers
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>). A runtime
-enforcement deployment carries it as a denial-reason identifier
-alongside the classification set of
-<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>. A consumer <span class="bcp14">MUST</span> treat an
-unrecognized reason code as a denial with no further semantics.<a href="#section-13-3" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>); this document
+requests that value's registration in the Mission Denial Reasons
+registry that member carries (<a href="#iana" class="auto internal xref">Section 23</a>).
+A runtime enforcement deployment separately carries it as a
+denial-reason identifier alongside the classification set of
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>, a distinct
+specification-defined value space the registry does not cover: the
+shared spelling is a coincidence, not a shared registration. A
+consumer <span class="bcp14">MUST</span> treat an unrecognized reason code as a denial with no
+further semantics.<a href="#section-13-3" class="pilcrow">¶</a></p>
 <p id="section-13-4">Consistent with the expansion profile, the classification of a denial
 as expansion-eligible belongs to the component that denies the
 action; this document classifies <code>authority_contained</code> as
@@ -2158,9 +2176,8 @@ transition.<a href="#section-18.1-2.10.1" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-18.2-1">A Containment Evidence object's canonical bytes are its JCS
 <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonicalization, and its type identifier is
-<code>application/mission-containment-evidence+json</code>, used by local
-agreement pending registration. An audit or transparency profile
-registers the object by these values.<a href="#section-18.2-1" class="pilcrow">¶</a></p>
+<code>application/mission-containment-evidence+json</code>, registered by this
+document (<a href="#iana" class="auto internal xref">Section 23</a>).<a href="#section-18.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2266,11 +2283,9 @@ guidance of <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Sect
 </div>
 <p id="section-19-6">A Protected Event Receipt's canonical bytes are its JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
 canonicalization, and its type identifier is
-<code>application/mission-protected-event-receipt+json</code>, used by local
-agreement pending registration, mirroring the Child and Discovery
-Evidence registration conventions
-(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). An audit or transparency
-profile registers the object by these values.<a href="#section-19-6" class="pilcrow">¶</a></p>
+<code>application/mission-protected-event-receipt+json</code>, registered by this
+document (<a href="#iana" class="auto internal xref">Section 23</a>), mirroring the Child and Discovery Evidence
+registration conventions (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-19-6" class="pilcrow">¶</a></p>
 <p id="section-19-7">An <code>applied</code> receipt's <code>event_id</code> correlates it to the Containment
 Evidence object the same event produced (<a href="#evidence-object" class="auto internal xref">Section 18.1</a>); a
 <code>rejected</code> receipt has no corresponding Containment Evidence, because
@@ -2440,25 +2455,177 @@ under the same rule.<a href="#section-22-1" class="pilcrow">¶</a></p>
       <h2 id="name-iana-considerations">
 <a href="#section-23" class="section-number selfRef">23. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-23-1">This document requires no IANA action.<a href="#section-23-1" class="pilcrow">¶</a></p>
+<p id="section-23-1">This document registers two media types.<a href="#section-23-1" class="pilcrow">¶</a></p>
 <p id="section-23-2">The <code>containment_version</code> member and any containment annotation ride
 surfaces whose defining profile establishes no per-member registry
 (the <code>mission</code> object of the Mission Status Response and the
 introspection Mission projection,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>); consistent with those
 surfaces' rules, a consumer ignores an unrecognized member.<a href="#section-23-2" class="pilcrow">¶</a></p>
-<p id="section-23-3"><code>authority_contained</code> extends, by specification, the closed set of
-reason codes carried in the shared <code>mission_denial_reason</code> member;
-that member's registrations are the expansion profile's, and this
-document creates no registry for the codes, consistent with that
-profile's plan for a future shared "Mission Denial Reason" registry
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-23-3" class="pilcrow">¶</a></p>
-<p id="section-23-4">The Containment Evidence type identifier
-<code>application/mission-containment-evidence+json</code> is used by local
-agreement pending registration (<a href="#evidence-canonical" class="auto internal xref">Section 18.2</a>).<a href="#section-23-4" class="pilcrow">¶</a></p>
-<p id="section-23-5">The Protected Event Receipt type identifier
-<code>application/mission-protected-event-receipt+json</code> is used by local
-agreement pending registration (<a href="#protected-event-receipt" class="auto internal xref">Section 19</a>).<a href="#section-23-5" class="pilcrow">¶</a></p>
+<p id="section-23-3">This document requests registration of <code>authority_contained</code> in the
+Mission Denial Reasons registry the expansion profile establishes
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), with its semantics
+as defined in this document and Reference this document: it rides the
+shared <code>mission_denial_reason</code> member that registry covers. The same string
+also names a denial-reason identifier in the AuthZEN decision-context
+classification set
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); that is a separate
+specification-defined value space this document does not register
+into, and the shared spelling implies no shared registration.<a href="#section-23-3" class="pilcrow">¶</a></p>
+<div id="media-type-registration">
+<section id="section-23.1">
+        <h3 id="name-media-type-registration">
+<a href="#section-23.1" class="section-number selfRef">23.1. </a><a href="#name-media-type-registration" class="section-name selfRef">Media Type Registration</a>
+        </h3>
+<p id="section-23.1-1">This document registers two media types per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>.<a href="#section-23.1-1" class="pilcrow">¶</a></p>
+<div id="containment-evidence-media-type">
+<section id="section-23.1.1">
+          <h4 id="name-containment-evidence-media-">
+<a href="#section-23.1.1" class="section-number selfRef">23.1.1. </a><a href="#name-containment-evidence-media-" class="section-name selfRef">Containment Evidence Media Type</a>
+          </h4>
+<ul class="normal">
+<li class="normal" id="section-23.1.1-1.1">
+              <p id="section-23.1.1-1.1.1">Type name: application<a href="#section-23.1.1-1.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.2">
+              <p id="section-23.1.1-1.2.1">Subtype name: mission-containment-evidence+json<a href="#section-23.1.1-1.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.3">
+              <p id="section-23.1.1-1.3.1">Required parameters: none<a href="#section-23.1.1-1.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.4">
+              <p id="section-23.1.1-1.4.1">Optional parameters: none<a href="#section-23.1.1-1.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.5">
+              <p id="section-23.1.1-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-23.1.1-1.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.6">
+              <p id="section-23.1.1-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 21</a><a href="#section-23.1.1-1.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.7">
+              <p id="section-23.1.1-1.7.1">Interoperability considerations: see this document<a href="#section-23.1.1-1.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.8">
+              <p id="section-23.1.1-1.8.1">Published specification: this document<a href="#section-23.1.1-1.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.9">
+              <p id="section-23.1.1-1.9.1">Applications that use this media type: Mission containment
+deployments<a href="#section-23.1.1-1.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.10">
+              <p id="section-23.1.1-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-23.1.1-1.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.11">
+              <p id="section-23.1.1-1.11.1">Additional information:<a href="#section-23.1.1-1.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-23.1.1-1.11.2.1">
+                  <p id="section-23.1.1-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-23.1.1-1.11.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-23.1.1-1.11.2.2">
+                  <p id="section-23.1.1-1.11.2.2.1">Magic number(s): none<a href="#section-23.1.1-1.11.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-23.1.1-1.11.2.3">
+                  <p id="section-23.1.1-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-23.1.1-1.11.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-23.1.1-1.11.2.4">
+                  <p id="section-23.1.1-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-23.1.1-1.11.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-23.1.1-1.12">
+              <p id="section-23.1.1-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-23.1.1-1.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.13">
+              <p id="section-23.1.1-1.13.1">Intended usage: COMMON<a href="#section-23.1.1-1.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.14">
+              <p id="section-23.1.1-1.14.1">Restrictions on usage: none<a href="#section-23.1.1-1.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.15">
+              <p id="section-23.1.1-1.15.1">Author: IETF<a href="#section-23.1.1-1.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.1-1.16">
+              <p id="section-23.1.1-1.16.1">Change controller: IETF<a href="#section-23.1.1-1.16.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+<div id="protected-event-receipt-media-type">
+<section id="section-23.1.2">
+          <h4 id="name-protected-event-receipt-med">
+<a href="#section-23.1.2" class="section-number selfRef">23.1.2. </a><a href="#name-protected-event-receipt-med" class="section-name selfRef">Protected Event Receipt Media Type</a>
+          </h4>
+<ul class="normal">
+<li class="normal" id="section-23.1.2-1.1">
+              <p id="section-23.1.2-1.1.1">Type name: application<a href="#section-23.1.2-1.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.2">
+              <p id="section-23.1.2-1.2.1">Subtype name: mission-protected-event-receipt+json<a href="#section-23.1.2-1.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.3">
+              <p id="section-23.1.2-1.3.1">Required parameters: none<a href="#section-23.1.2-1.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.4">
+              <p id="section-23.1.2-1.4.1">Optional parameters: none<a href="#section-23.1.2-1.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.5">
+              <p id="section-23.1.2-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-23.1.2-1.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.6">
+              <p id="section-23.1.2-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 21</a><a href="#section-23.1.2-1.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.7">
+              <p id="section-23.1.2-1.7.1">Interoperability considerations: see this document<a href="#section-23.1.2-1.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.8">
+              <p id="section-23.1.2-1.8.1">Published specification: this document<a href="#section-23.1.2-1.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.9">
+              <p id="section-23.1.2-1.9.1">Applications that use this media type: Mission containment
+deployments<a href="#section-23.1.2-1.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.10">
+              <p id="section-23.1.2-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-23.1.2-1.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.11">
+              <p id="section-23.1.2-1.11.1">Additional information:<a href="#section-23.1.2-1.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-23.1.2-1.11.2.1">
+                  <p id="section-23.1.2-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-23.1.2-1.11.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-23.1.2-1.11.2.2">
+                  <p id="section-23.1.2-1.11.2.2.1">Magic number(s): none<a href="#section-23.1.2-1.11.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-23.1.2-1.11.2.3">
+                  <p id="section-23.1.2-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-23.1.2-1.11.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-23.1.2-1.11.2.4">
+                  <p id="section-23.1.2-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-23.1.2-1.11.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-23.1.2-1.12">
+              <p id="section-23.1.2-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-23.1.2-1.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.13">
+              <p id="section-23.1.2-1.13.1">Intended usage: COMMON<a href="#section-23.1.2-1.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.14">
+              <p id="section-23.1.2-1.14.1">Restrictions on usage: none<a href="#section-23.1.2-1.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.15">
+              <p id="section-23.1.2-1.15.1">Author: IETF<a href="#section-23.1.2-1.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-23.1.2-1.16">
+              <p id="section-23.1.2-1.16.1">Change controller: IETF<a href="#section-23.1.2-1.16.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+</section>
+</div>
 </section>
 </div>
 <div id="acknowledgments">
@@ -2505,6 +2672,10 @@ Expansion's widening.<a href="#section-24-1" class="pilcrow">¶</a></p>
 <dt id="RFC3339">[RFC3339]</dt>
         <dd>
 <span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6838">[RFC6838]</dt>
+        <dd>
+<span class="refAuthor">Freed, N.</span>, <span class="refAuthor">Klensin, J.</span>, and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"Media Type Specifications and Registration Procedures"</span>, <span class="seriesInfo">BCP 13</span>, <span class="seriesInfo">RFC 6838</span>, <span class="seriesInfo">DOI 10.17487/RFC6838</span>, <time datetime="2013-01" class="refDate">January 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6838">https://www.rfc-editor.org/rfc/rfc6838</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC7519">[RFC7519]</dt>
         <dd>

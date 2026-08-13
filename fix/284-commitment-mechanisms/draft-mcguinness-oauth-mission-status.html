@@ -1357,10 +1357,13 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.3">
-                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-common-constraint-definitio" class="internal xref">Common Constraint Definition: terminal_when</a></p>
+                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-mission-lifecycle-states-re" class="internal xref">Mission Lifecycle States Registrations</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.4">
-                <p id="section-toc.1-1.13.2.4.1"><a href="#section-13.4" class="auto internal xref">13.4</a>.  <a href="#name-well-known-uri" class="internal xref">Well-Known URI</a></p>
+                <p id="section-toc.1-1.13.2.4.1"><a href="#section-13.4" class="auto internal xref">13.4</a>.  <a href="#name-common-constraints-registry" class="internal xref">Common Constraints Registry: terminal_when</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.5">
+                <p id="section-toc.1-1.13.2.5.1"><a href="#section-13.5" class="auto internal xref">13.5</a>.  <a href="#name-well-known-uri" class="internal xref">Well-Known URI</a></p>
 </li>
             </ul>
 </li>
@@ -2981,7 +2984,8 @@ naming convention (<a href="#iana" class="auto internal xref">Section 13</a>).<a
           <dt id="section-7.2-2.1">
 <code>terminal_when</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.2-2.2">
-            <p id="section-7.2-2.2.1"><span class="bcp14">OPTIONAL</span>. An array of completion conditions. When any condition is
+            <p id="section-7.2-2.2.1"><span class="bcp14">OPTIONAL</span>. An array of one or more completion conditions. When any
+condition is
 met, the entry is discharged (<a href="#discharge" class="auto internal xref">Section 7.3</a>). Each condition is an
 object with these members:<a href="#section-7.2-2.2.1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-7.2-2.2.2">
@@ -3015,7 +3019,13 @@ issuance.<a href="#section-7.2-2.2.2.6.1" class="pilcrow">¶</a></p>
 </dl>
 <p id="section-7.2-3">The <code>terminal_when</code> array is part of the entry's <code>constraints</code> and so of
 the Authority Set: it is committed by <code>authority_hash</code> and reproducible
-under derivation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Whether a
+under derivation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Condition
+identity is byte equality of the condition object's canonical form
+under the issuance profile's canonicalization; an AS refuses a value
+carrying two identical conditions, and an intersection of two arrays
+deduplicates by that identity and sorts by the lexicographic order of
+the canonical bytes (<a href="#iana-terminal-when" class="auto internal xref">Section 13.4</a>), so the intersected entry
+is one reproducible array. Whether a
 condition has fired is evaluated state, not part of <code>authority_hash</code>;
 folding fired status into the anchor would make the committed authority
 time-varying.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
@@ -3828,11 +3838,14 @@ that exposure when the source is operated by another party.<a href="#section-12.
       <h2 id="name-iana-considerations">
 <a href="#section-13" class="section-number selfRef">13. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-13-1">This document requests IANA actions for OAuth AS metadata members and
-a media type. It defines no new registry: the endpoint
-authentication-method value space is a closed set defined inline
-(<a href="#as-metadata" class="auto internal xref">Section 9</a>), and the <code>terminal_when</code> Common Constraint is defined
-by specification (<a href="#iana-terminal-when" class="auto internal xref">Section 13.3</a>), not by an IANA action.<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-1">This document requests IANA actions for OAuth AS metadata members, a
+media type, and a registration in the issuance profile's Mission
+Common Constraints registry. It defines no new registry of its own:
+the endpoint authentication-method value space is a closed set defined
+inline (<a href="#as-metadata" class="auto internal xref">Section 9</a>), and the <code>terminal_when</code> Common Constraint is
+registered in the issuance profile's registry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), not established as a
+registry here (<a href="#iana-terminal-when" class="auto internal xref">Section 13.4</a>).<a href="#section-13-1" class="pilcrow">¶</a></p>
 <div id="oauth-authorization-server-metadata-registration">
 <section id="section-13.1">
         <h3 id="name-oauth-authorization-server-">
@@ -3941,58 +3954,111 @@ Change Controller IETF; Reference this document, <a href="#as-metadata" class="a
 </div>
 </section>
 </div>
-<div id="iana-terminal-when">
+<div id="iana-lifecycle-registrations">
 <section id="section-13.3">
-        <h3 id="name-common-constraint-definitio">
-<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-common-constraint-definitio" class="section-name selfRef">Common Constraint Definition: terminal_when</a>
+        <h3 id="name-mission-lifecycle-states-re">
+<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-mission-lifecycle-states-re" class="section-name selfRef">Mission Lifecycle States Registrations</a>
         </h3>
-<p id="section-13.3-1">The completion capability (<a href="#completion" class="auto internal xref">Section 7</a>) defines one Common
-Constraint by specification, under the issuance profile's Common
-Constraint convention (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), which
-requires a definition to fix the name, value syntax, subset rule, and
-intersection rule:<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+<p id="section-13.3-1">This document requests registration of two states in the issuance
+profile's Mission Lifecycle States registry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), under that registry's
+Specification Required policy:<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-5">
+          <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Value</th>
+              <th class="text-left" rowspan="1" colspan="1">Terminal</th>
+              <th class="text-left" rowspan="1" colspan="1">Semantics</th>
+              <th class="text-left" rowspan="1" colspan="1">Change Controller</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>suspended</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">no</td>
+              <td class="text-left" rowspan="1" colspan="1">A paused Mission that derives no tokens until resumed.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>completed</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">yes</td>
+              <td class="text-left" rowspan="1" colspan="1">Records successful completion of the Mission.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+</section>
+</div>
+<div id="iana-terminal-when">
+<section id="section-13.4">
+        <h3 id="name-common-constraints-registry">
+<a href="#section-13.4" class="section-number selfRef">13.4. </a><a href="#name-common-constraints-registry" class="section-name selfRef">Common Constraints Registry: terminal_when</a>
+        </h3>
+<p id="section-13.4-1">The completion capability (<a href="#completion" class="auto internal xref">Section 7</a>) registers one Common
+Constraint in the issuance profile's Mission Common Constraints
+registry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), under that
+registry's Specification Required policy. This document supplies the
+registration's required fields:<a href="#section-13.4-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-13.3-2.1">
-            <p id="section-13.3-2.1.1">Name: <code>terminal_when</code><a href="#section-13.3-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-13.4-2.1">
+            <p id="section-13.4-2.1.1">Key Name: <code>terminal_when</code><a href="#section-13.4-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.3-2.2">
-            <p id="section-13.3-2.2.1">Value syntax: a JSON array of completion-condition objects, each with a
+          <li class="normal" id="section-13.4-2.2">
+            <p id="section-13.4-2.2.1">Value Space: a JSON array of one or more completion-condition
+objects, each with a
 <span class="bcp14">REQUIRED</span> <code>event_type</code> (string), an <span class="bcp14">OPTIONAL</span> <code>event_source</code> (string, a
-URI), and an <span class="bcp14">OPTIONAL</span> <code>max_staleness</code> (string, an ISO 8601 duration)
-(<a href="#terminal-when" class="auto internal xref">Section 7.2</a>).<a href="#section-13.3-2.2.1" class="pilcrow">¶</a></p>
+URI), and an <span class="bcp14">OPTIONAL</span> <code>max_staleness</code> (string, an ISO 8601 duration);
+no two conditions in one array share a canonical form
+(<a href="#terminal-when" class="auto internal xref">Section 7.2</a>).<a href="#section-13.4-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.3-2.3">
-            <p id="section-13.3-2.3.1">Subset rule: a candidate value is no broader than a reference value
+          <li class="normal" id="section-13.4-2.3">
+            <p id="section-13.4-2.3.1">Subset Rule: a candidate value is no broader than a reference value
 when the candidate's condition array contains every condition of the
 reference, compared structurally after the issuance profile's
 canonicalization; the candidate <span class="bcp14">MAY</span> add further conditions
-(<a href="#subset-extension" class="auto internal xref">Section 7.4</a>).<a href="#section-13.3-2.3.1" class="pilcrow">¶</a></p>
+(<a href="#subset-extension" class="auto internal xref">Section 7.4</a>).<a href="#section-13.4-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.3-2.4">
-            <p id="section-13.3-2.4.1">Intersection rule: the union of the two condition arrays.<a href="#section-13.3-2.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-13.4-2.4">
+            <p id="section-13.4-2.4.1">Intersection Rule: the union of the two condition arrays, where
+condition identity is byte equality of each condition object's
+canonical form under the issuance profile's canonicalization
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): byte-identical conditions
+collapse to one, and the union is sorted by the lexicographic order
+of those canonical bytes, so two implementations produce the
+identical array and the identical <code>authority_hash</code>.<a href="#section-13.4-2.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.3-2.5">
-            <p id="section-13.3-2.5.1">Change Controller: IETF<a href="#section-13.3-2.5.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-13.4-2.5">
+            <p id="section-13.4-2.5.1">Change Controller: IETF<a href="#section-13.4-2.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.3-2.6">
-            <p id="section-13.3-2.6.1">Reference: this document, <a href="#terminal-when" class="auto internal xref">Section 7.2</a><a href="#section-13.3-2.6.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-13.4-2.6">
+            <p id="section-13.4-2.6.1">Reference: this document, <a href="#terminal-when" class="auto internal xref">Section 7.2</a><a href="#section-13.4-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-13.3-3"><code>terminal_when</code> is a <code>constraints</code> member of the <code>mission_resource_access</code>
+<p id="section-13.4-3"><code>terminal_when</code> is a <code>constraints</code> member of the <code>mission_resource_access</code>
 authorization details type defined by the issuance profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). <code>event_type</code> values are
 deployment- or registry-defined and opaque to this document, as
-<code>purpose</code> is, so this document establishes no registry of event types.<a href="#section-13.3-3" class="pilcrow">¶</a></p>
+<code>purpose</code> is, so this document establishes no registry of event types.<a href="#section-13.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="well-known-uri">
-<section id="section-13.4">
+<section id="section-13.5">
         <h3 id="name-well-known-uri">
-<a href="#section-13.4" class="section-number selfRef">13.4. </a><a href="#name-well-known-uri" class="section-name selfRef">Well-Known URI</a>
+<a href="#section-13.5" class="section-number selfRef">13.5. </a><a href="#name-well-known-uri" class="section-name selfRef">Well-Known URI</a>
         </h3>
-<p id="section-13.4-1">This document registers no new Well-Known URI. The metadata members of
+<p id="section-13.5-1">This document registers no new Well-Known URI. The metadata members of
 <a href="#as-metadata" class="auto internal xref">Section 9</a> are added to the OAuth Authorization Server Metadata
-document at <code>/.well-known/oauth-authorization-server</code> <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
+document at <code>/.well-known/oauth-authorization-server</code> <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

@@ -1624,18 +1624,22 @@ commitment in place of it.<a href="#section-3.3-5" class="pilcrow">¶</a></p>
 for any other artifact it commits, with the following default
 construction. The OAuth issuance profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) instantiates it, and family
-profiles import it from this section; a binding with a native
-commitment (a content address, a signed object) remains free to use
-that instead.<a href="#section-3.3.1-1" class="pilcrow">¶</a></p>
+profiles import it from this section; a binding with a native or
+member-named commitment (a content address, a signed object, a
+digest whose member name fixes the algorithm) remains free to use
+that instead, stating its own algorithm identification and agility
+behavior under the duties above.<a href="#section-3.3.1-1" class="pilcrow">¶</a></p>
 <p id="section-3.3.1-2">The default commits to bytes in one of three species, and a
 specification defining a commitment classifies it:<a href="#section-3.3.1-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-3.3.1-3.1">
               <p id="section-3.3.1-3.1.1"><strong>Envelope anchor</strong>: SHA-256 <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span> over the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
-canonical bytes of a domain-separated, issuer-bound envelope
-<code>{typ, iss, value}</code>, where <code>typ</code> is a collision-resistant name
-selecting the committed object, <code>iss</code> binds the issuing party, and
-<code>value</code> is the committed object.<a href="#section-3.3.1-3.1.1" class="pilcrow">¶</a></p>
+canonical bytes of a closed JSON object carrying exactly three
+members and no others: <code>typ</code>, a string naming the committed
+object, collision-resistant because a namespace the defining
+specification controls qualifies it; <code>iss</code>, a string whose value
+the defining commitment specifies; and <code>value</code>, the committed
+JSON value.<a href="#section-3.3.1-3.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-3.3.1-3.2">
               <p id="section-3.3.1-3.2.1"><strong>Canonical-object digest</strong>: SHA-256 over the JCS serialization of
@@ -1643,22 +1647,29 @@ a normalized JSON object without the envelope, where protocol
 context already fixes what is committed.<a href="#section-3.3.1-3.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-3.3.1-3.3">
-              <p id="section-3.3.1-3.3.1"><strong>Raw-octet digest</strong>: SHA-256 over an artifact's exact octets as
-exchanged, with no canonicalization.<a href="#section-3.3.1-3.3.1" class="pilcrow">¶</a></p>
+              <p id="section-3.3.1-3.3.1"><strong>Raw-octet digest</strong>: SHA-256 over an exact,
+specification-defined octet sequence, with no canonicalization: a
+whole artifact as exchanged, or the UTF-8 encoding of a defined
+scalar value.<a href="#section-3.3.1-3.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-3.3.1-4">A digest is encoded as an algorithm prefix followed by the
-base64url, no-padding encoding of the digest: <code>sha-256:</code> identifies
-SHA-256, which is mandatory to implement and the only algorithm
-defined.<a href="#section-3.3.1-4" class="pilcrow">¶</a></p>
+<p id="section-3.3.1-4">The envelope's <code>iss</code> is a namespace binding that domain-separates
+commitments across issuing authorities; it does not authenticate
+whoever computed the commitment, which stays a signature or evidence
+property. A digest is encoded as an algorithm prefix followed by the
+base64url, no-padding <span>[<a href="#RFC4648" class="cite xref">RFC4648</a>]</span> encoding of the digest: <code>sha-256:</code>
+identifies SHA-256, which is mandatory to implement and the only
+algorithm defined.<a href="#section-3.3.1-4" class="pilcrow">¶</a></p>
 <p id="section-3.3.1-5">Every committed JSON value, and the envelope around it, <span class="bcp14">MUST</span> satisfy
 I-JSON <span>[<a href="#RFC7493" class="cite xref">RFC7493</a>]</span>, and the party computing or verifying a
 commitment <span class="bcp14">MUST</span> reject non-conformant input before canonicalization:
-objects carry no duplicate member names; string data is valid
-Unicode, free of the surrogate and noncharacter code points I-JSON
-prohibits, and is preserved unchanged; number data supplied to JCS
-is representable as a finite IEEE 754 binary64 value (<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>,
-Section 3.1). The commitment is over the parsed I-JSON data value,
+externally received JSON destined for commitment is parsed by a
+duplicate-detecting parser, and an object carrying duplicate member
+names is rejected at parse time, before the parsed data model
+exists; string data is valid Unicode, free of the surrogate and
+noncharacter code points I-JSON prohibits, and is preserved
+unchanged; number data supplied to JCS is representable as a finite
+IEEE 754 binary64 value (<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>, Section 3.1). The commitment is over the parsed I-JSON data value,
 not the source text; a value needing exact decimal or large-integer
 semantics rides as a string or under a stricter declared numeric
 domain.<a href="#section-3.3.1-5" class="pilcrow">¶</a></p>
@@ -2402,9 +2413,17 @@ enable guessing attacks when the committed context has low entropy.<a href="#sec
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC4648">[RFC4648]</dt>
+        <dd>
+<span class="refAuthor">Josefsson, S.</span>, <span class="refTitle">"The Base16, Base32, and Base64 Data Encodings"</span>, <span class="seriesInfo">RFC 4648</span>, <span class="seriesInfo">DOI 10.17487/RFC4648</span>, <time datetime="2006-10" class="refDate">October 2006</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc4648">https://www.rfc-editor.org/rfc/rfc4648</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC6234">[RFC6234]</dt>
         <dd>
 <span class="refAuthor">Eastlake 3rd, D.</span> and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"US Secure Hash Algorithms (SHA and SHA-based HMAC and HKDF)"</span>, <span class="seriesInfo">RFC 6234</span>, <span class="seriesInfo">DOI 10.17487/RFC6234</span>, <time datetime="2011-05" class="refDate">May 2011</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6234">https://www.rfc-editor.org/rfc/rfc6234</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6920">[RFC6920]</dt>
+        <dd>
+<span class="refAuthor">Farrell, S.</span>, <span class="refAuthor">Kutscher, D.</span>, <span class="refAuthor">Dannewitz, C.</span>, <span class="refAuthor">Ohlman, B.</span>, <span class="refAuthor">Keranen, A.</span>, and <span class="refAuthor">P. Hallam-Baker</span>, <span class="refTitle">"Naming Things with Hashes"</span>, <span class="seriesInfo">RFC 6920</span>, <span class="seriesInfo">DOI 10.17487/RFC6920</span>, <time datetime="2013-04" class="refDate">April 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6920">https://www.rfc-editor.org/rfc/rfc6920</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC7493">[RFC7493]</dt>
         <dd>
@@ -2460,12 +2479,8 @@ enable guessing attacks when the committed context has low entropy.<a href="#sec
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC6920">[RFC6920]</dt>
       <dd>
-<span class="refAuthor">Farrell, S.</span>, <span class="refAuthor">Kutscher, D.</span>, <span class="refAuthor">Dannewitz, C.</span>, <span class="refAuthor">Ohlman, B.</span>, <span class="refAuthor">Keranen, A.</span>, and <span class="refAuthor">P. Hallam-Baker</span>, <span class="refTitle">"Naming Things with Hashes"</span>, <span class="seriesInfo">RFC 6920</span>, <span class="seriesInfo">DOI 10.17487/RFC6920</span>, <time datetime="2013-04" class="refDate">April 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6920">https://www.rfc-editor.org/rfc/rfc6920</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>

@@ -130,8 +130,9 @@ Table of Contents
      13.1.  OAuth Authorization Server Metadata Registration
      13.2.  Media Type Registration
        13.2.1.  application/mission-status-response+jwt
-     13.3.  Common Constraint Definition: terminal_when
-     13.4.  Well-Known URI
+     13.3.  Mission Lifecycle States Registrations
+     13.4.  Common Constraints Registry: terminal_when
+     13.5.  Well-Known URI
    Acknowledgments
    References
      Normative References
@@ -1322,9 +1323,9 @@ Table of Contents
    defined Common Constraint under the issuance profile's naming
    convention (Section 13).
 
-   terminal_when:  OPTIONAL.  An array of completion conditions.  When
-      any condition is met, the entry is discharged (Section 7.3).  Each
-      condition is an object with these members:
+   terminal_when:  OPTIONAL.  An array of one or more completion
+      conditions.  When any condition is met, the entry is discharged
+      (Section 7.3).  Each condition is an object with these members:
 
       event_type:  REQUIRED.  A string identifying the completion event.
          Its semantics are deployment- or registry-defined and opaque to
@@ -1342,10 +1343,15 @@ Table of Contents
 
    The terminal_when array is part of the entry's constraints and so of
    the Authority Set: it is committed by authority_hash and reproducible
-   under derivation ([I-D.draft-mcguinness-oauth-mission]).  Whether a
-   condition has fired is evaluated state, not part of authority_hash;
-   folding fired status into the anchor would make the committed
-   authority time-varying.
+   under derivation ([I-D.draft-mcguinness-oauth-mission]).  Condition
+   identity is byte equality of the condition object's canonical form
+   under the issuance profile's canonicalization; an AS refuses a value
+   carrying two identical conditions, and an intersection of two arrays
+   deduplicates by that identity and sorts by the lexicographic order of
+   the canonical bytes (Section 13.4), so the intersected entry is one
+   reproducible array.  Whether a condition has fired is evaluated
+   state, not part of authority_hash; folding fired status into the
+   anchor would make the committed authority time-varying.
 
    terminal_when is the enforceable counterpart of the inert
    success_criteria ([I-D.draft-mcguinness-oauth-mission]), which
@@ -1984,11 +1990,14 @@ Table of Contents
 
 13.  IANA Considerations
 
-   This document requests IANA actions for OAuth AS metadata members and
-   a media type.  It defines no new registry: the endpoint
-   authentication-method value space is a closed set defined inline
-   (Section 9), and the terminal_when Common Constraint is defined by
-   specification (Section 13.3), not by an IANA action.
+   This document requests IANA actions for OAuth AS metadata members, a
+   media type, and a registration in the issuance profile's Mission
+   Common Constraints registry.  It defines no new registry of its own:
+   the endpoint authentication-method value space is a closed set
+   defined inline (Section 9), and the terminal_when Common Constraint
+   is registered in the issuance profile's registry
+   ([I-D.draft-mcguinness-oauth-mission]), not established as a registry
+   here (Section 13.4).
 
 13.1.  OAuth Authorization Server Metadata Registration
 
@@ -2056,28 +2065,59 @@ Table of Contents
 
    *  Author/Change controller: IETF
 
-13.3.  Common Constraint Definition: terminal_when
+13.3.  Mission Lifecycle States Registrations
 
-   The completion capability (Section 7) defines one Common Constraint
-   by specification, under the issuance profile's Common Constraint
-   convention ([I-D.draft-mcguinness-oauth-mission]), which requires a
-   definition to fix the name, value syntax, subset rule, and
-   intersection rule:
+   This document requests registration of two states in the issuance
+   profile's Mission Lifecycle States registry
+   ([I-D.draft-mcguinness-oauth-mission]), under that registry's
+   Specification Required policy:
 
-   *  Name: terminal_when
+   +===========+==========+==================+============+===========+
+   | Value     | Terminal | Semantics        | Change     | Reference |
+   |           |          |                  | Controller |           |
+   +===========+==========+==================+============+===========+
+   | suspended | no       | A paused Mission | IETF       | this      |
+   |           |          | that derives no  |            | document, |
+   |           |          | tokens until     |            | Section 6 |
+   |           |          | resumed.         |            |           |
+   +-----------+----------+------------------+------------+-----------+
+   | completed | yes      | Records          | IETF       | this      |
+   |           |          | successful       |            | document, |
+   |           |          | completion of    |            | Section 6 |
+   |           |          | the Mission.     |            |           |
+   +-----------+----------+------------------+------------+-----------+
 
-   *  Value syntax: a JSON array of completion-condition objects, each
-      with a REQUIRED event_type (string), an OPTIONAL event_source
-      (string, a URI), and an OPTIONAL max_staleness (string, an ISO
-      8601 duration) (Section 7.2).
+                                 Table 5
 
-   *  Subset rule: a candidate value is no broader than a reference
+13.4.  Common Constraints Registry: terminal_when
+
+   The completion capability (Section 7) registers one Common Constraint
+   in the issuance profile's Mission Common Constraints registry
+   ([I-D.draft-mcguinness-oauth-mission]), under that registry's
+   Specification Required policy.  This document supplies the
+   registration's required fields:
+
+   *  Key Name: terminal_when
+
+   *  Value Space: a JSON array of one or more completion-condition
+      objects, each with a REQUIRED event_type (string), an OPTIONAL
+      event_source (string, a URI), and an OPTIONAL max_staleness
+      (string, an ISO 8601 duration); no two conditions in one array
+      share a canonical form (Section 7.2).
+
+   *  Subset Rule: a candidate value is no broader than a reference
       value when the candidate's condition array contains every
       condition of the reference, compared structurally after the
       issuance profile's canonicalization; the candidate MAY add further
       conditions (Section 7.4).
 
-   *  Intersection rule: the union of the two condition arrays.
+   *  Intersection Rule: the union of the two condition arrays, where
+      condition identity is byte equality of each condition object's
+      canonical form under the issuance profile's canonicalization
+      ([I-D.draft-mcguinness-oauth-mission]): byte-identical conditions
+      collapse to one, and the union is sorted by the lexicographic
+      order of those canonical bytes, so two implementations produce the
+      identical array and the identical authority_hash.
 
    *  Change Controller: IETF
 
@@ -2089,7 +2129,7 @@ Table of Contents
    deployment- or registry-defined and opaque to this document, as
    purpose is, so this document establishes no registry of event types.
 
-13.4.  Well-Known URI
+13.5.  Well-Known URI
 
    This document registers no new Well-Known URI.  The metadata members
    of Section 9 are added to the OAuth Authorization Server Metadata

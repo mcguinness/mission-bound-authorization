@@ -1354,6 +1354,11 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
             <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-extensibility" class="internal xref">Extensibility</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-namespace-taxonomy" class="internal xref">Namespace Taxonomy</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
             <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-authorization-server-metada" class="internal xref">Authorization Server Metadata</a></p>
@@ -1463,6 +1468,9 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.8">
                 <p id="section-toc.1-1.18.2.8.1"><a href="#section-18.8" class="auto internal xref">18.8</a>.  <a href="#name-common-constraints-registry" class="internal xref">Common Constraints Registry</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.9">
+                <p id="section-toc.1-1.18.2.9.1"><a href="#section-18.9" class="auto internal xref">18.9</a>.  <a href="#name-mission-lifecycle-states-re" class="internal xref">Mission Lifecycle States Registry</a></p>
 </li>
             </ul>
 </li>
@@ -2269,7 +2277,9 @@ whose policy cannot accept the proposed <code>expires_at</code> refuses with
 document defines the members below; others <span class="bcp14">MAY</span> be added by
 deployments or defined by companion profiles (an extension member
 follows the collision-resistant naming and fail-safe rules of
-<a href="#extensibility" class="auto internal xref">Section 12</a>):<a href="#section-4-3.14.1" class="pilcrow">¶</a></p>
+<a href="#extensibility" class="auto internal xref">Section 12</a>). A future revision <span class="bcp14">MAY</span> establish a registry for
+these members on demonstrated third-party extension demand; until
+then they are specification-defined.<a href="#section-4-3.14.1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-4-3.14.2">
             <dt id="section-4-3.14.2.1">
 <code>acr</code>:</dt>
@@ -3836,8 +3846,8 @@ and <code>value</code> is the Authority Set as a JSON array of entries.<a href="
             <p id="section-6.3-2.3.1">Compute SHA-256 <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span> over the canonical bytes.<a href="#section-6.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.3-2.4">
-            <p id="section-6.3-2.4.1">Encode as <code>sha-256:</code> followed by the base64url, no-padding,
-encoding of the digest.<a href="#section-6.3-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-6.3-2.4.1">Encode as <code>sha-256:</code> followed by the base64url, no-padding
+<span>[<a href="#RFC4648" class="cite xref">RFC4648</a>]</span> encoding of the digest.<a href="#section-6.3-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 <p id="section-6.3-3">The <code>typ</code> field domain-separates the anchors so a digest of one
@@ -3853,8 +3863,9 @@ without a registry, a new <code>typ</code> value <span class="bcp14">MUST</span>
 (for example, a short name prefixed within a namespace the defining
 profile controls, following the Collision-Resistant Name guidance of
 <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Section 4.2). The <code>mission-</code> prefixed values defined by
-profiles that extend this document share an author-coordinated
-namespace for this reason.<a href="#section-6.3-4" class="pilcrow">¶</a></p>
+profiles that extend this document share a namespace coordinated
+through this document series' change controller, or a registry a
+future revision establishes, for this reason.<a href="#section-6.3-4" class="pilcrow">¶</a></p>
 <p id="section-6.3-5">SHA-256 is the only digest algorithm this document defines and is
 mandatory to implement; the <code>sha-256:</code> prefix identifies it. The
 prefix is the algorithm-agility mechanism, and the reject-unknown,
@@ -3879,9 +3890,11 @@ for <code>authority_hash</code>. An auditor reproduces a digest from the
 record alone.<a href="#section-6.4-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.4-2.2">
-            <p id="section-6.4-2.2.1">The party computing or verifying a commitment <span class="bcp14">MUST</span> reject an input
-object containing duplicate JSON member names before
-canonicalization; such input is invalid.<a href="#section-6.4-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-6.4-2.2.1">The party computing or verifying a commitment <span class="bcp14">MUST</span> parse
+externally received input with a parser that detects duplicate
+JSON member names, and <span class="bcp14">MUST</span> reject an object carrying them. An
+ordinary parser silently collapses duplicates, so the check
+happens at parse time, before the parsed data model exists.<a href="#section-6.4-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.4-2.3">
             <p id="section-6.4-2.3.1">JCS does not reorder array elements, and this document defines no
@@ -3907,8 +3920,9 @@ over the recorded values.<a href="#section-6.4-2.4.1" class="pilcrow">¶</a></p>
         <h3 id="name-commitment-mechanisms">
 <a href="#section-6.5" class="section-number selfRef">6.5. </a><a href="#name-commitment-mechanisms" class="section-name selfRef">Commitment Mechanisms</a>
         </h3>
-<p id="section-6.5-1">This family commits to bytes in three ways, and a specification
-defining a commitment classifies it as one of these species:<a href="#section-6.5-1" class="pilcrow">¶</a></p>
+<p id="section-6.5-1">The family's default prefixed construction commits to bytes in three
+ways, and a specification defining a prefixed commitment classifies
+it as one of these species:<a href="#section-6.5-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6.5-2.1">
             <p id="section-6.5-2.1.1"><strong>Envelope anchor</strong>: the domain-separated, issuer-bound envelope of
@@ -3923,9 +3937,10 @@ context already fixes what is committed (for example, a runtime
 parameter digest).<a href="#section-6.5-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.3">
-            <p id="section-6.5-2.3.1"><strong>Raw-octet digest</strong>: <code>sha-256:</code> over an artifact's exact octets as
-exchanged, with no canonicalization (for example, a work-product
-artifact digest).<a href="#section-6.5-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-2.3.1"><strong>Raw-octet digest</strong>: <code>sha-256:</code> over an exact,
+specification-defined octet sequence, with no canonicalization: a
+whole artifact as exchanged, or the UTF-8 encoding of a defined
+scalar value (for example, a work-product artifact digest).<a href="#section-6.5-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-6.5-3">The prefix and agility rules below bind all three species. The
@@ -3933,13 +3948,20 @@ I-JSON rule binds the two JSON species. The envelope and <code>typ</code>
 discipline of <a href="#integrity-anchors" class="auto internal xref">Section 6.3</a> binds envelope anchors alone.
 This section instantiates the substrate's default commitment
 construction (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>); the two
-state the same rules, and this document remains self-contained.<a href="#section-6.5-3" class="pilcrow">¶</a></p>
+state the same rules, and this document remains self-contained. A
+commitment outside this construction (a native content address, a
+member-named digest whose member name fixes the algorithm) is
+permitted; its defining specification states its own algorithm
+identification and agility behavior.<a href="#section-6.5-3" class="pilcrow">¶</a></p>
 <p id="section-6.5-4">Every committed JSON value, and the envelope around it, <span class="bcp14">MUST</span> satisfy
 I-JSON <span>[<a href="#RFC7493" class="cite xref">RFC7493</a>]</span>, and the party computing or verifying a
 commitment <span class="bcp14">MUST</span> reject non-conformant input before canonicalization:<a href="#section-6.5-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6.5-5.1">
-            <p id="section-6.5-5.1.1">objects carry no duplicate member names (<a href="#canonicalization" class="auto internal xref">Section 6.4</a>);<a href="#section-6.5-5.1.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-5.1.1">externally received JSON destined for commitment is parsed by a
+duplicate-detecting parser, and an object carrying duplicate member
+names is rejected at parse time, before the parsed data model
+exists (<a href="#canonicalization" class="auto internal xref">Section 6.4</a>);<a href="#section-6.5-5.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-5.2">
             <p id="section-6.5-5.2.1">string data is valid Unicode, free of the surrogate and
@@ -4010,8 +4032,10 @@ describe a signed artifact's own envelope, or identify a party in an
 additional members set at creation using short names coordinated with
 it (for example, a lineage member linking the Mission to a
 predecessor or parent); any other extension <span class="bcp14">MUST</span> use
-collision-resistant names. The members below are the ones this
-profile defines:<a href="#section-7-3" class="pilcrow">¶</a></p>
+collision-resistant names. A future revision <span class="bcp14">MAY</span> establish a registry
+for these members on demonstrated third-party extension demand; until
+then they are specification-defined. The members below are the ones
+this profile defines:<a href="#section-7-3" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-7-4">
         <dt id="section-7-4.1">
 <code>id</code>:</dt>
@@ -4643,7 +4667,10 @@ the extension controls, per the Collision-Resistant Name guidance of
 <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Section 4.2) and is defined by the profile that introduces
 it. A consumer <span class="bcp14">MUST</span> ignore members it does not understand and <span class="bcp14">MUST NOT</span>
 use any additional member to grant or widen authority; the
-members above remain authoritative.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+members above remain authoritative. A future revision <span class="bcp14">MAY</span> establish a
+claim-member registry (the JWT Confirmation Methods registry of
+<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span> is the structural precedent); until then the members are
+specification-defined.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
 <p id="section-8.1-4"><code>intent_hash</code> and <code>authority_hash</code> are independent commitments to
 independent objects. That the approved task bounds the derived
 authority is a governance assertion, made by derivation policy and
@@ -4832,7 +4859,34 @@ cryptographic proof that the carried entries are a subset of the
 approved set. That subset relationship is an assertion by the AS,
 authenticated by the token signature, and depends on the AS applying
 the subset rule correctly.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
-<p id="section-8.2-5">Three denials above are byte-identical <code>403</code>s to a client, and
+<p id="section-8.2-5">A worked contrast, using the two-entry Authority Set of the test
+vectors (<a href="#test-vectors" class="auto internal xref">Appendix B</a>), shows what each party can verify. A
+single-audience token carries one narrowed entry:
+<code>journal-entries.write</code> with the approved <code>max_amount</code> of <code>500.00</code>
+USD tightened to <code>250.00</code>. The Resource Server verifies the token
+signature and <code>cnf</code>, checks <code>aud</code>, enforces the carried entry,
+checks the anchor's algorithm prefix (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>), and
+logs the <code>mission</code> claim for correlation. It cannot recompute
+<code>authority_hash</code>: hashing the carried entry digests a one-entry
+array the anchor never committed, and the tightened <code>max_amount</code>
+makes the entry a semantic narrowing, not a byte-level member, of
+the approved set. Whether <code>250.00</code> sits within the approved ceiling
+is the subset test (<a href="#subset" class="auto internal xref">Section 5.1</a>), and that test needs the approved
+entry to compare against. A party holding the full Authority Set (a
+Resource Server provisioned with it, or a policy decision point
+holding the Mission record) recomputes the commitment over the held
+two-entry set, matches <code>mission.authority_hash</code>, and verifies the
+carried entry as a subset of the held <code>journal-entries.write</code> entry:
+containment verified relative to the authenticated committed set.
+For that verification to be independent of the issuer, the
+deployment provisions the set together with its provenance: the full
+Authority Set, the Mission <code>id</code> and issuer it belongs to, the
+expected <code>authority_hash</code>, and an authenticated approval-time source
+for all three (trusted Mission or consent evidence, or an audit
+commitment recorded before any compromise). Without that pinning, a
+compromised issuer signs a token carrying a replacement set's hash,
+and recomputation confirms the replacement.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
+<p id="section-8.2-6">Three denials above are byte-identical <code>403</code>s to a client, and
 misrouting them turns a step-up into an authority-widening ceremony
 or a fail-closed mismatch into a retry loop. A Mission-aware Resource
 Server <span class="bcp14">SHOULD</span> therefore state which path it denies into, using the
@@ -4847,15 +4901,15 @@ not a widening), or <code>constraint_unrecognized</code> (an applicable entry
 carries a <code>constraints</code> key the RS cannot enforce, and the request
 fails closed). A value the client does not recognize is treated as
 <code>insufficient_authority</code>. The attribute's disclosure considerations
-are <a href="#denial-disclosure" class="auto internal xref">Section 16.8</a>'s.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
-<p id="section-8.2-6">A Mission-unaware Resource Server that authorizes only from <code>scope</code>
+are <a href="#denial-disclosure" class="auto internal xref">Section 16.8</a>'s.<a href="#section-8.2-6" class="pilcrow">¶</a></p>
+<p id="section-8.2-7">A Mission-unaware Resource Server that authorizes only from <code>scope</code>
 still operates within the Mission at the coarse scope level, because
 the AS derived and bounded that scope by the Authority Set
 (<a href="#mission-bound-tokens" class="auto internal xref">Section 8</a>); but it does not enforce the per-entry
 <code>constraints</code>, which <code>scope</code> cannot carry. A deployment that relies on
 those constraints <span class="bcp14">MUST</span> route the protected operation through a
 Resource Server that enforces <code>authorization_details</code> (or the runtime
-layer that evaluates them).<a href="#section-8.2-6" class="pilcrow">¶</a></p>
+layer that evaluates them).<a href="#section-8.2-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="remediation-grains">
@@ -4959,18 +5013,19 @@ policy. Terminal.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
         </tbody>
       </table>
 <p id="section-9-5">These three states are the mandatory core of the Mission lifecycle
-state space. This profile owns that state space; an <span class="bcp14">OPTIONAL</span> companion
-profile <span class="bcp14">MAY</span> define an additional state for a lifecycle it introduces
-(for example, a paused or a superseded state), but only <code>active</code> ever
-permits issuance. To keep the state space extensible without a registry,
-a consumer <span class="bcp14">MUST</span> apply this forward-compatibility rule wherever a Mission
-state is reported, including the Mission record and the introspection
-<code>mission</code> member: only the exact value <code>active</code> permits
-derivation or continued reliance, and every other value, including a
-value the consumer does not recognize, <span class="bcp14">MUST</span> be treated as non-active and
-non-deriving. A consumer <span class="bcp14">MUST NOT</span> fail open on an unrecognized state.
-This makes a state added by a companion profile fail safe for a consumer
-that predates it.<a href="#section-9-5" class="pilcrow">¶</a></p>
+state space. This profile owns that state space and establishes its
+registry, the Mission Lifecycle States registry
+(<a href="#iana-lifecycle-states" class="auto internal xref">Section 18.9</a>); an <span class="bcp14">OPTIONAL</span> companion profile <span class="bcp14">MAY</span> register
+an additional state for a lifecycle it introduces (for example, a
+paused or a superseded state), but only <code>active</code> ever permits
+issuance. A consumer <span class="bcp14">MUST</span> apply this forward-compatibility rule
+wherever a Mission state is reported, including the Mission record and
+the introspection <code>mission</code> member: only the exact value <code>active</code>
+permits derivation or continued reliance, and every other value,
+including a value the consumer does not recognize, <span class="bcp14">MUST</span> be treated as
+non-active and non-deriving. A consumer <span class="bcp14">MUST NOT</span> fail open on an
+unrecognized state. This makes a registered state added by a companion
+profile fail safe for a consumer that predates it.<a href="#section-9-5" class="pilcrow">¶</a></p>
 <div id="issuance-gating">
 <section id="section-9.1">
         <h3 id="name-issuance-gating">
@@ -5652,10 +5707,12 @@ members and never derive authority from them.<a href="#section-12-4.4.1" class="
 </li>
         <li class="normal" id="section-12-4.5">
           <p id="section-12-4.5.1"><strong>Lifecycle state.</strong> The lifecycle state space (<a href="#lifecycle" class="auto internal xref">Section 9</a>) is open
-to additional states defined by companion profiles for lifecycles they
-introduce. The forward-compatibility rule in <a href="#lifecycle" class="auto internal xref">Section 9</a> keeps this
-safe without a registry: only <code>active</code> permits issuance, and a consumer
-treats every other state, recognized or not, as non-active.<a href="#section-12-4.5.1" class="pilcrow">¶</a></p>
+to additional states registered by companion profiles for lifecycles
+they introduce, in the Mission Lifecycle States registry
+(<a href="#iana-lifecycle-states" class="auto internal xref">Section 18.9</a>). The forward-compatibility rule in
+<a href="#lifecycle" class="auto internal xref">Section 9</a> keeps this safe regardless: only <code>active</code> permits
+issuance, and a consumer treats every other state, recognized or not,
+as non-active.<a href="#section-12-4.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-4.6">
           <p id="section-12-4.6.1"><strong>Approval-event sequencing.</strong> The approval-event steps, their
@@ -5670,12 +5727,67 @@ Mission Deferred Approval companion is such a profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>).<a href="#section-12-4.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-12-5">This document defines no extension registry, capability-negotiation
-mechanism, or profile-version field; an extension declares its own
-identifiers and, where it needs discovery, its own metadata. The
-extensibility of the <code>typ</code> value space, the <code>mission</code> claim, and the
-lifecycle state space rests on collision-resistant naming and the
-fail-safe rules above rather than on central registration.<a href="#section-12-5" class="pilcrow">¶</a></p>
+<p id="section-12-5">This document defines no capability-negotiation mechanism or
+profile-version field; an extension declares its own identifiers and,
+where it needs discovery, its own metadata. The extensibility of the
+<code>typ</code> value space and the <code>mission</code> claim rests on collision-resistant
+naming and the fail-safe rules above rather than on central
+registration; the lifecycle state space is additionally backed by the
+Mission Lifecycle States registry (<a href="#iana-lifecycle-states" class="auto internal xref">Section 18.9</a>).
+<a href="#namespace-taxonomy" class="auto internal xref">Section 12.1</a> states the general rule this section's extension
+points follow.<a href="#section-12-5" class="pilcrow">¶</a></p>
+<div id="namespace-taxonomy">
+<section id="section-12.1">
+        <h3 id="name-namespace-taxonomy">
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-namespace-taxonomy" class="section-name selfRef">Namespace Taxonomy</a>
+        </h3>
+<p id="section-12.1-1">The family's extensible namespaces follow one of three postures:<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12.1-2.1">
+            <p id="section-12.1-2.1.1"><strong>Registry-backed.</strong> A namespace whose values are load-bearing for
+fail-closed behavior and span multiple documents is backed by an
+IANA registry: the document that owns the namespace carries the
+IANA creation instruction and seeds the registry with the values it
+itself defines, and every further document that defines a value
+requests that value's registration, carrying any Internet-Draft
+reference as a publication dependency under the registry's policy.
+Mission Common Constraints (<a href="#iana-common-constraints" class="auto internal xref">Section 18.8</a>) and
+Mission Lifecycle States (<a href="#iana-lifecycle-states" class="auto internal xref">Section 18.9</a>) are this
+document's two; the Mission Authority Server Metadata registry and
+the Mission Denial Reasons registry are established where those
+namespaces are defined.<a href="#section-12.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.1-2.2">
+            <p id="section-12.1-2.2.1"><strong>Specification-defined.</strong> A namespace with a defined fail-safe for
+unknown values and no demonstrated third-party extension demand
+stays specification-defined, coordinated through this document
+series' change controller. A future revision <span class="bcp14">MAY</span> establish a
+registry for such a set; until one exists, the defining documents
+are the value space.<a href="#section-12.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.1-2.3">
+            <p id="section-12.1-2.3.1"><strong>Collision-resistant.</strong> Deployment-defined names follow the
+collision-resistant naming rules of this section and are never
+registered.<a href="#section-12.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-12.1-3">A newly defined, family-specific typed artifact that crosses a
+protocol boundary is named by an <code>application/mission-*</code> media type,
+and its defining document carries the RFC 6838 registration template
+at definition time. An artifact typed by a standard this family
+composes (an access token profile, a Security Event Token) keeps
+that standard's type. A defining document <span class="bcp14">MAY</span> instead record a
+local-use identifier as a transitional reservation where cross-domain
+interoperability is not yet claimed, registering the type when the
+claim is made; the audit profile's deferred evidence types are this
+class. The JOSE protected <code>typ</code> of a family-typed artifact is the
+registered media type, with the <code>application/</code> prefix omitted where
+JWS permits the shortened form; an HTTP <code>Content-Type</code> carries the
+full media type. A <code>typ</code> inside a JCS commitment envelope names a
+hash domain, not a representation crossing a boundary, and is
+deliberately not a media type (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>).<a href="#section-12.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="discovery">
@@ -5940,7 +6052,43 @@ enforcing the token's <code>authorization_details</code> directly
 (<a href="#mission-bound-tokens" class="auto internal xref">Section 8</a>). It relies on the signed token as the AS's
 assertion that the carried authority was correctly projected from the
 approved set; <code>authority_hash</code> supplies no independent subset proof.<a href="#section-16.1-3" class="pilcrow">¶</a></p>
-<p id="section-16.1-4"><code>intent_hash</code> extends the same protection to the task itself: it
+<p id="section-16.1-4">This document's flat Authority Set commitment defines no selective
+inclusion-proof mechanism: <code>authority_hash</code> digests the complete set
+as a single array (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>), recomputation therefore
+needs the full set, and the baseline defines neither a retrieval
+surface for that set nor a proof format for anything less. Both are
+undefined here, not impossible. Retrieval carries a real privacy and
+authorization burden rather than an architectural prohibition: the
+minimization rules of <a href="#caller-authorization-and-minimization" class="auto internal xref">Section 10.1</a> keep
+other audiences' entries out of token introspection, so a distinct
+control-plane surface serving a policy decision point, auditor, or
+privileged Resource Server needs authorization at least that strong.
+A selective proof composes with the existing subset rules: a profile
+could commit the approved entries to a structure that supports
+inclusion proofs, prove the approved parent entry against that
+approval-time root, and apply the type-specific subset test
+(<a href="#subset" class="auto internal xref">Section 5.1</a>) between the carried narrowed entry and the disclosed
+parent; the cryptography stays generic, and only the semantic
+comparison is type-owned, the division this document uses
+throughout. Either mechanism is a future profile with privacy,
+commitment, and trust-bootstrap requirements to meet. Under the
+baseline, a deployment that needs assurance independent of the token
+signature provisions the verifying party out of band, the Resource
+Server itself or a policy decision point holding a materialized view
+of the Mission record, and uses the recomputation path of
+<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>.<a href="#section-16.1-4" class="pilcrow">¶</a></p>
+<p id="section-16.1-5">What such verification buys depends on when the issuer is
+compromised. A proof or retrieval response issued under the same
+trust root as the token adds nothing against an issuer malicious at
+approval time: that issuer can approve and commit arbitrary
+authority, and no containment mechanism changes that. The same
+checks do defend against projection implementation errors, against
+corruption of the record after an independently anchored approval
+commitment, and against post-approval signing-key compromise where
+the original commitment is pinned outside the issuer. The pinning is
+what makes the difference; the worked example in <a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>
+lists what a deployment provisions to get it.<a href="#section-16.1-5" class="pilcrow">¶</a></p>
+<p id="section-16.1-6"><code>intent_hash</code> extends the same protection to the task itself: it
 commits the approved Mission Intent, so an auditor can detect any
 later alteration of the recorded task, independently of the authority
 derived from it. <code>proposal_hash</code>, present when the client submitted
@@ -5948,8 +6096,8 @@ an authority proposal (<a href="#authority-proposal" class="auto internal xref">
 agent asked for: approval-time provenance that lets an auditor
 compare the narrowed grant against the request that sought it. The
 anchors are domain-separated
-(<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>); none is a substitute for another.<a href="#section-16.1-4" class="pilcrow">¶</a></p>
-<p id="section-16.1-5">The task and the authority are committed separately, rather than folded
+(<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>); none is a substitute for another.<a href="#section-16.1-6" class="pilcrow">¶</a></p>
+<p id="section-16.1-7">The task and the authority are committed separately, rather than folded
 into one hash over the whole Mission, because they are distinct objects
 with distinct uses. <code>authority_hash</code> commits what a Resource Server
 enforces and what a cross-domain projection carries, so it <span class="bcp14">MUST</span> be
@@ -5957,11 +6105,11 @@ verifiable from a token that conveys only the authority, without the
 Intent. <code>intent_hash</code> commits the task as audit material, tamper-evident
 even where the authority is projected without the Intent traveling with
 it. One combined hash could not serve both a token that carries
-authority alone and an auditor that holds the task alone.<a href="#section-16.1-5" class="pilcrow">¶</a></p>
-<p id="section-16.1-6">Neither anchor proves the Approver understood the rendered task, nor
+authority alone and an auditor that holds the task alone.<a href="#section-16.1-7" class="pilcrow">¶</a></p>
+<p id="section-16.1-8">Neither anchor proves the Approver understood the rendered task, nor
 that the AS rendered it faithfully; they commit what the AS
-recorded, and make post-hoc tampering of those records detectable.<a href="#section-16.1-6" class="pilcrow">¶</a></p>
-<p id="section-16.1-7">This profile commits the task (<code>intent_hash</code>) and the authority
+recorded, and make post-hoc tampering of those records detectable.<a href="#section-16.1-8" class="pilcrow">¶</a></p>
+<p id="section-16.1-9">This profile commits the task (<code>intent_hash</code>) and the authority
 (<code>authority_hash</code>) the Approver consented to, but deliberately does
 not commit the <strong>rendered consent disclosure</strong> itself: the locale,
 disclosure-template version, and material notices the Approver was
@@ -5979,7 +6127,7 @@ Evidence <span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" c
 that does not implement it <span class="bcp14">MAY</span> record equivalent evidence out of band.
 As that profile makes explicit, such a commitment binds the structured
 disclosure the AS records, not the pixels actually presented; it
-narrows this gap for audit but does not close it.<a href="#section-16.1-7" class="pilcrow">¶</a></p>
+narrows this gap for audit but does not close it.<a href="#section-16.1-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-drift">
@@ -7008,6 +7156,103 @@ collision-resistant or remains deployment-defined and outside the
 registry.<a href="#section-18.8-6" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="iana-lifecycle-states">
+<section id="section-18.9">
+        <h3 id="name-mission-lifecycle-states-re">
+<a href="#section-18.9" class="section-number selfRef">18.9. </a><a href="#name-mission-lifecycle-states-re" class="section-name selfRef">Mission Lifecycle States Registry</a>
+        </h3>
+<p id="section-18.9-1">IANA is requested to create the "Mission Lifecycle States" registry.
+The registration policy is Specification
+Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>. A Designated Expert reviews a submission for the
+discipline <a href="#lifecycle" class="auto internal xref">Section 9</a> requires: a <code>Value</code> matching
+<code>^[a-z][a-z0-9_]*$</code> not already registered; a <code>Terminal</code> designation of
+<code>yes</code> or <code>no</code> consistent with the transitions the registrant's
+specification defines (a <code>yes</code> state admits no further transition; a
+<code>no</code> state does); and a <code>Semantics</code> sentence precise enough to
+distinguish the state from every registered state. Whether a Mission
+in any state is available for reliance is fixed by the governing rule
+below, never per row. Registration does not require
+IETF review or a Standards Track document; a Specification Required
+reference that a Designated Expert can review against these criteria
+suffices.<a href="#section-18.9-1" class="pilcrow">¶</a></p>
+<p id="section-18.9-2">Only the exact value <code>active</code> permits token derivation or continued
+reliance; a consumer treats every other value, including one it does
+not recognize, as non-<code>active</code> and never widens on it (<a href="#lifecycle" class="auto internal xref">Section 9</a>).
+A Designated Expert <span class="bcp14">MUST</span> reject a registration whose governing
+specification attempts to redefine this interaction rather than adding
+a new value bound by it.<a href="#section-18.9-2" class="pilcrow">¶</a></p>
+<p id="section-18.9-3">Each registration records:<a href="#section-18.9-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-18.9-4.1">
+            <p id="section-18.9-4.1.1"><strong>Value</strong>: the lifecycle state's string value.<a href="#section-18.9-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.9-4.2">
+            <p id="section-18.9-4.2.1"><strong>Terminal</strong>: <code>yes</code> if the state admits no further transition, <code>no</code>
+otherwise.<a href="#section-18.9-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.9-4.3">
+            <p id="section-18.9-4.3.1"><strong>Semantics</strong>: one sentence stating what the state means and, for a
+non-terminal state, what a Mission in that state cannot do.<a href="#section-18.9-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.9-4.4">
+            <p id="section-18.9-4.4.1"><strong>Change Controller</strong>: IETF, or the registrant for any other
+registration.<a href="#section-18.9-4.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-18.9-4.5">
+            <p id="section-18.9-4.5.1"><strong>Reference</strong>: the specification defining the state.<a href="#section-18.9-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-18.9-5">This document seeds the registry with the states it defines:<a href="#section-18.9-5" class="pilcrow">¶</a></p>
+<table class="center" id="table-4">
+          <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Value</th>
+              <th class="text-left" rowspan="1" colspan="1">Terminal</th>
+              <th class="text-left" rowspan="1" colspan="1">Semantics</th>
+              <th class="text-left" rowspan="1" colspan="1">Change Controller</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>active</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">no</td>
+              <td class="text-left" rowspan="1" colspan="1">Tokens <span class="bcp14">MAY</span> be derived; the only state from which issuance proceeds.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#lifecycle" class="auto internal xref">Section 9</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>revoked</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">yes</td>
+              <td class="text-left" rowspan="1" colspan="1">Terminated by the Subject, Approver, or policy.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#lifecycle" class="auto internal xref">Section 9</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>expired</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">yes</td>
+              <td class="text-left" rowspan="1" colspan="1">The Mission's <code>expires_at</code> has passed.</td>
+              <td class="text-left" rowspan="1" colspan="1">IETF</td>
+              <td class="text-left" rowspan="1" colspan="1">this document, <a href="#lifecycle" class="auto internal xref">Section 9</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-18.9-7">Each further document that defines a lifecycle state requests that
+state's registration in its own IANA considerations, carrying its
+Internet-Draft reference as a publication dependency under this
+registry's policy until it is published.<a href="#section-18.9-7" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -7041,6 +7286,10 @@ registry.<a href="#section-18.8-6" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">Berners-Lee, T.</span>, <span class="refAuthor">Fielding, R.</span>, and <span class="refAuthor">L. Masinter</span>, <span class="refTitle">"Uniform Resource Identifier (URI): Generic Syntax"</span>, <span class="seriesInfo">STD 66</span>, <span class="seriesInfo">RFC 3986</span>, <span class="seriesInfo">DOI 10.17487/RFC3986</span>, <time datetime="2005-01" class="refDate">January 2005</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3986">https://www.rfc-editor.org/rfc/rfc3986</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC4648">[RFC4648]</dt>
+        <dd>
+<span class="refAuthor">Josefsson, S.</span>, <span class="refTitle">"The Base16, Base32, and Base64 Data Encodings"</span>, <span class="seriesInfo">RFC 4648</span>, <span class="seriesInfo">DOI 10.17487/RFC4648</span>, <time datetime="2006-10" class="refDate">October 2006</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc4648">https://www.rfc-editor.org/rfc/rfc4648</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC6234">[RFC6234]</dt>
         <dd>
 <span class="refAuthor">Eastlake 3rd, D.</span> and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"US Secure Hash Algorithms (SHA and SHA-based HMAC and HKDF)"</span>, <span class="seriesInfo">RFC 6234</span>, <span class="seriesInfo">DOI 10.17487/RFC6234</span>, <time datetime="2011-05" class="refDate">May 2011</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6234">https://www.rfc-editor.org/rfc/rfc6234</a>&gt;</span>. </dd>
@@ -7052,6 +7301,10 @@ registry.<a href="#section-18.8-6" class="pilcrow">¶</a></p>
 <dt id="RFC6750">[RFC6750]</dt>
         <dd>
 <span class="refAuthor">Jones, M.</span> and <span class="refAuthor">D. Hardt</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework: Bearer Token Usage"</span>, <span class="seriesInfo">RFC 6750</span>, <span class="seriesInfo">DOI 10.17487/RFC6750</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6750">https://www.rfc-editor.org/rfc/rfc6750</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6920">[RFC6920]</dt>
+        <dd>
+<span class="refAuthor">Farrell, S.</span>, <span class="refAuthor">Kutscher, D.</span>, <span class="refAuthor">Dannewitz, C.</span>, <span class="refAuthor">Ohlman, B.</span>, <span class="refAuthor">Keranen, A.</span>, and <span class="refAuthor">P. Hallam-Baker</span>, <span class="refTitle">"Naming Things with Hashes"</span>, <span class="seriesInfo">RFC 6920</span>, <span class="seriesInfo">DOI 10.17487/RFC6920</span>, <time datetime="2013-04" class="refDate">April 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6920">https://www.rfc-editor.org/rfc/rfc6920</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC7493">[RFC7493]</dt>
         <dd>
@@ -7257,10 +7510,6 @@ registry.<a href="#section-18.8-6" class="pilcrow">¶</a></p>
 <dt id="MCP">[MCP]</dt>
         <dd>
 <span class="refAuthor">Model Context Protocol Project</span>, <span class="refTitle">"Model Context Protocol: Authorization"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization">https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC6920">[RFC6920]</dt>
-        <dd>
-<span class="refAuthor">Farrell, S.</span>, <span class="refAuthor">Kutscher, D.</span>, <span class="refAuthor">Dannewitz, C.</span>, <span class="refAuthor">Ohlman, B.</span>, <span class="refAuthor">Keranen, A.</span>, and <span class="refAuthor">P. Hallam-Baker</span>, <span class="refTitle">"Naming Things with Hashes"</span>, <span class="seriesInfo">RFC 6920</span>, <span class="seriesInfo">DOI 10.17487/RFC6920</span>, <time datetime="2013-04" class="refDate">April 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6920">https://www.rfc-editor.org/rfc/rfc6920</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC7009">[RFC7009]</dt>
         <dd>

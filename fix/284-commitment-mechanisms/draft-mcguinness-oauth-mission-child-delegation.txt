@@ -118,6 +118,9 @@ Table of Contents
      17.6.  Subset Bugs
    18. Privacy Considerations
    19. IANA Considerations
+     19.1.  Registry Registrations
+     19.2.  Media Type Registration
+       19.2.1.  Child Evidence Media Type
    20. References
      20.1.  Normative References
      20.2.  Informative References
@@ -836,14 +839,16 @@ Table of Contents
    delegation_not_permitted, child_actor_not_allowed, not_strict_subset,
    and fanout_exceeded accompany invalid_request; and policy_denied
    accompanies access_denied.  In an error response body the symbolic
-   reason rides in the mission_denial_reason member, the shared
-   adjudication-denial carrier defined and registered by the expansion
-   profile ([I-D.draft-mcguinness-oauth-mission-expansion]), alongside
-   the OAuth error member.  On a deferred completion (Section 6.4) a
-   denial surfaces as the deferred substrate's access_denied resolution.
-   The possession proof is presented only on the token endpoint's
-   authenticated back channel and MUST NOT appear on any front channel
-   (Section 6).
+   reason rides, alongside the OAuth error member, in the
+   mission_denial_reason member, the shared adjudication-denial carrier
+   defined and registered by the expansion profile
+   ([I-D.draft-mcguinness-oauth-mission-expansion]); this document
+   requests these seven reasons' registration in that profile's Mission
+   Denial Reasons registry (Section 19.1).  On a deferred completion
+   (Section 6.4) a denial surfaces as the deferred substrate's
+   access_denied resolution.  The possession proof is presented only on
+   the token endpoint's authenticated back channel and MUST NOT appear
+   on any front channel (Section 6).
 
    For example, a child Mission Intent that drops the parent entry's
    resource_issued_before constraint proposes a relaxation, not a
@@ -1435,9 +1440,7 @@ Table of Contents
 
    A Child Evidence object's canonical bytes are its JCS [RFC8785]
    canonicalization, and its type identifier is application/mission-
-   child-evidence+json, used by local agreement pending registration.
-   An audit or transparency profile registers the object by these
-   values.
+   child-evidence+json, registered by this document (Section 19).
 
 12.  Relationship to Expansion
 
@@ -1639,18 +1642,89 @@ Table of Contents
    profile, carried inside the already-registered mission claim.
 
    This document defines one closed set of symbolic codes: the child
-   creation denial reasons (Section 6.10).  Like the issuance profile's
-   restraint with mission members, these are documented in this
-   specification rather than placed in a new IANA registry: they ride in
-   the shared mission_denial_reason member defined and registered by the
-   expansion profile ([I-D.draft-mcguinness-oauth-mission-expansion])
-   and in evidence, inside existing OAuth error responses rather than on
-   a new wire surface, and the closed set is small and fully specified
-   here.  This document therefore requires no registration for the
-   member.  Should interoperable extension prove necessary, the
-   expansion profile's IANA considerations anticipate a shared "Mission
-   Denial Reason" registry with a Specification Required [RFC8126]
-   policy; this document does not create it.
+   creation denial reasons (Section 6.10).  They ride the shared
+   mission_denial_reason member the expansion profile defines and
+   registers ([I-D.draft-mcguinness-oauth-mission-expansion]).  This
+   document establishes no registry of its own; it requests these
+   registrations in the registries its siblings establish
+   (Section 19.1).
+
+19.1.  Registry Registrations
+
+   This document requests registration of its seven denial reasons in
+   the expansion profile's Mission Denial Reasons registry, one row per
+   reason of Section 6.10, each with its semantics as defined there,
+   Change Controller IETF, and Reference this document, Section 6.10.
+
+   It requests registration of one state in the issuance profile's
+   Mission Lifecycle States registry
+   ([I-D.draft-mcguinness-oauth-mission]):
+
+    +==========+==========+==================+============+===========+
+    | Value    | Terminal | Semantics        | Change     | Reference |
+    |          |          |                  | Controller |           |
+    +==========+==========+==================+============+===========+
+    | cascaded | yes      | A terminal state | IETF       | this      |
+    |          |          | a Child Mission  |            | document, |
+    |          |          | enters when a    |            | Section   |
+    |          |          | terminal cascade |            | 10.1      |
+    |          |          | trigger on its   |            |           |
+    |          |          | Parent Mission   |            |           |
+    |          |          | terminates it    |            |           |
+    |          |          | under immediate  |            |           |
+    |          |          | cascade.         |            |           |
+    +----------+----------+------------------+------------+-----------+
+
+                                  Table 2
+
+19.2.  Media Type Registration
+
+   This document registers one media type per [RFC6838].
+
+19.2.1.  Child Evidence Media Type
+
+   *  Type name: application
+
+   *  Subtype name: mission-child-evidence+json
+
+   *  Required parameters: none
+
+   *  Optional parameters: none
+
+   *  Encoding considerations: binary; JSON encoded in UTF-8
+
+   *  Security considerations: see Section 17
+
+   *  Interoperability considerations: see this document
+
+   *  Published specification: this document
+
+   *  Applications that use this media type: Mission child delegation
+      deployments
+
+   *  Fragment identifier considerations: same as for application/json
+
+   *  Additional information:
+
+      -  Deprecated alias names for this type: none
+
+      -  Magic number(s): none
+
+      -  File extension(s): .json
+
+      -  Macintosh file type code(s): TEXT
+
+   *  Person & email address to contact for further information: Karl
+      McGuinness public@karlmcguinness.com
+      (mailto:public@karlmcguinness.com)
+
+   *  Intended usage: COMMON
+
+   *  Restrictions on usage: none
+
+   *  Author: IETF
+
+   *  Change controller: IETF
 
    Child creation uses the already-registered [RFC8693]
    urn:ietf:params:oauth:grant-type:token-exchange grant type, selected
@@ -1693,6 +1767,11 @@ Table of Contents
    [RFC6755]  Campbell, B. and H. Tschofenig, "An IETF URN Sub-Namespace
               for OAuth", RFC 6755, DOI 10.17487/RFC6755, October 2012,
               <https://www.rfc-editor.org/rfc/rfc6755>.
+
+   [RFC6838]  Freed, N., Klensin, J., and T. Hansen, "Media Type
+              Specifications and Registration Procedures", BCP 13,
+              RFC 6838, DOI 10.17487/RFC6838, January 2013,
+              <https://www.rfc-editor.org/rfc/rfc6838>.
 
    [RFC7523]  Jones, M., Campbell, B., and C. Mortimore, "JSON Web Token
               (JWT) Profile for OAuth 2.0 Client Authentication and
@@ -1872,7 +1951,7 @@ Appendix A.  Experimental Consumer-Verified Cascade Modes
    |          |                   | check         |                    |
    +----------+-------------------+---------------+--------------------+
 
-                                  Table 2
+                                  Table 3
 
    A consumer that cannot obtain parent state must obey the mode:
 
