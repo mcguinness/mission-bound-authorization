@@ -641,9 +641,9 @@ architecture defines ({{I-D.draft-mcguinness-mission-architecture}}). It MUST in
   {{I-D.draft-mcguinness-mission-runtime-evidence}}, resolve here);
 - the reconciliation window for matching execution-outcome evidence to
   decisions, the component responsible for orphaned-evidence and
-  sequence-gap detection and for driving each unresolved outcome to
-  committed or failed within the window, and that component's alerting
-  obligation ({{evidence}}).
+  sequence-gap detection and for actively reconciling each unresolved
+  outcome within the window, and that component's alerting obligation
+  ({{evidence}}).
 
 A deployment MUST NOT claim runtime enforcement for a resource, action
 class, `authorization_details` type, or execution path outside that
@@ -1900,9 +1900,10 @@ was made under:
 |---|---|---|
 | claimed / permit-issued (unconsumed, unexpired) | return the prior decision (retransmission) | `idempotency_conflict`, terminal |
 | reserved / outcome unresolved | `duplicate_suppressed`, transient (`next_action: retry`, `retry_after` within the reconciliation window) | `idempotency_conflict`, terminal |
+| indeterminate (window closed, outcome undetermined, {{evidence}}) | `duplicate_suppressed`, terminal (`next_action: none`); resolution is operational, never a new permit | `idempotency_conflict`, terminal |
 | completed (within window or tombstoned horizon) | `duplicate_suppressed`, terminal (`next_action: none`); the prior result is available from the resource under the Operation Profile | `idempotency_conflict`, terminal |
 | failed | deployment policy: retry as a NEW operation requires a new key | `idempotency_conflict`, terminal |
-| expired past the declared horizon | outside the guarantee; treated as new | outside the guarantee |
+| expired past the declared horizon | outside the guarantee; treated as new. An indeterminate tombstone does not expire into this state ({{evidence}}) | outside the guarantee |
 {: title="Idempotency claim state resolution"}
 
 A different operation identity under the same key is always a
@@ -2004,8 +2005,7 @@ refusal.
 | Mission state cannot be established within the staleness bound | Fail closed for consequential actions |
 | A policy-required history predicate cannot be established, or the evidence store cannot be consulted ({{input-history}}) | Fail closed |
 | PDP unreachable | Fail closed for consequential actions; do not proceed on cached permits past the window. An unexpired, unconsumed permit MAY execute during a PDP outage: executing-PEP reverification needs no PDP |
-| Mission not `active` | Refuse |
-| Mission non-active with an outcome unresolved | The declared component resolves it to committed or failed within the reconciliation window; no new effect is admitted under the Mission; identifier and claim state is retained ({{evidence}}) |
+| Mission not `active` | Refuse; work already initiated reconciles under {{evidence}}, never re-executes |
 | The Mission's `expires_at` passed, when known from the Mission state source | Refuse |
 | Unsupported `authorization_details` type for the action | Refuse |
 | Unknown or unmetered constraint on the applicable entry | Refuse |
@@ -2111,19 +2111,29 @@ with no matching execution-outcome record within it) and sequence
 gaps in a Mission's records ({{record-integrity}}).
 
 An unknown outcome has an owner and a deadline, not only a window:
-the declared component MUST drive each unresolved outcome to
-committed or failed before the window closes, and its alerting
-obligation covers any outcome still unknown at the deadline.
+the declared component MUST actively reconcile each unresolved
+outcome before the window closes, querying the resource and matching
+evidence, and record the outcome the evidence establishes
+(`completed`, `failed`, or `suppressed`,
+{{I-D.draft-mcguinness-mission-runtime-evidence}}). Evidence, never
+the deadline, determines the result: an outcome the component cannot
+establish stays undetermined-outcome, is escalated under the declared
+alerting obligation, and is never synthesized into a terminal result.
 Reconciliation survives the Mission: once the Mission is non-active,
-it MAY resolve an in-flight outcome to committed or failed and MUST
-NOT admit a new effect under that Mission (an action already
-executing follows the run-to-completion rule of
-{{execution-reverification}}, unchanged). Consumed and reserved
-decision identifiers and idempotency claims persist across Mission
-lifecycle transitions for at least the reconciliation window, and any
-declared tombstone horizon ({{idempotency}}): termination does not
-erase them, so a post-termination retry resolves against the recorded
-claim rather than executing again.
+it MAY record the outcome of work already initiated and MUST NOT
+admit a new effect under that Mission (an action already executing
+follows the run-to-completion rule of {{execution-reverification}},
+unchanged). Consumed and reserved decision identifiers and
+idempotency claims persist across Mission lifecycle transitions for
+at least the reconciliation window and any declared tombstone horizon
+({{idempotency}}): termination does not erase them, so a
+post-termination retry resolves against the recorded claim rather
+than executing again. An unresolved claim never becomes reusable
+through time alone: when the window closes on an undetermined
+outcome, the claim converts to a non-reusable indeterminate
+tombstone, retained for at least the declared idempotency horizon and
+released only by an evidence-recorded operational resolution, never
+by expiry into a fresh claim.
 
 ## Mission Receipt {#mission-receipt}
 
