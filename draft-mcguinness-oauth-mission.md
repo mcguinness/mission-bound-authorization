@@ -30,7 +30,9 @@ author:
 normative:
   RFC3339:
   RFC3986:
+  RFC4648:
   RFC6234:
+  RFC6920:
   RFC7493:
   RFC6749:
   RFC6750:
@@ -62,7 +64,6 @@ normative:
       ISO: "4217:2015"
 
 informative:
-  RFC6920:
   RFC8126:
   RFC7009:
   RFC8935:
@@ -2222,8 +2223,8 @@ issuer-bound envelope:
 
 2. Canonicalize the envelope with JCS {{RFC8785}}.
 3. Compute SHA-256 {{RFC6234}} over the canonical bytes.
-4. Encode as `sha-256:` followed by the base64url, no-padding,
-   encoding of the digest.
+4. Encode as `sha-256:` followed by the base64url, no-padding
+   {{RFC4648}} encoding of the digest.
 
 The `typ` field domain-separates the anchors so a digest of one
 object can never be mistaken for another's. The `iss` binding
@@ -2260,9 +2261,11 @@ to computing an anchor and to comparing committed values:
   `proposed_authority` for `proposal_hash`, and the `authority_set`
   for `authority_hash`. An auditor reproduces a digest from the
   record alone.
-- The party computing or verifying a commitment MUST reject an input
-  object containing duplicate JSON member names before
-  canonicalization; such input is invalid.
+- The party computing or verifying a commitment MUST parse
+  externally received input with a parser that detects duplicate
+  JSON member names, and MUST reject an object carrying them. An
+  ordinary parser silently collapses duplicates, so the check
+  happens at parse time, before the parsed data model exists.
 - JCS does not reorder array elements, and this document defines no
   element sorting, so array order is significant. The AS MUST emit
   each array in a fixed, reproducible order; that order is part of
@@ -2279,8 +2282,9 @@ Test vectors for the anchors are provided in {{test-vectors}}.
 
 ## Commitment Mechanisms {#commitment-mechanisms}
 
-This family commits to bytes in three ways, and a specification
-defining a commitment classifies it as one of these species:
+The family's default prefixed construction commits to bytes in three
+ways, and a specification defining a prefixed commitment classifies
+it as one of these species:
 
 - **Envelope anchor**: the domain-separated, issuer-bound envelope of
   {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
@@ -2290,22 +2294,30 @@ defining a commitment classifies it as one of these species:
   of a normalized JSON object without the envelope, where protocol
   context already fixes what is committed (for example, a runtime
   parameter digest).
-- **Raw-octet digest**: `sha-256:` over an artifact's exact octets as
-  exchanged, with no canonicalization (for example, a work-product
-  artifact digest).
+- **Raw-octet digest**: `sha-256:` over an exact,
+  specification-defined octet sequence, with no canonicalization: a
+  whole artifact as exchanged, or the UTF-8 encoding of a defined
+  scalar value (for example, a work-product artifact digest).
 
 The prefix and agility rules below bind all three species. The
 I-JSON rule binds the two JSON species. The envelope and `typ`
 discipline of {{integrity-anchors}} binds envelope anchors alone.
 This section instantiates the substrate's default commitment
 construction ({{I-D.draft-mcguinness-mission-substrate}}); the two
-state the same rules, and this document remains self-contained.
+state the same rules, and this document remains self-contained. A
+commitment outside this construction (a native content address, a
+member-named digest whose member name fixes the algorithm) is
+permitted; its defining specification states its own algorithm
+identification and agility behavior.
 
 Every committed JSON value, and the envelope around it, MUST satisfy
 I-JSON {{RFC7493}}, and the party computing or verifying a
 commitment MUST reject non-conformant input before canonicalization:
 
-- objects carry no duplicate member names ({{canonicalization}});
+- externally received JSON destined for commitment is parsed by a
+  duplicate-detecting parser, and an object carrying duplicate member
+  names is rejected at parse time, before the parsed data model
+  exists ({{canonicalization}});
 - string data is valid Unicode, free of the surrogate and
   noncharacter code points I-JSON prohibits, and is preserved
   unchanged; and

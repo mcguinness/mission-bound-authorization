@@ -26,12 +26,13 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC4648:
   RFC6234:
+  RFC6920:
   RFC7493:
   RFC8785:
 
 informative:
-  RFC6920:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -353,37 +354,48 @@ A binding MAY satisfy the duties above, for the Approved Context and
 for any other artifact it commits, with the following default
 construction. The OAuth issuance profile
 ({{I-D.draft-mcguinness-oauth-mission}}) instantiates it, and family
-profiles import it from this section; a binding with a native
-commitment (a content address, a signed object) remains free to use
-that instead.
+profiles import it from this section; a binding with a native or
+member-named commitment (a content address, a signed object, a
+digest whose member name fixes the algorithm) remains free to use
+that instead, stating its own algorithm identification and agility
+behavior under the duties above.
 
 The default commits to bytes in one of three species, and a
 specification defining a commitment classifies it:
 
 * **Envelope anchor**: SHA-256 {{RFC6234}} over the JCS {{RFC8785}}
-  canonical bytes of a domain-separated, issuer-bound envelope
-  `{typ, iss, value}`, where `typ` is a collision-resistant name
-  selecting the committed object, `iss` binds the issuing party, and
-  `value` is the committed object.
+  canonical bytes of a closed JSON object carrying exactly three
+  members and no others: `typ`, a string naming the committed
+  object, collision-resistant because a namespace the defining
+  specification controls qualifies it; `iss`, a string whose value
+  the defining commitment specifies; and `value`, the committed
+  JSON value.
 * **Canonical-object digest**: SHA-256 over the JCS serialization of
   a normalized JSON object without the envelope, where protocol
   context already fixes what is committed.
-* **Raw-octet digest**: SHA-256 over an artifact's exact octets as
-  exchanged, with no canonicalization.
+* **Raw-octet digest**: SHA-256 over an exact,
+  specification-defined octet sequence, with no canonicalization: a
+  whole artifact as exchanged, or the UTF-8 encoding of a defined
+  scalar value.
 
-A digest is encoded as an algorithm prefix followed by the
-base64url, no-padding encoding of the digest: `sha-256:` identifies
-SHA-256, which is mandatory to implement and the only algorithm
-defined.
+The envelope's `iss` is a namespace binding that domain-separates
+commitments across issuing authorities; it does not authenticate
+whoever computed the commitment, which stays a signature or evidence
+property. A digest is encoded as an algorithm prefix followed by the
+base64url, no-padding {{RFC4648}} encoding of the digest: `sha-256:`
+identifies SHA-256, which is mandatory to implement and the only
+algorithm defined.
 
 Every committed JSON value, and the envelope around it, MUST satisfy
 I-JSON {{RFC7493}}, and the party computing or verifying a
 commitment MUST reject non-conformant input before canonicalization:
-objects carry no duplicate member names; string data is valid
-Unicode, free of the surrogate and noncharacter code points I-JSON
-prohibits, and is preserved unchanged; number data supplied to JCS
-is representable as a finite IEEE 754 binary64 value ({{RFC8785}},
-Section 3.1). The commitment is over the parsed I-JSON data value,
+externally received JSON destined for commitment is parsed by a
+duplicate-detecting parser, and an object carrying duplicate member
+names is rejected at parse time, before the parsed data model
+exists; string data is valid Unicode, free of the surrogate and
+noncharacter code points I-JSON prohibits, and is preserved
+unchanged; number data supplied to JCS is representable as a finite
+IEEE 754 binary64 value ({{RFC8785}}, Section 3.1). The commitment is over the parsed I-JSON data value,
 not the source text; a value needing exact decimal or large-integer
 semantics rides as a string or under a stricter declared numeric
 domain.

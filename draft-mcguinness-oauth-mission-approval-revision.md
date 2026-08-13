@@ -534,7 +534,7 @@ worked disclosure and test vector:
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:dUuA6ioErHALo02bwESKBt4Yq0RrWSTOT0bBGuRBog0"
+      "sha-256:y-XRrRqSKkeR6mjgXKqcM2DW8FMOwrjOqzZwjb1rNqY"
   },
   "evidence_envelope": {
     "format": "jws-compact",

@@ -716,12 +716,14 @@ A dispatched Mission is re-checkable in audit with no per-dispatch human
 in the record, because the human is at the template. For a dispatched
 Mission an authorized auditor can:
 
-- recompute `template_hash` from the stored template bytes and match it
-  to the committed template consent evidence
-  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) and to the
-  instance's `template` lineage member ({{template-member}}), so the
-  ceiling the instance was checked against is the one the human
-  consented to;
+- recompute `template_hash`, the envelope anchor of {{template-hash}},
+  from the stored Mission Template object and match it to the committed
+  anchor the template-creation consent evidence carries in its
+  `source_hashes` ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}};
+  that disclosure's own `rendering_template_digest` commits the
+  rendering template, a different object) and to the instance's
+  `template` lineage member ({{template-member}}), so the ceiling the
+  instance was checked against is the one the human consented to;
 - re-run the subset check of the instance's Authority Set against the
   Template Ceiling ({{dispatch}}), confirming the instance is within the
   ceiling; and
