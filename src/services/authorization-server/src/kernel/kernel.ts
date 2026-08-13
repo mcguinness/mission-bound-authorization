@@ -17,10 +17,13 @@ import {
 import type { DerivationPolicy } from "./derive.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
 import {
+  type IntentSubmissionPresenter,
+  provisionalIntentHash,
   type SubmissionEvidenceBounds,
   validateAuthorityProposal,
   validateMissionIntent,
   validateMissionIntentSubmission,
+  verifyIntentSubmissionEvidence,
 } from "./intent.js";
 import {
   signStatusListToken,
@@ -33,6 +36,7 @@ import {
   type ApprovalBasis,
   type AuthorityEntry,
   type ContainmentEventRecord,
+  type IntentSubmissionEvidenceEntry,
   type IntentSubmissionEvidenceFact,
   LEGAL_TRANSITIONS,
   type LifecycleCommit,
@@ -190,6 +194,38 @@ export class MissionKernel {
    */
   validateSubmission(raw: string, bounds?: SubmissionEvidenceBounds): MissionIntentSubmission {
     return validateMissionIntentSubmission(raw, bounds);
+  }
+
+  /**
+   * @spec mission#intent-submission-evidence — STAGE-2 verification of a
+   * parsed submission's evidence, per the processing order: the semantic
+   * `intent` is already validated, so the PROVISIONAL `intent_hash` is
+   * computed here and handed to each type's verifier together with this
+   * issuer, the presenter the containing exchange established, and the
+   * kernel clock. `required` is the policy-resolved anti-downgrade set (a
+   * required type absent => refused). Returns the normalized verified facts
+   * the Mission Record lands (undefined when no evidence was presented and
+   * none is required). On idempotent operations the caller MUST run its
+   * completed-operation recovery lookup BEFORE this.
+   */
+  async verifySubmissionEvidence(input: {
+    intent: MissionIntent;
+    evidence?: IntentSubmissionEvidenceEntry[];
+    presenter: IntentSubmissionPresenter;
+    required?: readonly string[];
+    requestContext?: Record<string, unknown>;
+  }): Promise<IntentSubmissionEvidenceFact[] | undefined> {
+    return verifyIntentSubmissionEvidence(
+      input.evidence,
+      {
+        intentHash: provisionalIntentHash(this.opts.issuer, input.intent),
+        issuer: this.opts.issuer,
+        presenter: input.presenter,
+        now: this.now(),
+        ...(input.requestContext ? { requestContext: input.requestContext } : {}),
+      },
+      input.required ?? [],
+    );
   }
 
   derive(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): AuthorityEntry[] {

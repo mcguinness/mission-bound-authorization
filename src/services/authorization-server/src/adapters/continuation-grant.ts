@@ -49,7 +49,14 @@ import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
 import type { AuthorityEntry, MissionIntent, MissionIntentSubmission, MissionRecord } from "../kernel/types.js";
 import { mintChildGrant } from "./child-grant.js";
-import { childErrorCode, intentErrorToOidc, InvalidAuthorizationDetails, newResourceServer, resourceServerInfoFor } from "./provider.js";
+import {
+  childErrorCode,
+  intentErrorToOidc,
+  InvalidAuthorizationDetails,
+  newResourceServer,
+  requiredEvidenceTypesFor,
+  resourceServerInfoFor,
+} from "./provider.js";
 import type { AdapterOptions } from "./provider.js";
 
 /** @spec RFC 8693 §2.1 — the token-exchange grant type. */
@@ -1331,6 +1338,26 @@ export async function handleChildCreationExchange(
     return;
   }
 
+  // @spec mission#intent-submission-evidence — STAGE-2 evidence verification
+  // runs AFTER the completed-operation recovery lookup above (an artifact
+  // that expired after the first attempt completed MUST NOT break recovery)
+  // and BEFORE creation/derivation. Presenter conjunction: the AUTHENTICATED
+  // client + the possession key of THIS exchange; required types are resolved
+  // from policy (global + client registration) before derivation.
+  let submissionEvidence: Awaited<ReturnType<typeof opts.kernel.verifySubmissionEvidence>>;
+  try {
+    submissionEvidence = await opts.kernel.verifySubmissionEvidence({
+      intent,
+      ...(submission.evidence ? { evidence: submission.evidence } : {}),
+      presenter: { clientId: client.clientId, cnf: { jkt: resolved.jkt } },
+      required: requiredEvidenceTypesFor(opts, client),
+      requestContext: { carrier: "token-exchange:child-creation" },
+    });
+  } catch (e) {
+    if (e instanceof IntentError) throw intentErrorToOidc(e);
+    throw e;
+  }
+
   // Steps 5-6: SYNCHRONOUS, NON-derivation subset creation, ATOMIC with the
   // idempotency reservation (one kernel-db transaction: reserved -> insertRecord
   // -> completed; the datastore uniqueness constraint — never read-before-insert
@@ -1345,6 +1372,7 @@ export async function handleChildCreationExchange(
         parentId: parent.id,
         intent,
         ...(proposedAuthority ? { proposedAuthority } : {}),
+        ...(submissionEvidence?.length ? { submissionEvidence } : {}),
         childActor,
       });
       return { missionId: created.child.id, value: created.child };
@@ -1614,6 +1642,25 @@ export async function handleExpansionExchange(
     return;
   }
 
+  // @spec mission#intent-submission-evidence — STAGE-2 evidence verification
+  // runs AFTER the recovery lookup above (recovery of a completed or pending
+  // operation never re-verifies evidence freshness) and BEFORE the lifecycle
+  // gate and derivation. The verified facts persist across a deferred window
+  // (store.open below) and land on the successor at redemption.
+  let submissionEvidence: Awaited<ReturnType<typeof opts.kernel.verifySubmissionEvidence>>;
+  try {
+    submissionEvidence = await opts.kernel.verifySubmissionEvidence({
+      intent,
+      ...(submission.evidence ? { evidence: submission.evidence } : {}),
+      presenter: { clientId: client.clientId, cnf: { jkt: resolved.jkt } },
+      required: requiredEvidenceTypesFor(opts, client),
+      requestContext: { carrier: "token-exchange:expansion" },
+    });
+  } catch (e) {
+    if (e instanceof IntentError) throw intentErrorToOidc(e);
+    throw e;
+  }
+
   // The predecessor MUST be active at request time.
   const active = opts.kernel.applyExpiry(resolved.record);
   if (active.state !== "active") {
@@ -1648,6 +1695,9 @@ export async function handleExpansionExchange(
       predecessorId: active.id,
       intent,
       ...(proposedAuthority ? { proposedAuthority } : {}),
+      // Facts verified at INITIATION persist across the deferred window and
+      // land on the successor at redemption.
+      ...(submissionEvidence?.length ? { submissionEvidence } : {}),
       clientId: acting.sub,
       jkt: resolved.jkt,
       creationRequestId,

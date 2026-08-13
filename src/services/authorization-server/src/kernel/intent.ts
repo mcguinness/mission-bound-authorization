@@ -18,7 +18,14 @@
  * applied to the retired `proposed_authority` Intent member.
  */
 
-import { DuplicateMemberError, type JsonValue, parseStrictJson } from "@mission/core";
+import {
+  computeAnchor,
+  DuplicateMemberError,
+  intentHash,
+  type JsonValue,
+  MISSION_INTENT_EVIDENCE_TYP,
+  parseStrictJson,
+} from "@mission/core";
 import {
   SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
   validateMissionResourceAccessSchema,
@@ -26,6 +33,7 @@ import {
 import type {
   AuthorityEntry,
   IntentSubmissionEvidenceEntry,
+  IntentSubmissionEvidenceFact,
   MissionIntent,
   MissionIntentSubmission,
 } from "./types.js";
@@ -66,17 +74,79 @@ export interface SubmissionEvidenceBounds {
 }
 
 /**
- * @spec mission#intent-submission-evidence — the registry of Intent Submission
- * Evidence types this AS accepts, keyed by `type`; each value validates the
- * type's OWN closed member set (the RAR type-dispatch discipline: the type
- * owns its exact members and semantics). EMPTY today — no evidence-type
- * profile is implemented — so every presented type is unknown and refused,
- * which is exactly the hook's rule for a deployment with no registered types.
+ * @spec mission#intent-submission-evidence — the presenter the CONTAINING
+ * exchange established (client authentication + possession). The presenter
+ * conjunction: an evidence type binding a presenter (`client_id`, `cnf`) MUST
+ * match THIS value; the assertion never authenticates or selects the
+ * presenter. `cnf` is present where the exchange is sender-constrained (the
+ * D69 token exchanges); PAR and dispatch establish the client alone.
  */
-export const INTENT_SUBMISSION_EVIDENCE_TYPES: ReadonlyMap<
-  string,
-  (entry: Record<string, JsonValue>) => void
-> = new Map();
+export interface IntentSubmissionPresenter {
+  clientId: string;
+  cnf?: { jkt: string };
+}
+
+/**
+ * @spec mission#intent-submission-evidence — the stage-2 verification input
+ * handed to a type's `verify`: the entry, the PROVISIONAL `intent_hash`
+ * (computed over the submitted semantic intent BEFORE verification, per the
+ * processing order), the AS issuer (the expected artifact audience), the
+ * established presenter, and the evaluation time.
+ */
+export interface IntentSubmissionEvidenceVerifyInput {
+  entry: IntentSubmissionEvidenceEntry;
+  intentHash: string;
+  issuer: string;
+  presenter: IntentSubmissionPresenter;
+  now: Date;
+  /** Carrier-specific context (e.g. which submission carrier), advisory. */
+  requestContext?: Record<string, unknown>;
+}
+
+/**
+ * @spec mission#intent-submission-evidence — one registered Intent Submission
+ * Evidence type: the TWO-STAGE interface the processing order requires.
+ *  - Stage 1 `validate`: SYNCHRONOUS structural validation of the type's OWN
+ *    closed member set (the RAR type-dispatch discipline), run at parse time —
+ *    before the creation fingerprint is computed, so the fingerprint input is
+ *    shape-valid. Throws {@link IntentError} (`invalid_mission_intent_evidence`).
+ *  - Stage 2 `verify`: ASYNC verification (signature, issuer trust, audience,
+ *    freshness, `intent_hash` equality, presenter conjunction, status/replay)
+ *    returning the NORMALIZED verified output facts the Mission Record lands
+ *    (the nested `facts` object of {@link IntentSubmissionEvidenceFact}). Any
+ *    throw maps to `invalid_mission_intent_evidence`.
+ */
+export interface IntentSubmissionEvidenceType {
+  validate(entry: Record<string, JsonValue>): void;
+  verify(input: IntentSubmissionEvidenceVerifyInput): Promise<Record<string, JsonValue>>;
+}
+
+const EVIDENCE_TYPE_REGISTRY = new Map<string, IntentSubmissionEvidenceType>();
+
+/**
+ * @spec mission#intent-submission-evidence — the registry of Intent Submission
+ * Evidence types this AS accepts, keyed by `type`. EMPTY as shipped — no
+ * evidence-type profile is implemented — so every presented type is unknown
+ * and refused, which is exactly the hook's rule for a deployment with no
+ * registered types. {@link registerIntentSubmissionEvidenceType} is the
+ * extension point an evidence-type profile implementation (or a test fixture)
+ * uses.
+ */
+export const INTENT_SUBMISSION_EVIDENCE_TYPES: ReadonlyMap<string, IntentSubmissionEvidenceType> =
+  EVIDENCE_TYPE_REGISTRY;
+
+/** Register an evidence-type implementation (profile wiring / test fixtures). */
+export function registerIntentSubmissionEvidenceType(
+  type: string,
+  impl: IntentSubmissionEvidenceType,
+): void {
+  EVIDENCE_TYPE_REGISTRY.set(type, impl);
+}
+
+/** Remove a registered evidence type (test-fixture cleanup). */
+export function unregisterIntentSubmissionEvidenceType(type: string): void {
+  EVIDENCE_TYPE_REGISTRY.delete(type);
+}
 
 export class IntentError extends Error {
   constructor(
@@ -154,10 +224,10 @@ export function validateMissionIntentSubmission(
  * array of the Submission envelope. Every entry is an object with a REQUIRED
  * `type`; the selected type owns the entry's remaining members and validation
  * (dispatch through {@link INTENT_SUBMISSION_EVIDENCE_TYPES}). An unknown
- * type or an entry failing its type's validation is refused — evidence
- * presented for admission is never silently ignored. Entry count and
- * per-entry size are bounded. Returns undefined for absent (or empty)
- * evidence, mirroring the proposal normalization.
+ * type or an entry failing its type's stage-1 validation is refused —
+ * evidence presented for admission is never silently ignored. `evidence`,
+ * when present, MUST be a non-empty array; entry count and per-entry size are
+ * bounded. Returns undefined only for ABSENT evidence.
  */
 export function validateIntentSubmissionEvidence(
   raw: JsonValue | undefined,
@@ -169,10 +239,15 @@ export function validateIntentSubmissionEvidence(
   }
   const maxEntries = bounds.maxEvidenceEntries ?? DEFAULT_MAX_EVIDENCE_ENTRIES;
   const maxEntryBytes = bounds.maxEvidenceEntryBytes ?? DEFAULT_MAX_EVIDENCE_ENTRY_BYTES;
+  // @spec mission#submission-via-par — `evidence`, when present, is a
+  // NON-EMPTY array: an empty array presents nothing and is refused rather
+  // than silently normalized away.
+  if (raw.length === 0) {
+    throw new IntentError("invalid_request", "evidence must be a non-empty array");
+  }
   if (raw.length > maxEntries) {
     throw new IntentError("invalid_request", `evidence exceeds the entry-count bound (${maxEntries})`);
   }
-  if (raw.length === 0) return undefined;
   for (const entry of raw) {
     if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
       throw new IntentError("invalid_request", "evidence entries must be objects");
@@ -184,13 +259,89 @@ export function validateIntentSubmissionEvidence(
     if (Buffer.byteLength(JSON.stringify(e), "utf8") > maxEntryBytes) {
       throw new IntentError("invalid_request", `evidence entry exceeds the size bound (${maxEntryBytes} bytes)`);
     }
-    const validate = INTENT_SUBMISSION_EVIDENCE_TYPES.get(e.type);
-    if (!validate) {
+    const impl = EVIDENCE_TYPE_REGISTRY.get(e.type);
+    if (!impl) {
       throw new IntentError("invalid_mission_intent_evidence", `unknown evidence type: ${e.type}`);
     }
-    validate(e);
+    // Stage 1 only: the type's SYNCHRONOUS structural validation (closed
+    // member set). Stage-2 verification (signature/freshness/binding) runs
+    // later, via verifyIntentSubmissionEvidence — after the idempotency
+    // recovery lookup on the exchanges, so an artifact that expired after a
+    // completed operation cannot break that operation's recovery.
+    impl.validate(e);
   }
   return raw as IntentSubmissionEvidenceEntry[];
+}
+
+/**
+ * @spec mission#intent-submission-evidence — STAGE 2: verify the presented
+ * (stage-1-validated) evidence and produce the normalized facts the Mission
+ * Record lands. Runs per the processing order: the semantic intent is already
+ * validated and the PROVISIONAL `intent_hash` computed (passed here); each
+ * entry's type-specific verifier receives that hash, the AS issuer, the
+ * presenter the containing exchange established, and the evaluation time.
+ *
+ * The ANTI-DOWNGRADE hook: `required` is the policy-resolved set of evidence
+ * types this submission MUST present (resolved BEFORE derivation from global
+ * or per-client configuration). A required type absent from the submission is
+ * refused; successful processing without evidence never satisfies a
+ * requirement. ALL verification failures map to
+ * `invalid_mission_intent_evidence`.
+ *
+ * On IDEMPOTENT operations the completed-operation recovery lookup PRECEDES
+ * this call: recovery of an already-completed request never re-verifies
+ * evidence freshness or status.
+ */
+export async function verifyIntentSubmissionEvidence(
+  evidence: IntentSubmissionEvidenceEntry[] | undefined,
+  ctx: Omit<IntentSubmissionEvidenceVerifyInput, "entry">,
+  required: readonly string[] = [],
+): Promise<IntentSubmissionEvidenceFact[] | undefined> {
+  const presented = new Set((evidence ?? []).map((e) => e.type));
+  for (const type of required) {
+    if (!presented.has(type)) {
+      throw new IntentError(
+        "invalid_mission_intent_evidence",
+        `required evidence type absent: ${type}`,
+      );
+    }
+  }
+  if (!evidence || evidence.length === 0) return undefined;
+  const facts: IntentSubmissionEvidenceFact[] = [];
+  for (const entry of evidence) {
+    const impl = EVIDENCE_TYPE_REGISTRY.get(entry.type);
+    if (!impl) {
+      throw new IntentError("invalid_mission_intent_evidence", `unknown evidence type: ${entry.type}`);
+    }
+    let verified: Record<string, JsonValue>;
+    try {
+      verified = await impl.verify({ ...ctx, entry });
+    } catch (e) {
+      if (e instanceof IntentError) throw e;
+      throw new IntentError(
+        "invalid_mission_intent_evidence",
+        `evidence verification failed (${entry.type}): ${e instanceof Error ? e.message : "verifier error"}`,
+      );
+    }
+    facts.push({
+      type: entry.type,
+      // The artifact digest as the record lands it: the family anchor idiom
+      // over the entry AS PRESENTED (typ mission-intent-evidence).
+      artifact_hash: computeAnchor(MISSION_INTENT_EVIDENCE_TYP, ctx.issuer, entry as never),
+      verified_at: ctx.now.toISOString(),
+      ...(Object.keys(verified).length ? { facts: verified } : {}),
+    });
+  }
+  return facts;
+}
+
+/**
+ * Compute the PROVISIONAL `intent_hash` for evidence verification (processing
+ * order: validate the intent, compute the provisional hash, then verify).
+ * Identical to the commitment the approval later records.
+ */
+export function provisionalIntentHash(issuer: string, intent: MissionIntent): string {
+  return intentHash(issuer, intent as never);
 }
 
 /**

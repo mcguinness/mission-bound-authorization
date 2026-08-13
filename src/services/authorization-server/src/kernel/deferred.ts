@@ -18,7 +18,13 @@ import { CreationIdempotencyStore } from "./creation-idempotency.js";
 import { isSubsetSet } from "./derive.js";
 import { createExpansion } from "./expansion.js";
 import type { MissionKernel } from "./kernel.js";
-import type { AuthorityEntry, MissionClaim, MissionIntent, MissionRecord } from "./types.js";
+import type {
+  AuthorityEntry,
+  IntentSubmissionEvidenceFact,
+  MissionClaim,
+  MissionIntent,
+  MissionRecord,
+} from "./types.js";
 
 export const DEFERRED_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:deferred";
 
@@ -236,6 +242,7 @@ CREATE TABLE expansion_deferrals (
   jkt TEXT NOT NULL,
   creation_request_id TEXT,
   pred_containment_version INTEGER NOT NULL,
+  submission_evidence_json TEXT,
   approver_json TEXT,
   approval_event_id TEXT,
   approved_until TEXT,
@@ -329,6 +336,15 @@ export class ExpansionDeferralStore {
      * distinct creation operations and open distinct deferrals.
      */
     creationRequestId?: string;
+    /**
+     * @spec mission#intent-submission-evidence — the VERIFIED evidence facts
+     * of the widening submission (stage-2 output, verified at INITIATION).
+     * Persisted across the deferred window and landed on the successor at
+     * redemption; NOT part of the dedup key (the presented evidence is
+     * already in the creation fingerprint; the same submission re-verifies
+     * to the same facts modulo `verified_at`).
+     */
+    submissionEvidence?: IntentSubmissionEvidenceFact[];
   }): DeferralPending {
     const predecessor = this.kernel.get(input.predecessorId);
     if (!predecessor || this.kernel.applyExpiry(predecessor).state !== "active") {
@@ -356,7 +372,7 @@ export class ExpansionDeferralStore {
     if (!existing) {
       this.db
         .prepare(
-          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, submission_evidence_json, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .run(
           code,
@@ -366,6 +382,7 @@ export class ExpansionDeferralStore {
           input.jkt,
           input.creationRequestId ?? null,
           snapshotCv,
+          input.submissionEvidence?.length ? JSON.stringify(input.submissionEvidence) : null,
           this.now().getTime(),
         );
     }
@@ -496,6 +513,11 @@ export class ExpansionDeferralStore {
       typeof row.creation_request_id === "string" && row.creation_request_id
         ? row.creation_request_id
         : undefined;
+    // @spec mission#intent-submission-evidence — the facts verified at
+    // INITIATION, persisted across the deferred window, land on the successor.
+    const submissionEvidence = row.submission_evidence_json
+      ? (JSON.parse(row.submission_evidence_json as string) as IntentSubmissionEvidenceFact[])
+      : undefined;
     const { successor } = withTransaction(this.kernel.db, () => {
       const res = createExpansion(this.kernel, {
         predecessorId: row.predecessor_id as string,
@@ -504,6 +526,7 @@ export class ExpansionDeferralStore {
         approver,
         approvalEventId: row.approval_event_id as string,
         approvedUntil: row.approved_until as string,
+        ...(submissionEvidence?.length ? { submissionEvidence } : {}),
       });
       if (creationRequestId) {
         this.creationIdempotency.completeInCallerTx(
