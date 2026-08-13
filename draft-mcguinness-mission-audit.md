@@ -390,7 +390,7 @@ record as part of the Mission's feed.
 | Lifecycle transition | Signals SET as issued; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `issuer` |
 | Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | `issuer` |
 | Consent evidence | retained signed object, as issued | `application/mission-consent-evidence+json` | `issuer` |
-| Approval governance | signed envelope, as issued | `application/mission-approval-governance+json` | `issuer` |
+| Approval governance | complete record including `envelope` (JCS), the record-digest preimage | `application/mission-approval-governance+json` | `issuer` |
 | Decision evidence | Decision Evidence object, as issued | `application/mission-decision-evidence+json` | PDP key |
 | Execution evidence | Execution Evidence object, as issued | `application/mission-execution-evidence+json` | PEP key |
 | Refusal Record | Refusal Record object, as issued | `application/mission-refusal-record+json` | PEP key |

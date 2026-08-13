@@ -765,24 +765,24 @@ A Consent Evidence object has these members:
   Where an Approval Governance Record is recorded
   ({{I-D.draft-mcguinness-mission-approval-governance}}), that record
   is authoritative for approval-governance facts and this member is a
-  deliberately partial presentation of it: principals, decisions, and
-  times only, never the policy, the evaluation, or per-assertion
-  provenance.
+  deliberately partial presentation of it: each entry MUST correspond
+  to one of the record's `human` assertions under the mapping that
+  document fixes (its consent evidence relationship), presenting
+  principals, decisions, and times only, never the policy, the
+  evaluation, or per-assertion provenance.
 
 `approval_authority`:
 : OPTIONAL. A reference identifying the standing policy or delegation the
   Approver acted under. An additive hook that does not change the single
   accountable Approver ({{I-D.draft-mcguinness-oauth-mission}}). Where
-  an Approval Governance Record is recorded, this member SHOULD equal
-  its `approval_policy.id`.
+  an Approval Governance Record is recorded, this member, when
+  present, MUST equal its `approval_policy.id`.
 
 `approval_governance_digest`:
-: OPTIONAL. A string. The digest of the Approval Governance Record's
-  signed envelope
-  ({{I-D.draft-mcguinness-mission-approval-governance}}), in the
-  integrity-anchor encoded form of
-  {{I-D.draft-mcguinness-oauth-mission}}, binding this evidence to
-  the authoritative governance record.
+: OPTIONAL. A string. The Approval Governance Record's record digest
+  ({{I-D.draft-mcguinness-mission-approval-governance}}), binding
+  this evidence to the authoritative governance record; verified per
+  {{integrity}}.
 
 `rendering_attestation`:
 : OPTIONAL and experimental. An object. Evidence that an attested,
@@ -874,8 +874,8 @@ A Consent Evidence object has these members:
 
 `approval_policy_version`:
 : OPTIONAL. A string. The approval policy version in effect at the
-  approval event, equal to the Approval Governance Record's
-  `approval_policy.version` where one is recorded
+  approval event; where an Approval Governance Record is recorded, it
+  MUST equal that record's `approval_policy.version`
   ({{I-D.draft-mcguinness-mission-approval-governance}}). Distinct
   from the Mission record's `policy_version`, which names the
   derivation policy ({{I-D.draft-mcguinness-oauth-mission}}). The AS
@@ -978,7 +978,15 @@ service authorized by the Mission Issuer. A verifier:
    bound to the per-approval value, and treats a confirmation that does
    not verify, or whose authenticator is not bound to the recorded
    `approver`, as an integrity failure; and
-8. when `rendering_attestation` is present ({{experimental-rungs}}),
+8. when `approval_governance_digest` is present, retrieves the
+   Approval Governance Record it names, verifies its envelope and
+   Mission binding per that document
+   ({{I-D.draft-mcguinness-mission-approval-governance}}), recomputes
+   the record digest, and compares it to the member: a mismatch is an
+   integrity failure of this evidence, while a record unavailable
+   within its retention obligation is an audit failure of the
+   deployment, not an integrity failure of the evidence; and
+9. when `rendering_attestation` is present ({{experimental-rungs}}),
    validates the attested component identity and its attestation against
    the verifier's configured trust anchors, and treats an attestation it
    cannot validate as unverified (the evidence then asserts no rung above

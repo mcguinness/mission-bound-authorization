@@ -206,13 +206,21 @@ plus the integrity `envelope` {{envelope}} defines.
 `approval_policy`:
 : REQUIRED. An object identifying the governing
   delegation-of-authority policy: `id` (an identifier), `version` (a
-  string), and `digest` (an integrity anchor over the policy
-  representation the deployment retains, in the encoded form
-  {{conventions-and-definitions}} fixes). The referenced policy
-  version, or an immutable snapshot of it, MUST be retained for the
-  Mission's audit horizon ({{I-D.draft-mcguinness-oauth-mission}}),
-  so the evaluation is re-checkable against the policy that governed
-  it. Threshold, quorum, veto, and separation-of-duty semantics live
+  string), and `digest` (an integrity anchor over the retained policy
+  snapshot, in the encoded form {{conventions-and-definitions}}
+  fixes). The digest preimage is the issuance profile's
+  integrity-anchor envelope ({{I-D.draft-mcguinness-oauth-mission}})
+  with `typ` `mission-approval-policy`, `iss` the Mission issuer, and
+  `value` an object of `content_type` (the snapshot's media type) and
+  `content` (the base64url, no-padding encoding of the snapshot
+  bytes), canonicalized with JCS {{RFC8785}}: the `typ`
+  domain-separates this anchor from every other anchor in the family,
+  and the issuer binding prevents cross-issuer replay. The snapshot
+  bytes and their media type, or the referenced policy version they
+  represent, MUST be retained for the Mission's audit horizon
+  ({{I-D.draft-mcguinness-oauth-mission}}), so an independent auditor
+  reproduces the digest exactly and re-checks the evaluation against
+  the policy that governed it. Threshold, quorum, veto, and separation-of-duty semantics live
   in the referenced policy; any human-readable summary of them in
   deployment tooling is advisory and carries no semantics in this
   record.
@@ -250,7 +258,9 @@ plus the integrity `envelope` {{envelope}} defines.
 
 `evaluation`:
 : REQUIRED. An object recording the outcome: `decision` (a string,
-  `approved` or `denied`), `evaluated_at` (an RFC 3339 timestamp),
+  `approved`, the only value a committed record carries, since a
+  record exists only for an approval that committed,
+  {{atomic-commitment}}), `evaluated_at` (an RFC 3339 timestamp),
   and `contributing` (an array of the `assertion_id` values the
   evaluation relied on).
 
@@ -348,7 +358,13 @@ Mission record MUST NOT be created `active` unless the evaluation's
 with the Mission's creation. Failure to authenticate the
 contributing assertions, to complete the evaluation, or to persist
 the record MUST prevent activation; there is no Mission whose
-governance record was meant to exist and does not. The issuer signs
+governance record was meant to exist and does not. A governance
+evaluation that denies creates no Mission and no committed record:
+negative assertions retained inside a committed record document
+dissent ({{assertion-requirements}}), and a wholly declined
+approval's evidence surface is consent evidence's declined outcome
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), which
+exists without a Mission record. The issuer signs
 the evaluated record ({{envelope}}) and persists the signed form in
 the same commit as the Mission's creation; signing follows
 evaluation and precedes persistence, never the reverse.
@@ -393,6 +409,14 @@ document defines only the `jws-compact` format; an implementation
 MUST reject an envelope whose `format` is unsupported rather than
 accepting it unverified.
 
+The **record digest** is the digest, in the encoded form
+{{conventions-and-definitions}} fixes, over the JCS {{RFC8785}}
+canonical bytes of the complete record, `envelope` included. It is
+the one byte sequence every external binding names: audit
+registration hashes exactly these bytes ({{audit-evidence}}), and
+consent evidence's `approval_governance_digest` equals exactly this
+value ({{consent-evidence-relationship}}).
+
 # Recording Triggers {#triggers}
 
 Defined here so a profile cites one list. The record is REQUIRED for
@@ -412,13 +436,28 @@ record is required.
 # Consent Evidence Relationship {#consent-evidence-relationship}
 
 Where both are recorded, the AGR is authoritative for
-approval-governance facts, and consent evidence's `co_approvals` and
-`approval_authority` members are a deliberately partial presentation
-of it: principals, decisions, times, and one policy reference
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). Consent
-evidence MAY carry the digest of the AGR's signed envelope to bind
-the two. Where both are recorded they MUST agree, and the AGR
-governs.
+approval-governance facts, and consent evidence presents a
+deliberately partial view of it
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). Agreement
+is testable, member by member:
+
+- Each `co_approvals` entry MUST correspond to exactly one `human`
+  assertion in the record with the same `principal`, the entry's
+  decision equal to the assertion's `decision`, and the entry's
+  timestamp equal to the assertion's `decided_at`. Omitting an
+  assertion is permitted; an entry with no corresponding assertion,
+  or one that alters a decision or time, is an integrity failure.
+  `service` and `policy` assertions are governance inputs, never
+  consent events, and are never presented as co-approvals.
+- The consent evidence `approver` MUST equal the `principal` of the
+  record's accountable assertion ({{assertion-requirements}}).
+- `approval_authority`, when present, MUST equal
+  `approval_policy.id`; `approval_policy_version`, when present,
+  MUST equal `approval_policy.version`.
+- `approval_governance_digest`, when present, MUST equal the record
+  digest ({{envelope}}).
+
+The AGR governs on any disagreement.
 
 # Boundaries {#boundaries}
 
@@ -438,8 +477,8 @@ matching the issuance profile's control-plane discipline.
 The AGR is registrable Mission evidence under the audit
 transparency profile's evidence-type pattern
 ({{I-D.draft-mcguinness-mission-audit}}): canonical bytes are the
-signed envelope as issued, since an already-signed object is not
-re-canonicalized; `payload-preimage-content-type` is
+JCS canonical bytes of the complete record, `envelope` included, the
+record-digest preimage ({{envelope}}); `payload-preimage-content-type` is
 `application/mission-approval-governance+json`; the authoritative
 producer is the Mission `issuer`. Registration is optional
 transparency hardening; retention and immutability do not depend on
