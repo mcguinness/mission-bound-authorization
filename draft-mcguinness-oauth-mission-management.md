@@ -355,16 +355,26 @@ an authorized management operation, is deployment-defined; a
 dedicated metadata update operation is deferred until deployment
 experience shows the shape. `owner` and `tenant` are fixed when the
 administrative metadata is created: they define filter scope, so
-changing either redraws who may see and operate on the Mission. A
-deployment that nonetheless supports reclassifying or re-homing a
-Mission MUST gate the change on an explicit authority distinct from
-its enumeration and lifecycle grants, MUST require the caller's
-filter scope to cover the Mission both before and after the change,
+changing either redraws who may see and operate on the Mission. So
+does changing whether the object exists: a metadata-matching filter
+member matches no Mission that has none ({{filter}}), so creating the
+object after issuance, deleting it, or deleting and recreating it
+redraws scope as surely as changing a value. Every post-issuance
+transition of the administrative metadata (a value change, absent to
+present, or present to absent) is therefore a **re-home**. A
+deployment that supports re-homing MUST gate it on an explicit
+authority distinct from its enumeration and lifecycle grants, MUST
+require the caller's filter scope to cover the Mission both before
+and after the change (a Mission without administrative metadata is
+covered through the filter members that do not match against it),
 MUST NOT accept an authorization derived from the values the change
 itself would establish, MUST apply the change as an atomic
-compare-and-set against the current values, and MUST record the
-audited management event with both the prior and the new values
-({{filter-scope}}).
+compare-and-set against the current values, absent being a value the
+comparison and the record both name, and MUST record the audited
+management event with both the prior and the new values
+({{filter-scope}}). A re-home does not travel alone: an outstanding
+bulk token that pins the Mission fails its scope-currency check at
+its next presentation ({{bulk-token-security}}).
 
 # Mission Filter {#filter}
 
@@ -449,7 +459,11 @@ carries:
   pins (the pinned set) as summaries, so the reviewed set equals the
   executed set ({{dry-run}}). `filter` MUST equal the filter the
   token binds; the AS MUST refuse a mismatch with `invalid_bulk_token`
-  ({{management-errors}}). Presenting a bulk token to `enumerate` is
+  ({{management-errors}}). Before disclosing any summary, the AS MUST
+  verify that every pinned member is still within the caller's
+  current filter scope ({{filter-scope}}), refusing the whole token
+  with `stale_bulk_token` and naming no member otherwise
+  ({{bulk-token-security}}). Presenting a bulk token to `enumerate` is
   read-only and does not consume it.
 
 ## Response {#enumeration-response}
@@ -608,13 +622,21 @@ On `mode` `execute` the AS MUST verify that the presented
 
 1. is unexpired,
 2. is unused,
-3. was issued to this caller, and
+3. was issued to this caller,
 4. binds an `operation`, `filter`, and (for a `suspend`)
-   `suspend_until` and `on_expiry` all equal to the request's.
+   `suspend_until` and `on_expiry` all equal to the request's, and
+5. pins a membership every member of which is still within the
+   caller's current filter scope ({{filter-scope}}).
 
 An execute whose `operation`, `filter`, or `on_expiry` differs from
 what the token pins MUST be refused with `invalid_bulk_token`,
-executing nothing. The token is then consumed: it is single-use
+executing nothing. An execute any of whose pinned members has left
+the caller's filter scope (administrative metadata changed under the
+reviewed set, {{admin-metadata}}) MUST be refused with
+`stale_bulk_token`, executing nothing and naming no member; the
+caller re-runs the dry run under current scope
+({{bulk-token-security}}). Either check completes before any
+transition commits. The token is then consumed: it is single-use
 whatever the outcome.
 
 The AS applies the operation to each member of the bound membership
@@ -751,6 +773,7 @@ are manifest outcomes ({{manifest}}), never wire errors. The codes:
 |---|---|---|
 | `invalid_request` | 400 | Malformed request: unknown `operation`, unrecognized filter member, invalid member combination, or a cursor that does not match its caller and filter. |
 | `invalid_bulk_token` | 400 | The bulk token is missing, expired, already used, issued to another caller, or bound to a different operation, filter, `suspend_until`, or `on_expiry`. |
+| `stale_bulk_token` | 409 | Administrative metadata changed under the pinned membership: at least one pinned Mission is no longer within the caller's filter scope. Re-run the dry run ({{bulk-token-security}}). |
 | `filter_too_broad` | 400 | The filter matches more Missions than the deployment's declared bound for the requested operation. |
 | `unauthorized` | 401 | Request not authenticated. |
 | `forbidden` | 403 | Caller authenticated but not authorized for the requested operation or filter scope ({{filter-scope}}). |
@@ -920,9 +943,26 @@ the operator reviewed the dry-run count, so a reviewed "revoke these
 3" could silently become "revoke these 30". Single use prevents a
 captured or logged token from re-running the sweep; the short lifetime
 bounds how stale the reviewed set can be; and the caller binding keeps
-the reviewed set and the executing principal the same. An AS MUST
-enforce all four; a bulk token that survives reuse, transfer, or
-filter substitution reduces the two-step exchange to a one-step sweep.
+the reviewed set and the executing principal the same.
+
+The scope-currency check ({{execution}}) is the fifth binding, and it
+guards the reverse drift: the membership binding freezes the set, but
+a re-home ({{admin-metadata}}) can move a pinned Mission out of the
+caller's filter scope after review, and a token checked only against
+its own bindings would let its holder keep enumerating the moved
+Mission and revoke, suspend, resume, or complete it from outside the
+scope that now governs it. The re-homing actor's own pre- and
+post-scope gate cannot see other callers' outstanding tokens; the
+check at presentation is what closes them. The refusal is computed
+before any disclosure or transition and names no member. How the AS
+detects staleness is its choice: binding each member's
+administrative-metadata generation into the token and refusing on any
+change, or eagerly invalidating every outstanding token that pins a
+re-homed Mission, both conform.
+
+An AS MUST enforce all five; a bulk token that survives reuse,
+transfer, filter substitution, or a re-home reduces the two-step
+exchange to a one-step sweep.
 
 ## General OAuth Security
 
