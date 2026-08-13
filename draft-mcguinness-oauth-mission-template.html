@@ -1816,9 +1816,13 @@ instance with:<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 <dt id="section-7.2-2.5">
 <code>mission_intent</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.2-2.6">
-            <p id="section-7.2-2.6.1"><span class="bcp14">REQUIRED</span>. The dispatch intent, in the issuance profile's Mission
-Intent shape (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), from which the
-instance Authority Set is derived (<a href="#dispatch" class="auto internal xref">Section 7</a>).<a href="#section-7.2-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-7.2-2.6.1"><span class="bcp14">REQUIRED</span>. The dispatch submission, in the issuance profile's
+Mission Intent Submission envelope shape
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): its <code>intent</code> is the
+dispatch intent from which the instance Authority Set is derived
+(<a href="#dispatch" class="auto internal xref">Section 7</a>), and its <span class="bcp14">OPTIONAL</span> <code>evidence</code> array carries Intent
+Submission Evidence under that profile's dispatch, refusal, and
+never-authority rules.<a href="#section-7.2-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.2-2.7">

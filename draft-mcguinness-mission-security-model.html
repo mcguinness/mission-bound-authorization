@@ -1863,9 +1863,11 @@ authority the agent legitimately holds.<a href="#section-9-3.2.1" class="pilcrow
         <dd class="break"></dd>
 <dt id="section-9-3.3">Prompt injection tries to widen authority:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.4">
-          <p id="section-9-3.4.1">Addressed by the same approval-time commitment: <code>purpose</code> and
-<code>success_criteria</code> are inert, and <code>goal</code> shapes authority only through
-the pre-approval derivation the Approver consents to. Residual:
+          <p id="section-9-3.4.1">Addressed by the same approval-time commitment: the Intent's prose
+members (<code>goal</code>, <code>constraints</code>, <code>success_criteria</code>) are inert at
+derivation, never parsed for machine semantics; authority enters as
+the structured proposal the AS only narrows, and the Approver
+consents to the derived result (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Residual:
 injected text can still drive actions already in scope.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>

@@ -1571,11 +1571,14 @@ pushing: it rides the existing <code>claim_token</code> parameter of the token
 endpoint's UMA grant, and this binding defines no new endpoint or
 parameter.<a href="#section-4-1" class="pilcrow">¶</a></p>
 <p id="section-4-2">A Mission Intent claim token is a JWT whose payload carries a
-<code>mission_intent</code> claim: a Mission Intent object as the issuance
-profile defines it, under that profile's syntactic rules (the object
-is closed at the top level, the authorization server <span class="bcp14">MUST</span> bound its
-size and array lengths, and it is untrusted client input, never
-authority). The payload <span class="bcp14">MAY</span> additionally carry an
+<code>mission_intent</code> claim: a Mission Intent Submission envelope as the
+issuance profile defines it, <code>intent</code> plus <span class="bcp14">OPTIONAL</span> <code>evidence</code>, under
+that profile's syntactic and Intent Submission Evidence rules (the
+envelope and the Intent are both closed at the top level, the
+authorization server <span class="bcp14">MUST</span> bound size, array lengths, evidence entry
+count, and evidence verification cost, presented evidence is
+dispatched by type and refused when unsupported or failing, and the
+submission is untrusted client input, never authority). The payload <span class="bcp14">MAY</span> additionally carry an
 <code>authorization_details</code> claim: the client's authority proposal, an
 array of <code>authorization_details</code> objects. This claim is this
 binding's proposal carriage, replacing the issuance profile's

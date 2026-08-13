@@ -1998,9 +1998,9 @@ by fail-closed is queued for resume or dropped;<a href="#section-4.2-3.9.1" clas
           <li class="normal" id="section-4.2-3.12">
             <p id="section-4.2-3.12.1">the reconciliation window for matching execution-outcome evidence to
 decisions, the component responsible for orphaned-evidence and
-sequence-gap detection and for driving each unresolved outcome to
-committed or failed within the window, and that component's alerting
-obligation (<a href="#evidence" class="auto internal xref">Section 11</a>).<a href="#section-4.2-3.12.1" class="pilcrow">¶</a></p>
+sequence-gap detection and for actively reconciling each unresolved
+outcome within the window, and that component's alerting obligation
+(<a href="#evidence" class="auto internal xref">Section 11</a>).<a href="#section-4.2-3.12.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-4.2-4">A deployment <span class="bcp14">MUST NOT</span> claim runtime enforcement for a resource, action
@@ -3686,6 +3686,13 @@ was made under:<a href="#section-8.4-4" class="pilcrow">¶</a></p>
                 <code>idempotency_conflict</code>, terminal</td>
             </tr>
             <tr>
+              <td class="text-left" rowspan="1" colspan="1">indeterminate (window closed, outcome undetermined, <a href="#evidence" class="auto internal xref">Section 11</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>duplicate_suppressed</code>, terminal (<code>next_action: none</code>); resolution is operational, never a new permit</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>idempotency_conflict</code>, terminal</td>
+            </tr>
+            <tr>
               <td class="text-left" rowspan="1" colspan="1">completed (within window or tombstoned horizon)</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>duplicate_suppressed</code>, terminal (<code>next_action: none</code>); the prior result is available from the resource under the Operation Profile</td>
@@ -3700,7 +3707,7 @@ was made under:<a href="#section-8.4-4" class="pilcrow">¶</a></p>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">expired past the declared horizon</td>
-              <td class="text-left" rowspan="1" colspan="1">outside the guarantee; treated as new</td>
+              <td class="text-left" rowspan="1" colspan="1">outside the guarantee; treated as new. An indeterminate tombstone does not expire into this state (<a href="#evidence" class="auto internal xref">Section 11</a>)</td>
               <td class="text-left" rowspan="1" colspan="1">outside the guarantee</td>
             </tr>
           </tbody>
@@ -3850,11 +3857,7 @@ refusal.<a href="#section-10-1" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Mission not <code>active</code>
 </td>
-            <td class="text-left" rowspan="1" colspan="1">Refuse</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Mission non-active with an outcome unresolved</td>
-            <td class="text-left" rowspan="1" colspan="1">The declared component resolves it to committed or failed within the reconciliation window; no new effect is admitted under the Mission; identifier and claim state is retained (<a href="#evidence" class="auto internal xref">Section 11</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Refuse; work already initiated reconciles under <a href="#evidence" class="auto internal xref">Section 11</a>, never re-executes</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">The Mission's <code>expires_at</code> passed, when known from the Mission state source</td>
@@ -4025,18 +4028,29 @@ window, and the named component detects orphaned evidence (a decision
 with no matching execution-outcome record within it) and sequence
 gaps in a Mission's records (<a href="#record-integrity" class="auto internal xref">Section 11.4</a>).<a href="#section-11.2-2" class="pilcrow">¶</a></p>
 <p id="section-11.2-3">An unknown outcome has an owner and a deadline, not only a window:
-the declared component <span class="bcp14">MUST</span> drive each unresolved outcome to
-committed or failed before the window closes, and its alerting
-obligation covers any outcome still unknown at the deadline.
+the declared component <span class="bcp14">MUST</span> actively reconcile each unresolved
+outcome before the window closes, querying the resource and matching
+evidence, and record the outcome the evidence establishes
+(<code>completed</code>, <code>failed</code>, or <code>suppressed</code>,
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>). Evidence, never
+the deadline, determines the result: an outcome the component cannot
+establish stays undetermined-outcome, is escalated under the declared
+alerting obligation, and is never synthesized into a terminal result.
 Reconciliation survives the Mission: once the Mission is non-active,
-it <span class="bcp14">MAY</span> resolve an in-flight outcome to committed or failed and <span class="bcp14">MUST NOT</span> admit a new effect under that Mission (an action already
-executing follows the run-to-completion rule of
-<a href="#execution-reverification" class="auto internal xref">Section 8.5</a>, unchanged). Consumed and reserved
-decision identifiers and idempotency claims persist across Mission
-lifecycle transitions for at least the reconciliation window, and any
-declared tombstone horizon (<a href="#idempotency" class="auto internal xref">Section 8.4</a>): termination does not
-erase them, so a post-termination retry resolves against the recorded
-claim rather than executing again.<a href="#section-11.2-3" class="pilcrow">¶</a></p>
+it <span class="bcp14">MAY</span> record the outcome of work already initiated and <span class="bcp14">MUST NOT</span>
+admit a new effect under that Mission (an action already executing
+follows the run-to-completion rule of <a href="#execution-reverification" class="auto internal xref">Section 8.5</a>,
+unchanged). Consumed and reserved decision identifiers and
+idempotency claims persist across Mission lifecycle transitions for
+at least the reconciliation window and any declared tombstone horizon
+(<a href="#idempotency" class="auto internal xref">Section 8.4</a>): termination does not erase them, so a
+post-termination retry resolves against the recorded claim rather
+than executing again. An unresolved claim never becomes reusable
+through time alone: when the window closes on an undetermined
+outcome, the claim converts to a non-reusable indeterminate
+tombstone, retained for at least the declared idempotency horizon and
+released only by an evidence-recorded operational resolution, never
+by expiry into a fresh claim.<a href="#section-11.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-receipt">

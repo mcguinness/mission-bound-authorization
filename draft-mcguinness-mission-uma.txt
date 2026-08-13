@@ -343,21 +343,25 @@ Table of Contents
    parameter.
 
    A Mission Intent claim token is a JWT whose payload carries a
-   mission_intent claim: a Mission Intent object as the issuance profile
-   defines it, under that profile's syntactic rules (the object is
-   closed at the top level, the authorization server MUST bound its size
-   and array lengths, and it is untrusted client input, never
-   authority).  The payload MAY additionally carry an
-   authorization_details claim: the client's authority proposal, an
-   array of authorization_details objects.  This claim is this binding's
-   proposal carriage, replacing the issuance profile's PAR-only carriage
-   rule; that profile's validation, derivation, recording, and hashing
-   semantics apply unchanged (a proposal, never authority; the Intent
-   itself carries no authority members).  A Mission created from a push
-   carrying one records proposed_authority and proposal_hash as the
-   issuance profile's Mission record defines them.  The JWT MAY be
-   signed by the client for attribution; a signature confers no
-   authority.  Its claim_token_format identifier is:
+   mission_intent claim: a Mission Intent Submission envelope as the
+   issuance profile defines it, intent plus OPTIONAL evidence, under
+   that profile's syntactic and Intent Submission Evidence rules (the
+   envelope and the Intent are both closed at the top level, the
+   authorization server MUST bound size, array lengths, evidence entry
+   count, and evidence verification cost, presented evidence is
+   dispatched by type and refused when unsupported or failing, and the
+   submission is untrusted client input, never authority).  The payload
+   MAY additionally carry an authorization_details claim: the client's
+   authority proposal, an array of authorization_details objects.  This
+   claim is this binding's proposal carriage, replacing the issuance
+   profile's PAR-only carriage rule; that profile's validation,
+   derivation, recording, and hashing semantics apply unchanged (a
+   proposal, never authority; the Intent itself carries no authority
+   members).  A Mission created from a push carrying one records
+   proposed_authority and proposal_hash as the issuance profile's
+   Mission record defines them.  The JWT MAY be signed by the client for
+   attribution; a signature confers no authority.  Its
+   claim_token_format identifier is:
 
    https://mcguinness.github.io/mission-bound-authorization/uma-intent-jwt
 

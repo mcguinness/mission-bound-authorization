@@ -589,8 +589,8 @@ Table of Contents
 
    *  the reconciliation window for matching execution-outcome evidence
       to decisions, the component responsible for orphaned-evidence and
-      sequence-gap detection and for driving each unresolved outcome to
-      committed or failed within the window, and that component's
+      sequence-gap detection and for actively reconciling each
+      unresolved outcome within the window, and that component's
       alerting obligation (Section 11).
 
    A deployment MUST NOT claim runtime enforcement for a resource,
@@ -1977,37 +1977,46 @@ Table of Contents
    and whether the request's operation identity equals the one the claim
    was made under:
 
-    +===============+=========================+=======================+
-    | Claim state   | Same key + same         | Same key + different  |
-    |               | operation identity      | operation identity    |
-    +===============+=========================+=======================+
-    | claimed /     | return the prior        | idempotency_conflict, |
-    | permit-issued | decision                | terminal              |
-    | (unconsumed,  | (retransmission)        |                       |
-    | unexpired)    |                         |                       |
-    +---------------+-------------------------+-----------------------+
-    | reserved /    | duplicate_suppressed,   | idempotency_conflict, |
-    | outcome       | transient (next_action: | terminal              |
-    | unresolved    | retry, retry_after      |                       |
-    |               | within the              |                       |
-    |               | reconciliation window)  |                       |
-    +---------------+-------------------------+-----------------------+
-    | completed     | duplicate_suppressed,   | idempotency_conflict, |
-    | (within       | terminal (next_action:  | terminal              |
-    | window or     | none); the prior result |                       |
-    | tombstoned    | is available from the   |                       |
-    | horizon)      | resource under the      |                       |
-    |               | Operation Profile       |                       |
-    +---------------+-------------------------+-----------------------+
-    | failed        | deployment policy:      | idempotency_conflict, |
-    |               | retry as a NEW          | terminal              |
-    |               | operation requires a    |                       |
-    |               | new key                 |                       |
-    +---------------+-------------------------+-----------------------+
-    | expired past  | outside the guarantee;  | outside the guarantee |
-    | the declared  | treated as new          |                       |
-    | horizon       |                         |                       |
-    +---------------+-------------------------+-----------------------+
+   +=================+=========================+=======================+
+   | Claim state     | Same key + same         | Same key + different  |
+   |                 | operation identity      | operation identity    |
+   +=================+=========================+=======================+
+   | claimed /       | return the prior        | idempotency_conflict, |
+   | permit-issued   | decision                | terminal              |
+   | (unconsumed,    | (retransmission)        |                       |
+   | unexpired)      |                         |                       |
+   +-----------------+-------------------------+-----------------------+
+   | reserved /      | duplicate_suppressed,   | idempotency_conflict, |
+   | outcome         | transient (next_action: | terminal              |
+   | unresolved      | retry, retry_after      |                       |
+   |                 | within the              |                       |
+   |                 | reconciliation window)  |                       |
+   +-----------------+-------------------------+-----------------------+
+   | indeterminate   | duplicate_suppressed,   | idempotency_conflict, |
+   | (window         | terminal (next_action:  | terminal              |
+   | closed,         | none); resolution is    |                       |
+   | outcome         | operational, never a    |                       |
+   | undetermined,   | new permit              |                       |
+   | Section 11)     |                         |                       |
+   +-----------------+-------------------------+-----------------------+
+   | completed       | duplicate_suppressed,   | idempotency_conflict, |
+   | (within         | terminal (next_action:  | terminal              |
+   | window or       | none); the prior result |                       |
+   | tombstoned      | is available from the   |                       |
+   | horizon)        | resource under the      |                       |
+   |                 | Operation Profile       |                       |
+   +-----------------+-------------------------+-----------------------+
+   | failed          | deployment policy:      | idempotency_conflict, |
+   |                 | retry as a NEW          | terminal              |
+   |                 | operation requires a    |                       |
+   |                 | new key                 |                       |
+   +-----------------+-------------------------+-----------------------+
+   | expired past    | outside the guarantee;  | outside the guarantee |
+   | the declared    | treated as new.  An     |                       |
+   | horizon         | indeterminate tombstone |                       |
+   |                 | does not expire into    |                       |
+   |                 | this state (Section 11) |                       |
+   +-----------------+-------------------------+-----------------------+
 
                 Table 6: Idempotency claim state resolution
 
@@ -2142,14 +2151,9 @@ Table of Contents
     |                        | outage: executing-PEP reverification   |
     |                        | needs no PDP                           |
     +------------------------+----------------------------------------+
-    | Mission not active     | Refuse                                 |
-    +------------------------+----------------------------------------+
-    | Mission non-active     | The declared component resolves it to  |
-    | with an outcome        | committed or failed within the         |
-    | unresolved             | reconciliation window; no new effect   |
-    |                        | is admitted under the Mission;         |
-    |                        | identifier and claim state is retained |
-    |                        | (Section 11)                           |
+    | Mission not active     | Refuse; work already initiated         |
+    |                        | reconciles under Section 11, never re- |
+    |                        | executes                               |
     +------------------------+----------------------------------------+
     | The Mission's          | Refuse                                 |
     | expires_at passed,     |                                        |
@@ -2294,19 +2298,29 @@ Table of Contents
    records (Section 11.4).
 
    An unknown outcome has an owner and a deadline, not only a window:
-   the declared component MUST drive each unresolved outcome to
-   committed or failed before the window closes, and its alerting
-   obligation covers any outcome still unknown at the deadline.
+   the declared component MUST actively reconcile each unresolved
+   outcome before the window closes, querying the resource and matching
+   evidence, and record the outcome the evidence establishes (completed,
+   failed, or suppressed,
+   [I-D.draft-mcguinness-mission-runtime-evidence]).  Evidence, never
+   the deadline, determines the result: an outcome the component cannot
+   establish stays undetermined-outcome, is escalated under the declared
+   alerting obligation, and is never synthesized into a terminal result.
    Reconciliation survives the Mission: once the Mission is non-active,
-   it MAY resolve an in-flight outcome to committed or failed and MUST
-   NOT admit a new effect under that Mission (an action already
-   executing follows the run-to-completion rule of Section 8.5,
-   unchanged).  Consumed and reserved decision identifiers and
-   idempotency claims persist across Mission lifecycle transitions for
-   at least the reconciliation window, and any declared tombstone
-   horizon (Section 8.4): termination does not erase them, so a post-
-   termination retry resolves against the recorded claim rather than
-   executing again.
+   it MAY record the outcome of work already initiated and MUST NOT
+   admit a new effect under that Mission (an action already executing
+   follows the run-to-completion rule of Section 8.5, unchanged).
+   Consumed and reserved decision identifiers and idempotency claims
+   persist across Mission lifecycle transitions for at least the
+   reconciliation window and any declared tombstone horizon
+   (Section 8.4): termination does not erase them, so a post-termination
+   retry resolves against the recorded claim rather than executing
+   again.  An unresolved claim never becomes reusable through time
+   alone: when the window closes on an undetermined outcome, the claim
+   converts to a non-reusable indeterminate tombstone, retained for at
+   least the declared idempotency horizon and released only by an
+   evidence-recorded operational resolution, never by expiry into a
+   fresh claim.
 
 11.3.  Mission Receipt
 

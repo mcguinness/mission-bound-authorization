@@ -1635,7 +1635,11 @@ actor (<a href="#child-vs-act" class="auto internal xref">Section 3.2</a>).<a hr
 <dt id="section-6-4.13">
 <code>mission_intent</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-6-4.14">
-          <p id="section-6-4.14.1"><span class="bcp14">REQUIRED</span>. The proposed Child Mission Intent.<a href="#section-6-4.14.1" class="pilcrow">¶</a></p>
+          <p id="section-6-4.14.1"><span class="bcp14">REQUIRED</span>. The Mission Intent Submission envelope
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) whose <code>intent</code> is the
+proposed Child Mission Intent; its <span class="bcp14">OPTIONAL</span> <code>evidence</code> array
+carries Intent Submission Evidence under that profile's dispatch,
+refusal, and never-authority rules.<a href="#section-6-4.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-4.15">
@@ -2142,7 +2146,8 @@ requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Ajwt&amp;
 subject_token=&lt;parent%20Mission-bound%20access%20token&gt;&amp;
 subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3A
   access_token&amp;
-mission_intent=%7B...read-only%20Q3%20invoice%20extraction...%7D&amp;
+mission_intent=%7B%22intent%22%3A
+  %7B...read-only%20Q3%20invoice%20extraction...%7D%7D&amp;
 parent=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&amp;
 child_actor=%7B%22sub%22%3A%22subagent-invoice-extractor%22%2C
   %22sub_profile%22%3A%22ai_agent%22%7D&amp;

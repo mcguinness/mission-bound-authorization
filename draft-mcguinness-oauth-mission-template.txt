@@ -531,10 +531,13 @@ Table of Contents
 
    template_id:  REQUIRED.  The Mission Template's id (Section 5).
 
-   mission_intent:  REQUIRED.  The dispatch intent, in the issuance
-      profile's Mission Intent shape
-      ([I-D.draft-mcguinness-oauth-mission]), from which the instance
-      Authority Set is derived (Section 7).
+   mission_intent:  REQUIRED.  The dispatch submission, in the issuance
+      profile's Mission Intent Submission envelope shape
+      ([I-D.draft-mcguinness-oauth-mission]): its intent is the dispatch
+      intent from which the instance Authority Set is derived
+      (Section 7), and its OPTIONAL evidence array carries Intent
+      Submission Evidence under that profile's dispatch, refusal, and
+      never-authority rules.
 
    authorization_details:  OPTIONAL.  The Dispatcher's authority
       proposal: the standard [RFC9396] parameter carried on the same

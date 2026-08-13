@@ -1475,8 +1475,10 @@ authority.<a href="#section-3-5.2.1" class="pilcrow">¶</a></p>
         <dd class="break"></dd>
 <dt id="section-3-5.5">Mission Intent proposal:</dt>
         <dd style="margin-left: 1.5em" id="section-3-5.6">
-          <p id="section-3-5.6.1">The candidate <code>mission_intent</code> object the shaper emits for validation
-and approval under the issuance profile.<a href="#section-3-5.6.1" class="pilcrow">¶</a></p>
+          <p id="section-3-5.6.1">The candidate Mission Intent object the shaper emits for validation
+and approval under the issuance profile. The requesting client
+submits it as the <code>intent</code> member of that profile's Mission Intent
+Submission envelope.<a href="#section-3-5.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-3-5.7">Capability source:</dt>
@@ -1682,8 +1684,9 @@ resolve those details.<a href="#section-6-3" class="pilcrow">¶</a></p>
       <h2 id="name-mission-intent-construction">
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-mission-intent-construction" class="section-name selfRef">Mission Intent Construction</a>
       </h2>
-<p id="section-7-1">A Mission Intent proposal <span class="bcp14">MUST</span> satisfy the syntactic requirements of the
-issuance profile's <code>mission_intent</code> object
+<p id="section-7-1">A Mission Intent proposal <span class="bcp14">MUST</span> satisfy the syntactic requirements of
+the issuance profile's Mission Intent object, the <code>intent</code> member of
+its <code>mission_intent</code> Submission envelope
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):<a href="#section-7-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-2.1">
@@ -1872,7 +1875,7 @@ and is never an input authority derives from.<a href="#section-7.3-1" class="pil
               <td class="text-left" rowspan="1" colspan="1">
                 <code>constraints</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">Free-text bounds the user expressed plus deployment-policy bounds always applied, so the Approver sees the full bound set. The Mission Issuer derives any structured constraint from these.</td>
+              <td class="text-left" rowspan="1" colspan="1">Free-text bounds the user expressed plus deployment-policy bounds always applied, so the Approver sees the full bound set. Where a bound is machine-enforceable, the shaper also emits it as a structured constraint on the authority proposal; the Mission Issuer never parses the prose (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <span class="bcp14">SHOULD NOT</span> silently drop a user-expressed bound; record it in <code>constraints</code> or in Shaping Evidence, or clarify or refuse instead.</td>
             </tr>
@@ -2303,9 +2306,12 @@ shaper, validates it, narrows it to policy, and derives the concrete
 Authority Set the agent will be bound to: a <code>mission_resource_access</code>
 entry for <code>https://erp.example.com</code> with <code>invoices.read</code> constrained to
 the 2026-Q3 period and the acme-corp tenant, and <code>journal-entries.write</code>
-constrained to a <code>max_amount</code> of 500.00 USD. The shaper's free-text
-<code>constraints</code> informed that derivation but granted nothing; the
-invariants (period, amount, tenant) are what bound an open-ended task
+constrained to a <code>max_amount</code> of 500.00 USD, each a narrowing of a
+structured entry the shaper proposed. The shaper translated the user's
+words into those structured constraints before admission; the Issuer
+never parses the free-text <code>constraints</code>, which disclose the same
+bounds to the Approver and granted nothing. The invariants (period,
+amount, tenant) are what bound an open-ended task
 whose individual invoices were unknown when the goal was written. Had
 the request been ambiguous about which entity's invoices, the shaper
 would have asked <code>alice</code> rather than guess (<a href="#clarifications" class="auto internal xref">Section 8.1</a>).<a href="#section-11-3" class="pilcrow">¶</a></p>
@@ -2408,10 +2414,16 @@ retry.<a href="#section-13-4" class="pilcrow">¶</a></p>
 <p id="section-14.1-1">Mission-Bound Authorization for OAuth 2.0
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> defines a <code>mission_intent</code>
 parameter carried inside a Pushed Authorization Request (PAR)
-<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>. The Mission Intent the shaper produced is the value of that
-parameter; an authority proposal the shaper produced is the value of
-the standard <code>authorization_details</code> parameter pushed alongside it
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The Authorization Server <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> acts as the Mission
+<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>, whose value is that profile's Mission Intent Submission
+envelope. The Mission Intent the shaper produced is the envelope's
+<code>intent</code> member; an authority proposal the shaper produced is the
+value of the standard <code>authorization_details</code> parameter pushed
+alongside it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Intent
+Submission Evidence in the envelope's <code>evidence</code> array binds the
+exact <code>intent_hash</code> of the submitted Intent: evidence obtained for an
+earlier candidate does not admit a re-shaped Intent, so a shaping
+pass that changes the Intent needs evidence for the Intent it
+actually submits (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The Authorization Server <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> acts as the Mission
 Issuer: it validates, narrows, renders the consent disclosure, records
 the approval event, and derives an Authority Set
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-14.1-1" class="pilcrow">¶</a></p>
@@ -2422,7 +2434,8 @@ its output to the requesting client, which performs the OAuth flow and
 <span class="bcp14">MAY</span> also convey a <code>shaping_evidence_hash</code> so the Mission record can cite
 the evidence (<a href="#evidence-hash" class="auto internal xref">Section 10.1</a>).<a href="#section-14.1-2" class="pilcrow">¶</a></p>
 <p id="section-14.1-3">Because the issuance profile rejects
-an unrecognized top-level Mission Intent member
+an unrecognized top-level member of both the Submission envelope and
+the Mission Intent
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the hash is not carried inside
 <code>mission_intent</code>; a deployment conveys it as a separate PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>
 request parameter it registers (for example, a <code>shaping_evidence_hash</code>

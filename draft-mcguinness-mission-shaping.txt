@@ -252,9 +252,10 @@ Table of Contents
    Mission requester:  The component or user that supplies the task
       request to be shaped.
 
-   Mission Intent proposal:  The candidate mission_intent object the
+   Mission Intent proposal:  The candidate Mission Intent object the
       shaper emits for validation and approval under the issuance
-      profile.
+      profile.  The requesting client submits it as the intent member of
+      that profile's Mission Intent Submission envelope.
 
    Capability source:  A resource-owning catalog, metadata endpoint,
       policy service, or other source the shaper consults to resolve
@@ -409,7 +410,8 @@ Table of Contents
 7.  Mission Intent Construction
 
    A Mission Intent proposal MUST satisfy the syntactic requirements of
-   the issuance profile's mission_intent object
+   the issuance profile's Mission Intent object, the intent member of
+   its mission_intent Submission envelope
    ([I-D.draft-mcguinness-oauth-mission]):
 
    *  a goal;
@@ -555,69 +557,67 @@ Table of Contents
    Issuer only narrows; Shaping Evidence records the same facts for
    audit only and is never an input authority derives from.
 
-     +==================+=========================+==================+
-     | Field            | Guidance                | Avoid            |
-     +==================+=========================+==================+
-     | goal             | Concise user-readable   | SHOULD NOT quote |
-     |                  | summary in the form the | verbatim prompt  |
-     |                  | Approver sees at        | text that        |
-     |                  | consent; preserve the   | contains         |
-     |                  | user's framing so the   | instructions or  |
-     |                  | disclosure matches      | commands         |
-     |                  | their understanding.    | (Section 18.3).  |
-     +------------------+-------------------------+------------------+
-     | resources        | Enumerate, as absolute  | SHOULD NOT widen |
-     |                  | URIs, the resources,    | beyond what the  |
-     |                  | datasets, tools, or     | prompt           |
-     |                  | domains the prompt      | referenced; "for |
-     |                  | referenced; record any  | convenience"     |
-     |                  | human-readable label as | enlarges         |
-     |                  | an audit annotation in  | approved         |
-     |                  | Shaping Evidence, not   | authority.       |
-     |                  | as the resources value. |                  |
-     +------------------+-------------------------+------------------+
-     | constraints      | Free-text bounds the    | SHOULD NOT       |
-     |                  | user expressed plus     | silently drop a  |
-     |                  | deployment-policy       | user-expressed   |
-     |                  | bounds always applied,  | bound; record it |
-     |                  | so the Approver sees    | in constraints   |
-     |                  | the full bound set.     | or in Shaping    |
-     |                  | The Mission Issuer      | Evidence, or     |
-     |                  | derives any structured  | clarify or       |
-     |                  | constraint from these.  | refuse instead.  |
-     +------------------+-------------------------+------------------+
-     | success_criteria | Free-text observable    | SHOULD NOT       |
-     |                  | outcomes that indicate  | encode authority |
-     |                  | the task is complete,   | here;            |
-     |                  | phrased for the         | success_criteria |
-     |                  | Approver.  Disclosure   | carries no       |
-     |                  | and audit material      | machine          |
-     |                  | only.                   | semantics in the |
-     |                  |                         | issuance         |
-     |                  |                         | profile.         |
-     +------------------+-------------------------+------------------+
-     | expires_at       | The smallest ceiling    | Don't request    |
-     |                  | that lets the task      | the maximum the  |
-     |                  | complete; if the prompt | Mission Issuer   |
-     |                  | names no bound, apply a | allows; the      |
-     |                  | conservative deployment | Issuer MAY       |
-     |                  | default.                | narrow further.  |
-     +------------------+-------------------------+------------------+
-     | purpose          | If the client has       | SHOULD NOT       |
-     |                  | registered purposes,    | invent a new     |
-     |                  | select the closest      | purpose URI.     |
-     |                  | registered URI.         |                  |
-     +------------------+-------------------------+------------------+
-     | controls         | Emit controls keys the  | SHOULD NOT emit  |
-     |                  | deployment recognizes;  | a key the        |
-     |                  | a deployment MAY add    | specific         |
-     |                  | further keys it         | deployment does  |
-     |                  | defines.                | not recognize;   |
-     |                  |                         | an unrecognized  |
-     |                  |                         | key risks        |
-     |                  |                         | rejection of the |
-     |                  |                         | Intent.          |
-     +------------------+-------------------------+------------------+
+   +================+=======================================+================+
+   |Field           |Guidance                               |Avoid           |
+   +================+=======================================+================+
+   |goal            |Concise user-readable summary in the   |SHOULD NOT quote|
+   |                |form the Approver sees at consent;     |verbatim prompt |
+   |                |preserve the user's framing so the     |text that       |
+   |                |disclosure matches their understanding.|contains        |
+   |                |                                       |instructions or |
+   |                |                                       |commands        |
+   |                |                                       |(Section 18.3). |
+   +----------------+---------------------------------------+----------------+
+   |resources       |Enumerate, as absolute URIs, the       |SHOULD NOT widen|
+   |                |resources, datasets, tools, or domains |beyond what the |
+   |                |the prompt referenced; record any      |prompt          |
+   |                |human-readable label as an audit       |referenced; "for|
+   |                |annotation in Shaping Evidence, not as |convenience"    |
+   |                |the resources value.                   |enlarges        |
+   |                |                                       |approved        |
+   |                |                                       |authority.      |
+   +----------------+---------------------------------------+----------------+
+   |constraints     |Free-text bounds the user expressed    |SHOULD NOT      |
+   |                |plus deployment-policy bounds always   |silently drop a |
+   |                |applied, so the Approver sees the full |user-expressed  |
+   |                |bound set.  Where a bound is machine-  |bound; record it|
+   |                |enforceable, the shaper also emits it  |in constraints  |
+   |                |as a structured constraint on the      |or in Shaping   |
+   |                |authority proposal; the Mission Issuer |Evidence, or    |
+   |                |never parses the prose                 |clarify or      |
+   |                |([I-D.draft-mcguinness-oauth-mission]).|refuse instead. |
+   +----------------+---------------------------------------+----------------+
+   |success_criteria|Free-text observable outcomes that     |SHOULD NOT      |
+   |                |indicate the task is complete, phrased |encode authority|
+   |                |for the Approver.  Disclosure and audit|here;           |
+   |                |material only.                         |success_criteria|
+   |                |                                       |carries no      |
+   |                |                                       |machine         |
+   |                |                                       |semantics in the|
+   |                |                                       |issuance        |
+   |                |                                       |profile.        |
+   +----------------+---------------------------------------+----------------+
+   |expires_at      |The smallest ceiling that lets the task|Don't request   |
+   |                |complete; if the prompt names no bound,|the maximum the |
+   |                |apply a conservative deployment        |Mission Issuer  |
+   |                |default.                               |allows; the     |
+   |                |                                       |Issuer MAY      |
+   |                |                                       |narrow further. |
+   +----------------+---------------------------------------+----------------+
+   |purpose         |If the client has registered purposes, |SHOULD NOT      |
+   |                |select the closest registered URI.     |invent a new    |
+   |                |                                       |purpose URI.    |
+   +----------------+---------------------------------------+----------------+
+   |controls        |Emit controls keys the deployment      |SHOULD NOT emit |
+   |                |recognizes; a deployment MAY add       |a key the       |
+   |                |further keys it defines.               |specific        |
+   |                |                                       |deployment does |
+   |                |                                       |not recognize;  |
+   |                |                                       |an unrecognized |
+   |                |                                       |key risks       |
+   |                |                                       |rejection of the|
+   |                |                                       |Intent.         |
+   +----------------+---------------------------------------+----------------+
 
                                   Table 1
 
@@ -906,13 +906,15 @@ Table of Contents
    Authority Set the agent will be bound to: a mission_resource_access
    entry for https://erp.example.com with invoices.read constrained to
    the 2026-Q3 period and the acme-corp tenant, and journal-
-   entries.write constrained to a max_amount of 500.00 USD.  The
-   shaper's free-text constraints informed that derivation but granted
-   nothing; the invariants (period, amount, tenant) are what bound an
-   open-ended task whose individual invoices were unknown when the goal
-   was written.  Had the request been ambiguous about which entity's
-   invoices, the shaper would have asked alice rather than guess
-   (Section 8.1).
+   entries.write constrained to a max_amount of 500.00 USD, each a
+   narrowing of a structured entry the shaper proposed.  The shaper
+   translated the user's words into those structured constraints before
+   admission; the Issuer never parses the free-text constraints, which
+   disclose the same bounds to the Approver and granted nothing.  The
+   invariants (period, amount, tenant) are what bound an open-ended task
+   whose individual invoices were unknown when the goal was written.
+   Had the request been ambiguous about which entity's invoices, the
+   shaper would have asked alice rather than guess (Section 8.1).
 
 12.  Mission Issuer Handling
 
@@ -983,14 +985,19 @@ Table of Contents
    Mission-Bound Authorization for OAuth 2.0
    [I-D.draft-mcguinness-oauth-mission] defines a mission_intent
    parameter carried inside a Pushed Authorization Request (PAR)
-   [RFC9126].  The Mission Intent the shaper produced is the value of
-   that parameter; an authority proposal the shaper produced is the
-   value of the standard authorization_details parameter pushed
-   alongside it ([I-D.draft-mcguinness-oauth-mission]).  The
-   Authorization Server [RFC6749] acts as the Mission Issuer: it
-   validates, narrows, renders the consent disclosure, records the
-   approval event, and derives an Authority Set
-   ([I-D.draft-mcguinness-oauth-mission]).
+   [RFC9126], whose value is that profile's Mission Intent Submission
+   envelope.  The Mission Intent the shaper produced is the envelope's
+   intent member; an authority proposal the shaper produced is the value
+   of the standard authorization_details parameter pushed alongside it
+   ([I-D.draft-mcguinness-oauth-mission]).  Intent Submission Evidence
+   in the envelope's evidence array binds the exact intent_hash of the
+   submitted Intent: evidence obtained for an earlier candidate does not
+   admit a re-shaped Intent, so a shaping pass that changes the Intent
+   needs evidence for the Intent it actually submits
+   ([I-D.draft-mcguinness-oauth-mission]).  The Authorization Server
+   [RFC6749] acts as the Mission Issuer: it validates, narrows, renders
+   the consent disclosure, records the approval event, and derives an
+   Authority Set ([I-D.draft-mcguinness-oauth-mission]).
 
    The shaper does not invoke the PAR endpoint or the Authorization
    Endpoint and does not handle the authorization response.  Those are
@@ -999,11 +1006,12 @@ Table of Contents
    and MAY also convey a shaping_evidence_hash so the Mission record can
    cite the evidence (Section 10.1).
 
-   Because the issuance profile rejects an unrecognized top-level
-   Mission Intent member ([I-D.draft-mcguinness-oauth-mission]), the
-   hash is not carried inside mission_intent; a deployment conveys it as
-   a separate PAR [RFC9126] request parameter it registers (for example,
-   a shaping_evidence_hash parameter) alongside the Mission Intent.
+   Because the issuance profile rejects an unrecognized top-level member
+   of both the Submission envelope and the Mission Intent
+   ([I-D.draft-mcguinness-oauth-mission]), the hash is not carried
+   inside mission_intent; a deployment conveys it as a separate PAR
+   [RFC9126] request parameter it registers (for example, a
+   shaping_evidence_hash parameter) alongside the Mission Intent.
    Conveying it does not require the Mission Issuer to trust the shaper.
 
 14.2.  Runtime Enforcement

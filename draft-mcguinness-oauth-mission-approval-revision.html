@@ -1499,7 +1499,8 @@ Mission remains unapproved.<a href="#section-6.1-8" class="pilcrow">¶</a></p>
         <h3 id="name-submitting-a-revision">
 <a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-submitting-a-revision" class="section-name selfRef">Submitting a Revision</a>
         </h3>
-<p id="section-6.2-1">The client submits the narrowed Mission Intent, with any revised
+<p id="section-6.2-1">The client submits the narrowed Mission Intent, as the <code>intent</code> of a
+new Mission Intent Submission envelope, with any revised
 <code>authorization_details</code> proposal alongside it
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), to the PAR endpoint
 <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> with the <code>revision_handle</code> as an additional parameter,
@@ -1581,11 +1582,20 @@ subset comparison reproducible. The reviewer-seen bound exists because
 a re-baselined set could be broader than the one the reviewer saw: it
 ensures that re-baselining under changed policy cannot widen the
 revision beyond what was actually reviewed.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
-<p id="section-6.2-4">The client continues polling the existing <code>deferral_code</code>; the revision
+<p id="section-6.2-4">A revision changes the semantic Intent, and its <code>intent_hash</code> with
+it. Intent Submission Evidence bound to the proposed Mission's
+<code>intent_hash</code> <span class="bcp14">MUST NOT</span> be treated as evidence for the revision
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): evidence a policy requires
+is presented anew on the revision submission's envelope, bound to the
+revised Intent, unless the evidence type's specification authorizes
+defined transformations and verifies their lineage. The issuance
+profile's required-evidence resolution applies to the revision
+submission as to any submission.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.2-5">The client continues polling the existing <code>deferral_code</code>; the revision
 does not start a new approval. A PAR <code>request_uri</code> returned on the
 revision submission is an artifact of PAR. It <span class="bcp14">MUST NOT</span> be used to
 start a separate authorization transaction. The Mission Issuer
-<span class="bcp14">MUST NOT</span> honor that <code>request_uri</code> at the authorization endpoint.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<span class="bcp14">MUST NOT</span> honor that <code>request_uri</code> at the authorization endpoint.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="revision-errors">
@@ -1796,7 +1806,8 @@ POST /par HTTP/1.1
 Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
 
-mission_intent=%7B...read-only%20Q3%20invoices...%7D&amp;
+mission_intent=%7B%22intent%22%3A
+  %7B...read-only%20Q3%20invoices...%7D%7D&amp;
 client_id=s6BhdRkqt3&amp;
 revision_handle=rvh_4QFJ3P9wZ2
 </pre><a href="#section-8-9" class="pilcrow">¶</a>
