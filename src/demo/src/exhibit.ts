@@ -318,7 +318,7 @@ function act(stack: DemoStack, numeral: string, title: string, oneLine: string) 
 // ===========================================================================
 // Agent Access Model (Nightly Reconciliation) — the AAM run narrated ENTIRELY
 // in Mission vocabulary, driven against the SAME live stack the sections above
-// use. The AAM -> Mission mapping is in AAM.md; the wire recipes below are the
+// use. The AAM -> Mission mapping is in notes/AAM.md; the wire recipes below are the
 // ones the authoritative e2e proves
 // (services/authorization-server/test/aam-nightly-reconciliation.test.ts).
 // ===========================================================================
@@ -458,7 +458,7 @@ function aamOverCeilingIntent(): IntentPair {
 function aamLegend() {
   const row = (component: string, surface: string) =>
     console.log(`  ${C.bold}${C.cyan}${component.padEnd(27)}${C.reset}${C.dim}${surface}${C.reset}`);
-  console.log(`\n${C.bold}AAM → Mission${C.reset} ${C.dim}— each Agent Access Model component and the Mission surface that realizes it (AAM.md).${C.reset}`);
+  console.log(`\n${C.bold}AAM → Mission${C.reset} ${C.dim}— each Agent Access Model component and the Mission surface that realizes it (notes/AAM.md).${C.reset}`);
   row("Task Template + ceiling", "Mission Template + POST /templates (consent once)");
   row("Agent Identity Broker", "the mission-dispatch grant (low-consequence) + an ordinary approval (external-commitment)");
   row("Task-Scoped Access Engine", "the PDP (@mission/pdp) over OpenFGA");
@@ -487,7 +487,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     stack,
     "VII",
     "Agent Access Model (Nightly Reconciliation)",
-    "Cloudflare's AAM run, narrated entirely in Mission vocabulary (AAM.md), on the same live AS, PDP, OpenFGA, PEP, egress gate, and Activity Log.",
+    "Cloudflare's AAM run, narrated entirely in Mission vocabulary (notes/AAM.md), on the same live AS, PDP, OpenFGA, PEP, egress gate, and Activity Log.",
   );
 
   let seq = 0;
@@ -508,7 +508,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
 
   // The harness egress scope statement: inference_api is mediated to a single
   // destination; transport in_memory forces containment_claim "none" (the honest
-  // downgrade — an in-process gate cannot contain a compromised agent; see AAM.md).
+  // downgrade — an in-process gate cannot contain a compromised agent; see notes/AAM.md).
   const scopeStatement = buildScopeStatement({
     isolation_mechanism: "in-process AAM reference demo (no isolation boundary)",
     transport: "in_memory",
