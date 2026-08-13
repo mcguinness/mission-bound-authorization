@@ -604,9 +604,11 @@ parties with a governance need.
 
 # IANA Considerations {#iana}
 
-This document has no IANA actions. Following the expansion profile's
-restraint, `out_of_ceiling` is documented here as a
-specification-defined extension of that profile's denial-reason set,
+This document requests one registration in the expansion profile's
+pre-drafted Mission Denial Reasons registry
+({{I-D.draft-mcguinness-oauth-mission-expansion}}): `out_of_ceiling`,
+with the semantics of {{denial-reason}} and Reference this
+document. Beyond that,
 `authority_ceiling` and `drawdown_policy` are Mission record members
 defined by this profile, and the `mission-authority-ceiling` anchor
 `typ` follows the issuance profile's collision-resistant `typ`

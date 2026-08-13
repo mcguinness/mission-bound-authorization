@@ -883,7 +883,9 @@ narrowed `scope`. It has the following members:
   document defines the members below; others MAY be added by
   deployments or defined by companion profiles (an extension member
   follows the collision-resistant naming and fail-safe rules of
-  {{extensibility}}):
+  {{extensibility}}). A future revision MAY establish a registry for
+  these members on demonstrated third-party extension demand; until
+  then they are specification-defined.
 
   `acr`:
   : OPTIONAL. A string. An authentication context class for the
@@ -2235,8 +2237,9 @@ without a registry, a new `typ` value MUST be a collision-resistant name
 (for example, a short name prefixed within a namespace the defining
 profile controls, following the Collision-Resistant Name guidance of
 {{RFC7519}} Section 4.2). The `mission-` prefixed values defined by
-profiles that extend this document share an author-coordinated
-namespace for this reason.
+profiles that extend this document share a namespace coordinated
+through this document series' change controller, or a registry a
+future revision establishes, for this reason.
 
 SHA-256 is the only digest algorithm this document defines; the
 `sha-256:` prefix identifies it. Algorithm agility is future work.
@@ -2298,8 +2301,10 @@ Like the `mission` claim ({{mission-claim}}), the record is open
 additional members set at creation using short names coordinated with
 it (for example, a lineage member linking the Mission to a
 predecessor or parent); any other extension MUST use
-collision-resistant names. The members below are the ones this
-profile defines:
+collision-resistant names. A future revision MAY establish a registry
+for these members on demonstrated third-party extension demand; until
+then they are specification-defined. The members below are the ones
+this profile defines:
 
 `id`:
 : REQUIRED. A string. The canonical Mission Identifier
@@ -2810,7 +2815,10 @@ the extension controls, per the Collision-Resistant Name guidance of
 {{RFC7519}} Section 4.2) and is defined by the profile that introduces
 it. A consumer MUST ignore members it does not understand and MUST NOT
 use any additional member to grant or widen authority; the
-members above remain authoritative.
+members above remain authoritative. A future revision MAY establish a
+claim-member registry (the JWT Confirmation Methods registry of
+{{RFC7800}} is the structural precedent); until then the members are
+specification-defined.
 
 `intent_hash` and `authority_hash` are independent commitments to
 independent objects. That the approved task bounds the derived
@@ -3052,18 +3060,19 @@ The transitions are:
 | `active` | `expires_at` reached | `expired` |
 
 These three states are the mandatory core of the Mission lifecycle
-state space. This profile owns that state space; an OPTIONAL companion
-profile MAY define an additional state for a lifecycle it introduces
-(for example, a paused or a superseded state), but only `active` ever
-permits issuance. To keep the state space extensible without a registry,
-a consumer MUST apply this forward-compatibility rule wherever a Mission
-state is reported, including the Mission record and the introspection
-`mission` member: only the exact value `active` permits
-derivation or continued reliance, and every other value, including a
-value the consumer does not recognize, MUST be treated as non-active and
-non-deriving. A consumer MUST NOT fail open on an unrecognized state.
-This makes a state added by a companion profile fail safe for a consumer
-that predates it.
+state space. This profile owns that state space and pre-drafts its
+registry, the Mission Lifecycle States registry
+({{iana-lifecycle-states}}); an OPTIONAL companion profile MAY register
+an additional state for a lifecycle it introduces (for example, a
+paused or a superseded state), but only `active` ever permits
+issuance. A consumer MUST apply this forward-compatibility rule
+wherever a Mission state is reported, including the Mission record and
+the introspection `mission` member: only the exact value `active`
+permits derivation or continued reliance, and every other value,
+including a value the consumer does not recognize, MUST be treated as
+non-active and non-deriving. A consumer MUST NOT fail open on an
+unrecognized state. This makes a registered state added by a companion
+profile fail safe for a consumer that predates it.
 
 ## Issuance Gating
 
@@ -3666,10 +3675,12 @@ new machinery:
   receipt, or an attestation reference), and consumers ignore unknown
   members and never derive authority from them.
 - **Lifecycle state.** The lifecycle state space ({{lifecycle}}) is open
-  to additional states defined by companion profiles for lifecycles they
-  introduce. The forward-compatibility rule in {{lifecycle}} keeps this
-  safe without a registry: only `active` permits issuance, and a consumer
-  treats every other state, recognized or not, as non-active.
+  to additional states registered by companion profiles for lifecycles
+  they introduce, in the Mission Lifecycle States registry
+  ({{iana-lifecycle-states}}). The forward-compatibility rule in
+  {{lifecycle}} keeps this safe regardless: only `active` permits
+  issuance, and a consumer treats every other state, recognized or not,
+  as non-active.
 - **Approval-event sequencing.** The approval-event steps, their
   order, and the atomicity of record creation with the approval
   decision are the model's ({{approval-event}}); the coupling of that
@@ -3681,12 +3692,48 @@ new machinery:
   Mission Deferred Approval companion is such a profile
   ({{I-D.draft-mcguinness-oauth-mission-approval}}).
 
-This document defines no extension registry, capability-negotiation
-mechanism, or profile-version field; an extension declares its own
-identifiers and, where it needs discovery, its own metadata. The
-extensibility of the `typ` value space, the `mission` claim, and the
-lifecycle state space rests on collision-resistant naming and the
-fail-safe rules above rather than on central registration.
+This document defines no capability-negotiation mechanism or
+profile-version field; an extension declares its own identifiers and,
+where it needs discovery, its own metadata. The extensibility of the
+`typ` value space and the `mission` claim rests on collision-resistant
+naming and the fail-safe rules above rather than on central
+registration; the lifecycle state space is additionally backed by the
+pre-drafted Mission Lifecycle States registry ({{iana-lifecycle-states}}).
+{{namespace-taxonomy}} states the general rule this section's extension
+points follow.
+
+## Namespace Taxonomy {#namespace-taxonomy}
+
+The family's extensible namespaces follow one of three postures:
+
+- **Registry-backed.** A namespace whose values are load-bearing for
+  fail-closed behavior and span multiple documents is backed by an
+  IANA registry: the registry is pre-drafted in the document that
+  owns the namespace and requested by the eventual defining RFC.
+  Mission Common Constraints ({{iana-common-constraints}}) and
+  Mission Lifecycle States ({{iana-lifecycle-states}}) are this
+  document's two; the Mission Authority Server Metadata registry and
+  the Mission Denial Reasons registry are pre-drafted where those
+  namespaces are defined.
+- **Specification-defined.** A namespace with a defined fail-safe for
+  unknown values and no demonstrated third-party extension demand
+  stays specification-defined, coordinated through this document
+  series' change controller. A future revision MAY establish a
+  registry for such a set; until one exists, the defining documents
+  are the value space.
+- **Collision-resistant.** Deployment-defined names follow the
+  collision-resistant naming rules of this section and are never
+  registered.
+
+Every typed artifact that crosses a protocol boundary is named by an
+`application/mission-*` media type, and its defining document carries
+the RFC 6838 registration template at definition time. The JOSE
+protected `typ` of such an artifact is the registered media type,
+with the `application/` prefix omitted where JWS permits the
+shortened form; an HTTP `Content-Type` carries the full media type. A
+`typ` inside a JCS commitment envelope names a hash domain, not a
+representation crossing a boundary, and is deliberately not a media
+type ({{integrity-anchors}}).
 
 # Authorization Server Metadata {#discovery}
 
@@ -4645,6 +4692,61 @@ Names are kept collision-free by the convention
 coordinated through this registry, and any other name is either
 collision-resistant or remains deployment-defined and outside the
 registry.
+
+## Mission Lifecycle States Registry {#iana-lifecycle-states}
+
+This document pre-drafts the "Mission Lifecycle States" registry; the
+registry is requested by the eventual RFC that standardizes this
+specification, not created, activated, or assigned a change controller
+at working group adoption. The registration policy is Specification
+Required {{RFC8126}}. A Designated Expert reviews a submission for the
+discipline {{lifecycle}} requires: a `Value` matching
+`^[a-z][a-z0-9_]*$` not already registered; a `Terminal` designation of
+`yes` or `no` consistent with the transitions the registrant's
+specification defines (a `yes` state admits no further transition; a
+`no` state does); and a `Semantics` sentence precise enough that an
+implementation can decide, from the sentence alone, whether a Mission
+in that state is available for reliance. Registration does not require
+IETF review or a Standards Track document; a Specification Required
+reference that a Designated Expert can review against these criteria
+suffices.
+
+Only the exact value `active` permits token derivation or continued
+reliance; a consumer treats every other value, including one it does
+not recognize, as non-`active` and never widens on it ({{lifecycle}}).
+A Designated Expert MUST reject a registration whose governing
+specification attempts to redefine this interaction rather than adding
+a new value bound by it.
+
+Each registration records:
+
+- **Value**: the lifecycle state's string value.
+- **Terminal**: `yes` if the state admits no further transition, `no`
+  otherwise.
+- **Semantics**: one sentence stating what the state means and, for a
+  non-terminal state, what a Mission in that state cannot do.
+- **Change Controller**: IETF, or the registrant for any other
+  registration.
+- **Reference**: the specification defining the state.
+
+This document populates the registry with the lifecycle states
+currently defined across the family:
+
+| Value | Terminal | Semantics | Change Controller | Reference |
+|---|---|---|---|---|
+| `active` | no | Tokens MAY be derived; the only state from which issuance proceeds. | IETF | this document, {{lifecycle}} |
+| `revoked` | yes | Terminated by the Subject, Approver, or policy. | IETF | this document, {{lifecycle}} |
+| `expired` | yes | The Mission's `expires_at` has passed. | IETF | this document, {{lifecycle}} |
+| `suspended` | no | A paused Mission that derives no tokens until resumed. | IETF | {{I-D.draft-mcguinness-oauth-mission-status}}, Section "Mission Lifecycle Endpoint" |
+| `completed` | yes | Records successful completion of the Mission. | IETF | {{I-D.draft-mcguinness-oauth-mission-status}}, Section "Mission Lifecycle Endpoint" |
+| `superseded` | yes | A predecessor Mission that a successor has replaced through a replacement expansion. | IETF | {{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The Superseded Predecessor State" |
+| `cascaded` | yes | A terminal state a Child Mission enters when a terminal cascade trigger on its Parent Mission terminates it under `immediate` cascade. | IETF | {{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section "Child Mission State" |
+
+`suspended` and `completed` are defined by the Mission Status profile;
+`superseded` by the Mission Expansion profile; `cascaded` by the
+Mission Child Delegation profile. Each is a companion registration
+under this registry's policy, not a member of this document's own
+lifecycle ({{lifecycle}}).
 
 --- back
 
