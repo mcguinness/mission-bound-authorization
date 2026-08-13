@@ -687,8 +687,9 @@ Table of Contents
    constraints:  OPTIONAL.  An array of strings.  Human-readable bounds
       on the task (for example, "read only invoices from 2026").  They
       are disclosure and audit context, rendered to the Approver beside
-      the derived Authority Set (Section 6); the AS never parses them
-      for machine semantics (Section 5).
+      the derived Authority Set (Section 6); the AS MUST NOT parse them
+      for machine semantics, and a machine-enforceable bound enters as
+      structure instead (Section 5).
 
    success_criteria:  OPTIONAL.  An array of strings.  Human-readable
       observable outcomes that indicate the task is complete.  These are
@@ -699,15 +700,14 @@ Table of Contents
 
    purpose:  OPTIONAL.  A string.  A URI identifying the purpose of the
       task, recorded for disclosure and audit.  Its semantics are
-      deployment- or registry-defined and opaque to this document.  Like
-      goal, it shapes authority only through the pre-approval derivation
-      whose result the Approver reads and consents to: in template mode
-      it MAY key the configured mapping (Section 5), and the derived set
-      stays bounded by the Intent and by policy like any derivation.  It
-      MUST NOT otherwise be used to derive, widen, or gate authority,
-      and once the Mission is approved it is inert.  A deployment MAY
-      consult it for out-of-band policy or logging that does not affect
-      the authority derived here.
+      deployment- or registry-defined and opaque to this document.  It
+      is a structured, opaque lookup key permitted only for template-
+      mode selection: the configured mapping MAY key on it (Section 5),
+      and the derived set stays bounded by the Intent and by policy like
+      any derivation.  It MUST NOT otherwise be used to derive, widen,
+      or gate authority, and once the Mission is approved it is inert.
+      A deployment MAY consult it for out-of-band policy or logging that
+      does not affect the authority derived here.
 
    expires_at:  REQUIRED.  A string.  An RFC 3339 [RFC3339] date-time
       after which the AS MUST NOT derive tokens under the Mission.  The
@@ -972,6 +972,10 @@ Table of Contents
      { "type": "mission_resource_access",
        "resource": "https://erp.example.com",
        "actions": ["invoices.*"],
+       "constraints": {
+         "resource_issued_after": "2026-07-01T00:00:00Z",
+         "resource_issued_before": "2026-09-30T23:59:59Z"
+       },
        "delegation": {
          "max_depth": 2,
          "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -980,7 +984,7 @@ Table of Contents
        "resource": "https://erp.example.com",
        "actions": ["journal-entries.write"],
        "constraints": {
-         "max_amount": { "amount": "1000.00", "currency": "USD" }
+         "max_amount": { "amount": "500.00", "currency": "USD" }
        } }
    ]
 
@@ -1024,10 +1028,11 @@ Table of Contents
    record the policy version in force as the Mission's policy_version:
    an opaque audit correlator naming the policy a derivation ran under,
    not a value whose policy travels.  Deriving authority generatively,
-   from the Intent's free text or with model assistance, is not one of
+   with model assistance over the structured inputs above, is not one of
    this profile's modes: a deployment MAY implement it as a local-policy
-   extension, it is the least portable option, and the Intent bounds and
-   recording rule above still apply to it.
+   extension, it is the least portable option, and the Intent bounds,
+   the prose boundary below, and the recording rule above all apply to
+   it unchanged.
 
    A resources entry the deployment does not recognize either causes
    refusal with invalid_authorization_details (Section 4.1) or is
@@ -1044,27 +1049,30 @@ Table of Contents
    The derived Authority Set, not the Mission Intent, is the authority
    the Approver consents to: the AS renders the Authority Set for
    approval and commits it as authority_hash (Section 6).  The Intent's
-   goal, constraints, and other members describe and bound the task but
-   grant no authority by themselves (Section 4); they constrain what the
-   AS MAY derive, never widen it.
+   members describe and bound the task but grant no authority by
+   themselves (Section 4): its structured members constrain what the AS
+   MAY derive mechanically, its prose members bound through disclosure
+   (the Approver refuses authority the words do not support), and none
+   widens.
 
    The goal, constraints, and success_criteria members are human-
-   readable disclosure and audit context.  In the narrowing and template
-   modes this profile defines, the AS MUST NOT parse those members for
-   machine semantics or vary the derived Authority Set on an
-   interpretation of their prose; a deployment that derives from prose
-   does so under the generative local-policy extension above, outside
-   both conforming modes for that step.  A machine-enforceable bound
-   enters as structure through one of two doors: the top-level
-   authorization_details proposal, with the Common Constraints
+   readable disclosure and audit context.  The AS MUST NOT parse them
+   for machine semantics or vary the derived Authority Set on an
+   interpretation of their prose; translating a user's words into
+   structure is the shaper's job, before admission and outside the trust
+   boundary ([I-D.draft-mcguinness-mission-shaping]).  A client-proposed
+   constraint on an individual Authority Set entry enters through the
+   top-level authorization_details proposal: the Common Constraints
    (Section 5.2), type-specific constraints, and the collision-resistant
-   deployment extensions the AS understands (Section 12), or the
-   Intent's controls and the configured template mapping keyed on
-   purpose or resources, a lookup over structured values yielding
-   structured candidate entries, never an interpretation of prose.  The
-   approval surface renders the prose beside the derived Authority Set
-   (Section 6): the human check that the structure matches the words,
-   never a machine enforcement mechanism.
+   deployment extensions the AS understands (Section 12).  Authority is
+   further bounded by the Intent's structured members (resources,
+   expires_at, controls), by the template mapping keyed on purpose or
+   resources (a lookup over structured values yielding structured
+   candidate entries, never an interpretation of prose), and by local
+   policy and eligibility.  The approval surface renders the prose
+   beside the derived Authority Set (Section 6): the human check that
+   the structure matches the words, never a machine enforcement
+   mechanism.
 
    Derivation is governed by local policy and is not a portable
    algorithm: different Authorization Servers MAY derive different
@@ -2070,6 +2078,10 @@ Table of Contents
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
          "actions": ["invoices.*"],
+         "constraints": {
+           "resource_issued_after": "2026-07-01T00:00:00Z",
+           "resource_issued_before": "2026-09-30T23:59:59Z"
+         },
          "delegation": {
            "max_depth": 2,
            "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -2078,7 +2090,7 @@ Table of Contents
          "resource": "https://erp.example.com",
          "actions": ["journal-entries.write"],
          "constraints": {
-           "max_amount": { "amount": "1000.00", "currency": "USD" }
+           "max_amount": { "amount": "500.00", "currency": "USD" }
          } }
      ],
      "authority_set": [
@@ -4423,6 +4435,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime.html>.
 
+   [I-D.draft-mcguinness-mission-shaping]
+              McGuinness, K., "Mission Intent Shaping", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-shaping.html>.
+
    [I-D.draft-mcguinness-mission-substrate]
               McGuinness, K., "Mission Substrate Requirements", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -4600,6 +4617,10 @@ A.2.  Stage 1: Mission Creation
      { "type": "mission_resource_access",
        "resource": "https://erp.example.com",
        "actions": ["invoices.*"],
+       "constraints": {
+         "resource_issued_after": "2026-07-01T00:00:00Z",
+         "resource_issued_before": "2026-09-30T23:59:59Z"
+       },
        "delegation": {
          "max_depth": 2,
          "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -4608,7 +4629,7 @@ A.2.  Stage 1: Mission Creation
        "resource": "https://erp.example.com",
        "actions": ["journal-entries.write"],
        "constraints": {
-         "max_amount": { "amount": "1000.00", "currency": "USD" }
+         "max_amount": { "amount": "500.00", "currency": "USD" }
        } }
    ]
 

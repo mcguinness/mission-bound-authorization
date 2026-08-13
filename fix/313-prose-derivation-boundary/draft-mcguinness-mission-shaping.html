@@ -1872,7 +1872,7 @@ and is never an input authority derives from.<a href="#section-7.3-1" class="pil
               <td class="text-left" rowspan="1" colspan="1">
                 <code>constraints</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">Free-text bounds the user expressed plus deployment-policy bounds always applied, so the Approver sees the full bound set. The Mission Issuer derives any structured constraint from these.</td>
+              <td class="text-left" rowspan="1" colspan="1">Free-text bounds the user expressed plus deployment-policy bounds always applied, so the Approver sees the full bound set. Where a bound is machine-enforceable, the shaper also emits it as a structured constraint on the authority proposal; the Mission Issuer never parses the prose (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <span class="bcp14">SHOULD NOT</span> silently drop a user-expressed bound; record it in <code>constraints</code> or in Shaping Evidence, or clarify or refuse instead.</td>
             </tr>
@@ -2303,9 +2303,12 @@ shaper, validates it, narrows it to policy, and derives the concrete
 Authority Set the agent will be bound to: a <code>mission_resource_access</code>
 entry for <code>https://erp.example.com</code> with <code>invoices.read</code> constrained to
 the 2026-Q3 period and the acme-corp tenant, and <code>journal-entries.write</code>
-constrained to a <code>max_amount</code> of 500.00 USD. The shaper's free-text
-<code>constraints</code> informed that derivation but granted nothing; the
-invariants (period, amount, tenant) are what bound an open-ended task
+constrained to a <code>max_amount</code> of 500.00 USD, each a narrowing of a
+structured entry the shaper proposed. The shaper translated the user's
+words into those structured constraints before admission; the Issuer
+never parses the free-text <code>constraints</code>, which disclose the same
+bounds to the Approver and granted nothing. The invariants (period,
+amount, tenant) are what bound an open-ended task
 whose individual invoices were unknown when the goal was written. Had
 the request been ambiguous about which entity's invoices, the shaper
 would have asked <code>alice</code> rather than guess (<a href="#clarifications" class="auto internal xref">Section 8.1</a>).<a href="#section-11-3" class="pilcrow">¶</a></p>
