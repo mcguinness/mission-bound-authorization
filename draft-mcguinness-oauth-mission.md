@@ -203,6 +203,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-shaping:
+    title: "Mission Intent Shaping"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-approval:
     title: "Mission Deferred Approval for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
@@ -770,8 +778,11 @@ has the following members:
 
 `constraints`:
 : OPTIONAL. An array of strings. Human-readable bounds on
-  the task (for example, "read only invoices from 2026"). These
-  inform derivation and consent rendering.
+  the task (for example, "read only invoices from 2026"). They are
+  disclosure and audit context, rendered to the Approver beside the
+  derived Authority Set ({{approval-event}}); the AS MUST NOT parse
+  them for machine semantics, and a machine-enforceable bound enters
+  as structure instead ({{authorization-derivation}}).
 
 `success_criteria`:
 : OPTIONAL. An array of strings. Human-readable
@@ -784,10 +795,9 @@ has the following members:
 `purpose`:
 : OPTIONAL. A string. A URI identifying the purpose of the
   task, recorded for disclosure and audit. Its semantics are
-  deployment- or registry-defined and opaque to this document. Like
-  `goal`, it shapes authority only through the pre-approval
-  derivation whose result the Approver reads and consents to: in
-  template mode it MAY key the configured mapping
+  deployment- or registry-defined and opaque to this document. It is
+  a structured, opaque lookup key permitted only for template-mode
+  selection: the configured mapping MAY key on it
   ({{authorization-derivation}}), and the derived set stays bounded
   by the Intent and by policy like any derivation. It MUST NOT
   otherwise be used to derive, widen, or gate authority, and once
@@ -1048,6 +1058,10 @@ Authority Set of {{authorization-derivation}}):
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["invoices.*"],
+    "constraints": {
+      "resource_issued_after": "2026-07-01T00:00:00Z",
+      "resource_issued_before": "2026-09-30T23:59:59Z"
+    },
     "delegation": {
       "max_depth": 2,
       "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -1056,7 +1070,7 @@ Authority Set of {{authorization-derivation}}):
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
     "constraints": {
-      "max_amount": { "amount": "1000.00", "currency": "USD" }
+      "max_amount": { "amount": "500.00", "currency": "USD" }
     } }
 ]
 ~~~
@@ -1101,11 +1115,12 @@ machine-actionable `controls` bound. In both modes the AS MUST also
 record the policy version in force as the Mission's
 `policy_version`: an opaque audit correlator naming the policy a
 derivation ran under, not a value whose policy travels. Deriving
-authority generatively, from the Intent's free text or with model
-assistance, is not one of this
+authority generatively, with model assistance over the structured
+inputs above, is not one of this
 profile's modes: a deployment MAY implement it as a local-policy
-extension, it is the least portable option, and the Intent bounds
-and recording rule above still apply to it.
+extension, it is the least portable option, and the Intent bounds,
+the prose boundary below, and the recording rule above all apply to
+it unchanged.
 
 A `resources` entry the deployment does not recognize either causes
 refusal with `invalid_authorization_details` ({{submission-via-par}})
@@ -1122,9 +1137,31 @@ ever represented as granted.
 The derived Authority Set, not the Mission Intent, is the authority the
 Approver consents to: the AS renders the Authority Set for approval and
 commits it as `authority_hash` ({{approval-event}}). The Intent's
-`goal`, `constraints`, and other members describe and bound the task
-but grant no authority by themselves ({{mission-intent}}); they
-constrain what the AS MAY derive, never widen it.
+members describe and bound the task but grant no authority by
+themselves ({{mission-intent}}): its structured members constrain
+what the AS MAY derive mechanically, its prose members bound through
+disclosure (the Approver refuses authority the words do not
+support), and none widens.
+
+The `goal`, `constraints`, and `success_criteria` members are
+human-readable disclosure and audit context. The AS MUST NOT parse
+them for machine semantics or vary the derived Authority Set on an
+interpretation of their prose; translating a user's words into
+structure is the shaper's job, before admission and outside the
+trust boundary ({{I-D.draft-mcguinness-mission-shaping}}). A
+client-proposed constraint on an individual Authority Set entry
+enters through the top-level `authorization_details` proposal: the
+Common Constraints ({{common-constraints}}), type-specific
+constraints, and the collision-resistant deployment extensions the
+AS understands ({{extensibility}}). Authority is further bounded by
+the Intent's structured members (`resources`, `expires_at`,
+`controls`), by the template mapping keyed on `purpose` or
+`resources` (a lookup over structured values yielding structured
+candidate entries, never an interpretation of prose), and by local
+policy and eligibility. The approval surface renders the prose
+beside the derived Authority Set ({{approval-event}}): the human
+check that the structure matches the words, never a machine
+enforcement mechanism.
 
 Derivation is governed by local policy and is not a portable algorithm:
 different Authorization Servers MAY derive different Authority Sets from
@@ -2152,6 +2189,10 @@ outside carries it as `mission_id`, as in the token-response parameter
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["invoices.*"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
       "delegation": {
         "max_depth": 2,
         "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -2160,7 +2201,7 @@ outside carries it as `mission_id`, as in the token-response parameter
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
       "constraints": {
-        "max_amount": { "amount": "1000.00", "currency": "USD" }
+        "max_amount": { "amount": "500.00", "currency": "USD" }
       } }
   ],
   "authority_set": [
@@ -4265,6 +4306,10 @@ same push:
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["invoices.*"],
+    "constraints": {
+      "resource_issued_after": "2026-07-01T00:00:00Z",
+      "resource_issued_before": "2026-09-30T23:59:59Z"
+    },
     "delegation": {
       "max_depth": 2,
       "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -4273,7 +4318,7 @@ same push:
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
     "constraints": {
-      "max_amount": { "amount": "1000.00", "currency": "USD" }
+      "max_amount": { "amount": "500.00", "currency": "USD" }
     } }
 ]
 ~~~
