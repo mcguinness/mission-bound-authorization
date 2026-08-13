@@ -78,6 +78,7 @@ normative:
     date: 2026
 
 informative:
+  RFC7942:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
@@ -165,86 +166,144 @@ actually metered.
 
 ## Promotion Criteria {#promotion-criteria}
 
-Promotion moves this accounting model from optional evaluation toward
-the architectural baseline for any Mission carrying a consumption
-bound, so the bar is exercised machinery, not elapsed time. The
-criteria below state the evidence. Meeting them changes nothing by
-itself: it makes the profile eligible for a deliberate maturity
-decision by the document editor, recorded as a relabel of this
-document. No criterion, met or unmet, relabels anything
-automatically.
+This section is informative. Promotion moves this accounting model
+from optional evaluation toward the architectural baseline for any
+Mission carrying a consumption bound, so the bar is exercised
+machinery, not elapsed time. Meeting these criteria supplies
+implementation and deployment evidence for a deliberate decision,
+through the applicable IETF process, about changing this document's
+intended status or moving selected mechanisms into a Standards Track
+profile; it does not itself change either status, and no criterion,
+met or unmet, changes anything automatically. A catalog or inventory
+maturity label is distinct from an IETF stream decision and follows
+one rather than substituting for one. Implementation listings and
+test reports belong in an Implementation Status section per
+{{RFC7942}}, removed before RFC publication; this section states the
+durable criteria.
 
-1. **Decrement accounting proven under concurrency and retry.** The
-   check-and-decrement rules of {{metering}} and {{retry}} are
-   demonstrated exactly-once per claimed bound class: a retry under
-   the same idempotency key or decision identifier consumes once;
-   concurrent attempts against a near-exhausted bound never
-   over-consume; a redelivered settlement neither double-commits nor
-   double-releases; a crash between reserve and commit resumes to a
-   consistent balance ({{settlement-exchange}}). This is the
-   decrement-side counterpart of the exactly-once reservation
-   machinery the family's Mission-creating surfaces carry for
-   creation. Artifacts: a reproducible test suite covering those
-   interleavings for `max_budget` and `max_calls` at minimum, with
-   no skipped cases, and the documented reserve/commit posture the
-   tests pin.
+Promotion is gated per feature by the applicable rows:
 
-2. **The consistency model exercised, not only published.** At least
-   one deployment operates under a declared {{topology}} posture (a
-   single serializing PDP, per-PDP sub-budgets, or a bounded
-   reconciliation window) and demonstrates the declared guarantee at
-   its edges: refusal at exhaustion, and orphaned-reservation
-   reconciliation on the published cadence, including a
-   non-idempotent reservation held until affirmative evidence of
-   non-execution ({{settlement-exchange}}). Artifacts: the
-   Enforcement Scope Statement naming the topology and consistency
-   bound, and the reconciliation record.
+| Gate | Applies to |
+| --- | --- |
+| Retry, atomicity, settlement, and crash recovery | Every consumption bound |
+| Exact or qualified topology behavior | Every claimed topology profile |
+| Currency and debit/refund behavior | `max_budget` |
+| Call classification and counting point | `max_calls` |
+| Measurement, renewal, skew, and stop behavior | `max_duration` |
+| Payload dereference and message accounting | `max_egress_volume` |
+| Cross-Mission counter consistency | Aggregate bounds |
+| Atomic latch and release | `exclusive` |
+| Independent interoperation | Each promoted wire profile |
+{: title="Promotion gates"}
 
-3. **Lineage accounting exercised.** A lineage-keyed budget
-   identifier and its authoritative shared counter
-   ({{aggregate-bounds}}) meter a root Mission and its Child
-   Missions against one bound: a lineage-wide `quota_exceeded`
-   refusal from Child Mission consumption is observed, a Child
-   Mission's released reservation returns to the shared counter, and
-   no consent surface or Enforcement Scope Statement renders an
-   aggregate bound the deployed counter does not back. Artifacts:
-   Decision Evidence for the lineage refusal and the counter's
-   consistency-domain description.
+Each gate passes on named evidence:
 
-4. **The exclusivity latch proven under race.** Concurrent
-   consequential actions matching different selectors of one
-   `exclusive` group latch exactly one selector, atomically with the
-   permit; the affirmative-non-execution release restores the group;
-   refusals carry `exclusivity_latched` in Decision Evidence; the
-   latch domain is named in the Enforcement Scope Statement
-   ({{exclusivity}}). Artifacts: race and release test cases with no
-   skipped cases. This criterion also gates the family's adoption of
-   the `exclusive` control into the issuance profile's core
-   `controls` vocabulary: that adoption follows the criteria of this
-   section being met, and until then the control is homed here.
+**Retry, atomicity, settlement, and crash recovery.** For each
+promoted bound class, a reproducible test suite with no skipped
+cases demonstrates exactly-once accounting under {{retry}} and
+{{settlement-exchange}}: a retry under the same idempotency key or
+decision identifier consumes once; a redelivered settlement neither
+double-commits nor double-releases; a conflicting redelivery fails
+closed; a crash between reserve and commit resumes to a consistent
+balance; and every evidence state of {{settlement-states}} is
+exercised. This is the decrement-side counterpart of the
+exactly-once reservation machinery the family's Mission-creating
+surfaces carry for creation.
 
-5. **Interoperation evidence.** Two independent implementations of
-   {{metering}}, or one implementation and one deployment distinct
-   from it, each metering the bound classes it claims, refusing per
-   the fail-closed rule, and agreeing on the wire members of
-   criterion 6. Artifacts: an Enforcement Scope Statement per
-   deployment and a record of exchanged wire messages.
+**Exact or qualified topology behavior.** Each claimed enforcement
+profile of {{topology}} is demonstrated against its own guarantee:
+the Exact profile never over-consumes under concurrent
+near-exhaustion attempts; the Bounded-consistency profile stays
+within its published overshoot and staleness bound and reconciles
+orphaned reservations on the published cadence, including a
+non-idempotent reservation held until affirmative evidence of
+non-execution. Only Exact-profile evidence qualifies a bound for
+promotion as a baseline hard cap; Bounded-consistency evidence
+qualifies only the qualified form, the cap together with its
+published bound, rendered per {{consent}}. Artifacts: the
+Enforcement Scope Statement naming the profile per counter, and the
+reconciliation record.
 
-6. **Wire stability.** The `controls` members of {{bounds}} and the
-   AuthZEN metering surface (`quota_exceeded`, `exclusivity_latched`,
-   `context.prior_decision_id`, `measured_duration`;
-   {{authzen-binding}}, {{settlement-exchange}}) are unchanged in
-   name, shape, and semantics across two consecutive published
-   revisions of this document while the evidence above accumulates.
-   Artifacts: the document history of those revisions.
+**Currency and debit/refund behavior** (`max_budget`). Exact decimal
+arithmetic with no floating-point accumulation; refusal on a
+currency the counter does not carry, or the deployment's documented
+conversion rule; debit, refund, and release paths returning exact
+amounts.
+
+**Call classification and counting point** (`max_calls`). The
+`call_class` mapping of {{bounds}} exercised across implementations,
+the same consequential action counted against the same class, and
+the counting point proven: the count consumed at decision, the
+disposition confirmed at settlement ({{settlement-contract}}).
+
+**Measurement, renewal, skew, and stop behavior** (`max_duration`).
+The duration rules of {{metering}} exercised: bounded reservation or
+lease for an unknown duration, renewal through
+`context.prior_evaluation_id` ahead of expiry by the skew margin,
+stop-or-new-permit before exhaustion, the in-flight handling of an
+action that cannot be safely stopped, and `measured_duration` commit
+with release of the unused reservation.
+
+**Payload dereference and message accounting**
+(`max_egress_volume`). The Operation Profile measurement exercised
+for both `bytes` and `messages`, including a reference-typed
+parameter measured by its dereferenced payload or its action class
+excluded from a claimed `bytes` bound ({{metering}}).
+
+**Cross-Mission counter consistency** (aggregate bounds,
+{{aggregate-bounds}}). A lineage-keyed budget identifier and its
+authoritative shared counter metering a root Mission and its Child
+Missions in the counter's own consistency domain: a lineage-wide
+`quota_exceeded` refusal from Child Mission consumption, a Child
+Mission's released reservation returned to the shared counter, and
+no consent surface or Enforcement Scope Statement rendering an
+aggregate bound the deployed counter does not back. Artifacts: the
+refusal's Decision Evidence carrying a `metering` entry
+({{metering-evidence}}) whose `requested`, `remaining`,
+`counter_scope`, and `counter_id` prove the accounting invariant
+rather than only the asserted refusal.
+
+**Atomic latch and release** (`exclusive`). Concurrent consequential
+actions matching different selectors of one group latch exactly one
+selector, atomically with the permit; the affirmative-non-execution
+release restores the group; refusals carry `exclusivity_latched` in
+Decision Evidence; the latch domain is named in the Enforcement
+Scope Statement ({{exclusivity}}). This gate also holds the family's
+adoption of the `exclusive` control into the issuance profile's core
+`controls` vocabulary: that adoption follows the applicable gates of
+this section being met, and until then the control is homed here.
+
+**Independent interoperation.** Two distinct results, both required
+for each promoted wire profile, aligning with the implementation and
+interoperation reporting convention of {{RFC7942}}:
+
+- Operational experience: at least one deployment not operated by
+  the implementer.
+- Interoperability: an independently implemented PEP and PDP
+  exchange the profiled messages, including duplicate delivery and
+  failure cases, under the settlement submission contract
+  ({{settlement-contract}}).
+
+Across every gate, promotion additionally requires the promoted wire
+surface unchanged in name, shape, and semantics across two
+consecutive published revisions of this document while the evidence
+accumulated: the `controls` members of {{bounds}}, `quota_exceeded`,
+`exclusivity_latched`, `context.prior_evaluation_id`,
+`measured_duration`, the `metering` evidence member
+({{metering-evidence}}), and the settlement submission contract of
+{{settlement-contract}}.
+
+Selective promotion means the applicable rows: promoting a
+per-Mission bound class does not require the aggregate or
+`exclusive` gates, and promoting the `exclusive` control does not
+require the bound-class gates; every promotion includes the rows
+that apply to each consumption bound it covers, its claimed topology
+profiles, and its wire profile.
 
 The criteria are sized to be satisfiable by a reference
-implementation plus one real deployment; they demand exercised
-machinery and stable surfaces, not adoption counts. A maturity
-decision may be selective: it may promote a bound class or control
-whose evidence is complete, for example `max_budget` and `max_calls`
-or the `exclusive` control, while the rest of this document remains
-experimental.
+implementation, one deployment not operated by its implementer, and
+one independently implemented counterpart component; they demand
+exercised machinery and stable surfaces, not adoption counts.
 
 # Relationship to the Issuance and Runtime Profiles {#relationship}
 
@@ -296,7 +355,7 @@ It consumes these optional capabilities:
 | Monotonic Derivation | not consumed | A lineage-keyed budget identifier correlates a root Mission and its Child Missions to one shared counter ({{aggregate-bounds}}); lineage counters are correlation, not narrowing, and this document defines no no-broader-than comparison |
 | Credential-Bound | not consumed | This document defines no binding of its own: enforcement composes through the runtime profile's Mission binding establishment step ({{I-D.draft-mcguinness-mission-runtime}}) |
 | Independently Verifiable | not consumed | This document defines no verification artifact of its own; metered outcomes enter the runtime evidence records and inherit their verification ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
-| Portable Evidence | not consumed | This document defines no evidence artifact of its own; metered refusals and settlement are carried in the runtime evidence records ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
+| Portable Evidence | not consumed | This document defines no evidence artifact of its own; metered refusals and settlement are carried in the runtime evidence records through the coordinated `metering` member ({{metering-evidence}}, {{I-D.draft-mcguinness-mission-runtime-evidence}}) |
 {: title="Metering profile capability consumption"}
 
 The portability claim is capability-scoped rather than substrate-wide
@@ -413,10 +472,10 @@ them presents an unenforced promise at the consent surface.
 Under a multi-PDP topology ({{topology}}), a consented hard cap the
 deployment renders as enforced MUST either:
 
-- be realized as structurally exact relaxations: per-PDP sub-budgets
-  that sum to the cap; or
-- be rendered with the consistency qualifier the topology operates
-  under.
+- be enforced under the Exact enforcement profile, for example as
+  per-PDP sub-budgets that sum to the cap; or
+- be rendered with the named qualifier of the Bounded-consistency
+  enforcement profile the counter operates under ({{topology}}).
 
 Either way the Approver consents to the guarantee the deployment can
 meet rather than to a hard number it cannot.
@@ -485,21 +544,32 @@ refusal rather than silent pass-through
 ## Exactness and Topology {#topology}
 
 The exactness of a consumption bound depends on the decision
-topology, and this profile does not overpromise:
+topology, and this profile does not overpromise. A deployment
+enforces each counter under one of two named enforcement profiles:
 
-- Under a **single serializing PDP** for the Mission, the check and
-  decrement can be atomic, and the bound is exact.
-- Under **multiple or distributed PDPs** (for example, Resource
-  Server-hosted PDPs), an exact global counter is a distributed-counting
-  problem. Such a deployment MUST publish the consistency bound it
-  operates under (for example, per-PDP sub-budgets, or a bounded
-  reconciliation window), and the effective guarantee is that bound,
-  not exact-to-the-call enforcement.
+Exact enforcement profile:
+: The check and decrement are atomic against the authoritative
+  balance: a single serializing PDP for the counter, a shared
+  linearizable counter, or per-PDP sub-budgets that are structurally
+  exact because they sum to the cap. The bound never over-consumes;
+  it is a hard cap.
 
-A deployment MUST NOT advertise exact consumption enforcement it
-cannot meet under its chosen topology. The consistency bound is part of
-the runtime enforcement scope the runtime profile requires a deployment
-to document ({{I-D.draft-mcguinness-mission-runtime}}).
+Bounded-consistency enforcement profile:
+: Multiple or distributed PDPs (for example, Resource Server-hosted
+  PDPs) share the counter without linearizable coordination, a
+  distributed-counting problem. The deployment MUST publish, per
+  bound class, the maximum overshoot and staleness it operates under
+  (for example, a bounded reconciliation window), and the effective
+  guarantee is the cap plus that published bound, not
+  exact-to-the-call enforcement. The published qualifier is part of
+  the bound's enforced semantic and is rendered per {{consent}}.
+
+A deployment MUST name the enforcement profile per counter in its
+Enforcement Scope Statement, and MUST NOT advertise exact consumption
+enforcement it cannot meet under its chosen topology. The consistency
+bound is part of the runtime enforcement scope the runtime profile
+requires a deployment to document
+({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## Retry, Idempotency, and Reserve/Commit Posture {#retry}
 
@@ -510,9 +580,11 @@ bound twice. Reuse of an idempotency key or decision identifier for a
 different normalized action MUST cause refusal. For irreversible
 actions and external commitments, a deployment MUST define whether
 metering is reserved before execution and committed after success, or
-committed before execution. It MUST NOT leave the decrement ambiguous.
-A failed attempt releases any reserved consumption per the deployment's
-documented reserve/commit posture.
+committed before execution. It MUST NOT leave the decrement ambiguous:
+a reservation settles on the evidence state ({{settlement-states}}),
+never on a generic failure signal. The reserve/commit posture fixes
+when consumption is charged; the evidence state fixes how the charge
+settles.
 
 # Exclusivity and Separation of Duty {#exclusivity}
 
@@ -534,18 +606,19 @@ restoring monotonic narrowing rather than breaking it. Absent that
 affirmative non-execution the latch does not unlatch: narrowing by
 exercise is monotonic, like every other narrowing in the family.
 
-The latch is exempt from the relaxations of {{topology}}. A counter
-degrades gracefully under a per-PDP sub-budget or a reconciliation
-window; a separation-of-duty rule violated once is violated
+The latch is exempt from the Bounded-consistency enforcement profile
+of {{topology}}. A counter degrades gracefully under a per-PDP
+sub-budget or a reconciliation window; a separation-of-duty rule violated once is violated
 permanently, and two PDPs can latch the same group to opposite
 selectors within the window. Therefore:
 
-- An exclusivity group MUST be enforced in a single strongly
-  consistent per-Mission latch domain (the runtime profile's
+- An exclusivity group MUST be enforced under the Exact enforcement
+  profile of {{topology}}, in a single strongly consistent
+  per-Mission latch domain (the runtime profile's
   Mission-sharding guidance makes the Mission the consistency unit,
   {{I-D.draft-mcguinness-mission-runtime}}).
-- The sub-budget and reconciliation-window relaxations MUST NOT be
-  applied to `exclusive`.
+- The Bounded-consistency enforcement profile MUST NOT be applied to
+  `exclusive`.
 - The deployment MUST name the latch domain in its Enforcement Scope
   Statement.
 
@@ -599,14 +672,101 @@ An aggregate bound is deployment policy: it is carried on no single
 Mission Intent, is committed by no `intent_hash`, and is disclosed
 through the deployment's Enforcement Scope Statement rather than the
 approval event. A refusal under an aggregate bound is carried as
-`quota_exceeded`, and Decision Evidence records the
-deployment-defined aggregate key class.
+`quota_exceeded`, and its Decision Evidence `metering` entry records
+the aggregate key class in `counter_scope` and the counter in
+`counter_id` ({{metering-evidence}}).
 
 Aggregate keying crosses the family's per-Mission consistency
 domains: a subject-keyed or lineage-keyed counter is shared by every
 Mission the key spans, so it cannot be sharded by Mission Identifier
 and is provisioned as its own consistency domain
 ({{I-D.draft-mcguinness-mission-runtime}}).
+
+# Metering Evidence {#metering-evidence}
+
+A metered decision is auditable only where the evidence exposes the
+counter state the decision asserted. This document defines one
+coordinated evidence member, `metering`, carried in Decision
+Evidence and Execution Evidence under the runtime evidence
+companion's extension conventions
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+
+`metering`:
+: An array of one or more entries, one per bound the evaluation
+  metered. In a deployment claiming this profile, a Decision
+  Evidence record emitted for a metered evaluation, permit or
+  refusal, MUST carry it, and an Execution Evidence record MUST
+  carry it where the committed quantity is conveyed by `consumed`
+  ({{settlement-contract}}). Each entry has the members:
+
+  `bound`:
+  : REQUIRED. A string. The metered bound: a `controls` member name
+    ({{bounds}}) or the applicable per-entry constraint name
+    ({{metering}}).
+
+  `counter_scope`:
+  : REQUIRED. A string. The counter's key class: `mission` for the
+    Mission-keyed bounds of this document, or `subject`, `client`,
+    or `lineage` for an aggregate bound ({{aggregate-bounds}}).
+
+  `counter_id`:
+  : REQUIRED. A string. A stable identifier of the counter, the same
+    value on every record the counter's decisions and settlements
+    produce. It is committed or pseudonymous: a sensitive key (a
+    subject or lineage identifier the record does not otherwise
+    carry) appears only as a commitment, for example a `sha-256:`
+    digest of the deployment's counter key, never raw.
+
+  `requested`:
+  : REQUIRED in Decision Evidence, absent otherwise. The quantity
+    the evaluation sought to consume, in the bound's native unit
+    shape: `{amount, currency}` for `max_budget`, an integer count
+    for `max_calls`, an ISO 8601 duration for `max_duration`, and
+    an object of `bytes` and `messages` for `max_egress_volume`.
+
+  `reserved`:
+  : CONDITIONAL. The same shape. The quantity reserved; REQUIRED in
+    the Decision Evidence of a permitted action under a reserving
+    posture ({{retry}}).
+
+  `remaining`:
+  : REQUIRED in Decision Evidence, absent otherwise. The same shape.
+    The counter's remaining quantity after the decision; after a
+    refusal, the unchanged remaining quantity the request exceeded.
+
+  `consumed`:
+  : CONDITIONAL. The same shape. Execution Evidence only: the actual
+    quantity for the PDP to commit, per the bound-class conveyance
+    rules of {{settlement-contract}}.
+
+  `settlement_state`:
+  : CONDITIONAL. A string. Decision Evidence of a permitted metered
+    action only: the decision-time posture, `reserved` or
+    `committed` ({{retry}}). The terminal disposition, commit,
+    release, hold, or conflict, is applied under
+    {{settlement-states}} and joined through `evaluation_id`; it is
+    not restated in the immutable record.
+
+The member turns a metered refusal into a checkable claim rather
+than an assertion: the refusal's entry shows `requested` exceeding
+`remaining` on a named counter, and the counter's accounting history
+is the join of the entries sharing its `counter_id`. A lineage-wide
+refusal under an aggregate bound reads:
+
+~~~ json
+{
+  "metering": [
+    {
+      "bound": "max_budget",
+      "counter_scope": "lineage",
+      "counter_id":
+        "sha-256:t7RnQ2xV9kM4wB1sJ6eL3yP8cA5fH0dZu2gN7bXq4Ss",
+      "requested": { "amount": "25.00", "currency": "USD" },
+      "remaining": { "amount": "10.00", "currency": "USD" }
+    }
+  ]
+}
+~~~
 
 # AuthZEN Binding {#authzen-binding}
 
@@ -637,28 +797,97 @@ The metering rules require the PEP to signal actual use so the PDP
 commits consumption and releases any reservation. In the AuthZEN
 binding, delivery of the Execution Evidence Object
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}) to the PDP is
-that commit-or-release signal: on receipt the PDP commits the consumption
-the linked action used and releases any reserved excess, keyed to the
-Execution Evidence's `decision_id`.
+that commit-or-release signal: on receipt the PDP settles the linked
+action's consumption per {{settlement-states}}, keyed to the
+Execution Evidence's `evaluation_id`.
 
-The deployment MUST provide a settlement transport for this signal:
-a PDP evidence-submission path, or an equivalent channel, with
-at-least-once delivery and a commit that is idempotent on the
-Execution Evidence's `decision_id`, so a redelivered settlement
-neither double-commits the consumption nor double-releases the
-reservation.
+### Settlement Submission Contract {#settlement-contract}
 
-Settlement can also fail to arrive. A reservation MUST carry a bounded
-lease so a crashed or abandoned reservation does not consume the budget
-permanently: on lease expiry without settlement the PDP reconciles the
-reservation through the runtime profile's orphaned-evidence process
-({{I-D.draft-mcguinness-mission-runtime}}). For an idempotent or
-reversible action class, expiry releases the reservation and returns the
-budget; for a non-idempotent action class, expiry forces reconciliation
-or human review rather than release. An unsettled reservation remains
-charged against the bound until it is reconciled, and is released only
-on affirmative evidence of non-execution; timeout alone never releases a
-reservation for a non-idempotent action class.
+The settlement transport is the runtime evidence companion's
+Execution Evidence delivery contract, profiled rather than a second
+channel: exactly one Execution Evidence Object exists per final
+disposition of a permit, delivery is at-least-once, and the receiver
+deduplicates on `execution_id`
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). This profile
+adds:
+
+- **Intake and audience.** The deployment MUST name the settlement
+  intake, the PDP evidence-submission path or the event or evidence
+  API it profiles, in its Enforcement Scope Statement. The intake
+  MUST feed the consistency domain that holds the counter
+  ({{topology}}, {{aggregate-bounds}}).
+- **Authentication.** The intake MUST accept a settlement only as an
+  Execution Evidence Object in the evidence companion's integrity
+  envelope, verified against the emitter key, scope, and `audience`
+  binding claimed in the Enforcement Scope Statement
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+- **Acknowledgement.** The intake MUST acknowledge a settlement only
+  after the commit or release is durably applied; an unacknowledged
+  delivery is retried under the at-least-once contract.
+- **Duplicate delivery.** A redelivered record, the same
+  `execution_id` with the same settlement-relevant content, MUST be
+  acknowledged without applying the settlement again: the commit is
+  idempotent on `evaluation_id`, so a redelivered settlement neither
+  double-commits the consumption nor double-releases the
+  reservation.
+- **Conflicting redelivery.** A record naming an `evaluation_id`
+  whose settlement is applied but differing in settlement-relevant
+  content (`outcome`, `measured_duration`, or a `metering` entry),
+  or a second `execution_id` for the same `evaluation_id`, MUST fail
+  closed: the applied settlement is unchanged, the conflicting
+  record is retained as evidence, and the conflict is surfaced on
+  the deployment's audit and alarm path.
+
+The committed quantity is conveyed per bound class:
+
+- `max_calls`: intrinsic. The class counter is consumed at decision
+  time, one consequential call per `evaluation_id`; settlement
+  confirms the disposition only.
+- `max_duration`: the Execution Evidence `measured_duration` member.
+- `max_budget`: the Execution Evidence `metering` entry's `consumed`
+  member, as `{amount, currency}` ({{metering-evidence}}).
+- `max_egress_volume`: the Execution Evidence `metering` entry's
+  `consumed` member, as `bytes` and `messages`, measured per the
+  Operation Profile rules of {{metering}}, including the
+  dereferenced-payload rule.
+
+Where an action class defines no actual measure for a bound, the
+Operation Profile MUST state that the reserved quantity commits.
+
+### Settlement by Evidence State {#settlement-states}
+
+A reservation settles on the evidence state, never on a generic
+failure signal:
+
+- **Affirmative non-execution** (`outcome` `suppressed`): the action
+  was permitted but affirmatively not attempted. The PDP releases
+  the reservation and returns the quantity to the counter. Within
+  the strongly consistent latch domain this same state releases an
+  exclusivity latch ({{exclusivity}}).
+- **Completed execution** (`outcome` `completed`): the PDP commits
+  the conveyed actual quantity, or the reserved quantity where the
+  class defines no actual measure, and releases any reserved excess.
+- **Attempted but failed** (`outcome` `failed`): not affirmative
+  non-execution, because the attempt may have consumed real
+  resources. The Operation Profile MUST define the commit-or-refund
+  rule per metered action class; absent a defined rule the
+  reservation remains charged and reconciles as an unknown outcome.
+- **Unknown outcome** (no evidence within the reservation lease): a
+  reservation MUST carry a bounded lease so a crashed or abandoned
+  reservation does not consume the budget permanently. On lease
+  expiry without settlement the PDP reconciles the reservation
+  through the runtime profile's orphaned-evidence process
+  ({{I-D.draft-mcguinness-mission-runtime}}). For an idempotent or
+  reversible action class, expiry releases the reservation and
+  returns the budget; for a non-idempotent action class, expiry
+  forces reconciliation or human review rather than release. An
+  unsettled reservation remains charged against the bound until it
+  is reconciled, and is released only on affirmative evidence of
+  non-execution; timeout alone never releases a reservation for a
+  non-idempotent action class.
+- **Conflicting settlement**: fail closed per
+  {{settlement-contract}}. The applied settlement is unchanged; the
+  conflict is audited, never adjudicated by the intake.
 
 The operational consequence: a lossy evidence channel accumulates
 reservations against `max_budget` and `max_calls` until the Mission
@@ -667,25 +896,27 @@ deployment SHOULD run orphaned-evidence reconciliation on a published
 cadence sized to its evidence-channel loss rate; the reconciliation
 window it publishes is how long leaked budget stays leaked.
 
+### Duration-Lease Renewal {#lease-renewal}
+
 For a duration-metered action the PEP reports the measured duration in
 the Execution Evidence `measured_duration` member, and the PDP commits
 that duration against `max_duration`. A duration-lease renewal is a new
-re-evaluation request that carries the prior permit's `decision_id` in
-`context.prior_decision_id`, so the PDP continues the same metered
+re-evaluation request that carries the prior permit's `evaluation_id`
+in `context.prior_evaluation_id`, so the PDP continues the same metered
 activity rather than opening a new reservation.
 
 The PDP MUST verify that the renewal's Mission, subject, action, and
-audience match the decision named by `prior_decision_id`. A
+audience match the evaluation named by `prior_evaluation_id`. A
 deployment sizes lease
 intervals to amortize renewals: an interval materially shorter than
 the action class's staleness bound adds decision load without
 tightening the revocation cutoff. This exchange requires
 one request member and one evidence member:
 
-`context.prior_decision_id`:
+`context.prior_evaluation_id`:
 : OPTIONAL. A string. Present on a duration-lease renewal request,
-  carrying the `decision_id` of the permit being renewed. Absent on an
-  initial request.
+  carrying the `evaluation_id` of the permit being renewed. Absent on
+  an initial request.
 
 `measured_duration` (Execution Evidence):
 : REQUIRED for a duration-metered action, otherwise absent. A string
@@ -693,7 +924,7 @@ one request member and one evidence member:
   {{RFC3339}}): the PEP's measured duration for the executed action.
 
 A renewal repeats the evaluation-request envelope for the same
-activity and adds `context.prior_decision_id`. Here a long-running,
+activity and adds `context.prior_evaluation_id`. Here a long-running,
 duration-metered ledger reconciliation renews its lease before the
 prior permit expires; the action is not parameter-bound, so no
 `parameter_digest` is carried:
@@ -730,7 +961,7 @@ prior permit expires; the action is not parameter-bound, so no
       "mode": "fresh",
       "freshness_at": "2026-11-02T08:44:00Z"
     },
-    "prior_decision_id": "dec_0Rt5nB8xW2qK7mJ4vS1pL9eYc"
+    "prior_evaluation_id": "dec_0Rt5nB8xW2qK7mJ4vS1pL9eYc"
   }
 }
 ~~~
@@ -748,6 +979,8 @@ A runtime deployment that claims this profile MUST:
   the permit ({{exclusivity}});
 - where aggregate bounds are configured, meter and disclose them per
   {{aggregate-bounds}};
+- emit the `metering` evidence member on the records
+  {{metering-evidence}} requires;
 - publish its consistency bound under a multi-PDP topology
   ({{topology}});
 - define and document its retry, idempotency, and reserve/commit
@@ -805,7 +1038,10 @@ fine-grained record of Mission activity over time. It SHOULD be
 retained under the same access controls and retention windows as
 runtime enforcement evidence
 ({{I-D.draft-mcguinness-mission-runtime}}), and disclosed in decision
-responses only as refusals, not as remaining-balance oracles.
+responses only as refusals, not as remaining-balance oracles. The
+`metering` evidence member records `remaining` inside those
+access-controlled records ({{metering-evidence}}), never in a
+decision response.
 
 The refusal boundary is itself a coarse balance oracle: the point at
 which a bound flips from permit to refusal reveals the remaining
@@ -823,10 +1059,11 @@ This document has no IANA actions. `max_budget`, `max_calls`,
 Intent `controls`
 members defined by this
 profile under the issuance profile's controls extension seam;
-`context.prior_decision_id` is AuthZEN extension data carried per the
-AuthZEN profile's conventions ({{I-D.draft-mcguinness-mission-authzen}});
-`measured_duration` is a coordinated Execution Evidence member under
-the runtime evidence companion's extension conventions
+`context.prior_evaluation_id` is AuthZEN extension data carried per
+the AuthZEN profile's conventions
+({{I-D.draft-mcguinness-mission-authzen}}); `measured_duration` and
+`metering` are coordinated evidence members under the runtime
+evidence companion's extension conventions
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 --- back
