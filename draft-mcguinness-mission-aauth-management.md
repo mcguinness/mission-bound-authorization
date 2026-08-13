@@ -349,8 +349,8 @@ person represented by the mission and MUST prevent tenant or account
 selection from being supplied solely by the request body.
 
 The Person MAY read status and delegation data, and MAY terminate with
-reason `completed`, `revoked`, or `superseded`.  For `superseded`, the PS
-SHOULD require the replacement's `mission_s256` and verify that the
+reason `completed`, `revoked`, or `superseded`.  For `superseded`,
+`replacement_s256` is REQUIRED, and the PS SHOULD verify that the
 same Person authorized both missions before recording the relationship.
 
 ## Administrator and Management Service
@@ -456,7 +456,7 @@ Owning Agent or Person and REQUIRED for an administrator.  `purpose` is
 an audit string, not executable policy, and MUST be rendered as
 untrusted text.
 
-For `superseded`, a Person or administrator MAY include:
+For `superseded`, the request MUST include the replacement:
 
 ~~~ json
 "replacement_s256": "QmV0dGVyTWlzc2lvbkRpZ2VzdFZhbHVlMTIzNDU2Nzg5MDE"
@@ -464,11 +464,14 @@ For `superseded`, a Person or administrator MAY include:
 
 The replacement is related evidence, not an alternate key for the
 target operation.  It MUST identify an already approved mission that
-the caller is authorized to reference.  Replacement validation is
-subject to {{errors}}: a replacement that is absent, unapproved, or
-outside the caller's authorization fails uniformly with
-`invalid_request`, and the failure MUST NOT disclose which condition
-held or anything else about the referenced mission.
+the caller is authorized to reference; it is validated before, and
+committed in, the atomic transition.  A `superseded` request without
+`replacement_s256` fails with `invalid_request` as a missing member.
+Replacement validation is subject to {{errors}}: a replacement that
+is unresolvable, unapproved, or outside the caller's authorization
+fails uniformly with `invalid_request`, and the failure MUST NOT
+disclose which condition held or anything else about the referenced
+mission.
 
 ## Atomic Transition
 
