@@ -52,6 +52,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-template:
+    title: "Mission Template for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
@@ -304,7 +312,10 @@ A Consent Disclosure object has these members:
   yet exist, and the disclosure can commit only to the proposed Intent,
   the submitted proposal, and the Authority Set it actually renders. The Consent Evidence object,
   recorded at or after the decision, carries the resolved `mission`
-  container with `id`, `issuer`, and the same anchors.
+  container with `id`, `issuer`, and the same anchors. For an approval
+  whose consented object is not a Mission (a Mission Template ceiling,
+  {{I-D.draft-mcguinness-oauth-mission-template}}), `source_hashes`
+  carries the consented object's committed anchor instead.
 
 `submission_provenance_hash`:
 : REQUIRED when the approved submission carried Intent Submission
@@ -326,12 +337,16 @@ A Consent Disclosure object has these members:
 `template_version`:
 : REQUIRED. A string identifying the template version.
 
-`template_hash`:
+`rendering_template_digest`:
 : OPTIONAL. A string committing the disclosure template content bytes,
   in the integrity-anchor encoded form of
   {{I-D.draft-mcguinness-oauth-mission}}. REQUIRED for a deployment
   claiming Rung 1 or above ({{experimental-rungs}}), so the template a
   verifier retrieves is bound to the one used to render this disclosure.
+  It commits the rendering template, never a consented object: a
+  Mission Template's own anchor
+  ({{I-D.draft-mcguinness-oauth-mission-template}}) rides in
+  `source_hashes` as the committed anchor of the object consented to.
 
 `locale`:
 : REQUIRED. A string identifying the locale used for presentation, a
@@ -645,10 +660,12 @@ envelope:
 The value uses the same integrity-anchor encoding the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}} defines for `intent_hash` and
 `authority_hash`: a hash-name prefix and the base64url digest, for
-example `sha-256:...`. SHA-256 is the only digest algorithm defined; the
-`sha-256:` prefix identifies it, and algorithm agility is future work.
-A verifier MUST reject a commitment whose algorithm prefix it does not
-recognize. It MUST NOT treat an unrecognized prefix as SHA-256.
+example `sha-256:...`. This document imports the issuance profile's
+commitment mechanisms normatively, including the algorithm-agility
+and unrecognized-prefix rules: `consent_rendering_hash` and
+`submission_provenance_hash` are envelope anchors, and
+`rendering_template_digest` is a raw-octet digest over the disclosure template's
+content bytes.
 
 The hash commits the disclosure object, not pixels or browser state. A
 deployment MAY additionally retain screenshots or UI telemetry, but the
@@ -657,7 +674,7 @@ disclosure and computed vector are provided in {{disclosure-vector}}.
 
 So that the committed object can be related to what a human would see,
 the rendering SHOULD be a deterministic function of the disclosure
-object and its `template_id`, `template_version`, `template_hash`, and
+object and its `template_id`, `template_version`, `rendering_template_digest`, and
 `locale`, so an auditor can re-render the recorded disclosure into the
 form the Approver should have been shown. A deployment that makes this
 guarantee normative claims Rung 1 ({{experimental-rungs}}), which
@@ -935,7 +952,7 @@ Example, over the worked disclosure of {{disclosure-vector}}:
     "authority_hash":
       "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro",
     "consent_rendering_hash":
-      "sha-256:dUuA6ioErHALo02bwESKBt4Yq0RrWSTOT0bBGuRBog0"
+      "sha-256:y-XRrRqSKkeR6mjgXKqcM2DW8FMOwrjOqzZwjb1rNqY"
   },
   "approver": {
     "iss": "https://idp.example.com",
@@ -959,7 +976,7 @@ Example, over the worked disclosure of {{disclosure-vector}}:
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:dUuA6ioErHALo02bwESKBt4Yq0RrWSTOT0bBGuRBog0"
+      "sha-256:y-XRrRqSKkeR6mjgXKqcM2DW8FMOwrjOqzZwjb1rNqY"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -1349,10 +1366,10 @@ Rung 1, Deterministic rendering:
   template. A deployment claiming Rung 1 MUST:
 
   - render the disclosure as a deterministic function of the disclosure
-    object, `template_id`, `template_version`, `template_hash`, and
+    object, `template_id`, `template_version`, `rendering_template_digest`, and
     `locale`, so the same inputs produce the same rendered form within a
     presentation modality;
-  - commit the template content bytes in `template_hash`
+  - commit the template content bytes in `rendering_template_digest`
     ({{consent-disclosure}}); and
   - keep the named template retrievable or reconstructable by an
     authorized auditor for the retention period ({{audit}}).
@@ -1408,7 +1425,7 @@ issuance profile's test vectors
 `https://erp.example.com`, approved by `alice`
 (`user_3p2q8mN1a0kV7tR`); `source_hashes` carries that profile's
 computed `intent_hash` and `authority_hash`. This Mission submitted
-no authority proposal, so `source_hashes` carries no `proposal_hash`. The `template_hash` value
+no authority proposal, so `source_hashes` carries no `proposal_hash`. The `rendering_template_digest` value
 stands for the deployment's template commitment and is illustrative.
 
 The Consent Disclosure object:
@@ -1424,7 +1441,7 @@ The Consent Disclosure object:
   },
   "template_id": "mission-consent-standard",
   "template_version": "2026-06",
-  "template_hash":
+  "rendering_template_digest":
     "sha-256:50S2DpJfcfNGlzi_vzZJNJbJKkknFX65rhWJWLiMyok",
   "locale": "en-US",
   "mission_summary": {
@@ -1555,22 +1572,22 @@ ion":"irreversible_action","statement":"Posted journal entries are n
 ot automatically reversible."}],"mission_summary":{"approver_display
 ":"alice (user_3p2q8mN1a0kV7tR)","expires_at":"2026-12-31T23:59:59Z"
 ,"goal":"Reconcile Q3 invoices","subject_display":"alice (user_3p2q8
-mN1a0kV7tR)"},"requesting_client":{"client_id":"s6BhdRkqt3","display
-":"Invoice Reconciler Agent"},"risk_summary":[{"dimension":"data_acc
-ess","statement":"The agent can read invoices held in the ERP system
-."},{"dimension":"spend","statement":"The agent can post journal ent
-ries of up to 500 US dollars."},{"dimension":"irreversibility","stat
-ement":"Posted journal entries alter the ledger of record."}],"sourc
-e_hashes":{"authority_hash":"sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqR
-lfJNCr4PzLro","intent_hash":"sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmp
-uc65486IqimQ"},"template_hash":"sha-256:50S2DpJfcfNGlzi_vzZJNJbJKkkn
-FX65rhWJWLiMyok","template_id":"mission-consent-standard","template_
-version":"2026-06"}}
+mN1a0kV7tR)"},"rendering_template_digest":"sha-256:50S2DpJfcfNGlzi_v
+zZJNJbJKkknFX65rhWJWLiMyok","requesting_client":{"client_id":"s6BhdR
+kqt3","display":"Invoice Reconciler Agent"},"risk_summary":[{"dimens
+ion":"data_access","statement":"The agent can read invoices held in
+ the ERP system."},{"dimension":"spend","statement":"The agent can p
+ost journal entries of up to 500 US dollars."},{"dimension":"irrever
+sibility","statement":"Posted journal entries alter the ledger of re
+cord."}],"source_hashes":{"authority_hash":"sha-256:vUCCfjGulit9u0qJ
+0Z6pQSNerZtXMqRlfJNCr4PzLro","intent_hash":"sha-256:6mIFoCz79uCHNzKL
+fBpBwqFjoFXdpmpuc65486IqimQ"},"template_id":"mission-consent-standar
+d","template_version":"2026-06"}}
 ~~~
 
 ~~~ text
 consent_rendering_hash =
-  sha-256:dUuA6ioErHALo02bwESKBt4Yq0RrWSTOT0bBGuRBog0
+  sha-256:y-XRrRqSKkeR6mjgXKqcM2DW8FMOwrjOqzZwjb1rNqY
 ~~~
 
 An implementation that canonicalizes the same envelope, computes

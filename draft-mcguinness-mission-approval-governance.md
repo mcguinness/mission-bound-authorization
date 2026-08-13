@@ -27,6 +27,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC3339:
   RFC6838:
   RFC7515:
@@ -149,7 +157,12 @@ this document does not define a second canonicalization.
 A digest is encoded in the integrity-anchor encoded form of
 {{I-D.draft-mcguinness-oauth-mission}}: the `sha-256:` prefix
 followed by the base64url, no-padding encoding of the digest. This
-document defines no digest algorithm of its own.
+document defines no digest algorithm of its own. Its two digests are
+classified under the substrate's default commitment construction,
+which this document imports normatively
+({{I-D.draft-mcguinness-mission-substrate}}):
+`approval_policy.digest` is an envelope anchor, and the record
+digest ({{envelope}}) is a canonical-object digest.
 
 The terms Mission, Mission Issuer, Approver, approval event,
 `approval_event_id`, `intent_hash`, and `authority_hash` are used as

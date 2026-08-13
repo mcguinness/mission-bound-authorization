@@ -247,6 +247,9 @@ is computed with the issuance profile's integrity-anchor envelope
   `drawdown_policy` member is omitted from the hashed object, never
   included as null or an empty string.
 
+`ceiling_hash` is an envelope anchor under the issuance profile's
+commitment mechanisms, which this document imports normatively.
+
 Neither member is committed under `authority_hash`: `authority_hash`
 commits only the consented Authority Set
 ({{I-D.draft-mcguinness-oauth-mission}}), and the ceiling is a bound

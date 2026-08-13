@@ -27,6 +27,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC3339:
   RFC6234:
   RFC7515:
@@ -708,6 +716,11 @@ JCS-canonicalized {{RFC8785}}:
   derivation was a delegation.
 - `issued_at` (string, required): an RFC 3339 {{RFC3339}} date-time at
   which the token was issued.
+
+`entries_digest` is an envelope anchor and `token_digest` a
+raw-octet digest under the substrate's default commitment
+construction, which this document imports normatively
+({{I-D.draft-mcguinness-mission-substrate}}).
 
 Its media type is `application/mission-derivation-record+json`
 ({{iana}}), and its authoritative producer is the `issuer`: the Signed

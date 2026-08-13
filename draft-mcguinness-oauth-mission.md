@@ -30,7 +30,10 @@ author:
 normative:
   RFC3339:
   RFC3986:
+  RFC4648:
   RFC6234:
+  RFC6920:
+  RFC7493:
   RFC6749:
   RFC6750:
   RFC7636:
@@ -2220,8 +2223,8 @@ issuer-bound envelope:
 
 2. Canonicalize the envelope with JCS {{RFC8785}}.
 3. Compute SHA-256 {{RFC6234}} over the canonical bytes.
-4. Encode as `sha-256:` followed by the base64url, no-padding,
-   encoding of the digest.
+4. Encode as `sha-256:` followed by the base64url, no-padding
+   {{RFC4648}} encoding of the digest.
 
 The `typ` field domain-separates the anchors so a digest of one
 object can never be mistaken for another's. The `iss` binding
@@ -2241,13 +2244,11 @@ profiles that extend this document share a namespace coordinated
 through this document series' change controller, or a registry a
 future revision establishes, for this reason.
 
-SHA-256 is the only digest algorithm this document defines; the
-`sha-256:` prefix identifies it. Algorithm agility is future work.
-
-A verifier MUST reject an integrity anchor whose algorithm prefix it
-does not recognize. A verifier MUST NOT treat an unrecognized prefix as
-`sha-256`. This ensures that adding an algorithm later cannot be
-exploited as a downgrade.
+SHA-256 is the only digest algorithm this document defines and is
+mandatory to implement; the `sha-256:` prefix identifies it. The
+prefix is the algorithm-agility mechanism, and the reject-unknown,
+no-downgrade rule binding every prefixed digest is stated once in
+{{commitment-mechanisms}}.
 
 ## Canonicalization Rules {#canonicalization}
 
@@ -2260,8 +2261,11 @@ to computing an anchor and to comparing committed values:
   `proposed_authority` for `proposal_hash`, and the `authority_set`
   for `authority_hash`. An auditor reproduces a digest from the
   record alone.
-- The AS MUST reject an input object containing duplicate JSON member
-  names before canonicalization; such input is invalid.
+- The party computing or verifying a commitment MUST parse
+  externally received input with a parser that detects duplicate
+  JSON member names, and MUST reject an object carrying them. An
+  ordinary parser silently collapses duplicates, so the check
+  happens at parse time, before the parsed data model exists.
 - JCS does not reorder array elements, and this document defines no
   element sorting, so array order is significant. The AS MUST emit
   each array in a fixed, reproducible order; that order is part of
@@ -2275,6 +2279,82 @@ to computing an anchor and to comparing committed values:
   over the recorded values.
 
 Test vectors for the anchors are provided in {{test-vectors}}.
+
+## Commitment Mechanisms {#commitment-mechanisms}
+
+The family's default prefixed construction commits to bytes in three
+ways, and a specification defining a prefixed commitment classifies
+it as one of these species:
+
+- **Envelope anchor**: the domain-separated, issuer-bound envelope of
+  {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
+  `authority_hash`, and commitments produced with companion-defined
+  `typ` values).
+- **Canonical-object digest**: `sha-256:` over the JCS serialization
+  of a normalized JSON object without the envelope, where protocol
+  context already fixes what is committed (for example, a runtime
+  parameter digest).
+- **Raw-octet digest**: `sha-256:` over an exact,
+  specification-defined octet sequence, with no canonicalization: a
+  whole artifact as exchanged, or the UTF-8 encoding of a defined
+  scalar value (for example, a work-product artifact digest).
+
+The prefix and agility rules below bind all three species. The
+I-JSON rule binds the two JSON species. The envelope and `typ`
+discipline of {{integrity-anchors}} binds envelope anchors alone.
+This section instantiates the substrate's default commitment
+construction ({{I-D.draft-mcguinness-mission-substrate}}); the two
+state the same rules, and this document remains self-contained. A
+commitment outside this construction (a native content address, a
+member-named digest whose member name fixes the algorithm) is
+permitted; its defining specification states its own algorithm
+identification and agility behavior.
+
+Every committed JSON value, and the envelope around it, MUST satisfy
+I-JSON {{RFC7493}}, and the party computing or verifying a
+commitment MUST reject non-conformant input before canonicalization:
+
+- externally received JSON destined for commitment is parsed by a
+  duplicate-detecting parser, and an object carrying duplicate member
+  names is rejected at parse time, before the parsed data model
+  exists ({{canonicalization}});
+- string data is valid Unicode, free of the surrogate and
+  noncharacter code points I-JSON prohibits, and is preserved
+  unchanged; and
+- number data supplied to JCS is representable as a finite IEEE 754
+  binary64 value ({{RFC8785}}, Section 3.1).
+
+The commitment is over the parsed I-JSON data value, not the source
+text: JCS serializes the parsed binary64 value deterministically and
+does not preserve a source lexeme's spelling or excess precision. A
+profile whose values need exact decimal or large-integer semantics
+carries them as strings or defines a stricter numeric domain, as
+Common Constraints already does for constraint values
+({{common-constraints}}). The security considerations of {{RFC8785}}
+apply to every JCS computation.
+
+The algorithm prefix is the agility mechanism. `sha-256` is
+mandatory to implement and the only algorithm this family defines. A
+new algorithm enters only through a new prefix defined by a
+referencing specification, its name drawn from the Named Information
+Hash Algorithm Registry ({{RFC6920}}); this document defines no
+negotiation. A verifier MUST reject a digest whose algorithm prefix
+it does not recognize and MUST NOT treat an unrecognized prefix as
+`sha-256`, so an algorithm added later cannot be exploited as a
+downgrade. These rules bind a prefixed digest when its defining
+specification classifies it under this taxonomy and imports this
+section normatively, whichever species it is: this document so
+classifies its three anchors, and each family companion classifies
+the digests it defines.
+
+This document defines no transition mechanism: every commitment a
+current carrier defines is a single prefixed string, and no carrier
+defines a location for a second one. A specification that introduces
+a new prefix MUST define the carrier and schema of any parallel
+commitment, the binding that proves the old and new values commit to
+the same object, producer behavior during the transition, verifier
+selection and downgrade behavior when recognition sets differ, and
+the transition procedure itself.
 
 # Mission Record {#mission-record}
 
