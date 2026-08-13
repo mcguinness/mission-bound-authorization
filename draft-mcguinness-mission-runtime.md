@@ -537,7 +537,7 @@ It consumes these optional capabilities:
 | State-Observable | conditional | An authenticated freshness source with a stated staleness bound, consumed wherever an enforcement scope's published staleness bound is tighter than the credential lifetime ({{state-freshness}}) |
 | Monotonic Derivation | conditional | Consumed where delegation, attenuation, or containment narrowing is enforced at action time through effective-set evaluation ({{input-authority}}) |
 | Credential-Bound | conditional | Consumed when the binding provides the Mission-bound credential carrying the `mission` claim; a binding that does not provide it supplies an externally established Mission reference instead, under the binding-establishment step of {{mission-binding}} |
-| Independently Verifiable, Portable Evidence | not consumed | Evidence portability and offline verification are the runtime evidence companion's concern ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
+| Independently Verifiable, Portable Evidence | not consumed | Evidence portability and offline verification are the audit profile's concern ({{I-D.draft-mcguinness-mission-audit}}); the runtime evidence companion defines the records themselves ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
 {: title="Runtime profile capability consumption"}
 
 The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
