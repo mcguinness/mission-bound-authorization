@@ -2986,8 +2986,16 @@ entry to compare against. A party holding the full Authority Set (a
 Resource Server provisioned with it, or a policy decision point
 holding the Mission record) recomputes the commitment over the held
 two-entry set, matches `mission.authority_hash`, and verifies the
-carried entry as a subset of the held `journal-entries.write` entry;
-only that party has verified approval-time containment.
+carried entry as a subset of the held `journal-entries.write` entry:
+containment verified relative to the authenticated committed set.
+For that verification to be independent of the issuer, the
+deployment provisions the set together with its provenance: the full
+Authority Set, the Mission `id` and issuer it belongs to, the
+expected `authority_hash`, and an authenticated approval-time source
+for all three (trusted Mission or consent evidence, or an audit
+commitment recorded before any compromise). Without that pinning, a
+compromised issuer signs a token carrying a replacement set's hash,
+and recomputation confirms the replacement.
 
 Three denials above are byte-identical `403`s to a client, and
 misrouting them turns a step-up into an authority-widening ceremony
@@ -3929,25 +3937,43 @@ enforcing the token's `authorization_details` directly
 assertion that the carried authority was correctly projected from the
 approved set; `authority_hash` supplies no independent subset proof.
 
-No mechanism closes that gap locally, and the omission is
-deliberate. A containment proof produced by the AS, whether an
-Authority Set retrieval response or an inclusion proof carried on
-the token, is issued under the same trust root as the token itself,
-so it adds nothing against a compromised or malicious issuer. A
-retrieval surface returning the complete Authority Set to a
-single-audience Resource Server would disclose entries addressed to
-other audiences, which the introspection minimization rules forbid
-({{caller-authorization-and-minimization}}). And because a carried
-entry may be a semantic narrowing of an approved entry rather than a
-byte-identical member, a containment proof is a proof system per
-`authorization_details` type ({{subset}}), not a hash-membership
-check. A deployment that needs assurance independent of the token
-signature provisions the verifying party with the full Authority Set
-out of band, the Resource Server itself or a policy decision point
-holding a materialized view of the Mission record, and uses the
-recomputation path of {{rs-enforcement}}: recompute the commitment
-over the held set, match `mission.authority_hash`, and apply the
-subset rule to the carried entries.
+This document's flat Authority Set commitment defines no selective
+inclusion-proof mechanism: `authority_hash` digests the complete set
+as a single array ({{integrity-anchors}}), recomputation therefore
+needs the full set, and the baseline defines neither a retrieval
+surface for that set nor a proof format for anything less. Both are
+undefined here, not impossible. Retrieval carries a real privacy and
+authorization burden rather than an architectural prohibition: the
+minimization rules of {{caller-authorization-and-minimization}} keep
+other audiences' entries out of token introspection, so a distinct
+control-plane surface serving a policy decision point, auditor, or
+privileged Resource Server needs authorization at least that strong.
+A selective proof composes with the existing subset rules: a profile
+could commit the approved entries to a structure that supports
+inclusion proofs, prove the approved parent entry against that
+approval-time root, and apply the type-specific subset test
+({{subset}}) between the carried narrowed entry and the disclosed
+parent; the cryptography stays generic, and only the semantic
+comparison is type-owned, the division this document uses
+throughout. Either mechanism is a future profile with privacy,
+commitment, and trust-bootstrap requirements to meet. Under the
+baseline, a deployment that needs assurance independent of the token
+signature provisions the verifying party out of band, the Resource
+Server itself or a policy decision point holding a materialized view
+of the Mission record, and uses the recomputation path of
+{{rs-enforcement}}.
+
+What such verification buys depends on when the issuer is
+compromised. A proof or retrieval response issued under the same
+trust root as the token adds nothing against an issuer malicious at
+approval time: that issuer can approve and commit arbitrary
+authority, and no containment mechanism changes that. The same
+checks do defend against projection implementation errors, against
+corruption of the record after an independently anchored approval
+commitment, and against post-approval signing-key compromise where
+the original commitment is pinned outside the issuer. The pinning is
+what makes the difference; the worked example in {{rs-enforcement}}
+lists what a deployment provisions to get it.
 
 `intent_hash` extends the same protection to the task itself: it
 commits the approved Mission Intent, so an auditor can detect any
