@@ -6,22 +6,36 @@
 // Usage: node scripts/check-conformance-manifest.mjs [--collect]
 //
 // Exits 1 with a message per finding on any of:
-//   (a) schema violation      - missing/invalid fields, unknown enum values
+//   (a) schema violation      - missing/empty/mistyped fields, unknown enum
+//                               values, unknown row or mapping members
 //   (b) duplicate ID          - two requirement rows share an id
-//   (c) unknown anchor        - the named draft has no {#anchor}
+//   (c) unknown anchor        - the named draft has no {#anchor} heading
 //   (d) stale requirement     - the row's quoted clause text no longer appears
-//                               (whitespace-normalized) in the named draft;
-//                               an edited clause forces a manifest re-review
-//   (e) missing test          - a named test file does not exist, or the test
-//                               name string does not appear in it
+//                               (whitespace-normalized) INSIDE the anchored
+//                               section; an edited or relocated clause forces
+//                               a manifest re-review
+//   (e) missing test          - a mapped test file does not exist, or the full
+//                               test name does not appear in it
+//   (f) coverage inconsistency- the declared coverage state contradicts the
+//                               mappings (see rules below)
 //
-// With --collect, additionally runs `pnpm -C src exec vitest list` and fails
-// for any named test the runner does not collect (guards against renamed or
-// skipped tests that still match by string).
+// Coverage states and their enforced consistency rules:
+//   tested  - tests non-empty, and at least one mapping matches the row's
+//             level (and surface, for endpoint-level rows). Semantic adequacy
+//             is a human judgment; the checker enforces only that the declared
+//             state and the mappings are internally consistent.
+//   partial - tests non-empty (coverage exists but not at the required level,
+//             surface, or breadth; say why in notes or observation.local).
+//   todo    - tests empty.
+//   blocked - blocked_by present (and only blocked rows carry blocked_by).
 //
-// Rows with an empty tests[] (or a blocked_by) are the reverse-mapping TODO
-// report: printed, never failing. Completeness is judged by that report, not
-// by every test having a tag.
+// Rows not "tested" are the outstanding reverse-mapping report: printed,
+// never failing. Completeness is judged by that report, not by tag coverage.
+//
+// With --collect, additionally runs `pnpm -C src exec vitest list --json` over
+// the unique mapped files and fails for any mapping whose (file, full name)
+// pair the runner does not collect, so a renamed, relocated, or skipped test
+// cannot pass on a string match.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -35,6 +49,7 @@ const MANIFEST_PATH = path.join(ROOT, "conformance-manifest.json");
 const errors = [];
 const fail = (check, msg) => errors.push(`[${check}] ${msg}`);
 const normalize = (s) => s.replace(/\s+/g, " ").trim();
+const nonEmptyString = (v) => typeof v === "string" && v.trim().length > 0;
 
 function readFile(p, label) {
   try {
@@ -49,112 +64,239 @@ const manifest = JSON.parse(readFile(MANIFEST_PATH, "conformance-manifest.json")
 const model = manifest.model ?? {};
 const rows = manifest.requirements ?? [];
 
-const REQUIRED_FIELDS = [
-  "id", "spec", "anchor", "text", "role", "strength", "applicability",
-  "surface", "assertion", "observation", "level", "tests",
-];
+// ---- model and source validation ------------------------------------------
+
+const MODEL_LISTS = ["roles", "strengths", "assertions", "surfaces", "levels", "capabilities"];
+for (const list of MODEL_LISTS) {
+  if (!Array.isArray(model[list]) || model[list].length === 0 || !model[list].every(nonEmptyString)) {
+    fail("schema", `model.${list} must be a non-empty array of non-empty strings`);
+  }
+}
+if (!manifest.source || !nonEmptyString(manifest.source.revision)) {
+  fail("schema", "manifest.source.revision (the drafts revision the rows were evaluated against) is required");
+}
+
+// ---- section extraction ----------------------------------------------------
 
 const draftCache = new Map();
-function draftContent(file) {
+function draftSections(file) {
   if (!draftCache.has(file)) {
     const p = path.join(ROOT, file);
-    if (!fs.existsSync(p)) return null;
-    const raw = fs.readFileSync(p, "utf8");
-    draftCache.set(file, { raw, normalized: normalize(raw) });
+    if (!fs.existsSync(p)) {
+      draftCache.set(file, null);
+    } else {
+      const lines = fs.readFileSync(p, "utf8").split("\n");
+      const headings = [];
+      for (let i = 0; i < lines.length; i++) {
+        const m = lines[i].match(/^(#{1,6})\s+.*\{#([A-Za-z0-9._-]+)\}\s*$/);
+        const plain = lines[i].match(/^(#{1,6})\s+/);
+        if (m) headings.push({ line: i, level: m[1].length, anchor: m[2] });
+        else if (plain) headings.push({ line: i, level: plain[1].length, anchor: null });
+      }
+      const sections = new Map();
+      for (let h = 0; h < headings.length; h++) {
+        const cur = headings[h];
+        if (!cur.anchor) continue;
+        let end = lines.length;
+        for (let j = h + 1; j < headings.length; j++) {
+          if (headings[j].level <= cur.level) { end = headings[j].line; break; }
+        }
+        sections.set(cur.anchor, normalize(lines.slice(cur.line, end).join("\n")));
+      }
+      draftCache.set(file, sections);
+    }
   }
   return draftCache.get(file);
 }
 
+// ---- row validation ---------------------------------------------------------
+
+const ROW_MEMBERS = new Set([
+  "id", "spec", "anchor", "text", "facet", "role", "strength", "applicability",
+  "surface", "assertion", "observation", "level", "coverage", "tests",
+  "blocked_by", "notes",
+]);
+const REQUIRED_MEMBERS = [
+  "id", "spec", "anchor", "text", "role", "strength", "applicability",
+  "surface", "assertion", "observation", "level", "coverage", "tests",
+];
+const MAPPING_MEMBERS = new Set(["file", "name", "level", "surface"]);
+const COVERAGES = ["tested", "partial", "todo", "blocked"];
+
 const seenIds = new Set();
-const todo = [];
+const outstanding = [];
 
 for (const row of rows) {
-  const id = row.id ?? "<missing id>";
+  const id = nonEmptyString(row.id) ? row.id : "<missing id>";
 
-  for (const f of REQUIRED_FIELDS) {
-    if (row[f] === undefined) fail("schema", `${id}: missing field "${f}"`);
+  for (const k of Object.keys(row)) {
+    if (!ROW_MEMBERS.has(k)) fail("schema", `${id}: unknown member "${k}"`);
   }
+  for (const f of REQUIRED_MEMBERS) {
+    if (row[f] === undefined || row[f] === null) fail("schema", `${id}: missing field "${f}"`);
+  }
+  for (const f of ["id", "spec", "anchor", "text"]) {
+    if (row[f] !== undefined && !nonEmptyString(row[f])) fail("schema", `${id}: ${f} must be a non-empty string`);
+  }
+  for (const f of ["facet", "notes"]) {
+    if (row[f] !== undefined && !nonEmptyString(row[f])) fail("schema", `${id}: ${f} must be a non-empty string when present`);
+  }
+  if (row.blocked_by !== undefined && !/^#\d+$/.test(row.blocked_by ?? "")) {
+    fail("schema", `${id}: blocked_by must be "#<issue number>"`);
+  }
+
   if (seenIds.has(id)) fail("duplicate-id", `${id} appears more than once`);
   seenIds.add(id);
 
   const enums = [
-    ["role", model.roles],
-    ["strength", model.strengths],
-    ["assertion", model.assertions],
-    ["surface", model.surfaces],
+    ["role", model.roles], ["strength", model.strengths],
+    ["assertion", model.assertions], ["surface", model.surfaces],
     ["level", model.levels],
   ];
   for (const [field, allowed] of enums) {
-    if (Array.isArray(allowed) && row[field] !== undefined && !allowed.includes(row[field])) {
-      fail("schema", `${id}: ${field} "${row[field]}" not in model.${field === "role" ? "roles" : field + "s"}`);
+    if (Array.isArray(allowed) && nonEmptyString(row[field]) && !allowed.includes(row[field])) {
+      fail("schema", `${id}: ${field} "${row[field]}" not in the model`);
     }
   }
-  if (row.observation && typeof row.observation.normative !== "string") {
-    fail("schema", `${id}: observation.normative is required`);
+  if (!COVERAGES.includes(row.coverage)) {
+    fail("schema", `${id}: coverage must be one of ${COVERAGES.join(", ")}`);
   }
 
-  const draft = row.spec ? draftContent(row.spec) : null;
-  if (row.spec && !draft) {
-    fail("unknown-anchor", `${id}: spec file ${row.spec} not found`);
-  } else if (draft) {
-    if (row.anchor && !draft.raw.includes(`{#${row.anchor}}`)) {
-      fail("unknown-anchor", `${id}: ${row.spec} has no {#${row.anchor}}`);
+  // applicability: structured, machine-readable
+  const app = row.applicability;
+  if (app === undefined || app === null || typeof app !== "object" || Array.isArray(app)) {
+    fail("schema", `${id}: applicability must be an object`);
+  } else if (app.kind === "unconditional") {
+    if (Object.keys(app).length !== 1) fail("schema", `${id}: unconditional applicability carries no other members`);
+  } else if (app.kind === "capability") {
+    const extra = Object.keys(app).filter((k) => k !== "kind" && k !== "capability");
+    if (!nonEmptyString(app.capability) || extra.length) {
+      fail("schema", `${id}: capability applicability is {kind, capability}`);
+    } else if (Array.isArray(model.capabilities) && !model.capabilities.includes(app.capability)) {
+      fail("schema", `${id}: capability "${app.capability}" not declared in model.capabilities`);
     }
-    if (row.text && !draft.normalized.includes(normalize(row.text))) {
+  } else {
+    fail("schema", `${id}: applicability.kind must be "unconditional" or "capability"`);
+  }
+
+  // observation: exact members, normative required
+  const obs = row.observation;
+  if (obs === null || typeof obs !== "object" || Array.isArray(obs)) {
+    fail("schema", `${id}: observation must be an object`);
+  } else {
+    for (const k of Object.keys(obs)) {
+      if (k !== "normative" && k !== "local") fail("schema", `${id}: observation has unknown member "${k}"`);
+    }
+    if (!nonEmptyString(obs.normative)) fail("schema", `${id}: observation.normative must be a non-empty string`);
+    if (obs.local !== undefined && !nonEmptyString(obs.local)) fail("schema", `${id}: observation.local must be a non-empty string when present`);
+  }
+
+  // anchor-bound requirement text
+  if (nonEmptyString(row.spec) && nonEmptyString(row.anchor) && nonEmptyString(row.text)) {
+    const sections = draftSections(row.spec);
+    if (!sections) {
+      fail("unknown-anchor", `${id}: spec file ${row.spec} not found`);
+    } else if (!sections.has(row.anchor)) {
+      fail("unknown-anchor", `${id}: ${row.spec} has no heading with {#${row.anchor}}`);
+    } else if (!sections.get(row.anchor).includes(normalize(row.text))) {
       fail(
         "stale-requirement",
-        `${id}: quoted clause not found in ${row.spec}; the clause changed or the row is wrong, re-review the requirement`
+        `${id}: quoted clause not found inside the {#${row.anchor}} section of ${row.spec}; the clause changed, moved, or the anchor is wrong: re-review the requirement`
       );
     }
   }
 
-  for (const entry of row.tests ?? []) {
-    const [file, name] = entry.split(" :: ");
-    if (!file || !name) {
-      fail("missing-test", `${id}: test entry "${entry}" is not "path :: test name"`);
+  // test mappings
+  if (!Array.isArray(row.tests)) {
+    fail("schema", `${id}: tests must be an array`);
+    continue;
+  }
+  let levelMatched = false;
+  for (const m of row.tests) {
+    if (m === null || typeof m !== "object" || Array.isArray(m)) {
+      fail("schema", `${id}: each test mapping must be an object {file, name, level, surface}`);
       continue;
     }
-    const p = path.join(ROOT, file);
+    for (const k of Object.keys(m)) {
+      if (!MAPPING_MEMBERS.has(k)) fail("schema", `${id}: test mapping has unknown member "${k}"`);
+    }
+    if (!nonEmptyString(m.file) || !nonEmptyString(m.name)) {
+      fail("schema", `${id}: test mapping needs non-empty file and name`);
+      continue;
+    }
+    if (!model.levels?.includes(m.level)) fail("schema", `${id}: mapping level "${m.level}" not in the model`);
+    if (!model.surfaces?.includes(m.surface)) fail("schema", `${id}: mapping surface "${m.surface}" not in the model`);
+    const p = path.join(ROOT, m.file);
     if (!fs.existsSync(p)) {
-      fail("missing-test", `${id}: test file ${file} not found`);
-    } else if (!fs.readFileSync(p, "utf8").includes(name)) {
-      fail("missing-test", `${id}: test name "${name}" not found in ${file}`);
+      fail("missing-test", `${id}: test file ${m.file} not found`);
+    } else {
+      const leaf = m.name.includes(" > ") ? m.name.slice(m.name.lastIndexOf(" > ") + 3) : m.name;
+      if (!fs.readFileSync(p, "utf8").includes(leaf)) {
+        fail("missing-test", `${id}: test "${leaf}" not found in ${m.file}`);
+      }
+    }
+    if (m.level === row.level && (row.level !== "endpoint" || m.surface === row.surface)) {
+      levelMatched = true;
     }
   }
 
-  if ((row.tests ?? []).length === 0 || row.blocked_by) {
-    todo.push(row);
+  // coverage consistency
+  const n = row.tests.length;
+  switch (row.coverage) {
+    case "tested":
+      if (n === 0) fail("coverage", `${id}: tested with no test mappings`);
+      else if (!levelMatched) fail("coverage", `${id}: tested but no mapping matches the row's level${row.level === "endpoint" ? " and surface" : ""}`);
+      break;
+    case "partial":
+      if (n === 0) fail("coverage", `${id}: partial requires at least one test mapping (else it is todo)`);
+      break;
+    case "todo":
+      if (n > 0) fail("coverage", `${id}: todo with test mappings (declare tested or partial)`);
+      break;
+    case "blocked":
+      break;
   }
+  if (row.coverage === "blocked" && !row.blocked_by) fail("coverage", `${id}: blocked requires blocked_by`);
+  if (row.coverage !== "blocked" && row.blocked_by) fail("coverage", `${id}: blocked_by requires coverage "blocked"`);
+
+  if (row.coverage !== "tested") outstanding.push(row);
 }
 
+// ---- collection check (--collect) -------------------------------------------
+
 if (process.argv.includes("--collect")) {
-  let listing = "";
-  try {
-    listing = execSync("pnpm -C src exec vitest list", {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 300000,
-    });
-  } catch (e) {
-    fail("collect", `vitest list failed: ${e.message}`);
-  }
-  if (listing) {
+  const files = [...new Set(rows.flatMap((r) => (r.tests ?? []).map((m) => m.file)))].filter(nonEmptyString);
+  if (files.length) {
+    const rel = files.map((f) => path.relative("src", f));
+    let collected = [];
+    try {
+      const out = execSync(`pnpm -C src exec vitest list ${rel.map((r) => JSON.stringify(r)).join(" ")} --json`, {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 600000,
+      });
+      collected = JSON.parse(out.slice(out.indexOf("[")));
+    } catch (e) {
+      fail("collect", `vitest list failed: ${e.message}`);
+    }
     for (const row of rows) {
-      for (const entry of row.tests ?? []) {
-        const name = entry.split(" :: ")[1];
-        if (name && !listing.includes(name)) {
-          fail("collect", `${row.id}: test "${name}" not collected by the runner`);
-        }
+      for (const m of row.tests ?? []) {
+        const hit = collected.some(
+          (e) => e.name === m.name && typeof e.file === "string" && path.resolve(e.file) === path.resolve(ROOT, m.file)
+        );
+        if (!hit) fail("collect", `${row.id}: (${m.file}, "${m.name}") not collected by the runner`);
       }
     }
   }
 }
 
-if (todo.length) {
-  console.log(`TODO (${todo.length} requirement${todo.length === 1 ? "" : "s"} without adequate tests):`);
-  for (const row of todo) {
+// ---- report ------------------------------------------------------------------
+
+if (outstanding.length) {
+  console.log(`Outstanding (${outstanding.length} of ${rows.length} not fully tested):`);
+  for (const row of outstanding) {
     const blocked = row.blocked_by ? ` [blocked by ${row.blocked_by}]` : "";
-    console.log(`  - ${row.id}${blocked}: ${row.observation?.normative ?? ""}`);
+    console.log(`  - ${row.id} (${row.coverage})${blocked}: ${row.observation?.normative ?? ""}`);
   }
 }
 
@@ -163,7 +305,5 @@ if (errors.length) {
   console.error(`conformance-manifest check FAILED: ${errors.length} finding(s).`);
   process.exit(1);
 }
-console.log(
-  `conformance-manifest check OK: ${rows.length} requirements, ` +
-  `${rows.length - todo.length} tested, ${todo.length} TODO.`
-);
+const counts = COVERAGES.map((c) => `${rows.filter((r) => r.coverage === c).length} ${c}`).join(", ");
+console.log(`conformance-manifest check OK: ${rows.length} requirements (${counts}).`);

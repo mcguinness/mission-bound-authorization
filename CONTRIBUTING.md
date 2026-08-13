@@ -74,13 +74,16 @@ and privacy assertions are all valid forms; a requirement is not
 covered merely because a refusal exists somewhere.
 
 The record is `conformance-manifest.json`, validated in CI by
-`scripts/check-conformance-manifest.mjs`: unknown anchors, stale
-requirement text, duplicate IDs, and missing tests fail; rows without
-tests are the visible TODO report (the reverse mapping is the metric,
-not tag coverage). Each row carries the conforming role, BCP 14
-strength, applicability condition, protocol surface, assertion form,
-and the normative observation separated from any locally chosen
-behavior.
+`scripts/check-conformance-manifest.mjs`: unknown anchors, quoted
+clauses missing from their anchored section, duplicate IDs, missing
+tests, and coverage states inconsistent with their test mappings
+fail; rows whose coverage is `partial`, `todo`, or `blocked` are the
+visible outstanding report (the reverse mapping is the metric, not
+tag coverage). Each row carries the conforming role, BCP 14 strength
+(`stated` for present-tense normative prose), a machine-readable
+applicability condition, protocol surface, assertion form, a declared
+coverage state, per-test level and surface mappings, and the
+normative observation separated from any locally chosen behavior.
 
 Two rules keep the record honest. Only pin an OAuth error code or
 Mission diagnostic where the draft normatively specifies it: a test

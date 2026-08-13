@@ -1,11 +1,15 @@
 {
-  "$comment": "Conformance traceability manifest (#245). Each requirement row maps a normative clause to its observable conformance assertion and the tests that drive it. Validated by scripts/check-conformance-manifest.mjs: unknown anchors, stale requirement text, duplicate IDs, and missing tests fail CI; rows with no tests are reported as TODO (the reverse mapping), never silently passed. A row's `observation.local` records this implementation's chosen behavior where the spec permits more than one; a local pin never becomes the protocol requirement. Rows whose `applicability` names an optional capability apply only where the deployment claims it: a runner MUST NOT mark an unclaimed capability nonconforming, and a failed SHOULD row is a recorded departure, not a hard fail.",
+  "$comment": "Conformance traceability manifest (#245). Each requirement row maps one normative clause (or one facet of a multi-part clause) to its observable conformance assertion and the tests that drive it. Validated by scripts/check-conformance-manifest.mjs: unknown anchors, quoted clauses missing from their anchored section, duplicate IDs, missing tests, and coverage states inconsistent with their mappings all fail CI; rows not fully tested are the visible outstanding report, never silent. observation.local records this implementation's chosen behavior where the spec permits more than one; a local pin never becomes the protocol requirement. Rows whose applicability names a capability apply only where the deployment claims it: a runner MUST NOT mark an unclaimed capability nonconforming, and a failed SHOULD row is a recorded departure, not a hard fail. source.revision names the drafts revision the rows were evaluated against; the stale-text check catches edits, the revision identifies the edition.",
+  "source": {
+    "revision": "fdfaa5b"
+  },
   "model": {
     "roles": ["AS", "client", "RS", "PDP", "PEP", "verifier"],
     "strengths": ["MUST", "MUST NOT", "SHOULD", "MAY", "stated"],
     "assertions": ["refusal", "ignore", "output-bound", "no-side-effect", "replay", "privacy", "concurrency"],
     "surfaces": ["par", "authorization-endpoint", "token-endpoint", "introspection", "derivation", "verification"],
-    "levels": ["unit", "endpoint", "cross-component", "concurrency"]
+    "levels": ["unit", "endpoint", "cross-component", "concurrency"],
+    "capabilities": ["core.introspection"]
   },
   "requirements": [
     {
@@ -15,13 +19,14 @@
       "text": "The AS MUST reject with `invalid_request` a `mission_intent` presented on a front-channel authorization request that does not use a PAR-issued `request_uri`",
       "role": "AS",
       "strength": "MUST",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "authorization-endpoint",
       "assertion": "refusal",
       "observation": {
         "normative": "authorization request carrying mission_intent without a PAR-issued request_uri fails invalid_request"
       },
       "level": "endpoint",
+      "coverage": "todo",
       "tests": []
     },
     {
@@ -31,49 +36,64 @@
       "text": "a `mission_intent` submitted outside the Request Object in the same push MUST be rejected with `invalid_request`",
       "role": "AS",
       "strength": "MUST",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
         "normative": "push carrying a Request Object plus a mission_intent outside it fails invalid_request"
       },
       "level": "endpoint",
+      "coverage": "todo",
       "tests": []
     },
     {
       "id": "core.submission.size-bounds-evidence",
       "spec": "draft-mcguinness-oauth-mission.md",
       "anchor": "submission-via-par",
-      "text": "refusing a submission that exceeds the deployment-defined limits with `invalid_request`",
+      "text": "The AS MUST bound the Submission envelope's total size, the Intent's total size and the lengths of its arrays, and the count and per-entry sizes of `evidence` entries, refusing a submission that exceeds the deployment-defined limits with `invalid_request`",
+      "facet": "evidence-count-and-per-entry-size",
       "role": "AS",
       "strength": "MUST",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
-        "normative": "submission exceeding a declared envelope, Intent, array, or evidence bound fails invalid_request"
+        "normative": "submission exceeding the declared evidence entry count or per-entry size fails invalid_request",
+        "local": "driven at the intake parser, not through the PAR endpoint"
       },
       "level": "endpoint",
+      "coverage": "partial",
       "tests": [
-        "src/services/authorization-server/test/submission-envelope.test.ts :: bounds the entry COUNT (config default, overridable)",
-        "src/services/authorization-server/test/submission-envelope.test.ts :: bounds the per-entry SIZE (config default, overridable)"
-      ],
-      "notes": "Evidence count and per-entry bounds are driven; the Intent-size branch (MAX_INTENT_BYTES, kernel intent.ts) is untested at the wire and is the TODO in core.submission.size-bounds-intent."
+        {
+          "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+          "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > bounds the entry COUNT (config default, overridable)",
+          "level": "unit",
+          "surface": "par"
+        },
+        {
+          "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+          "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > bounds the per-entry SIZE (config default, overridable)",
+          "level": "unit",
+          "surface": "par"
+        }
+      ]
     },
     {
-      "id": "core.submission.size-bounds-intent",
+      "id": "core.submission.size-bounds-envelope-and-intent",
       "spec": "draft-mcguinness-oauth-mission.md",
       "anchor": "submission-via-par",
-      "text": "The AS MUST bound the Submission envelope's total size, the Intent's total size and the lengths of its arrays",
+      "text": "The AS MUST bound the Submission envelope's total size, the Intent's total size and the lengths of its arrays, and the count and per-entry sizes of `evidence` entries, refusing a submission that exceeds the deployment-defined limits with `invalid_request`",
+      "facet": "envelope-total-intent-total-and-array-lengths",
       "role": "AS",
       "strength": "MUST",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
-        "normative": "Intent exceeding the deployment size limit fails invalid_request at the wire"
+        "normative": "submission exceeding the declared envelope total size, Intent total size, or Intent array-length bounds fails invalid_request at the wire"
       },
       "level": "endpoint",
+      "coverage": "todo",
       "tests": []
     },
     {
@@ -83,50 +103,74 @@
       "text": "the AS MUST ignore any `mission_intent`, `authorization_details`, `scope`, or `resource` presented, and MUST NOT let such a value widen the authority derived from the pushed parameters",
       "role": "AS",
       "strength": "MUST",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "authorization-endpoint",
       "assertion": "ignore",
       "observation": {
         "normative": "widened mission_intent, authorization_details, scope, or resource beside the request_uri on the authorization request neither affects approval rendering nor widens issued authority"
       },
       "level": "endpoint",
+      "coverage": "todo",
       "tests": []
     },
     {
-      "id": "core.canonicalization.duplicate-members",
+      "id": "core.commitment.duplicate-members",
       "spec": "draft-mcguinness-oauth-mission.md",
-      "anchor": "canonicalization",
+      "anchor": "commitment-mechanisms",
       "text": "an object carrying duplicate member names is rejected at parse time, before the parsed data model exists",
       "role": "AS",
       "strength": "MUST",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
         "normative": "input destined for commitment carrying duplicate JSON member names is rejected before canonicalization; last-value-wins is foreclosed"
       },
       "level": "unit",
+      "coverage": "tested",
       "tests": [
-        "src/services/authorization-server/test/kernel.test.ts :: rejects duplicate member names",
-        "src/services/authorization-server/test/submission-envelope.test.ts :: strict parse: duplicate member names in the envelope are refused"
+        {
+          "file": "src/services/authorization-server/test/kernel.test.ts",
+          "name": "intent validation (@spec mission#submission-via-par) > rejects duplicate member names",
+          "level": "unit",
+          "surface": "par"
+        },
+        {
+          "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+          "name": "Submission envelope parse (@spec mission#submission-via-par) > strict parse: duplicate member names in the envelope are refused",
+          "level": "unit",
+          "surface": "par"
+        },
+        {
+          "file": "src/packages/mission-core/test/anchors.test.ts",
+          "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
+          "level": "unit",
+          "surface": "verification"
+        }
       ]
     },
     {
-      "id": "core.anchors.unknown-prefix",
+      "id": "core.commitment.unknown-prefix",
       "spec": "draft-mcguinness-oauth-mission.md",
-      "anchor": "integrity-anchors",
+      "anchor": "commitment-mechanisms",
       "text": "A verifier MUST reject a digest whose algorithm prefix it does not recognize",
       "role": "verifier",
       "strength": "MUST",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "verification",
       "assertion": "refusal",
       "observation": {
         "normative": "an anchor with an unrecognized algorithm prefix is rejected, never treated as sha-256"
       },
       "level": "unit",
+      "coverage": "tested",
       "tests": [
-        "src/packages/mission-core/test/anchors.test.ts :: verifyAnchor round-trips and rejects unknown algorithm prefixes"
+        {
+          "file": "src/packages/mission-core/test/anchors.test.ts",
+          "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+          "level": "unit",
+          "surface": "verification"
+        }
       ]
     },
     {
@@ -136,16 +180,22 @@
       "text": "An AS MUST reject `max_derivations` below 1 with `invalid_request`",
       "role": "AS",
       "strength": "MUST",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
         "normative": "controls.max_derivations of 0 or less fails invalid_request",
-        "local": "kernel test drives the input but asserts a message regex; the invalid_request code is not yet asserted"
+        "local": "the kernel test drives the input but asserts a message regex; the invalid_request code is not yet asserted"
       },
       "level": "unit",
+      "coverage": "partial",
       "tests": [
-        "src/services/authorization-server/test/kernel.test.ts :: rejects max_derivations below 1"
+        {
+          "file": "src/services/authorization-server/test/kernel.test.ts",
+          "name": "intent validation (@spec mission#submission-via-par) > rejects max_derivations below 1",
+          "level": "unit",
+          "surface": "par"
+        }
       ]
     },
     {
@@ -155,16 +205,47 @@
       "text": "the AS MUST maintain a per-Mission count of **derivations** and MUST refuse with `invalid_grant` any derivation that would exceed the bound",
       "role": "AS",
       "strength": "MUST",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "token-endpoint",
       "assertion": "refusal",
       "observation": {
-        "normative": "derivation past controls.max_derivations fails invalid_grant at the token endpoint; failed derivations do not count",
+        "normative": "derivation past controls.max_derivations fails invalid_grant at the token endpoint",
         "local": "covered at the kernel gate only; no wire test observes invalid_grant for exhaustion"
       },
       "level": "endpoint",
+      "coverage": "partial",
       "tests": [
-        "src/services/authorization-server/test/kernel.test.ts :: gates derivation on state and derivation cap (@spec mission#lifecycle)"
+        {
+          "file": "src/services/authorization-server/test/kernel.test.ts",
+          "name": "lifecycle (@spec status#legal-transitions) > gates derivation on state and derivation cap (@spec mission#lifecycle)",
+          "level": "unit",
+          "surface": "token-endpoint"
+        }
+      ]
+    },
+    {
+      "id": "core.lifecycle.failed-derivations-not-counted",
+      "spec": "draft-mcguinness-oauth-mission.md",
+      "anchor": "lifecycle",
+      "text": "A derivation that fails, including one refused for exceeding the bound, MUST NOT be counted",
+      "role": "AS",
+      "strength": "MUST NOT",
+      "applicability": { "kind": "unconditional" },
+      "surface": "token-endpoint",
+      "assertion": "no-side-effect",
+      "observation": {
+        "normative": "a failed or refused derivation leaves the derivation count unchanged",
+        "local": "asserted on the expansion nothing_to_expand refusal path; not yet driven at the cap boundary itself"
+      },
+      "level": "endpoint",
+      "coverage": "partial",
+      "tests": [
+        {
+          "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+          "name": "expansion wire: NON-WIDENING request is REFUSED (@spec expansion#nothing-to-expand) > a pure subset request refuses (invalid_request + nothing_to_expand): predecessor stays active, nothing created or reserved, no derivation consumed",
+          "level": "endpoint",
+          "surface": "token-endpoint"
+        }
       ]
     },
     {
@@ -174,7 +255,7 @@
       "text": "the AS SHOULD include, alongside `error`, the `mission_error` token-error-response member",
       "role": "AS",
       "strength": "SHOULD",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "token-endpoint",
       "assertion": "output-bound",
       "observation": {
@@ -182,6 +263,7 @@
         "local": "implementation emits mission_denial_reason with the kernel reason set instead; recorded SHOULD-level departure, tracked in #526"
       },
       "level": "endpoint",
+      "coverage": "todo",
       "tests": []
     },
     {
@@ -191,13 +273,14 @@
       "text": "an AS whose policy cannot accept the proposed `expires_at` refuses with `invalid_authorization_details` rather than rewriting it",
       "role": "AS",
       "strength": "stated",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
         "normative": "unacceptable proposed expires_at fails invalid_authorization_details; the AS never rewrites the value"
       },
       "level": "endpoint",
+      "coverage": "blocked",
       "tests": [],
       "blocked_by": "#525",
       "notes": "Cross-document contradiction with the Mission Template three-way clamp; no test pins either behavior until #525 resolves."
@@ -209,13 +292,14 @@
       "text": "The mapping is a lookup, never synthesis; the AS refuses an Intent that matches no configured mapping with `invalid_authorization_details`",
       "role": "AS",
       "strength": "stated",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "derivation",
       "assertion": "refusal",
       "observation": {
         "normative": "in configured-mapping (template) mode, an Intent matching no configured mapping fails invalid_authorization_details, distinguishable from a policy refusal"
       },
       "level": "endpoint",
+      "coverage": "todo",
       "tests": [],
       "notes": "Core configured-mapping mode, not the Mission Template companion; the companion's unknown template_id error is specified and tested separately."
     },
@@ -226,13 +310,14 @@
       "text": "an AS MUST NOT derive Mission-bound authority from a client-supplied `mission_id`",
       "role": "AS",
       "strength": "MUST NOT",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "token-endpoint",
       "assertion": "output-bound",
       "observation": {
         "normative": "a client-supplied mission_id cannot select or alter the Mission used for derivation; if the request is accepted, the emitted Mission is the grant-bound Mission (rejecting the unexpected parameter also conforms)"
       },
       "level": "endpoint",
+      "coverage": "todo",
       "tests": []
     },
     {
@@ -242,15 +327,22 @@
       "text": "A credential the Mission Issuer derives MUST have an `exp` that does not exceed the Mission's `expires_at`",
       "role": "AS",
       "strength": "MUST",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "token-endpoint",
       "assertion": "output-bound",
       "observation": {
-        "normative": "no derived credential's exp exceeds the Mission's expires_at"
+        "normative": "no derived credential's exp exceeds the Mission's expires_at",
+        "local": "driven on the async-delegation initial-access path; the requirement spans every credential the issuer derives (refresh, exchange, deferral, child, expansion), so the remaining paths are outstanding"
       },
       "level": "endpoint",
+      "coverage": "partial",
       "tests": [
-        "src/services/authorization-server/test/async-delegation.test.ts :: absolute-lifetime clamp: the initial access token exp never exceeds the Mission expires_at"
+        {
+          "file": "src/services/authorization-server/test/async-delegation.test.ts",
+          "name": "async-delegation terminal paths (@spec async-delegation) > absolute-lifetime clamp: the initial access token exp never exceeds the Mission expires_at",
+          "level": "endpoint",
+          "surface": "token-endpoint"
+        }
       ]
     },
     {
@@ -260,13 +352,14 @@
       "text": "The AS MUST NOT issue a Mission-bound token whose `scope` exceeds the Authority Set",
       "role": "AS",
       "strength": "MUST NOT",
-      "applicability": "unconditional",
+      "applicability": { "kind": "unconditional" },
       "surface": "token-endpoint",
       "assertion": "output-bound",
       "observation": {
         "normative": "every issued scope value corresponds to authority present in authorization_details; no issued token carries scope beyond the Authority Set"
       },
       "level": "endpoint",
+      "coverage": "todo",
       "tests": []
     },
     {
@@ -276,7 +369,7 @@
       "text": "the AS MUST return `active: false` and include `mission.state` giving the reason",
       "role": "AS",
       "strength": "MUST",
-      "applicability": "introspection overlay claimed",
+      "applicability": { "kind": "capability", "capability": "core.introspection" },
       "surface": "introspection",
       "assertion": "output-bound",
       "observation": {
@@ -284,6 +377,25 @@
         "local": "provider currently returns bare {active:false} with no mission member; red-first tests and the paired fix are #526"
       },
       "level": "endpoint",
+      "coverage": "blocked",
+      "tests": [],
+      "blocked_by": "#526"
+    },
+    {
+      "id": "core.introspection.caller-authentication",
+      "spec": "draft-mcguinness-oauth-mission.md",
+      "anchor": "caller-authorization-and-minimization",
+      "text": "MUST authenticate the calling party",
+      "role": "AS",
+      "strength": "MUST",
+      "applicability": { "kind": "capability", "capability": "core.introspection" },
+      "surface": "introspection",
+      "assertion": "privacy",
+      "observation": {
+        "normative": "an unauthenticated introspection caller receives no Mission detail"
+      },
+      "level": "endpoint",
+      "coverage": "blocked",
       "tests": [],
       "blocked_by": "#526"
     },
@@ -291,17 +403,36 @@
       "id": "core.introspection.caller-authorization",
       "spec": "draft-mcguinness-oauth-mission.md",
       "anchor": "caller-authorization-and-minimization",
-      "text": "MUST return Mission data only to a caller authorized to receive it",
+      "text": "MUST return Mission data only to a caller authorized to receive it, in particular a Resource Server that is an audience of the token",
       "role": "AS",
       "strength": "MUST",
-      "applicability": "introspection overlay claimed",
+      "applicability": { "kind": "capability", "capability": "core.introspection" },
       "surface": "introspection",
       "assertion": "privacy",
       "observation": {
-        "normative": "an unauthenticated, unauthorized, or wrong-audience caller receives no Mission detail",
+        "normative": "a caller not authorized for the token receives no Mission detail"
+      },
+      "level": "endpoint",
+      "coverage": "blocked",
+      "tests": [],
+      "blocked_by": "#526"
+    },
+    {
+      "id": "core.introspection.audience-minimization",
+      "spec": "draft-mcguinness-oauth-mission.md",
+      "anchor": "caller-authorization-and-minimization",
+      "text": "MUST audience-filter the response, returning the `authorization_details` entries and Mission data relevant to the caller's audience and not disclosing entries addressed to other audiences",
+      "role": "AS",
+      "strength": "MUST",
+      "applicability": { "kind": "capability", "capability": "core.introspection" },
+      "surface": "introspection",
+      "assertion": "privacy",
+      "observation": {
+        "normative": "the response discloses only the entries and Mission data relevant to the caller's audience",
         "local": "no audience filtering exists in the handler; red-first tests and the paired fix are #526"
       },
       "level": "endpoint",
+      "coverage": "blocked",
       "tests": [],
       "blocked_by": "#526"
     }
