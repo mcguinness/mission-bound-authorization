@@ -219,6 +219,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
@@ -2114,9 +2122,10 @@ are deliberately out of scope and deferred:
   activation ({{mission-record}}), and is left to a governance layer.
 
 Both remain out of the core. Where a deployment needs them, they are
-recorded by the deferred-approval profile's Approval Decision Set
-({{I-D.draft-mcguinness-oauth-mission-approval}}) and consent
-evidence's co-approval members
+recorded by the Approval Governance Record
+({{I-D.draft-mcguinness-mission-approval-governance}}). Consent
+Evidence may carry a deliberately partial presentation of that record
+through `co_approvals` and its approval-governance members
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 ## Integrity Anchors {#integrity-anchors}
