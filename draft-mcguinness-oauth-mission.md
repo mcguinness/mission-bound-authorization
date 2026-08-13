@@ -2123,8 +2123,9 @@ are deliberately out of scope and deferred:
 
 Both remain out of the core. Where a deployment needs them, they are
 recorded by the Approval Governance Record
-({{I-D.draft-mcguinness-mission-approval-governance}}), which consent
-evidence's co-approval members present in part
+({{I-D.draft-mcguinness-mission-approval-governance}}). Consent
+Evidence may carry a deliberately partial presentation of that record
+through `co_approvals` and its approval-governance members
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 ## Integrity Anchors {#integrity-anchors}
