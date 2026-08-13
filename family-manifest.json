@@ -249,6 +249,7 @@
         "draft-mcguinness-mission-orchestration",
         "draft-mcguinness-mission-runtime",
         "draft-mcguinness-mission-runtime-evidence",
+        "draft-mcguinness-mission-substrate",
         "draft-mcguinness-oauth-mission",
         "draft-mcguinness-oauth-mission-child-delegation",
         "draft-mcguinness-oauth-mission-expansion",
@@ -311,6 +312,7 @@
         "draft-mcguinness-mission-harness",
         "draft-mcguinness-mission-runtime",
         "draft-mcguinness-mission-runtime-evidence",
+        "draft-mcguinness-mission-substrate",
         "draft-mcguinness-oauth-mission",
         "draft-mcguinness-oauth-mission-expansion",
         "draft-mcguinness-oauth-mission-signals",
@@ -328,6 +330,7 @@
       "is_published_core": false,
       "deps": [
         "draft-mcguinness-mission-runtime",
+        "draft-mcguinness-mission-substrate",
         "draft-mcguinness-oauth-mission"
       ]
     },
