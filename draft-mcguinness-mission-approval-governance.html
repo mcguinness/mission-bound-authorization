@@ -1316,7 +1316,12 @@ this document does not define a second canonicalization.<a href="#section-3-2" c
 <p id="section-3-3">A digest is encoded in the integrity-anchor encoded form of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>: the <code>sha-256:</code> prefix
 followed by the base64url, no-padding encoding of the digest. This
-document defines no digest algorithm of its own.<a href="#section-3-3" class="pilcrow">¶</a></p>
+document defines no digest algorithm of its own. Its two digests are
+classified under the substrate's default commitment construction,
+which this document imports normatively
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>):
+<code>approval_policy.digest</code> is an envelope anchor, and the record
+digest (<a href="#envelope" class="auto internal xref">Section 8</a>) is a canonical-object digest.<a href="#section-3-3" class="pilcrow">¶</a></p>
 <p id="section-3-4">The terms Mission, Mission Issuer, Approver, approval event,
 <code>approval_event_id</code>, <code>intent_hash</code>, and <code>authority_hash</code> are used as
 defined in <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-3-4" class="pilcrow">¶</a></p>
@@ -1989,6 +1994,10 @@ version before treating the evaluation as re-checked
 <a href="#section-17.1" class="section-number selfRef">17.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>

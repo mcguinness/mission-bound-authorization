@@ -2581,7 +2581,9 @@ collision-resistant <code>typ</code> convention, and whose committed value is
 the object below: the anchor envelope is canonicalized with JCS
 <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>, hashed with SHA-256, and encoded as <code>sha-256:</code> followed
 by the base64url, no-padding, encoding of the digest, exactly as for
-the profile's other anchors. As a JCS commitment-envelope <code>typ</code>,
+the profile's other anchors. It is an envelope anchor under the
+issuance profile's commitment mechanisms, which this document
+imports normatively. As a JCS commitment-envelope <code>typ</code>,
 <code>mission-creation-fingerprint</code> names a hash domain, not a
 representation crossing a protocol boundary, and is deliberately not a
 media type (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Namespace

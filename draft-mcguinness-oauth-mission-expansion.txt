@@ -1113,10 +1113,12 @@ Table of Contents
    and whose committed value is the object below: the anchor envelope is
    canonicalized with JCS [RFC8785], hashed with SHA-256, and encoded as
    sha-256: followed by the base64url, no-padding, encoding of the
-   digest, exactly as for the profile's other anchors.  As a JCS
-   commitment-envelope typ, mission-creation-fingerprint names a hash
-   domain, not a representation crossing a protocol boundary, and is
-   deliberately not a media type ([I-D.draft-mcguinness-oauth-mission],
+   digest, exactly as for the profile's other anchors.  It is an
+   envelope anchor under the issuance profile's commitment mechanisms,
+   which this document imports normatively.  As a JCS commitment-
+   envelope typ, mission-creation-fingerprint names a hash domain, not a
+   representation crossing a protocol boundary, and is deliberately not
+   a media type ([I-D.draft-mcguinness-oauth-mission],
    Section "Namespace Taxonomy").
 
    The fingerprint object carries exactly these members:

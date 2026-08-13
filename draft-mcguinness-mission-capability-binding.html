@@ -1291,7 +1291,11 @@ this document does not define a second canonicalization.<a href="#section-2-2" c
 <p id="section-2-3">"SHA-256" refers to <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span>. A digest is encoded in the
 integrity-anchor encoded form of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>: <code>sha-256:</code> followed by the
-base64url, no-padding encoding of the digest.<a href="#section-2-3" class="pilcrow">¶</a></p>
+base64url, no-padding encoding of the digest. Under the substrate's
+default commitment construction, which this document imports
+normatively (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>),
+<code>source_digest</code> is a canonical-object digest and <code>catalog_digest</code> a
+raw-octet digest over the exact retrieved representation.<a href="#section-2-3" class="pilcrow">¶</a></p>
 <p id="section-2-4">The terms Policy Enforcement Point (PEP), Policy Decision Point
 (PDP), consequential action, and Executor are used as defined in
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>. The AuthZEN request and
@@ -1710,6 +1714,10 @@ value.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>

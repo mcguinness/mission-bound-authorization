@@ -713,6 +713,11 @@ Table of Contents
    *  issued_at (string, required): an RFC 3339 [RFC3339] date-time at
       which the token was issued.
 
+   entries_digest is an envelope anchor and token_digest a raw-octet
+   digest under the substrate's default commitment construction, which
+   this document imports normatively
+   ([I-D.draft-mcguinness-mission-substrate]).
+
    Its media type is application/mission-derivation-record+json
    (Section 15), and its authoritative producer is the issuer: the
    Signed Statement's iss MUST equal the Mission issuer (Section 6.3).
@@ -1640,6 +1645,11 @@ Table of Contents
               McGuinness, K., "Mission Runtime Evidence", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime-evidence.html>.
+
+   [I-D.draft-mcguinness-mission-substrate]
+              McGuinness, K., "Mission Substrate Requirements", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-substrate.html>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth

@@ -1553,7 +1553,9 @@ the integrity-anchor envelope requires, so member order follows that
 canonicalization.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.1-3"><code>template_hash</code> is to the template what <code>authority_hash</code> is to a
+<p id="section-5.1-3">It is an envelope anchor under the issuance profile's commitment
+mechanisms, which this document imports normatively.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.1-4"><code>template_hash</code> is to the template what <code>authority_hash</code> is to a
 Mission's Authority Set: the anchor over the consented object. It plays
 the same role the progressive profile's <code>ceiling_hash</code> plays for a
 consented authority ceiling
@@ -1561,7 +1563,7 @@ consented authority ceiling
 Mission commits its own <code>intent_hash</code> and <code>authority_hash</code> over its own
 Intent and final Authority Set (<a href="#dispatch" class="auto internal xref">Section 7</a>); the template commits the
 ceiling once, under <code>template_hash</code>. The Mission's anchors and the
-template's anchor are never merged.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+template's anchor are never merged.<a href="#section-5.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="template-lifecycle">
@@ -2042,12 +2044,14 @@ in the record, because the human is at the template. For a dispatched
 Mission an authorized auditor can:<a href="#section-11-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11-2.1">
-          <p id="section-11-2.1.1">recompute <code>template_hash</code> from the stored template bytes and match it
-to the committed template consent evidence
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>) and to the
-instance's <code>template</code> lineage member (<a href="#template-member" class="auto internal xref">Section 7.1</a>), so the
-ceiling the instance was checked against is the one the human
-consented to;<a href="#section-11-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.1.1">recompute <code>template_hash</code>, the envelope anchor of <a href="#template-hash" class="auto internal xref">Section 5.1</a>,
+from the stored Mission Template object and match it to the committed
+anchor the template-creation consent evidence carries in its
+<code>source_hashes</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>;
+that disclosure's own <code>rendering_template_digest</code> commits the
+rendering template, a different object) and to the instance's
+<code>template</code> lineage member (<a href="#template-member" class="auto internal xref">Section 7.1</a>), so the ceiling the
+instance was checked against is the one the human consented to;<a href="#section-11-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.2">
           <p id="section-11-2.2.1">re-run the subset check of the instance's Authority Set against the

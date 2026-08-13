@@ -2072,10 +2072,14 @@ derivation was a delegation.<a href="#section-6.3.2-3.7.1" class="pilcrow">¶</a
 which the token was issued.<a href="#section-6.3.2-3.8.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-6.3.2-4">Its media type is <code>application/mission-derivation-record+json</code>
+<p id="section-6.3.2-4"><code>entries_digest</code> is an envelope anchor and <code>token_digest</code> a
+raw-octet digest under the substrate's default commitment
+construction, which this document imports normatively
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-6.3.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.3.2-5">Its media type is <code>application/mission-derivation-record+json</code>
 (<a href="#iana" class="auto internal xref">Section 15</a>), and its authoritative producer is the <code>issuer</code>: the Signed
 Statement's <code>iss</code> <span class="bcp14">MUST</span> equal the Mission <code>issuer</code>
-(<a href="#evidence-types" class="auto internal xref">Section 6.3</a>).<a href="#section-6.3.2-4" class="pilcrow">¶</a></p>
+(<a href="#evidence-types" class="auto internal xref">Section 6.3</a>).<a href="#section-6.3.2-5" class="pilcrow">¶</a></p>
 <div id="derivation-vector">
 <section id="section-6.3.2.1">
             <h5 id="name-computed-example-2">
@@ -3136,6 +3140,10 @@ rather than registering a new identifier.<a href="#section-15-6" class="pilcrow"
 <dt id="I-D.draft-mcguinness-mission-runtime-evidence">[I-D.draft-mcguinness-mission-runtime-evidence]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Runtime Evidence"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>

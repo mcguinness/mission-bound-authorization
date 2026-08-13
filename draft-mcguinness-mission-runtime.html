@@ -3289,33 +3289,36 @@ SHA-256(JCS({
 }))
 </pre><a href="#section-7.5-5" class="pilcrow">¶</a>
 </div>
-<p id="section-7.5-6">The committed manifest <span class="bcp14">MUST</span> carry:<a href="#section-7.5-6" class="pilcrow">¶</a></p>
+<p id="section-7.5-6"><code>policy_view_id</code> is an envelope anchor under the substrate's default
+commitment construction, which this document imports normatively
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-7.5-6" class="pilcrow">¶</a></p>
+<p id="section-7.5-7">The committed manifest <span class="bcp14">MUST</span> carry:<a href="#section-7.5-7" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-7.5-7.1">
-            <p id="section-7.5-7.1.1"><code>mission_id</code> and <code>authority_hash</code>: the Mission's identifier and
-Authority Set integrity anchor.<a href="#section-7.5-7.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-7.5-8.1">
+            <p id="section-7.5-8.1.1"><code>mission_id</code> and <code>authority_hash</code>: the Mission's identifier and
+Authority Set integrity anchor.<a href="#section-7.5-8.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.5-7.2">
-            <p id="section-7.5-7.2.1"><code>policy_version</code>: the derivation <code>policy_version</code> recorded at the
-approval event.<a href="#section-7.5-7.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-7.5-8.2">
+            <p id="section-7.5-8.2.1"><code>policy_version</code>: the derivation <code>policy_version</code> recorded at the
+approval event.<a href="#section-7.5-8.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.5-7.3">
-            <p id="section-7.5-7.3.1"><code>compiler</code>: an object naming the trusted compiler that produced the
+          <li class="normal" id="section-7.5-8.3">
+            <p id="section-7.5-8.3.1"><code>compiler</code>: an object naming the trusted compiler that produced the
 manifest, with <code>profile</code> (the compiler's identity) and <code>version</code>
 (its version), so a change in compiler identity or version is
 itself a reproducibility input rather than an unaccounted
-difference.<a href="#section-7.5-7.3.1" class="pilcrow">¶</a></p>
+difference.<a href="#section-7.5-8.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.5-7.4">
-            <p id="section-7.5-7.4.1">Either <code>policy_ir</code>, the normalized policy intermediate
+          <li class="normal" id="section-7.5-8.4">
+            <p id="section-7.5-8.4.1">Either <code>policy_ir</code>, the normalized policy intermediate
 representation as JSON, or <code>artifact</code>, an object carrying <code>digest</code>
 (the integrity-anchor encoded digest of the engine-native artifact)
 and <code>encoding</code> (naming the artifact's format), for a deployment
 that compiles to an engine-native form this document does not
-standardize.<a href="#section-7.5-7.4.1" class="pilcrow">¶</a></p>
+standardize.<a href="#section-7.5-8.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-7.5-8">The manifest <span class="bcp14">MUST NOT</span> embed Mission lifecycle state: three independent
+<p id="section-7.5-9">The manifest <span class="bcp14">MUST NOT</span> embed Mission lifecycle state: three independent
 values govern reliance, and conflating them is the common
 implementation error. <code>policy_view_id</code> is the content identity of the
 compiled authority and the cache key. A <code>mission_state_version</code>, where
@@ -3334,7 +3337,7 @@ content hash, any change to the manifest yields a new <code>policy_view_id</code
 so equality on <code>policy_view_id</code> is the cache identity; it is never the
 freshness test. This document defines no second canonicalization and
 no policy-language wire form for <code>policy_ir</code> or the engine-native
-artifact.<a href="#section-7.5-8" class="pilcrow">¶</a></p>
+artifact.<a href="#section-7.5-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="semantic-evaluators">
@@ -3420,15 +3423,28 @@ issuance profile's rules;<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
           <p id="section-8-2.5.1">exactly which fields enter the <code>parameter_digest</code>;<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.6">
-          <p id="section-8-2.6.1">whether a single-use decision identifier is required (versus a
-validity window plus idempotency key);<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.6.1">digest test vectors for the operation, each carrying the operation
+input before normalization, the exact normalized parameter value,
+the exact JCS UTF-8 serialization (or an unambiguous byte
+representation of it, such as UTF-8 hex), and the resulting
+prefixed digest; at least one vector <span class="bcp14">MUST</span> exercise a normalization
+rule that materially changes the input (default insertion, an
+omitted optional field, set-like array treatment, or another
+operation-specific rule), and at least one conformance case <span class="bcp14">MUST</span>
+present changed parameters that fail the digest match, so
+normalization drift between the PDP and the executing PEP surfaces
+at profile adoption rather than as a fail-closed outage;<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.7">
-          <p id="section-8-2.7.1">whether an execution lease is required; and<a href="#section-8-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.7.1">whether a single-use decision identifier is required (versus a
+validity window plus idempotency key);<a href="#section-8-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.8">
-          <p id="section-8-2.8.1">the evidence fields the decision and execution records carry for the
-operation.<a href="#section-8-2.8.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.8.1">whether an execution lease is required; and<a href="#section-8-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.9">
+          <p id="section-8-2.9.1">the evidence fields the decision and execution records carry for the
+operation.<a href="#section-8-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-8-3">The rules below are the normative requirements the Operation Profile
@@ -3464,7 +3480,12 @@ padding, SHA-256 <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span>
 the normalized parameter object. It <span class="bcp14">MUST</span> be computed under the same
 canonicalization rules the issuance profile defines (duplicate
 member rejection, significant array order, byte-for-byte URI
-comparison); this document does not define a second canonicalization.<a href="#section-8.1-2.1.1" class="pilcrow">¶</a></p>
+comparison); this document does not define a second canonicalization.
+It is a canonical-object digest under the substrate's default
+commitment construction, which this document imports normatively
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>): the I-JSON
+requirement and the reject-unknown-prefix rule apply to computing
+and verifying it unchanged.<a href="#section-8.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.1-2.2">
             <p id="section-8.1-2.2.1">Every parameter that influences the action's external effect (for
