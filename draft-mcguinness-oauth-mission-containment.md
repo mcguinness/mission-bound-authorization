@@ -28,6 +28,7 @@ author:
 
 normative:
   RFC3339:
+  RFC6838:
   RFC7519:
   RFC8259:
   RFC8785:
@@ -627,11 +628,16 @@ At the token endpoint the denial uses the issuance profile's error
 vocabulary for a request outside the derivable authority and MAY
 additionally carry `authority_contained` in the shared
 `mission_denial_reason` member the expansion profile registers
-({{I-D.draft-mcguinness-oauth-mission-expansion}}). A runtime
-enforcement deployment carries it as a denial-reason identifier
-alongside the classification set of
-{{I-D.draft-mcguinness-mission-authzen}}. A consumer MUST treat an
-unrecognized reason code as a denial with no further semantics.
+({{I-D.draft-mcguinness-oauth-mission-expansion}}); this document
+requests that value's registration in the Mission Denial Reasons
+registry that member carries ({{iana}}).
+A runtime enforcement deployment separately carries it as a
+denial-reason identifier alongside the classification set of
+{{I-D.draft-mcguinness-mission-authzen}}, a distinct
+specification-defined value space the registry does not cover: the
+shared spelling is a coincidence, not a shared registration. A
+consumer MUST treat an unrecognized reason code as a denial with no
+further semantics.
 
 Consistent with the expansion profile, the classification of a denial
 as expansion-eligible belongs to the component that denies the
@@ -819,9 +825,8 @@ Example:
 
 A Containment Evidence object's canonical bytes are its JCS
 {{RFC8785}} canonicalization, and its type identifier is
-`application/mission-containment-evidence+json`, used by local
-agreement pending registration. An audit or transparency profile
-registers the object by these values.
+`application/mission-containment-evidence+json`, registered by this
+document ({{iana}}).
 
 # Protected Event Receipt {#protected-event-receipt}
 
@@ -897,11 +902,9 @@ Example, a rejected report:
 
 A Protected Event Receipt's canonical bytes are its JCS {{RFC8785}}
 canonicalization, and its type identifier is
-`application/mission-protected-event-receipt+json`, used by local
-agreement pending registration, mirroring the Child and Discovery
-Evidence registration conventions
-({{I-D.draft-mcguinness-mission-audit}}). An audit or transparency
-profile registers the object by these values.
+`application/mission-protected-event-receipt+json`, registered by this
+document ({{iana}}), mirroring the Child and Discovery Evidence
+registration conventions ({{I-D.draft-mcguinness-mission-audit}}).
 
 An `applied` receipt's `event_id` correlates it to the Containment
 Evidence object the same event produced ({{evidence-object}}); a
@@ -1024,7 +1027,7 @@ under the same rule.
 
 # IANA Considerations {#iana}
 
-This document requires no IANA action.
+This document registers two media types.
 
 The `containment_version` member and any containment annotation ride
 surfaces whose defining profile establishes no per-member registry
@@ -1033,20 +1036,70 @@ introspection Mission projection,
 {{I-D.draft-mcguinness-oauth-mission-status}}); consistent with those
 surfaces' rules, a consumer ignores an unrecognized member.
 
-`authority_contained` extends, by specification, the closed set of
-reason codes carried in the shared `mission_denial_reason` member;
-that member's registrations are the expansion profile's, and this
-document creates no registry for the codes, consistent with that
-profile's plan for a future shared "Mission Denial Reason" registry
-({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+This document requests registration of `authority_contained` in the
+Mission Denial Reasons registry the expansion profile establishes
+({{I-D.draft-mcguinness-oauth-mission-expansion}}), with its semantics
+as defined in this document and Reference this document: it rides the
+shared `mission_denial_reason` member that registry covers. The same string
+also names a denial-reason identifier in the AuthZEN decision-context
+classification set
+({{I-D.draft-mcguinness-mission-authzen}}); that is a separate
+specification-defined value space this document does not register
+into, and the shared spelling implies no shared registration.
 
-The Containment Evidence type identifier
-`application/mission-containment-evidence+json` is used by local
-agreement pending registration ({{evidence-canonical}}).
+## Media Type Registration
 
-The Protected Event Receipt type identifier
-`application/mission-protected-event-receipt+json` is used by local
-agreement pending registration ({{protected-event-receipt}}).
+This document registers two media types per {{RFC6838}}.
+
+### Containment Evidence Media Type
+
+- Type name: application
+- Subtype name: mission-containment-evidence+json
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; JSON encoded in UTF-8
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
+- Published specification: this document
+- Applications that use this media type: Mission containment
+  deployments
+- Fragment identifier considerations: same as for `application/json`
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): `.json`
+  - Macintosh file type code(s): TEXT
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
+
+### Protected Event Receipt Media Type
+
+- Type name: application
+- Subtype name: mission-protected-event-receipt+json
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; JSON encoded in UTF-8
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
+- Published specification: this document
+- Applications that use this media type: Mission containment
+  deployments
+- Fragment identifier considerations: same as for `application/json`
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): `.json`
+  - Macintosh file type code(s): TEXT
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
 
 # Acknowledgments
 {:numbered="false"}

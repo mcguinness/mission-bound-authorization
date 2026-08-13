@@ -127,6 +127,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-authzen:
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-template:
+    title: "Mission Template for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -1109,7 +1125,11 @@ collision-resistant `typ` convention, and whose committed value is
 the object below: the anchor envelope is canonicalized with JCS
 {{RFC8785}}, hashed with SHA-256, and encoded as `sha-256:` followed
 by the base64url, no-padding, encoding of the digest, exactly as for
-the profile's other anchors.
+the profile's other anchors. As a JCS commitment-envelope `typ`,
+`mission-creation-fingerprint` names a hash domain, not a
+representation crossing a protocol boundary, and is deliberately not a
+media type ({{I-D.draft-mcguinness-oauth-mission}}, Section "Namespace
+Taxonomy").
 
 The fingerprint object carries exactly these members:
 
@@ -1280,7 +1300,8 @@ untouched. Such a denial surfaces per the completion mode
 derive a valid Authority Set from), as the deferred substrate's
 `access_denied` resolution on a deferred poll, or through the
 interactive approval's own decline path. It MAY additionally carry one
-machine-readable reason code from the closed set below:
+machine-readable reason code from the Mission Denial Reasons registry
+({{iana-denial-reasons}}); this document defines four:
 
 `out_of_policy`:
 : The Mission Issuer's governance policy refuses the requested
@@ -1304,11 +1325,16 @@ machine-readable reason code from the closed set below:
   predecessor, so an expansion response is never ambiguously a
   non-successor.
 
-A companion profile MAY extend this set by specification (the
-experimental progressive authorization companion defines
-`out_of_ceiling`, {{I-D.draft-mcguinness-oauth-mission-progressive}});
-a consumer MUST treat an unrecognized reason code as a denial with no
-further semantics.
+A companion profile registers an extension to this set in the Mission
+Denial Reasons registry ({{iana-denial-reasons}}) rather than defining
+it here (for example, the experimental progressive authorization
+companion registers `out_of_ceiling`,
+{{I-D.draft-mcguinness-oauth-mission-progressive}}, and the
+experimental template dispatch companion registers
+`out_of_template_ceiling` and `dispatch_prohibited_class`,
+{{I-D.draft-mcguinness-oauth-mission-template}}); a consumer MUST
+treat an unrecognized reason code as a denial with no further
+semantics.
 
 A Mission Issuer MUST NOT use a reason code to disclose policy
 boundaries beyond the adjudicated request ({{policy-probing}});
@@ -1671,19 +1697,93 @@ object for which the issuance profile establishes no member registry.
 No new claim, parameter, or token-introspection registration is
 required for the lineage link.
 
-This document defines two closed sets of symbolic codes, the expansion
-reconciliation status codes ({{reconciliation}}), conveyed in
+This document defines two sets of symbolic codes: the expansion
+reconciliation status codes ({{reconciliation}}), a closed set
+conveyed in
 `mission_expansion_status`, and the expansion denial reasons
 ({{denial-reasons}}), conveyed in the shared `mission_denial_reason`
 member. As members of the OAuth error response JSON body at the token
 endpoint, both are namespaced to their error responses and require no
 registration; their authorization error response parameter forms, used
-on the retained interactive path, are registered below. This document
-creates no registry for the codes: the closed sets are small and fully
-specified in their defining specifications. Should interoperable
-extension prove necessary, a future revision can create a "Mission
-Expansion Reconciliation Status" registry and a shared "Mission Denial
-Reason" registry with a Specification Required {{RFC8126}} policy.
+on the retained interactive path, are registered below.
+
+The reconciliation status codes remain specification-defined: the
+closed set is small and fully specified in {{reconciliation}}. A future
+revision MAY establish a "Mission Expansion Reconciliation Status"
+registry for it with a Specification Required {{RFC8126}} policy; until
+then this document is the value space.
+
+The denial reasons are registry-backed: this document establishes the
+Mission Denial Reasons registry ({{iana-denial-reasons}}), the one
+registry-backed carrier for adjudication-denial values across the
+family, seeds it with the four values it defines, and each further
+document that defines a value on the carrier requests its own
+registration in it.
+
+## Mission Lifecycle States Registration {#iana-lifecycle-registration}
+
+This document requests registration of one state in the issuance
+profile's Mission Lifecycle States registry
+({{I-D.draft-mcguinness-oauth-mission}}), under that registry's
+Specification Required policy:
+
+| Value | Terminal | Semantics | Change Controller | Reference |
+|---|---|---|---|---|
+| `superseded` | yes | A predecessor Mission that a successor has replaced through a replacement expansion; terminal and non-active. | IETF | this document, {{superseded-state}} |
+
+## Mission Denial Reasons Registry {#iana-denial-reasons}
+
+IANA is requested to create the "Mission Denial Reasons" registry.
+The registration policy is Specification
+Required {{RFC8126}}. A Designated Expert reviews a submission for the
+discipline {{denial-reasons}} requires: a `Value` matching
+`^[a-z][a-z0-9_]*$` not already registered, a `Semantics` sentence
+precise enough that a consumer can tell the denial from every other
+registered value, and a `Reference` that fixes which specification
+defines it. Registration does not require IETF review or a Standards
+Track document; a Specification Required reference that a Designated
+Expert can review against these criteria suffices.
+
+The registry covers values of the `mission_denial_reason` parameter
+only ({{denial-reasons}}); the Resource Server `WWW-Authenticate`
+`mission_denial` attribute
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Resource Server
+Enforcement") and AuthZEN decision-context denial reasons
+({{I-D.draft-mcguinness-mission-authzen}}) are separate
+specification-defined value spaces, outside this registry's scope. A
+companion that adds a denial value states whether it adds a row to
+this carrier's registry or defines a value in a separate space; a
+shared spelling across carriers is a coincidence, never shared
+semantics, unless the defining documents state the mapping.
+
+A consumer MUST treat an unrecognized value as a denial with no further
+semantics ({{denial-reasons}}). A Designated Expert MUST reject a
+registration whose governing specification attempts to redefine this
+interaction rather than adding a value bound by it.
+
+Each registration records:
+
+- **Value**: the `mission_denial_reason` symbolic string.
+- **Semantics**: one sentence stating what the denial means.
+- **Change Controller**: IETF, or the registrant for any other
+  registration.
+- **Reference**: the specification defining the value.
+
+This document seeds the registry with the values it defines
+({{denial-reasons}}):
+
+| Value | Semantics | Change Controller | Reference |
+|---|---|---|---|
+| `out_of_policy` | The Mission Issuer's governance policy refuses the requested authority class for this Mission, independent of who approves. | IETF | this document, {{denial-reasons}} |
+| `approver_rejected` | The Approver declined the expansion at the consent step. | IETF | this document, {{denial-reasons}} |
+| `out_of_scope_for_purpose` | The requested authority is incompatible with the Mission's recorded `purpose`. | IETF | this document, {{denial-reasons}} |
+| `nothing_to_expand` | The derived requested authority is a subset of the predecessor's own effective Authority Set, so there is nothing to expand. | IETF | this document, {{denial-reasons}} |
+
+Each further document that defines a value on this carrier requests
+that value's registration in its own IANA considerations, carrying its
+Internet-Draft reference as a publication dependency under this
+registry's policy until it is published; Specification Required does
+not require Standards Track maturity of the registrant.
 
 The expansion request is an {{RFC8693}} token exchange carrying the
 already-registered `mission_intent` request parameter and the

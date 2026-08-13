@@ -862,10 +862,11 @@ action. Following the restraint of the sibling profiles:
   carried inside the already-open `mission` claim and needs no separate
   registration;
 - `out_of_template_ceiling` and `dispatch_prohibited_class` are
-  specification-defined values of the shared `mission_denial_reason`
-  member the expansion profile established
-  ({{I-D.draft-mcguinness-oauth-mission-expansion}}), not a new
-  registry; and
+  requested as registrations in the expansion profile's
+  Mission Denial Reasons registry
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}), each with its
+  semantics as defined in this document and Reference this document;
+  and
 - the Mission Template's type identifier,
   `application/mission-template+json`, is used by local agreement
   pending registration; an audit or transparency profile registers the
