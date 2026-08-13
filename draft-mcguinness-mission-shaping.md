@@ -552,7 +552,7 @@ and is never an input authority derives from.
 |---|---|---|
 | `goal` | Concise user-readable summary in the form the Approver sees at consent; preserve the user's framing so the disclosure matches their understanding. | SHOULD NOT quote verbatim prompt text that contains instructions or commands ({{prompt-injection}}). |
 | `resources` | Enumerate, as absolute URIs, the resources, datasets, tools, or domains the prompt referenced; record any human-readable label as an audit annotation in Shaping Evidence, not as the `resources` value. | SHOULD NOT widen beyond what the prompt referenced; "for convenience" enlarges approved authority. |
-| `constraints` | Free-text bounds the user expressed plus deployment-policy bounds always applied, so the Approver sees the full bound set. The Mission Issuer derives any structured constraint from these. | SHOULD NOT silently drop a user-expressed bound; record it in `constraints` or in Shaping Evidence, or clarify or refuse instead. |
+| `constraints` | Free-text bounds the user expressed plus deployment-policy bounds always applied, so the Approver sees the full bound set. Where a bound is machine-enforceable, the shaper also emits it as a structured constraint on the authority proposal; the Mission Issuer never parses the prose ({{I-D.draft-mcguinness-oauth-mission}}). | SHOULD NOT silently drop a user-expressed bound; record it in `constraints` or in Shaping Evidence, or clarify or refuse instead. |
 | `success_criteria` | Free-text observable outcomes that indicate the task is complete, phrased for the Approver. Disclosure and audit material only. | SHOULD NOT encode authority here; `success_criteria` carries no machine semantics in the issuance profile. |
 | `expires_at` | The smallest ceiling that lets the task complete; if the prompt names no bound, apply a conservative deployment default. | Don't request the maximum the Mission Issuer allows; the Issuer MAY narrow further. |
 | `purpose` | If the client has registered purposes, select the closest registered URI. | SHOULD NOT invent a new `purpose` URI. |
@@ -845,9 +845,12 @@ shaper, validates it, narrows it to policy, and derives the concrete
 Authority Set the agent will be bound to: a `mission_resource_access`
 entry for `https://erp.example.com` with `invoices.read` constrained to
 the 2026-Q3 period and the acme-corp tenant, and `journal-entries.write`
-constrained to a `max_amount` of 500.00 USD. The shaper's free-text
-`constraints` informed that derivation but granted nothing; the
-invariants (period, amount, tenant) are what bound an open-ended task
+constrained to a `max_amount` of 500.00 USD, each a narrowing of a
+structured entry the shaper proposed. The shaper translated the user's
+words into those structured constraints before admission; the Issuer
+never parses the free-text `constraints`, which disclose the same
+bounds to the Approver and granted nothing. The invariants (period,
+amount, tenant) are what bound an open-ended task
 whose individual invoices were unknown when the goal was written. Had
 the request been ambiguous about which entity's invoices, the shaper
 would have asked `alice` rather than guess ({{clarifications}}).

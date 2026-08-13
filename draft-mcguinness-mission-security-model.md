@@ -821,9 +821,11 @@ Compromised or injected agent acts beyond its task:
   authority the agent legitimately holds.
 
 Prompt injection tries to widen authority:
-: Addressed by the same approval-time commitment: `purpose` and
-  `success_criteria` are inert, and `goal` shapes authority only through
-  the pre-approval derivation the Approver consents to. Residual:
+: Addressed by the same approval-time commitment: the Intent's prose
+  members (`goal`, `constraints`, `success_criteria`) are inert at
+  derivation, never parsed for machine semantics; authority enters as
+  the structured proposal the AS only narrows, and the Approver
+  consents to the derived result ({{I-D.draft-mcguinness-oauth-mission}}). Residual:
   injected text can still drive actions already in scope.
 
 Agent escalates through the request path (expansion, requestable denial,
