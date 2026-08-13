@@ -1333,7 +1333,10 @@ The PEP, or the client acting for it, POSTs a JSON object:
 
 `token_sha256`:
 : A string. The unpadded base64url SHA-256 digest of the access
-  token's ASCII bytes.
+  token's ASCII bytes. This is a raw-octet digest deliberately
+  outside the issuance profile's prefixed encoded form: the member
+  name fixes the algorithm, and a successor algorithm enters as a
+  new member, never by reinterpreting this one.
 
 `token_jkt`:
 : A string. The JWK thumbprint {{RFC7638}}, using SHA-256, of the

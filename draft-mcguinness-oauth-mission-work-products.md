@@ -450,7 +450,9 @@ artifact_digest:
   How an artifact is serialized to those octets is the producer's
   concern; this document defines no artifact serialization and does not
   canonicalize the artifact. The producer and consumer MUST agree on the
-  exact bytes so that both compute the same digest.
+  exact bytes so that both compute the same digest. It is a raw-octet
+  digest under the issuance profile's commitment mechanisms, which
+  this document imports normatively.
 
 provenance_digest:
 : REQUIRED. The predicate anchor. It binds the sealed provenance object
@@ -474,6 +476,8 @@ provenance_digest:
   document defines under the collision-resistant-name rule of
   {{I-D.draft-mcguinness-oauth-mission}}; that document defines no
   registry of such values and none is registered here.
+  `provenance_digest` is an envelope anchor under the same commitment
+  mechanisms.
 
 The binding MAY carry other standard JWT {{RFC7519}} claims, such as
 `iat`; they do not affect either digest.
@@ -494,9 +498,10 @@ and the binding verifies in this order:
    `mediator.id` MUST differ from the provenance object's `producer`.
    Reject on any mismatch.
 4. Recompute `artifact_digest` over the received artifact octets and
-   reject unless it matches. A receiver MUST reject an `artifact_digest`
-   whose algorithm prefix it does not recognize and MUST NOT treat an
-   unrecognized prefix as `sha-256`.
+   reject unless it matches. An unrecognized algorithm prefix is
+   rejected under the imported unrecognized-prefix rule
+   ({{I-D.draft-mcguinness-oauth-mission}}), never treated as
+   `sha-256`.
 5. Recompute `provenance_digest` over the JCS envelope of the received
    provenance object as above, using the binding's `iss`, and reject
    unless it matches. Apply the same unrecognized-prefix rule.

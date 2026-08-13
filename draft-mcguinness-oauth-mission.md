@@ -2276,13 +2276,13 @@ Test vectors for the anchors are provided in {{test-vectors}}.
 
 ## Commitment Mechanisms {#commitment-mechanisms}
 
-This family commits to bytes in three ways, and every commitment a
-document in this family defines classifies itself as one of these
-species:
+This family commits to bytes in three ways, and a specification
+defining a commitment classifies it as one of these species:
 
 - **Envelope anchor**: the domain-separated, issuer-bound envelope of
   {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
-  `authority_hash`, and the companion-defined `typ` values).
+  `authority_hash`, and commitments produced with companion-defined
+  `typ` values).
 - **Canonical-object digest**: `sha-256:` over the JCS serialization
   of a normalized JSON object without the envelope, where protocol
   context already fixes what is committed (for example, a runtime
@@ -2296,14 +2296,24 @@ I-JSON rule binds the two JSON species. The envelope and `typ`
 discipline of {{integrity-anchors}} binds envelope anchors alone.
 
 Every committed JSON value, and the envelope around it, MUST satisfy
-I-JSON {{RFC7493}}. The party computing or verifying a commitment
-MUST reject non-conformant input before canonicalization: duplicate
-member names ({{canonicalization}}), numbers outside the range JCS
-serializes exactly, and strings that are not Unicode-valid (unpaired
-surrogates). The security considerations of {{RFC8785}} apply to
-every JCS computation. Common Constraints already carry numeric
-quantities as decimal strings ({{common-constraints}}); that
-stricter convention for constraint values is unchanged.
+I-JSON {{RFC7493}}, and the party computing or verifying a
+commitment MUST reject non-conformant input before canonicalization:
+
+- objects carry no duplicate member names ({{canonicalization}});
+- string data is valid Unicode, free of the surrogate and
+  noncharacter code points I-JSON prohibits, and is preserved
+  unchanged; and
+- number data supplied to JCS is representable as a finite IEEE 754
+  binary64 value ({{RFC8785}}, Section 3.1).
+
+The commitment is over the parsed I-JSON data value, not the source
+text: JCS serializes the parsed binary64 value deterministically and
+does not preserve a source lexeme's spelling or excess precision. A
+profile whose values need exact decimal or large-integer semantics
+carries them as strings or defines a stricter numeric domain, as
+Common Constraints already does for constraint values
+({{common-constraints}}). The security considerations of {{RFC8785}}
+apply to every JCS computation.
 
 The algorithm prefix is the agility mechanism. `sha-256` is
 mandatory to implement and the only algorithm this family defines. A
@@ -2313,17 +2323,20 @@ Hash Algorithm Registry ({{RFC6920}}); this document defines no
 negotiation. A verifier MUST reject a digest whose algorithm prefix
 it does not recognize and MUST NOT treat an unrecognized prefix as
 `sha-256`, so an algorithm added later cannot be exploited as a
-downgrade. These rules bind every prefixed digest defined by this
-document or by a document that cites this section, whichever species
-it is.
+downgrade. These rules bind a prefixed digest when its defining
+specification classifies it under this taxonomy and imports this
+section normatively, whichever species it is: this document so
+classifies its three anchors, and each family companion classifies
+the digests it defines.
 
-During an algorithm transition a record MAY carry parallel
-commitments over the same bytes under the old and new prefixes. A
-verifier verifies every commitment whose prefix it recognizes,
-rejects on a mismatch in any commitment it recognizes, and rejects
-when it recognizes none. This sketch is informative; a specification
-that introduces a new prefix defines its transition behavior
-normatively.
+This document defines no transition mechanism: every commitment a
+current carrier defines is a single prefixed string, and no carrier
+defines a location for a second one. A specification that introduces
+a new prefix MUST define the carrier and schema of any parallel
+commitment, the binding that proves the old and new values commit to
+the same object, producer behavior during the transition, verifier
+selection and downgrade behavior when recognition sets differ, and
+the transition procedure itself.
 
 # Mission Record {#mission-record}
 

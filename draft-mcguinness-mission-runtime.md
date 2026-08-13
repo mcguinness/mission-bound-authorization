@@ -1648,6 +1648,10 @@ SHA-256(JCS({
 }))
 ~~~
 
+`policy_view_id` is an envelope anchor under the issuance profile's
+commitment mechanisms, which this document imports normatively
+({{I-D.draft-mcguinness-oauth-mission}}).
+
 The committed manifest MUST carry:
 
 - `mission_id` and `authority_hash`: the Mission's identifier and
@@ -1742,10 +1746,17 @@ implementers of the same operation bind the same bytes:
 - set-like array handling and any other canonicalization beyond the
   issuance profile's rules;
 - exactly which fields enter the `parameter_digest`;
-- at least one digest test vector for the operation: a normalized
-  parameter object and its `parameter_digest`, so normalization
-  drift between the PDP and the executing PEP surfaces at profile
-  adoption rather than as a fail-closed outage;
+- digest test vectors for the operation, each carrying the operation
+  input before normalization, the exact normalized parameter value,
+  the exact JCS UTF-8 serialization (or an unambiguous byte
+  representation of it, such as UTF-8 hex), and the resulting
+  prefixed digest; at least one vector MUST exercise a normalization
+  rule that materially changes the input (default insertion, an
+  omitted optional field, set-like array treatment, or another
+  operation-specific rule), and at least one conformance case MUST
+  present changed parameters that fail the digest match, so
+  normalization drift between the PDP and the executing PEP surfaces
+  at profile adoption rather than as a fail-closed outage;
 - whether a single-use decision identifier is required (versus a
   validity window plus idempotency key);
 - whether an execution lease is required; and

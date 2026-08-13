@@ -217,7 +217,12 @@ human-approved expansion
 This document uses:
 
 - Mission, Authority Set, Mission Issuer, the subset rule, and the
-  integrity anchors as the core defines them;
+  integrity anchors as the core defines them, and imports the core's
+  commitment mechanisms normatively: of the digests this document
+  defines, `resource_metadata_digest` and
+  `resource_declaration_digest` are raw-octet digests over exact
+  retrieved bytes, and `ceiling_entry_digest` is a canonical-object
+  digest over the entry drawn against;
 - the authority ceiling, drawdown policy, and in-ceiling expansion
   as the progressive profile defines them
   ({{I-D.draft-mcguinness-oauth-mission-progressive}});

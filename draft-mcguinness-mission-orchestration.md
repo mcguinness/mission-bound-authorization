@@ -407,7 +407,9 @@ The `unwind_plan_hash` over the step's unwind plan MUST be durably
 recorded strictly before the step's dispatch. The hash is computed
 with the integrity-anchor envelope of the issuance profile
 ({{I-D.draft-mcguinness-oauth-mission}}) under a new `typ` value
-`mission-unwind-plan`, where `value` is the unwind plan object.
+`mission-unwind-plan`, where `value` is the unwind plan object. It
+is an envelope anchor under the issuance profile's commitment
+mechanisms, which this document imports normatively.
 
 The commit procedure is:
 

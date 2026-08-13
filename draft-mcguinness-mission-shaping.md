@@ -705,7 +705,9 @@ following members are RECOMMENDED content.
   exclusion ruleset applied. The auditor recomputes the digest over
   the retained canonical input under that ruleset. A digest whose
   exclusion set is not recorded cannot be reproduced and so is not a
-  sound `input_digest`.
+  sound `input_digest`. It is a canonical-object digest under the
+  issuance profile's commitment mechanisms, which this document
+  imports normatively.
 
 `user_supplied_facts`:
 : Facts copied from the request.
@@ -756,7 +758,9 @@ can cite how the proposal was produced. When it does,
 
 Hashing the bare object would omit the `typ` domain separation and
 `iss` binding the integrity-anchor construction exists to provide. The
-hash is an audit commitment only.
+hash is an envelope anchor under the issuance profile's commitment
+mechanisms, which this document imports normatively, and is an audit
+commitment only.
 
 Because the shaper is client-side and MAY build a proposal before the
 target Mission Issuer is selected, the `iss` binding requires that

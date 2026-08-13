@@ -270,7 +270,10 @@ document does not define a second canonicalization.
 "SHA-256" refers to {{RFC6234}}. A digest is encoded in the
 integrity-anchor encoded form of
 {{I-D.draft-mcguinness-oauth-mission}}: `sha-256:` followed by the
-base64url, no-padding encoding of the digest.
+base64url, no-padding encoding of the digest. The canonical
+projections of {{projections}} are canonical-object digests under
+the issuance profile's commitment mechanisms, which this document
+imports normatively.
 
 The terms Policy Enforcement Point (PEP), Policy Decision Point (PDP),
 consequential action, Resource policy, decision, Mission state source,

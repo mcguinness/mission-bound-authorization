@@ -350,6 +350,9 @@ computed with the issuance profile's integrity-anchor envelope
   the integrity-anchor envelope requires, so member order follows that
   canonicalization.
 
+It is an envelope anchor under the issuance profile's commitment
+mechanisms, which this document imports normatively.
+
 `template_hash` is to the template what `authority_hash` is to a
 Mission's Authority Set: the anchor over the consented object. It plays
 the same role the progressive profile's `ceiling_hash` plays for a

@@ -149,7 +149,11 @@ this document does not define a second canonicalization.
 A digest is encoded in the integrity-anchor encoded form of
 {{I-D.draft-mcguinness-oauth-mission}}: the `sha-256:` prefix
 followed by the base64url, no-padding encoding of the digest. This
-document defines no digest algorithm of its own.
+document defines no digest algorithm of its own. Its two digests are
+classified under the issuance profile's commitment mechanisms, which
+this document imports normatively: `approval_policy.digest` is an
+envelope anchor, and the record digest ({{envelope}}) is a
+canonical-object digest.
 
 The terms Mission, Mission Issuer, Approver, approval event,
 `approval_event_id`, `intent_hash`, and `authority_hash` are used as

@@ -575,6 +575,11 @@ JCS-canonicalized {{RFC8785}}:
 - `issued_at` (string, required): an RFC 3339 {{RFC3339}} date-time at
   which the token was issued.
 
+`entries_digest` is an envelope anchor and `token_digest` a
+raw-octet digest under the issuance profile's commitment mechanisms,
+which this document imports normatively
+({{I-D.draft-mcguinness-oauth-mission}}).
+
 Its media type is `application/mission-derivation-record+json`
 ({{iana}}), and its authoritative producer is the `issuer`: the Signed
 Statement's `iss` MUST equal the Mission `issuer`

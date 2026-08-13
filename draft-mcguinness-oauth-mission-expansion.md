@@ -1109,7 +1109,9 @@ collision-resistant `typ` convention, and whose committed value is
 the object below: the anchor envelope is canonicalized with JCS
 {{RFC8785}}, hashed with SHA-256, and encoded as `sha-256:` followed
 by the base64url, no-padding, encoding of the digest, exactly as for
-the profile's other anchors.
+the profile's other anchors. It is an envelope anchor under the
+issuance profile's commitment mechanisms, which this document
+imports normatively.
 
 The fingerprint object carries exactly these members:
 
