@@ -2969,6 +2969,34 @@ approved set. That subset relationship is an assertion by the AS,
 authenticated by the token signature, and depends on the AS applying
 the subset rule correctly.
 
+A worked contrast, using the two-entry Authority Set of the test
+vectors ({{test-vectors}}), shows what each party can verify. A
+single-audience token carries one narrowed entry:
+`journal-entries.write` with the approved `max_amount` of `500.00`
+USD tightened to `250.00`. The Resource Server verifies the token
+signature and `cnf`, checks `aud`, enforces the carried entry,
+checks the anchor's algorithm prefix ({{integrity-anchors}}), and
+logs the `mission` claim for correlation. It cannot recompute
+`authority_hash`: hashing the carried entry digests a one-entry
+array the anchor never committed, and the tightened `max_amount`
+makes the entry a semantic narrowing, not a byte-level member, of
+the approved set. Whether `250.00` sits within the approved ceiling
+is the subset test ({{subset}}), and that test needs the approved
+entry to compare against. A party holding the full Authority Set (a
+Resource Server provisioned with it, or a policy decision point
+holding the Mission record) recomputes the commitment over the held
+two-entry set, matches `mission.authority_hash`, and verifies the
+carried entry as a subset of the held `journal-entries.write` entry:
+containment verified relative to the authenticated committed set.
+For that verification to be independent of the issuer, the
+deployment provisions the set together with its provenance: the full
+Authority Set, the Mission `id` and issuer it belongs to, the
+expected `authority_hash`, and an authenticated approval-time source
+for all three (trusted Mission or consent evidence, or an audit
+commitment recorded before any compromise). Without that pinning, a
+compromised issuer signs a token carrying a replacement set's hash,
+and recomputation confirms the replacement.
+
 Three denials above are byte-identical `403`s to a client, and
 misrouting them turns a step-up into an authority-widening ceremony
 or a fail-closed mismatch into a retry loop. A Mission-aware Resource
@@ -3908,6 +3936,44 @@ enforcing the token's `authorization_details` directly
 ({{mission-bound-tokens}}). It relies on the signed token as the AS's
 assertion that the carried authority was correctly projected from the
 approved set; `authority_hash` supplies no independent subset proof.
+
+This document's flat Authority Set commitment defines no selective
+inclusion-proof mechanism: `authority_hash` digests the complete set
+as a single array ({{integrity-anchors}}), recomputation therefore
+needs the full set, and the baseline defines neither a retrieval
+surface for that set nor a proof format for anything less. Both are
+undefined here, not impossible. Retrieval carries a real privacy and
+authorization burden rather than an architectural prohibition: the
+minimization rules of {{caller-authorization-and-minimization}} keep
+other audiences' entries out of token introspection, so a distinct
+control-plane surface serving a policy decision point, auditor, or
+privileged Resource Server needs authorization at least that strong.
+A selective proof composes with the existing subset rules: a profile
+could commit the approved entries to a structure that supports
+inclusion proofs, prove the approved parent entry against that
+approval-time root, and apply the type-specific subset test
+({{subset}}) between the carried narrowed entry and the disclosed
+parent; the cryptography stays generic, and only the semantic
+comparison is type-owned, the division this document uses
+throughout. Either mechanism is a future profile with privacy,
+commitment, and trust-bootstrap requirements to meet. Under the
+baseline, a deployment that needs assurance independent of the token
+signature provisions the verifying party out of band, the Resource
+Server itself or a policy decision point holding a materialized view
+of the Mission record, and uses the recomputation path of
+{{rs-enforcement}}.
+
+What such verification buys depends on when the issuer is
+compromised. A proof or retrieval response issued under the same
+trust root as the token adds nothing against an issuer malicious at
+approval time: that issuer can approve and commit arbitrary
+authority, and no containment mechanism changes that. The same
+checks do defend against projection implementation errors, against
+corruption of the record after an independently anchored approval
+commitment, and against post-approval signing-key compromise where
+the original commitment is pinned outside the issuer. The pinning is
+what makes the difference; the worked example in {{rs-enforcement}}
+lists what a deployment provisions to get it.
 
 `intent_hash` extends the same protection to the task itself: it
 commits the approved Mission Intent, so an auditor can detect any
