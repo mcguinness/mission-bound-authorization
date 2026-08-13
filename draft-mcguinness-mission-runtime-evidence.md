@@ -1141,6 +1141,28 @@ defined in the Mission Record section of
 {{I-D.draft-mcguinness-oauth-mission}}. Regulated deployments MAY
 require longer retention.
 
+# Evidence Properties {#evidence-properties}
+
+This section is informative: it names the property set the records
+of this document carry for a high-consequence action, so the cluster
+is citable as one anchor. Each property is delivered by machinery
+this document or the runtime profile already defines; this section
+adds no requirement to either.
+
+| Property | Mechanism | Where |
+|---|---|---|
+| Parameter-bound | Evidence produced at execution and cryptographically bound to the authorized parameters: Decision Evidence carries the permit's `parameter_digest`, Execution Evidence carries the authorized and effective digest pair, and action-bound approval links the rendered action to the digest | {{decision-evidence-object}}, {{execution-evidence-object}}, the runtime profile's parameter binding and action-bound approval ({{I-D.draft-mcguinness-mission-runtime}}) |
+| Key-isolated | Each record is signed by the emitter's published key, bound to its scope and audience; where the deployment claims agent-compromise-resistant enforcement, custody places key material with the mediating PEP, inaccessible to the agent | {{decision-evidence-integrity}}, the runtime profile's custody rules ({{I-D.draft-mcguinness-mission-runtime}}) |
+| Session-independent | Verification is anchored in published key sets with retired keys resolvable for the retention window; no verification step consults a live session or the carrying credential, so a record verifies whether that session is active, expired, or absent | {{evidence-integrity-signing-keys}} |
+| Third-party-verifiable | Two tiers: a party with access to the Enforcement Scope Statement's published keys verifies a record independently of the emitting deployment; durable verifiability for a party without that access rides the audit profile's transparency mechanisms, where adopted | {{evidence-integrity-signing-keys}}, {{I-D.draft-mcguinness-mission-audit}} |
+{: title="Evidence properties and the mechanisms that carry them"}
+
+The properties are presented per record class and tier, never as a
+blanket claim: the key-isolated placement holds only under the
+runtime profile's custody rules (base conformance alone does not
+deliver it), and the second verifiability tier holds only where the
+audit profile is adopted.
+
 # Extension Members {#evidence-extensions}
 
 A Decision Evidence Object, Execution Evidence Object, and Refusal
