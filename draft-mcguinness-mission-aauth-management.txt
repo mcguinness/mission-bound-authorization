@@ -518,7 +518,8 @@ Table of Contents
        equivalent serialization mechanism;
 
    3.  if active, atomically commit terminated, terminated_at, the
-       reason, actor, and request_id to the mission log;
+       reason, actor, request_id, and, for superseded, the validated
+       replacement_s256 to the mission log;
 
    4.  make that state visible to every local PS decision and issuance
        path;
