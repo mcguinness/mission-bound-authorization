@@ -639,11 +639,23 @@ Mandate:
    present and well-formed.
 3. **Signature.** Resolve the REQUIRED `kid` in the Mission Issuer's
    published key material ({{mission-substrate}}) and verify the JWS
-   signature. Confirm `mission.issuer` equals `iss`. Reject a Mandate
-   whose `kid` the issuer has published as revoked for compromise,
-   and, where that key carries a compromise time, reject a Mandate
-   whose `iat` is at or after it ({{minting}}); either is the invalid
-   class of {{failures}}.
+   signature. Confirm `mission.issuer` equals `iss`. Where the issuer
+   has published the `kid` as revoked for compromise ({{minting}}),
+   apply this precedence:
+
+   - Where the key carries a compromise time and the Mandate's `iat`
+     is at or after it, reject the Mandate: it asserts
+     post-compromise creation, the invalid class of {{failures}}.
+   - Otherwise, where a Receipt the verifier trusts under the audit
+     transparency profile ({{audit-evidence}}) anchors the Mandate's
+     registration before the compromise time, verification continues:
+     the Receipt establishes pre-compromise existence, and the
+     signature authenticates the content as of that time.
+   - Otherwise, including where the issuer published no compromise
+     time, the Mandate is unverifiable ({{failures}}), never invalid.
+
+   The self-asserted `iat` never establishes the pre-compromise
+   bound; only a Receipt's registration time does.
 4. **Issuer trust.** Decide by local policy or configured trust
    anchors whether the `iss` value names a trusted issuer. A verifier MUST NOT
    trust an issuer merely because it appears inside a signed artifact,
@@ -675,10 +687,12 @@ Mandate:
 
 Where the deployment runs the audit transparency profile, a verifier
 MAY additionally confirm an audit-registration Receipt
-({{audit-evidence}}) before high-consequence reliance; the
-issuer-key-compromise consideration states what this optional
-hardening bounds and what its absence leaves open
-({{security-considerations}}).
+({{audit-evidence}}) before high-consequence reliance, and under a
+key revoked for compromise the Receipt is the only path on which
+verification continues (step 3). Transparency-hardened verification
+({{transparency-hardened}}) makes both sides mandatory; the
+issuer-key-compromise consideration states what the hardening bounds
+and what its absence leaves open ({{security-considerations}}).
 
 ## Failure Taxonomy {#failures}
 
@@ -686,8 +700,9 @@ Verification failures fall into four classes, and a partial
 disclosure into a fifth; a verifier MUST distinguish them:
 
 Invalid:
-: The artifact fails as an artifact: signature, `typ`, a key revoked
-  for compromise or a post-compromise `iat` under step 3, the claim
+: The artifact fails as an artifact: signature, `typ`, a
+  post-compromise `iat` under a compromised key per step 3's
+  precedence, the claim
   structure of step 2, `iss`/`issuer` mismatch, anchor mismatch over a
   full array under step 6 (as distinct from the partial class below),
   or an unrecognized hash prefix under step 8. The Mandate MUST be
@@ -711,8 +726,9 @@ Unverifiable:
   - the issuer's key material is unreachable;
   - the `kid` does not resolve;
   - no trust anchor covers the Mission's issuer; or
-  - the signing key is issuer-flagged as compromised and the
-    Mandate's `iat` is not anchored before the compromise time
+  - the signing key is issuer-flagged as compromised and no trusted
+    Receipt anchors the Mandate before the published compromise time,
+    or no compromise time is published at all
     ({{security-considerations}}).
 
   This is not evidence of tampering, mirroring the audit profile's
@@ -736,6 +752,24 @@ Expired:
   stale, expiry is not cured by a state check: the Mandate MUST NOT
   be relied on as evidence, though expiry is not evidence against
   the facts it states.
+
+## Transparency-Hardened Verification {#transparency-hardened}
+
+Baseline verification is steps 1 through 8: a Mandate's validity
+never depends on transparency infrastructure. A deployment that wants
+the stronger assurance as a claimable property MAY run
+**transparency-hardened Mandate verification**. Under it:
+
+- the Mandate Issuer MUST register every Mandate it mints as Mission
+  evidence at minting ({{audit-evidence}}), so a missing Receipt is
+  itself a signal rather than an unknown; and
+- a Mandate Verifier MUST confirm a Receipt it trusts before
+  high-consequence reliance, and applies the compromised-key
+  precedence of step 3 with the Receipt in hand.
+
+The mode is a deployment property, not an artifact property: a
+Mandate carries no marker for it, and a verifier learns which mode
+governs from deployment configuration ({{conformance}}).
 
 # Mandate Use {#use}
 
@@ -776,7 +810,10 @@ Subject or client. A rail MUST NOT derive authority on possession of a
 Mandate alone. Before minting its vertical artifact, the rail MUST
 independently authenticate the presenter as the Mission's `subject` or
 `client_id` through its own channel, and treat the Mandate only as the
-committed facts that authentication is checked against. Until a
+committed facts that authentication is checked against. That
+authentication is necessary, never sufficient: minting is the rail's
+own authorization decision under its own governance, and neither the
+Mandate nor its presentation substitutes for it. Until a
 holder-bound Mandate is defined ({{non-goals}}), that independent
 authentication is the only binding between the artifact and its
 presenter, and deriving authority without it repeats the
@@ -802,18 +839,29 @@ A Mandate is registrable Mission evidence. For deployments running the
 audit transparency profile ({{I-D.draft-mcguinness-mission-audit}}),
 the Mandate slots into its evidence-type pattern with these values:
 
-- **Canonical bytes**: the JWS Compact Serialization as issued, hashed
-  as-is (an already-signed object is not re-canonicalized).
-- **`payload-preimage-content-type`**: `application/mission-mandate+jwt`
+- **Canonical bytes**: for the plain form, the JWS Compact
+  Serialization as issued, hashed as-is (an already-signed object is
+  not re-canonicalized). For the SD-JWT form, the issuer-signed JWT
+  component as issued, the serialization up to but excluding the
+  first `~` ({{RFC9901}}): a presentation varies by disclosure
+  subset, so only that component has stable bytes. The Receipt then
+  anchors the signature and the disclosure digests it protects, and
+  the disclosed values of any later presentation verify against those
+  anchored commitments through {{RFC9901}} digest processing.
+- **`payload-preimage-content-type`**:
+  `application/mission-mandate+jwt` for the plain form,
+  `application/mission-mandate+sd-jwt` for the SD-JWT form
   ({{iana}}).
 - **Authoritative producer**: the Mission `issuer`; the registering
   `iss` MUST equal it, which holds by construction since a Mandate's
   `iss` is `mission.issuer` ({{conformance}}).
 
-Registration is an optional hardening: verification
+Registration happens once, at minting, independent of any
+presentation. It is an optional hardening: verification
 ({{verification}}) does not require it. It gives a Mandate an
-independent existence proof, which
-bounds a later issuer key compromise ({{security-considerations}}).
+independent existence proof, which bounds a later issuer key
+compromise ({{security-considerations}}); transparency-hardened
+verification makes it mandatory ({{transparency-hardened}}).
 
 # Non-Goals and Deferred Work {#non-goals}
 
@@ -855,7 +903,10 @@ A **Mandate Issuer** MUST:
 
 A Mandate Issuer running the audit transparency profile SHOULD
 register a Mandate as Mission evidence when it feeds
-high-consequence decisions ({{audit-evidence}}).
+high-consequence decisions ({{audit-evidence}}). Under
+transparency-hardened verification ({{transparency-hardened}}),
+registration is not selective: the issuer MUST register every
+Mandate at minting.
 
 A **Mandate Verifier** MUST:
 
@@ -864,8 +915,10 @@ A **Mandate Verifier** MUST:
   as evidence against the artifact;
 - obtain current state within its freshness bound whenever reliance
   requires an active Mission; and
-- never grant access, mint credentials, or widen authority on
-  presentation of a Mandate ({{security-considerations}}).
+- never grant access, mint credentials, or widen authority solely by
+  virtue of presentation of a Mandate; a derived artifact rests on
+  the relying party's own authorization decision
+  ({{vertical-derivation}}, {{security-considerations}}).
 
 # Security Considerations {#security-considerations}
 
@@ -878,9 +931,11 @@ state; accepting it as a credential turns a freely copyable audit
 artifact into a bearer token.
 
 A verifier MUST NOT grant access, mint a credential, or widen any
-authority on presentation of a Mandate. Authority flows only through
-the substrate's issuance surfaces
-({{I-D.draft-mcguinness-oauth-mission}}).
+authority solely by virtue of presentation of a Mandate. Authority
+flows only through the substrate's issuance surfaces
+({{I-D.draft-mcguinness-oauth-mission}}) or, for a derived vertical
+artifact, through the rail's own authorization decision
+({{vertical-derivation}}); the presentation itself never suffices.
 
 This is a deliberate departure from prior art that binds authority to
 a signed artifact's presentation: zcap-ld capabilities, W3C Verifiable
@@ -925,7 +980,8 @@ An issuer that learns a signing key was compromised SHOULD record
 and publish the compromise time. A verifier then treats an
 unregistered Mandate under that `kid` whose `iat` cannot be anchored
 before that time as unverifiable ({{failures}}), never as verified
-evidence.
+evidence; a Mandate whose Receipt anchors it before that time
+continues through step 3's precedence ({{verification}}).
 
 ## Confusion with the Cross-Domain Grant
 

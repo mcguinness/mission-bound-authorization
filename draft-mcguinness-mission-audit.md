@@ -385,7 +385,7 @@ record as part of the Mission's feed.
 | Decision evidence | Decision Evidence object, as issued | `application/mission-decision-evidence+json` | PDP key |
 | Execution evidence | Execution Evidence object, as issued | `application/mission-execution-evidence+json` | PEP key |
 | Refusal Record | Refusal Record object, as issued | `application/mission-refusal-record+json` | PEP key |
-| Mission Mandate | JWS Compact Serialization, as issued | `application/mission-mandate+jwt` | `issuer` |
+| Mission Mandate | plain form: JWS Compact Serialization, as issued; SD-JWT form: issuer-signed JWT component, as issued | `application/mission-mandate+jwt`, else `application/mission-mandate+sd-jwt` | `issuer` |
 | Child Evidence | Child Evidence object (JCS), as the child-delegation profile fixes | `application/mission-child-evidence+json` | `issuer` |
 | Discovery Evidence | Discovery Evidence object (JCS), as the discovery profile fixes | `application/mission-discovery-evidence+json` | `issuer` |
 | Harness Evidence | Harness Evidence object (JCS), as the harness profile fixes | `application/mission-harness-evidence+json` | harness key |
