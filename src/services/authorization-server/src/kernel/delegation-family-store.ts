@@ -89,6 +89,17 @@ export class DelegationFamilyStore {
   }
 
   /**
+   * Invalidate ONE provisional family (its creation rolled back before any
+   * token was issued, e.g. a derivation-gate rejection after the grant was
+   * saved): the row goes terminal so the lineage never resolves.
+   */
+  invalidate(grantId: string): void {
+    this.db
+      .prepare("UPDATE delegation_families SET state = 'terminal' WHERE grant_id = ?")
+      .run(grantId);
+  }
+
+  /**
    * Read accessor: the grant ids of every family for a Mission, in ANY state
    * (ordered by record time), so a caller can drive revocation of each grant
    * even after the families were marked terminal.

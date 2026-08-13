@@ -414,10 +414,14 @@ export async function handleTokenExchangeGrant(
  * stays 1 across N refreshes.
  *
  * @spec continuation#transport-async — retry safety (#485): the exchange REQUIRES
- * `creation_request_id` (expansion#creation-request-id adopted by reference); the
- * reservation commits atomically with the single gateDerivation, and a revalidated
- * retry recovers the operation ({@link recoverAsyncDelegation}) — never a second
- * delegation family, never a second derivation count.
+ * `creation_request_id` (the COMMON idempotency primitives adopted from
+ * expansion#creation-request-id; family delivery/recovery defined by the
+ * continuation profile itself). The reservation is acquired BEFORE any side
+ * effect, the family-created transition commits atomically with the single
+ * gateDerivation, and a revalidated retry recovers the operation
+ * ({@link recoverAsyncDelegation}) — never a second delegation family, never a
+ * second derivation count, and never a sibling refresh token once the initial
+ * one is consumed (consumption proves delivery).
  */
 export async function handleAsyncDelegationExchange(
   opts: AdapterOptions,
@@ -598,14 +602,45 @@ export async function handleAsyncDelegationExchange(
     return;
   }
 
-  // Step 4: the per-delegation Grant (the family artifact). Its rar IS the
-  // confined subset (structural confinement); addResourceScope(target) is
-  // REQUIRED or the refreshed access token's scope filters empty. Record the
-  // family so extraTokenClaims/rotate/ttl recognise it. Created BEFORE the
-  // reservation transaction so a committed operation always references an
-  // existing family (a crash before the transaction leaves only an orphan
-  // grant with no tokens — a retry re-runs the whole creation; nothing was
-  // counted or reserved).
+  // Step 4 (RESERVED): acquire the durable (client, creation_request_id)
+  // reservation BEFORE any side effect. The datastore uniqueness constraint is
+  // the concurrency funnel: a concurrent duplicate loses the INSERT and
+  // re-reads the winner (retryable in-progress, a family-created resume, or
+  // the stored response) — it never creates a second family.
+  const reservation: CreationReservation = {
+    clientId: client.clientId,
+    creationRequestId,
+    op: "async-delegation",
+    fingerprint,
+    cnfJkt: jkt,
+    sourceMissionId: record.id,
+  };
+  try {
+    idem.reserve(reservation);
+  } catch (e) {
+    if (e instanceof UniqueViolationError) {
+      const winner = idem.find(client.clientId, creationRequestId);
+      if (winner) {
+        await recoverAsyncDelegation(opts, provider, ctx, winner, fingerprint, jkt);
+        return;
+      }
+    }
+    throw e;
+  }
+
+  // Step 5 (FAMILY-CREATED): create the per-delegation Grant (its rar IS the
+  // confined subset — structural confinement; addResourceScope(target) is
+  // REQUIRED or the refreshed access token's scope filters empty), record the
+  // family so extraTokenClaims/rotate/ttl recognise it, then record the family
+  // identity on the reservation ATOMICALLY with the single gateDerivation (one
+  // kernel-db transaction). Every later hop (initial mint + refreshes +
+  // resumed delivery) re-gates with gateActive only, so it never recounts.
+  // Crash windows: before this transaction, only the reservation exists (a
+  // retry sees a retryable in-progress result until the tombstone expires; the
+  // token-less grant is inert); after it, a retry finds family-created and
+  // RESUMES delivery of the recorded family. A GateError rolls the count and
+  // the family-created transition back together, invalidates the provisional
+  // family, and records a failed tombstone (the refusal replays).
   const grant = new provider.Grant({ accountId: record.subject.sub, clientId: client.clientId });
   grant.addOIDCScope("payments");
   grant.addResourceScope(target, "payments");
@@ -614,40 +649,16 @@ export async function handleAsyncDelegationExchange(
   }
   const grantId = await grant.save();
   familyStore.record({ grantId, missionId: record.id });
-
-  // Step 5: THE SINGLE family count, ATOMIC with the idempotency reservation
-  // (one kernel-db transaction: reserved -> gateDerivation -> completed; the
-  // datastore uniqueness constraint serializes concurrent duplicates). Every
-  // later hop (initial mint + refreshes + recovery re-mints) re-gates with
-  // gateActive only, so it never recounts. A GateError refusal is recorded as
-  // a `failed` operation so a retry replays the refusal.
-  const reservation: CreationReservation = {
-    clientId: client.clientId,
-    creationRequestId,
-    op: "async-delegation",
-    fingerprint,
-    cnfJkt: jkt,
-    sourceMissionId: record.id,
-    delivery: { grant_id: grantId, target },
-  };
   try {
-    idem.createCompleted(reservation, () => {
+    idem.advanceReserved(client.clientId, creationRequestId, { grant_id: grantId, target }, () => {
       kernel.gateDerivation(record.id);
-      return { missionId: record.id, value: undefined };
     });
   } catch (e) {
-    if (e instanceof UniqueViolationError) {
-      // A concurrent duplicate won the reservation: recover its outcome.
-      const winner = idem.find(client.clientId, creationRequestId);
-      if (winner) {
-        await recoverAsyncDelegation(opts, provider, ctx, winner, fingerprint, jkt);
-        return;
-      }
-      throw e;
-    }
     if (e instanceof GateError) {
+      familyStore.invalidate(grantId);
+      await (grant as unknown as { destroy: () => Promise<void> }).destroy();
       const body = { error: "invalid_grant", error_description: e.message };
-      idem.recordFailure(reservation, { status: 400, body });
+      idem.failReserved(client.clientId, creationRequestId, { status: 400, body });
       ctx.status = 400;
       ctx.body = body;
       ctx.set("cache-control", "no-store");
@@ -656,65 +667,17 @@ export async function handleAsyncDelegationExchange(
     throw e;
   }
 
-  // Step 6: mint the initial access token under the family grant (mirror
-  // mintDeferredToken). TTL clamped to the Mission expires_at (absolute lifetime).
-  // save() fires extraTokenClaims -> family fallback -> gateActive (no double count).
-  const ttlClamp = Math.max(1, Math.floor((Date.parse(active.expires_at) - Date.now()) / 1000));
-  const info = resourceServerInfoFor(target, Math.min(opts.accessTokenTTL ?? 300, ttlClamp));
-  const at = new provider.AccessToken({
-    accountId: record.subject.sub,
-    client,
+  // Steps 6-8 (COMPLETED = delivery): mint the family's initial access +
+  // refresh tokens and complete the operation with the stored response.
+  await deliverAsyncDelegationFamily(opts, provider, ctx, {
+    mission: active,
     grantId,
-    gty: TOKEN_EXCHANGE_GRANT_TYPE,
-    rar: confinedSubset,
-    scope: "payments",
-  });
-  at.resourceServer = newResourceServer(provider, target, info);
-  at.jkt = jkt; // sender-constrain to the DPoP key (tokenType -> DPoP)
-  ctx.oidc.entity("AccessToken", at);
-  const accessToken = await at.save();
-
-  // Step 7: mint the refresh token under the family grant. resource = target keeps
-  // every refreshed access token audienced to the target even when the disconnected
-  // client sends no resource; rar carries the confined subset across rotations. The
-  // jkt MUST be set MANUALLY (setRefreshTokenBindings no-ops for private_key_jwt).
-  const RefreshTokenCtor = (provider as unknown as {
-    RefreshToken: new (props: Record<string, unknown>) => { jkt?: string; save(): Promise<string> };
-  }).RefreshToken;
-  const rt = new RefreshTokenCtor({
-    accountId: record.subject.sub,
-    client,
-    grantId,
-    gty: TOKEN_EXCHANGE_GRANT_TYPE,
-    scope: "payments",
-    rar: confinedSubset,
-    resource: target,
-  });
-  rt.jkt = jkt;
-  const refreshTokenValue = await rt.save();
-
-  // Step 8: RFC 8693-shaped success (200, no-store). The refreshed access tokens are
-  // obtained via ordinary native grant_type=refresh_token (no custom handler).
-  // Credential generation ran AFTER the atomic reservation commit: a crash
-  // between the commit and this response is recovered by the retry finding the
-  // completed operation and resuming DELIVERY (recovery = delivery, never
-  // re-creation). The stored response is the recovery artifact while the
-  // initial refresh token is unissued or unused.
-  const responseBody = {
-    access_token: accessToken,
-    token_type: "DPoP",
-    expires_in: (at as unknown as { expiration: number }).expiration,
-    refresh_token: refreshTokenValue,
-    authorization_details: confinedSubset,
-  };
-  idem.recordDelivery(client.clientId, creationRequestId, {
-    grant_id: grantId,
     target,
-    body: responseBody,
+    tokenRar: confinedSubset,
+    refreshRar: confinedSubset,
+    jkt,
+    creationRequestId,
   });
-  ctx.status = 200;
-  ctx.body = responseBody;
-  ctx.set("cache-control", "no-store");
 }
 
 /** The async-delegation response body stored as the delivery artifact. */
@@ -726,10 +689,90 @@ interface AsyncDelegationResponseBody {
   authorization_details: AuthorityEntry[];
 }
 
+/** The inputs of one async-delegation family delivery (initial or resumed). */
+interface AsyncFamilyDelivery {
+  /** The ACTIVE base Mission record (accountId + absolute-lifetime clamp). */
+  mission: MissionRecord;
+  grantId: string;
+  target: string;
+  /** The authorization the initial access token carries. */
+  tokenRar: AuthorityEntry[];
+  /** The family's structural subset, carried on the refresh token across rotations. */
+  refreshRar: AuthorityEntry[];
+  /** The confirmed key the family is sender-constrained to. */
+  jkt: string;
+  creationRequestId: string;
+}
+
+/**
+ * @spec continuation#transport-async — DELIVER one async-delegation family:
+ * mint the family's initial access token (TTL clamped to the Mission
+ * expires_at; save() fires extraTokenClaims -> family fallback -> gateActive,
+ * no derivation recount) and its initial refresh token (resource = target
+ * keeps every refreshed access token audienced to the target; the jkt MUST be
+ * set MANUALLY — setRefreshTokenBindings no-ops for private_key_jwt), then
+ * mark the operation COMPLETED with the response as the stored delivery
+ * artifact. Shared by the first presentation and by the family-created RESUME
+ * path of {@link recoverAsyncDelegation}.
+ */
+async function deliverAsyncDelegationFamily(
+  opts: AdapterOptions,
+  provider: Provider,
+  ctx: KoaContextWithOIDC,
+  d: AsyncFamilyDelivery,
+): Promise<void> {
+  const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+  const ttlClamp = Math.max(1, Math.floor((Date.parse(d.mission.expires_at) - Date.now()) / 1000));
+  const info = resourceServerInfoFor(d.target, Math.min(opts.accessTokenTTL ?? 300, ttlClamp));
+  const at = new provider.AccessToken({
+    accountId: d.mission.subject.sub,
+    client,
+    grantId: d.grantId,
+    gty: TOKEN_EXCHANGE_GRANT_TYPE,
+    rar: d.tokenRar,
+    scope: "payments",
+  });
+  at.resourceServer = newResourceServer(provider, d.target, info);
+  at.jkt = d.jkt; // sender-constrain to the confirmed key (tokenType -> DPoP)
+  ctx.oidc.entity("AccessToken", at);
+  const accessToken = await at.save();
+  const RefreshTokenCtor = (provider as unknown as {
+    RefreshToken: new (props: Record<string, unknown>) => { jkt?: string; save(): Promise<string> };
+  }).RefreshToken;
+  const rt = new RefreshTokenCtor({
+    accountId: d.mission.subject.sub,
+    client,
+    grantId: d.grantId,
+    gty: TOKEN_EXCHANGE_GRANT_TYPE,
+    scope: "payments",
+    rar: d.refreshRar,
+    resource: d.target,
+  });
+  rt.jkt = d.jkt;
+  const refreshTokenValue = await rt.save();
+  // RFC 8693-shaped success (200, no-store). The refreshed access tokens are
+  // obtained via ordinary native grant_type=refresh_token (no custom handler).
+  const responseBody: AsyncDelegationResponseBody = {
+    access_token: accessToken,
+    token_type: "DPoP",
+    expires_in: (at as unknown as { expiration: number }).expiration,
+    refresh_token: refreshTokenValue,
+    authorization_details: d.tokenRar,
+  };
+  opts.creationIdempotency?.completeDelivered(client.clientId, d.creationRequestId, d.mission.id, {
+    grant_id: d.grantId,
+    target: d.target,
+    body: responseBody,
+  });
+  ctx.status = 200;
+  ctx.body = responseBody;
+  ctx.set("cache-control", "no-store");
+}
+
 /**
  * @spec continuation#transport-async (containment conformance) — project a
  * family grant's issuance-time rar through the Mission's CURRENT effective set
- * (approved minus contained) for a recovery re-mint, exactly as the provider's
+ * (approved minus contained) for a RESUMED delivery, exactly as the provider's
  * rarThroughContainment does for refresh responses. No containment -> the same
  * array (fast path).
  */
@@ -753,18 +796,26 @@ function projectRarThroughEffective(
 
 /**
  * @spec continuation#transport-async — recover a repeated async-delegation
- * exchange. Same contract as {@link recoverChildCreation}/{@link recoverExpansion}:
- * fingerprint match + proof of the RECORDED confirmation key are REQUIRED (a
- * matching identifier never bypasses possession); recovery is DELIVERY, never a
- * second family and never a second derivation count:
- *  - failed    -> the recorded refusal is replayed verbatim;
- *  - completed -> the stored response is returned while the initial refresh
- *                 token is unissued or unused; where it has been consumed or
- *                 has expired, a FRESH refresh token (with a fresh access
- *                 token) is minted WITHIN THE SAME family grant — the family's
- *                 native rotation, an issuance event with issuance accounting
- *                 only (the access-token save re-gates with gateActive via the
- *                 family fallback; the single gateDerivation is never re-run).
+ * exchange. Fingerprint match + proof of the RECORDED confirmation key are
+ * REQUIRED (a matching identifier never bypasses possession); recovery is
+ * DELIVERY of the single recorded family, never a second family and never a
+ * second derivation count:
+ *  - failed         -> the recorded refusal is replayed verbatim;
+ *  - reserved       -> retryable in-progress (no family exists yet);
+ *  - family-created -> RESUME delivery: the recorded family's initial tokens
+ *                      are issued and the operation completes (the crash
+ *                      window between the family-created transition and the
+ *                      response);
+ *  - completed      -> the stored response is returned while the initial
+ *                      refresh token is unissued or unconsumed. Consumption
+ *                      PROVES delivery (the client held the response and
+ *                      rotated on it), so once it is consumed — or gone:
+ *                      expired, or wiped by reuse detection — creation
+ *                      recovery is REFUSED and the caller continues on the
+ *                      family's current refresh token. A rotating
+ *                      refresh-token family is a single lineage; recovery
+ *                      never mints an independent sibling refresh token into
+ *                      it.
  */
 async function recoverAsyncDelegation(
   opts: AdapterOptions,
@@ -793,14 +844,22 @@ async function recoverAsyncDelegation(
     ctx.set("cache-control", "no-store");
     return;
   }
-  if (op.state === "reserved") {
-    // Not observable in practice (reserved -> completed commits in ONE
-    // transaction); a concurrent reservation holder surfaces here.
+  const stored = op.delivery as
+    | { grant_id?: string; target?: string; body?: AsyncDelegationResponseBody }
+    | undefined;
+  const grantId = typeof stored?.grant_id === "string" ? stored.grant_id : undefined;
+  const target = typeof stored?.target === "string" ? stored.target : undefined;
+  if (op.state === "reserved" && !grantId) {
+    // RESERVED (no family yet): a concurrent first presentation holds the
+    // reservation, or the first attempt crashed before the family-created
+    // transition (nothing was created or counted; the tombstone frees the
+    // identifier at the retry horizon).
     txError(ctx, 400, "invalid_request", "creation is in progress; retry with the same creation_request_id");
     return;
   }
-  // completed: deliver for the ALREADY-CREATED family.
-  const record = op.missionId ? opts.kernel.get(op.missionId) : undefined;
+  // family-created or completed: the recorded family must still be live.
+  const missionId = op.missionId ?? op.sourceMissionId;
+  const record = opts.kernel.get(missionId);
   if (!record) {
     txError(ctx, 400, "invalid_grant", "recorded mission not found");
     return;
@@ -810,18 +869,45 @@ async function recoverAsyncDelegation(
     txError(ctx, 400, "invalid_grant", `recorded mission is ${active.state}`);
     return;
   }
-  const stored = op.delivery as
-    | { grant_id?: string; target?: string; body?: AsyncDelegationResponseBody }
-    | undefined;
-  const grantId = typeof stored?.grant_id === "string" ? stored.grant_id : undefined;
-  const target = typeof stored?.target === "string" ? stored.target : undefined;
   if (!grantId || !target || !opts.familyStore?.resolve(grantId)) {
     txError(ctx, 400, "invalid_grant", "recorded delegation family not found");
     return;
   }
-  // @spec continuation#transport-async — the stored response is returned while
-  // the initial refresh token is unissued or unused: find() excludes an expired
-  // token, and a consumed one means the rotation already happened.
+  if (op.state === "reserved") {
+    // FAMILY-CREATED: the family and its single derivation count exist but the
+    // response was never delivered (no token was ever issued). RESUME delivery
+    // of the RECORDED family: issue its initial tokens and complete — never a
+    // second family, never a second gateDerivation. The grant's rar is the
+    // authoritative structural subset; it is projected through the CURRENT
+    // effective set so a capability contained since creation cannot ride the
+    // resumed delivery. A grant already destroyed fails closed.
+    const GrantModel = (provider as unknown as {
+      Grant: { find: (id: string) => Promise<{ rar?: unknown } | undefined> };
+    }).Grant;
+    const grant = await GrantModel.find(grantId);
+    const grantRar = Array.isArray(grant?.rar) ? (grant.rar as AuthorityEntry[]) : undefined;
+    if (!grantRar) {
+      txError(ctx, 400, "invalid_grant", "recorded delegation family no longer exists");
+      return;
+    }
+    const projected = projectRarThroughEffective(opts.kernel, active, grantRar);
+    if (projected.length === 0) {
+      txError(ctx, 400, "invalid_grant", "the recorded delegation's authority is fully contained");
+      return;
+    }
+    await deliverAsyncDelegationFamily(opts, provider, ctx, {
+      mission: active,
+      grantId,
+      target,
+      tokenRar: projected,
+      refreshRar: grantRar,
+      jkt: op.cnfJkt,
+      creationRequestId: op.creationRequestId,
+    });
+    return;
+  }
+  // COMPLETED: the stored response is returned while the initial refresh token
+  // is unissued or unconsumed (find() excludes an expired token).
   const storedBody = stored?.body;
   if (storedBody?.refresh_token) {
     const RefreshTokenModel = (provider as unknown as {
@@ -835,69 +921,17 @@ async function recoverAsyncDelegation(
       return;
     }
   }
-  // Consumed or expired: mint a FRESH refresh token WITHIN THE SAME family (the
-  // family's native rotation; never a second family, never a second
-  // gateDerivation). The family grant is the authoritative structural
-  // confinement: its rar is the issuance-time confined subset. A grant already
-  // destroyed (a reuse-detection wipe) fails closed.
-  const GrantModel = (provider as unknown as {
-    Grant: { find: (id: string) => Promise<{ rar?: unknown } | undefined> };
-  }).Grant;
-  const grant = await GrantModel.find(grantId);
-  const grantRar = Array.isArray(grant?.rar) ? (grant.rar as AuthorityEntry[]) : undefined;
-  if (!grantRar) {
-    txError(ctx, 400, "invalid_grant", "recorded delegation family no longer exists");
-    return;
-  }
-  const projected = projectRarThroughEffective(opts.kernel, active, grantRar);
-  if (projected.length === 0) {
-    txError(ctx, 400, "invalid_grant", "the recorded delegation's authority is fully contained");
-    return;
-  }
-  const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
-  const ttlClamp = Math.max(1, Math.floor((Date.parse(active.expires_at) - Date.now()) / 1000));
-  const info = resourceServerInfoFor(target, Math.min(opts.accessTokenTTL ?? 300, ttlClamp));
-  const at = new provider.AccessToken({
-    accountId: active.subject.sub,
-    client,
-    grantId,
-    gty: TOKEN_EXCHANGE_GRANT_TYPE,
-    rar: projected,
-    scope: "payments",
-  });
-  at.resourceServer = newResourceServer(provider, target, info);
-  at.jkt = op.cnfJkt;
-  ctx.oidc.entity("AccessToken", at);
-  const accessToken = await at.save();
-  const RefreshTokenCtor = (provider as unknown as {
-    RefreshToken: new (props: Record<string, unknown>) => { jkt?: string; save(): Promise<string> };
-  }).RefreshToken;
-  const rt = new RefreshTokenCtor({
-    accountId: active.subject.sub,
-    client,
-    grantId,
-    gty: TOKEN_EXCHANGE_GRANT_TYPE,
-    scope: "payments",
-    rar: grantRar,
-    resource: target,
-  });
-  rt.jkt = op.cnfJkt;
-  const refreshTokenValue = await rt.save();
-  const responseBody: AsyncDelegationResponseBody = {
-    access_token: accessToken,
-    token_type: "DPoP",
-    expires_in: (at as unknown as { expiration: number }).expiration,
-    refresh_token: refreshTokenValue,
-    authorization_details: projected,
-  };
-  opts.creationIdempotency?.recordDelivery(op.clientId, op.creationRequestId, {
-    grant_id: grantId,
-    target,
-    body: responseBody,
-  });
-  ctx.status = 200;
-  ctx.body = responseBody;
-  ctx.set("cache-control", "no-store");
+  // Consumption of the initial refresh token PROVES delivery: the client held
+  // the response and rotated on it. The rotating family is a single lineage —
+  // recovery MUST NOT mint an independent sibling refresh token into it, so
+  // creation recovery is refused and the caller continues on its current
+  // refresh token.
+  txError(
+    ctx,
+    400,
+    "invalid_grant",
+    "the delegation was already delivered; continue with the family's current refresh token",
+  );
 }
 
 // ===========================================================================

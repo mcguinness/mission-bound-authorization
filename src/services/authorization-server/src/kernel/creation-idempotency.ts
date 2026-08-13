@@ -28,6 +28,12 @@
  *    delivery resumes).
  *  - Deferred expansion reserves at initiation (delivery = the deferral handle)
  *    and completes atomically with successor creation at redemption.
+ *  - Async-delegation interposes a FAMILY-CREATED stage, encoded as `reserved`
+ *    with the family identity recorded in `delivery_json`
+ *    ({@link advanceReserved}): reserved (no side effects yet) ->
+ *    family-created (family exists, the single derivation counted, atomically)
+ *    -> completed with the delivered response ({@link completeDelivered}). A
+ *    retry finding family-created RESUMES delivery of the recorded family.
  *
  * Retention (two tiers): the delivery ARTIFACT (the child grant / access token)
  * expires on its own short lifetime; the idempotency TOMBSTONE (this row)
@@ -349,6 +355,61 @@ export class CreationIdempotencyStore {
    */
   reserve(res: CreationReservation): void {
     withTransaction(this.db, () => this.insertRow(res, "reserved"));
+  }
+
+  /**
+   * @spec continuation#transport-async — advance a `reserved` operation to
+   * FAMILY-CREATED: record the created family's identity (`delivery`) on the
+   * reservation, atomically with the caller's creation-side accounting
+   * (`accompany`, e.g. the single gateDerivation, runs inside the same
+   * kernel-db transaction; its throw rolls the whole transition back and the
+   * reservation stays plain `reserved`).
+   */
+  advanceReserved(
+    clientId: string,
+    creationRequestId: string,
+    delivery: Record<string, unknown>,
+    accompany?: () => void,
+  ): void {
+    withTransaction(this.db, () => {
+      accompany?.();
+      this.db
+        .prepare(
+          "UPDATE creation_idempotency SET delivery_json = ? WHERE client_id = ? AND creation_request_id = ? AND state = 'reserved'",
+        )
+        .run(JSON.stringify(delivery), clientId, creationRequestId);
+    });
+  }
+
+  /**
+   * Mark a `reserved` operation FAILED in place (a definitive refusal after
+   * the reservation was acquired, e.g. a derivation-gate rejection), replayed
+   * verbatim on a matching retry.
+   */
+  failReserved(clientId: string, creationRequestId: string, failure: CreationFailure): void {
+    this.db
+      .prepare(
+        "UPDATE creation_idempotency SET state = 'failed', failure_json = ?, completed_at = ? WHERE client_id = ? AND creation_request_id = ? AND state = 'reserved'",
+      )
+      .run(JSON.stringify(failure), this.now().getTime(), clientId, creationRequestId);
+  }
+
+  /**
+   * @spec continuation#transport-async — mark an operation COMPLETED with its
+   * delivered response (the stable outcome + the delivery artifact in one
+   * UPDATE). Used at delivery time, after the family-created stage.
+   */
+  completeDelivered(
+    clientId: string,
+    creationRequestId: string,
+    missionId: string,
+    delivery: Record<string, unknown>,
+  ): void {
+    this.db
+      .prepare(
+        "UPDATE creation_idempotency SET state = 'completed', mission_id = ?, delivery_json = ?, completed_at = ? WHERE client_id = ? AND creation_request_id = ?",
+      )
+      .run(missionId, JSON.stringify(delivery), this.now().getTime(), clientId, creationRequestId);
   }
 
   /**
