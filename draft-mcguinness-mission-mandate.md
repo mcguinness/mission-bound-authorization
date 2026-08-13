@@ -672,14 +672,13 @@ Mandate:
 8. **Hash agility.** Reject any integrity anchor whose algorithm
    prefix the verifier does not recognize, and never treat an
    unrecognized prefix as `sha-256`, per the issuance profile.
-9. **Existence proof.** Before relying on a Mandate for a
-   high-consequence decision, confirm an audit-registration Receipt
-   ({{audit-evidence}}) that proves the Mandate's independent
-   existence at a committed time. A Mandate a key-holding attacker
-   minted after a compromise and backdated has no Receipt predating
-   the compromise. A verifier that cannot obtain such a Receipt MUST
-   treat the Mandate as unverifiable ({{failures}}) for
-   high-consequence reliance.
+
+Where the deployment runs the audit transparency profile, a verifier
+MAY additionally confirm an audit-registration Receipt
+({{audit-evidence}}) before high-consequence reliance; the
+issuer-key-compromise consideration states what this optional
+hardening bounds and what its absence leaves open
+({{security-considerations}}).
 
 ## Failure Taxonomy {#failures}
 
@@ -811,7 +810,9 @@ the Mandate slots into its evidence-type pattern with these values:
   `iss` MUST equal it, which holds by construction since a Mandate's
   `iss` is `mission.issuer` ({{conformance}}).
 
-Registration gives a Mandate an independent existence proof, which
+Registration is an optional hardening: verification
+({{verification}}) does not require it. It gives a Mandate an
+independent existence proof, which
 bounds a later issuer key compromise ({{security-considerations}}).
 
 # Non-Goals and Deferred Work {#non-goals}
@@ -849,10 +850,12 @@ A **Mandate Issuer** MUST:
 - publish a compromised signing key as revoked, distinct from routine
   retirement ({{minting}});
 - provision a recipient's standing to a state surface when its
-  reliance requires an active Mission ({{minting}});
-- register a Mandate as Mission evidence when it feeds
-  high-consequence decisions ({{audit-evidence}}); and
+  reliance requires an active Mission ({{minting}}); and
 - issue `jti` values it never reuses.
+
+A Mandate Issuer running the audit transparency profile SHOULD
+register a Mandate as Mission evidence when it feeds
+high-consequence decisions ({{audit-evidence}}).
 
 A **Mandate Verifier** MUST:
 
@@ -909,7 +912,10 @@ verifies exactly as a genuine one does, and an issuer cannot recover
 by simply dropping the key from the published set without also
 breaking the genuine Mandates that key signed.
 
-Audit registration ({{audit-evidence}}) is the bound. A deployment
+The residual is explicit: a signature-only Mandate cannot prove it
+existed before an issuer-key compromise. Audit registration
+({{audit-evidence}}), where the deployment runs the transparency
+profile, is the bound. A deployment
 whose Mandates feed high-consequence decisions SHOULD register them:
 a genuine Mandate has an independent, timestamped existence proof,
 and a forged one either goes unregistered or leaves a permanent,
