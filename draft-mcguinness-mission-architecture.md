@@ -1503,10 +1503,14 @@ portable derivation.
 
 The ceiling the derivation narrows against is itself a composition,
 not a single object. The derived Authority Set sits inside every
-authority source that bounds the task: the issuer's derivation
-policy, the Approver's own authority (an approval grants nothing the
-Approver could not grant), and, at enforcement time, the resource
-owner's and deployment's live policy at the decision point. The
+bound on the task: the issuer's derivation policy, the ceiling of
+the Mission's established authority source (a delegating person's
+own authority, a workload's provisioned authority, or governed
+organizational policy: approval activates authority the source
+already holds and grants nothing beyond it, and the Approver needs
+authority to activate the source, not personal possession of its
+permissions), and, at enforcement time, the resource owner's and
+deployment's live policy at the decision point. The
 derivation step intersects the first two and commits the result;
 the runtime contract re-checks the rest on every action, which is
 why a permit is never implied by the Authority Set alone. A

@@ -455,13 +455,16 @@ uses the mechanisms here to obtain Mission-bound tokens.
 ## Applicability {#applicability}
 
 This profile targets OAuth deployments where authority serves a
-durable, user-approved task that spans more than one token, request,
+durable, approved task that spans more than one token, request,
 or audience: an agent pursuing a multi-step objective on a user's
 behalf, or a workflow whose audit must join activity across hops on a
 shared task. It is not intended for, and adds cost without benefit to,
-single-request user flows, machine-to-machine service credentials, or
-short-lived authorizations where the credential's lifetime is the
-task's lifetime; those use OAuth unchanged.
+single-request user flows and short-lived authorizations where the
+credential's lifetime is the task's lifetime, ordinary
+machine-to-machine service credentials among them; those use OAuth
+unchanged. The boundary is that lifetime equality, not the absence
+of a human: a workload's durable multi-step task is in scope as a
+service-owned Mission ({{authority-sources}}).
 
 A Mission SHOULD be scoped to a concrete task, not to an agent's whole
 lifetime. A deployment SHOULD prefer narrow, per-task Missions, each
@@ -601,15 +604,15 @@ All JSON shown in this document is non-normative and illustrative; the
 member definitions in the surrounding text are authoritative.
 
 Agent (Client):
-: The OAuth client acting on a user's behalf, identified by
+: The OAuth client acting for the Mission's Subject, identified by
   `client_id`. Agent identity is established per
   {{I-D.draft-klrc-aiagent-auth}} or ordinary OAuth client
   authentication.
 
 Subject:
-: The user or system on whose behalf the Mission is approved,
-  identified by an (`iss`, `sub`) pair and carried in derived tokens'
-  `sub` claim.
+: The user, workload, or organizational principal on whose behalf the
+  Mission is approved ({{authority-sources}}), identified by an
+  (`iss`, `sub`) pair and carried in derived tokens' `sub` claim.
 
 Approver:
 : The single accountable principal who approves the Mission at the
@@ -739,6 +742,42 @@ execution) is carried on derived tokens via the `act` chain
 ({{delegation}}), not on the immutable Mission record. Richer subject
 identifier formats (for example, the formats of {{RFC9493}}) MAY be
 layered in future versions and are not required here.
+
+## Authority Sources {#authority-sources}
+
+A Mission draws its authority from one of three sources: a delegating
+person's own authority (**user-delegated**), a workload's own
+provisioned authority (**service-owned**), or explicitly governed
+organizational policy with a named accountable owner
+(**organizational**). The source names whose authority the approval
+draws on, recorded immutably as the Mission's `authority_source`;
+`approval_basis` records how drawing on it was activated
+({{mission-record}}), and the two compose: any source may activate
+through a `direct` approval event or through a standing-consent basis
+a companion defines. Approval activates authority the source already
+holds and manufactures none: the AS establishes the source and
+verifies the derived Authority Set against it before approval
+({{approval-event}}).
+
+The subject-representation discipline is the same in every source:
+
+- The accountable principal is the record's `approver`, equal to
+  `approval_basis.consent_principal`, in every source; it is never
+  inferred from the token `sub`.
+- `sub` carries a delegating person only in the user-delegated
+  source. A service-owned or organizational Mission MUST record the
+  workload or organizational principal as `subject` and MUST NOT
+  record a human principal in its place: some work is not any one
+  person's, and borrowing a human subject for it blurs the actor, the
+  subject, and the accountable principal exactly where the record
+  keeps them distinct. The injective mapping of {{approval-event}}
+  applies unchanged: that principal receives its own AS-local `sub`,
+  denotes itself, and impersonates nobody. It MUST be an
+  authorization subject the AS recognizes as a resource owner in its
+  own right (the `sub` model of {{RFC9068}}), not merely the task's
+  beneficiary.
+- The actor model does not vary by source: `client_id` names the
+  Agent, and delegates ride the `act` chain ({{delegation}}).
 
 ## Protocol Flow
 
@@ -1937,7 +1976,10 @@ At the approval event the AS MUST, in order:
    Subject from unauthenticated client input. This document defines no
    wire parameter for the Subject; how the AS establishes it
    (administrative selection, a directory, an authenticated reference)
-   is a deployment matter. When the Subject's home issuer
+   is a deployment matter. The Subject may be a workload or
+   organizational principal ({{authority-sources}}); its
+   establishment and the mapping below are unchanged. When the
+   Subject's home issuer
    (`subject.iss`) differs from the AS, the AS MUST map the external
    (`subject.iss`, `subject.sub`) pair to an AS-local `sub` under an
    injective mapping: one external Subject maps to exactly one
@@ -1947,7 +1989,20 @@ At the approval event the AS MUST, in order:
    string verbatim as the local `sub` is one permitted deployment
    choice, valid exactly where it collides with no other principal's
    `sub`; the injectivity, not the verbatim adoption, is the rule.
-3. Render for consent the derived Authority Set in human-meaningful
+3. Establish the authority source: whose authority the approval
+   draws on, recorded as the Mission's `authority_source`
+   ({{authority-sources}}, {{mission-record}}). The AS MUST establish
+   it from trusted configuration or authenticated governance state,
+   never from client assertion. The AS MUST verify the Approver is
+   authorized under local policy to activate the established source,
+   and MUST verify the derived Authority Set lies within that
+   source's authority (for `organizational`, within the governed
+   policy identified by `authority_source.policy`). These are
+   distinct checks: an organizational owner may be authorized to
+   activate policy without personally holding every operational
+   permission. The AS MUST refuse when either relationship cannot be
+   established.
+4. Render for consent the derived Authority Set in human-meaningful
    terms, with the `goal`, `constraints`, `expires_at`, and any
    `controls` bounds (notably `max_derivations`) as context:
    - The object the Approver consents to is the **derived Authority
@@ -1958,6 +2013,10 @@ At the approval event the AS MUST, in order:
      derived Authority Set does not conform.
    - When the Approver is not the Subject, the rendering MUST
      identify the Subject the authority is granted for.
+   - The rendering MUST identify the authority source and, for
+     `organizational`, the governed policy it draws on
+     (`authority_source.policy`). A change to the established source
+     before the decision MUST force re-evaluation and re-rendering.
    - When the client submitted an authority proposal
      ({{authority-proposal}}), the rendering MUST distinguish the
      entries the client proposed from any narrowing or restructuring
@@ -1966,12 +2025,12 @@ At the approval event the AS MUST, in order:
    The Authority Set, not the Intent, is the consent object because
    derivation is local policy: nothing commits that the derived
    authority faithfully reflects the goal the Approver read.
-4. Compute the integrity anchors ({{integrity-anchors}}):
+5. Compute the integrity anchors ({{integrity-anchors}}):
    `authority_hash` over the consented Authority Set, `intent_hash`
    over the approved Mission Intent, and, when an authority proposal
    was submitted ({{authority-proposal}}), `proposal_hash` over the
    submitted `authorization_details` array.
-5. Create the Mission record ({{mission-record}}) in the `active`
+6. Create the Mission record ({{mission-record}}) in the `active`
    state, atomically with issuance of the authorization code.
 
 The atomic coupling of the approval decision to authorization-code
@@ -2376,6 +2435,28 @@ profile defines:
   as a wire signal; it MUST NOT be relied on to grant or widen
   authority.
 
+`authority_source`:
+: REQUIRED. An object. The source of the authority the approval
+  draws on ({{authority-sources}}), established at the approval event
+  ({{approval-event}}) and immutable thereafter, like `approver` and
+  `approval_basis`. Members:
+
+  `type`:
+  : REQUIRED. A string: `user_delegated`, `service_owned`, or
+    `organizational`, subject to the forward-compatibility rule of
+    {{lifecycle}}.
+
+  `policy`:
+  : REQUIRED for `organizational`, absent otherwise. An object with
+    `id`, `version`, and `digest`: the stable reference to, and
+    commitment over, the governed organizational policy the Mission
+    draws on.
+
+  `authority_source` is provenance like `approval_basis`: recorded
+  alongside it, folded into neither `intent_hash` nor
+  `authority_hash`, and not carried on access tokens; Resource
+  Servers enforce `authorization_details` and do not consult it.
+
 `client_id`:
 : REQUIRED. A string. The Agent (OAuth client) that
   submitted the Mission Intent.
@@ -2482,6 +2563,7 @@ outside carries it as `mission_id`, as in the token-response parameter
     "root_commitment":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
+  "authority_source": { "type": "user_delegated" },
   "client_id": "s6BhdRkqt3",
   "policy_version": "deploy-policy:v17",
   "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",

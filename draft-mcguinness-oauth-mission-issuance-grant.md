@@ -567,13 +567,18 @@ remaining redemption rules (subset, lifetime, state-gated refresh,
 no re-approval, and the error mapping of {{redemption-errors}})
 apply at the token request unchanged.
 
-The AS MUST bind the resource owner authenticated at the
-authorization endpoint to the grant's `sub`: it proceeds only where
-the authenticated user is the grant's Subject under the deployment's
-mapping policy ({{issuance-join}}). The AS MUST refuse when a
-different user authenticates, so the grant cannot mint tokens for
-the wrong resource owner. The authenticated client MUST still be the
-grant's `client_id` ({{redemption}}).
+This carriage serves user-delegated Missions
+({{I-D.draft-mcguinness-oauth-mission}}), where an authenticated
+resource owner exists to bind. The AS MUST bind the resource owner
+authenticated at the authorization endpoint to the grant's `sub`: it
+proceeds only where the authenticated user is the grant's Subject
+under the deployment's mapping policy ({{issuance-join}}). The AS
+MUST refuse when a different user authenticates, so the grant cannot
+mint tokens for the wrong resource owner. For a service-owned or
+organizational Mission there is no delegating user to authenticate;
+such a grant is redeemed directly ({{redemption}}), not carried
+through the authorization code flow. The authenticated client MUST
+still be the grant's `client_id` ({{redemption}}).
 
 # Relationship to Other Artifacts {#relationships}
 
