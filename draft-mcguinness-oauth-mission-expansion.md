@@ -46,6 +46,14 @@ informative:
   RFC8126:
   RFC9470:
   RFC9562:
+  I-D.draft-mcguinness-mission-harness:
+    title: "Mission-Aware Agent Harnesses"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -923,6 +931,56 @@ supersession, so the original remains `active`. An atomic, grant-bound
 branch
 expansion that creates such a child within a single expansion approval
 event is deferred to a future revision of this document.
+
+# Continuing Under an Independently Approved Mission {#independent-continuation}
+
+A deployment can end one Mission and continue the work under another
+without this document's expansion protocol: it approves an ordinary
+new Mission under the issuance profile and explicitly revokes the
+prior Mission. This is independent continuation, an operational
+pattern; it is not expansion, succession, or replacement in the
+protocol sense, and none of this document's `predecessor`,
+`successor`, or `superseded` semantics apply.
+
+The two commits are independent, and the pattern's properties follow
+from that:
+
+- both Missions are normally `active` for an interval; revoking first
+  instead opens an availability gap if the new approval fails;
+- revocation can fail or be omitted, leaving both active until the
+  prior Mission's own lifecycle ends it;
+- the prior Mission's outstanding tokens retain their ordinary
+  residual lifetime, and no credential is rebound: authority under
+  the new Mission is obtained only by fresh derivation from it;
+- revoking the prior Mission terminal-cascades its Child Missions,
+  and continuing child work requires fresh Child Mission creation
+  under the new Mission
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}});
+- a harness applies its ordinary stop behavior to the revoked
+  Mission; the supersession continuation handoff does not apply
+  ({{I-D.draft-mcguinness-mission-harness}}); and
+- nothing serializes concurrent continuations, no exactly-one
+  guarantee exists, and the new approval is not grant-bound to the
+  prior Mission.
+
+A deployment MAY record the relationship as `related_to` on the new
+Mission ({{predecessor-member}}). `related_to` is issuer-recorded
+correlation metadata, not client-asserted authority: this document
+defines no client request parameter for it, and `mission_intent` is
+task-only; the input that causes it to be recorded is authenticated
+and authorized under the Mission Issuer's management or local policy;
+the Mission Issuer resolves the reference in its own namespace, and a
+cross-issuer relationship requires a structured extension; an
+unauthorized, absent, or unknown reference is handled without
+disclosing whether the referenced Mission exists. The member asserts
+related work only, neither mutual recognition nor replacement.
+
+A Mission created this way MUST NOT carry the `predecessor` member,
+which asserts the supersession semantics only replacement expansion
+provides. Independent continuation does not satisfy any profile that
+requires a successor: containment restoration in particular requires
+the `predecessor` link and the disclosed history that expansion's
+approval renders.
 
 # Concurrent Expansion Reconciliation {#reconciliation}
 

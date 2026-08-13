@@ -478,7 +478,8 @@ The PS performs these actions in order:
 2. apply expiry and read the current state under a transaction or
    equivalent serialization mechanism;
 3. if active, atomically commit `terminated`, `terminated_at`, the
-   reason, actor, and `request_id` to the mission log;
+   reason, actor, `request_id`, and, for `superseded`, the validated
+   `replacement_s256` to the mission log;
 4. make that state visible to every local PS decision and issuance path;
 5. initiate revocation of outstanding Auth Tokens as described in
    {{token-consequences}}, without waiting for all attempts to finish;
