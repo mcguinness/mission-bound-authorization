@@ -1518,36 +1518,77 @@ reachability judgment.<a href="#section-3-3.8.1" class="pilcrow">¶</a></p>
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
       </h2>
 <p id="section-4-1">This profile is defined against the Mission model rather than against
-OAuth 2.0 mechanics. It consumes these substrate primitives:<a href="#section-4-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-4-2.1">
-          <p id="section-4-2.1.1">the Mission identifier;<a href="#section-4-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-2.2">
-          <p id="section-4-2.2.1">the lifecycle state space with its only-<code>active</code>-permits rule and
-the deployment's freshness sources;<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-2.3">
-          <p id="section-4-2.3.1">the Mission-bound credentials the harness holds or mediates, with
-their sender-constraint custody, when the binding in use provides
-them; and<a href="#section-4-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-4-2.4">
-          <p id="section-4-2.4.1">the evidence integrity conventions imported from the runtime
-profile.<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-4-3">The Mission-bound credential primitive is binding-dependent: under a
-binding without Mission-bound credentials, the harness binds governed
-work items to the externally established Mission reference of the
-runtime profile's Mission binding establishment step
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and the custody duties of
-<a href="#cached-access" class="auto internal xref">Section 10</a> apply to whatever acting credentials the deployment
-uses. The issuance profile
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is this version's normative
-substrate; every OAuth artifact named in this document enters through
-it. Another substrate that provides the same primitives can host this
-profile unchanged.<a href="#section-4-3" class="pilcrow">¶</a></p>
+OAuth 2.0 mechanics: it is a substrate-neutral consumer, and this
+section is its consumption declaration under the rule of Mission
+Substrate Requirements (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>)
+that a substrate-neutral profile declare the kernel functions and
+optional capabilities it consumes.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">From the contextual-governance kernel it consumes the Mission
+identifier and issuer, the kernel's Mission Reference and Controller,
+recorded in every Mission binding (<a href="#mission-binding" class="auto internal xref">Section 6</a>); and the
+lifecycle state space with its only-<code>active</code>-permits rule, the
+kernel's governance gate, which every resume check re-establishes
+(<a href="#resume-checks" class="auto internal xref">Section 7</a>). The evidence integrity conventions Harness
+Evidence imports from the runtime profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) are a companion
+dependency of <a href="#harness-evidence" class="auto internal xref">Section 15</a>, not a substrate primitive.<a href="#section-4-2" class="pilcrow">¶</a></p>
+<p id="section-4-3">It consumes these optional capabilities:<a href="#section-4-3" class="pilcrow">¶</a></p>
+<span id="name-harness-profile-capability-"></span><table class="center" id="table-1">
+        <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-harness-profile-capability-" class="selfRef">Harness profile capability consumption</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Capability</th>
+            <th class="text-left" rowspan="1" colspan="1">Consumption</th>
+            <th class="text-left" rowspan="1" colspan="1">Scope of consumption</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
+            <td class="text-left" rowspan="1" colspan="1">required</td>
+            <td class="text-left" rowspan="1" colspan="1">Every resume, retry dispatch, background wake-up, and cached-access use is gated on active Mission state, and governed work is suppressed when active state cannot be established (<a href="#resume-checks" class="auto internal xref">Section 7</a>, <a href="#stop-behavior" class="auto internal xref">Section 13</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
+            <td class="text-left" rowspan="1" colspan="1">required</td>
+            <td class="text-left" rowspan="1" colspan="1">The resume checks establish state through a Mission Status operation, a maintained event-driven cache, or a runtime PDP decision, and stop propagation acts on what they report; staleness is bounded per action class by the bounds the Enforcement Scope Statement declares (<a href="#resume-checks" class="auto internal xref">Section 7</a>, <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
+            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">The Mission-bound credentials the harness holds or mediates, with their sender-constraint custody, when the binding in use provides them; under a binding without them, the harness binds governed work items to the externally established Mission reference of the runtime profile's Mission binding establishment step (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and the custody duties of <a href="#cached-access" class="auto internal xref">Section 10</a> apply to whatever acting credentials the deployment uses</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
+            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">Consumed where the harness scopes the tool catalog and schemas to the Mission's Authority Set (<a href="#mediated-egress" class="auto internal xref">Section 5</a>), records <code>authority_hash</code> on the Mission binding when known (<a href="#mission-binding" class="auto internal xref">Section 6</a>), and, on continuation across supersession, proceeds only for the actions the successor's Authority Set authorizes (<a href="#supersession-continuity" class="auto internal xref">Section 13.2</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">The Mission binding grants no authority (<a href="#mission-binding" class="auto internal xref">Section 6</a>), and binding inheritance copies or narrows a pointer, not an Authority Set (<a href="#binding-inheritance" class="auto internal xref">Section 6.1</a>); the harness derives no authority to compare</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Independently Verifiable, Portable Evidence</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">This document consumes neither capability; it produces Harness Evidence of its own, registrable on the Mission's transparency feed (<a href="#harness-evidence" class="auto internal xref">Section 15</a>, <span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>)</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-4-5">The issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is this
+version's normative substrate: it defines each consumed kernel
+function and capability for OAuth 2.0, and every OAuth artifact named
+in this document enters through it. A binding that provides the
+required capabilities above, and whichever conditional capabilities
+the deployment's governed work relies on, can host this profile. The
+portability claim is capability-scoped rather than substrate-wide for
+the reason the substrate's Capability Confusion consideration states:
+every property this profile requires matches an explicit capability
+claim and its scope, never the generic statement that a binding
+supports Missions.<a href="#section-4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mediated-egress">
@@ -2267,8 +2308,8 @@ running.<a href="#section-11.1-7" class="pilcrow">¶</a></p>
 states. Harness Evidence types <code>prior_harness_state</code> and
 <code>resulting_harness_state</code> (<a href="#harness-evidence-object" class="auto internal xref">Section 15.1</a>) against this
 enumeration.<a href="#section-12-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-1">
-        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<table class="center" id="table-2">
+        <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">State</th>
@@ -2363,8 +2404,8 @@ state is non-active.<a href="#section-13-3" class="pilcrow">¶</a></p>
 and is a deployment's stop-behavior matrix as written. A deployment
 <span class="bcp14">MUST</span> document each cell where it deviates; no other cell needs
 documentation. A deviation <span class="bcp14">MUST</span> be at least as strict as the minimum:<a href="#section-13.1-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-2">
-          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<table class="center" id="table-3">
+          <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Mission state</th>
@@ -3312,6 +3353,10 @@ of <a href="#harness-evidence" class="auto internal xref">Section 15</a> is loca
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
@@ -3405,8 +3450,8 @@ transaction logs, retry queues, and execution state; this profile
 adds no second copy of that state. Ownership splits by ledger: the
 execution ledger stays with the harness or engine, the authorization
 ledger with the Mission Issuer and its enforcement plane.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-3">
-        <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
+<table class="center" id="table-4">
+        <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Execution ledger</th>
