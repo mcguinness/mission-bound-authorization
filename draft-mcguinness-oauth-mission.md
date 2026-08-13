@@ -784,7 +784,9 @@ narrowed `scope`. It has the following members:
 
 `goal`:
 : REQUIRED. A string. A human-readable statement of the task,
-  for rendering to the Approver. Maximum 4096 characters.
+  for rendering to the Approver. Maximum 4096 characters. Prose
+  here persists on the record and can carry personal data about
+  third parties ({{third-party-data-subjects}}).
 
 `resources`:
 : REQUIRED. An array of strings. The target resources the
@@ -4320,6 +4322,42 @@ low-entropy or guessable content the anchor is a disclosure channel,
 and deployments treat it as one when the Intent itself is sensitive;
 the same confirmation channel exists for a candidate proposal
 against `proposal_hash`.
+
+## Third-Party Data Subjects {#third-party-data-subjects}
+
+A task can be about a person who holds no Mission role: in a
+background check, the employer's agent queries a registrar about a
+candidate who is neither Subject nor Approver nor resource owner.
+Mission approval records the accountable Approver's authorization of
+the undertaking ({{approval-event}}); it is not, by itself, evidence
+of such a person's consent to disclosure or of any other legal basis
+a disclosure requires, and whether a basis is required and what
+satisfies it is deployment and legal policy outside this protocol.
+Where the resource domain requires data-subject consent or another
+basis, that disclosure policy MUST be satisfied in that domain's own
+lane, wherever the deployment evaluates it (the Resource Server, a
+gateway, a policy decision point, or an authorization server acting
+for the domain) and through that lane's mechanisms (claims
+gathering, a resource-domain consent artifact), and access MUST be
+refused while required evidence is absent or invalid. A conforming
+deployment treats that refusal as the resource's answer, never as a
+Mission gap to route around, and MUST NOT represent an approved
+Mission as carrying a data subject's consent.
+
+Third-party personal data written into `goal`, `constraints`, or a
+`proposed_authority` resource identifier persists on the Mission
+record for its audit horizon ({{mission-record}}), concentrates at
+the AS with the record ({{record-access}}), and is confirmable
+through the unsalted anchors by any party holding a candidate value
+(the retention consideration above). Clients SHOULD reference a
+third party through resource-scoped or pseudonymous identifiers
+rather than identifying prose; an opaque identifier is minimization,
+not anonymity, and personal-data obligations follow it. Retention
+and erasure follow the deployment's policy, with the audit profile's
+erasure record and its data-subject-request basis as the
+transparency-side mechanism
+({{I-D.draft-mcguinness-mission-audit}}): it records an erasure, it
+neither performs one nor overrides retention law.
 
 ## Mission Record and Evidence Access {#record-access}
 
