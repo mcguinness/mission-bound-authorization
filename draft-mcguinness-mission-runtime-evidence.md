@@ -119,10 +119,12 @@ classified failure. This document defines the records a deployment
 emits to make that decision durable and verifiable: the Decision
 Evidence Object, the Execution Evidence Object, and the Refusal
 Record, together with their integrity envelope, media types, and
-retention rules. The records are defined against the runtime
-profile's abstract decision output and failure classification, so
-any decision-API binding produces the same records; the OpenID
-AuthZEN binding is one such producer.
+retention rules. It also defines the Mission Receipt, a signed
+manifest projecting these records into one portable object a holder
+can present without shipping a log. The records are defined against
+the runtime profile's abstract decision output and failure
+classification, so any decision-API binding produces the same
+records; the OpenID AuthZEN binding is one such producer.
 
 --- middle
 
@@ -152,7 +154,10 @@ family's Standards-Track binding and the reference producer this
 document's examples are drawn from. `evaluation_id` is the
 correlation key across every record and wire artifact of one
 evaluation; each record additionally carries its own record
-identifier (`evidence_id`, `execution_id`, or `refusal_id`).
+identifier (`evidence_id`, `execution_id`, or `refusal_id`). This
+document additionally defines the Mission Receipt
+({{mission-receipt}}), the portable projection over these records
+that a holder presents in place of the records themselves.
 
 This document does not restate the runtime profile's decision
 contract, action classification, or failure conditions; those are
@@ -1145,6 +1150,384 @@ defined in the Mission Record section of
 {{I-D.draft-mcguinness-oauth-mission}}. Regulated deployments MAY
 require longer retention.
 
+# Mission Receipt {#mission-receipt}
+
+A Mission Receipt is the portable, tamper-evident projection of a
+Mission's runtime enforcement evidence: one signed object a holder
+can present to answer what was decided, and for an executed action
+what happened, without shipping a log.
+
+A Mission Receipt is a signed manifest, never a second source of
+truth. Its signer attests exactly two things: that it assembled the
+stated projection, and that it verified every referenced evidence
+record under the declared profile at assembly time. The emitters of
+the referenced Decision Evidence, Execution Evidence, and Refusal
+Records remain authoritative for their facts. A verifier MUST
+verify the referenced records, or a transparency commitment to
+them, and the cross-record joins of {{receipt-verification}} before
+relying on any copied field; a deployment MAY instead accept a
+copied field on the receipt signer's authority alone, but only
+under an explicit policy that names the receipt issuer as attesting
+that fact directly. A receipt whose underlying evidence is
+unavailable within its retention obligations is an integrity
+reference, not portable proof: hashes alone do not make erased
+evidence available.
+
+A Mission Receipt is not a SCITT Receipt: the audit transparency
+profile uses Receipt in the SCITT sense alone (an inclusion proof),
+and the qualified names keep the two apart
+({{I-D.draft-mcguinness-mission-audit}}).
+
+## Receipt Kinds {#receipt-kinds}
+
+A `kind` member fixes what a receipt may claim, with exactly three
+values and the required evidence combination for each:
+
+`decision`:
+: The receipt projects a Decision Evidence record alone. It claims
+  an authorization decision was rendered; it claims nothing about
+  execution, and a verifier MUST NOT treat it as evidence that an
+  action occurred.
+
+`execution`:
+: The receipt projects a permit Decision Evidence record and the
+  final Execution Evidence record of the same action. Its `outcome`
+  is copied from the Execution Evidence and carries that document's
+  semantics unchanged; an action whose outcome is not yet terminal
+  has no `execution` receipt, and an unresolved action MUST NOT be
+  rewritten as terminal to issue one.
+
+`refusal`:
+: The receipt projects a Refusal Record alone. A refusal is
+  exclusively pre-decision ({{pre-decision-refusal}}), so there is no
+  Decision Evidence for the same evaluation to project beside it.
+
+## Members
+
+A Mission Receipt is a JSON object. REQUIRED members:
+
+`evidence_envelope`:
+: REQUIRED. An object. Integrity protection in the same form as
+  Decision Evidence ({{decision-evidence-integrity}}), carrying a
+  `format` (string, required) and a `value` (string, required). The
+  default `format` is `jws-compact`; the JWS protected `typ` is
+  `application/mission-receipt+json` ({{iana}}).
+
+`kind`:
+: REQUIRED. A string. One of `decision`, `execution`, or `refusal`
+  ({{receipt-kinds}}).
+
+`mission`:
+: REQUIRED. An object, with `id` (REQUIRED) and `issuer` (REQUIRED),
+  plus `authority_hash` (OPTIONAL). The member is this exact object,
+  never a union with another projection; a cross-domain grant or a
+  Mandate that proves the tuple is carried as an evidence reference,
+  not as a replacement shape.
+
+`emitter`:
+: REQUIRED. An object, in the form Decision Evidence's `emitter`
+  member defines ({{decision-evidence-object}}): `id` (a string
+  identifying the receipt issuer) and `role` (a string; `receipt_issuer`,
+  a role this document registers under that member's extensibility
+  rule). Names the party a verifier resolves a signing key for; unlike
+  a Decision, Execution, or Refusal record, whose emitter's key is
+  bound to a resource audience, a receipt issuer's key is bound to the
+  Mission it reports on ({{receipt-verification}}).
+
+`evidence`:
+: REQUIRED. An array of evidence references ({{receipt-evidence}}).
+
+`issued_at`:
+: REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
+
+`outcome`:
+: REQUIRED when `kind` is `execution`; absent otherwise. A string,
+  copied from the projected Execution Evidence's `outcome`
+  ({{execution-evidence-object}}), carrying that member's semantics
+  unchanged: one of `completed`, `failed`, or `suppressed`.
+
+Everything beyond the join and integrity core is optional and
+selected, never defaulted: a projection profile or a recipient
+agreement names the optional members a receipt carries, and an
+issuer minimizes to that selection. Actor chains, policy versions,
+target detail, and custody topology are correlation surfaces; a
+receipt carries them when its recipient needs them, not because the
+underlying evidence has them. A Mission Receipt is evidence, never
+reusable authorization, and confers no authority on its holder.
+
+OPTIONAL members, each a projection from the evidence a receipt of
+that content already carries:
+
+`decision`:
+: OPTIONAL. An object, with `id` (the projected Decision Evidence's
+  own `evidence_id`) and `result` (its `decision` member, `permit` or
+  `deny`) ({{decision-evidence-object}}).
+
+`policy`:
+: OPTIONAL. An object, with `pdp_policy_view` (the projected Decision
+  Evidence's `mission.policy_view_id`) and `mission_policy_version`
+  (its `mission.policy_version`, when the Decision Evidence carries
+  it) ({{decision-evidence-object}}).
+
+`executor`:
+: OPTIONAL. An object, the projected Decision Evidence's `actor`
+  member: the authenticated actor and any `act` chain
+  ({{decision-evidence-object}}).
+
+`target`:
+: OPTIONAL. An object, with `resource` (the projected Decision
+  Evidence's `resource` member) and `audience` (its `audience`
+  member) ({{decision-evidence-object}}).
+
+`custody`:
+: OPTIONAL. A string, the credential custody mode for the action:
+  whether a mediating PEP held the credential
+  ({{I-D.draft-mcguinness-mission-runtime}}). Asserted on the receipt
+  issuer's own authority under the trust model's copied-field
+  exception; no Decision or Execution Evidence record carries it, so
+  this member is not a projection.
+
+`chain`:
+: OPTIONAL. An object ({{receipt-chaining}}).
+
+## Evidence References {#receipt-evidence}
+
+Each `evidence` entry is an object. All members REQUIRED:
+
+`type`:
+: REQUIRED. A string. The referenced record's registered media type:
+  `application/mission-decision-evidence+json`,
+  `application/mission-execution-evidence+json`, or
+  `application/mission-refusal-record+json` ({{iana}},
+  {{decision-evidence-object}}, {{execution-evidence-object}},
+  {{pre-decision-refusal}}).
+
+`digest`:
+: REQUIRED. A string. A `sha-256:` prefixed digest, classified under
+  the core's commitment taxonomy
+  ({{I-D.draft-mcguinness-oauth-mission}}) as a canonical-object
+  digest for a JSON evidence record and a raw-octet digest for a
+  JWS- or JWT-shaped artifact. For a JSON evidence record the digest
+  input is the exact canonical bytes the convention fixes for that
+  record: the complete object, `evidence_envelope` included, JCS
+  {{RFC8785}} canonicalized ({{decision-evidence-integrity}}). For a
+  compact-serialized artifact the digest input is the exact
+  serialization octets, as issued.
+
+`evidence_id`:
+: REQUIRED. A string. The referenced record's own identifier member:
+  `evidence_id` for a Decision Evidence record
+  ({{decision-evidence-object}}), `execution_id` for an Execution
+  Evidence record ({{execution-evidence-object}}), or `refusal_id`
+  for a Refusal Record ({{pre-decision-refusal}}).
+
+`emitter`:
+: REQUIRED. An object, in the form Decision Evidence's `emitter`
+  member defines ({{decision-evidence-object}}): `id` and `role`.
+  Enough to select the emitting component's published key set before
+  the referenced record is resolved; the specific signing key is
+  selected, once resolved, by that record's own JWS `kid`.
+
+An `evidence` array carries the combination {{receipt-kinds}} fixes
+for the receipt's `kind`: one Decision Evidence reference alone for
+`decision`; a permit Decision Evidence reference and the final
+Execution Evidence reference of the same action for `execution`; a
+Refusal Record reference, optionally with the Decision Evidence
+reference it relates to, for `refusal`. A reference to a record type
+the verifier does not implement fails verification; it is not
+skipped.
+
+## Receipt Chaining {#receipt-chaining}
+
+Chaining is OPTIONAL, orthogonal to transparency, and never a
+substitute for it: a signer-controlled hash chain can be truncated,
+forked, or presented differently to different verifiers, so it
+gives tamper-evident linkage within the view a verifier is shown,
+never global ordering or inclusion. A deployment that needs those
+properties runs the audit transparency profile or anchors the chain
+head independently; a deployment without either still MAY chain, or
+MAY not.
+
+A chain is scoped to one (Mission, receipt issuer, stream): the
+`chain` member carries `stream` (an issuer-chosen identifier),
+`sequence` (an integer, strictly increasing per stream), and
+`previous` (an array of one or more digests of predecessor
+receipts in the same scope, present on every receipt after the
+stream's first). Concurrent issuance either serializes per stream
+or records multiple predecessors; a verifier treats the result as a
+DAG and checks only linkage and sequence monotonicity, never
+completeness. The scope's receipt issuer is the `emitter` the
+predecessor and successor receipts carry ({{receipt-verification}}).
+
+A predecessor digest is a canonical-object digest
+({{receipt-evidence}}): the complete predecessor Mission Receipt
+object, `evidence_envelope` included, JCS canonicalized, the same
+construction an evidence reference's digest uses over a Decision,
+Execution, or Refusal record, so this digest too covers the signature
+rather than only the unsigned payload. The predecessor object is
+itself a Mission Receipt, typed `application/mission-receipt+json`,
+so the digest cannot be read as committing to any other record type.
+
+## Receipt Verification {#receipt-verification}
+
+A verifier MUST perform the following steps, in order, and MUST NOT
+rely on a receipt if any step fails:
+
+1. Verify the receipt's `evidence_envelope`: decode the JWS payload,
+   compute the JCS canonical bytes of the receipt with
+   `evidence_envelope` removed, and require byte-for-byte equality,
+   rejecting on any difference ({{decision-evidence-integrity}}).
+   Confirm the JWS protected `typ` is `application/mission-receipt+json`
+   and verify the signature against the published key resolved by the
+   JWS `kid` for the party named in `emitter`. Unlike a Decision,
+   Execution, or Refusal record, whose key is bound to a resource
+   audience, a receipt issuer's key is bound to the Mission it reports
+   on: confirm the resolved key is published for the receipt's
+   `mission.id` and `mission.issuer`, and that `emitter.role` is one
+   the deployment accepts as a receipt issuer.
+2. Confirm the `kind`'s required evidence combination is present
+   ({{receipt-kinds}}, {{receipt-evidence}}).
+3. Resolve each evidence reference. Verify each resolved record under
+   its own rules ({{decision-evidence-integrity}}). Recompute each
+   digest over the defined bytes ({{receipt-evidence}}) and require
+   equality. Require the resolved record's own identifier to equal
+   `evidence_id` and its emitter and key to match `emitter`.
+4. Join the records: the same `mission.id` and `mission.issuer` as
+   the receipt's `mission`; the Execution Evidence joins the Decision
+   Evidence on `evaluation_id` ({{decision-evidence-object}},
+   {{execution-evidence-object}}); audience and target, and the
+   authorized and effective parameter digests, are consistent across
+   the records per the runtime's rules
+   ({{I-D.draft-mcguinness-mission-runtime}}); for `execution`, the
+   receipt's `outcome` equals the Execution Evidence's terminal
+   `outcome`.
+5. Require every copied optional member to equal the corresponding
+   member of the record it projects.
+6. Reject on: a missing required record, a record of an unimplemented
+   type, digest mismatch, emitter or key mismatch, join failure, or a
+   copied field that differs. A verifier MUST NOT treat the receipt as
+   verified if any step fails ({{decision-evidence-integrity}}).
+
+## Retention
+
+A Mission Receipt inherits the runtime's record-integrity and
+retention floor ({{execution-evidence-object}}). A receipt is
+retained at least as long as the records it projects; conversely, the
+referenced evidence and the historical verification keys MUST remain
+retained or resolvable for as long as verifiers are expected to
+validate the receipt ({{I-D.draft-mcguinness-mission-runtime}}).
+
+## Worked example
+
+A complete `execution` receipt, projecting records carrying the
+identifiers of {{decision-evidence-object}} and
+{{execution-evidence-object}}'s worked examples;
+{{mission-receipt-digest-worked}} fixes the exact bytes verified for
+the execution reference:
+
+~~~ json
+{
+  "kind": "execution",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "emitter": { "id": "receipts.example.com", "role": "receipt_issuer" },
+  "evidence": [
+    {
+      "type": "application/mission-decision-evidence+json",
+      "digest":
+        "sha-256:fS_yB6-Yit7Gsz-6vw73q7YphoiRm3VwC-3Pk8xW9J0",
+      "evidence_id": "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA",
+      "emitter": { "id": "pdp.example.com", "role": "pdp" }
+    },
+    {
+      "type": "application/mission-execution-evidence+json",
+      "digest":
+        "sha-256:Ims1Xx5FAPYfFB6c6Y2gbqybB-Z2PxCi93yWPcIHmC8",
+      "evidence_id": "exe_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+      "emitter": { "id": "pep.example.com", "role": "executor" }
+    }
+  ],
+  "issued_at": "2026-11-02T08:14:06Z",
+  "outcome": "completed",
+  "decision": {
+    "id": "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA",
+    "result": "permit"
+  },
+  "policy": {
+    "pdp_policy_view":
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+    "mission_policy_version": "deploy-policy:v17"
+  },
+  "executor": {
+    "client_id": "s6BhdRkqt3",
+    "client_instance_id": "inst_macbook_7f3a",
+    "act": [
+      { "iss": "https://as.example.com", "sub": "s6BhdRkqt3" }
+    ]
+  },
+  "target": {
+    "resource": {
+      "type": "journal-entry",
+      "id": "je_2026Q3_inv_8421"
+    },
+    "audience": "https://erp.example.com"
+  },
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InJlY2VpcHQta2V5..."
+  }
+}
+~~~
+
+## Digest vector {#mission-receipt-digest-worked}
+
+A reproducible digest for the `execution` evidence reference above.
+The referenced record is a minimal Execution Evidence stand-in
+carrying only the members {{execution-evidence-object}} requires,
+consistent with that section's worked example's identifiers:
+
+~~~ json
+{
+  "audience": "https://erp.example.com",
+  "emitter": { "id": "pep.example.com", "role": "executor" },
+  "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value":
+      "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXktMSJ9.dGhlLXNpZ25lZC1wYXlsb2FkLWJ5dGVzLWFib3Zl.RVMyNTZfc2lnbmF0dXJlX2J5dGVzX2lsbHVzdHJhdGl2ZQ"
+  },
+  "execution_id": "exe_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "outcome": "completed",
+  "outcome_at": "2026-11-02T08:14:05Z",
+  "sequence": 43
+}
+~~~
+
+The digest input is the JCS {{RFC8785}} canonical bytes of that
+object, member names sorted, no whitespace (one line, 506 bytes,
+shown here wrapped for layout only; remove the layout line breaks,
+adding no characters, to recover the canonical form):
+
+~~~ text
+{"audience":"https://erp.example.com","emitter":{"id":"pep.example.
+com","role":"executor"},"evaluation_id":"dec_8K2nP4qV9rL3tY6sB1zN0e
+F7jB","evidence_envelope":{"format":"jws-compact","value":"eyJhbGci
+OiJFUzI1NiIsImtpZCI6InBlcC1rZXktMSJ9.dGhlLXNpZ25lZC1wYXlsb2FkLWJ5dG
+VzLWFib3Zl.RVMyNTZfc2lnbmF0dXJlX2J5dGVzX2lsbHVzdHJhdGl2ZQ"},"execut
+ion_id":"exe_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w","mission_id":"msn_8R
+fX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","outcome":"completed","outcome_at":
+"2026-11-02T08:14:05Z","sequence":43}
+~~~
+
+~~~ text
+digest = sha-256:Ims1Xx5FAPYfFB6c6Y2gbqybB-Z2PxCi93yWPcIHmC8
+~~~
+
 # Evidence Properties {#evidence-properties}
 
 This section is informative: it names a property vocabulary for the
@@ -1226,12 +1609,14 @@ a common wire carrier.
 
 # Conformance {#conformance}
 
-This document defines conformance for two roles: a PRODUCER that
-emits the records themselves, and a CONSUMER, or VERIFIER, that reads
-and checks them after the fact. A decision-API binding's own
-conformance statement, such as the AuthZEN binding's
-({{I-D.draft-mcguinness-mission-authzen}}), incorporates this
-document's PRODUCER role for its PDP, PEP, and executor.
+This document defines conformance for four roles: a PRODUCER that
+emits the records themselves; a CONSUMER, or VERIFIER, that reads
+and checks them after the fact; a RECEIPT ISSUER that assembles and
+signs a Mission Receipt over them; and a RECEIPT VERIFIER that
+verifies one. A decision-API binding's own conformance statement,
+such as the AuthZEN binding's ({{I-D.draft-mcguinness-mission-authzen}}),
+incorporates this document's PRODUCER role for its PDP, PEP, and
+executor.
 
 A PRODUCER conforming to this document MUST:
 
@@ -1254,6 +1639,26 @@ byte-equality verification procedure and key checks of
 Evidence and cross-record digest divergence as
 {{security-considerations}} and {{execution-evidence-object}}
 require, never as proof of action.
+
+A RECEIPT ISSUER conforming to this document MUST:
+
+- verify every referenced Decision Evidence, Execution Evidence, and
+  Refusal Record under {{decision-evidence-integrity}} before
+  assembling a Mission Receipt that projects it;
+- minimize the receipt to the optional members a projection profile
+  or recipient agreement selects, never defaulting to every available
+  member ({{mission-receipt}});
+- assemble only the evidence combination {{receipt-kinds}} fixes for
+  the receipt's `kind` ({{receipt-evidence}});
+- publish the signing key resolvable by `kid` for the `mission.id` and
+  `mission.issuer` the receipt names ({{receipt-verification}}); and
+- when chaining, maintain a strictly increasing `sequence` per
+  (Mission, issuer, stream) and carry the predecessor digests
+  {{receipt-chaining}} requires.
+
+A RECEIPT VERIFIER conforming to this document MUST perform the
+algorithm of {{receipt-verification}} and reject a Mission Receipt on
+any of its failure conditions.
 
 # Security Considerations {#security-considerations}
 
@@ -1313,6 +1718,26 @@ Audit channels carrying Decision Evidence and Execution Evidence MUST
 be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED). Evidence at
 rest MUST be encrypted per the deployment's data-protection posture.
 
+## Mission Receipt {#receipt-security-considerations}
+
+A Mission Receipt that copies fields from its underlying evidence
+invites a verifier to treat the receipt signer as authoritative for
+those facts; the trust model ({{mission-receipt}}) and the
+verification algorithm ({{receipt-verification}}) are the control,
+not the receipt's signature alone.
+
+Chaining gives view-local linkage only: a signer-controlled chain can
+be truncated, forked, or presented differently to different
+verifiers ({{receipt-chaining}}); a deployment that needs global
+ordering or inclusion runs the audit transparency profile or anchors
+the chain head independently.
+
+A compromised receipt-issuer signing key inherits the emitter-key
+considerations of {{evidence-integrity-signing-keys}}: a key known or
+suspected compromised is published as revoked or marked with a
+compromise time, and a receipt signed under it after that time is
+unverifiable rather than verified.
+
 # Privacy Considerations {#privacy-considerations}
 
 The runtime profile's evidence-privacy guidance
@@ -1358,13 +1783,22 @@ inherent to the Mission's role as a governance handle. Deployments that
 require unlinkability need an additional privacy design outside this
 document.
 
+## Mission Receipt {#receipt-privacy-considerations}
+
+The Mission Receipt's optional members ({{mission-receipt}}) are
+correlation surfaces, the same as the evidence they project from.
+Minimization to the selection a projection profile or recipient
+agreement names is the rule, not a default. A receipt crosses a trust
+boundary by design, so an issuer carries only the members its
+recipient needs.
+
 # IANA Considerations {#iana}
 
 This document requests the following IANA actions.
 
 ## Media Type Registry
 
-This document registers three media types per {{RFC6838}}.
+This document registers four media types per {{RFC6838}}.
 
 ### Decision Evidence Media Type
 
@@ -1420,6 +1854,31 @@ This document registers three media types per {{RFC6838}}.
 
 - Type name: application
 - Subtype name: mission-refusal-record+json
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; JSON encoded in UTF-8
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
+- Published specification: this document
+- Applications that use this media type: Mission-bound runtime
+  enforcement deployments
+- Fragment identifier considerations: same as for `application/json`
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): `.json`
+  - Macintosh file type code(s): TEXT
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
+
+### Mission Receipt Media Type
+
+- Type name: application
+- Subtype name: mission-receipt+json
 - Required parameters: none
 - Optional parameters: none
 - Encoding considerations: binary; JSON encoded in UTF-8

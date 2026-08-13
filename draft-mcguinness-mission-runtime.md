@@ -2047,10 +2047,10 @@ or PDP unreachability) or after a PDP permit (for example, a
 enforcement evidence record with the available fields and the failure
 condition. This document fixes the minimum record content and local
 integrity requirements; the concrete record schemas, canonical byte
-representation, and integrity envelope are defined by Mission Runtime
-Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}). The
-Mission Receipt's portable schema ({{mission-receipt}}) remains out
-of scope ({{deferred}}).
+representation, and integrity envelope, together with the Mission
+Receipt's portable schema ({{mission-receipt}}), are defined by
+Mission Runtime Evidence
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 A record captures decision inputs, the applicable policy and
 authority references, the result, and the failure condition. No
@@ -2167,19 +2167,19 @@ the Mission itself.
 A Mission Receipt MUST identify the Mission the action was authorized
 under: `mission.id` and `mission.issuer`, or a verifiable Mission
 projection such as the cross-domain grant's `mission` claim
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). It SHOULD bind
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). It MAY project
 the policy decision (the decision identifier and result), the policy
 state it was decided under (the PDP's policy-view version and the
 Mission's `policy_version`), the
 executor (the authenticated actor and any `act` chain), the custody
 boundary (whether a mediating PEP held the credential, {{custody}}),
 the downstream target (the resource and audience), the outcome, the
-timestamps, and, where receipt chaining substitutes for a
-transparency feed ({{I-D.draft-mcguinness-mission-audit}}), the
-digest of the previous Mission Receipt. The portable schema and
-canonical byte representation are deferred ({{deferred}}); the
-members above are the minimum a deployment-defined Mission Receipt
-binds.
+timestamps, and, where a deployment chains receipts, the digest of a
+predecessor Mission Receipt. The portable schema, receipt kinds,
+evidence references, verification, and chaining are defined by
+{{I-D.draft-mcguinness-mission-runtime-evidence}}, which fixes the
+minimum join and integrity core every Mission Receipt carries; the
+members above are what a receipt MAY project beyond that core.
 
 ## Record Integrity and Retention {#record-integrity}
 
@@ -2516,10 +2516,10 @@ work and are not required to enforce it:
 - the Mission Receipt's portable schema and canonical byte
   representation ({{mission-receipt}}: this profile fixes the term,
   its minimum binding, and the local runtime enforcement evidence
-  record). The concrete Decision Evidence, Execution Evidence, and
-  Refusal Record object schemas, canonicalization, integrity
-  envelope, and media types are, by contrast, no longer deferred:
-  they are defined by the runtime evidence companion
+  record), together with the concrete Decision Evidence, Execution
+  Evidence, and Refusal Record object schemas, canonicalization,
+  integrity envelope, and media types, are no longer deferred: all
+  are defined by the runtime evidence companion
   ({{I-D.draft-mcguinness-mission-runtime-evidence}});
 - actor provenance beyond the `act` chain and attestation of the
   execution environment: actor-signed hop proofs
