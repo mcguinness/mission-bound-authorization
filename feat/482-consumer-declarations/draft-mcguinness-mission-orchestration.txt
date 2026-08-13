@@ -235,24 +235,100 @@ Table of Contents
 4.  Mission Substrate
 
    This profile is defined against the Mission model rather than against
-   OAuth 2.0 mechanics.  It consumes these substrate primitives:
+   OAuth 2.0 mechanics: it is a substrate-neutral consumer, and this
+   section is its consumption declaration under the rule of Mission
+   Substrate Requirements ([I-D.draft-mcguinness-mission-substrate])
+   that a substrate-neutral profile declare the kernel functions and
+   optional capabilities it consumes.
 
-   *  the Mission identifier;
+   From the contextual-governance kernel it consumes the Mission
+   identifier and issuer, the kernel's Mission Reference and Controller;
+   the lifecycle state space with its only-active-permits rule, the
+   kernel's governance gate, which drives state-change behavior
+   (Section 7); and the integrity-anchor envelope, used for
+   unwind_plan_hash (Section 6.1).  The runtime enforcement evidence its
+   records link ([I-D.draft-mcguinness-mission-runtime-evidence]) is a
+   companion dependency, not a substrate primitive.
 
-   *  the lifecycle state space with its only-active-permits rule;
+   It consumes these optional capabilities:
 
-   *  the runtime enforcement evidence its records link;
+   +==================+=============+=================================+
+   | Capability       | Consumption | Scope of consumption            |
+   +==================+=============+=================================+
+   | Lifecycle-Gated  | required    | When the orchestrator learns a  |
+   | Authorization    |             | Mission is no longer active, or |
+   |                  |             | cannot establish active state   |
+   |                  |             | within the deployment's         |
+   |                  |             | staleness bound, it stops       |
+   |                  |             | dispatching new governed steps, |
+   |                  |             | suppresses or pauses queued     |
+   |                  |             | work, and evaluates in-flight   |
+   |                  |             | steps; post-completion behavior |
+   |                  |             | runs only on an established     |
+   |                  |             | non-active state (Section 7)    |
+   +------------------+-------------+---------------------------------+
+   | State-Observable | required    | The orchestration profile MUST  |
+   |                  |             | define the source of Mission    |
+   |                  |             | state used by the orchestrator  |
+   |                  |             | and a staleness bound per       |
+   |                  |             | action class, calibrated        |
+   |                  |             | against the runtime profile's   |
+   |                  |             | non-normative freshness table   |
+   |                  |             | (Section 3.1)                   |
+   +------------------+-------------+---------------------------------+
+   | Structured       | conditional | Consumed only for a successor's |
+   | Authority        |             | or remedial Mission's own       |
+   |                  |             | Authority Set: a                |
+   |                  |             | separate_mission compensation   |
+   |                  |             | basis requires a distinct       |
+   |                  |             | active Mission whose Authority  |
+   |                  |             | Set is scoped to compensation   |
+   |                  |             | actions for the terminated      |
+   |                  |             | Mission's committed steps, and  |
+   |                  |             | a resource_policy basis lies    |
+   |                  |             | outside Mission authority       |
+   |                  |             | entirely (Section 9.1)          |
+   +------------------+-------------+---------------------------------+
+   | Monotonic        | not         | The orchestrator derives no     |
+   | Derivation       | consumed    | authority; a superseded         |
+   |                  |             | Mission's continued work        |
+   |                  |             | proceeds through a fresh        |
+   |                  |             | derivation from the successor's |
+   |                  |             | grant, not by rebinding the     |
+   |                  |             | predecessor's authority         |
+   |                  |             | (Section 7)                     |
+   +------------------+-------------+---------------------------------+
+   | Credential-Bound | not         | The runtime profile still       |
+   |                  | consumed    | governs each consequential      |
+   |                  |             | action at the last controllable |
+   |                  |             | boundary (Section 12); under a  |
+   |                  |             | resource_policy compensation    |
+   |                  |             | basis the orchestrator presents |
+   |                  |             | no Mission-bound credential     |
+   |                  |             | (Section 9.1)                   |
+   +------------------+-------------+---------------------------------+
+   | Independently    | not         | This document consumes neither  |
+   | Verifiable,      | consumed    | capability; it produces         |
+   | Portable         |             | Orchestration Evidence of its   |
+   | Evidence         |             | own, under the record integrity |
+   |                  |             | and retention requirements      |
+   |                  |             | imported from the runtime       |
+   |                  |             | profile (Section 11,            |
+   |                  |             | Section 11.1)                   |
+   +------------------+-------------+---------------------------------+
 
-   *  the integrity-anchor envelope, used for unwind_plan_hash; and
-
-   *  the substrate's Mission state, against which a compensation
-      authority basis resolves (Section 9.1): a separate_mission basis
-      requires a Mission that is active under the binding in use, and a
-      resource_policy basis lies outside Mission authority entirely.
+          Table 1: Orchestration profile capability consumption
 
    The issuance profile [I-D.draft-mcguinness-oauth-mission] is this
-   version's normative substrate; another substrate that provides the
-   same primitives can host this profile unchanged.
+   version's normative substrate: it defines each consumed kernel
+   function and capability for OAuth 2.0.  A binding that provides the
+   required capabilities above, and Structured Authority where a
+   deployment compensates under a separate_mission basis, can host this
+   profile.  The portability claim is capability-scoped rather than
+   substrate-wide for the reason the substrate's Capability Confusion
+   consideration states: every property this profile requires matches an
+   explicit capability claim and its scope, never the generic statement
+   that a binding supports Missions.
 
 5.  Reversibility Classes
 
@@ -300,7 +376,7 @@ Table of Contents
         | Privileged administration | privileged_administration   |
         +---------------------------+-----------------------------+
 
-                                  Table 1
+                                  Table 2
 
    read_only and reversible_write are a reversibility refinement this
    profile adds that the runtime classification does not separately
@@ -509,7 +585,7 @@ Table of Contents
       | superseded | [I-D.draft-mcguinness-oauth-mission-expansion] |
       +------------+------------------------------------------------+
 
-                                  Table 2
+                                  Table 3
 
    The orchestrator needs none of those companion profiles to be
    conformant: per the issuance profile's forward-compatibility rule it
@@ -971,6 +1047,11 @@ Table of Contents
               McGuinness, K., "Mission Runtime Evidence", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime-evidence.html>.
+
+   [I-D.draft-mcguinness-mission-substrate]
+              McGuinness, K., "Mission Substrate Requirements", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-substrate.html>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth

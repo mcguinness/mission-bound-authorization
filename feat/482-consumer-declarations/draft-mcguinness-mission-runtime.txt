@@ -467,9 +467,11 @@ Table of Contents
    |             |           |Section 7.3                                      |
    +-------------+-----------+-------------------------------------------------+
    |Independently|not        |Evidence portability and offline verification are|
-   |Verifiable,  |consumed   |the runtime evidence companion's concern         |
-   |Portable     |           |([I-D.draft-mcguinness-mission-runtime-evidence])|
-   |Evidence     |           |                                                 |
+   |Verifiable,  |consumed   |the audit profile's concern                      |
+   |Portable     |           |([I-D.draft-mcguinness-mission-audit]); the      |
+   |Evidence     |           |runtime evidence companion defines the records   |
+   |             |           |themselves                                       |
+   |             |           |([I-D.draft-mcguinness-mission-runtime-evidence])|
    +-------------+-----------+-------------------------------------------------+
 
               Table 1: Runtime profile capability consumption
