@@ -95,6 +95,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-continuation:
+    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
@@ -1017,6 +1025,11 @@ The child delegation profile
 same parameter with the same semantics on its child-creation
 exchange, as `mission_denial_reason` is shared across the profiles
 that mint a Mission related to an existing one ({{denial-reasons}}).
+Delegation-family-creating exchanges adopt the same definitions by
+reference, each under its own domain-separating `op` value
+({{creation-fingerprint}}); the continuation profile's
+async-delegation exchange does so
+({{I-D.draft-mcguinness-oauth-mission-continuation}}).
 
 ## The operation fingerprint {#creation-fingerprint}
 

@@ -32,6 +32,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-zhu-oauth-async-delegation:
@@ -345,6 +353,41 @@ the trigger. This is the "scheduled continuation roots in durable
 authorization" case: the Mission is that durable authorization. Successive
 refreshes within one family are one delegation and are not counted again
 against `max_derivations` ({{authorization-continuity}}).
+
+Establishing the family is a delegation-family-creating exchange, and a
+client that loses the response retries with a fresh, valid proof; without
+an idempotency identifier that retry mints a second live refresh-token
+family. The exchange therefore carries `creation_request_id`, the
+creation idempotency identifier of
+{{I-D.draft-mcguinness-oauth-mission-expansion}}. The parameter is
+REQUIRED; a Mission Issuer MUST refuse an exchange missing it with
+`invalid_request`. Its syntax, the reservation state machine and its
+uniqueness constraint, tombstone retention against the published retry
+horizon, and the revalidation rules are that profile's, applied by
+reference and not redefined here.
+
+In the operation fingerprint, `op` is `async-delegation`; `iss` and
+`client` are as the expansion profile defines them; `source` is the
+`mission_id` of the base Mission resolved from `subject_token`, never
+the raw token; `cnf` is the acting client's verified confirmation,
+since this exchange deliberately re-binds the family to the acting
+key rather than proving possession of the subject token's own
+confirmation; `proposal` is the parsed `authorization_details` array
+naming the requested confined subset, when present; `resource` is the
+target the family is audienced to; and `request_refresh_token` is the
+parameter selecting this exchange. A repetition whose fingerprint
+differs is refused with `invalid_request`.
+
+Recovery is delivery, never a second family. A revalidated retry (the
+same authenticated client proving possession of the recorded `cnf`,
+with a matching fingerprint) recovers the recorded operation: it MUST
+NOT create a second delegation family and MUST NOT count a second
+derivation against `max_derivations`. The stored response is returned
+while the initial refresh token is unissued or unused; where that
+token has been consumed or has expired, the Mission Issuer mints a
+fresh refresh token within the same family (the family's native
+rotation), an issuance event with issuance accounting only, never
+creation accounting.
 
 ## Cross-Domain Projection Transport {#transport-xdomain}
 
