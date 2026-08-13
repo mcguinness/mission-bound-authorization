@@ -4341,23 +4341,37 @@ for the domain) and through that lane's mechanisms (claims
 gathering, a resource-domain consent artifact), and access MUST be
 refused while required evidence is absent or invalid. A conforming
 deployment treats that refusal as the resource's answer, never as a
-Mission gap to route around, and MUST NOT represent an approved
-Mission as carrying a data subject's consent.
+Mission gap to route around. Mission approval and Mission authority
+MUST NOT be treated as the data subject's consent; a Mission record
+MAY retain a verified consent reference or facts as
+`submission_evidence` ({{mission-record}}), and those facts are
+provenance and policy input only: the resource domain validates them
+independently under its current disclosure policy, and that policy
+remains authoritative.
 
-Third-party personal data written into `goal`, `constraints`, or a
-`proposed_authority` resource identifier persists on the Mission
-record for its audit horizon ({{mission-record}}), concentrates at
-the AS with the record ({{record-access}}), and is confirmable
-through the unsalted anchors by any party holding a candidate value
-(the retention consideration above). Clients SHOULD reference a
+Third-party personal data can enter through any Intent, proposal,
+authority, or recorded-evidence member: the prose members (`goal`,
+`constraints`, `success_criteria`), `purpose`, `resources`,
+deployment-defined `controls`, any type-owned member of a proposed
+entry, the derived Authority Set entries that reach tokens
+({{mission-bound-tokens}}), and `submission_evidence` facts,
+including a consent reference. Whatever the member, it persists on
+the Mission record for its audit horizon ({{mission-record}}) and
+concentrates at the AS with the record ({{record-access}}), and the
+committed members are confirmable through the unsalted anchors by
+any party holding a candidate value (the retention consideration
+above). Clients SHOULD reference a
 third party through resource-scoped or pseudonymous identifiers
 rather than identifying prose; an opaque identifier is minimization,
 not anonymity, and personal-data obligations follow it. Retention
-and erasure follow the deployment's policy, with the audit profile's
-erasure record and its data-subject-request basis as the
+and erasure follow the deployment's policy. Where approval-event
+evidence was registered under the audit transparency profile, its
+erasure record and data-subject-request basis are the
 transparency-side mechanism
 ({{I-D.draft-mcguinness-mission-audit}}): it records an erasure, it
-neither performs one nor overrides retention law.
+neither performs one nor overrides retention law, and the
+operational Mission record and its audit-horizon retention floor
+({{mission-record}}) are untouched by it.
 
 ## Mission Record and Evidence Access {#record-access}
 
