@@ -26,6 +26,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC7515:
   RFC8259:
   RFC8785:
@@ -706,8 +714,8 @@ following members are RECOMMENDED content.
   the retained canonical input under that ruleset. A digest whose
   exclusion set is not recorded cannot be reproduced and so is not a
   sound `input_digest`. It is a canonical-object digest under the
-  issuance profile's commitment mechanisms, which this document
-  imports normatively.
+  substrate's default commitment construction, which this document
+  imports normatively ({{I-D.draft-mcguinness-mission-substrate}}).
 
 `user_supplied_facts`:
 : Facts copied from the request.
@@ -758,8 +766,9 @@ can cite how the proposal was produced. When it does,
 
 Hashing the bare object would omit the `typ` domain separation and
 `iss` binding the integrity-anchor construction exists to provide. The
-hash is an envelope anchor under the issuance profile's commitment
-mechanisms, which this document imports normatively, and is an audit
+hash is an envelope anchor under the substrate's default commitment
+construction, which this document imports normatively
+({{I-D.draft-mcguinness-mission-substrate}}), and is an audit
 commitment only.
 
 Because the shaper is client-side and MAY build a proposal before the

@@ -2294,6 +2294,9 @@ defining a commitment classifies it as one of these species:
 The prefix and agility rules below bind all three species. The
 I-JSON rule binds the two JSON species. The envelope and `typ`
 discipline of {{integrity-anchors}} binds envelope anchors alone.
+This section instantiates the substrate's default commitment
+construction ({{I-D.draft-mcguinness-mission-substrate}}); the two
+state the same rules, and this document remains self-contained.
 
 Every committed JSON value, and the envelope around it, MUST satisfy
 I-JSON {{RFC7493}}, and the party computing or verifying a

@@ -25,7 +25,13 @@ author:
     organization: Independent
     email: public@karlmcguinness.com
 
+normative:
+  RFC6234:
+  RFC7493:
+  RFC8785:
+
 informative:
+  RFC6920:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -340,6 +346,61 @@ every governance party satisfies this section through the maintained
 value; a native content address it also uses as the Mission Reference
 is then verification material for parties holding the value, not a
 commitment in place of it.
+
+### Default Commitment Construction {#default-commitment}
+
+A binding MAY satisfy the duties above, for the Approved Context and
+for any other artifact it commits, with the following default
+construction. The OAuth issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) instantiates it, and family
+profiles import it from this section; a binding with a native
+commitment (a content address, a signed object) remains free to use
+that instead.
+
+The default commits to bytes in one of three species, and a
+specification defining a commitment classifies it:
+
+* **Envelope anchor**: SHA-256 {{RFC6234}} over the JCS {{RFC8785}}
+  canonical bytes of a domain-separated, issuer-bound envelope
+  `{typ, iss, value}`, where `typ` is a collision-resistant name
+  selecting the committed object, `iss` binds the issuing party, and
+  `value` is the committed object.
+* **Canonical-object digest**: SHA-256 over the JCS serialization of
+  a normalized JSON object without the envelope, where protocol
+  context already fixes what is committed.
+* **Raw-octet digest**: SHA-256 over an artifact's exact octets as
+  exchanged, with no canonicalization.
+
+A digest is encoded as an algorithm prefix followed by the
+base64url, no-padding encoding of the digest: `sha-256:` identifies
+SHA-256, which is mandatory to implement and the only algorithm
+defined.
+
+Every committed JSON value, and the envelope around it, MUST satisfy
+I-JSON {{RFC7493}}, and the party computing or verifying a
+commitment MUST reject non-conformant input before canonicalization:
+objects carry no duplicate member names; string data is valid
+Unicode, free of the surrogate and noncharacter code points I-JSON
+prohibits, and is preserved unchanged; number data supplied to JCS
+is representable as a finite IEEE 754 binary64 value ({{RFC8785}},
+Section 3.1). The commitment is over the parsed I-JSON data value,
+not the source text; a value needing exact decimal or large-integer
+semantics rides as a string or under a stricter declared numeric
+domain.
+
+The algorithm prefix is the agility mechanism. A new algorithm
+enters only through a new prefix defined by a referencing
+specification, its name drawn from the Named Information Hash
+Algorithm Registry ({{RFC6920}}). A verifier MUST reject a digest
+whose algorithm prefix it does not recognize and MUST NOT treat an
+unrecognized prefix as `sha-256`. No transition mechanism is
+defined: every commitment a current carrier defines is a single
+prefixed string, and a specification introducing a new prefix MUST
+define the carrier and schema of any parallel commitment, the
+binding that proves the old and new values commit to the same
+object, producer behavior during the transition, verifier selection
+and downgrade behavior when recognition sets differ, and the
+transition procedure itself.
 
 ## Approval Event {#approval}
 

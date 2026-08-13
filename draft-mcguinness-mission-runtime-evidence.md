@@ -175,8 +175,8 @@ integrity-anchor encoded form of
 base64url, no-padding encoding of the digest. Every digest this
 document defines (`evaluation_request_digest`, `entry_digest`,
 `effective_parameter_digest`) is a canonical-object digest under the
-issuance profile's commitment mechanisms, which this document
-imports normatively.
+substrate's default commitment construction, which this document
+imports normatively ({{I-D.draft-mcguinness-mission-substrate}}).
 
 The terms Policy Enforcement Point (PEP), Policy Decision Point
 (PDP), consequential action, action class (and the action-class

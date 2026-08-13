@@ -1648,9 +1648,9 @@ SHA-256(JCS({
 }))
 ~~~
 
-`policy_view_id` is an envelope anchor under the issuance profile's
-commitment mechanisms, which this document imports normatively
-({{I-D.draft-mcguinness-oauth-mission}}).
+`policy_view_id` is an envelope anchor under the substrate's default
+commitment construction, which this document imports normatively
+({{I-D.draft-mcguinness-mission-substrate}}).
 
 The committed manifest MUST carry:
 
@@ -1795,10 +1795,11 @@ that digest immediately before acting
   canonicalization rules the issuance profile defines (duplicate
   member rejection, significant array order, byte-for-byte URI
   comparison); this document does not define a second canonicalization.
-  It is a canonical-object digest under the issuance profile's
-  commitment mechanisms: the I-JSON requirement and the
-  reject-unknown-prefix rule apply to computing and verifying it
-  unchanged ({{I-D.draft-mcguinness-oauth-mission}}).
+  It is a canonical-object digest under the substrate's default
+  commitment construction, which this document imports normatively
+  ({{I-D.draft-mcguinness-mission-substrate}}): the I-JSON
+  requirement and the reject-unknown-prefix rule apply to computing
+  and verifying it unchanged.
 - Every parameter that influences the action's external effect (for
   example, the recipient, destination, amount, or target object) MUST
   enter the `parameter_digest`. A field the deployment excludes MUST be

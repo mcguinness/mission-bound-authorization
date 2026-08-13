@@ -27,6 +27,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC3339:
   RFC8785:
   RFC9728:
@@ -217,9 +225,10 @@ human-approved expansion
 This document uses:
 
 - Mission, Authority Set, Mission Issuer, the subset rule, and the
-  integrity anchors as the core defines them, and imports the core's
-  commitment mechanisms normatively: of the digests this document
-  defines, `resource_metadata_digest` and
+  integrity anchors as the core defines them, and imports the
+  substrate's default commitment construction normatively
+  ({{I-D.draft-mcguinness-mission-substrate}}): of the digests this
+  document defines, `resource_metadata_digest` and
   `resource_declaration_digest` are raw-octet digests over exact
   retrieved bytes, and `ceiling_entry_digest` is a canonical-object
   digest over the entry drawn against;

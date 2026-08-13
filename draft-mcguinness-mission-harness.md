@@ -1277,8 +1277,8 @@ A Harness Evidence object is a JSON object {{RFC8259}} with:
   when this record was made, so a record can be joined to the
   published scope claim after the fact. It is a raw-octet digest
   over the referenced statement's exact published bytes, under the
-  issuance profile's commitment mechanisms, which this document
-  imports normatively.
+  substrate's default commitment construction, which this document
+  imports normatively ({{I-D.draft-mcguinness-mission-substrate}}).
 
 `occurred_at`:
 : REQUIRED. RFC 3339 {{RFC3339}} timestamp.

@@ -26,6 +26,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC3339:
   RFC6234:
   RFC7519:
@@ -272,8 +280,8 @@ integrity-anchor encoded form of
 {{I-D.draft-mcguinness-oauth-mission}}: `sha-256:` followed by the
 base64url, no-padding encoding of the digest. The canonical
 projections of {{projections}} are canonical-object digests under
-the issuance profile's commitment mechanisms, which this document
-imports normatively.
+the substrate's default commitment construction, which this document
+imports normatively ({{I-D.draft-mcguinness-mission-substrate}}).
 
 The terms Policy Enforcement Point (PEP), Policy Decision Point (PDP),
 consequential action, Resource policy, decision, Mission state source,
