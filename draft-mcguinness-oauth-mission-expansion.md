@@ -968,12 +968,17 @@ Mission ({{predecessor-member}}). `related_to` is issuer-recorded
 correlation metadata, not client-asserted authority: this document
 defines no client request parameter for it, and `mission_intent` is
 task-only; the input that causes it to be recorded is authenticated
-and authorized under the Mission Issuer's management or local policy;
-the Mission Issuer resolves the reference in its own namespace, and a
-cross-issuer relationship requires a structured extension; an
-unauthorized, absent, or unknown reference is handled without
-disclosing whether the referenced Mission exists. The member asserts
-related work only, neither mutual recognition nor replacement.
+and authorized under the Mission Issuer's management or local policy.
+The Mission Issuer MUST authorize and resolve the reference, in its
+own namespace, before the new Mission's approval completes (a
+cross-issuer relationship requires a structured extension); MUST set
+`related_to` atomically when the Mission record is created; and MUST
+NOT add or change it afterward. An unresolved or unauthorized
+reference is never recorded: deployment policy either rejects the
+creation uniformly or proceeds without the relationship, applied
+consistently across requests, and neither behavior discloses whether
+the referenced Mission exists. The member asserts related work only,
+neither mutual recognition nor replacement.
 
 A Mission created this way MUST NOT carry the `predecessor` member,
 which asserts the supersession semantics only replacement expansion
@@ -1388,8 +1393,19 @@ delta.
 # Conformance {#conformance}
 
 An implementation claims conformance to this document only in the
-Mission Issuer role and only when it adjudicates expansion. A
-conforming **expansion-capable Mission Issuer** MUST:
+Mission Issuer role, under one of two targets: as an
+expansion-capable Mission Issuer when it adjudicates expansion, or
+under the optional `related_to` correlation target below.
+
+A Mission Issuer that records `related_to` without adjudicating
+expansion conforms to the **`related_to` correlation** target when it
+meets every rule of {{independent-continuation}}: authenticated and
+authorized input, pre-approval resolution, creation-time atomic
+recording, immutability, consistent non-disclosing failure behavior,
+and no `predecessor` member. Nothing else in this section applies to
+that target.
+
+A conforming **expansion-capable Mission Issuer** MUST:
 
 - accept an {{RFC8693}} token exchange whose `subject_token` is the
   predecessor's Mission-bound access token, with `subject_token_type`
@@ -1615,6 +1631,15 @@ member, and to any Mission-state surface that exposes it, to parties
 with a governance need, rather than exposing the chain to every
 credential audience. The issuance profile's Mission Identifier
 correlation considerations apply to each Mission in the chain.
+
+## Related-work correlation {#related-to-correlation}
+
+`related_to` correlates independently approved tasks the way the
+`predecessor` chain correlates a succession, without the authority
+linkage. The same scoping applies: deployments SHOULD disclose the
+member only to audiences that require the governance relationship,
+and the issuance profile's Mission Identifier correlation
+considerations apply to both Missions it names.
 
 ## Disclosure of the broadened task {#broadened-task}
 
