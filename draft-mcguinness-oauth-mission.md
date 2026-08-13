@@ -1789,8 +1789,9 @@ commits the approved authority, not the way that authority was
 rendered to the Approver; this profile commits no separate consent
 disclosure object (see {{consent-binding}}). Every token derived under
 the Mission carries this value ({{mission-bound-tokens}}). A party
-holding the full Authority Set can recompute the commitment and verify
-that the token's carried authority is a subset of that set. A party
+holding the full Authority Set can recompute the commitment,
+confirming the set is the approved one, and then apply the subset
+rule to the token's carried authority. A party
 holding only a narrowed subset cannot recompute the commitment and
 treats it as an audit anchor. For that party, `authority_hash` alone
 does not prove that the carried entries belong to the approved set;
@@ -2415,10 +2416,8 @@ The `mission` claim is a JSON object:
 
 `authority_hash`:
 : REQUIRED. A string. The Mission's
-  `authority_hash`, identifying the commitment to the complete
-  consented Authority Set. The value alone is not a cryptographic
-  proof that a narrowed token's carried `authorization_details` are a
-  subset of that set ({{rs-enforcement}}).
+  `authority_hash`, the commitment over the complete consented
+  Authority Set ({{rs-enforcement}}).
 
 `expires_at`:
 : OPTIONAL. A string. The Mission's `expires_at`
