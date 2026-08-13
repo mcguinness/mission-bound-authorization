@@ -302,7 +302,8 @@ Mission remains unapproved.
 
 ## Submitting a Revision {#revision-submission}
 
-The client submits the narrowed Mission Intent, with any revised
+The client submits the narrowed Mission Intent, as the `intent` of a
+new Mission Intent Submission envelope, with any revised
 `authorization_details` proposal alongside it
 ({{I-D.draft-mcguinness-oauth-mission}}), to the PAR endpoint
 {{RFC9126}} with the `revision_handle` as an additional parameter,
@@ -354,6 +355,16 @@ subset comparison reproducible. The reviewer-seen bound exists because
 a re-baselined set could be broader than the one the reviewer saw: it
 ensures that re-baselining under changed policy cannot widen the
 revision beyond what was actually reviewed.
+
+A revision changes the semantic Intent, and its `intent_hash` with
+it. Intent Submission Evidence bound to the proposed Mission's
+`intent_hash` MUST NOT be treated as evidence for the revision
+({{I-D.draft-mcguinness-oauth-mission}}): evidence a policy requires
+is presented anew on the revision submission's envelope, bound to the
+revised Intent, unless the evidence type's specification authorizes
+defined transformations and verifies their lineage. The issuance
+profile's required-evidence resolution applies to the revision
+submission as to any submission.
 
 The client continues polling the existing `deferral_code`; the revision
 does not start a new approval. A PAR `request_uri` returned on the
@@ -543,7 +554,8 @@ POST /par HTTP/1.1
 Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
 
-mission_intent=%7B...read-only%20Q3%20invoices...%7D&
+mission_intent=%7B%22intent%22%3A
+  %7B...read-only%20Q3%20invoices...%7D%7D&
 client_id=s6BhdRkqt3&
 revision_handle=rvh_4QFJ3P9wZ2
 ~~~

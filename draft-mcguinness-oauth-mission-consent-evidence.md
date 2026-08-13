@@ -254,6 +254,18 @@ This profile separates three artifacts:
 Only the approved Mission grants authority. The disclosure and evidence
 objects prove the approval surface and are audit artifacts.
 
+This profile renders and records the approved semantic Intent, never
+the inbound Mission Intent Submission envelope: raw Intent Submission
+Evidence artifacts presented at admission
+({{I-D.draft-mcguinness-oauth-mission}}) are not embedded in the
+disclosure or the Consent Evidence object, and the verified facts
+they yield land on the Mission record's `submission_evidence`.
+Material verified provenance is nonetheless part of the approval
+surface: the disclosure commits it through
+`submission_provenance_hash` ({{consent-disclosure}}), covered by
+`consent_rendering_hash`, so the recorded rendering proves which
+provenance supported the decision.
+
 # Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}
@@ -293,6 +305,20 @@ A Consent Disclosure object has these members:
   the submitted proposal, and the Authority Set it actually renders. The Consent Evidence object,
   recorded at or after the decision, carries the resolved `mission`
   container with `id`, `issuer`, and the same anchors.
+
+`submission_provenance_hash`:
+: REQUIRED when the approved submission carried Intent Submission
+  Evidence ({{I-D.draft-mcguinness-oauth-mission}}); absent
+  otherwise. A string. The commitment to the normalized verified
+  provenance the Mission records as `submission_evidence`: the
+  issuance profile's anchor envelope with `typ`
+  `mission-submission-provenance` and `value` the
+  `submission_evidence` array, canonicalized with JCS {{RFC8785}},
+  hashed with SHA-256, and encoded like `consent_rendering_hash`
+  ({{consent-rendering-hash}}). Raw evidence artifacts stay out of
+  the disclosure ({{evidence-model}}); this member makes the
+  material verified provenance a committed part of the approval
+  surface, covered by `consent_rendering_hash`.
 
 `template_id`:
 : REQUIRED. A string identifying the disclosure template.
@@ -648,7 +674,8 @@ The Consent Disclosure object MUST be constructed after Authority Set
 derivation and before approval. If any disclosure input changes after
 the disclosure is constructed and before the decision (the Mission
 Intent, the authority proposal, the Authority
-Set, the locale, the template, or the material notices), the Mission
+Set, the verified submission provenance, the locale, the template, or
+the material notices), the Mission
 Issuer MUST discard the disclosure and construct a new one. It
 MUST NOT reuse the prior `consent_rendering_hash`; the issuance
 profile's rule recomputing the integrity anchors over the changed

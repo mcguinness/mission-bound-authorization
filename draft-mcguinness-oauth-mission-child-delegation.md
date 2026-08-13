@@ -394,7 +394,11 @@ The child-creation token exchange carries:
 : REQUIRED when `actor_token` is present, per {{RFC8693}}.
 
 `mission_intent`:
-: REQUIRED. The proposed Child Mission Intent.
+: REQUIRED. The Mission Intent Submission envelope
+  ({{I-D.draft-mcguinness-oauth-mission}}) whose `intent` is the
+  proposed Child Mission Intent; its OPTIONAL `evidence` array
+  carries Intent Submission Evidence under that profile's dispatch,
+  refusal, and never-authority rules.
 
 `authorization_details`:
 : OPTIONAL. The child's authority proposal: the standard {{RFC9396}}
@@ -790,7 +794,8 @@ requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Ajwt&
 subject_token=<parent%20Mission-bound%20access%20token>&
 subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3A
   access_token&
-mission_intent=%7B...read-only%20Q3%20invoice%20extraction...%7D&
+mission_intent=%7B%22intent%22%3A
+  %7B...read-only%20Q3%20invoice%20extraction...%7D%7D&
 parent=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&
 child_actor=%7B%22sub%22%3A%22subagent-invoice-extractor%22%2C
   %22sub_profile%22%3A%22ai_agent%22%7D&

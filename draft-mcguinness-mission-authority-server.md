@@ -453,20 +453,22 @@ recorded as the Mission's `client_id`.
 The endpoint serves two operations, dispatched by request media type:
 
 - **Intent submission**: an HTTPS POST whose `application/json` body
-  is the Mission Intent object itself ({{intent-submission}}).
+  is the Mission Intent Submission envelope ({{intent-submission}}).
 - **Submission status**: an HTTPS POST with an
   `application/x-www-form-urlencoded` body containing a `submission`
   parameter ({{submission-status}}).
 
 ## Intent Submission {#intent-submission}
 
-The request body is a Mission Intent as the issuance profile defines
-it, and the issuance profile's validation rules apply unchanged
-({{I-D.draft-mcguinness-oauth-mission}}): the Intent is untrusted
-client input and never authority; the MAS MUST bound its total size
-and array lengths; and the Intent is closed at the top level. The
-issuance profile's OAuth error outcomes map to this endpoint's error
-codes ({{submission-errors}}):
+The request body is a Mission Intent Submission envelope as the
+issuance profile defines it, `intent` plus OPTIONAL `evidence`, and
+the issuance profile's validation and Intent Submission Evidence
+rules apply unchanged ({{I-D.draft-mcguinness-oauth-mission}}): the
+submission is untrusted client input and never authority; the MAS
+MUST bound its total size, array lengths, evidence entry count, and
+evidence verification cost; and the envelope and the Intent are both
+closed at the top level. The issuance profile's OAuth error outcomes
+map to this endpoint's error codes ({{submission-errors}}):
 
 - A body that cannot be parsed as a JSON {{RFC8259}} object, is
   structurally invalid, exceeds the deployment's size bounds, or
@@ -478,6 +480,12 @@ codes ({{submission-errors}}):
   Authority Set under policy MUST be refused with `invalid_authority`
   (the MAS equivalent of `invalid_authorization_details`), so a client
   can distinguish a syntax error from an authority-derivation failure.
+- An Intent Submission Evidence entry of an unsupported type, an
+  entry that fails its type's verification, or a policy-required
+  evidence type absent from the submission MUST be refused with
+  `invalid_intent_evidence` (the MAS equivalent of the issuance
+  profile's `invalid_mission_intent_evidence`); presented evidence is
+  never silently ignored.
 
 The request body MAY additionally carry an `authorization_details`
 member: the client's authority proposal, an array of
@@ -486,9 +494,9 @@ proposal carriage, replacing the issuance profile's PAR-only
 carriage rule; that profile's validation, derivation, recording, and
 hashing semantics apply unchanged
 ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
-authority, and it is a submission member, not a Mission Intent member
-({{native-carriage}}): the MAS MUST remove it before applying the
-Intent validation above. The issuance profile's intake refusals for a
+authority, and it is a submission member, not a Submission-envelope
+member ({{native-carriage}}): the MAS MUST remove it before applying
+the envelope validation above. The issuance profile's intake refusals for a
 proposed entry map to `invalid_authority` here. A Mission created
 from a submission carrying a proposal records `proposed_authority`
 and `proposal_hash` as the issuance profile's Mission record defines
@@ -533,9 +541,11 @@ Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 {
-  "goal": "Reconcile Q3 invoices and post adjustments under $500.",
-  "resources": ["https://erp.example.com"],
-  "expires_at": "2026-12-31T23:59:59Z"
+  "intent": {
+    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "resources": ["https://erp.example.com"],
+    "expires_at": "2026-12-31T23:59:59Z"
+  }
 }
 ~~~
 
@@ -603,6 +613,7 @@ A consumer MUST ignore members it does not recognize.
 |---|---|---|
 | `invalid_mission_intent` | 400 | Unparseable, structurally invalid, oversized, or containing an undefined top-level member. |
 | `invalid_authority` | 400 | Well-formed Intent, but no valid Authority Set is derivable under policy. |
+| `invalid_intent_evidence` | 400 | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
 | `unauthorized` | 401 | Request not authenticated. |
 | `not_found` | 404 | A referenced submission or Mission does not exist OR is not visible to the caller. |
 | `rate_limited` | 429 | Caller is rate-limited. |
@@ -771,8 +782,9 @@ of the request body:
 
 These are submission members, not Mission Intent members: a MAS that
 implements this capability MUST remove them before applying the
-issuance profile's Intent validation, and the remainder of the body is
-the Mission Intent, validated unchanged ({{intent-submission}}). On a
+issuance profile's Intent validation, and the remainder of the body
+is the Mission Intent Submission envelope, validated unchanged
+({{intent-submission}}). On a
 MAS that does not implement this capability they are undefined
 top-level members and the submission is refused with
 `invalid_mission_intent`, the correct refusal for an unsupported
@@ -952,17 +964,19 @@ Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 {
-  "goal": "Reconcile Q3 invoices and post adjustments under $2,000.",
-  "resources": ["https://erp.example.com"],
-  "expires_at": "2026-12-31T23:59:59Z",
+  "intent": {
+    "goal": "Reconcile Q3 invoices and post adjustments under $2,000.",
+    "resources": ["https://erp.example.com"],
+    "expires_at": "2026-12-31T23:59:59Z"
+  },
   "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
 }
 ~~~
 
 The MAS authenticates the client, verifies it is the predecessor's
 recorded `client_id`, verifies the predecessor is `active`, strips
-`predecessor`, validates the remaining Mission Intent, derives the
-successor's Authority Set, and accepts:
+`predecessor`, validates the remaining Submission envelope, derives
+the successor's Authority Set, and accepts:
 
 ~~~ http-message
 HTTP/1.1 202 Accepted
@@ -2093,9 +2107,11 @@ Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 {
-  "goal": "Reconcile Q3 invoices and post adjustments under $500.",
-  "resources": ["https://erp.example.com"],
-  "expires_at": "2026-12-31T23:59:59Z"
+  "intent": {
+    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "resources": ["https://erp.example.com"],
+    "expires_at": "2026-12-31T23:59:59Z"
+  }
 }
 ~~~
 

@@ -549,9 +549,13 @@ instance with:
 : REQUIRED. The Mission Template's `id` ({{the-mission-template}}).
 
 `mission_intent`:
-: REQUIRED. The dispatch intent, in the issuance profile's Mission
-  Intent shape ({{I-D.draft-mcguinness-oauth-mission}}), from which the
-  instance Authority Set is derived ({{dispatch}}).
+: REQUIRED. The dispatch submission, in the issuance profile's
+  Mission Intent Submission envelope shape
+  ({{I-D.draft-mcguinness-oauth-mission}}): its `intent` is the
+  dispatch intent from which the instance Authority Set is derived
+  ({{dispatch}}), and its OPTIONAL `evidence` array carries Intent
+  Submission Evidence under that profile's dispatch, refusal, and
+  never-authority rules.
 
 `authorization_details`:
 : OPTIONAL. The Dispatcher's authority proposal: the standard

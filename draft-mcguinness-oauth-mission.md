@@ -627,6 +627,21 @@ Mission Intent:
 : The structured description of the task the client submits
   ({{mission-intent}}).
 
+Mission Intent Submission (Submission envelope):
+: The object a client submits as the `mission_intent` parameter
+  value: the Mission Intent under `intent`, and Intent Submission
+  Evidence under `evidence` where any is presented
+  ({{submission-via-par}}).
+
+Intent Submission Evidence:
+: Typed artifacts a client presents in support of claims about a
+  submitted Mission Intent ({{intent-submission-evidence}}):
+  authenticated policy input, never authority. The term names
+  inbound, client-presented material; the evidence this document and
+  companion profiles emit and record (a consent-evidence artifact, an
+  audit evidence base) is issuer- or runtime-produced output, not
+  this.
+
 Authority Proposal:
 : The `authorization_details` array a client submits alongside a
   Mission Intent, a proposal for derivation and never authority
@@ -763,8 +778,9 @@ submitted; the granted authority is committed by `authority_hash`
 over the derived Authority Set ({{authorization-derivation}}).
 
 A Mission Intent is a JSON object describing the task. The client
-submits it in place of `scope`, or alongside a narrowed `scope`. It
-has the following members:
+submits it as the `intent` member of the Mission Intent Submission
+envelope ({{submission-via-par}}), in place of `scope` or alongside a
+narrowed `scope`. It has the following members:
 
 `goal`:
 : REQUIRED. A string. A human-readable statement of the task,
@@ -907,25 +923,53 @@ Example Mission Intent:
 A client MUST submit a Mission Intent through a Pushed Authorization
 Request {{RFC9126}} using the `mission_intent` request parameter. The
 parameter value is the UTF-8 JSON {{RFC8259}} serialization of the
-Mission Intent object, carried as an ordinary OAuth request-parameter
-value (form-encoded in the `application/x-www-form-urlencoded` PAR
-request body, like other OAuth parameters). The AS returns a
-`request_uri` as usual, which the client uses to start authorization.
-An AS that cannot parse `mission_intent` as a JSON object, or that
-parses it but finds it structurally invalid against this document's
-member definitions, MUST refuse the request with `invalid_request`.
+**Mission Intent Submission envelope** (the Submission envelope), a
+JSON object carried as an ordinary OAuth request-parameter value
+(form-encoded in the `application/x-www-form-urlencoded` PAR request
+body, like other OAuth parameters) with exactly these members:
+
+`intent`:
+: REQUIRED. The Mission Intent object ({{mission-intent}}).
+
+`evidence`:
+: OPTIONAL. A non-empty array of Intent Submission Evidence entries
+  ({{intent-submission-evidence}}). When present it MUST be
+  non-empty: omission already expresses absence, and the AS refuses
+  an empty array with `invalid_request`, preserving one closed
+  canonical syntax for "no evidence".
+
+The Submission envelope separates the semantic task from material
+presented about it: `intent_hash` commits exactly the `intent`
+object, never the Submission envelope or its `evidence` array
+({{integrity-anchors}}), so an evidence artifact can commit to the
+`intent_hash` of the Intent it supports without becoming part of the
+object that hash covers. Earlier revisions of this document defined
+the parameter value as the bare Mission Intent object; this document
+does not ({{document-history}}), and the bare shape is refused under
+the closed-envelope rule below.
+
+The AS returns a `request_uri` as usual, which the client uses to
+start authorization. An AS that cannot parse `mission_intent` as a
+JSON object, or that parses it but finds the Submission envelope or
+the Intent structurally invalid against this document's member
+definitions, MUST refuse the request with `invalid_request`.
 
 Submission is governed by the following rules:
 
-- **Closed top level.** The AS MUST reject with `invalid_request` a
-  Mission Intent containing a top-level member this document does
-  not define; extension data belongs under `controls`
-  ({{mission-intent}}), so deployment-defined semantics are explicit
-  and cannot masquerade as core Intent semantics. The top level is
-  closed because its members
-  feed approval rendering and the `intent_hash` commitment, and the
-  closure also keeps issuer-output members, such as a client-planted
-  `authority_hash`, out of the Intent.
+- **Closed top levels.** The Submission envelope is closed: the AS
+  MUST reject with `invalid_request` an envelope containing a
+  top-level member other than `intent` and `evidence`. A bare
+  Mission Intent submitted as the parameter value fails this rule,
+  since its `goal` and sibling members are unknown envelope members.
+  The Mission Intent's own top level is likewise closed: the AS MUST
+  reject with `invalid_request` an `intent` containing a top-level
+  member this document does not define; extension data belongs under
+  `controls` ({{mission-intent}}), so deployment-defined semantics
+  are explicit and cannot masquerade as core Intent semantics. Both
+  top levels are closed because their members feed approval
+  rendering, the `intent_hash` commitment, and evidence dispatch,
+  and the closure also keeps issuer-output members, such as a
+  client-planted `authority_hash`, out of the Intent.
 - **Derivation failure is distinct from syntax.** For an Intent that
   is well-formed but yields no valid Authority Set (an unsupported
   resource, action, or authorization details type, or a policy that
@@ -949,10 +993,14 @@ Submission is governed by the following rules:
   single point of precedence keeps the member set the AS validates
   and bounds in one place; PAR keeps the integrity-sensitive Intent
   off the untrusted front channel.
-- **Bounded size.** The AS MUST bound the Intent's total size and
-  the lengths of its arrays, refusing an Intent that exceeds the
-  deployment-defined limits with `invalid_request`, so an oversized
-  Intent cannot exhaust the AS at rendering, derivation, or hashing.
+- **Bounded size.** The AS MUST bound the Submission envelope's
+  total size, the Intent's total size and the lengths of its arrays,
+  and the count and per-entry sizes of `evidence` entries, refusing
+  a submission that exceeds the deployment-defined limits with
+  `invalid_request`, so an oversized submission cannot exhaust the
+  AS at rendering, derivation, verification, or hashing. The
+  verification-cost bound of {{intent-submission-evidence}}
+  accompanies these.
 - **Concrete authority is proposed via `authorization_details`.**
   A client proposing concrete authority submits the standard
   {{RFC9396}} `authorization_details` request parameter alongside
@@ -976,6 +1024,25 @@ Submission is governed by the following rules:
   client produces the Intent (for example, a "Mission Shaper"
   deriving it from a natural-language instruction) is out of scope
   for this document.
+
+Example Submission envelope, carrying a compact Intent and one
+evidence entry of an illustrative, deployment-defined type:
+
+~~~ json
+{
+  "intent": {
+    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "resources": ["https://erp.example.com"],
+    "expires_at": "2026-12-31T23:59:59Z"
+  },
+  "evidence": [
+    {
+      "type": "urn:example:intent-evidence:admission",
+      "assertion": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFkbS0xIn0..."
+    }
+  ]
+}
+~~~
 
 ## The Authority Proposal {#authority-proposal}
 
@@ -1074,6 +1141,142 @@ Authority Set of {{authorization-derivation}}):
     } }
 ]
 ~~~
+
+## Intent Submission Evidence {#intent-submission-evidence}
+
+The Submission envelope's `evidence` array carries **Intent
+Submission Evidence**: typed artifacts the client presents in support
+of claims about the submitted Intent, such as its originator, an
+admission or consent decision that applies to it, or the presenter
+authorized to submit it. Intent Submission Evidence is inbound and
+client-presented; it is not the evidence this document and its
+companions emit and record as output (a consent-evidence artifact, a
+runtime decision record, an audit evidence base,
+{{I-D.draft-mcguinness-mission-audit}}). The naming keeps the two
+apart: evidence in this section is what a client shows the AS about a
+submission, and emitted Evidence is what the issuer or runtime
+records about its own decisions.
+
+Each entry is a JSON object with a REQUIRED `type` member: a string
+naming the evidence type as a collision-resistant name, under the
+same guidance as anchor `typ` values ({{integrity-anchors}}). The
+specification that owns a `type` defines the entry's remaining
+members as a closed schema, the artifact format, the verification
+procedure, and the verified output facts that verification yields.
+The generic entry has no other members: as with an {{RFC9396}}
+authorization-details type, the selected `type` owns the entry's
+exact members and semantics, and this document defines no bag of
+optional format, issuer, subject, reference, digest, or criticality
+members. This document defines no evidence types; a companion profile
+defines the first, and an AS that supports none refuses every
+presented entry under the dispatch rule below, which is the correct
+refusal, not a gap.
+
+Processing is governed by the following rules:
+
+- **Reject, never ignore.** An entry that is not a JSON object, or
+  that lacks `type`, is structurally invalid and refused with
+  `invalid_request`. The AS MUST refuse an entry whose `type` it
+  does not support, and an entry that fails its type's validation or
+  verification, with `invalid_mission_intent_evidence` ({{iana}}).
+  Evidence presented for admission MUST NOT be silently ignored,
+  dropped, or demoted to advisory input: a submission is accepted
+  only when every presented entry verified.
+- **Policy input, never authority.** A verified entry MUST NOT be
+  interpreted as authority, copied into the Authority Set, or
+  treated as the Mission approval event. Verified evidence MAY serve
+  as authenticated input to the AS's admission and derivation
+  policy; the AS remains responsible for deriving and bounding the
+  Authority Set ({{authorization-derivation}}), and the approval
+  event ({{approval-event}}) remains the sole activation of
+  authority. Verification authenticates the artifact issuer's
+  claims; AS policy decides whether those claims are acceptable for
+  this request.
+- **Required evidence is resolved before derivation.** Rejecting
+  presented evidence does not defend against evidence a client
+  omits. The AS determines the evidence types its applicable
+  profile, client, resource, or admission policy requires before
+  derivation. When a required type is absent from the submission,
+  the AS MUST refuse with `invalid_mission_intent_evidence`, and
+  successful processing of a submission without evidence MUST NOT be
+  interpreted as satisfying an evidence requirement. This is the
+  submission-plane form of the downgrade-by-omission duty
+  ({{downgrade-by-omission}}).
+- **Evidence binds one exact Intent.** Evidence bound to an
+  `intent_hash` applies only to that exact semantic Intent. Any
+  shaping or approval revision that changes `intent_hash` MUST
+  obtain new evidence, unless the evidence type's specification
+  explicitly authorizes defined transformations and defines how
+  their lineage is verified. Evidence for the predecessor Intent
+  MUST NOT be treated as evidence for the revised Intent.
+- **The exchange establishes the presenter; the evidence must
+  agree.** The AS establishes the presenter through the containing
+  exchange: client authentication and, where present, proof of
+  possession. An entry that names an authorized presenter (a
+  `client_id`, a `cnf` key binding) MUST match the established
+  presenter, and a mismatch fails that entry's verification.
+  Evidence is never an alternative client-authentication mechanism
+  and never selects the presenter.
+- **Bounded verification.** Beyond the size and count bounds of
+  {{submission-via-par}}, the AS MUST bound the verification cost a
+  submission can impose (for example, the number of signature
+  verifications it performs), refusing a submission that exceeds the
+  bound with `invalid_request`, so presented evidence cannot exhaust
+  the AS any more than an oversized Intent can.
+
+The AS processes a submission in this order:
+
+1. Parse the Submission envelope and enforce both closed top levels
+   ({{submission-via-par}}).
+2. Validate the `intent` object against the Mission Intent member
+   definitions ({{mission-intent}}).
+3. Compute the provisional `intent_hash` over the `intent` object
+   ({{integrity-anchors}}).
+4. Resolve the evidence types policy requires, and refuse a
+   submission missing a required type.
+5. Verify every `evidence` entry under its type's rules, verifying
+   that intent-bound evidence names exactly the provisional
+   `intent_hash` and is bound to this AS and to the established
+   presenter.
+6. Apply admission policy and derive the Authority Set independently
+   ({{authorization-derivation}}).
+7. Render the Intent, the Authority Set, and the material verified
+   provenance for approval; a change to any of them before the
+   decision is re-rendered and approved over the changed context
+   ({{approval-event}}).
+8. At activation, record the approved `intent`, `intent_hash`, the
+   Authority Set, and the verified evidence facts as
+   `submission_evidence` ({{mission-record}}).
+
+The material verified provenance of step 7 is part of the approval
+surface, not an annotation beside it: where a deployment commits the
+rendered approval surface, the commitment MUST cover the normalized
+provenance facts, at least as a digest of their canonical
+`submission_evidence` representation ({{mission-record}}), so the
+committed rendering proves which provenance supported the decision.
+The consent-evidence companion binds this with a
+`submission_provenance_hash` inside its committed disclosure
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+
+Schema validation and the provisional hash precede signature
+verification, so the AS never verifies artifacts for a submission it
+would refuse on shape, and so intent-bound evidence has a hash to be
+checked against.
+
+On a surface that carries a Mission-creation idempotency fingerprint
+(the expansion and child-creation token exchanges,
+{{I-D.draft-mcguinness-oauth-mission-expansion}}), presented evidence
+affects admission, derivation, approval, and side effects and is
+therefore a member of that fingerprint; the profile that owns the
+fingerprint lists it. On those surfaces, recovery of a completed
+operation under the creation-idempotency rules
+({{I-D.draft-mcguinness-oauth-mission-expansion}}) returns the
+recorded outcome without re-verifying the presented evidence:
+verification happened when the operation ran, and an artifact whose
+freshness or status has since lapsed does not invalidate the recovery
+of an already-completed request. PAR-based creation and surfaces that
+submit no Mission Intent carry no such fingerprint and retain their
+own replay and idempotency mechanisms.
 
 # Mission Authority {#authorization-derivation}
 
@@ -1934,7 +2137,9 @@ issuer-bound envelope:
    ~~~
 
    For `intent_hash`, `typ` is `mission-intent` and `value` is the
-   approved Mission Intent object. For `proposal_hash`, `typ` is
+   approved Mission Intent object: the Submission envelope's `intent`
+   member, never the envelope or its `evidence`
+   ({{submission-via-par}}). For `proposal_hash`, `typ` is
    `mission-proposed-authority` and `value` is the submitted
    `authorization_details` array exactly as recorded
    ({{authority-proposal}}); the anchor exists iff a proposal was
@@ -2072,6 +2277,31 @@ profile defines:
   not enforcement input: like `approval_basis`, it is surfaced on
   the record and through introspection ({{introspection}}) and is
   not carried on the `mission` claim ({{mission-claim}}).
+
+`submission_evidence`:
+: OPTIONAL. An array. The verified Intent Submission Evidence facts
+  ({{intent-submission-evidence}}), one element per verified entry,
+  present iff the approved submission carried evidence. Each element
+  carries exactly these members: `type`, the entry's evidence type;
+  `artifact_hash`, an integrity anchor ({{integrity-anchors}}) with
+  `typ` `mission-intent-evidence` over the entry exactly as
+  presented; `verified_at`, an RFC 3339 timestamp of verification;
+  and `facts`, an object holding the verified output facts the
+  type's specification designates for recording, nested so
+  type-owned facts cannot collide with the common members. Elements
+  preserve the submission's `evidence` order, so the array has one
+  canonical form ({{canonicalization}}). Like
+  `approval_basis`, it is provenance, not enforcement input, and it
+  is not carried on the `mission` claim ({{mission-claim}}). No
+  integrity anchor commits it: its digests are record metadata whose
+  trustworthiness is the trust in this immutable record, not an
+  independently verifiable association between the Mission and the
+  artifacts presented at admission, and an auditor who does not
+  trust the record cannot prove from the anchors which evidence was
+  used. A profile whose threat model requires that association
+  commits normalized provenance under its own anchor `typ`
+  ({{integrity-anchors}}, {{extensibility}}); this document defines
+  none.
 
 `subject`:
 : REQUIRED. An object. The Subject, an object with `iss` and
@@ -3310,14 +3540,21 @@ remaining stable across revisions of this profile:
   ({{authorization-derivation}}); and
 - the `act` delegation chain ({{delegation}}).
 
-The profile offers four extension points, each a declared seam rather
-than new machinery:
+The profile's extension points are each a declared seam rather than
+new machinery:
 
 - **Authority types.** The Authority Set is open to other AS-supported
   `authorization_details` types ({{other-types}}); the Mission
   apparatus (commitment, gating, delegation) is type-agnostic toward
   them, subject to the delegation and projection limits in
   {{other-types}}.
+- **Intent Submission Evidence types.** The `evidence` array of the
+  Submission envelope is open to evidence types defined by companion
+  profiles ({{intent-submission-evidence}}): each type is a
+  collision-resistant name whose owning specification defines the
+  entry's closed schema, verification, and verified output facts,
+  and an AS refuses an entry of a type it does not support rather
+  than ignoring it.
 - **Integrity anchors.** Additional committed objects use the same
   domain-separated, issuer-bound envelope with a new `typ`
   ({{integrity-anchors}}). A consent-disclosure commitment, an
@@ -3463,7 +3700,9 @@ An implementation conforms in one of three roles.
 A **Mission Issuer** (the Authorization Server) implements the core
 issuance surfaces:
 
-- submission of a Mission Intent via PAR ({{mission-intent}});
+- submission of a Mission Intent, in the Submission envelope, via
+  PAR ({{submission-via-par}}), with the Intent Submission Evidence
+  dispatch and refusal rules ({{intent-submission-evidence}});
 - derivation of `mission_resource_access` authorization details
   ({{authorization-derivation}});
 - the approval event with its integrity anchors and recorded
@@ -4022,6 +4261,11 @@ projections of authority where possible, and minimizing status and
 introspection disclosures to authorized callers. The subsections that follow and the
 introspection minimization rules
 ({{caller-authorization-and-minimization}}) give the specific rules.
+An Intent Submission Evidence artifact can carry personal data (an
+originator identity, a consent reference); PAR keeps it off the front
+channel, and the record retains the designated verified facts under
+the same access governance as the rest of the Mission's evidence
+({{record-access}}).
 
 ## Mission Identifier Correlation {#mission-identifier-correlation}
 
@@ -4100,7 +4344,7 @@ registry:
 - Name: `mission_intent`
 - Parameter Usage Location: authorization request
 - Change Controller: IESG
-- Specification Document(s): this document, {{mission-intent}}
+- Specification Document(s): this document, {{submission-via-par}}
 
 - Name: `mission_id`
 - Parameter Usage Location: token response
@@ -4123,6 +4367,24 @@ code, so generic {{RFC6749}} error handling is undisturbed. The
 the `WWW-Authenticate` scheme's extensible auth-param space
 ({{RFC6750}}, {{rs-enforcement}}), for which no IANA registry
 exists; no action is required for it.
+
+## OAuth Extensions Error Registration
+
+This document registers the following in the "OAuth Extensions Error"
+registry {{RFC6749}}:
+
+- Name: `invalid_mission_intent_evidence`
+- Usage Location: authorization endpoint, token endpoint
+- Protocol Extension: Intent Submission Evidence
+  ({{intent-submission-evidence}})
+- Change Controller: IESG
+- Specification Document(s): this document,
+  {{intent-submission-evidence}}
+
+The error is returned where the containing exchange returns its
+errors: on a PAR submission, in the PAR error response; on a
+token-endpoint carriage defined by a companion profile, in the token
+error response.
 
 ## The Mission Resource Access Authorization Details Type {#type-registration}
 
@@ -4273,27 +4535,30 @@ that identity; Stage 0 is otherwise unchanged from that specification.
 
 ## Stage 1: Mission Creation
 
-The agent submits this Mission Intent through PAR
-({{mission-intent}}), proposing concrete authority alongside it on
-the `authorization_details` parameter ({{authority-proposal}}):
+The agent submits this Submission envelope through PAR
+({{submission-via-par}}), carrying the Mission Intent and no
+evidence, and proposing concrete authority alongside it on the
+`authorization_details` parameter ({{authority-proposal}}):
 
 ~~~ json
 {
-  "goal": "Reconcile Q3 invoices and post adjustments under $500.",
-  "resources": ["https://erp.example.com"],
-  "constraints": [
-    "Read only invoices issued in 2026-Q3.",
-    "Post journal entries under $500."
-  ],
-  "success_criteria": [
-    "All Q3 invoices reconciled.",
-    "Each posted adjustment references a source invoice."
-  ],
-  "purpose": "urn:example:purpose:reconcile",
-  "expires_at": "2026-12-31T23:59:59Z",
-  "controls": {
-    "acr": "urn:example:acr:mfa",
-    "max_derivations": 200
+  "intent": {
+    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "resources": ["https://erp.example.com"],
+    "constraints": [
+      "Read only invoices issued in 2026-Q3.",
+      "Post journal entries under $500."
+    ],
+    "success_criteria": [
+      "All Q3 invoices reconciled.",
+      "Each posted adjustment references a source invoice."
+    ],
+    "purpose": "urn:example:purpose:reconcile",
+    "expires_at": "2026-12-31T23:59:59Z",
+    "controls": {
+      "acr": "urn:example:acr:mfa",
+      "max_derivations": 200
+    }
   }
 }
 ~~~
@@ -4613,6 +4878,21 @@ resolve before interoperating.
 
 -01
 
+- Breaking change to the Intent carriage shape: the `mission_intent`
+  parameter value is the Mission Intent Submission envelope
+  ({{submission-via-par}}), `intent` plus an OPTIONAL typed
+  `evidence` array, and the bare-Intent value is refused under the
+  closed envelope. Anchors are stable: `intent_hash` commits exactly
+  the `intent` object, so committed values, recorded anchors, and
+  the test vectors are unchanged. The Intent Submission Evidence
+  hook ({{intent-submission-evidence}}) adds type-dispatched
+  verification that rejects unknown or failing entries, the
+  policy-input-never-authority rule, the required-evidence
+  anti-downgrade rule, evidence invalidation across shaping and
+  revision, the presenter conjunction, verification-cost bounds, the
+  `invalid_mission_intent_evidence` error registration, and the
+  `submission_evidence` record member as record-trusted provenance
+  metadata.
 - Breaking change to the authority-proposal carriage: the proposal
   moves from the Intent's `proposed_authority` member, which is
   removed, to the standard top-level `authorization_details`

@@ -414,13 +414,16 @@ token endpoint. The request carries:
 : REQUIRED when `actor_token` is present, per {{RFC8693}}.
 
 `mission_intent`:
-: REQUIRED. The successor's Mission Intent, per
-  {{I-D.draft-mcguinness-oauth-mission}}. It describes the broadened
-  task: the `goal`, `resources`, `constraints`, and `controls` the
-  successor needs, including the authority the denied action required.
-  The Mission Issuer derives the successor's Authority Set from this
-  Intent and bounds it by policy exactly as for any Mission; this
-  document adds no authority-derivation rule.
+: REQUIRED. The successor's Mission Intent Submission envelope, per
+  {{I-D.draft-mcguinness-oauth-mission}}: its `intent` is the
+  successor's Mission Intent, and its OPTIONAL `evidence` array
+  carries Intent Submission Evidence under that profile's dispatch,
+  refusal, and never-authority rules. The Intent describes the
+  broadened task: the `goal`, `resources`, `constraints`, and
+  `controls` the successor needs, including the authority the denied
+  action required. The Mission Issuer derives the successor's
+  Authority Set from this Intent and bounds it by policy exactly as
+  for any Mission; this document adds no authority-derivation rule.
 
 `authorization_details`:
 : OPTIONAL. The successor's authority proposal: the standard
@@ -966,8 +969,9 @@ from that:
 A deployment MAY record the relationship as `related_to` on the new
 Mission ({{predecessor-member}}). `related_to` is issuer-recorded
 correlation metadata, not client-asserted authority: this document
-defines no client request parameter for it, and `mission_intent` is
-task-only; the input that causes it to be recorded is authenticated
+defines no client request parameter for it, and `mission_intent`
+carries the task and its submission evidence, never a relationship
+member; the input that causes it to be recorded is authenticated
 and authorized under the Mission Issuer's management or local policy.
 The Mission Issuer MUST authorize and resolve the reference, in its
 own namespace, before the new Mission's approval completes (a
@@ -1138,7 +1142,15 @@ The fingerprint object carries exactly these members:
   where client authentication alone identifies the acting agent.
 
 `intent`:
-: The parsed `mission_intent` object.
+: The semantic `intent` object of the parsed `mission_intent`
+  Submission envelope ({{I-D.draft-mcguinness-oauth-mission}}).
+
+`evidence`:
+: The parsed `evidence` array of the Submission envelope, when
+  present. Presented evidence affects admission, derivation,
+  approval, and side effects, so a retry presenting different
+  evidence is a different operation, refused on the fingerprint
+  mismatch below.
 
 `proposal`:
 : The parsed `authorization_details` array, when present.
@@ -1353,7 +1365,8 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&
 requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
 subject_token=<predecessor%20Mission-bound%20access%20token>&
 subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
-mission_intent=%7B...journal-entries%20cap%20%242000...%7D&
+mission_intent=%7B%22intent%22%3A
+  %7B...journal-entries%20cap%20%242000...%7D%7D&
 predecessor=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&
 creation_request_id=7c9e6679-7425-40de-944b-e07fc1f90ae7&
 client_id=s6BhdRkqt3
