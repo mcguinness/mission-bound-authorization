@@ -831,7 +831,9 @@ narrowed `scope`. It has the following members:
 
 `goal`:
 : REQUIRED. A string. A human-readable statement of the task,
-  for rendering to the Approver. Maximum 4096 characters.
+  for rendering to the Approver. Maximum 4096 characters. Prose
+  here persists on the record and can carry personal data about
+  third parties ({{third-party-data-subjects}}).
 
 `resources`:
 : REQUIRED. An array of strings. The target resources the
@@ -4411,6 +4413,56 @@ low-entropy or guessable content the anchor is a disclosure channel,
 and deployments treat it as one when the Intent itself is sensitive;
 the same confirmation channel exists for a candidate proposal
 against `proposal_hash`.
+
+## Third-Party Data Subjects {#third-party-data-subjects}
+
+A task can be about a person who holds no Mission role: in a
+background check, the employer's agent queries a registrar about a
+candidate who is neither Subject nor Approver nor resource owner.
+Mission approval records the accountable Approver's authorization of
+the undertaking ({{approval-event}}); it is not, by itself, evidence
+of such a person's consent to disclosure or of any other legal basis
+a disclosure requires, and whether a basis is required and what
+satisfies it is deployment and legal policy outside this protocol.
+Where the resource domain requires data-subject consent or another
+basis, that disclosure policy MUST be satisfied in that domain's own
+lane, wherever the deployment evaluates it (the Resource Server, a
+gateway, a policy decision point, or an authorization server acting
+for the domain) and through that lane's mechanisms (claims
+gathering, a resource-domain consent artifact), and access MUST be
+refused while required evidence is absent or invalid. A conforming
+deployment treats that refusal as the resource's answer, never as a
+Mission gap to route around. Mission approval and Mission authority
+MUST NOT be treated as the data subject's consent; a Mission record
+MAY retain a verified consent reference or facts as
+`submission_evidence` ({{mission-record}}), and those facts are
+provenance and policy input only: the resource domain validates them
+independently under its current disclosure policy, and that policy
+remains authoritative.
+
+Third-party personal data can enter through any Intent, proposal,
+authority, or recorded-evidence member: the prose members (`goal`,
+`constraints`, `success_criteria`), `purpose`, `resources`,
+deployment-defined `controls`, any type-owned member of a proposed
+entry, the derived Authority Set entries that reach tokens
+({{mission-bound-tokens}}), and `submission_evidence` facts,
+including a consent reference. Whatever the member, it persists on
+the Mission record for its audit horizon ({{mission-record}}) and
+concentrates at the AS with the record ({{record-access}}), and the
+committed members are confirmable through the unsalted anchors by
+any party holding a candidate value (the retention consideration
+above). Clients SHOULD reference a
+third party through resource-scoped or pseudonymous identifiers
+rather than identifying prose; an opaque identifier is minimization,
+not anonymity, and personal-data obligations follow it. Retention
+and erasure follow the deployment's policy. Where approval-event
+evidence was registered under the audit transparency profile, its
+erasure record and data-subject-request basis are the
+transparency-side mechanism
+({{I-D.draft-mcguinness-mission-audit}}): it records an erasure, it
+neither performs one nor overrides retention law, and the
+operational Mission record and its audit-horizon retention floor
+({{mission-record}}) are untouched by it.
 
 ## Mission Record and Evidence Access {#record-access}
 
