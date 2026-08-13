@@ -1204,6 +1204,9 @@ limits what a given verifier sees.<a href="#section-abstract-1" class="pilcrow">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
                 <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-failure-taxonomy" class="internal xref">Failure Taxonomy</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-transparency-hardened-verif" class="internal xref">Transparency-Hardened Verification</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
@@ -1952,11 +1955,30 @@ present and well-formed.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
         <li id="section-7-2.3">
           <p id="section-7-2.3.1"><strong>Signature.</strong> Resolve the <span class="bcp14">REQUIRED</span> <code>kid</code> in the Mission Issuer's
 published key material (<a href="#mission-substrate" class="auto internal xref">Section 4</a>) and verify the JWS
-signature. Confirm <code>mission.issuer</code> equals <code>iss</code>. Reject a Mandate
-whose <code>kid</code> the issuer has published as revoked for compromise,
-and, where that key carries a compromise time, reject a Mandate
-whose <code>iat</code> is at or after it (<a href="#minting" class="auto internal xref">Section 5.4</a>); either is the invalid
-class of <a href="#failures" class="auto internal xref">Section 7.1</a>.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+signature. Confirm <code>mission.issuer</code> equals <code>iss</code>. Where the issuer
+has published the <code>kid</code> as revoked for compromise (<a href="#minting" class="auto internal xref">Section 5.4</a>),
+apply this precedence:<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-2.3.2.1">
+              <p id="section-7-2.3.2.1.1">Where the key carries a compromise time and the Mandate's <code>iat</code>
+is at or after it, reject the Mandate: it asserts
+post-compromise creation, the invalid class of <a href="#failures" class="auto internal xref">Section 7.1</a>.<a href="#section-7-2.3.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-2.3.2.2">
+              <p id="section-7-2.3.2.2.1">Otherwise, where a Receipt the verifier trusts under the audit
+transparency profile (<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>) anchors the Mandate's
+registration before the compromise time, verification continues:
+the Receipt establishes pre-compromise existence, and the
+signature authenticates the content as of that time.<a href="#section-7-2.3.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-7-2.3.2.3">
+              <p id="section-7-2.3.2.3.1">Otherwise, including where the issuer published no compromise
+time, the Mandate is unverifiable (<a href="#failures" class="auto internal xref">Section 7.1</a>), never invalid.<a href="#section-7-2.3.2.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-7-2.3.3">
+The self-asserted <code>iat</code> never establishes the pre-compromise
+bound; only a Receipt's registration time does.<a href="#section-7-2.3.3" class="pilcrow">¶</a></p>
 </li>
         <li id="section-7-2.4">
           <p id="section-7-2.4.1"><strong>Issuer trust.</strong> Decide by local policy or configured trust
@@ -1999,10 +2021,12 @@ unrecognized prefix as <code>sha-256</code>, per the issuance profile.<a href="#
       </ol>
 <p id="section-7-3">Where the deployment runs the audit transparency profile, a verifier
 <span class="bcp14">MAY</span> additionally confirm an audit-registration Receipt
-(<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>) before high-consequence reliance; the
-issuer-key-compromise consideration states what this optional
-hardening bounds and what its absence leaves open
-(<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-7-3" class="pilcrow">¶</a></p>
+(<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>) before high-consequence reliance, and under a
+key revoked for compromise the Receipt is the only path on which
+verification continues (step 3). Transparency-hardened verification
+(<a href="#transparency-hardened" class="auto internal xref">Section 7.2</a>) makes both sides mandatory; the
+issuer-key-compromise consideration states what the hardening bounds
+and what its absence leaves open (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-7-3" class="pilcrow">¶</a></p>
 <div id="failures">
 <section id="section-7.1">
         <h3 id="name-failure-taxonomy">
@@ -2013,8 +2037,9 @@ disclosure into a fifth; a verifier <span class="bcp14">MUST</span> distinguish 
 <span class="break"></span><dl class="dlParallel" id="section-7.1-2">
           <dt id="section-7.1-2.1">Invalid:</dt>
           <dd style="margin-left: 1.5em" id="section-7.1-2.2">
-            <p id="section-7.1-2.2.1">The artifact fails as an artifact: signature, <code>typ</code>, a key revoked
-for compromise or a post-compromise <code>iat</code> under step 3, the claim
+            <p id="section-7.1-2.2.1">The artifact fails as an artifact: signature, <code>typ</code>, a
+post-compromise <code>iat</code> under a compromised key per step 3's
+precedence, the claim
 structure of step 2, <code>iss</code>/<code>issuer</code> mismatch, anchor mismatch over a
 full array under step 6 (as distinct from the partial class below),
 or an unrecognized hash prefix under step 8. The Mandate <span class="bcp14">MUST</span> be
@@ -2056,8 +2081,9 @@ normally. A verifier that needs the full Authority Set:<a href="#section-7.1-2.4
                 <p id="section-7.1-2.6.2.3.1">no trust anchor covers the Mission's issuer; or<a href="#section-7.1-2.6.2.3.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-7.1-2.6.2.4">
-                <p id="section-7.1-2.6.2.4.1">the signing key is issuer-flagged as compromised and the
-Mandate's <code>iat</code> is not anchored before the compromise time
+                <p id="section-7.1-2.6.2.4.1">the signing key is issuer-flagged as compromised and no trusted
+Receipt anchors the Mandate before the published compromise time,
+or no compromise time is published at all
 (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-7.1-2.6.2.4.1" class="pilcrow">¶</a></p>
 </li>
             </ul>
@@ -2089,6 +2115,32 @@ the facts it states.<a href="#section-7.1-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
+</section>
+</div>
+<div id="transparency-hardened">
+<section id="section-7.2">
+        <h3 id="name-transparency-hardened-verif">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-transparency-hardened-verif" class="section-name selfRef">Transparency-Hardened Verification</a>
+        </h3>
+<p id="section-7.2-1">Baseline verification is steps 1 through 8: a Mandate's validity
+never depends on transparency infrastructure. A deployment that wants
+the stronger assurance as a claimable property <span class="bcp14">MAY</span> run
+<strong>transparency-hardened Mandate verification</strong>. Under it:<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.2-2.1">
+            <p id="section-7.2-2.1.1">the Mandate Issuer <span class="bcp14">MUST</span> register every Mandate it mints as Mission
+evidence at minting (<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>), so a missing Receipt is
+itself a signal rather than an unknown; and<a href="#section-7.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-2.2">
+            <p id="section-7.2-2.2.1">a Mandate Verifier <span class="bcp14">MUST</span> confirm a Receipt it trusts before
+high-consequence reliance, and applies the compromised-key
+precedence of step 3 with the Receipt in hand.<a href="#section-7.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.2-3">The mode is a deployment property, not an artifact property: a
+Mandate carries no marker for it, and a verifier learns which mode
+governs from deployment configuration (<a href="#conformance" class="auto internal xref">Section 10</a>).<a href="#section-7.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2140,7 +2192,10 @@ Subject or client. A rail <span class="bcp14">MUST NOT</span> derive authority o
 Mandate alone. Before minting its vertical artifact, the rail <span class="bcp14">MUST</span>
 independently authenticate the presenter as the Mission's <code>subject</code> or
 <code>client_id</code> through its own channel, and treat the Mandate only as the
-committed facts that authentication is checked against. Until a
+committed facts that authentication is checked against. That
+authentication is necessary, never sufficient: minting is the rail's
+own authorization decision under its own governance, and neither the
+Mandate nor its presentation substitutes for it. Until a
 holder-bound Mandate is defined (<a href="#non-goals" class="auto internal xref">Section 9</a>), that independent
 authentication is the only binding between the artifact and its
 presenter, and deriving authority without it repeats the
@@ -2170,11 +2225,20 @@ audit transparency profile (<span>[<a href="#I-D.draft-mcguinness-mission-audit"
 the Mandate slots into its evidence-type pattern with these values:<a href="#section-8.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8.3-2.1">
-            <p id="section-8.3-2.1.1"><strong>Canonical bytes</strong>: the JWS Compact Serialization as issued, hashed
-as-is (an already-signed object is not re-canonicalized).<a href="#section-8.3-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-8.3-2.1.1"><strong>Canonical bytes</strong>: for the plain form, the JWS Compact
+Serialization as issued, hashed as-is (an already-signed object is
+not re-canonicalized). For the SD-JWT form, the issuer-signed JWT
+component as issued, the serialization up to but excluding the
+first <code>~</code> (<span>[<a href="#RFC9901" class="cite xref">RFC9901</a>]</span>): a presentation varies by disclosure
+subset, so only that component has stable bytes. The Receipt then
+anchors the signature and the disclosure digests it protects, and
+the disclosed values of any later presentation verify against those
+anchored commitments through <span>[<a href="#RFC9901" class="cite xref">RFC9901</a>]</span> digest processing.<a href="#section-8.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.3-2.2">
-            <p id="section-8.3-2.2.1"><strong><code>payload-preimage-content-type</code></strong>: <code>application/mission-mandate+jwt</code>
+            <p id="section-8.3-2.2.1"><strong><code>payload-preimage-content-type</code></strong>:
+<code>application/mission-mandate+jwt</code> for the plain form,
+<code>application/mission-mandate+sd-jwt</code> for the SD-JWT form
 (<a href="#iana" class="auto internal xref">Section 13</a>).<a href="#section-8.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.3-2.3">
@@ -2183,10 +2247,12 @@ as-is (an already-signed object is not re-canonicalized).<a href="#section-8.3-2
 <code>iss</code> is <code>mission.issuer</code> (<a href="#conformance" class="auto internal xref">Section 10</a>).<a href="#section-8.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-8.3-3">Registration is an optional hardening: verification
+<p id="section-8.3-3">Registration happens once, at minting, independent of any
+presentation. It is an optional hardening: verification
 (<a href="#verification" class="auto internal xref">Section 7</a>) does not require it. It gives a Mandate an
-independent existence proof, which
-bounds a later issuer key compromise (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-8.3-3" class="pilcrow">¶</a></p>
+independent existence proof, which bounds a later issuer key
+compromise (<a href="#security-considerations" class="auto internal xref">Section 11</a>); transparency-hardened
+verification makes it mandatory (<a href="#transparency-hardened" class="auto internal xref">Section 7.2</a>).<a href="#section-8.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2268,7 +2334,10 @@ reliance requires an active Mission (<a href="#minting" class="auto internal xre
       </ul>
 <p id="section-10-3">A Mandate Issuer running the audit transparency profile <span class="bcp14">SHOULD</span>
 register a Mandate as Mission evidence when it feeds
-high-consequence decisions (<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>).<a href="#section-10-3" class="pilcrow">¶</a></p>
+high-consequence decisions (<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>). Under
+transparency-hardened verification (<a href="#transparency-hardened" class="auto internal xref">Section 7.2</a>),
+registration is not selective: the issuer <span class="bcp14">MUST</span> register every
+Mandate at minting.<a href="#section-10-3" class="pilcrow">¶</a></p>
 <p id="section-10-4">A <strong>Mandate Verifier</strong> <span class="bcp14">MUST</span>:<a href="#section-10-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-10-5.1">
@@ -2283,8 +2352,10 @@ as evidence against the artifact;<a href="#section-10-5.2.1" class="pilcrow">¶<
 requires an active Mission; and<a href="#section-10-5.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-5.4">
-          <p id="section-10-5.4.1">never grant access, mint credentials, or widen authority on
-presentation of a Mandate (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-10-5.4.1" class="pilcrow">¶</a></p>
+          <p id="section-10-5.4.1">never grant access, mint credentials, or widen authority solely by
+virtue of presentation of a Mandate; a derived artifact rests on
+the relying party's own authorization decision
+(<a href="#vertical-derivation" class="auto internal xref">Section 8.2</a>, <a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-10-5.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2305,9 +2376,11 @@ binds no presenter, proves no possession, and commits no current
 state; accepting it as a credential turns a freely copyable audit
 artifact into a bearer token.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
 <p id="section-11.1-2">A verifier <span class="bcp14">MUST NOT</span> grant access, mint a credential, or widen any
-authority on presentation of a Mandate. Authority flows only through
-the substrate's issuance surfaces
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-11.1-2" class="pilcrow">¶</a></p>
+authority solely by virtue of presentation of a Mandate. Authority
+flows only through the substrate's issuance surfaces
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) or, for a derived vertical
+artifact, through the rail's own authorization decision
+(<a href="#vertical-derivation" class="auto internal xref">Section 8.2</a>); the presentation itself never suffices.<a href="#section-11.1-2" class="pilcrow">¶</a></p>
 <p id="section-11.1-3">This is a deliberate departure from prior art that binds authority to
 a signed artifact's presentation: zcap-ld capabilities, W3C Verifiable
 Credentials used as authorization tokens, and other JWT-shaped
@@ -2357,7 +2430,8 @@ attributable trace.<a href="#section-11.3-2" class="pilcrow">¶</a></p>
 and publish the compromise time. A verifier then treats an
 unregistered Mandate under that <code>kid</code> whose <code>iat</code> cannot be anchored
 before that time as unverifiable (<a href="#failures" class="auto internal xref">Section 7.1</a>), never as verified
-evidence.<a href="#section-11.3-3" class="pilcrow">¶</a></p>
+evidence; a Mandate whose Receipt anchors it before that time
+continues through step 3's precedence (<a href="#verification" class="auto internal xref">Section 7</a>).<a href="#section-11.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="confusion-with-the-cross-domain-grant">

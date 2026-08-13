@@ -1586,16 +1586,26 @@ an authorized management operation, is deployment-defined; a
 dedicated metadata update operation is deferred until deployment
 experience shows the shape. <code>owner</code> and <code>tenant</code> are fixed when the
 administrative metadata is created: they define filter scope, so
-changing either redraws who may see and operate on the Mission. A
-deployment that nonetheless supports reclassifying or re-homing a
-Mission <span class="bcp14">MUST</span> gate the change on an explicit authority distinct from
-its enumeration and lifecycle grants, <span class="bcp14">MUST</span> require the caller's
-filter scope to cover the Mission both before and after the change,
+changing either redraws who may see and operate on the Mission. So
+does changing whether the object exists: a metadata-matching filter
+member matches no Mission that has none (<a href="#filter" class="auto internal xref">Section 5</a>), so creating the
+object after issuance, deleting it, or deleting and recreating it
+redraws scope as surely as changing a value. Every post-issuance
+transition of the administrative metadata (a value change, absent to
+present, or present to absent) is therefore a <strong>re-home</strong>. A
+deployment that supports re-homing <span class="bcp14">MUST</span> gate it on an explicit
+authority distinct from its enumeration and lifecycle grants, <span class="bcp14">MUST</span>
+require the caller's filter scope to cover the Mission both before
+and after the change (a Mission without administrative metadata is
+covered through the filter members that do not match against it),
 <span class="bcp14">MUST NOT</span> accept an authorization derived from the values the change
 itself would establish, <span class="bcp14">MUST</span> apply the change as an atomic
-compare-and-set against the current values, and <span class="bcp14">MUST</span> record the
-audited management event with both the prior and the new values
-(<a href="#filter-scope" class="auto internal xref">Section 3.3</a>).<a href="#section-4-5" class="pilcrow">¶</a></p>
+compare-and-set against the current values, absent being a value the
+comparison and the record both name, and <span class="bcp14">MUST</span> record the audited
+management event with both the prior and the new values
+(<a href="#filter-scope" class="auto internal xref">Section 3.3</a>). A re-home does not travel alone: an outstanding
+bulk token that pins the Mission fails its scope-currency check at
+its next presentation (<a href="#bulk-token-security" class="auto internal xref">Section 13.3</a>).<a href="#section-4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="filter">
@@ -1722,7 +1732,11 @@ When present, <code>enumerate</code> returns exactly the membership that token
 pins (the pinned set) as summaries, so the reviewed set equals the
 executed set (<a href="#dry-run" class="auto internal xref">Section 7.1</a>). <code>filter</code> <span class="bcp14">MUST</span> equal the filter the
 token binds; the AS <span class="bcp14">MUST</span> refuse a mismatch with <code>invalid_bulk_token</code>
-(<a href="#management-errors" class="auto internal xref">Section 8</a>). Presenting a bulk token to <code>enumerate</code> is
+(<a href="#management-errors" class="auto internal xref">Section 8</a>). Before disclosing any summary, the AS <span class="bcp14">MUST</span>
+verify that every pinned member is still within the caller's
+current filter scope (<a href="#filter-scope" class="auto internal xref">Section 3.3</a>), refusing the whole token
+with <code>stale_bulk_token</code> and naming no member otherwise
+(<a href="#bulk-token-security" class="auto internal xref">Section 13.3</a>). Presenting a bulk token to <code>enumerate</code> is
 read-only and does not consume it.<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
@@ -1940,16 +1954,26 @@ evaluated membership.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
             <p id="section-7.2-2.2.1">is unused,<a href="#section-7.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-7.2-2.3">
-            <p id="section-7.2-2.3.1">was issued to this caller, and<a href="#section-7.2-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-7.2-2.3.1">was issued to this caller,<a href="#section-7.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-7.2-2.4">
             <p id="section-7.2-2.4.1">binds an <code>operation</code>, <code>filter</code>, and (for a <code>suspend</code>)
-<code>suspend_until</code> and <code>on_expiry</code> all equal to the request's.<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
+<code>suspend_until</code> and <code>on_expiry</code> all equal to the request's, and<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-7.2-2.5">
+            <p id="section-7.2-2.5.1">pins a membership every member of which is still within the
+caller's current filter scope (<a href="#filter-scope" class="auto internal xref">Section 3.3</a>).<a href="#section-7.2-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 <p id="section-7.2-3">An execute whose <code>operation</code>, <code>filter</code>, or <code>on_expiry</code> differs from
 what the token pins <span class="bcp14">MUST</span> be refused with <code>invalid_bulk_token</code>,
-executing nothing. The token is then consumed: it is single-use
+executing nothing. An execute any of whose pinned members has left
+the caller's filter scope (administrative metadata changed under the
+reviewed set, <a href="#admin-metadata" class="auto internal xref">Section 4</a>) <span class="bcp14">MUST</span> be refused with
+<code>stale_bulk_token</code>, executing nothing and naming no member; the
+caller re-runs the dry run under current scope
+(<a href="#bulk-token-security" class="auto internal xref">Section 13.3</a>). Either check completes before any
+transition commits. The token is then consumed: it is single-use
 whatever the outcome.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
 <p id="section-7.2-4">The AS applies the operation to each member of the bound membership
 individually, under the status profile's lifecycle semantics
@@ -2146,6 +2170,13 @@ are manifest outcomes (<a href="#manifest" class="auto internal xref">Section 7.
 </td>
             <td class="text-left" rowspan="1" colspan="1">400</td>
             <td class="text-left" rowspan="1" colspan="1">The bulk token is missing, expired, already used, issued to another caller, or bound to a different operation, filter, <code>suspend_until</code>, or <code>on_expiry</code>.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>stale_bulk_token</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">409</td>
+            <td class="text-left" rowspan="1" colspan="1">Administrative metadata changed under the pinned membership: at least one pinned Mission is no longer within the caller's filter scope. Re-run the dry run (<a href="#bulk-token-security" class="auto internal xref">Section 13.3</a>).</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">
@@ -2407,9 +2438,24 @@ the operator reviewed the dry-run count, so a reviewed "revoke these
 3" could silently become "revoke these 30". Single use prevents a
 captured or logged token from re-running the sweep; the short lifetime
 bounds how stale the reviewed set can be; and the caller binding keeps
-the reviewed set and the executing principal the same. An AS <span class="bcp14">MUST</span>
-enforce all four; a bulk token that survives reuse, transfer, or
-filter substitution reduces the two-step exchange to a one-step sweep.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+the reviewed set and the executing principal the same.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+<p id="section-13.3-2">The scope-currency check (<a href="#execution" class="auto internal xref">Section 7.2</a>) is the fifth binding, and it
+guards the reverse drift: the membership binding freezes the set, but
+a re-home (<a href="#admin-metadata" class="auto internal xref">Section 4</a>) can move a pinned Mission out of the
+caller's filter scope after review, and a token checked only against
+its own bindings would let its holder keep enumerating the moved
+Mission and revoke, suspend, resume, or complete it from outside the
+scope that now governs it. The re-homing actor's own pre- and
+post-scope gate cannot see other callers' outstanding tokens; the
+check at presentation is what closes them. The refusal is computed
+before any disclosure or transition and names no member. How the AS
+detects staleness is its choice: binding each member's
+administrative-metadata generation into the token and refusing on any
+change, or eagerly invalidating every outstanding token that pins a
+re-homed Mission, both conform.<a href="#section-13.3-2" class="pilcrow">¶</a></p>
+<p id="section-13.3-3">An AS <span class="bcp14">MUST</span> enforce all five; a bulk token that survives reuse,
+transfer, filter substitution, or a re-home reduces the two-step
+exchange to a one-step sweep.<a href="#section-13.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="general-oauth-security">

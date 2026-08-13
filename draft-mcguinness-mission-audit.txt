@@ -318,74 +318,74 @@ Table of Contents
    is authoritative for the type (Section 6.4) before treating a record
    as part of the Mission's feed.
 
-     +============+=================+====================+==========+
-     | Evidence   | Canonical bytes | payload-preimage-  | Producer |
-     | type       | (hashed)        | content-type       |          |
-     +============+=================+====================+==========+
-     | Approval   | Mission record  | application/       | issuer   |
-     | event      | at creation,    | mission-approval-  |          |
-     |            | state excluded, | record+json        |          |
-     |            | canonicalized   |                    |          |
-     +------------+-----------------+--------------------+----------+
-     | Lifecycle  | Signals SET as  | application/       | issuer   |
-     | transition | issued; else    | secevent+jwt, else |          |
-     |            | Section 6.3.1   | application/       |          |
-     |            | (JCS)           | mission-lifecycle- |          |
-     |            |                 | transition+json    |          |
-     +------------+-----------------+--------------------+----------+
-     | Derivation | Section 6.3.2   | application/       | issuer   |
-     | record     | (JCS)           | mission-           |          |
-     |            |                 | derivation-        |          |
-     |            |                 | record+json        |          |
-     +------------+-----------------+--------------------+----------+
-     | Consent    | retained signed | application/       | issuer   |
-     | evidence   | object, as      | mission-consent-   |          |
-     |            | issued          | evidence+json      |          |
-     +------------+-----------------+--------------------+----------+
-     | Decision   | Decision        | application/       | PDP key  |
-     | evidence   | Evidence        | mission-decision-  |          |
-     |            | object, as      | evidence+json      |          |
-     |            | issued          |                    |          |
-     +------------+-----------------+--------------------+----------+
-     | Execution  | Execution       | application/       | PEP key  |
-     | evidence   | Evidence        | mission-execution- |          |
-     |            | object, as      | evidence+json      |          |
-     |            | issued          |                    |          |
-     +------------+-----------------+--------------------+----------+
-     | Refusal    | Refusal Record  | application/       | PEP key  |
-     | Record     | object, as      | mission-refusal-   |          |
-     |            | issued          | record+json        |          |
-     +------------+-----------------+--------------------+----------+
-     | Mission    | JWS Compact     | application/       | issuer   |
-     | Mandate    | Serialization,  | mission-           |          |
-     |            | as issued       | mandate+jwt        |          |
-     +------------+-----------------+--------------------+----------+
-     | Child      | Child Evidence  | application/       | issuer   |
-     | Evidence   | object (JCS),   | mission-child-     |          |
-     |            | as the child-   | evidence+json      |          |
-     |            | delegation      |                    |          |
-     |            | profile fixes   |                    |          |
-     +------------+-----------------+--------------------+----------+
-     | Discovery  | Discovery       | application/       | issuer   |
-     | Evidence   | Evidence object | mission-discovery- |          |
-     |            | (JCS), as the   | evidence+json      |          |
-     |            | discovery       |                    |          |
-     |            | profile fixes   |                    |          |
-     +------------+-----------------+--------------------+----------+
-     | Harness    | Harness         | application/       | harness  |
-     | Evidence   | Evidence object | mission-harness-   | key      |
-     |            | (JCS), as the   | evidence+json      |          |
-     |            | harness profile |                    |          |
-     |            | fixes           |                    |          |
-     +------------+-----------------+--------------------+----------+
-     | Erasure    | Section 6.3.3   | application/       | producer |
-     | record     | (JCS)           | mission-erasure-   | of the   |
-     |            |                 | record+json        | erased   |
-     |            |                 |                    | record's |
-     |            |                 |                    | type     |
-     +------------+-----------------+--------------------+----------+
+   +============+======================+====================+==========+
+   | Evidence   | Canonical bytes      | payload-preimage-  | Producer |
+   | type       | (hashed)             | content-type       |          |
+   +============+======================+====================+==========+
+   | Approval   | Mission record at    | application/       | issuer   |
+   | event      | creation, state      | mission-approval-  |          |
+   |            | excluded,            | record+json        |          |
+   |            | canonicalized        |                    |          |
+   +------------+----------------------+--------------------+----------+
+   | Lifecycle  | Signals SET as       | application/       | issuer   |
+   | transition | issued; else         | secevent+jwt,      |          |
+   |            | Section 6.3.1 (JCS)  | else application/  |          |
+   |            |                      | mission-           |          |
+   |            |                      | lifecycle-         |          |
+   |            |                      | transition+json    |          |
+   +------------+----------------------+--------------------+----------+
+   | Derivation | Section 6.3.2 (JCS)  | application/       | issuer   |
+   | record     |                      | mission-           |          |
+   |            |                      | derivation-        |          |
+   |            |                      | record+json        |          |
+   +------------+----------------------+--------------------+----------+
+   | Consent    | retained signed      | application/       | issuer   |
+   | evidence   | object, as issued    | mission-consent-   |          |
+   |            |                      | evidence+json      |          |
+   +------------+----------------------+--------------------+----------+
+   | Decision   | Decision Evidence    | application/       | PDP key  |
+   | evidence   | object, as issued    | mission-decision-  |          |
+   |            |                      | evidence+json      |          |
+   +------------+----------------------+--------------------+----------+
+   | Execution  | Execution Evidence   | application/       | PEP key  |
+   | evidence   | object, as issued    | mission-           |          |
+   |            |                      | execution-         |          |
+   |            |                      | evidence+json      |          |
+   +------------+----------------------+--------------------+----------+
+   | Refusal    | Refusal Record       | application/       | PEP key  |
+   | Record     | object, as issued    | mission-refusal-   |          |
+   |            |                      | record+json        |          |
+   +------------+----------------------+--------------------+----------+
+   | Mission    | plain form: JWS      | application/       | issuer   |
+   | Mandate    | Compact              | mission-           |          |
+   |            | Serialization, as    | mandate+jwt, else  |          |
+   |            | issued; SD-JWT form: | application/       |          |
+   |            | issuer-signed JWT    | mission-           |          |
+   |            | component, as issued | mandate+sd-jwt     |          |
+   +------------+----------------------+--------------------+----------+
+   | Child      | Child Evidence       | application/       | issuer   |
+   | Evidence   | object (JCS), as the | mission-child-     |          |
+   |            | child-delegation     | evidence+json      |          |
+   |            | profile fixes        |                    |          |
+   +------------+----------------------+--------------------+----------+
+   | Discovery  | Discovery Evidence   | application/       | issuer   |
+   | Evidence   | object (JCS), as the | mission-           |          |
+   |            | discovery profile    | discovery-         |          |
+   |            | fixes                | evidence+json      |          |
+   +------------+----------------------+--------------------+----------+
+   | Harness    | Harness Evidence     | application/       | harness  |
+   | Evidence   | object (JCS), as the | mission-harness-   | key      |
+   |            | harness profile      | evidence+json      |          |
+   |            | fixes                |                    |          |
+   +------------+----------------------+--------------------+----------+
+   | Erasure    | Section 6.3.3 (JCS)  | application/       | producer |
+   | record     |                      | mission-erasure-   | of the   |
+   |            |                      | record+json        | erased   |
+   |            |                      |                    | record's |
+   |            |                      |                    | type     |
+   +------------+----------------------+--------------------+----------+
 
-                                 Table 1
+                                  Table 1
 
    The table is extensible by specification: a profile MAY define an
    additional evidence type by fixing its canonical bytes, its payload-
