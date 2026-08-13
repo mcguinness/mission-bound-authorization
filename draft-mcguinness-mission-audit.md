@@ -67,6 +67,7 @@ normative:
     date: 2026
 
 informative:
+  RFC7515:
   RFC8610:
   I-D.draft-ietf-scitt-scrapi:
   I-D.draft-mcguinness-oauth-mission-signals:
@@ -160,6 +161,30 @@ informative:
   I-D.draft-mcguinness-oauth-mission-containment:
     title: "Mission Containment for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-work-products:
+    title: "Mission Work Products"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-shaping:
+    title: "Mission Intent Shaping"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-orchestration:
+    title: "Mission Orchestration and Unwinding"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html
     author:
       -
         ins: K. McGuinness
@@ -321,10 +346,13 @@ is not the `sha-256:...` display string an integrity anchor uses
 themselves.
 
 The committed value is the SHA-256 {{RFC6234}} digest of the evidence
-bytes that {{evidence-types}} fixes for the evidence type. For an object
-that is already signed, those bytes are the retained object as issued,
-hashed as-is; for an object this profile canonicalizes, they are its JCS
-canonical bytes. The protected header carries:
+bytes that {{evidence-types}} fixes for the evidence type. For an
+artifact whose retained form is itself a compact serialization (a JWS,
+JWT, SET, or SD-JWT component), those bytes are the artifact as
+issued, hashed as-is; for a JSON object, including one that carries a
+nested signature envelope, they are the JCS {{RFC8785}} canonical
+bytes of the complete retained object, envelope included, unless its
+row fixes different bytes. The protected header carries:
 
 - `payload-hash-alg` (label 258): the COSE algorithm of the hash, `-16`
   for SHA-256 {{I-D.draft-ietf-cose-hash-envelope}}; and
@@ -375,30 +403,70 @@ that recognizes these member names by convention still MUST check a
 record's registered type identifier against the exact type it expects
 before treating the record as that type ({{registration-policy}}).
 
+A registrable evidence type is named at up to three layers, and the
+layers are distinct identifiers with distinct purposes, not spellings
+of one string. The media type, or local-use type identifier, names the
+payload schema. The protected `typ` of an operational signature
+envelope, where the defining profile fixes one, names the signed
+object as that profile scopes it: either the payload, as the runtime
+evidence types do (the media type, its `application/` prefix retained
+or omitted, equivalent under JWS {{RFC7515}}), or the secured
+representation itself, as Consent Evidence's
+`mission-consent-evidence+jws` names the JWS over the
+`application/mission-consent-evidence+json` payload. The
+`payload-preimage-content-type` names the exact bytes committed at the
+transparency boundary ({{hash-commitment}}). The evidence-type table
+fixes each type's operational `typ` explicitly ({{evidence-types}});
+the identifiers are not derivable from one another in every case, and
+a consumer checks the identifier of the layer it is verifying. A new
+type that fixes an operational envelope SHOULD set its `typ` to its
+registered media type, prefix retained or omitted; a `typ` naming the
+secured representation instead is a per-type mapping the table
+documents, not a divergent spelling of the media type.
+
+This envelope heterogeneity is deliberate, not drift. A JOSE signature
+under a deployment-published key serves deployment-local verification
+of a record's origin; the COSE hash envelope serves independent
+verifiability at the transparency boundary ({{hash-commitment}}). They
+are the suite's two tiers of verifiability: they commit different
+bytes for different consumers, and the anti-cross-use rule above
+depends on keeping their identifiers distinct. Collapsing the types
+into one envelope, one media type, or a shared `typ` list would
+relocate domain separation from the registered identifier into a
+payload member.
+
 ## Evidence Types {#evidence-types}
 
 Each registrable evidence type fixes the exact bytes that are hashed,
-the media type carried in `payload-preimage-content-type`, and the producer
-authoritative for it. A producer MUST commit to the canonical bytes
-named here. A relying party MUST verify the producer is
-authoritative for the type ({{registration-policy}}) before treating a
-record as part of the Mission's feed.
+the media type carried in `payload-preimage-content-type`, the
+operational `typ` its retained form carries (none where the retained
+object is unsigned), and the producer authoritative for it. A producer
+MUST commit to the canonical bytes named here. A relying party MUST
+verify the producer is authoritative for the type
+({{registration-policy}}) before treating a record as part of the
+Mission's feed. The table is a normative catalog of evidence types,
+not a registry: a row registers nothing, and its identifier is
+defined, and registered where it is, by the profile the row cites.
 
-| Evidence type | Canonical bytes (hashed) | `payload-preimage-content-type` | Producer |
-|---|---|---|---|
-| Approval event | Mission record at creation, `state` excluded, canonicalized | `application/mission-approval-record+json` | `issuer` |
-| Lifecycle transition | Signals SET as issued; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `issuer` |
-| Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | `issuer` |
-| Consent evidence | retained signed object, as issued | `application/mission-consent-evidence+json` | `issuer` |
-| Approval governance | complete record including `envelope` (JCS), the record-digest preimage | `application/mission-approval-governance+json` | `issuer` |
-| Decision evidence | Decision Evidence object, as issued | `application/mission-decision-evidence+json` | PDP key |
-| Execution evidence | Execution Evidence object, as issued | `application/mission-execution-evidence+json` | PEP key |
-| Refusal Record | Refusal Record object, as issued | `application/mission-refusal-record+json` | PEP key |
-| Mission Mandate | plain form: JWS Compact Serialization, as issued; SD-JWT form: issuer-signed JWT component, as issued | `application/mission-mandate+jwt`, else `application/mission-mandate+sd-jwt` | `issuer` |
-| Child Evidence | Child Evidence object (JCS), as the child-delegation profile fixes | `application/mission-child-evidence+json` | `issuer` |
-| Discovery Evidence | Discovery Evidence object (JCS), as the discovery profile fixes | `application/mission-discovery-evidence+json` | `issuer` |
-| Harness Evidence | Harness Evidence object (JCS), as the harness profile fixes | `application/mission-harness-evidence+json` | harness key |
-| Erasure record | {{erasure-record}} (JCS) | `application/mission-erasure-record+json` | producer of the erased record's type |
+| Evidence type | Canonical bytes (hashed) | `payload-preimage-content-type` | Operational `typ` | Producer |
+|---|---|---|---|---|
+| Approval event | Mission record at creation, `state` excluded, canonicalized | `application/mission-approval-record+json` | none | `issuer` |
+| Lifecycle transition | Signals SET as issued; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `secevent+jwt`, else none | `issuer` |
+| Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | none | `issuer` |
+| Consent evidence | complete retained object, `evidence_envelope` included (JCS) | `application/mission-consent-evidence+json` | `mission-consent-evidence+jws` | `issuer` |
+| Approval governance | complete record including `envelope` (JCS), the record-digest preimage | `application/mission-approval-governance+json` | `application/mission-approval-governance+json` | `issuer` |
+| Decision evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-decision-evidence+json` | `application/mission-decision-evidence+json` | PDP key |
+| Execution evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-execution-evidence+json` | `application/mission-execution-evidence+json` | PEP key |
+| Refusal Record | complete object, `evidence_envelope` included (JCS) | `application/mission-refusal-record+json` | `application/mission-refusal-record+json` | PEP key |
+| Mission Mandate | plain form: JWS Compact Serialization, as issued; SD-JWT form: issuer-signed JWT component, as issued | `application/mission-mandate+jwt`, else `application/mission-mandate+sd-jwt` | `mission-mandate+jwt`, else `mission-mandate+sd-jwt` | `issuer` |
+| Work Product Binding | JWS Compact Serialization, as issued | `application/mission-work-product-binding+jwt` | `mission-work-product-binding+jwt` | mediator key |
+| Child Evidence | Child Evidence object (JCS), as the child-delegation profile fixes | `application/mission-child-evidence+json` | none | `issuer` |
+| Discovery Evidence | Discovery Evidence object (JCS), as the discovery profile fixes | `application/mission-discovery-evidence+json` | `mission-discovery-evidence+json` | `issuer` |
+| Harness Evidence | Harness Evidence object (JCS), as the harness profile fixes | `application/mission-harness-evidence+json` | none fixed; its media type when signed | harness key |
+| Egress evidence | Egress Evidence object (JCS), as the harness profile fixes | `application/mission-egress-evidence+json` | none fixed; its media type when signed | egress key |
+| Containment evidence | Containment Evidence object (JCS), as the containment profile fixes | `application/mission-containment-evidence+json` | none | `issuer` |
+| Protected event receipt | Protected Event Receipt object (JCS), as the containment profile fixes | `application/mission-protected-event-receipt+json` | none | `issuer` |
+| Erasure record | {{erasure-record}} (JCS) | `application/mission-erasure-record+json` | none | producer of the erased record's type |
 
 The table is extensible by specification: a profile MAY define an
 additional evidence type by fixing its canonical bytes, its
@@ -408,6 +476,19 @@ Mandate profile does for the Mission Mandate
 extension type it implements; it ignores records of a type it does
 not implement, and they are not audit failures.
 
+Two evidence producers stay outside the table by design. Shaping
+Evidence fixes no schema or media type; its commitment mechanism is
+the `shaping_evidence_hash` integrity anchor, the issuance profile's
+domain-separated `{typ, iss, value}` envelope with committed-object
+`typ` `mission-shaping-evidence`
+({{I-D.draft-mcguinness-mission-shaping}}), and the underlying record
+gains a row only when a profile fixes its canonical bytes and type
+identifier. Orchestration Evidence registers no media type and keeps
+`mission-orchestration-evidence` as a local-use identifier
+({{I-D.draft-mcguinness-mission-orchestration}}); a deployment MAY
+register it under deployment policy by fixing the values a row
+requires.
+
 The producer identifiers are principals the suite already names. For
 every record whose producer is the Mission `issuer`, the Signed
 Statement's `iss` MUST equal that `issuer`
@@ -415,15 +496,35 @@ Statement's `iss` MUST equal that `issuer`
 in the deployment-published key sets the runtime profile and its
 runtime evidence companion require
 ({{I-D.draft-mcguinness-mission-runtime}},
-{{I-D.draft-mcguinness-mission-runtime-evidence}}).
+{{I-D.draft-mcguinness-mission-runtime-evidence}}); the harness and
+egress keys publish in the same deployment key sets under the harness
+profile's conventions ({{I-D.draft-mcguinness-mission-harness}}). The
+mediator key for a Work Product Binding resolves by the mediator's
+role through these same paths
+({{I-D.draft-mcguinness-oauth-mission-work-products}}).
 
 The approval event, the lifecycle-transition object, and the
-derivation record are canonicalized
-under the issuance profile's canonicalization rules
-({{I-D.draft-mcguinness-oauth-mission}}); an already-signed object (the
-consent, decision, execution, and refusal evidence, the Signals SET,
-and the Mandate) is
-hashed as issued, not re-canonicalized.
+derivation record are canonicalized under the issuance profile's
+canonicalization rules ({{I-D.draft-mcguinness-oauth-mission}}). An
+artifact whose retained form is itself a compact serialization (the
+Signals SET, the Mandate, the Work Product Binding) is hashed as
+issued, not re-canonicalized. A JSON object that carries a nested
+signature envelope (the consent, decision, execution, and refusal
+evidence) is hashed as the JCS canonical bytes of the complete
+retained object, envelope included, the same shape as the
+approval-governance record digest: hashing received octets instead
+would let a reserialization outside the envelope change the audit
+digest while the operational signature stayed valid.
+
+The operational `typ` column records the protected `typ` of the
+signature envelope a type's retained form carries, none where the
+type is retained unsigned. It is the per-type mapping named in
+{{evidence-base}}, checked when verifying the operational signature,
+never in place of `payload-preimage-content-type`. Harness and Egress
+Evidence fix no envelope of their own; where a deployment signs one
+individually, the runtime profile's convention applies, a `typ`
+naming the record's own media type
+({{I-D.draft-mcguinness-mission-runtime}}).
 
 The media types and type identifiers are defined as follows:
 
@@ -441,9 +542,16 @@ The media types and type identifiers are defined as follows:
   ({{I-D.draft-mcguinness-mission-mandate}});
 - the Child Evidence canonical bytes and type identifier by the
   child-delegation profile
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}); and
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}});
 - the Discovery Evidence canonical bytes and type identifier by the
-  discovery profile ({{I-D.draft-mcguinness-mission-discovery}}).
+  discovery profile ({{I-D.draft-mcguinness-mission-discovery}});
+- the Work Product Binding media type by the work-products profile
+  ({{I-D.draft-mcguinness-oauth-mission-work-products}});
+- the Egress Evidence type identifier by the harness profile
+  ({{I-D.draft-mcguinness-mission-harness}}); and
+- the Containment Evidence and Protected Event Receipt type
+  identifiers by the containment profile
+  ({{I-D.draft-mcguinness-oauth-mission-containment}}).
 
 The approval event's canonical bytes are the whole Mission record at
 creation with `state` excluded, canonicalized ({{evidence-types}}):
@@ -463,9 +571,10 @@ evidence type from being read as another.
 Each companion-defined row binds only a deployment that produces that
 evidence, so the reference is consulted only where the profile is
 adopted. A row whose defining profile is Experimental (the Discovery
-Evidence row) stays on that profile's maturity: this document keeps
-that reference informative, and a deployment not running the
-Experimental profile omits the row. A deployment that does not run
+Evidence, Containment evidence, Protected event receipt, and Work
+Product Binding rows) stays on that profile's maturity: this document
+keeps those references informative, and a deployment not running an
+Experimental profile omits its rows. A deployment that does not run
 the Signals profile commits lifecycle transitions as the transition
 object ({{transition-object}}) instead of the Signals SET.
 
@@ -684,12 +793,15 @@ A relying party discovers a producer's key by the producer's role. The
 - the AAuth Person Server's existing `jwks_uri` in the AAuth binding
   ({{I-D.draft-mcguinness-mission-aauth}}).
 
-A PDP, PEP, or harness key is resolved through the
+A PDP, PEP, harness, or egress key is resolved through the
 deployment-published key sets the runtime profile and its runtime
 evidence companion require ({{I-D.draft-mcguinness-mission-runtime}},
 {{I-D.draft-mcguinness-mission-runtime-evidence}}); the harness
-profile requires the same publication of a harness that registers its
-evidence ({{I-D.draft-mcguinness-mission-harness}}).
+profile requires the same publication of a harness or egress gate that
+registers its evidence ({{I-D.draft-mcguinness-mission-harness}}). The
+mediator that signs a Work Product Binding is not a new role: its key
+resolves by the mediator's role, through the `issuer` or harness path
+above ({{I-D.draft-mcguinness-oauth-mission-work-products}}).
 
 ## Registration Availability {#availability}
 
@@ -992,8 +1104,9 @@ the Mission Issuer. Protected header, in CBOR extended diagnostic notation
 }
 ~~~
 
-The payload is the SHA-256 digest of the retained Consent Evidence object
-as issued ({{evidence-types}}), carried inline as the raw digest whose
+The payload is the SHA-256 digest of the JCS canonical bytes of the
+retained Consent Evidence object, `evidence_envelope` included
+({{evidence-types}}), carried inline as the raw digest whose
 base64url form is `CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz`, not that
 display string. The Transparency Service appends the statement
 and returns a Receipt, a COSE_Sign1 with an inclusion proof in its
@@ -1252,8 +1365,13 @@ Service are defined elsewhere:
   ({{I-D.draft-mcguinness-mission-mandate}});
 - the Child Evidence type identifier by the child-delegation profile
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}});
-- the Harness Evidence type identifier by the harness profile
-  ({{I-D.draft-mcguinness-mission-harness}}); and
+- the Harness Evidence and Egress Evidence type identifiers by the
+  harness profile ({{I-D.draft-mcguinness-mission-harness}});
+- the Containment Evidence and Protected Event Receipt type
+  identifiers by the containment profile
+  ({{I-D.draft-mcguinness-oauth-mission-containment}});
+- the Work Product Binding media type by the work-products profile
+  ({{I-D.draft-mcguinness-oauth-mission-work-products}}); and
 - the Signals SET media type `application/secevent+jwt` by RFC 8417,
   which the Signals profile carries the event in
   ({{I-D.draft-mcguinness-oauth-mission-signals}}).
