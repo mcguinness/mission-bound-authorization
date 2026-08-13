@@ -45,7 +45,12 @@ import {
   REFRESH_TOKEN_TOKEN_TYPE,
   TOKEN_EXCHANGE_GRANT_TYPE,
 } from "../src/adapters/continuation-grant.js";
-import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import {
+  buildAuthorizationServer,
+  type BuiltAs,
+  registerIntentSubmissionEvidenceType,
+  unregisterIntentSubmissionEvidenceType,
+} from "../src/index.js";
 
 const PORT = 14485;
 const ISSUER = `http://localhost:${PORT}`;
@@ -329,6 +334,94 @@ describe("expansion wire: Submission envelope (@spec mission#submission-via-par,
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("bare Mission Intent shape");
+  });
+});
+
+describe("expansion: verified facts persist across the deferred window (@spec mission#intent-submission-evidence, issue #506)", () => {
+  const EXP_TYPE = "urn:test:intent-evidence:exp-stub";
+  let failVerification = false;
+  beforeAll(() => {
+    registerIntentSubmissionEvidenceType(EXP_TYPE, {
+      validate(entry) {
+        if (typeof entry.assertion !== "string") throw new Error("assertion required");
+      },
+      async verify({ intentHash }) {
+        if (failVerification) throw new Error("artifact expired during the window");
+        return { admitted: true, bound_intent_hash: intentHash };
+      },
+    });
+  });
+  afterAll(() => unregisterIntentSubmissionEvidenceType(EXP_TYPE));
+
+  it("facts verified at INITIATION land on the successor at redemption; the window does not re-verify freshness", async () => {
+    failVerification = false;
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const entry = { type: EXP_TYPE, assertion: "widening-artifact" };
+    const opened = await tokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: pred.accessToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      mission_intent: JSON.stringify({
+        intent: { goal: "Widen with provenance", resources: [RESOURCE], expires_at: FAR_EXP },
+        evidence: [entry],
+      }),
+      authorization_details: JSON.stringify(
+        authority(["payments:invoice.read", "payments:remittance.send"]),
+      ),
+      creation_request_id: crypto.randomUUID(),
+    });
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(opened.status, JSON.stringify(ob)).toBe(400);
+    expect(ob.error).toBe("authorization_pending");
+
+    // The artifact "expires" DURING the deferred window: redemption must NOT
+    // re-verify freshness (verification ran once, at initiation; the facts
+    // were persisted with the deferral).
+    failVerification = true;
+    approveDeferral(ob.deferral_code as string);
+    const poll = await pollExpansion(ob.deferral_code as string);
+    const pb = (await poll.json()) as { access_token?: string; error?: string };
+    failVerification = false;
+    expect(poll.status, JSON.stringify(pb)).toBe(200);
+
+    // The successor record carries the INITIATION-verified facts.
+    const successorId = (decodeJwt(pb.access_token as string) as { mission: { id: string } })
+      .mission.id;
+    const successor = as.kernel.get(successorId);
+    const facts = successor?.submission_evidence;
+    expect(facts).toHaveLength(1);
+    expect(facts?.[0]?.type).toBe(EXP_TYPE);
+    // The provisional hash the verifier was bound to at initiation IS the
+    // successor's recorded intent_hash commitment.
+    expect(facts?.[0]?.facts).toEqual({
+      admitted: true,
+      bound_intent_hash: successor?.intent_hash,
+    });
+  });
+
+  it("a FAILING artifact at INITIATION refuses the widening exchange (stage 2 runs before the deferral opens)", async () => {
+    failVerification = true;
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const res = await tokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: pred.accessToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      mission_intent: JSON.stringify({
+        intent: { goal: "Widen with stale provenance", resources: [RESOURCE], expires_at: FAR_EXP },
+        evidence: [{ type: EXP_TYPE, assertion: "stale" }],
+      }),
+      authorization_details: JSON.stringify(
+        authority(["payments:invoice.read", "payments:remittance.send"]),
+      ),
+      creation_request_id: crypto.randomUUID(),
+    });
+    failVerification = false;
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_mission_intent_evidence");
+    expect(body.error_description).toContain("artifact expired during the window");
   });
 });
 
