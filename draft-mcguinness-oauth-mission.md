@@ -439,13 +439,16 @@ uses the mechanisms here to obtain Mission-bound tokens.
 ## Applicability {#applicability}
 
 This profile targets OAuth deployments where authority serves a
-durable, user-approved task that spans more than one token, request,
+durable, approved task that spans more than one token, request,
 or audience: an agent pursuing a multi-step objective on a user's
 behalf, or a workflow whose audit must join activity across hops on a
 shared task. It is not intended for, and adds cost without benefit to,
 single-request user flows, machine-to-machine service credentials, or
 short-lived authorizations where the credential's lifetime is the
-task's lifetime; those use OAuth unchanged.
+task's lifetime; those use OAuth unchanged. The exclusion is the
+lifetime equality, not the absence of a human: a workload's durable
+multi-step task is in scope as a service-owned Mission
+({{authority-sources}}).
 
 A Mission SHOULD be scoped to a concrete task, not to an agent's whole
 lifetime. A deployment SHOULD prefer narrow, per-task Missions, each
@@ -591,9 +594,9 @@ Agent (Client):
   authentication.
 
 Subject:
-: The user or system on whose behalf the Mission is approved,
-  identified by an (`iss`, `sub`) pair and carried in derived tokens'
-  `sub` claim.
+: The user, workload, or organizational principal on whose behalf the
+  Mission is approved ({{authority-sources}}), identified by an
+  (`iss`, `sub`) pair and carried in derived tokens' `sub` claim.
 
 Approver:
 : The single accountable principal who approves the Mission at the
@@ -708,6 +711,35 @@ execution) is carried on derived tokens via the `act` chain
 ({{delegation}}), not on the immutable Mission record. Richer subject
 identifier formats (for example, the formats of {{RFC9493}}) MAY be
 layered in future versions and are not required here.
+
+## Authority Sources {#authority-sources}
+
+A Mission draws its authority from one of three sources: a delegating
+person's own authority (**user-delegated**), a workload's own
+provisioned authority (**service-owned**), or explicitly governed
+organizational policy with a named accountable owner
+(**organizational**). The source names whose authority the approval
+draws on; `approval_basis` records how drawing on it was activated
+({{mission-record}}), and the two compose: any source may activate
+through a `direct` approval event or through a standing-consent basis
+a companion defines.
+
+The subject-representation discipline is the same in every source:
+
+- The accountable principal is the record's `approver`, equal to
+  `approval_basis.consent_principal`, in every source; it is never
+  inferred from the token `sub`.
+- `sub` carries a delegating person only in the user-delegated
+  source. A service-owned or organizational Mission MUST record the
+  workload or organizational principal as `subject` and MUST NOT
+  record a human principal in its place: some work is not any one
+  person's, and borrowing a human subject for it blurs the actor, the
+  subject, and the accountable principal exactly where the record
+  keeps them distinct. The injective mapping of {{approval-event}}
+  applies unchanged: that principal receives its own AS-local `sub`,
+  denotes itself, and impersonates nobody.
+- The actor model does not vary by source: `client_id` names the
+  Agent, and delegates ride the `act` chain ({{delegation}}).
 
 ## Protocol Flow
 
@@ -1689,7 +1721,10 @@ At the approval event the AS MUST, in order:
    Subject from unauthenticated client input. This document defines no
    wire parameter for the Subject; how the AS establishes it
    (administrative selection, a directory, an authenticated reference)
-   is a deployment matter. When the Subject's home issuer
+   is a deployment matter. The Subject may be a workload or
+   organizational principal ({{authority-sources}}); its
+   establishment and the mapping below are unchanged. When the
+   Subject's home issuer
    (`subject.iss`) differs from the AS, the AS MUST map the external
    (`subject.iss`, `subject.sub`) pair to an AS-local `sub` under an
    injective mapping: one external Subject maps to exactly one
