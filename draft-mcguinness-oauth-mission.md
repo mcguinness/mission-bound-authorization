@@ -770,8 +770,10 @@ has the following members:
 
 `constraints`:
 : OPTIONAL. An array of strings. Human-readable bounds on
-  the task (for example, "read only invoices from 2026"). These
-  inform derivation and consent rendering.
+  the task (for example, "read only invoices from 2026"). They are
+  disclosure and audit context, rendered to the Approver beside the
+  derived Authority Set ({{approval-event}}); the AS never parses
+  them for machine semantics ({{authorization-derivation}}).
 
 `success_criteria`:
 : OPTIONAL. An array of strings. Human-readable
@@ -1125,6 +1127,25 @@ commits it as `authority_hash` ({{approval-event}}). The Intent's
 `goal`, `constraints`, and other members describe and bound the task
 but grant no authority by themselves ({{mission-intent}}); they
 constrain what the AS MAY derive, never widen it.
+
+The `goal`, `constraints`, and `success_criteria` members are
+human-readable disclosure and audit context. In the narrowing and
+template modes this profile defines, the AS MUST NOT parse those
+members for machine semantics or vary the derived Authority Set on an
+interpretation of their prose; a deployment that derives from prose
+does so under the generative local-policy extension above, outside
+both conforming modes for that step. A machine-enforceable bound
+enters as structure through one of two doors: the top-level
+`authorization_details` proposal, with the Common Constraints
+({{common-constraints}}), type-specific constraints, and the
+collision-resistant deployment extensions the AS understands
+({{extensibility}}), or the Intent's `controls` and the configured
+template mapping keyed on `purpose` or `resources`, a lookup over
+structured values yielding structured candidate entries, never an
+interpretation of prose. The approval surface renders the prose
+beside the derived Authority Set ({{approval-event}}): the human
+check that the structure matches the words, never a machine
+enforcement mechanism.
 
 Derivation is governed by local policy and is not a portable algorithm:
 different Authorization Servers MAY derive different Authority Sets from
