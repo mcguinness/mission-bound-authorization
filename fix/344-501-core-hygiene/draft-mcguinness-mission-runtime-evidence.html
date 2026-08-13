@@ -1,0 +1,3241 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Runtime Evidence</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       Mission-Bound Runtime Enforcement defines an abstract decision
+contract: a Policy Decision Point evaluates each consequential
+action against the established Mission and returns a permit or a
+classified failure. This document defines the records a deployment
+emits to make that decision durable and verifiable: the Decision
+Evidence Object, the Execution Evidence Object, and the Refusal
+Record, together with their integrity envelope, media types, and
+retention rules. The records are defined against the runtime
+profile's abstract decision output and failure classification, so
+any decision-API binding produces the same records; the OpenID
+AuthZEN binding is one such producer. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="evidence" name="keyword">
+<meta content="audit" name="keyword">
+<meta content="draft-mcguinness-mission-runtime-evidence-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.11.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-mission-runtime-evidence.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Mission Runtime Evidence</td>
+<td class="right">August 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 14 February 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-runtime-evidence-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-08-13" class="published">13 August 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-02-14">14 February 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Runtime Evidence</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">Mission-Bound Runtime Enforcement defines an abstract decision
+contract: a Policy Decision Point evaluates each consequential
+action against the established Mission and returns a permit or a
+classified failure. This document defines the records a deployment
+emits to make that decision durable and verifiable: the Decision
+Evidence Object, the Execution Evidence Object, and the Refusal
+Record, together with their integrity envelope, media types, and
+retention rules. The records are defined against the runtime
+profile's abstract decision output and failure classification, so
+any decision-API binding produces the same records; the OpenID
+AuthZEN binding is one such producer.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-runtime-evidence/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-runtime-evidence/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 14 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-mission-substrate" class="internal xref">Mission Substrate</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-decision-evidence-object" class="internal xref">Decision Evidence Object</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-members" class="internal xref">Members</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-refusal-record" class="internal xref">Refusal Record</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-integrity" class="internal xref">Integrity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4">
+                <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="auto internal xref">4.4</a>.  <a href="#name-worked-example" class="internal xref">Worked example</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.5">
+                <p id="section-toc.1-1.4.2.5.1"><a href="#section-4.5" class="auto internal xref">4.5</a>.  <a href="#name-evaluation-request-digest-w" class="internal xref">Evaluation request digest worked value</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-execution-evidence-object" class="internal xref">Execution Evidence Object</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-members-2" class="internal xref">Members</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-worked-example-2" class="internal xref">Worked example</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-worked-example-parameter-de" class="internal xref">Worked example: parameter deviation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-toctou-and-parameter-bindin" class="internal xref">TOCTOU and parameter binding</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-retention" class="internal xref">Retention</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-extension-members" class="internal xref">Extension Members</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-decision-evidence-versus-ex" class="internal xref">Decision Evidence versus Execution Evidence</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-evidence-integrity-and-sign" class="internal xref">Evidence integrity and signing keys</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-transport" class="internal xref">Transport</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-evidence-as-pii-sinks" class="internal xref">Evidence as PII sinks</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-parameter-exposure" class="internal xref">Parameter exposure</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
+                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-actor-chain-and-mission-cor" class="internal xref">Actor chain and Mission correlation</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-media-type-registry" class="internal xref">Media Type Registry</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1.2.1">
+                    <p id="section-toc.1-1.10.2.1.2.1.1"><a href="#section-10.1.1" class="auto internal xref">10.1.1</a>.  <a href="#name-decision-evidence-media-typ" class="internal xref">Decision Evidence Media Type</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1.2.2">
+                    <p id="section-toc.1-1.10.2.1.2.2.1"><a href="#section-10.1.2" class="auto internal xref">10.1.2</a>.  <a href="#name-execution-evidence-media-ty" class="internal xref">Execution Evidence Media Type</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1.2.3">
+                    <p id="section-toc.1-1.10.2.1.2.3.1"><a href="#section-10.1.3" class="auto internal xref">10.1.3</a>.  <a href="#name-refusal-record-media-type" class="internal xref">Refusal Record Media Type</a></p>
+</li>
+                </ul>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">Mission-Bound Runtime Enforcement
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> (the "runtime profile")
+defines the abstract decision contract for enforcing a Mission-bound
+credential at the point of use: a Policy Enforcement Point (PEP)
+obtains a permit from a Policy Decision Point (PDP) before each
+consequential action, and every decision or refusal <span class="bcp14">MUST</span> produce a
+runtime enforcement evidence record. The runtime profile fixes the
+minimum record content and leaves the concrete record schema and
+integrity envelope to this document, so a Standards-Track
+decision-API binding, and any future binding, emits the same
+records.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document defines three record types: the Decision Evidence
+Object, for a PDP's decision on a consequential action; the
+Execution Evidence Object, for the outcome of a permitted action;
+and the Refusal Record, for a PEP or PDP refusal that occurs before
+any PDP decision. It fixes their members, canonicalization, integrity
+envelope, media types, and retention. A decision-API binding maps
+its own wire request and response onto these records; the OpenID
+AuthZEN Profile <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span> is the
+family's Standards-Track binding and the reference producer this
+document's examples are drawn from. <code>evaluation_id</code> is the
+correlation key across every record and wire artifact of one
+evaluation; each record additionally carries its own record
+identifier (<code>evidence_id</code>, <code>execution_id</code>, or <code>refusal_id</code>).<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">This document does not restate the runtime profile's decision
+contract, action classification, or failure conditions; those are
+normatively defined in <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> and
+are referenced, not duplicated, here.<a href="#section-1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions-and-definitions">
+<section id="section-2">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">This document uses JSON <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> as the data model for every
+record it defines. JCS canonicalization <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> applies wherever
+an integrity hash is computed, under the canonicalization rules of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; this document does not
+define a second canonicalization.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">"SHA-256" refers to <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span>. A digest is encoded in the
+integrity-anchor encoded form of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>: <code>sha-256:</code> followed by the
+base64url, no-padding encoding of the digest.<a href="#section-2-3" class="pilcrow">¶</a></p>
+<p id="section-2-4">The terms Policy Enforcement Point (PEP), Policy Decision Point
+(PDP), consequential action, action class (and the action-class
+names consequential read, consequential write, irreversible action,
+external commitment, and privileged administration), high-consequence
+classes, and parameter-bound are used as defined in
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>. The Mission claim (<code>id</code>,
+<code>issuer</code>, <code>authority_hash</code>), the integrity anchors (<code>intent_hash</code>,
+<code>authority_hash</code>), and <code>authorization_details</code> entries of type
+<code>mission_resource_access</code> are used as defined in
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-2-4" class="pilcrow">¶</a></p>
+<p id="section-2-5">Additional terms:<a href="#section-2-5" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-6">
+        <dt id="section-2-6.1">Decision Evidence:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-6.2">
+          <p id="section-2-6.2.1">The record a PDP emits for a decision on a consequential action
+(<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>).<a href="#section-2-6.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-6.3">Execution Evidence:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-6.4">
+          <p id="section-2-6.4.1">The record a PEP or executor emits after a permitted action's
+outcome is determined (<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>).<a href="#section-2-6.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-6.5">Refusal Record:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-6.6">
+          <p id="section-2-6.6.1">The record a PEP or PDP emits for a refusal that occurs before any
+PDP decision (<a href="#pre-decision-refusal" class="auto internal xref">Section 4.2</a>).<a href="#section-2-6.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-6.7">Executor:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-6.8">
+          <p id="section-2-6.8.1">The component that carries out a permitted action and emits
+Execution Evidence. It is the PEP in the common case, or a
+distinct component where the requesting PEP and the executing
+component differ.<a href="#section-2-6.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-6.9">Producer:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-6.10">
+          <p id="section-2-6.10.1">The PDP, PEP, or executor that emits and signs a record defined by
+this document.<a href="#section-2-6.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-6.11">Consumer, Verifier:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-6.12">
+          <p id="section-2-6.12.1">A component or role that reads a record defined by this document
+to reconstruct or verify a decision or execution after the fact.<a href="#section-2-6.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-6.13">Decision-API binding:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-6.14">
+          <p id="section-2-6.14.1">The deployment-chosen wire protocol that maps the runtime profile's
+abstract decision contract onto a concrete PEP-PDP request and
+response (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). This document
+is defined against that abstract contract and is independent of
+any one binding's wire.<a href="#section-2-6.14.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-2-7">HTTP and JSON message examples in this document follow the wire
+shape of the OpenID AuthZEN Authorization API binding
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>, the family's reference
+producer; a deployment using a different decision-API binding
+produces the same records from its own wire inputs.<a href="#section-2-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-substrate">
+<section id="section-3">
+      <h2 id="name-mission-substrate">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
+      </h2>
+<p id="section-3-1">This document is defined against the Mission model rather than
+against OAuth 2.0 mechanics: it is a substrate-neutral consumer, and
+this section is its consumption declaration under the rule of Mission
+Substrate Requirements (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>)
+that a substrate-neutral profile declare the kernel functions and
+optional capabilities it consumes.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">It is a kernel-only consumer. From the contextual-governance kernel
+it consumes the Mission identifier and issuer, the kernel's Mission
+Reference and Controller, carried in every record's <code>mission</code> object.
+Its records are not the kernel's ordered governance record: that
+record is the Controller's own ordered record of governance events,
+where this document's records form PDP, PEP, and executor emitter
+streams, ordered per emitter by <code>sequence</code>, correlated per evaluation
+by <code>evaluation_id</code>, and joinable to the Mission through the <code>mission</code>
+object (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>). They are a separate, joinable
+evidence stream, retained no shorter than the Mission's audit horizon
+(<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>), which the audit profile may
+incorporate (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3">Its declaration against the optional capabilities:<a href="#section-3-3" class="pilcrow">¶</a></p>
+<span id="name-runtime-evidence-capability"></span><table class="center" id="table-1">
+        <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-runtime-evidence-capability" class="selfRef">Runtime evidence capability consumption</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Capability</th>
+            <th class="text-left" rowspan="1" colspan="1">Consumption</th>
+            <th class="text-left" rowspan="1" colspan="1">Scope of consumption</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">Recording <code>contributing_constraints</code>, <code>authorization_details</code> entry types, and cited anchors is correlation, not machine-evaluable authority consumption; the runtime profile consumes Structured Authority and supplies the decision facts these records carry (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, <a href="#decision-evidence-object" class="auto internal xref">Section 4</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">The decision contract, action classification, and failure conditions are the runtime profile's; this document records decisions, it does not gate them (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>mission_state_version</code> records the state version a decision consulted, when the PDP tracks one; establishing Mission state is the runtime profile's concern (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">No record derives or narrows authority; anchors are cited for correlation, never compared</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">The Mission enters a record as the decision request's Mission reference object; this document verifies no credential binding (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">Not consumed, and supplied in scoped form: verification is anchored in the Enforcement Scope Statement's published keys, so a party with access to that statement verifies a record independently of the deployment that emitted it (<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 8.2</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Portable Evidence</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">Not supplied by this document alone: portability beyond a party with access to the deployment's published keys requires the transparency mechanisms of the audit profile (<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 8.2</a>, <span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>)</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-3-5">This document is defined against the runtime profile's abstract
+decision contract and is independent of any one decision-API
+binding's wire (<a href="#conventions-and-definitions" class="auto internal xref">Section 2</a>). The portability
+claim is capability-scoped rather than substrate-wide for the reason
+the substrate's Capability Confusion consideration states: every
+property this document requires matches an explicit capability claim
+and its scope, never the generic statement that a binding supports
+Missions.<a href="#section-3-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="decision-evidence-object">
+<section id="section-4">
+      <h2 id="name-decision-evidence-object">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-decision-evidence-object" class="section-name selfRef">Decision Evidence Object</a>
+      </h2>
+<p id="section-4-1">The runtime profile requires a decision evidence record for every PDP
+decision on a consequential action and fixes the minimum content and
+local integrity requirements. This section gives the concrete object,
+canonicalization, and integrity envelope a deployment emits.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<div id="members">
+<section id="section-4.1">
+        <h3 id="name-members">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-members" class="section-name selfRef">Members</a>
+        </h3>
+<span class="break"></span><dl class="dlParallel" id="section-4.1-1">
+          <dt id="section-4.1-1.1">
+<code>evidence_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.2">
+            <p id="section-4.1-1.2.1"><span class="bcp14">REQUIRED</span>. A string. Unique record identifier for this Decision
+Evidence Object. ABNF: <code>1*64( ALPHA / DIGIT / "-" / "_" )</code>. At
+least 128 bits of entropy.<a href="#section-4.1-1.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.3">
+<code>evaluation_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.4">
+            <p id="section-4.1-1.4.1"><span class="bcp14">REQUIRED</span>. A string. The correlation identifier for the evaluation
+this record documents: the abstract evaluation identifier of the
+runtime profile's Decision Output
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), as carried by the
+deployment's decision-API binding (for example, the AuthZEN binding
+carries this as the decision-API response's evaluation identifier,
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). Distinct
+from <code>evidence_id</code>: <code>evaluation_id</code> correlates this record with the
+evaluation and with every other record and wire artifact of the same
+evaluation; <code>evidence_id</code> names this evidence record alone.<a href="#section-4.1-1.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.5">
+<code>mission</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.6">
+            <p id="section-4.1-1.6.1"><span class="bcp14">REQUIRED</span>. An object. The decision request's Mission reference
+object, extended with the facts below, so the evidence chains back
+to the exact approved Mission. Sub-members:<a href="#section-4.1-1.6.1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.1-1.6.2">
+              <dt id="section-4.1-1.6.2.1">
+<code>id</code>, <code>issuer</code>, <code>authority_hash</code>:</dt>
+              <dd style="margin-left: 1.5em" id="section-4.1-1.6.2.2">
+                <p id="section-4.1-1.6.2.2.1"><span class="bcp14">REQUIRED</span>. From the request's Mission reference.<a href="#section-4.1-1.6.2.2.1" class="pilcrow">¶</a></p>
+</dd>
+              <dd class="break"></dd>
+<dt id="section-4.1-1.6.2.3">
+<code>policy_view_id</code>:</dt>
+              <dd style="margin-left: 1.5em" id="section-4.1-1.6.2.4">
+                <p id="section-4.1-1.6.2.4.1"><span class="bcp14">REQUIRED</span>. The PDP's own view identifier; the PDP always knows
+and populates it, whatever the request carried.<a href="#section-4.1-1.6.2.4.1" class="pilcrow">¶</a></p>
+</dd>
+              <dd class="break"></dd>
+<dt id="section-4.1-1.6.2.5">
+<code>intent_hash</code>:</dt>
+              <dd style="margin-left: 1.5em" id="section-4.1-1.6.2.6">
+                <p id="section-4.1-1.6.2.6.1"><span class="bcp14">OPTIONAL</span>. It is carried in neither the <code>mission</code> claim nor
+introspection, so only a PDP with direct Mission-record access
+can record it.<a href="#section-4.1-1.6.2.6.1" class="pilcrow">¶</a></p>
+</dd>
+              <dd class="break"></dd>
+<dt id="section-4.1-1.6.2.7">
+<code>policy_version</code>:</dt>
+              <dd style="margin-left: 1.5em" id="section-4.1-1.6.2.8">
+                <p id="section-4.1-1.6.2.8.1"><span class="bcp14">OPTIONAL</span>. From the request's Mission reference, when known.<a href="#section-4.1-1.6.2.8.1" class="pilcrow">¶</a></p>
+</dd>
+              <dd class="break"></dd>
+<dt id="section-4.1-1.6.2.9">Consent-disclosure commitment:</dt>
+              <dd style="margin-left: 1.5em" id="section-4.1-1.6.2.10">
+                <p id="section-4.1-1.6.2.10.1"><span class="bcp14">OPTIONAL</span>. Recorded when known.<a href="#section-4.1-1.6.2.10.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+</dl>
+<p id="section-4.1-1.6.3">These hashes are the issuing AS's
+commitments cited as anchors; the PDP does not recompute them.<a href="#section-4.1-1.6.3" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.7">
+<code>subject</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.8">
+            <p id="section-4.1-1.8.1"><span class="bcp14">REQUIRED</span>. An object. Subject identifiers and assurance metadata,
+never a raw claim set, minimized per the deployment's audit policy.<a href="#section-4.1-1.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.9">
+<code>resource</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.10">
+            <p id="section-4.1-1.10.1"><span class="bcp14">REQUIRED</span>. An object. The resource identifier and type; any further
+resource properties are minimized to what the deployment's audit
+policy declares.<a href="#section-4.1-1.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.11">
+<code>action</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.12">
+            <p id="section-4.1-1.12.1"><span class="bcp14">REQUIRED</span>. An object. The action's name or identifier and
+non-sensitive classification metadata only. It <span class="bcp14">MUST NOT</span> contain the
+request's <code>properties.parameters</code>, under any name: the parameter
+binding this record carries is <code>parameter_digest</code> alone, an
+evidence projection of the decision request rather than a
+pass-through of it.<a href="#section-4.1-1.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.13">
+<code>audience</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.14">
+            <p id="section-4.1-1.14.1"><span class="bcp14">REQUIRED</span>. A string. The audience the PDP evaluated: the runtime
+profile's audience input to the Decision Output
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), as carried by the
+deployment's decision-API binding (for example, the AuthZEN
+binding's decision-API request's audience member,
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-4.1-1.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.15">
+<code>mission_state_version</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.16">
+            <p id="section-4.1-1.16.1"><span class="bcp14">OPTIONAL</span>. An integer. The Mission lifecycle-state version the
+decision consulted, when the PDP tracks one: the mutable-state
+counterpart of the compiled-authority <code>policy_view_id</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The PDP computes and
+records it directly; no decision-API wire echo is required.<a href="#section-4.1-1.16.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.17">
+<code>action_class</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.18">
+            <p id="section-4.1-1.18.1"><span class="bcp14">REQUIRED</span>. A string. The runtime action class the PDP applied to the
+action: one of <code>consequential_read</code>, <code>consequential_write</code>,
+<code>irreversible_action</code>, <code>external_commitment</code>, or
+<code>privileged_administration</code>, naming the classes of
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>. Every decision this
+document records is on a consequential action, so the member is
+always present.<a href="#section-4.1-1.18.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.19">
+<code>class_source</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.20">
+            <p id="section-4.1-1.20.1"><span class="bcp14">REQUIRED</span> when <code>action_class</code> is present. A string. How the applied
+class was assigned: <code>default</code> (the runtime profile's default
+classification), <code>resource_floor</code> (the resource's published
+<code>mission_action_class_floors</code> floor set or raised it,
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), or <code>deployment</code>
+(deployment policy assigned it).<a href="#section-4.1-1.20.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.21">
+<code>actor</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.22">
+            <p id="section-4.1-1.22.1"><span class="bcp14">OPTIONAL</span>. An object. Actor-chain identifiers and assurance
+metadata, never a raw claim set, minimized per the deployment's
+audit policy.<a href="#section-4.1-1.22.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.23">
+<code>credential</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.24">
+            <p id="section-4.1-1.24.1"><span class="bcp14">OPTIONAL</span>. An object. Credential-derived identifiers and assurance
+metadata, never a raw claim set, minimized per the deployment's
+audit policy. This member <span class="bcp14">MUST</span> contain only claims the PEP verified
+before invoking the PDP.<a href="#section-4.1-1.24.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.25">
+<code>parameter_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.26">
+            <p id="section-4.1-1.26.1"><span class="bcp14">OPTIONAL</span>. A string. The parameter digest the decision was bound to
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); <span class="bcp14">REQUIRED</span> for a
+parameter-bound action.<a href="#section-4.1-1.26.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.27">
+<code>obligations</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.28">
+            <p id="section-4.1-1.28.1"><span class="bcp14">REQUIRED</span> whenever the decision response contained obligations, on
+either decision. An array of obligation objects, recorded as
+returned to the PEP (for example, as carried by the AuthZEN
+binding, <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-4.1-1.28.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.29">
+<code>conditions</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.30">
+            <p id="section-4.1-1.30.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>permit</code> for a consequential action. An
+object recording the permit's decision conditions in this
+document's normalized form: <code>valid_until</code> (the validity bound) and
+<code>use_limit</code> (the consumption bound on <code>evaluation_id</code>; the PDP <span class="bcp14">MUST</span>
+set <code>use_limit: 1</code> for a permit in the high-consequence classes).
+The parameter binding is recorded once, in this record's
+<code>parameter_digest</code> member; the producer <span class="bcp14">MUST</span> ensure that value
+equals the binding carried by the wire conditions. A binding maps
+its wire members onto this form (for example the AuthZEN binding's
+<code>conditions</code> response member,
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-4.1-1.30.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.31">
+<code>evaluation_request_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.32">
+            <p id="section-4.1-1.32.1">CONDITIONAL. A string. A privacy-preserving digest of the whole
+evaluation request, in the integrity-anchor encoded form
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). <span class="bcp14">REQUIRED</span> when
+<code>parameter_digest</code> is absent for a consequential action, so the closed
+object still carries the request digest the runtime profile requires
+of every decision record (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).
+Distinct from <code>parameter_digest</code>: that member records the parameter
+binding the decision was bound to;
+<code>evaluation_request_digest</code> is this record's fallback digest of the
+whole evaluation request, present whether the decision was a permit
+or a deny.<a href="#section-4.1-1.32.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.33">
+<code>compensates_evaluation_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.34">
+            <p id="section-4.1-1.34.1"><span class="bcp14">OPTIONAL</span>. A string. The <code>evaluation_id</code> of the action this decision
+compensates, carrying the runtime profile's compensation link
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) so a compensating
+action reconciles against the action it reverses.<a href="#section-4.1-1.34.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.35">
+<code>decision</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.36">
+            <p id="section-4.1-1.36.1"><span class="bcp14">REQUIRED</span>. A string. One of <code>permit</code> or <code>deny</code>.<a href="#section-4.1-1.36.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.37">
+<code>contributing_constraints</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.38">
+            <p id="section-4.1-1.38.1"><span class="bcp14">REQUIRED</span> when the decision turned on one or more authority or
+constraint entries. An array of strings: the identifiers of the
+constraints and entries the PDP evaluated (<code>constraints</code> keys,
+<code>authorization_details</code> entry types). For a permit it records every
+constraint key and entry type the decision relied on; for a deny it
+<span class="bcp14">MUST</span> list every entry that failed. Omitting an entry the decision
+turned on is non-conforming. The identifiers support correlation and
+targeted reconstruction of the decision, given access to the policy
+content and inputs those identifiers name; the array alone, without
+that access, does not reconstruct the decision basis.<a href="#section-4.1-1.38.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.39">
+<code>sequence</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.40">
+            <p id="section-4.1-1.40.1"><span class="bcp14">REQUIRED</span>. An integer. The per-Mission sequence indicator
+the runtime profile requires, so one emitter's decision stream has a
+verifiable order and gaps are detectable. <span class="bcp14">MUST</span> be zero or greater.
+The sequence is scoped to the emitter identified by <code>emitter</code>: each
+emitter maintains its own monotonically increasing per-Mission
+sequence, and a verifier detects gaps and orders records within
+(Mission, emitter). It does not reconstruct Mission-wide decision
+order across emitters: cross-emitter ordering is best-effort,
+established, where the deployment's evidence supports it, from the
+correlation members (<code>evaluation_id</code>, <code>mission.id</code>, <code>hop_reference</code>)
+together with each record's timestamps, not from <code>sequence</code> alone.<a href="#section-4.1-1.40.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.41">
+<code>emitter</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.42">
+            <p id="section-4.1-1.42.1"><span class="bcp14">REQUIRED</span>. An object. The identity of the component that emitted and
+signed this record, with members <code>id</code> (<span class="bcp14">REQUIRED</span>, a string identifying
+the emitting component) and <code>role</code> (<span class="bcp14">REQUIRED</span>, one of <code>pdp</code>, <code>pep</code>, or
+<code>executor</code>). For Decision Evidence <code>role</code> is <code>pdp</code>. A companion
+profile <span class="bcp14">MAY</span> register coordinated additional roles (<code>harness</code>,
+<code>egress</code>, <code>issuer</code>) for records emitted under these conventions at
+other enforcement points, or by the Mission Issuer's own retained
+producers (for example, protected-event ingestion,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>). A verifier <span class="bcp14">MUST</span>
+bind the emitter's signing key to the enforcement scope and audience
+the record serves (<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>).<a href="#section-4.1-1.42.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.43">
+<code>denial_reason</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.44">
+            <p id="section-4.1-1.44.1">CONDITIONAL. A string. Present when <code>decision</code> is <code>deny</code>. A value
+naming the runtime profile's failure-condition classification
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), as carried by the
+deployment's decision-API binding, including any
+specification-defined extension under that binding's extensibility
+rule; a consumer <span class="bcp14">MUST</span> treat an unrecognized value as a deny and <span class="bcp14">MUST NOT</span> attach any other semantics to it. For example, the AuthZEN
+binding carries this as its wire denial-reason strings
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). When the denial
+is a constraint violation, the value is <code>parameter_violation</code> and the
+specific failing <code>constraints</code> keys are carried in
+<code>contributing_constraints</code>, not in <code>denial_reason</code>, so the reason
+enum and the open constraint-key space never mix in one field.<a href="#section-4.1-1.44.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.45">
+<code>evaluated_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.46">
+            <p id="section-4.1-1.46.1"><span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp. The runtime profile's
+decision timestamp (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), as
+carried by the deployment's decision-API binding.<a href="#section-4.1-1.46.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.47">
+<code>authorizing_entry</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.48">
+            <p id="section-4.1-1.48.1"><span class="bcp14">OPTIONAL</span>. An object. The <code>authorization_details</code> entry the decision
+was evaluated against.<a href="#section-4.1-1.48.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.49">
+<code>entry_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.50">
+            <p id="section-4.1-1.50.1"><span class="bcp14">OPTIONAL</span>. A string. The integrity-anchor encoded digest
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) of that entry, for a
+deployment that does not record the entry in full. A record of a
+permit <span class="bcp14">MUST</span> carry <code>authorizing_entry</code> or <code>entry_digest</code>, per the
+runtime record requirements
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-4.1-1.50.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-1.51">
+<code>evidence_envelope</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-1.52">
+            <p id="section-4.1-1.52.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection
+(<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>), carrying a <code>format</code> (string,
+required) and a <code>value</code> (string, required).<a href="#section-4.1-1.52.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-4.1-2">A Decision Evidence Object is closed to uncoordinated extension; see
+<a href="#evidence-extensions" class="auto internal xref">Section 6</a> for the extension rule and the coordinated
+extension members a deployment following the AuthZEN binding
+commonly carries (<code>taint</code>, <code>mission_history</code>, <code>capability_source</code>,
+<code>hop_reference</code>).<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="pre-decision-refusal">
+<section id="section-4.2">
+        <h3 id="name-refusal-record">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-refusal-record" class="section-name selfRef">Refusal Record</a>
+        </h3>
+<p id="section-4.2-1">The Decision Evidence Object records a PDP decision, which is why its
+PDP-derived members are <span class="bcp14">REQUIRED</span>. The runtime profile also requires an
+evidence record for a refusal that occurs before any PDP decision,
+whether the refusing component is the PEP or the PDP: a PEP refusal
+for token validation failure, a missing <code>mission</code> claim, PEP-PDP
+channel failure, PDP unreachability, or the PEP being unable to
+establish Mission state (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); or
+a PDP refusal of an in-scope request that reaches it without the
+Mission decision context a runtime enforcement scope requires, per
+the AuthZEN binding (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). Such a
+refusal has no PDP decision and cannot populate the PDP-derived
+members above. A deployment records it as a Refusal Record, carrying
+only facts the refusing role verified: a PEP populates the members it
+can attest from token validation and its own state establishment; a
+PDP populates the members it can attest from the request it received.
+Neither role attests facts only the other could verify: the PDP
+cannot attest PEP-side token checks, and the PEP cannot attest the
+PDP's own context-completeness check. The boundary is the PDP
+decision: a Refusal Record is exclusively pre-decision, and once a
+PDP has decided, every final disposition of a consequential permit,
+whether completed, failed, or suppressed before release, is Execution
+Evidence (<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>), never a Refusal Record:<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.2-2">
+          <dt id="section-4.2-2.1">
+<code>refusal_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.2">
+            <p id="section-4.2-2.2.1"><span class="bcp14">REQUIRED</span>. A string. Unique refusal identifier. ABNF:
+<code>1*64( ALPHA / DIGIT / "-" / "_" )</code>. At least 128 bits of entropy.<a href="#section-4.2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.3">
+<code>audience</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.4">
+            <p id="section-4.2-2.4.1"><span class="bcp14">REQUIRED</span>. A string. The audience or protected-resource identifier,
+as the refusing component established it.<a href="#section-4.2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.5">
+<code>action</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.6">
+            <p id="section-4.2-2.6.1"><span class="bcp14">REQUIRED</span>. An object. The requested action descriptor, as the
+refusing component established it.<a href="#section-4.2-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.7">
+<code>resource</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.8">
+            <p id="section-4.2-2.8.1"><span class="bcp14">OPTIONAL</span>. An object. The target object identity, when the refusing
+component established one.<a href="#section-4.2-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.9">
+<code>decision</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.10">
+            <p id="section-4.2-2.10.1"><span class="bcp14">REQUIRED</span>. A string. Always <code>deny</code>.<a href="#section-4.2-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.11">
+<code>denial_reason</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.12">
+            <p id="section-4.2-2.12.1"><span class="bcp14">REQUIRED</span>. A string. For a PEP refusal, one of <code>token_invalid</code>,
+<code>mission_claim_missing</code>, <code>channel_failure</code>, <code>pdp_unreachable</code>, or
+<code>state_unavailable</code> (where the deployment's state-source placement
+has the PEP supply state, and it cannot establish it). For a PDP
+refusal of an in-scope request that reaches it without the Mission
+decision context a runtime enforcement scope requires,
+<code>mission_context_missing</code>. These name pre-evaluation conditions,
+PEP-side or PDP-side, and are disjoint from the runtime profile's
+PDP denial reasons for an evaluated decision (for example, as
+carried by the AuthZEN binding,
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); a record that can
+populate the PDP-derived members of an evaluated decision is a
+Decision Evidence Object instead.<a href="#section-4.2-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.13">
+<code>evaluated_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.14">
+            <p id="section-4.2-2.14.1"><span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-4.2-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.15">
+<code>parameter_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.16">
+            <p id="section-4.2-2.16.1">CONDITIONAL. A string. <span class="bcp14">REQUIRED</span> for a parameter-bound action class.<a href="#section-4.2-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.17">
+<code>evaluation_request_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.18">
+            <p id="section-4.2-2.18.1">CONDITIONAL. A string. A privacy-preserving digest of the whole
+refused request, in the form of <a href="#request-digest-worked" class="auto internal xref">Section 4.5</a>. <span class="bcp14">REQUIRED</span>
+when <code>parameter_digest</code> is absent, so the record meets the runtime
+profile's record minimum
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Distinct from a granted
+permit's <code>parameter_digest</code> condition
+(<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>): a Refusal Record has no PDP decision
+and no permit.<a href="#section-4.2-2.18.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.19">
+<code>mission</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.20">
+            <p id="section-4.2-2.20.1"><span class="bcp14">OPTIONAL</span>. An object. The Mission reference (<code>id</code>, <code>issuer</code>,
+<code>authority_hash</code>), present only when the refusing component
+established it before the failure: for a PEP, for example, on
+<code>pdp_unreachable</code>; for a PDP refusing on
+<code>mission_context_missing</code>, the reference is typically absent,
+since that is exactly what the request lacked.<a href="#section-4.2-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.21">
+<code>subject</code>, <code>actor</code>, <code>credential</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.22">
+            <p id="section-4.2-2.22.1"><span class="bcp14">OPTIONAL</span>. Objects. Verified facts only, in the projected forms
+<a href="#decision-evidence-object" class="auto internal xref">Section 4</a> defines (for example, as carried in the
+AuthZEN binding's decision-API request,
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). A PEP populates them from
+its own token validation; a PDP populates them from the request
+context it received, never asserting a check only the other role
+can perform. For a token-validation failure, the record <span class="bcp14">MUST NOT</span>
+describe unverified token claims as authenticated facts
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-4.2-2.22.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.23">
+<code>sequence</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.24">
+            <p id="section-4.2-2.24.1">CONDITIONAL. An integer. <span class="bcp14">REQUIRED</span> when the record carries a verified
+<code>mission</code> reference, continuing that emitter's per-Mission sequence
+for that Mission (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>); absent when no
+Mission was established.<a href="#section-4.2-2.24.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.25">
+<code>emitter</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.26">
+            <p id="section-4.2-2.26.1"><span class="bcp14">REQUIRED</span>. An object. The identity of the refusing component that
+emitted and signed this record, in the form Decision Evidence
+defines (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>), with <code>role</code> <code>pep</code> or <code>pdp</code>.
+A verifier <span class="bcp14">MUST</span> bind the emitter's signing key to the enforcement
+scope and audience the record serves
+(<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>).<a href="#section-4.2-2.26.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.27">
+<code>hop_reference</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.28">
+            <p id="section-4.2-2.28.1"><span class="bcp14">OPTIONAL</span>. An object, in the coordinated extension form
+<a href="#evidence-extensions" class="auto internal xref">Section 6</a> defines. Present only when the refusing
+component verified enough of the presented credential, before the
+failure, to establish it was a continued credential.<a href="#section-4.2-2.28.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-2.29">
+<code>evidence_envelope</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.30">
+            <p id="section-4.2-2.30.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection in the form of
+<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>, emitted by the refusing component,
+whose JWS protected <code>typ</code> is <code>application/mission-refusal-record+json</code>
+(<a href="#iana" class="auto internal xref">Section 10</a>).<a href="#section-4.2-2.30.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-4.2-3">A Refusal Record is closed to uncoordinated extension under the same
+rule as Decision Evidence (<a href="#evidence-extensions" class="auto internal xref">Section 6</a>).<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+<p id="section-4.2-4">Refusal Records are per-attempt, immutable, and append-only: a
+sustained failure condition with a retrying agent yields one signed
+record per attempt, never a record amended or replaced in place. A
+deployment <span class="bcp14">MAY</span> maintain a separate derived summary over a series of
+Refusal Records for reporting purposes (for example, a count of
+refusals sharing <code>denial_reason</code>, <code>audience</code>, and <code>action</code> over a
+window). That summary is not a Refusal Record, is not signed as one,
+and adds no evidentiary standing beyond the inputs it summarizes.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+<p id="section-4.2-5">When the deployment establishes the Mission binding externally under
+the runtime profile's binding-establishment step
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), absence of the <code>mission</code>
+claim is not a pre-decision refusal and <code>mission_claim_missing</code> does
+not apply; the external join's verification governs instead.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
+<p id="section-4.2-6">A PDP outage on the ERP reconciliation Mission, recorded by the PEP
+that failed closed:<a href="#section-4.2-6" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4.2-7">
+<pre>
+{
+  "refusal_id": "ref_3VtM9kQ2xN7rB4sL8eP1jY5wZc",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "audience": "https://erp.example.com",
+  "action": { "name": "journal-entries.write" },
+  "resource":
+    { "type": "journal-entry", "id": "je_2026Q3_inv_8421" },
+  "parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "decision": "deny",
+  "denial_reason": "pdp_unreachable",
+  "sequence": 44,
+  "emitter": { "id": "pep.example.com", "role": "pep" },
+  "evaluated_at": "2026-11-02T08:16:11Z",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXkt..."
+  }
+}
+</pre><a href="#section-4.2-7" class="pilcrow">¶</a>
+</div>
+<p id="section-4.2-8">A PDP-side refusal, recorded by the PDP itself: an in-scope request
+reached it without the Mission decision context the AuthZEN binding
+requires, so no Mission reference is established and the PDP
+populates only what it can attest from the request it received:<a href="#section-4.2-8" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4.2-9">
+<pre>
+{
+  "refusal_id": "ref_9NcT4wQ1xM6rB3sK7eV0jY2wLz",
+  "audience": "https://erp.example.com",
+  "action": { "name": "journal-entries.write" },
+  "parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "decision": "deny",
+  "denial_reason": "mission_context_missing",
+  "emitter": { "id": "pdp.example.com", "role": "pdp" },
+  "evaluated_at": "2026-11-02T08:17:02Z",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
+  }
+}
+</pre><a href="#section-4.2-9" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="decision-evidence-integrity">
+<section id="section-4.3">
+        <h3 id="name-integrity">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-integrity" class="section-name selfRef">Integrity</a>
+        </h3>
+<p id="section-4.3-1">The <code>evidence_envelope</code> carries the integrity protection over the
+Decision Evidence content. This document defines the concrete
+serialization required by <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>:
+the Decision Evidence object is serialized as JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical
+JSON before integrity protection. The default <code>format</code> is
+<code>jws-compact</code>, a JWS Compact Serialization <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> whose payload is
+the JCS canonical bytes of the Decision Evidence object with the
+<code>evidence_envelope</code> member removed during signing.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3-2">A verifier <span class="bcp14">MUST</span> perform the following steps, in order, and <span class="bcp14">MUST NOT</span>
+treat a record as verified if any step fails:<a href="#section-4.3-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4.3-3">
+<li id="section-4.3-3.1">
+            <p id="section-4.3-3.1.1">Decode the JWS payload.<a href="#section-4.3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.3-3.2">
+            <p id="section-4.3-3.2.1">Compute the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of the outer record
+with the <code>evidence_envelope</code> member removed.<a href="#section-4.3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.3-3.3">
+            <p id="section-4.3-3.3.1">Require byte-for-byte equality between the decoded payload of step
+1 and the canonical bytes of step 2, rejecting the record on any
+difference. The signature authenticates only its own embedded
+payload; an outer object that differs from that payload is
+unauthenticated, regardless of whether the signature itself
+verifies.<a href="#section-4.3-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.3-3.4">
+            <p id="section-4.3-3.4.1">Verify the JWS signature and protected header against the
+emitter's published signing key.<a href="#section-4.3-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-4.3-4">For Decision Evidence emitted by a PDP, the emitter is the PDP. For
+Execution Evidence emitted by a PEP or executor, the emitter is that
+PEP or executor. For a Refusal Record, the emitter is the refusing
+PEP. This procedure applies wherever verification of the
+<code>evidence_envelope</code> is described in this document, including for
+Execution Evidence and Refusal Records.<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+<p id="section-4.3-5">A verifier <span class="bcp14">MUST</span> confirm that the signing key selected by the JWS <code>kid</code>
+is the published key of the component named in the record's <code>emitter</code>
+member, and that this key is bound to the enforcement scope and
+audience the record serves: the record's own <code>audience</code> member,
+present directly on Decision Evidence, Execution Evidence, and
+Refusal Records alike (for Decision Evidence, mirroring the
+decision-API request's audience member,
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). A verifier <span class="bcp14">MUST</span> reject a
+record whose signing key is not published for that scope, so one
+component's key cannot sign evidence for a resource, audience, or
+scope it does not serve.<a href="#section-4.3-5" class="pilcrow">¶</a></p>
+<p id="section-4.3-6">The JWS protected header <span class="bcp14">MUST</span> carry:<a href="#section-4.3-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.3-7.1">
+            <p id="section-4.3-7.1.1"><code>kid</code>: a key identifier resolvable in the emitter's published JWKS
+(<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 8.2</a>), so a verifier can select the
+emitter's signing key independently.<a href="#section-4.3-7.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.3-7.2">
+            <p id="section-4.3-7.2.1"><code>alg</code>: <code>ES256</code> <span>[<a href="#RFC7518" class="cite xref">RFC7518</a>]</span> is mandatory to implement; an
+implementation <span class="bcp14">MAY</span> offer other JOSE algorithms but <span class="bcp14">MUST</span> implement
+<code>ES256</code>.<a href="#section-4.3-7.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.3-7.3">
+            <p id="section-4.3-7.3.1"><code>typ</code>: the registered media type of the evidence object being signed
+(<code>application/mission-decision-evidence+json</code> for Decision Evidence,
+<code>application/mission-execution-evidence+json</code> for Execution Evidence,
+<code>application/mission-refusal-record+json</code> for Refusal Records,
+<a href="#iana" class="auto internal xref">Section 10</a>). A verifier <span class="bcp14">MUST</span> reject a JWS whose protected <code>typ</code> is not
+the media type of the object it is verifying, so signatures over one
+record kind cannot be cross-used for another.<a href="#section-4.3-7.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-4.3-8">This rule is unaffected by the members Decision Evidence, Execution
+Evidence, and Refusal Records share with each other and with other
+evidence types, named once as a base shape
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). Shared member names describe
+a common shape for readability; they carry no exemption, and the <code>typ</code>
+check above remains the sole authority for which kind a signature
+covers.<a href="#section-4.3-8" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4.3-9">
+<pre>
+{
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
+  }
+}
+</pre><a href="#section-4.3-9" class="pilcrow">¶</a>
+</div>
+<p id="section-4.3-10">This document defines only the <code>jws-compact</code> format. Additional formats
+<span class="bcp14">MAY</span> be defined by future specifications; implementations <span class="bcp14">MUST</span> reject
+envelopes with unsupported formats.<a href="#section-4.3-10" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="worked-example">
+<section id="section-4.4">
+        <h3 id="name-worked-example">
+<a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-worked-example" class="section-name selfRef">Worked example</a>
+        </h3>
+<div class="breakable lang-json sourcecode" id="section-4.4-1">
+<pre>
+{
+  "evidence_id": "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA",
+  "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "intent_hash":
+      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "policy_version": "deploy-policy:v17",
+    "policy_view_id":
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
+  },
+  "subject": {
+    "type": "user",
+    "id": "user_3p2q8mN1a0kV7tR",
+    "properties": {
+      "iss": "https://idp.example.com"
+    }
+  },
+  "actor": {
+    "client_id": "s6BhdRkqt3",
+    "client_instance_id": "inst_macbook_7f3a",
+    "act": [
+      {
+        "iss": "https://as.example.com",
+        "sub": "s6BhdRkqt3"
+      }
+    ]
+  },
+  "credential": {
+    "issuer": "https://as.example.com",
+    "expires_at": "2026-11-02T09:14:00Z"
+  },
+  "resource": {
+    "type": "journal-entry",
+    "id": "je_2026Q3_inv_8421"
+  },
+  "action": { "name": "journal-entries.write" },
+  "parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "audience": "https://erp.example.com",
+  "action_class": "irreversible_action",
+  "class_source": "deployment",
+  "conditions": {
+    "valid_until": "2026-11-02T08:15:00Z",
+    "use_limit": 1
+  },
+  "decision": "permit",
+  "contributing_constraints": [
+    "mission_resource_access", "max_amount"
+  ],
+  "sequence": 42,
+  "emitter": { "id": "pdp.example.com", "role": "pdp" },
+  "evaluated_at": "2026-11-02T08:14:03Z",
+  "entry_digest":
+    "sha-256:dPCNLHsZuzPXuhco_s21VTvDI4cagI_LMhPQsqfNJKQ",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
+  }
+}
+</pre><a href="#section-4.4-1" class="pilcrow">¶</a>
+</div>
+<p id="section-4.4-2">Decision Evidence is durable and integrity-protected. It is the
+authoritative record of what the PDP evaluated, not proof that the
+action occurred.<a href="#section-4.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="request-digest-worked">
+<section id="section-4.5">
+        <h3 id="name-evaluation-request-digest-w">
+<a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-evaluation-request-digest-w" class="section-name selfRef">Evaluation request digest worked value</a>
+        </h3>
+<p id="section-4.5-1">For a consequential action that is not parameter-bound (here a
+consequential read), the record carries <code>evaluation_request_digest</code>
+in place of <code>parameter_digest</code>. The runtime profile does not
+standardize the digested request form, so the emitting deployment
+states the exact input; this non-normative example digests exactly
+the following evaluation-request summary object:<a href="#section-4.5-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4.5-2">
+<pre>
+{
+  "action": "journal-entries.read",
+  "audience": "https://erp.example.com",
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "resource": "je_2026Q3_inv_8421",
+  "subject": "user_3p2q8mN1a0kV7tR"
+}
+</pre><a href="#section-4.5-2" class="pilcrow">¶</a>
+</div>
+<p id="section-4.5-3">The value is the integrity-anchor encoded form of the SHA-256 of the
+JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of that object (one line, sorted
+member names, no whitespace, shown here wrapped for layout only;
+remove the layout line breaks, adding no characters, to recover the
+canonical form):<a href="#section-4.5-3" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-4.5-4">
+<pre>
+{"action":"journal-entries.read","audience":"https://erp.example.com
+","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","resource":
+"je_2026Q3_inv_8421","subject":"user_3p2q8mN1a0kV7tR"}
+</pre><a href="#section-4.5-4" class="pilcrow">¶</a>
+</div>
+<div class="lang-text sourcecode" id="section-4.5-5">
+<pre>
+evaluation_request_digest =
+  sha-256:sK12VE_g01AHD2v-O1vsf1Gf_xT_htjX0UN0Oe0dDRU
+</pre><a href="#section-4.5-5" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="execution-evidence-object">
+<section id="section-5">
+      <h2 id="name-execution-evidence-object">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-execution-evidence-object" class="section-name selfRef">Execution Evidence Object</a>
+      </h2>
+<p id="section-5-1">The PEP or executor emits an Execution Evidence Object once the
+authorized action's final outcome is determined: whether it completed,
+failed, or was suppressed, linked to the Decision Evidence by
+<code>evaluation_id</code>. A record is emitted once a final outcome exists, not
+for the attempt in progress; <code>attempted_at</code> carries the attempt's
+timing without asserting an <code>attempted</code> outcome. Emission follows
+the runtime profile's class rule: Execution Evidence is required for
+the high-consequence classes and for every further class the
+deployment claims under the runtime profile's transaction-assurance
+tier (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-5-1" class="pilcrow">¶</a></p>
+<div id="members-1">
+<section id="section-5.1">
+        <h3 id="name-members-2">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-members-2" class="section-name selfRef">Members</a>
+        </h3>
+<span class="break"></span><dl class="dlParallel" id="section-5.1-1">
+          <dt id="section-5.1-1.1">
+<code>execution_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.2">
+            <p id="section-5.1-1.2.1"><span class="bcp14">REQUIRED</span>. A string. Unique execution identifier, stable across
+delivery retries of this record: exactly one Execution Evidence
+Object exists per final disposition of a permit, and delivery of
+that record is at-least-once, so a consumer <span class="bcp14">MUST</span> deduplicate on
+<code>execution_id</code> rather than assume single delivery. ABNF:
+<code>1*64( ALPHA / DIGIT / "-" / "_" )</code>. At least 128 bits of entropy.<a href="#section-5.1-1.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.3">
+<code>evaluation_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.4">
+            <p id="section-5.1-1.4.1"><span class="bcp14">REQUIRED</span>. A string. Correlates this record with the linked Decision
+Evidence's own <code>evaluation_id</code> (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>), and
+with every other record and wire artifact of the same evaluation.<a href="#section-5.1-1.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.5">
+<code>mission_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.6">
+            <p id="section-5.1-1.6.1"><span class="bcp14">REQUIRED</span>. A string. The Mission <code>id</code>, mirrored from the
+linked Decision Evidence for join-key convenience.<a href="#section-5.1-1.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.7">
+<code>audience</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.8">
+            <p id="section-5.1-1.8.1"><span class="bcp14">REQUIRED</span>. A string. The audience the linked Decision Evidence
+recorded, mirrored for join-key convenience and so a verifier's
+key-to-audience binding (<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>) has its
+input.<a href="#section-5.1-1.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.9">
+<code>authorized_parameter_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.10">
+            <p id="section-5.1-1.10.1">CONDITIONAL. A string. <span class="bcp14">REQUIRED</span> when the linked Decision Evidence
+carries <code>parameter_digest</code>; <span class="bcp14">MUST</span> equal it. The link to what the
+permit authorized.<a href="#section-5.1-1.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.11">
+<code>effective_parameter_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.12">
+            <p id="section-5.1-1.12.1">CONDITIONAL. A string. <span class="bcp14">REQUIRED</span> whenever
+<code>authorized_parameter_digest</code> is present. The digest, in the same
+form, over the normalized parameters actually attempted or
+executed. Equality with <code>authorized_parameter_digest</code> is the
+binding-held case. Inequality is a parameter deviation, and the
+record REMAINS VALID: evidence of an unauthorized execution is
+still evidence, never grounds to discard the record. A deviation
+recorded against <code>outcome</code> <code>suppressed</code> carries <code>error</code>
+              <code>parameter_mismatch</code>. A deviation recorded against <code>outcome</code>
+              <code>completed</code> or <code>failed</code>, a buggy or compromised executor having
+gone ahead despite the mismatch, is equally representable, and a
+consumer <span class="bcp14">MUST</span> flag it as an unauthorized execution.<a href="#section-5.1-1.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.13">
+<code>outcome</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.14">
+            <p id="section-5.1-1.14.1"><span class="bcp14">REQUIRED</span>. A string. One of <code>completed</code>, <code>failed</code>, or <code>suppressed</code>;
+a final outcome, recorded once one exists. <code>suppressed</code> means the
+action was permitted but the executor chose not to attempt it (for
+example, a kill-switch or a secondary deny).<a href="#section-5.1-1.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.15">
+<code>outcome_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.16">
+            <p id="section-5.1-1.16.1"><span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-5.1-1.16.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.17">
+<code>error</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.18">
+            <p id="section-5.1-1.18.1">CONDITIONAL. A string. Error identifier when <code>outcome</code> is <code>failed</code> or
+<code>suppressed</code>, from this closed set: <code>parameter_mismatch</code> (the
+executing PEP found the effective parameters differ from those the
+permit bound), <code>permit_expired</code> (the permit's validity window had
+passed at execution), <code>permit_consumed</code> (re-presentation of an
+already-consumed single-use evaluation identifier),
+<code>obligation_unfulfilled</code> (a permit suppressed before release because
+an attached obligation could not be fulfilled; the failing entry is
+named in <code>obligation_outcomes</code>), and <code>kill_switch</code> (execution
+suppressed by an operator or safety control). A deployment <span class="bcp14">MAY</span>
+define additional values, which <span class="bcp14">MUST</span> be collision-resistant names
+(a short name within a namespace the deployment controls, following
+the Collision-Resistant Name guidance of <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Section 4.2) so
+they cannot collide with this set or another deployment's.<a href="#section-5.1-1.18.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.19">
+<code>obligation_outcomes</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.20">
+            <p id="section-5.1-1.20.1">CONDITIONAL. An array of objects. <span class="bcp14">REQUIRED</span> when the linked Decision
+Evidence carried obligations and a permit disposition exists. One
+object per attached obligation, with <code>id</code> (<span class="bcp14">REQUIRED</span>, a string, the
+obligation's identifier as returned by the decision), <code>type</code>
+(<span class="bcp14">REQUIRED</span>, a string, the obligation type), <code>outcome</code> (<span class="bcp14">REQUIRED</span>, a
+string, one of <code>fulfilled</code>, <code>failed</code>, or <code>unsupported</code>), and <code>error</code>
+(<span class="bcp14">OPTIONAL</span>, a string, an implementation-specific detail on a
+non-<code>fulfilled</code> outcome).<a href="#section-5.1-1.20.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.21">
+<code>sequence</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.22">
+            <p id="section-5.1-1.22.1"><span class="bcp14">REQUIRED</span>. An integer. The per-Mission sequence indicator the runtime
+profile requires of every record, so the execution stream has a
+verifiable order and gaps are detectable. <span class="bcp14">MUST</span> be zero or greater. It
+is scoped to <code>emitter</code> per (Mission, emitter) as Decision Evidence
+defines (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>).<a href="#section-5.1-1.22.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.23">
+<code>emitter</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.24">
+            <p id="section-5.1-1.24.1"><span class="bcp14">REQUIRED</span>. An object. The identity of the PEP or executor that emitted
+and signed this record, in the form Decision Evidence defines
+(<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>), with <code>role</code> <code>pep</code> or <code>executor</code>. A
+verifier <span class="bcp14">MUST</span> bind the emitter's signing key to the enforcement scope
+and audience the record serves (<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>).<a href="#section-5.1-1.24.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.25">
+<code>hop_reference</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.26">
+            <p id="section-5.1-1.26.1"><span class="bcp14">OPTIONAL</span>. An object, in the coordinated extension form
+<a href="#evidence-extensions" class="auto internal xref">Section 6</a> defines. Present when the linked Decision
+Evidence carries one.<a href="#section-5.1-1.26.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.27">
+<code>attempted_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.28">
+            <p id="section-5.1-1.28.1"><span class="bcp14">OPTIONAL</span>. An RFC 3339 timestamp. Timing context.<a href="#section-5.1-1.28.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.29">
+<code>completed_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.30">
+            <p id="section-5.1-1.30.1"><span class="bcp14">OPTIONAL</span>. An RFC 3339 timestamp. Timing context.<a href="#section-5.1-1.30.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.31">
+<code>result_summary</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.32">
+            <p id="section-5.1-1.32.1"><span class="bcp14">OPTIONAL</span>. An object. Minimal action result metadata
+(for example, affected resource counts). <span class="bcp14">MUST NOT</span> carry user-content
+payloads.<a href="#section-5.1-1.32.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-1.33">
+<code>evidence_envelope</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-1.34">
+            <p id="section-5.1-1.34.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection in the
+same form as Decision Evidence (<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>),
+carrying a <code>format</code> (string, required) and a <code>value</code> (string,
+required).<a href="#section-5.1-1.34.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-5.1-2">An Execution Evidence Object is closed to uncoordinated extension
+under the same rule as Decision Evidence (<a href="#evidence-extensions" class="auto internal xref">Section 6</a>):
+coordinated companion members (for example, the metering companion's
+<code>measured_duration</code>) are permitted, any other extension <span class="bcp14">MUST</span> use a
+collision-resistant name, and a consumer <span class="bcp14">MUST</span> ignore members it does
+not understand.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="worked-example-1">
+<section id="section-5.2">
+        <h3 id="name-worked-example-2">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-worked-example-2" class="section-name selfRef">Worked example</a>
+        </h3>
+<div class="lang-json sourcecode" id="section-5.2-1">
+<pre>
+{
+  "execution_id":  "exe_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+  "evaluation_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+  "mission_id":    "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "audience":      "https://erp.example.com",
+  "authorized_parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "effective_parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "outcome":      "completed",
+  "sequence":     43,
+  "emitter":      { "id": "pep.example.com", "role": "executor" },
+  "attempted_at": "2026-11-02T08:14:04Z",
+  "completed_at": "2026-11-02T08:14:05Z",
+  "outcome_at":   "2026-11-02T08:14:05Z",
+  "result_summary": {
+    "rows_affected": 1
+  },
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXkt..."
+  }
+}
+</pre><a href="#section-5.2-1" class="pilcrow">¶</a>
+</div>
+<p id="section-5.2-2">Decision Evidence and Execution Evidence are linked but distinct.
+Authorization is not proof that an action occurred; a Decision
+Evidence record with no corresponding Execution Evidence record
+indicates the action was not attempted, or that the executor failed to
+emit evidence. Here the two Execution Evidence digests are equal: the
+binding-held case, the executed parameters are the ones the permit
+authorized.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="example-parameter-deviation">
+<section id="section-5.3">
+        <h3 id="name-worked-example-parameter-de">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-worked-example-parameter-de" class="section-name selfRef">Worked example: parameter deviation</a>
+        </h3>
+<p id="section-5.3-1">A later attempt on the same operation, a different permit
+(<code>evaluation_id</code> <code>dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA</code>) bound to the same
+423.50 journal entry the runtime profile's parameter-digest example
+digests (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Between check and
+use the parameters became
+<code>{"amount_usd":"780.00","source_invoice_id":"inv_2026Q3_842"}</code>. The
+executing PEP recomputed the digest over the parameters it was about
+to use, found it differed from the authorized digest, and suppressed
+the release before acting:<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.3-2">
+<pre>
+{
+  "execution_id":  "exe_7QsK2wR4xN9mV3pB6tY8eJ1zH5uD0cA",
+  "evaluation_id": "dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA",
+  "mission_id":    "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "audience":      "https://erp.example.com",
+  "authorized_parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "effective_parameter_digest":
+    "sha-256:UdG-TiebDHTiKRXUVURs1Jeq_vDJp_Ro8jWbBAD8hgM",
+  "outcome":      "suppressed",
+  "error":        "parameter_mismatch",
+  "sequence":     44,
+  "emitter":      { "id": "pep.example.com", "role": "executor" },
+  "attempted_at": "2026-11-02T09:03:28Z",
+  "outcome_at":   "2026-11-02T09:03:29Z",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXkt..."
+  }
+}
+</pre><a href="#section-5.3-2" class="pilcrow">¶</a>
+</div>
+<p id="section-5.3-3">The two digests differ: a parameter deviation. The record REMAINS
+VALID; it is evidence that the executing PEP caught the deviation and
+suppressed the release, never an invalid record to be discarded. Had
+the executor instead gone ahead with the 780.00 parameters despite the
+mismatch, the same two-digest divergence would appear against
+<code>outcome</code> <code>completed</code> or <code>failed</code>, and a consumer <span class="bcp14">MUST</span> flag that
+record as an unauthorized execution regardless of the recorded
+outcome.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toctou-and-parameter-binding">
+<section id="section-5.4">
+        <h3 id="name-toctou-and-parameter-bindin">
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-toctou-and-parameter-bindin" class="section-name selfRef">TOCTOU and parameter binding</a>
+        </h3>
+<p id="section-5.4-1">The semantics of parameter binding and the time-of-check to
+time-of-use gap are defined by the runtime profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The parameter-digest chain
+runs from the decision-API request through Decision Evidence's
+<code>parameter_digest</code> to Execution Evidence's
+<code>authorized_parameter_digest</code> (<span class="bcp14">REQUIRED</span> to equal it) and
+<code>effective_parameter_digest</code> (the digest over what the executing PEP
+actually attempted or executed).<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+<p id="section-5.4-2">Equality between the two Execution Evidence digests is the
+binding-held case. Inequality is a parameter deviation, and the
+record REMAINS VALID: evidence of an unauthorized execution is still
+evidence, never an invalid record to discard. When the executing PEP
+detects the deviation before acting, it <span class="bcp14">MUST</span> refuse the action and
+emit Execution Evidence with <code>outcome</code> <code>suppressed</code> and <code>error</code>
+          <code>parameter_mismatch</code> (<a href="#example-parameter-deviation" class="auto internal xref">Section 5.3</a>). A deviation
+recorded against an <code>outcome</code> of <code>completed</code> or <code>failed</code>, a buggy or
+compromised executor having gone ahead despite the mismatch, is
+equally representable and is never grounds to reject the record.
+Whatever the recorded <code>outcome</code>, when the two digests diverge the
+audit consumer <span class="bcp14">MUST</span> classify the execution as a parameter deviation
+and treat it as equivalent to an unauthorized action for compliance
+purposes.<a href="#section-5.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="retention">
+<section id="section-5.5">
+        <h3 id="name-retention">
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-retention" class="section-name selfRef">Retention</a>
+        </h3>
+<p id="section-5.5-1">Decision Evidence, Execution Evidence, and Refusal Records <span class="bcp14">MUST</span> be
+retained for at least
+the deployment's audit retention window, which the runtime profile
+requires to be no shorter than the Mission's audit horizon, the term
+defined in the Mission Record section of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. Regulated deployments <span class="bcp14">MAY</span>
+require longer retention.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="evidence-extensions">
+<section id="section-6">
+      <h2 id="name-extension-members">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-extension-members" class="section-name selfRef">Extension Members</a>
+      </h2>
+<p id="section-6-1">A Decision Evidence Object, Execution Evidence Object, and Refusal
+Record are each closed to uncoordinated extension: a companion or
+binding specification <span class="bcp14">MAY</span> add a member, under a name coordinated
+with this document or a collision-resistant name, and a consumer
+<span class="bcp14">MUST</span> ignore a member it does not understand and <span class="bcp14">MUST NOT</span> derive
+authority from any member it does not recognize. An extension member
+is recorded as presented; this document does not otherwise define
+its semantics.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">The following members are coordinated extensions a deployment
+following the family's Standards-Track AuthZEN binding commonly
+carries. Each is registered and owned by the specification named,
+not by this document or by the AuthZEN binding merely because it is
+a common wire carrier.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6-3">
+        <dt id="section-6-3.1">
+<code>taint</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-3.2">
+          <p id="section-6-3.2.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence as presented.
+<span class="bcp14">REQUIRED</span> when the decision request carried a taint context. What
+taints a session and when a taint requirement applies are defined
+by the harness profile (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>),
+which owns this member's semantics; the AuthZEN binding is one wire
+carrier of the context this member records
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-6-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-3.3">
+<code>mission_history</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-3.4">
+          <p id="section-6-3.4.1"><span class="bcp14">OPTIONAL</span>. An array of objects, recorded on Decision Evidence: the
+policy-selected history predicates the PDP evaluated, each with its
+<code>predicate</code> (and <code>action_class</code>, where applicable) and an <code>outcome</code>
+member (<code>satisfied</code>, <code>not_satisfied</code> for an established-false
+predicate, or <code>unavailable</code> for a predicate that could not be
+established, including an unrecognized <code>predicate</code> value or an
+evidence store that could not be consulted within its bound).
+<span class="bcp14">REQUIRED</span> when policy selected any history predicate for the
+decision, whether or not the request carried a Mission history
+member. Registered and owned by the AuthZEN binding
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-6-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-3.5">
+<code>capability_source</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-3.6">
+          <p id="section-6-3.6.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence: the
+catalog-source binding the PDP evaluated for a catalog-sourced
+action. Registered and owned by the Mission Capability Binding
+companion (<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>).<a href="#section-6-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-3.7">
+<code>hop_reference</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-3.8">
+          <p id="section-6-3.8.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence, Execution
+Evidence, or a Refusal Record when the action or refusal concerns a
+credential authorized under a continuation profile's continued
+credential, attributing the record to the specific hop that carried
+the authorization. Sub-members: <code>jti</code> (<span class="bcp14">REQUIRED</span>, a string, the
+authorizing token's identifier) and <code>mission_id</code> (<span class="bcp14">REQUIRED</span>, a
+string, the Mission the continued credential carries);
+<code>continuation_handle</code> (<span class="bcp14">OPTIONAL</span>, a string, the hop's
+identity-continuation handle, when present). Registered and owned
+by the Mission Continuation profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>), which
+requires execution-time evidence to record the continuation hop
+reference; this member formalizes that requirement as a coordinated
+extension.<a href="#section-6-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="conformance">
+<section id="section-7">
+      <h2 id="name-conformance">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-7-1">This document defines conformance for two roles: a PRODUCER that
+emits the records themselves, and a CONSUMER, or VERIFIER, that reads
+and checks them after the fact. A decision-API binding's own
+conformance statement, such as the AuthZEN binding's
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), incorporates this
+document's PRODUCER role for its PDP, PEP, and executor.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">A PRODUCER conforming to this document <span class="bcp14">MUST</span>:<a href="#section-7-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-3.1">
+          <p id="section-7-3.1.1">emit a Decision Evidence Object for every PDP decision on a
+consequential action (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>);<a href="#section-7-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-3.2">
+          <p id="section-7-3.2.1">emit a Refusal Record for a PEP or PDP refusal that occurs before
+any PDP decision (<a href="#pre-decision-refusal" class="auto internal xref">Section 4.2</a>);<a href="#section-7-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-3.3">
+          <p id="section-7-3.3.1">emit an Execution Evidence Object for the classes the runtime
+profile's transaction-assurance tier covers
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>)
+(<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>); and<a href="#section-7-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-3.4">
+          <p id="section-7-3.4.1">sign every record with the integrity envelope of
+<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>, with a <code>kid</code> resolvable in its
+published key set and a <code>typ</code> matching the record's own media type.<a href="#section-7-3.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-7-4">A CONSUMER or VERIFIER conforming to this document <span class="bcp14">MUST</span> perform the
+byte-equality verification procedure and key checks of
+<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a> against the emitter's published keys
+(<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 8.2</a>), and classify orphaned Decision
+Evidence and cross-record digest divergence as
+<a href="#security-considerations" class="auto internal xref">Section 8</a> and <a href="#execution-evidence-object" class="auto internal xref">Section 5</a>
+require, never as proof of action.<a href="#section-7-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-8">
+      <h2 id="name-security-considerations">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-8-1">The runtime profile's Security Considerations
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) apply in full. This
+section addresses only threats specific to these records.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<div id="decision-evidence-versus-execution-evidence">
+<section id="section-8.1">
+        <h3 id="name-decision-evidence-versus-ex">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-decision-evidence-versus-ex" class="section-name selfRef">Decision Evidence versus Execution Evidence</a>
+        </h3>
+<p id="section-8.1-1">Decision Evidence is not proof an action occurred. Implementations <span class="bcp14">MUST</span>
+emit Execution Evidence to record outcomes, and auditors <span class="bcp14">MUST NOT</span> treat
+Decision Evidence alone as evidence of action. An audit consumer <span class="bcp14">MUST</span>
+classify orphaned Decision Evidence (no matching Execution Evidence
+within the deployment's reconciliation window) as undetermined-outcome
+or, per deployment policy, as action-attempted; it <span class="bcp14">MUST NOT</span> treat it as
+proof of action.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="evidence-integrity-signing-keys">
+<section id="section-8.2">
+        <h3 id="name-evidence-integrity-and-sign">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-evidence-integrity-and-sign" class="section-name selfRef">Evidence integrity and signing keys</a>
+        </h3>
+<p id="section-8.2-1">The <code>evidence_envelope</code> binds each record to the emitting PDP or PEP.
+The PDP's <code>jws-compact</code> signing key <span class="bcp14">MUST</span> be resolvable, by the JWS
+protected <code>kid</code>, in the PDP's published JWKS so a verifier can check
+Decision Evidence independently. The PEP or executor signing key used
+for Execution Evidence and Refusal Records <span class="bcp14">MUST</span> be resolvable the same
+way through a
+deployment-published key set.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2">This document fixes one concrete discovery convention: the PDP
+publishes its JWKS at a deployment-published location named in the
+enforcement scope statement (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>),
+and the PEP or executor key set is published and named there
+likewise. The retired-key rule of the issuance profile's key
+management (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) extends to
+evidence signing keys: a retired signing key <span class="bcp14">MUST</span> remain resolvable
+in the published key set for at least the evidence retention window,
+so records signed before a rotation stay verifiable after it. The
+compromise exception carries over with it: a key known or suspected
+compromised is published as revoked or marked with a compromise time,
+per the core rule, and evidence signed under it after that time is
+unverifiable rather than verified.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
+<p id="section-8.2-3">Implementations <span class="bcp14">MUST</span> reject evidence whose <code>format</code> is unsupported
+rather than accepting it unverified.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+<p id="section-8.2-4">Verification under this section is anchored in the Enforcement Scope
+Statement's published keys: a party with access to that statement can
+verify a record independently of the deployment that emitted it.
+Portability beyond that, to a party without access to the deployment's
+own published keys, is not a property this document provides; it
+requires the transparency mechanisms of the audit profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>), where a deployment adopts
+them.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="transport">
+<section id="section-8.3">
+        <h3 id="name-transport">
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-transport" class="section-name selfRef">Transport</a>
+        </h3>
+<p id="section-8.3-1">Audit channels carrying Decision Evidence and Execution Evidence <span class="bcp14">MUST</span>
+be served over TLS 1.2 or later (TLS 1.3 <span class="bcp14">RECOMMENDED</span>). Evidence at
+rest <span class="bcp14">MUST</span> be encrypted per the deployment's data-protection posture.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-9">
+      <h2 id="name-privacy-considerations">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-9-1">The runtime profile's evidence-privacy guidance
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) applies in full. This
+section addresses the concrete records this document defines.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<div id="evidence-as-pii-sinks">
+<section id="section-9.1">
+        <h3 id="name-evidence-as-pii-sinks">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-evidence-as-pii-sinks" class="section-name selfRef">Evidence as PII sinks</a>
+        </h3>
+<p id="section-9.1-1">Decision Evidence, Execution Evidence, and Refusal Records carry the
+authenticated
+<code>subject</code>, actor chain, resource and action identifiers,
+credential-derived correlators, capability-source identifiers,
+<code>parameter_digest</code> (or, on Execution Evidence,
+<code>authorized_parameter_digest</code> and <code>effective_parameter_digest</code>), and
+timing. These records are PII sinks and <span class="bcp14">SHOULD</span>
+be access-controlled to audit consumers with a legitimate need,
+encrypted at rest, and retained per the window of
+<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="parameter-exposure">
+<section id="section-9.2">
+        <h3 id="name-parameter-exposure">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-parameter-exposure" class="section-name selfRef">Parameter exposure</a>
+        </h3>
+<p id="section-9.2-1">This restates, for the privacy reader, the <code>action</code> member's rule
+(<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>): the durable Decision Evidence record
+<span class="bcp14">MUST NOT</span> contain the raw <code>properties.parameters</code> object under any
+name; it carries only <code>parameter_digest</code> and, at most,
+non-sensitive action classification metadata, consistent with the
+runtime profile's rule that raw parameters never appear in the
+record. Where raw parameters must be retained for audit, they are
+held in a separately access-controlled store keyed by
+<code>evaluation_id</code>. When the parameters
+are themselves PII, the PEP <span class="bcp14">SHOULD</span> supply only a parameter digest to
+the PDP, omitting the raw parameters, so the PDP evaluates against
+parameter-class policy without observing the raw values. The Execution
+Evidence <code>result_summary</code> <span class="bcp14">MUST NOT</span> carry user-content payloads.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="actor-chain-and-mission-correlation">
+<section id="section-9.3">
+        <h3 id="name-actor-chain-and-mission-cor">
+<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-actor-chain-and-mission-cor" class="section-name selfRef">Actor chain and Mission correlation</a>
+        </h3>
+<p id="section-9.3-1">The <code>actor</code> member carries the delegation chain, which <span class="bcp14">MAY</span> reveal
+service accounts, client instances, and organizational structure.
+Evidence carrying the same Mission <code>id</code> and <code>authority_hash</code> across
+resource boundaries can correlate a subject's activity; this is
+inherent to the Mission's role as a governance handle. Deployments that
+require unlinkability need an additional privacy design outside this
+document.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana">
+<section id="section-10">
+      <h2 id="name-iana-considerations">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-10-1">This document requests the following IANA actions.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<div id="media-type-registry">
+<section id="section-10.1">
+        <h3 id="name-media-type-registry">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-media-type-registry" class="section-name selfRef">Media Type Registry</a>
+        </h3>
+<p id="section-10.1-1">This document registers three media types per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<div id="decision-evidence-media-type">
+<section id="section-10.1.1">
+          <h4 id="name-decision-evidence-media-typ">
+<a href="#section-10.1.1" class="section-number selfRef">10.1.1. </a><a href="#name-decision-evidence-media-typ" class="section-name selfRef">Decision Evidence Media Type</a>
+          </h4>
+<ul class="normal">
+<li class="normal" id="section-10.1.1-1.1">
+              <p id="section-10.1.1-1.1.1">Type name: application<a href="#section-10.1.1-1.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.2">
+              <p id="section-10.1.1-1.2.1">Subtype name: mission-decision-evidence+json<a href="#section-10.1.1-1.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.3">
+              <p id="section-10.1.1-1.3.1">Required parameters: none<a href="#section-10.1.1-1.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.4">
+              <p id="section-10.1.1-1.4.1">Optional parameters: none<a href="#section-10.1.1-1.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.5">
+              <p id="section-10.1.1-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-10.1.1-1.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.6">
+              <p id="section-10.1.1-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 8</a><a href="#section-10.1.1-1.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.7">
+              <p id="section-10.1.1-1.7.1">Interoperability considerations: see this document<a href="#section-10.1.1-1.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.8">
+              <p id="section-10.1.1-1.8.1">Published specification: this document<a href="#section-10.1.1-1.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.9">
+              <p id="section-10.1.1-1.9.1">Applications that use this media type: Mission-bound runtime
+enforcement deployments<a href="#section-10.1.1-1.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.10">
+              <p id="section-10.1.1-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-10.1.1-1.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.11">
+              <p id="section-10.1.1-1.11.1">Additional information:<a href="#section-10.1.1-1.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1.1-1.11.2.1">
+                  <p id="section-10.1.1-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-10.1.1-1.11.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.1-1.11.2.2">
+                  <p id="section-10.1.1-1.11.2.2.1">Magic number(s): none<a href="#section-10.1.1-1.11.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.1-1.11.2.3">
+                  <p id="section-10.1.1-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-10.1.1-1.11.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.1-1.11.2.4">
+                  <p id="section-10.1.1-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-10.1.1-1.11.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-10.1.1-1.12">
+              <p id="section-10.1.1-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-10.1.1-1.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.13">
+              <p id="section-10.1.1-1.13.1">Intended usage: COMMON<a href="#section-10.1.1-1.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.14">
+              <p id="section-10.1.1-1.14.1">Restrictions on usage: none<a href="#section-10.1.1-1.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.15">
+              <p id="section-10.1.1-1.15.1">Author: IETF<a href="#section-10.1.1-1.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-1.16">
+              <p id="section-10.1.1-1.16.1">Change controller: IETF<a href="#section-10.1.1-1.16.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+<div id="execution-evidence-media-type">
+<section id="section-10.1.2">
+          <h4 id="name-execution-evidence-media-ty">
+<a href="#section-10.1.2" class="section-number selfRef">10.1.2. </a><a href="#name-execution-evidence-media-ty" class="section-name selfRef">Execution Evidence Media Type</a>
+          </h4>
+<ul class="normal">
+<li class="normal" id="section-10.1.2-1.1">
+              <p id="section-10.1.2-1.1.1">Type name: application<a href="#section-10.1.2-1.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.2">
+              <p id="section-10.1.2-1.2.1">Subtype name: mission-execution-evidence+json<a href="#section-10.1.2-1.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.3">
+              <p id="section-10.1.2-1.3.1">Required parameters: none<a href="#section-10.1.2-1.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.4">
+              <p id="section-10.1.2-1.4.1">Optional parameters: none<a href="#section-10.1.2-1.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.5">
+              <p id="section-10.1.2-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-10.1.2-1.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.6">
+              <p id="section-10.1.2-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 8</a><a href="#section-10.1.2-1.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.7">
+              <p id="section-10.1.2-1.7.1">Interoperability considerations: see this document<a href="#section-10.1.2-1.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.8">
+              <p id="section-10.1.2-1.8.1">Published specification: this document<a href="#section-10.1.2-1.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.9">
+              <p id="section-10.1.2-1.9.1">Applications that use this media type: Mission-bound runtime
+enforcement deployments<a href="#section-10.1.2-1.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.10">
+              <p id="section-10.1.2-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-10.1.2-1.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.11">
+              <p id="section-10.1.2-1.11.1">Additional information:<a href="#section-10.1.2-1.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1.2-1.11.2.1">
+                  <p id="section-10.1.2-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-10.1.2-1.11.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.2-1.11.2.2">
+                  <p id="section-10.1.2-1.11.2.2.1">Magic number(s): none<a href="#section-10.1.2-1.11.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.2-1.11.2.3">
+                  <p id="section-10.1.2-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-10.1.2-1.11.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.2-1.11.2.4">
+                  <p id="section-10.1.2-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-10.1.2-1.11.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-10.1.2-1.12">
+              <p id="section-10.1.2-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-10.1.2-1.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.13">
+              <p id="section-10.1.2-1.13.1">Intended usage: COMMON<a href="#section-10.1.2-1.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.14">
+              <p id="section-10.1.2-1.14.1">Restrictions on usage: none<a href="#section-10.1.2-1.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.15">
+              <p id="section-10.1.2-1.15.1">Author: IETF<a href="#section-10.1.2-1.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-1.16">
+              <p id="section-10.1.2-1.16.1">Change controller: IETF<a href="#section-10.1.2-1.16.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+<div id="refusal-record-media-type">
+<section id="section-10.1.3">
+          <h4 id="name-refusal-record-media-type">
+<a href="#section-10.1.3" class="section-number selfRef">10.1.3. </a><a href="#name-refusal-record-media-type" class="section-name selfRef">Refusal Record Media Type</a>
+          </h4>
+<ul class="normal">
+<li class="normal" id="section-10.1.3-1.1">
+              <p id="section-10.1.3-1.1.1">Type name: application<a href="#section-10.1.3-1.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.2">
+              <p id="section-10.1.3-1.2.1">Subtype name: mission-refusal-record+json<a href="#section-10.1.3-1.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.3">
+              <p id="section-10.1.3-1.3.1">Required parameters: none<a href="#section-10.1.3-1.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.4">
+              <p id="section-10.1.3-1.4.1">Optional parameters: none<a href="#section-10.1.3-1.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.5">
+              <p id="section-10.1.3-1.5.1">Encoding considerations: binary; JSON encoded in UTF-8<a href="#section-10.1.3-1.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.6">
+              <p id="section-10.1.3-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 8</a><a href="#section-10.1.3-1.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.7">
+              <p id="section-10.1.3-1.7.1">Interoperability considerations: see this document<a href="#section-10.1.3-1.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.8">
+              <p id="section-10.1.3-1.8.1">Published specification: this document<a href="#section-10.1.3-1.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.9">
+              <p id="section-10.1.3-1.9.1">Applications that use this media type: Mission-bound runtime
+enforcement deployments<a href="#section-10.1.3-1.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.10">
+              <p id="section-10.1.3-1.10.1">Fragment identifier considerations: same as for <code>application/json</code><a href="#section-10.1.3-1.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.11">
+              <p id="section-10.1.3-1.11.1">Additional information:<a href="#section-10.1.3-1.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1.3-1.11.2.1">
+                  <p id="section-10.1.3-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-10.1.3-1.11.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.3-1.11.2.2">
+                  <p id="section-10.1.3-1.11.2.2.1">Magic number(s): none<a href="#section-10.1.3-1.11.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.3-1.11.2.3">
+                  <p id="section-10.1.3-1.11.2.3.1">File extension(s): <code>.json</code><a href="#section-10.1.3-1.11.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.1.3-1.11.2.4">
+                  <p id="section-10.1.3-1.11.2.4.1">Macintosh file type code(s): TEXT<a href="#section-10.1.3-1.11.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-10.1.3-1.12">
+              <p id="section-10.1.3-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-10.1.3-1.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.13">
+              <p id="section-10.1.3-1.13.1">Intended usage: COMMON<a href="#section-10.1.3-1.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.14">
+              <p id="section-10.1.3-1.14.1">Restrictions on usage: none<a href="#section-10.1.3-1.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.15">
+              <p id="section-10.1.3-1.15.1">Author: IETF<a href="#section-10.1.3-1.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.3-1.16">
+              <p id="section-10.1.3-1.16.1">Change controller: IETF<a href="#section-10.1.3-1.16.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-11">
+      <h2 id="name-references">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-11.1">
+        <h3 id="name-normative-references">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6234">[RFC6234]</dt>
+        <dd>
+<span class="refAuthor">Eastlake 3rd, D.</span> and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"US Secure Hash Algorithms (SHA and SHA-based HMAC and HKDF)"</span>, <span class="seriesInfo">RFC 6234</span>, <span class="seriesInfo">DOI 10.17487/RFC6234</span>, <time datetime="2011-05" class="refDate">May 2011</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6234">https://www.rfc-editor.org/rfc/rfc6234</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6838">[RFC6838]</dt>
+        <dd>
+<span class="refAuthor">Freed, N.</span>, <span class="refAuthor">Klensin, J.</span>, and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"Media Type Specifications and Registration Procedures"</span>, <span class="seriesInfo">BCP 13</span>, <span class="seriesInfo">RFC 6838</span>, <span class="seriesInfo">DOI 10.17487/RFC6838</span>, <time datetime="2013-01" class="refDate">January 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6838">https://www.rfc-editor.org/rfc/rfc6838</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7518">[RFC7518]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refTitle">"JSON Web Algorithms (JWA)"</span>, <span class="seriesInfo">RFC 7518</span>, <span class="seriesInfo">DOI 10.17487/RFC7518</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7518">https://www.rfc-editor.org/rfc/rfc7518</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7519">[RFC7519]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7519">https://www.rfc-editor.org/rfc/rfc7519</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8259">[RFC8259]</dt>
+        <dd>
+<span class="refAuthor">Bray, T., Ed.</span>, <span class="refTitle">"The JavaScript Object Notation (JSON) Data Interchange Format"</span>, <span class="seriesInfo">STD 90</span>, <span class="seriesInfo">RFC 8259</span>, <span class="seriesInfo">DOI 10.17487/RFC8259</span>, <time datetime="2017-12" class="refDate">December 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8259">https://www.rfc-editor.org/rfc/rfc8259</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8785">[RFC8785]</dt>
+      <dd>
+<span class="refAuthor">Rundgren, A.</span>, <span class="refAuthor">Jordan, B.</span>, and <span class="refAuthor">S. Erdtman</span>, <span class="refTitle">"JSON Canonicalization Scheme (JCS)"</span>, <span class="seriesInfo">RFC 8785</span>, <span class="seriesInfo">DOI 10.17487/RFC8785</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8785">https://www.rfc-editor.org/rfc/rfc8785</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-11.2">
+        <h3 id="name-informative-references">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Audit Transparency"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-capability-binding">[I-D.draft-mcguinness-mission-capability-binding]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Capability Binding"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-continuation">[I-D.draft-mcguinness-oauth-mission-continuation]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Continuation: Authorization Continuity for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">This document extracts the Decision Evidence, Execution Evidence, and
+Refusal Record objects that Mission-Bound Runtime Enforcement's
+AuthZEN binding first defined, so any decision-API binding can
+produce them. The author thanks the Mission-Bound Authorization
+implementer community for feedback.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
