@@ -25,7 +25,7 @@ with the PEP/PDP boundary are its data plane.
 
 At a glance:
 
-- **36 drafts, deliberately decomposed.** One mandatory core (the
+- **37 drafts, deliberately decomposed.** One mandatory core (the
   OAuth 2.0 issuance profile, [on the
   datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)),
   three further bindings (one an experimental sketch) and normative
@@ -362,7 +362,9 @@ facts are the next subsection.
    estate ASs redeem MAS-minted grants for Mission-bound,
    state-gated tokens), **substrate** (for authors of new bindings).
 5. **Advanced, when the use case arrives**: **approval** (asynchronous
-   approvals), **expansion**, **child-delegation**,
+   approvals), **approval-governance** (authenticated,
+   policy-authorized approval provenance for multi-party or
+   policy-delegated decisions), **expansion**, **child-delegation**,
    **cross-domain**, **management**, **mandate**, **audit**,
    **capability-binding** (catalog and MCP tool drift detection),
    **shaping**, **signals** (push latency optimization over correctly
@@ -521,6 +523,19 @@ decision. A proposal the reviewer will grant only in narrowed form
 resolves to a denial, and the client resubmits a narrower Intent.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval.html)
+
+#### Mission Approval Governance
+
+Extracts approval-authority provenance into the Approval Governance
+Record: an issuer-retained, issuer-signed record of who approved,
+under which authority, and why the decision satisfied governance.
+Assertions are authenticated, event-bound, and policy-authorized
+before the evaluation contributes to Mission activation; the
+committed record is immutable and never appears on tokens, protocol
+messages, or enforcement projections. Required by the Enterprise
+Mission Authority Profile under its recording triggers.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-approval-governance.html)
 
 #### Mission Approval Revision for OAuth 2.0
 
