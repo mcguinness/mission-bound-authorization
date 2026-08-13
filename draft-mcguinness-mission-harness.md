@@ -53,6 +53,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-mission-audit:
@@ -256,28 +264,45 @@ Governed work:
 # Mission Substrate {#mission-substrate}
 
 This profile is defined against the Mission model rather than against
-OAuth 2.0 mechanics. It consumes these substrate primitives:
+OAuth 2.0 mechanics: it is a substrate-neutral consumer, and this
+section is its consumption declaration under the rule of Mission
+Substrate Requirements ({{I-D.draft-mcguinness-mission-substrate}})
+that a substrate-neutral profile declare the kernel functions and
+optional capabilities it consumes.
 
-- the Mission identifier;
-- the lifecycle state space with its only-`active`-permits rule and
-  the deployment's freshness sources;
-- the Mission-bound credentials the harness holds or mediates, with
-  their sender-constraint custody, when the binding in use provides
-  them; and
-- the evidence integrity conventions imported from the runtime
-  profile.
+From the contextual-governance kernel it consumes the Mission
+identifier and issuer, the kernel's Mission Reference and Controller,
+recorded in every Mission binding ({{mission-binding}}); and the
+lifecycle state space with its only-`active`-permits rule, the
+kernel's governance gate, which every resume check re-establishes
+({{resume-checks}}). The evidence integrity conventions Harness
+Evidence imports from the runtime profile
+({{I-D.draft-mcguinness-mission-runtime}}) are a companion
+dependency of {{harness-evidence}}, not a substrate primitive.
 
-The Mission-bound credential primitive is binding-dependent: under a
-binding without Mission-bound credentials, the harness binds governed
-work items to the externally established Mission reference of the
-runtime profile's Mission binding establishment step
-({{I-D.draft-mcguinness-mission-runtime}}), and the custody duties of
-{{cached-access}} apply to whatever acting credentials the deployment
-uses. The issuance profile
-{{I-D.draft-mcguinness-oauth-mission}} is this version's normative
-substrate; every OAuth artifact named in this document enters through
-it. Another substrate that provides the same primitives can host this
-profile unchanged.
+It consumes these optional capabilities:
+
+| Capability | Consumption | Scope of consumption |
+| --- | --- | --- |
+| Lifecycle-Gated Authorization | required | Every resume, retry dispatch, background wake-up, and cached-access use is gated on active Mission state, and governed work is suppressed when active state cannot be established ({{resume-checks}}, {{stop-behavior}}) |
+| State-Observable | required | The resume checks establish state through a Mission Status operation, a maintained event-driven cache, or a runtime PDP decision, and stop propagation acts on what they report; staleness is bounded per action class by the bounds the Enforcement Scope Statement declares ({{resume-checks}}, {{I-D.draft-mcguinness-mission-runtime}}) |
+| Credential-Bound | conditional | The Mission-bound credentials the harness holds or mediates, with their sender-constraint custody, when the binding in use provides them; under a binding without them, the harness binds governed work items to the externally established Mission reference of the runtime profile's Mission binding establishment step ({{I-D.draft-mcguinness-mission-runtime}}), and the custody duties of {{cached-access}} apply to whatever acting credentials the deployment uses |
+| Structured Authority | conditional | Consumed where the harness scopes the tool catalog and schemas to the Mission's Authority Set ({{mediated-egress}}), records `authority_hash` on the Mission binding when known ({{mission-binding}}), and, on continuation across supersession, proceeds only for the actions the successor's Authority Set authorizes ({{supersession-continuity}}) |
+| Monotonic Derivation | not consumed | The Mission binding grants no authority ({{mission-binding}}), and binding inheritance copies or narrows a pointer, not an Authority Set ({{binding-inheritance}}); the harness derives no authority to compare |
+| Independently Verifiable, Portable Evidence | not consumed | This document consumes neither capability; it produces Harness Evidence of its own, registrable on the Mission's transparency feed ({{harness-evidence}}, {{I-D.draft-mcguinness-mission-audit}}) |
+{: title="Harness profile capability consumption"}
+
+The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
+version's normative substrate: it defines each consumed kernel
+function and capability for OAuth 2.0, and every OAuth artifact named
+in this document enters through it. A binding that provides the
+required capabilities above, and whichever conditional capabilities
+the deployment's governed work relies on, can host this profile. The
+portability claim is capability-scoped rather than substrate-wide for
+the reason the substrate's Capability Confusion consideration states:
+every property this profile requires matches an explicit capability
+claim and its scope, never the generic statement that a binding
+supports Missions.
 
 # Mission Mediation {#mediated-egress}
 
