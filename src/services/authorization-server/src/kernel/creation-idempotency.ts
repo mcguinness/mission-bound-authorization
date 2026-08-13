@@ -1,9 +1,10 @@
 /**
- * @spec expansion#creation-request-id (owner), child-delegation#creation-request-id
+ * @spec expansion#creation-request-id (owner), child-delegation#creation-request-id,
+ * continuation#transport-async
  *
  * The durable creation-idempotency store: `creation_request_id` identifies ONE
- * Mission-creation operation (child creation / expansion) across all completion
- * modes. The Mission Issuer durably binds the authenticated client, the
+ * creation operation (child creation / expansion / async-delegation family
+ * establishment) across all completion modes. The Mission Issuer durably binds the authenticated client, the
  * identifier, the semantic operation FINGERPRINT, and the resulting Mission or
  * continuation, ATOMICALLY with the creation decision; repetition recovers that
  * operation and never repeats Mission creation or its creation-side effects
@@ -80,8 +81,9 @@ export function isValidCreationRequestId(v: unknown): v is string {
   return typeof v === "string" && CREATION_REQUEST_ID_RE.test(v);
 }
 
-/** The two Mission-creating token exchanges (domain separation member `op`). */
-export type CreationOp = "child-creation" | "expansion";
+/** The Mission-creating token exchanges plus the delegation-family-creating
+ *  async-delegation exchange (domain separation member `op`). */
+export type CreationOp = "child-creation" | "expansion" | "async-delegation";
 
 /**
  * @spec expansion#creation-fingerprint — the EXACT typed fingerprint object.
@@ -108,8 +110,8 @@ export type CreationOp = "child-creation" | "expansion";
  * Extension rule: a new parameter affecting authorization, derivation,
  * approval, output, or side effects of the creation MUST extend this object.
  */
-export interface CreationFingerprintInput {
-  op: CreationOp;
+export interface MissionCreationFingerprintInput {
+  op: "child-creation" | "expansion";
   iss: string;
   client: string;
   source: string;
@@ -122,7 +124,50 @@ export interface CreationFingerprintInput {
   cross_check?: string;
 }
 
+/**
+ * @spec continuation#transport-async — the async-delegation exchange's
+ * fingerprint (same anchor idiom, same `typ`). Members:
+ *  - `op`: `async-delegation`.
+ *  - `iss` / `client`: as the expansion profile defines them.
+ *  - `source`: the RESOLVED base Mission identifier (from subject_token
+ *    resolution) — never the raw subject_token.
+ *  - `cnf`: the ACTING client's verified confirmation — this exchange
+ *    deliberately re-binds the family to the acting key rather than proving
+ *    possession of the subject token's own confirmation.
+ *  - `proposal`: the parsed `authorization_details` array naming the requested
+ *    confined subset, when present.
+ *  - `resource`: the target the family is audienced to.
+ *  - `request_refresh_token`: the parameter selecting this exchange.
+ */
+export interface AsyncDelegationFingerprintInput {
+  op: "async-delegation";
+  iss: string;
+  client: string;
+  source: string;
+  cnf: { jkt: string };
+  proposal?: AuthorityEntry[];
+  resource: string;
+  request_refresh_token: true;
+}
+
+export type CreationFingerprintInput =
+  | MissionCreationFingerprintInput
+  | AsyncDelegationFingerprintInput;
+
 export function creationFingerprint(input: CreationFingerprintInput): string {
+  if (input.op === "async-delegation") {
+    const value = {
+      op: input.op,
+      iss: input.iss,
+      client: input.client,
+      source: input.source,
+      cnf: input.cnf,
+      ...(input.proposal ? { proposal: input.proposal } : {}),
+      resource: input.resource,
+      request_refresh_token: true,
+    };
+    return computeAnchor(MISSION_CREATION_FINGERPRINT_TYP, input.iss, value as unknown as JsonValue);
+  }
   const value = {
     op: input.op,
     iss: input.iss,

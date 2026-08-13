@@ -207,6 +207,7 @@ async function asyncDelegate(baseAccessToken: string): Promise<Response> {
     subject_token: baseAccessToken,
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     resource: RESOURCE,
+    creation_request_id: crypto.randomUUID(),
   });
 }
 

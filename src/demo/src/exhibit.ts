@@ -688,6 +688,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
       subject_token: "<dispatched mission access token>",
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       resource: CANONICAL_RESOURCE,
+      creation_request_id: "<client-generated idempotency id>",
     },
   });
   const exchRes = await tokenGrantRequest(asUrl, as.agentClientJwk, dispatcherDpop, {
@@ -696,6 +697,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     subject_token: dispatchedAccessToken,
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     resource: CANONICAL_RESOURCE,
+    creation_request_id: crypto.randomUUID(),
   });
   const exchBody = exchRes.body as { access_token?: string; token_type?: string; refresh_token?: string };
   httpRes(exchRes.status, {
