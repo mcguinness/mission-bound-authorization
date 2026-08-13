@@ -638,7 +638,10 @@ architecture defines ({{I-D.draft-mcguinness-mission-architecture}}). It MUST in
   ({{evidence}});
 - the locations of the deployment-published evidence signing key sets
   (the runtime evidence companion's PDP and PEP key sets,
-  {{I-D.draft-mcguinness-mission-runtime-evidence}}, resolve here);
+  {{I-D.draft-mcguinness-mission-runtime-evidence}}, resolve here),
+  and, where the agent-isolated evidence-emission condition is
+  claimed, its per-emitter declaration
+  ({{agent-isolated-evidence-emission}});
 - the reconciliation window for matching execution-outcome evidence to
   decisions, the component responsible for orphaned-evidence and
   sequence-gap detection and for actively reconciling each unresolved
@@ -1041,6 +1044,96 @@ egress path itself: content-level controls this profile does not
 define (data-loss prevention, redaction, payload policy) compose
 naturally at the mediating PEP, the one component that sees the full
 payload after the decision and before presentation.
+
+## Agent-Isolated Evidence Emission {#agent-isolated-evidence-emission}
+
+An evidence-signing key conveys no authority: its compromise corrupts
+the record plane, not the authority plane. The record plane is what a
+post-compromise investigation relies on, so the property that the
+agent cannot emit records under an emitter's identity has an owner
+here, as a standalone condition a deployment claims per emitter and
+scope. No named claim of this document includes it; a composition
+that wants both prevention and post-compromise evidence assurance
+names it explicitly alongside the claims of {{named-claims}}.
+
+A deployment claims the **agent-isolated evidence-emission
+condition** for a named emitter (a PDP, a mediating or executing
+PEP, or a companion-defined executor-side emitter) and scope only
+when all of the following hold:
+
+- the evidence-signing private key is non-exportable to, and
+  inaccessible from, the agent component;
+- only an authenticated identity for the named emitter's trusted
+  emission path can invoke the signing operation;
+- the agent cannot submit a complete evidence object, or an
+  arbitrary digest, for signature;
+- the signed record is constructed from the emitter's authoritative
+  decision, refusal, or execution state, with the emitter role, the
+  record type, the Mission and scope, the audience, the evaluation
+  or execution identifiers, the sequence position, and the digests
+  fixed by that path, never by caller input; and
+- a signing result cannot be relabeled or reused for another
+  emitter, role, scope, audience, or evidence type.
+
+The load-bearing property is the authenticated
+construction-and-signing path, not the storage technology: an HSM or
+KMS whose API the agent can invoke over arbitrary bytes is a signing
+oracle, a separate process the agent controls is not isolated, and
+an in-process signer inside a trusted PEP can be isolated where the
+control boundary is real. A signing service MAY accept a digest
+rather than the record, only over an authenticated channel from the
+trusted emission path with the record type and protected scope bound
+to the request; the signer is not required to parse the record
+schema.
+
+The condition bounds forgery, not activity: the agent can still
+trigger real decisions and effects that cause the emitter to create
+truthful records; it cannot invent or alter a record under the
+emitter's identity. The condition establishes neither the truth of
+an emitter's assertion nor the completeness or ordering of the
+evidence stream; those remain the concern of reconciliation,
+sequence-gap detection, and the transparency mechanisms
+({{evidence}}, {{I-D.draft-mcguinness-mission-audit}}).
+
+Key separation is adjacent hygiene, not the condition itself: an
+evidence-signing key SHOULD be cryptographically distinct from every
+sender-constraint, token-issuance, approval, and other
+authority-bearing key; a named high-assurance composition MAY
+require that separation; and isolation of one key plane MUST NOT be
+inferred from separation or custody of another.
+
+A deployment SHOULD satisfy this condition for every emitter whose
+records cover the high-consequence classes. Signer unavailability
+MUST NOT fall back to an agent-held key, to an unsigned record
+represented as verified, or to an unconstrained signing path;
+enforcement MAY continue while the evidence signer is unavailable,
+and the resulting gap in the record stream is what the declared
+orphan-detection and alerting obligations surface ({{evidence}}).
+
+On a declared compromise of an evidence-signing key, the runtime
+evidence companion's key-set lifecycle applies
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). The declared
+boundary is deployment-declared semantics and does not by itself
+resist backdating: a holder of the key can sign records carrying
+earlier timestamps. A record under a compromised key is trustworthy
+as pre-compromise only where an independent existence proof (a
+trusted timestamp, a transparency inclusion, or a Receipt,
+{{I-D.draft-mcguinness-mission-audit}}) shows it existed before the
+boundary.
+
+The Enforcement Scope Statement declaration for this condition is
+per covered emitter key: the emitter identity and role, the holder's
+trust boundary, the authorized invocation path, the mechanism class
+(separate process or service, HSM or KMS, attested environment), the
+covered action classes, scope, and audience, whether the key is
+shared, the key-separation posture, and an audit or attestation
+reference ({{runtime-conformance}}). The declaration discloses no
+operational secret. At base the declaration is declared-only; under
+a named claim that composes this condition, the attested or audited
+material covers the workload identity, the signer policy, and the
+trusted emission path, not merely the private key's location, and
+the weakest self-declared or organizationally audited term is named
+plainly, as {{compromise-resistant}} does for path scope.
 
 ## Least Exposure {#least-exposure}
 
@@ -2413,6 +2506,23 @@ These are the observable form of the requirements stated normatively
 above; a deployment's Enforcement Scope Statement
 ({{runtime-conformance}}) names which it enforces and which paths it
 excludes.
+
+The agent-isolated evidence-emission condition
+({{agent-isolated-evidence-emission}}) has its own observable form; a
+deployment claiming it SHOULD demonstrate, per covered emitter:
+
+| Bypass attempt | Required outcome |
+|---|---|
+| Agent attempts to export or read an evidence-signing private key | Refused |
+| Agent submits a complete evidence object, or a raw digest, for signature | Refused |
+| An authenticated emitter requests a signature for a different record type, role, scope, or audience | Refused |
+| One emitter identity invokes another emitter's key or emission path | Refused |
+| A separated evidence key is presented for use as a `cnf` or token-issuance key | Refused, where the deployment claims key separation |
+| The evidence signer is unavailable | No fallback to an agent-held key, an unsigned record represented as verified, or an unconstrained signing path |
+
+These tests demonstrate the exposed control surface; they do not
+prove the absence of a hidden bypass, which remains an attestation,
+audit, and path-completeness property.
 
 # Deployment Considerations {#runtime-deployment}
 
