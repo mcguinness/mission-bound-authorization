@@ -63,6 +63,32 @@ Two bounds:
   establish it; the citation may then stay informative.
 
 
+## Conformance Traceability Convention
+
+Every new or changed externally testable normative requirement
+identifies its observable conformance assertion and lands with a
+manifest-linked test at the lowest public surface that can
+distinguish conforming from non-conforming behavior.
+Negative/refusal, no-side-effect, output-bound, replay, concurrency,
+and privacy assertions are all valid forms; a requirement is not
+covered merely because a refusal exists somewhere.
+
+The record is `conformance-manifest.json`, validated in CI by
+`scripts/check-conformance-manifest.mjs`: unknown anchors, stale
+requirement text, duplicate IDs, and missing tests fail; rows without
+tests are the visible TODO report (the reverse mapping is the metric,
+not tag coverage). Each row carries the conforming role, BCP 14
+strength, applicability condition, protocol surface, assertion form,
+and the normative observation separated from any locally chosen
+behavior.
+
+Two rules keep the record honest. Only pin an OAuth error code or
+Mission diagnostic where the draft normatively specifies it: a test
+must not turn an implementation's preferred error into an accidental
+protocol requirement. And a runner never marks an unclaimed optional
+capability nonconforming, or a justified SHOULD departure a failure
+(RFC 2119 Section 3); both are recorded, not failed.
+
 ## Working Group Information
 
 Discussion of this work occurs on the [Web Authorization Protocol
