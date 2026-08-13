@@ -2018,10 +2018,12 @@ envelope:<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-3">The value uses the same integrity-anchor encoding the issuance profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> defines for <code>intent_hash</code> and
 <code>authority_hash</code>: a hash-name prefix and the base64url digest, for
-example <code>sha-256:...</code>. SHA-256 is the only digest algorithm defined; the
-<code>sha-256:</code> prefix identifies it, and algorithm agility is future work.
-A verifier <span class="bcp14">MUST</span> reject a commitment whose algorithm prefix it does not
-recognize. It <span class="bcp14">MUST NOT</span> treat an unrecognized prefix as SHA-256.<a href="#section-5-3" class="pilcrow">¶</a></p>
+example <code>sha-256:...</code>. This document imports the issuance profile's
+commitment mechanisms normatively, including the algorithm-agility
+and unrecognized-prefix rules: <code>consent_rendering_hash</code> and
+<code>submission_provenance_hash</code> are envelope anchors, and
+<code>template_hash</code> is a raw-octet digest over the disclosure template's
+content bytes.<a href="#section-5-3" class="pilcrow">¶</a></p>
 <p id="section-5-4">The hash commits the disclosure object, not pixels or browser state. A
 deployment <span class="bcp14">MAY</span> additionally retain screenshots or UI telemetry, but the
 interoperable commitment is the structured disclosure object. A worked

@@ -2187,13 +2187,12 @@ Table of Contents
 
 6.5.  Commitment Mechanisms
 
-   This family commits to bytes in three ways, and every commitment a
-   document in this family defines classifies itself as one of these
-   species:
+   This family commits to bytes in three ways, and a specification
+   defining a commitment classifies it as one of these species:
 
    *  *Envelope anchor*: the domain-separated, issuer-bound envelope of
-      Section 6.3 (intent_hash, proposal_hash, authority_hash, and the
-      companion-defined typ values).
+      Section 6.3 (intent_hash, proposal_hash, authority_hash, and
+      commitments produced with companion-defined typ values).
 
    *  *Canonical-object digest*: sha-256: over the JCS serialization of
       a normalized JSON object without the envelope, where protocol
@@ -2206,17 +2205,32 @@ Table of Contents
 
    The prefix and agility rules below bind all three species.  The
    I-JSON rule binds the two JSON species.  The envelope and typ
-   discipline of Section 6.3 binds envelope anchors alone.
+   discipline of Section 6.3 binds envelope anchors alone.  This section
+   instantiates the substrate's default commitment construction
+   ([I-D.draft-mcguinness-mission-substrate]); the two state the same
+   rules, and this document remains self-contained.
 
    Every committed JSON value, and the envelope around it, MUST satisfy
-   I-JSON [RFC7493].  The party computing or verifying a commitment MUST
-   reject non-conformant input before canonicalization: duplicate member
-   names (Section 6.4), numbers outside the range JCS serializes
-   exactly, and strings that are not Unicode-valid (unpaired
-   surrogates).  The security considerations of [RFC8785] apply to every
-   JCS computation.  Common Constraints already carry numeric quantities
-   as decimal strings (Section 5.2); that stricter convention for
-   constraint values is unchanged.
+   I-JSON [RFC7493], and the party computing or verifying a commitment
+   MUST reject non-conformant input before canonicalization:
+
+   *  objects carry no duplicate member names (Section 6.4);
+
+   *  string data is valid Unicode, free of the surrogate and
+      noncharacter code points I-JSON prohibits, and is preserved
+      unchanged; and
+
+   *  number data supplied to JCS is representable as a finite IEEE 754
+      binary64 value ([RFC8785], Section 3.1).
+
+   The commitment is over the parsed I-JSON data value, not the source
+   text: JCS serializes the parsed binary64 value deterministically and
+   does not preserve a source lexeme's spelling or excess precision.  A
+   profile whose values need exact decimal or large-integer semantics
+   carries them as strings or defines a stricter numeric domain, as
+   Common Constraints already does for constraint values (Section 5.2).
+   The security considerations of [RFC8785] apply to every JCS
+   computation.
 
    The algorithm prefix is the agility mechanism. sha-256 is mandatory
    to implement and the only algorithm this family defines.  A new
@@ -2226,16 +2240,20 @@ Table of Contents
    A verifier MUST reject a digest whose algorithm prefix it does not
    recognize and MUST NOT treat an unrecognized prefix as sha-256, so an
    algorithm added later cannot be exploited as a downgrade.  These
-   rules bind every prefixed digest defined by this document or by a
-   document that cites this section, whichever species it is.
+   rules bind a prefixed digest when its defining specification
+   classifies it under this taxonomy and imports this section
+   normatively, whichever species it is: this document so classifies its
+   three anchors, and each family companion classifies the digests it
+   defines.
 
-   During an algorithm transition a record MAY carry parallel
-   commitments over the same bytes under the old and new prefixes.  A
-   verifier verifies every commitment whose prefix it recognizes,
-   rejects on a mismatch in any commitment it recognizes, and rejects
-   when it recognizes none.  This sketch is informative; a specification
-   that introduces a new prefix defines its transition behavior
-   normatively.
+   This document defines no transition mechanism: every commitment a
+   current carrier defines is a single prefixed string, and no carrier
+   defines a location for a second one.  A specification that introduces
+   a new prefix MUST define the carrier and schema of any parallel
+   commitment, the binding that proves the old and new values commit to
+   the same object, producer behavior during the transition, verifier
+   selection and downgrade behavior when recognition sets differ, and
+   the transition procedure itself.
 
 7.  Mission Record
 

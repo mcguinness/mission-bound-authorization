@@ -1337,7 +1337,11 @@ define a second canonicalization.<a href="#section-2-2" class="pilcrow">¶</a></
 <p id="section-2-3">"SHA-256" refers to <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span>. A digest is encoded in the
 integrity-anchor encoded form of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>: <code>sha-256:</code> followed by the
-base64url, no-padding encoding of the digest.<a href="#section-2-3" class="pilcrow">¶</a></p>
+base64url, no-padding encoding of the digest. Every digest this
+document defines (<code>evaluation_request_digest</code>, <code>entry_digest</code>,
+<code>effective_parameter_digest</code>) is a canonical-object digest under the
+substrate's default commitment construction, which this document
+imports normatively (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-2-3" class="pilcrow">¶</a></p>
 <p id="section-2-4">The terms Policy Enforcement Point (PEP), Policy Decision Point
 (PDP), consequential action, action class (and the action-class
 names consequential read, consequential write, irreversible action,

@@ -1666,7 +1666,9 @@ message, a memory entry, a queue event, or any other opaque content.
 How an artifact is serialized to those octets is the producer's
 concern; this document defines no artifact serialization and does not
 canonicalize the artifact. The producer and consumer <span class="bcp14">MUST</span> agree on the
-exact bytes so that both compute the same digest.<a href="#section-9.2-5.6.1" class="pilcrow">¶</a></p>
+exact bytes so that both compute the same digest. It is a raw-octet
+digest under the issuance profile's commitment mechanisms, which
+this document imports normatively.<a href="#section-9.2-5.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-9.2-5.7">provenance_digest:</dt>
@@ -1691,7 +1693,9 @@ followed by the unpadded base64url of the digest.
 <code>mission-work-product-provenance</code> is a committed-object <code>typ</code> this
 document defines under the collision-resistant-name rule of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; that document defines no
-registry of such values and none is registered here.<a href="#section-9.2-5.8.3" class="pilcrow">¶</a></p>
+registry of such values and none is registered here.
+<code>provenance_digest</code> is an envelope anchor under the same commitment
+mechanisms.<a href="#section-9.2-5.8.3" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -1725,9 +1729,10 @@ Reject on any mismatch.<a href="#section-9.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-9.3-2.4">
             <p id="section-9.3-2.4.1">Recompute <code>artifact_digest</code> over the received artifact octets and
-reject unless it matches. A receiver <span class="bcp14">MUST</span> reject an <code>artifact_digest</code>
-whose algorithm prefix it does not recognize and <span class="bcp14">MUST NOT</span> treat an
-unrecognized prefix as <code>sha-256</code>.<a href="#section-9.3-2.4.1" class="pilcrow">¶</a></p>
+reject unless it matches. An unrecognized algorithm prefix is
+rejected under the imported unrecognized-prefix rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), never treated as
+<code>sha-256</code>.<a href="#section-9.3-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-9.3-2.5">
             <p id="section-9.3-2.5.1">Recompute <code>provenance_digest</code> over the JCS envelope of the received

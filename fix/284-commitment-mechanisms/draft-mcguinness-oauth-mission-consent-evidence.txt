@@ -629,11 +629,11 @@ Table of Contents
    The value uses the same integrity-anchor encoding the issuance
    profile [I-D.draft-mcguinness-oauth-mission] defines for intent_hash
    and authority_hash: a hash-name prefix and the base64url digest, for
-   example sha-256:.... SHA-256 is the only digest algorithm defined;
-   the sha-256: prefix identifies it, and algorithm agility is future
-   work.  A verifier MUST reject a commitment whose algorithm prefix it
-   does not recognize.  It MUST NOT treat an unrecognized prefix as SHA-
-   256.
+   example sha-256:.... This document imports the issuance profile's
+   commitment mechanisms normatively, including the algorithm-agility
+   and unrecognized-prefix rules: consent_rendering_hash and
+   submission_provenance_hash are envelope anchors, and template_hash is
+   a raw-octet digest over the disclosure template's content bytes.
 
    The hash commits the disclosure object, not pixels or browser state.
    A deployment MAY additionally retain screenshots or UI telemetry, but

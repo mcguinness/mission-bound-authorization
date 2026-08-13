@@ -3907,14 +3907,14 @@ over the recorded values.<a href="#section-6.4-2.4.1" class="pilcrow">¶</a></p>
         <h3 id="name-commitment-mechanisms">
 <a href="#section-6.5" class="section-number selfRef">6.5. </a><a href="#name-commitment-mechanisms" class="section-name selfRef">Commitment Mechanisms</a>
         </h3>
-<p id="section-6.5-1">This family commits to bytes in three ways, and every commitment a
-document in this family defines classifies itself as one of these
-species:<a href="#section-6.5-1" class="pilcrow">¶</a></p>
+<p id="section-6.5-1">This family commits to bytes in three ways, and a specification
+defining a commitment classifies it as one of these species:<a href="#section-6.5-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6.5-2.1">
             <p id="section-6.5-2.1.1"><strong>Envelope anchor</strong>: the domain-separated, issuer-bound envelope of
 <a href="#integrity-anchors" class="auto internal xref">Section 6.3</a> (<code>intent_hash</code>, <code>proposal_hash</code>,
-<code>authority_hash</code>, and the companion-defined <code>typ</code> values).<a href="#section-6.5-2.1.1" class="pilcrow">¶</a></p>
+<code>authority_hash</code>, and commitments produced with companion-defined
+<code>typ</code> values).<a href="#section-6.5-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.2">
             <p id="section-6.5-2.2.1"><strong>Canonical-object digest</strong>: <code>sha-256:</code> over the JCS serialization
@@ -3930,17 +3930,36 @@ artifact digest).<a href="#section-6.5-2.3.1" class="pilcrow">¶</a></p>
         </ul>
 <p id="section-6.5-3">The prefix and agility rules below bind all three species. The
 I-JSON rule binds the two JSON species. The envelope and <code>typ</code>
-discipline of <a href="#integrity-anchors" class="auto internal xref">Section 6.3</a> binds envelope anchors alone.<a href="#section-6.5-3" class="pilcrow">¶</a></p>
+discipline of <a href="#integrity-anchors" class="auto internal xref">Section 6.3</a> binds envelope anchors alone.
+This section instantiates the substrate's default commitment
+construction (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>); the two
+state the same rules, and this document remains self-contained.<a href="#section-6.5-3" class="pilcrow">¶</a></p>
 <p id="section-6.5-4">Every committed JSON value, and the envelope around it, <span class="bcp14">MUST</span> satisfy
-I-JSON <span>[<a href="#RFC7493" class="cite xref">RFC7493</a>]</span>. The party computing or verifying a commitment
-<span class="bcp14">MUST</span> reject non-conformant input before canonicalization: duplicate
-member names (<a href="#canonicalization" class="auto internal xref">Section 6.4</a>), numbers outside the range JCS
-serializes exactly, and strings that are not Unicode-valid (unpaired
-surrogates). The security considerations of <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> apply to
-every JCS computation. Common Constraints already carry numeric
-quantities as decimal strings (<a href="#common-constraints" class="auto internal xref">Section 5.2</a>); that
-stricter convention for constraint values is unchanged.<a href="#section-6.5-4" class="pilcrow">¶</a></p>
-<p id="section-6.5-5">The algorithm prefix is the agility mechanism. <code>sha-256</code> is
+I-JSON <span>[<a href="#RFC7493" class="cite xref">RFC7493</a>]</span>, and the party computing or verifying a
+commitment <span class="bcp14">MUST</span> reject non-conformant input before canonicalization:<a href="#section-6.5-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.5-5.1">
+            <p id="section-6.5-5.1.1">objects carry no duplicate member names (<a href="#canonicalization" class="auto internal xref">Section 6.4</a>);<a href="#section-6.5-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.5-5.2">
+            <p id="section-6.5-5.2.1">string data is valid Unicode, free of the surrogate and
+noncharacter code points I-JSON prohibits, and is preserved
+unchanged; and<a href="#section-6.5-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.5-5.3">
+            <p id="section-6.5-5.3.1">number data supplied to JCS is representable as a finite IEEE 754
+binary64 value (<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>, Section 3.1).<a href="#section-6.5-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.5-6">The commitment is over the parsed I-JSON data value, not the source
+text: JCS serializes the parsed binary64 value deterministically and
+does not preserve a source lexeme's spelling or excess precision. A
+profile whose values need exact decimal or large-integer semantics
+carries them as strings or defines a stricter numeric domain, as
+Common Constraints already does for constraint values
+(<a href="#common-constraints" class="auto internal xref">Section 5.2</a>). The security considerations of <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
+apply to every JCS computation.<a href="#section-6.5-6" class="pilcrow">¶</a></p>
+<p id="section-6.5-7">The algorithm prefix is the agility mechanism. <code>sha-256</code> is
 mandatory to implement and the only algorithm this family defines. A
 new algorithm enters only through a new prefix defined by a
 referencing specification, its name drawn from the Named Information
@@ -3948,16 +3967,19 @@ Hash Algorithm Registry (<span>[<a href="#RFC6920" class="cite xref">RFC6920</a>
 negotiation. A verifier <span class="bcp14">MUST</span> reject a digest whose algorithm prefix
 it does not recognize and <span class="bcp14">MUST NOT</span> treat an unrecognized prefix as
 <code>sha-256</code>, so an algorithm added later cannot be exploited as a
-downgrade. These rules bind every prefixed digest defined by this
-document or by a document that cites this section, whichever species
-it is.<a href="#section-6.5-5" class="pilcrow">¶</a></p>
-<p id="section-6.5-6">During an algorithm transition a record <span class="bcp14">MAY</span> carry parallel
-commitments over the same bytes under the old and new prefixes. A
-verifier verifies every commitment whose prefix it recognizes,
-rejects on a mismatch in any commitment it recognizes, and rejects
-when it recognizes none. This sketch is informative; a specification
-that introduces a new prefix defines its transition behavior
-normatively.<a href="#section-6.5-6" class="pilcrow">¶</a></p>
+downgrade. These rules bind a prefixed digest when its defining
+specification classifies it under this taxonomy and imports this
+section normatively, whichever species it is: this document so
+classifies its three anchors, and each family companion classifies
+the digests it defines.<a href="#section-6.5-7" class="pilcrow">¶</a></p>
+<p id="section-6.5-8">This document defines no transition mechanism: every commitment a
+current carrier defines is a single prefixed string, and no carrier
+defines a location for a second one. A specification that introduces
+a new prefix <span class="bcp14">MUST</span> define the carrier and schema of any parallel
+commitment, the binding that proves the old and new values commit to
+the same object, producer behavior during the transition, verifier
+selection and downgrade behavior when recognition sets differ, and
+the transition procedure itself.<a href="#section-6.5-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

@@ -2851,7 +2851,10 @@ is present.<a href="#section-11.1-2.4.1" class="pilcrow">¶</a></p>
 <code>token_sha256</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-11.1-2.6">
             <p id="section-11.1-2.6.1">A string. The unpadded base64url SHA-256 digest of the access
-token's ASCII bytes.<a href="#section-11.1-2.6.1" class="pilcrow">¶</a></p>
+token's ASCII bytes. This is a raw-octet digest deliberately
+outside the issuance profile's prefixed encoded form: the member
+name fixes the algorithm, and a successor algorithm enters as a
+new member, never by reinterpreting this one.<a href="#section-11.1-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-11.1-2.7">
