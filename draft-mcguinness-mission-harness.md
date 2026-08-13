@@ -1184,9 +1184,9 @@ PEP key the runtime profile requires, so a relying party can verify
 the harness as the record's authoritative producer. Harness and
 egress evidence emitters satisfy the runtime profile's agent-isolated
 evidence-emission condition only where the Enforcement Scope
-Statement names them, and their emission paths, in its claim
-({{I-D.draft-mcguinness-mission-runtime}}); carrying this evidence
-implies nothing about that isolation.
+Statement names them, and their emission paths, in its declaration
+of the condition ({{I-D.draft-mcguinness-mission-runtime}}); carrying
+this evidence implies nothing about that isolation.
 
 That key follows the issuance profile's retired-key rule, extended
 to this artifact's retention bound

@@ -1047,12 +1047,16 @@ payload after the decision and before presentation.
 
 ## Agent-Isolated Evidence Emission {#agent-isolated-evidence-emission}
 
-An evidence-signing key conveys no authority: its compromise corrupts
-the record plane, not the authority plane. The record plane is what a
-post-compromise investigation relies on, so the property that the
-agent cannot emit records under an emitter's identity has an owner
-here, as a standalone condition a deployment claims per emitter and
-scope. No named claim of this document includes it; a composition
+An evidence-signing key is not an authorization credential, and its
+signature MUST NOT be accepted as a grant or as widening the
+Authority Set. Its compromise corrupts the record plane and, where
+signed history is a decision input ({{input-history}}), can also
+corrupt later authorization outcomes within that envelope: a forged
+record is a forged precondition ({{security-considerations}}). The
+record plane is what a post-compromise investigation relies on, so
+the property that the agent cannot emit records under an emitter's
+identity has an owner here, as a standalone condition a deployment
+claims per emitter and scope. No named claim of this document includes it; a composition
 that wants both prevention and post-compromise evidence assurance
 names it explicitly alongside the claims of {{named-claims}}.
 
@@ -1061,17 +1065,24 @@ condition** for a named emitter (a PDP, a mediating or executing
 PEP, or a companion-defined executor-side emitter) and scope only
 when all of the following hold:
 
-- the evidence-signing private key is non-exportable to, and
-  inaccessible from, the agent component;
+- the evidence-signing private key is generated inside the declared
+  trusted holder boundary, or imported through a trusted procedure
+  in which the agent never possesses plaintext key material, and is
+  non-exportable to, and inaccessible from, the agent component,
+  with that property preserved across rotation, backup, replication,
+  restore, and migration;
 - only an authenticated identity for the named emitter's trusted
   emission path can invoke the signing operation;
 - the agent cannot submit a complete evidence object, or an
   arbitrary digest, for signature;
-- the signed record is constructed from the emitter's authoritative
-  decision, refusal, or execution state, with the emitter role, the
-  record type, the Mission and scope, the audience, the evaluation
-  or execution identifiers, the sequence position, and the digests
-  fixed by that path, never by caller input; and
+- the trusted emission path constructs the record from its
+  authoritative decision, refusal, or execution state and from
+  request inputs it independently validates and normalizes; the
+  caller cannot supply the completed record or directly assert the
+  emitter identity or role, the decision or outcome, the protected
+  record type, the sequence position, the evaluation or execution
+  identifiers, or the authoritative interpretation of the Mission,
+  scope, audience, and digests; and
 - a signing result cannot be relabeled or reused for another
   emitter, role, scope, audience, or evidence type.
 
@@ -1088,46 +1099,60 @@ schema.
 
 The condition bounds forgery, not activity: the agent can still
 trigger real decisions and effects that cause the emitter to create
-truthful records; it cannot invent or alter a record under the
-emitter's identity. The condition establishes neither the truth of
+its own records of them; it cannot invent or alter a record under
+the emitter's identity. The condition establishes neither the truth of
 an emitter's assertion nor the completeness or ordering of the
 evidence stream; those remain the concern of reconciliation,
 sequence-gap detection, and the transparency mechanisms
 ({{evidence}}, {{I-D.draft-mcguinness-mission-audit}}).
 
-Key separation is adjacent hygiene, not the condition itself: an
-evidence-signing key SHOULD be cryptographically distinct from every
+Key separation is not part of this condition: an evidence-signing
+key SHOULD be cryptographically distinct from every
 sender-constraint, token-issuance, approval, and other
-authority-bearing key; a named high-assurance composition MAY
-require that separation; and isolation of one key plane MUST NOT be
-inferred from separation or custody of another.
+authority-bearing key; a composing profile MAY require that
+separation; and isolation of one key plane MUST NOT be inferred from
+separation or custody of another.
 
 A deployment SHOULD satisfy this condition for every emitter whose
 records cover the high-consequence classes. Signer unavailability
 MUST NOT fall back to an agent-held key, to an unsigned record
-represented as verified, or to an unconstrained signing path;
-enforcement MAY continue while the evidence signer is unavailable,
-and the resulting gap in the record stream is what the declared
-orphan-detection and alerting obligations surface ({{evidence}}).
+represented as verified, or to an unconstrained signing path, and it
+relaxes neither {{evidence}} nor the runtime evidence companion's
+required envelope. Enforcement MAY continue through an outage only
+where the trusted emission path durably commits every required
+record for signing and publication under a declared recovery bound,
+preserving ordering and this condition; otherwise the deployment is
+not conforming for the affected decision or refusal and MUST NOT
+represent the condition as continuously satisfied. An execution
+outcome discovered after its effect is durably queued and
+reconciled, never synthesized or silently omitted
+({{failure-modes}}).
 
 On a declared compromise of an evidence-signing key, the runtime
 evidence companion's key-set lifecycle applies
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}). The declared
 boundary is deployment-declared semantics and does not by itself
 resist backdating: a holder of the key can sign records carrying
-earlier timestamps. A record under a compromised key is trustworthy
-as pre-compromise only where an independent existence proof (a
-trusted timestamp, a transparency inclusion, or a Receipt,
-{{I-D.draft-mcguinness-mission-audit}}) shows it existed before the
-boundary.
+earlier timestamps. A record under a compromised key can be shown to
+have existed before the declared boundary only by an independent
+existence proof (a trusted timestamp, a transparency inclusion, or a
+Receipt, {{I-D.draft-mcguinness-mission-audit}}); even then the
+proof establishes existence before the declared boundary, not that
+the key or emitter was uncompromised earlier, and not that the
+assertion is true.
 
 The Enforcement Scope Statement declaration for this condition is
-per covered emitter key: the emitter identity and role, the holder's
-trust boundary, the authorized invocation path, the mechanism class
-(separate process or service, HSM or KMS, attested environment), the
-covered action classes, scope, and audience, whether the key is
-shared, the key-separation posture, and an audit or attestation
-reference ({{runtime-conformance}}). The declaration discloses no
+per covered emitter, together with its key set and custody policy
+(optionally naming `kid` coverage): the emitter identity and role,
+the holder's trust boundary, the authorized invocation path, the
+mechanism class (separate process or service, HSM or KMS, attested
+environment), the custody and replica class across rotation, backup,
+replication, restore, and migration, the covered action classes,
+scope, and audience, whether the key is shared, the key-separation
+posture, and an audit or attestation reference
+({{runtime-conformance}}). Routine rotation under the same holder
+and invocation policy does not require a new declaration; a change
+in trust boundary or signer policy does. The declaration discloses no
 operational secret. At base the declaration is declared-only; under
 a named claim that composes this condition, the attested or audited
 material covers the workload identity, the signer policy, and the
@@ -2118,6 +2143,7 @@ refusal.
 | Mission state cannot be established within the staleness bound | Fail closed for consequential actions |
 | A policy-required history predicate cannot be established, or the evidence store cannot be consulted ({{input-history}}) | Fail closed |
 | PDP unreachable | Fail closed for consequential actions; do not proceed on cached permits past the window. An unexpired, unconsumed permit MAY execute during a PDP outage: executing-PEP reverification needs no PDP |
+| A required evidence record cannot be signed or emitted for a consequential decision or refusal | Fail closed, or durably commit the record for signing and publication under a declared recovery bound ({{agent-isolated-evidence-emission}}) |
 | Mission not `active` | Refuse; work already initiated reconciles under {{evidence}}, never re-executes |
 | The Mission's `expires_at` passed, when known from the Mission state source | Refuse |
 | Unsupported `authorization_details` type for the action | Refuse |
