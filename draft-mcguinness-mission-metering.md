@@ -163,6 +163,89 @@ The consent-integrity rule of {{consent}} is the boundary that makes
 this safe to omit: a bound is rendered to an Approver only where it is
 actually metered.
 
+## Promotion Criteria {#promotion-criteria}
+
+Promotion moves this accounting model from optional evaluation toward
+the architectural baseline for any Mission carrying a consumption
+bound, so the bar is exercised machinery, not elapsed time. The
+criteria below state the evidence. Meeting them changes nothing by
+itself: it makes the profile eligible for a deliberate maturity
+decision by the document editor, recorded as a relabel of this
+document. No criterion, met or unmet, relabels anything
+automatically.
+
+1. **Decrement accounting proven under concurrency and retry.** The
+   check-and-decrement rules of {{metering}} and {{retry}} are
+   demonstrated exactly-once per claimed bound class: a retry under
+   the same idempotency key or decision identifier consumes once;
+   concurrent attempts against a near-exhausted bound never
+   over-consume; a redelivered settlement neither double-commits nor
+   double-releases; a crash between reserve and commit resumes to a
+   consistent balance ({{settlement-exchange}}). This is the
+   decrement-side counterpart of the exactly-once reservation
+   machinery the family's Mission-creating surfaces carry for
+   creation. Artifacts: a reproducible test suite covering those
+   interleavings for `max_budget` and `max_calls` at minimum, with
+   no skipped cases, and the documented reserve/commit posture the
+   tests pin.
+
+2. **The consistency model exercised, not only published.** At least
+   one deployment operates under a declared {{topology}} posture (a
+   single serializing PDP, per-PDP sub-budgets, or a bounded
+   reconciliation window) and demonstrates the declared guarantee at
+   its edges: refusal at exhaustion, and orphaned-reservation
+   reconciliation on the published cadence, including a
+   non-idempotent reservation held until affirmative evidence of
+   non-execution ({{settlement-exchange}}). Artifacts: the
+   Enforcement Scope Statement naming the topology and consistency
+   bound, and the reconciliation record.
+
+3. **Lineage accounting exercised.** A lineage-keyed budget
+   identifier and its authoritative shared counter
+   ({{aggregate-bounds}}) meter a root Mission and its Child
+   Missions against one bound: a lineage-wide `quota_exceeded`
+   refusal from Child Mission consumption is observed, a Child
+   Mission's released reservation returns to the shared counter, and
+   no consent surface or Enforcement Scope Statement renders an
+   aggregate bound the deployed counter does not back. Artifacts:
+   Decision Evidence for the lineage refusal and the counter's
+   consistency-domain description.
+
+4. **The exclusivity latch proven under race.** Concurrent
+   consequential actions matching different selectors of one
+   `exclusive` group latch exactly one selector, atomically with the
+   permit; the affirmative-non-execution release restores the group;
+   refusals carry `exclusivity_latched` in Decision Evidence; the
+   latch domain is named in the Enforcement Scope Statement
+   ({{exclusivity}}). Artifacts: race and release test cases with no
+   skipped cases. This criterion also gates the family's adoption of
+   the `exclusive` control into the issuance profile's core
+   `controls` vocabulary: that adoption follows the criteria of this
+   section being met, and until then the control is homed here.
+
+5. **Interoperation evidence.** Two independent implementations of
+   {{metering}}, or one implementation and one deployment distinct
+   from it, each metering the bound classes it claims, refusing per
+   the fail-closed rule, and agreeing on the wire members of
+   criterion 6. Artifacts: an Enforcement Scope Statement per
+   deployment and a record of exchanged wire messages.
+
+6. **Wire stability.** The `controls` members of {{bounds}} and the
+   AuthZEN metering surface (`quota_exceeded`, `exclusivity_latched`,
+   `context.prior_decision_id`, `measured_duration`;
+   {{authzen-binding}}, {{settlement-exchange}}) are unchanged in
+   name, shape, and semantics across two consecutive published
+   revisions of this document while the evidence above accumulates.
+   Artifacts: the document history of those revisions.
+
+The criteria are sized to be satisfiable by a reference
+implementation plus one real deployment; they demand exercised
+machinery and stable surfaces, not adoption counts. A maturity
+decision may be selective: it may promote a bound class or control
+whose evidence is complete, for example `max_budget` and `max_calls`
+or the `exclusive` control, while the rest of this document remains
+experimental.
+
 # Relationship to the Issuance and Runtime Profiles {#relationship}
 
 This document depends normatively on the issuance profile and the
