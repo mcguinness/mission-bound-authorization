@@ -167,23 +167,85 @@ Table of Contents
 5.  Mission Substrate
 
    This profile is defined against the Mission model rather than against
-   OAuth 2.0 mechanics.  It consumes these primitives, the issuance
-   profile's instantiation of the substrate's kernel and Structured
-   Authority capability ([I-D.draft-mcguinness-mission-substrate]):
+   OAuth 2.0 mechanics: it is a substrate-neutral consumer, and this
+   section is its consumption declaration under the rule of Mission
+   Substrate Requirements ([I-D.draft-mcguinness-mission-substrate])
+   that a substrate-neutral profile declare the kernel functions and
+   optional capabilities it consumes.
 
-   *  the Mission Identifier and issuer, which key every consumption
-      counter;
+   From the contextual-governance kernel it consumes the Mission
+   Identifier and issuer, the kernel's Mission Reference and Controller,
+   which key every consumption counter; and the immutable Approved
+   Context, of which the bounds are part as Mission Intent controls
+   members.  The kernel requires no particular integrity anchors:
+   intent_hash is the OAuth binding's commitment to that approved value,
+   and it commits the bounds like any other Intent member (Section 3).
 
-   *  the Authority Set representation, from which a call_class SHOULD
-      be drawn (Section 6); and
+   It consumes these optional capabilities:
 
-   *  the integrity-anchor envelope, through which the bounds are
-      committed by intent_hash as Mission Intent controls members.
+   +=============+===========+=================================================+
+   |Capability   |Consumption|Scope of consumption                             |
+   +=============+===========+=================================================+
+   |Lifecycle-   |required   |Inherited scope: metering is performed by the    |
+   |Gated        |           |runtime profile's PDP within a documented        |
+   |Authorization|           |enforcement scope (Section 3), so every metered  |
+   |             |           |decision is already gated on the only-active-    |
+   |             |           |permits rule; this document adds counters to that|
+   |             |           |gate and defines no second one                   |
+   +-------------+-----------+-------------------------------------------------+
+   |Structured   |conditional|Two consumers.  A call_class value SHOULD be     |
+   |Authority    |           |drawn from the actions identifiers of the entry's|
+   |             |           |mission_resource_access, so the metered class    |
+   |             |           |maps to evaluated actions; a deployment that     |
+   |             |           |meters a coarser or cross-entry class defines    |
+   |             |           |that class's membership, and such a class is not |
+   |             |           |interoperable (Section 6).  The exclusive control|
+   |             |           |consumes it even then: its selectors are         |
+   |             |           |interpreted in the identifier space of the       |
+   |             |           |approved Authority Set entries and compared with |
+   |             |           |each consequential action, resource by equality  |
+   |             |           |and the invoked action by membership in actions, |
+   |             |           |per group and per Mission; selector semantics are|
+   |             |           |owned by this document (Section 6, Section 8)    |
+   +-------------+-----------+-------------------------------------------------+
+   |State-       |not        |Mission state is established by the runtime      |
+   |Observable   |consumed   |decision this document adds counters to, under   |
+   |             |           |that profile's freshness rules, not by this      |
+   |             |           |document ([I-D.draft-mcguinness-mission-runtime])|
+   +-------------+-----------+-------------------------------------------------+
+   |Monotonic    |not        |A lineage-keyed budget identifier correlates a   |
+   |Derivation   |consumed   |root Mission and its Child Missions to one shared|
+   |             |           |counter (Section 9); lineage counters are        |
+   |             |           |correlation, not narrowing, and this document    |
+   |             |           |defines no no-broader-than comparison            |
+   +-------------+-----------+-------------------------------------------------+
+   |Credential-  |not        |This document defines no binding of its own:     |
+   |Bound        |consumed   |enforcement composes through the runtime         |
+   |             |           |profile's Mission binding establishment step     |
+   |             |           |([I-D.draft-mcguinness-mission-runtime])         |
+   +-------------+-----------+-------------------------------------------------+
+   |Independently|not        |This document defines no verification artifact of|
+   |Verifiable   |consumed   |its own; metered outcomes enter the runtime      |
+   |             |           |evidence records and inherit their verification  |
+   |             |           |([I-D.draft-mcguinness-mission-runtime-evidence])|
+   +-------------+-----------+-------------------------------------------------+
+   |Portable     |not        |This document defines no evidence artifact of its|
+   |Evidence     |consumed   |own; metered refusals and settlement are carried |
+   |             |           |in the runtime evidence records                  |
+   |             |           |([I-D.draft-mcguinness-mission-runtime-evidence])|
+   +-------------+-----------+-------------------------------------------------+
 
-   It defines no binding of its own: enforcement composes through the
-   runtime profile's Mission binding establishment step
-   ([I-D.draft-mcguinness-mission-runtime]), and metering adds counters
-   to the runtime decision.
+              Table 1: Metering profile capability consumption
+
+   The portability claim is capability-scoped rather than substrate-wide
+   for the reason the substrate's Capability Confusion consideration
+   states: every property this profile requires matches an explicit
+   capability claim and its scope, never the generic statement that a
+   binding supports Missions.  Hosting under another binding also
+   requires a representation mapping: the bounds carried inside the
+   binding's own Approved Context and covered by its own commitment
+   mechanism, as the OAuth binding carries them in the Mission Intent
+   and commits them through intent_hash.
 
 6.  Consumption Bounds
 
@@ -728,6 +790,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime-evidence.html>.
 
+   [I-D.draft-mcguinness-mission-substrate]
+              McGuinness, K., "Mission Substrate Requirements", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-substrate.html>.
+
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -765,11 +832,6 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-mission-
               orchestration.html>.
-
-   [I-D.draft-mcguinness-mission-substrate]
-              McGuinness, K., "Mission Substrate Requirements", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-substrate.html>.
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",

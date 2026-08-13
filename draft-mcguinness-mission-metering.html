@@ -1346,27 +1346,79 @@ independently on each action.<a href="#section-4-2.2.1" class="pilcrow">¶</a></
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
       </h2>
 <p id="section-5-1">This profile is defined against the Mission model rather than against
-OAuth 2.0 mechanics. It consumes these primitives, the issuance
-profile's instantiation of the substrate's kernel and Structured
-Authority capability (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>):<a href="#section-5-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-5-2.1">
-          <p id="section-5-2.1.1">the Mission Identifier and issuer, which key every consumption
-counter;<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-5-2.2">
-          <p id="section-5-2.2.1">the Authority Set representation, from which a <code>call_class</code> <span class="bcp14">SHOULD</span>
-be drawn (<a href="#bounds" class="auto internal xref">Section 6</a>); and<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-5-2.3">
-          <p id="section-5-2.3.1">the integrity-anchor envelope, through which the bounds are
-committed by <code>intent_hash</code> as Mission Intent <code>controls</code> members.<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-5-3">It defines no binding of its own: enforcement composes through the
-runtime profile's Mission binding establishment step
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and metering adds
-counters to the runtime decision.<a href="#section-5-3" class="pilcrow">¶</a></p>
+OAuth 2.0 mechanics: it is a substrate-neutral consumer, and this
+section is its consumption declaration under the rule of Mission
+Substrate Requirements (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>)
+that a substrate-neutral profile declare the kernel functions and
+optional capabilities it consumes.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">From the contextual-governance kernel it consumes the Mission
+Identifier and issuer, the kernel's Mission Reference and Controller,
+which key every consumption counter; and the immutable Approved
+Context, of which the bounds are part as Mission Intent <code>controls</code>
+members. The kernel requires no particular integrity anchors:
+<code>intent_hash</code> is the OAuth binding's commitment to that approved
+value, and it commits the bounds like any other Intent member
+(<a href="#relationship" class="auto internal xref">Section 3</a>).<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3">It consumes these optional capabilities:<a href="#section-5-3" class="pilcrow">¶</a></p>
+<span id="name-metering-profile-capability"></span><table class="center" id="table-1">
+        <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-metering-profile-capability" class="selfRef">Metering profile capability consumption</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Capability</th>
+            <th class="text-left" rowspan="1" colspan="1">Consumption</th>
+            <th class="text-left" rowspan="1" colspan="1">Scope of consumption</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
+            <td class="text-left" rowspan="1" colspan="1">required</td>
+            <td class="text-left" rowspan="1" colspan="1">Inherited scope: metering is performed by the runtime profile's PDP within a documented enforcement scope (<a href="#relationship" class="auto internal xref">Section 3</a>), so every metered decision is already gated on the only-<code>active</code>-permits rule; this document adds counters to that gate and defines no second one</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
+            <td class="text-left" rowspan="1" colspan="1">conditional</td>
+            <td class="text-left" rowspan="1" colspan="1">Two consumers. A <code>call_class</code> value <span class="bcp14">SHOULD</span> be drawn from the <code>actions</code> identifiers of the entry's <code>mission_resource_access</code>, so the metered class maps to evaluated actions; a deployment that meters a coarser or cross-entry class defines that class's membership, and such a class is not interoperable (<a href="#bounds" class="auto internal xref">Section 6</a>). The <code>exclusive</code> control consumes it even then: its selectors are interpreted in the identifier space of the approved Authority Set entries and compared with each consequential action, <code>resource</code> by equality and the invoked action by membership in <code>actions</code>, per group and per Mission; selector semantics are owned by this document (<a href="#bounds" class="auto internal xref">Section 6</a>, <a href="#exclusivity" class="auto internal xref">Section 8</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">Mission state is established by the runtime decision this document adds counters to, under that profile's freshness rules, not by this document (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">A lineage-keyed budget identifier correlates a root Mission and its Child Missions to one shared counter (<a href="#aggregate-bounds" class="auto internal xref">Section 9</a>); lineage counters are correlation, not narrowing, and this document defines no no-broader-than comparison</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">This document defines no binding of its own: enforcement composes through the runtime profile's Mission binding establishment step (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">This document defines no verification artifact of its own; metered outcomes enter the runtime evidence records and inherit their verification (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Portable Evidence</td>
+            <td class="text-left" rowspan="1" colspan="1">not consumed</td>
+            <td class="text-left" rowspan="1" colspan="1">This document defines no evidence artifact of its own; metered refusals and settlement are carried in the runtime evidence records (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>)</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-5-5">The portability claim is capability-scoped rather than substrate-wide
+for the reason the substrate's Capability Confusion consideration
+states: every property this profile requires matches an explicit
+capability claim and its scope, never the generic statement that a
+binding supports Missions. Hosting under another binding also
+requires a representation mapping: the bounds carried inside the
+binding's own Approved Context and covered by its own commitment
+mechanism, as the OAuth binding carries them in the Mission Intent
+and commits them through <code>intent_hash</code>.<a href="#section-5-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="bounds">
@@ -2052,6 +2104,10 @@ the runtime evidence companion's extension conventions
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Runtime Evidence"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
@@ -2088,10 +2144,6 @@ the runtime evidence companion's extension conventions
 <dt id="I-D.draft-mcguinness-mission-orchestration">[I-D.draft-mcguinness-mission-orchestration]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Orchestration and Unwinding"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
       <dd>

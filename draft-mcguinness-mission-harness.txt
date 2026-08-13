@@ -255,30 +255,97 @@ Table of Contents
 4.  Mission Substrate
 
    This profile is defined against the Mission model rather than against
-   OAuth 2.0 mechanics.  It consumes these substrate primitives:
+   OAuth 2.0 mechanics: it is a substrate-neutral consumer, and this
+   section is its consumption declaration under the rule of Mission
+   Substrate Requirements ([I-D.draft-mcguinness-mission-substrate])
+   that a substrate-neutral profile declare the kernel functions and
+   optional capabilities it consumes.
 
-   *  the Mission identifier;
+   From the contextual-governance kernel it consumes the Mission
+   identifier and issuer, the kernel's Mission Reference and Controller,
+   recorded in every Mission binding (Section 6); and the lifecycle
+   state space with its only-active-permits rule, the kernel's
+   governance gate, which every resume check re-establishes (Section 7).
+   The evidence integrity conventions Harness Evidence imports from the
+   runtime profile ([I-D.draft-mcguinness-mission-runtime]) are a
+   companion dependency of Section 15, not a substrate primitive.
 
-   *  the lifecycle state space with its only-active-permits rule and
-      the deployment's freshness sources;
+   It consumes these optional capabilities:
 
-   *  the Mission-bound credentials the harness holds or mediates, with
-      their sender-constraint custody, when the binding in use provides
-      them; and
+   +=============+===========+=========================================+
+   |Capability   |Consumption|Scope of consumption                     |
+   +=============+===========+=========================================+
+   |Lifecycle-   |required   |Every resume, retry dispatch, background |
+   |Gated        |           |wake-up, and cached-access use is gated  |
+   |Authorization|           |on active Mission state, and governed    |
+   |             |           |work is suppressed when active state     |
+   |             |           |cannot be established (Section 7,        |
+   |             |           |Section 13)                              |
+   +-------------+-----------+-----------------------------------------+
+   |State-       |required   |The resume checks establish state through|
+   |Observable   |           |a Mission Status operation, a maintained |
+   |             |           |event-driven cache, or a runtime PDP     |
+   |             |           |decision, and stop propagation acts on   |
+   |             |           |what they report; staleness is bounded   |
+   |             |           |per action class by the bounds the       |
+   |             |           |Enforcement Scope Statement declares     |
+   |             |           |(Section 7,                              |
+   |             |           |[I-D.draft-mcguinness-mission-runtime])  |
+   +-------------+-----------+-----------------------------------------+
+   |Credential-  |conditional|The Mission-bound credentials the harness|
+   |Bound        |           |holds or mediates, with their sender-    |
+   |             |           |constraint custody, when the binding in  |
+   |             |           |use provides them; under a binding       |
+   |             |           |without them, the harness binds governed |
+   |             |           |work items to the externally established |
+   |             |           |Mission reference of the runtime         |
+   |             |           |profile's Mission binding establishment  |
+   |             |           |step                                     |
+   |             |           |([I-D.draft-mcguinness-mission-runtime]),|
+   |             |           |and the custody duties of Section 10     |
+   |             |           |apply to whatever acting credentials the |
+   |             |           |deployment uses                          |
+   +-------------+-----------+-----------------------------------------+
+   |Structured   |conditional|Consumed where the harness scopes the    |
+   |Authority    |           |tool catalog and schemas to the Mission's|
+   |             |           |Authority Set (Section 5), records       |
+   |             |           |authority_hash on the Mission binding    |
+   |             |           |when known (Section 6), and, on          |
+   |             |           |continuation across supersession,        |
+   |             |           |proceeds only for the actions the        |
+   |             |           |successor's Authority Set authorizes     |
+   |             |           |(Section 13.2)                           |
+   +-------------+-----------+-----------------------------------------+
+   |Monotonic    |not        |The Mission binding grants no authority  |
+   |Derivation   |consumed   |(Section 6), and binding inheritance     |
+   |             |           |copies or narrows a pointer, not an      |
+   |             |           |Authority Set (Section 6.1); the harness |
+   |             |           |derives no authority to compare          |
+   +-------------+-----------+-----------------------------------------+
+   |Independently|not        |The harness establishes Mission state    |
+   |Verifiable   |consumed   |through online or event-driven sources   |
+   |             |           |(Section 7); it verifies no Mission      |
+   |             |           |property offline                         |
+   +-------------+-----------+-----------------------------------------+
+   |Portable     |not        |This document produces Harness Evidence  |
+   |Evidence     |consumed   |of its own, registrable on the Mission's |
+   |             |           |transparency feed (Section 15,           |
+   |             |           |[I-D.draft-mcguinness-mission-audit])    |
+   +-------------+-----------+-----------------------------------------+
 
-   *  the evidence integrity conventions imported from the runtime
-      profile.
+              Table 1: Harness profile capability consumption
 
-   The Mission-bound credential primitive is binding-dependent: under a
-   binding without Mission-bound credentials, the harness binds governed
-   work items to the externally established Mission reference of the
-   runtime profile's Mission binding establishment step
-   ([I-D.draft-mcguinness-mission-runtime]), and the custody duties of
-   Section 10 apply to whatever acting credentials the deployment uses.
    The issuance profile [I-D.draft-mcguinness-oauth-mission] is this
-   version's normative substrate; every OAuth artifact named in this
-   document enters through it.  Another substrate that provides the same
-   primitives can host this profile unchanged.
+   version's normative substrate: it defines each consumed kernel
+   function and capability for OAuth 2.0, and every OAuth artifact named
+   in this document enters through it.  A binding that provides the
+   required capabilities above, and whichever conditional capabilities
+   the deployment's governed work relies on, can host this profile.  The
+   portability claim is capability-scoped rather than substrate-wide for
+   the reason the substrate's Capability Confusion consideration states:
+   every property this profile requires matches an explicit capability
+   claim and its scope, never the generic statement that a binding
+   supports Missions.
 
 5.  Mission Mediation
 
@@ -847,7 +914,7 @@ Table of Contents
             |            | or governance workflow.            |
             +------------+------------------------------------+
 
-                                  Table 1
+                                  Table 2
 
    This enumeration is the evidence vocabulary, not an internal state-
    machine requirement: a harness MAY run any internal execution states,
@@ -905,7 +972,7 @@ Table of Contents
           | stale         |                                    |
           +---------------+------------------------------------+
 
-                                 Table 2
+                                 Table 3
 
    The non-core states in this matrix are defined by companion profiles
    a deployment may run: suspended and completed by Mission Status
@@ -1581,6 +1648,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime.html>.
 
+   [I-D.draft-mcguinness-mission-substrate]
+              McGuinness, K., "Mission Substrate Requirements", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-substrate.html>.
+
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -1703,7 +1775,7 @@ Appendix A.  Mapping to Durable-Execution Engines
        | management             | evidence                         |
        +------------------------+----------------------------------+
 
-                                  Table 3
+                                  Table 4
 
    Each obligation is discharged at a boundary such an engine already
    exposes:
