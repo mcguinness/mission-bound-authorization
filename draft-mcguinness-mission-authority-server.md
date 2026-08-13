@@ -99,6 +99,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
@@ -1615,6 +1623,19 @@ binding, with the obligations below ({{I-D.draft-mcguinness-mission-architecture
 - **Audit evidence.** Joins and decisions MUST produce runtime
   evidence retained for the audit horizon
   ({{I-D.draft-mcguinness-mission-runtime}}).
+- **Approval governance.** Where a recording trigger of Mission
+  Approval Governance holds for an approval event (the Approver
+  differs from the Subject, more than one principal contributes, a
+  non-human assertion contributes, a threshold, veto, or
+  separation-of-duty rule is evaluated, or validating an assertion
+  requires authority standing outside the Mission record), the MAS
+  MUST record the Approval Governance Record
+  ({{I-D.draft-mcguinness-mission-approval-governance}}), committed
+  atomically with the Mission's creation and retained for its audit
+  horizon. The Mission record still carries exactly one accountable
+  `approver`, the only principal any projection or enforcement
+  consumes; direct self-approval by one authenticated human stays the
+  degenerate case the Mission record represents completely.
 
 The Join Assertion obligation is what separates the modes: the
 mapping join ({{mission-join}}) is the baseline compatibility mode,

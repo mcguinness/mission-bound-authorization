@@ -101,6 +101,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-aauth:
     title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
@@ -382,6 +390,7 @@ record as part of the Mission's feed.
 | Lifecycle transition | Signals SET as issued; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `issuer` |
 | Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | `issuer` |
 | Consent evidence | retained signed object, as issued | `application/mission-consent-evidence+json` | `issuer` |
+| Approval governance | complete record including `envelope` (JCS), the record-digest preimage | `application/mission-approval-governance+json` | `issuer` |
 | Decision evidence | Decision Evidence object, as issued | `application/mission-decision-evidence+json` | PDP key |
 | Execution evidence | Execution Evidence object, as issued | `application/mission-execution-evidence+json` | PEP key |
 | Refusal Record | Refusal Record object, as issued | `application/mission-refusal-record+json` | PEP key |
@@ -424,6 +433,8 @@ The media types and type identifiers are defined as follows:
   registered by the profiles that define those objects
   ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}},
   {{I-D.draft-mcguinness-mission-runtime-evidence}});
+- the Approval governance media type by Mission Approval Governance
+  ({{I-D.draft-mcguinness-mission-approval-governance}});
 - the Signals SET media type by the Signals profile it is carried in
   ({{I-D.draft-mcguinness-oauth-mission-signals}});
 - the Mandate media type by the Mandate profile

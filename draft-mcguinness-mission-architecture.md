@@ -2644,6 +2644,12 @@ reclassification, not by a stable document absorbing a dependency.
 `oauth-mission-approval`:
 : Asynchronous approval over the deferred substrate.
 
+`mission-approval-governance`:
+: The Approval Governance Record: authenticated, event-bound,
+  policy-authorized assertions standing behind an approval decision,
+  committed atomically with Mission activation and immutable once
+  signed.
+
 `oauth-mission-approval-revision`:
 : Experimental: in-review narrowing revision of a deferred proposal.
 
