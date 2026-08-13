@@ -541,9 +541,11 @@ Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 {
-  "goal": "Reconcile Q3 invoices and post adjustments under $500.",
-  "resources": ["https://erp.example.com"],
-  "expires_at": "2026-12-31T23:59:59Z"
+  "intent": {
+    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "resources": ["https://erp.example.com"],
+    "expires_at": "2026-12-31T23:59:59Z"
+  }
 }
 ~~~
 
@@ -962,17 +964,19 @@ Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 {
-  "goal": "Reconcile Q3 invoices and post adjustments under $2,000.",
-  "resources": ["https://erp.example.com"],
-  "expires_at": "2026-12-31T23:59:59Z",
+  "intent": {
+    "goal": "Reconcile Q3 invoices and post adjustments under $2,000.",
+    "resources": ["https://erp.example.com"],
+    "expires_at": "2026-12-31T23:59:59Z"
+  },
   "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
 }
 ~~~
 
 The MAS authenticates the client, verifies it is the predecessor's
 recorded `client_id`, verifies the predecessor is `active`, strips
-`predecessor`, validates the remaining Mission Intent, derives the
-successor's Authority Set, and accepts:
+`predecessor`, validates the remaining Submission envelope, derives
+the successor's Authority Set, and accepts:
 
 ~~~ http-message
 HTTP/1.1 202 Accepted
@@ -2103,9 +2107,11 @@ Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 {
-  "goal": "Reconcile Q3 invoices and post adjustments under $500.",
-  "resources": ["https://erp.example.com"],
-  "expires_at": "2026-12-31T23:59:59Z"
+  "intent": {
+    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "resources": ["https://erp.example.com"],
+    "expires_at": "2026-12-31T23:59:59Z"
+  }
 }
 ~~~
 

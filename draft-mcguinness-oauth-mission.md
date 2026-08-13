@@ -923,7 +923,10 @@ body, like other OAuth parameters) with exactly these members:
 
 `evidence`:
 : OPTIONAL. A non-empty array of Intent Submission Evidence entries
-  ({{intent-submission-evidence}}).
+  ({{intent-submission-evidence}}). When present it MUST be
+  non-empty: omission already expresses absence, and the AS refuses
+  an empty array with `invalid_request`, preserving one closed
+  canonical syntax for "no evidence".
 
 The Submission envelope separates the semantic task from material
 presented about it: `intent_hash` commits exactly the `intent`
@@ -1231,6 +1234,16 @@ The AS processes a submission in this order:
    Authority Set, and the verified evidence facts as
    `submission_evidence` ({{mission-record}}).
 
+The material verified provenance of step 7 is part of the approval
+surface, not an annotation beside it: where a deployment commits the
+rendered approval surface, the commitment MUST cover the normalized
+provenance facts, at least as a digest of their canonical
+`submission_evidence` representation ({{mission-record}}), so the
+committed rendering proves which provenance supported the decision.
+The consent-evidence companion binds this with a
+`submission_provenance_hash` inside its committed disclosure
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+
 Schema validation and the provisional hash precede signature
 verification, so the AS never verifies artifacts for a submission it
 would refuse on shape, and so intent-bound evidence has a hash to be
@@ -1241,9 +1254,15 @@ On a surface that carries a Mission-creation idempotency fingerprint
 {{I-D.draft-mcguinness-oauth-mission-expansion}}), presented evidence
 affects admission, derivation, approval, and side effects and is
 therefore a member of that fingerprint; the profile that owns the
-fingerprint lists it. PAR-based creation and surfaces that submit no
-Mission Intent carry no such fingerprint and retain their own replay
-and idempotency mechanisms.
+fingerprint lists it. On those surfaces, recovery of a completed
+operation under the creation-idempotency rules
+({{I-D.draft-mcguinness-oauth-mission-expansion}}) returns the
+recorded outcome without re-verifying the presented evidence:
+verification happened when the operation ran, and an artifact whose
+freshness or status has since lapsed does not invalidate the recovery
+of an already-completed request. PAR-based creation and surfaces that
+submit no Mission Intent carry no such fingerprint and retain their
+own replay and idempotency mechanisms.
 
 # Mission Authority {#authorization-derivation}
 
@@ -2226,11 +2245,15 @@ profile defines:
 : OPTIONAL. An array. The verified Intent Submission Evidence facts
   ({{intent-submission-evidence}}), one element per verified entry,
   present iff the approved submission carried evidence. Each element
-  records the entry's `type`, an `artifact_hash` computed as an
-  integrity anchor ({{integrity-anchors}}) with `typ`
-  `mission-intent-evidence` over the entry exactly as presented, a
-  `verified_at` RFC 3339 timestamp, and the verified output facts
-  the type's specification designates for recording. Like
+  carries exactly these members: `type`, the entry's evidence type;
+  `artifact_hash`, an integrity anchor ({{integrity-anchors}}) with
+  `typ` `mission-intent-evidence` over the entry exactly as
+  presented; `verified_at`, an RFC 3339 timestamp of verification;
+  and `facts`, an object holding the verified output facts the
+  type's specification designates for recording, nested so
+  type-owned facts cannot collide with the common members. Elements
+  preserve the submission's `evidence` order, so the array has one
+  canonical form ({{canonicalization}}). Like
   `approval_basis`, it is provenance, not enforcement input, and it
   is not carried on the `mission` claim ({{mission-claim}}). No
   integrity anchor commits it: its digests are record metadata whose
