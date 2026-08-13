@@ -181,10 +181,13 @@ async function issueParentMission(): Promise<{ missionId: string; refreshToken: 
   const challenge = Buffer.from(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
   ).toString("base64url");
+  // @spec mission#submission-via-par — the wire value is the Submission envelope.
   const intent = JSON.stringify({
-    goal: "Pay Acme invoices and send remittance",
-    resources: [RESOURCE],
-    expires_at: PARENT_EXP,
+    intent: {
+      goal: "Pay Acme invoices and send remittance",
+      resources: [RESOURCE],
+      expires_at: PARENT_EXP,
+    },
   });
   const par = await fetch(`${ISSUER}/request`, {
     method: "POST",
@@ -285,13 +288,13 @@ async function createChildViaExchange(fields: {
     requested_token_type: JWT_TOKEN_TYPE,
     // @spec child-delegation#creation-request-id — REQUIRED on every creation.
     creation_request_id: crypto.randomUUID(),
-    mission_intent: JSON.stringify(
-      fields.intent ?? {
+    mission_intent: JSON.stringify({
+      intent: fields.intent ?? {
         goal: "Extract Acme invoices",
         resources: [RESOURCE],
         expires_at: PARENT_EXP,
       },
-    ),
+    }),
     authorization_details: JSON.stringify(childAuthority()),
     child_actor: JSON.stringify(fields.childActor),
   };
@@ -416,6 +419,29 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
       subject_token_type: REFRESH_TOKEN_TOKEN_TYPE,
       requested_token_type: JWT_TOKEN_TYPE,
       mission_intent: JSON.stringify({
+        intent: {
+          goal: "Extract Acme invoices",
+          resources: [RESOURCE],
+          expires_at: PARENT_EXP,
+        },
+      }),
+      authorization_details: JSON.stringify(childAuthority()),
+      child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
+    });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("refresh token");
+  });
+
+  it("refuses the retired bare-Intent mission_intent shape (the exchange carries the Submission envelope)", async () => {
+    const res = await tokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: parent.accessToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      creation_request_id: crypto.randomUUID(),
+      mission_intent: JSON.stringify({
         goal: "Extract Acme invoices",
         resources: [RESOURCE],
         expires_at: PARENT_EXP,
@@ -426,7 +452,31 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
-    expect(body.error_description).toContain("refresh token");
+    expect(body.error_description).toContain("bare Mission Intent shape");
+  });
+
+  it("refuses presented evidence of an unknown type on the exchange (no types registered)", async () => {
+    const res = await tokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: parent.accessToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      creation_request_id: crypto.randomUUID(),
+      mission_intent: JSON.stringify({
+        intent: {
+          goal: "Extract Acme invoices",
+          resources: [RESOURCE],
+          expires_at: PARENT_EXP,
+        },
+        evidence: [{ type: "urn:example:unregistered", assertion: "eyJ" }],
+      }),
+      authorization_details: JSON.stringify(childAuthority()),
+      child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
+    });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_mission_intent_evidence");
+    expect(body.error_description).toContain("unknown evidence type");
   });
 
   it("the parent access token is not consumed: two child creations under the same subject_token both succeed, and neither derives the parent (NON-derivation)", async () => {
@@ -459,9 +509,11 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: JWT_TOKEN_TYPE,
       mission_intent: JSON.stringify({
-        goal: "Extract Acme invoices",
-        resources: [RESOURCE],
-        expires_at: PARENT_EXP,
+        intent: {
+          goal: "Extract Acme invoices",
+          resources: [RESOURCE],
+          expires_at: PARENT_EXP,
+        },
       }),
       authorization_details: JSON.stringify(childAuthority()),
       child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
@@ -482,9 +534,11 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
         subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
         requested_token_type: JWT_TOKEN_TYPE,
         mission_intent: JSON.stringify({
-          goal: "Extract Acme invoices",
-          resources: [RESOURCE],
-          expires_at: PARENT_EXP,
+          intent: {
+            goal: "Extract Acme invoices",
+            resources: [RESOURCE],
+            expires_at: PARENT_EXP,
+          },
         }),
         authorization_details: JSON.stringify(childAuthority()),
         child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),

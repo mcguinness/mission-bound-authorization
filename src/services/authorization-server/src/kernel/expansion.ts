@@ -11,7 +11,13 @@
 import { randomBytes } from "node:crypto";
 import { authorityHash, intentHash, proposalHash } from "@mission/core";
 import type { MissionKernel } from "./kernel.js";
-import type { ApprovalBasis, AuthorityEntry, MissionIntent, MissionRecord } from "./types.js";
+import type {
+  ApprovalBasis,
+  AuthorityEntry,
+  IntentSubmissionEvidenceFact,
+  MissionIntent,
+  MissionRecord,
+} from "./types.js";
 
 export interface ExpansionInput {
   predecessorId: string;
@@ -28,6 +34,13 @@ export interface ExpansionInput {
   approvalEventId: string;
   /** Bounds the successor credential; MUST NOT be exceeded (approved_until). */
   approvedUntil: string;
+  /**
+   * @spec mission#intent-submission-evidence — the VERIFIED Intent Submission
+   * Evidence facts of the widening submission (stage-2 output, verified at
+   * initiation and persisted across a deferred window). Landed on the
+   * successor record's `submission_evidence`, outside all anchors.
+   */
+  submissionEvidence?: IntentSubmissionEvidenceFact[];
 }
 
 /**
@@ -119,6 +132,7 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     authority_set: authoritySet,
     intent_hash: intentHash(predecessor.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(predecessor.issuer, proposal as never) } : {}),
+    ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),
     authority_hash: authorityHashValue,
     subject: predecessor.subject,
     approver: input.approver,

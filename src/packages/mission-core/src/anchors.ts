@@ -52,6 +52,16 @@ export const MISSION_TEMPLATE_TYP = "mission-template";
  */
 export const MISSION_CREATION_FINGERPRINT_TYP = "mission-creation-fingerprint";
 
+/**
+ * @spec mission#intent-submission-evidence — the `artifact_hash` of a verified
+ * Intent Submission Evidence entry as the Mission Record lands it: the family
+ * anchor idiom over the entry AS PRESENTED. Record-trusted provenance metadata
+ * (the approval_basis treatment), outside every integrity anchor; this typ is
+ * also the documented extension point were a threat model to select a
+ * verifiable association (a future provenance_hash).
+ */
+export const MISSION_INTENT_EVIDENCE_TYP = "mission-intent-evidence";
+
 export function computeAnchor(typ: string, iss: string, value: JsonValue): string {
   const envelope: JsonValue = { typ, iss, value };
   const canonical = canonicalize(envelope);
@@ -59,6 +69,9 @@ export function computeAnchor(typ: string, iss: string, value: JsonValue): strin
   return `sha-256:${digest.toString("base64url")}`;
 }
 
+/** Commits exactly the SEMANTIC Mission Intent: the `intent` member of the
+ *  Mission Intent Submission envelope, never the envelope or its `evidence`
+ *  array (so intent-bound evidence can name this hash without self-reference). */
 export function intentHash(iss: string, intent: JsonValue): string {
   return computeAnchor(INTENT_TYP, iss, intent);
 }

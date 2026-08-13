@@ -36,7 +36,12 @@ import {
 } from "../src/adapters/continuation-grant.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import type { LifecycleCommit } from "../src/kernel/types.js";
-import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import {
+  buildAuthorizationServer,
+  type BuiltAs,
+  registerIntentSubmissionEvidenceType,
+  unregisterIntentSubmissionEvidenceType,
+} from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 
 const PORT = 14520;
@@ -113,8 +118,9 @@ const authority = (actions: string[]) => [
   },
 ];
 
+// @spec mission#submission-via-par — the wire value is the Submission envelope.
 const intentJson = (goal: string): string =>
-  JSON.stringify({ goal, resources: [RESOURCE], expires_at: FAR_EXP });
+  JSON.stringify({ intent: { goal, resources: [RESOURCE], expires_at: FAR_EXP } });
 
 /** Full PAR -> approval -> code -> token dance: an ACTIVE Mission + its
  *  DPoP-bound (dpopKeys) Mission ACCESS token (parent or predecessor role). */
@@ -349,6 +355,71 @@ describe("child-creation idempotency (@spec child-delegation#creation-request-id
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("creation_request_id");
+  });
+});
+
+describe("evidence vs recovery ordering (@spec mission#intent-submission-evidence, issue #506)", () => {
+  // A test evidence type whose stage-2 verifier can be flipped to FAIL,
+  // simulating an artifact whose freshness/status lapsed AFTER the first
+  // attempt completed. Registered by this file only; the shipped registry is
+  // empty.
+  const IDEM_TYPE = "urn:test:intent-evidence:idem-stub";
+  let failVerification = false;
+  beforeAll(() => {
+    registerIntentSubmissionEvidenceType(IDEM_TYPE, {
+      validate(entry) {
+        if (typeof entry.assertion !== "string") throw new Error("assertion required");
+      },
+      async verify() {
+        if (failVerification) throw new Error("artifact expired after completion");
+        return { admitted: true };
+      },
+    });
+  });
+  afterAll(() => unregisterIntentSubmissionEvidenceType(IDEM_TYPE));
+
+  const IDEM_ENTRY = { type: IDEM_TYPE, assertion: "idem-artifact" };
+  const evidenceChildParams = (subjectToken: string, crid: string): Record<string, string> => ({
+    ...childParams(subjectToken, crid),
+    mission_intent: JSON.stringify({
+      intent: { goal: "Extract Acme invoices", resources: [RESOURCE], expires_at: FAR_EXP },
+      evidence: [IDEM_ENTRY],
+    }),
+  });
+
+  it("the completed-operation recovery lookup PRECEDES evidence re-verification: an artifact that expired after completion does not break recovery; a FRESH operation still verifies", async () => {
+    failVerification = false;
+    const parent = await issueMission(["payments:invoice.read", "payments:remittance.send"]);
+    const crid = crypto.randomUUID();
+
+    // First attempt: stage-2 verification runs (verifier OK) and the child is
+    // created with REQUEST-DERIVED facts on its record.
+    const first = await tokenRequest(evidenceChildParams(parent.accessToken, crid));
+    const fb = (await first.json()) as { mission_id?: string; error?: string };
+    expect(first.status, JSON.stringify(fb)).toBe(200);
+    const childId = fb.mission_id as string;
+    const facts = as.kernel.get(childId)?.submission_evidence;
+    expect(facts?.[0]?.type).toBe(IDEM_TYPE);
+    expect(facts?.[0]?.facts).toEqual({ admitted: true });
+
+    // The artifact "expires": stage-2 verification would now FAIL...
+    failVerification = true;
+    // ...but the RETRY of the COMPLETED operation recovers it: the recovery
+    // lookup runs BEFORE evidence freshness/status re-verification, so the
+    // lost-response retry returns the SAME child, never a refusal.
+    const retry = await tokenRequest(evidenceChildParams(parent.accessToken, crid));
+    const rb = (await retry.json()) as { mission_id?: string; error?: string };
+    expect(retry.status, JSON.stringify(rb)).toBe(200);
+    expect(rb.mission_id).toBe(childId);
+
+    // A FRESH operation (new creation_request_id) is NOT a recovery: stage-2
+    // verification runs and refuses with the registered error code.
+    const fresh = await tokenRequest(evidenceChildParams(parent.accessToken, crypto.randomUUID()));
+    const nb = (await fresh.json()) as { error?: string; error_description?: string };
+    expect(fresh.status, JSON.stringify(nb)).toBe(400);
+    expect(nb.error).toBe("invalid_mission_intent_evidence");
+    expect(nb.error_description).toContain("artifact expired after completion");
+    failVerification = false;
   });
 });
 

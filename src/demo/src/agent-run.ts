@@ -50,9 +50,11 @@ async function main(): Promise<void> {
   // authority proposal rides the standard RFC 9396 authorization_details
   // parameter, pushed through PAR alongside mission_intent.
   const missionIntent = JSON.stringify({
-    goal,
-    resources: [CANONICAL_RESOURCE],
-    expires_at: "2027-01-01T00:00:00Z",
+    intent: {
+      goal,
+      resources: [CANONICAL_RESOURCE],
+      expires_at: "2027-01-01T00:00:00Z",
+    },
   });
   const authorizationDetails = JSON.stringify([
     {

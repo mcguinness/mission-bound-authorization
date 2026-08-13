@@ -294,7 +294,7 @@ afterAll(() => {
 describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission)", () => {
   it("accepts authorization_details alongside mission_intent as the proposal", async () => {
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
-      mission_intent: JSON.stringify(TASK_INTENT),
+      mission_intent: JSON.stringify({ intent: TASK_INTENT }),
       authorization_details: JSON.stringify(PROPOSAL),
     });
     expect(res.status).toBe(201);
@@ -323,7 +323,7 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
 
   it("a governed client submitting the proposal WITH mission_intent proceeds", async () => {
     const res = await pushPar("governed-agent", "governed-agent-auth", governedKey, {
-      mission_intent: JSON.stringify(TASK_INTENT),
+      mission_intent: JSON.stringify({ intent: TASK_INTENT }),
       authorization_details: JSON.stringify(PROPOSAL),
     });
     expect(res.status).toBe(201);
@@ -331,7 +331,7 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
 
   it("refuses a pushed Intent that carries the retired proposed_authority member", async () => {
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
-      mission_intent: JSON.stringify({ ...TASK_INTENT, proposed_authority: PROPOSAL }),
+      mission_intent: JSON.stringify({ intent: { ...TASK_INTENT, proposed_authority: PROPOSAL } }),
     });
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
@@ -339,13 +339,55 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
 
   it("refuses a proposal entry whose resource is not among the Intent resources", async () => {
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
-      mission_intent: JSON.stringify(TASK_INTENT),
+      mission_intent: JSON.stringify({ intent: TASK_INTENT }),
       authorization_details: JSON.stringify([
         { type: "mission_resource_access", resource: "https://other.example", actions: ["a"] },
       ]),
     });
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
+  });
+});
+
+describe("Submission envelope carriage (@spec mission#submission-via-par, issue #506)", () => {
+  it("refuses the retired bare-Intent parameter shape (invalid_request)", async () => {
+    const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      mission_intent: JSON.stringify(TASK_INTENT),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string; error_description?: string };
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("bare Mission Intent shape");
+  });
+
+  it("refuses an unknown evidence type on the wire (no types are registered)", async () => {
+    const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      mission_intent: JSON.stringify({
+        intent: TASK_INTENT,
+        evidence: [
+          {
+            type: "urn:ietf:params:oauth:mission:intent-evidence:intent-admission",
+            assertion: "eyJhbGciOiJFUzI1NiJ9..sig",
+          },
+        ],
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string; error_description?: string };
+    // Type-dispatch failures carry the core-registered code; structural
+    // envelope failures stay invalid_request (the two tests beside this one).
+    expect(body.error).toBe("invalid_mission_intent_evidence");
+    expect(body.error_description).toContain("unknown evidence type");
+  });
+
+  it("refuses a typeless evidence entry on the wire", async () => {
+    const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      mission_intent: JSON.stringify({ intent: TASK_INTENT, evidence: [{ assertion: "eyJ" }] }),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string; error_description?: string };
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("evidence entries require a type");
   });
 });
 
@@ -365,7 +407,7 @@ describe("end-to-end issuance under the new carriage", () => {
 
   it("derives issuer-side, echoes the granted set, surfaces proposal_hash issuer-only", async () => {
     const par = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
-      mission_intent: JSON.stringify(TASK_INTENT),
+      mission_intent: JSON.stringify({ intent: TASK_INTENT }),
       authorization_details: JSON.stringify(OVER_ASK),
     });
     expect(par.status).toBe(201);

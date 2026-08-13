@@ -50,7 +50,7 @@ import {
 } from "@mission/core";
 import { UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import type { MissionKernel } from "./kernel.js";
-import type { AuthorityEntry, MissionIntent } from "./types.js";
+import type { AuthorityEntry, IntentSubmissionEvidenceEntry, MissionIntent } from "./types.js";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS creation_idempotency (
@@ -105,8 +105,15 @@ export type CreationOp = "child-creation" | "expansion" | "async-delegation";
  *  - `cnf`: the verified presenter confirmation (`{ jkt }` for DPoP; an mTLS
  *    binding would carry `{ "x5t#S256" }`).
  *  - `actor`: the verified acting-actor identity.
- *  - `intent`: the parsed Mission Intent object.
+ *  - `intent`: the parsed semantic Mission Intent object (the `intent` member
+ *    of the Submission envelope).
  *  - `proposal`: the parsed `authorization_details` array, when present.
+ *  - `evidence`: the presented Intent Submission Evidence entries (canonical
+ *    form: the parsed array, JCS-canonicalized with the rest of this object),
+ *    when present — evidence affecting admission, derivation, approval, or
+ *    side effects MUST be included, so the same `creation_request_id` with
+ *    different evidence is a fingerprint MISMATCH, never a silent replay
+ *    (@spec mission#intent-submission-evidence).
  *  - `child_actor`: child-creation only.
  *  - `requested_token_type`.
  *  - `cross_check`: the supplied `parent`/`predecessor` value, when present.
@@ -125,6 +132,7 @@ export interface MissionCreationFingerprintInput {
   actor: { iss: string; sub: string };
   intent: MissionIntent;
   proposal?: AuthorityEntry[];
+  evidence?: IntentSubmissionEvidenceEntry[];
   child_actor?: { sub: string; iss?: string; sub_profile?: string };
   requested_token_type: string;
   cross_check?: string;
@@ -183,6 +191,7 @@ export function creationFingerprint(input: CreationFingerprintInput): string {
     actor: input.actor,
     intent: input.intent,
     ...(input.proposal ? { proposal: input.proposal } : {}),
+    ...(input.evidence ? { evidence: input.evidence } : {}),
     ...(input.child_actor
       ? {
           child_actor: {

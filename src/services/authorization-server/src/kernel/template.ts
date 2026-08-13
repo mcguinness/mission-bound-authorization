@@ -36,6 +36,7 @@ import {
   type ApprovalBasis,
   type AuthorityEntry,
   type MissionIntent,
+  type IntentSubmissionEvidenceFact,
   type MissionRecord,
   type TemplateRef,
   TERMINAL_STATES,
@@ -168,6 +169,12 @@ export interface DispatchInput {
   proposedAuthority?: AuthorityEntry[];
   /** The subject the instance acts for. */
   subject: { iss: string; sub: string };
+  /**
+   * @spec mission#intent-submission-evidence — the VERIFIED Intent Submission
+   * Evidence facts of the dispatch submission (stage-2 output). Landed on the
+   * instance record's `submission_evidence`, outside all anchors.
+   */
+  submissionEvidence?: IntentSubmissionEvidenceFact[];
   /**
    * The version of the derivation policy the passed `kernel` derives under
    * (e.g. `DERIVATION_POLICY.policy_version`). Recorded on the instance as its
@@ -363,6 +370,7 @@ export function dispatchFromTemplate(
     authority_set: final,
     intent_hash: intentHash(template.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(template.issuer, proposal as never) } : {}),
+    ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),
     authority_hash: authorityHash(template.issuer, final as never),
     subject: input.subject,
     approver: template.approver,

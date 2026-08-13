@@ -16,7 +16,15 @@ import {
 } from "./containment.js";
 import type { DerivationPolicy } from "./derive.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
-import { validateAuthorityProposal, validateMissionIntent } from "./intent.js";
+import {
+  type IntentSubmissionPresenter,
+  provisionalIntentHash,
+  type SubmissionEvidenceBounds,
+  validateAuthorityProposal,
+  validateMissionIntent,
+  validateMissionIntentSubmission,
+  verifyIntentSubmissionEvidence,
+} from "./intent.js";
 import {
   signStatusListToken,
   STATUS_LIST_SIZE,
@@ -28,12 +36,15 @@ import {
   type ApprovalBasis,
   type AuthorityEntry,
   type ContainmentEventRecord,
+  type IntentSubmissionEvidenceEntry,
+  type IntentSubmissionEvidenceFact,
   LEGAL_TRANSITIONS,
   type LifecycleCommit,
   type LifecycleOperation,
   type MissionClaim,
   type MissionContainment,
   type MissionIntent,
+  type MissionIntentSubmission,
   type MissionRecord,
   type MissionState,
   type ParentRef,
@@ -77,7 +88,8 @@ CREATE TABLE IF NOT EXISTS missions (
   template_id TEXT,
   template_json TEXT,
   projected_from TEXT,
-  containment_json TEXT
+  containment_json TEXT,
+  submission_evidence_json TEXT
 ) STRICT;
 `;
 
@@ -109,6 +121,13 @@ export interface ApproveInput {
   approver: { iss: string; sub: string };
   clientId: string;
   approvalEventId: string;
+  /**
+   * @spec mission#intent-submission-evidence — the VERIFIED evidence facts to
+   * record on the Mission (provenance metadata outside all integrity
+   * anchors; see {@link MissionRecord.submission_evidence}). Absent or empty
+   * means none verified — always the case today, with no registered types.
+   */
+  submissionEvidence?: IntentSubmissionEvidenceFact[];
 }
 
 export interface KernelOptions {
@@ -164,6 +183,49 @@ export class MissionKernel {
 
   validateIntent(raw: string): MissionIntent {
     return validateMissionIntent(raw);
+  }
+
+  /**
+   * @spec mission#submission-via-par — intake of the `mission_intent`
+   * parameter VALUE: the Mission Intent Submission envelope
+   * ({@link validateMissionIntentSubmission}). The returned `intent` is the
+   * exact semantic object `intent_hash` commits; presented `evidence` is
+   * typed, bounded, and never silently ignored.
+   */
+  validateSubmission(raw: string, bounds?: SubmissionEvidenceBounds): MissionIntentSubmission {
+    return validateMissionIntentSubmission(raw, bounds);
+  }
+
+  /**
+   * @spec mission#intent-submission-evidence — STAGE-2 verification of a
+   * parsed submission's evidence, per the processing order: the semantic
+   * `intent` is already validated, so the PROVISIONAL `intent_hash` is
+   * computed here and handed to each type's verifier together with this
+   * issuer, the presenter the containing exchange established, and the
+   * kernel clock. `required` is the policy-resolved anti-downgrade set (a
+   * required type absent => refused). Returns the normalized verified facts
+   * the Mission Record lands (undefined when no evidence was presented and
+   * none is required). On idempotent operations the caller MUST run its
+   * completed-operation recovery lookup BEFORE this.
+   */
+  async verifySubmissionEvidence(input: {
+    intent: MissionIntent;
+    evidence?: IntentSubmissionEvidenceEntry[];
+    presenter: IntentSubmissionPresenter;
+    required?: readonly string[];
+    requestContext?: Record<string, unknown>;
+  }): Promise<IntentSubmissionEvidenceFact[] | undefined> {
+    return verifyIntentSubmissionEvidence(
+      input.evidence,
+      {
+        intentHash: provisionalIntentHash(this.opts.issuer, input.intent),
+        issuer: this.opts.issuer,
+        presenter: input.presenter,
+        now: this.now(),
+        ...(input.requestContext ? { requestContext: input.requestContext } : {}),
+      },
+      input.required ?? [],
+    );
   }
 
   derive(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): AuthorityEntry[] {
@@ -226,6 +288,9 @@ export class MissionKernel {
       authority_set: authoritySet,
       intent_hash: intentHash(this.opts.issuer, input.intent as never),
       ...(proposal ? { proposal_hash: proposalHash(this.opts.issuer, proposal as never) } : {}),
+      // @spec mission#intent-submission-evidence — verified facts land on the
+      // record only (never in any anchor input above).
+      ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),
       authority_hash: authorityHashValue,
       subject: input.subject,
       approver: input.approver,
@@ -265,8 +330,8 @@ export class MissionKernel {
            approval_basis_json, client_id,
            policy_version, approval_event_id, created_at, expires_at, version, max_derivations,
            derivation_count, grant_id, predecessor, parent_id, parent_json, template_id,
-           template_json, projected_from)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           template_json, projected_from, submission_evidence_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -309,6 +374,9 @@ export class MissionKernel {
           // @spec child-delegation#child-state: a fresh Mission is never a
           // projected-suspended hold; the marker is written later by setState.
           record.projected_from ?? null,
+          // @spec mission#intent-submission-evidence — verified facts, immutable
+          // after creation (like approval_basis), written only here.
+          record.submission_evidence ? JSON.stringify(record.submission_evidence) : null,
         );
     });
     // The activating event: version 1, no prior_state. Shared by approve() and
@@ -1068,6 +1136,13 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     authority_set: JSON.parse(row.authority_set_json as string) as AuthorityEntry[],
     intent_hash: row.intent_hash as string,
     ...(row.proposal_hash ? { proposal_hash: row.proposal_hash as string } : {}),
+    ...(row.submission_evidence_json
+      ? {
+          submission_evidence: JSON.parse(
+            row.submission_evidence_json as string,
+          ) as IntentSubmissionEvidenceFact[],
+        }
+      : {}),
     authority_hash: row.authority_hash as string,
     subject: { iss: row.subject_iss as string, sub: row.subject_sub as string },
     approver: { iss: row.approver_iss as string, sub: row.approver_sub as string },

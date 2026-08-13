@@ -39,6 +39,7 @@ import {
   type ChildEvidence,
   type ChildFanoutControls,
   type MissionIntent,
+  type IntentSubmissionEvidenceFact,
   type MissionRecord,
   type ParentRef,
   TERMINAL_STATES,
@@ -115,6 +116,12 @@ export interface CreateChildInput {
   cascadeMode?: CascadeMode;
   /** Optional Mission-Issuer-defined identifier for the delegation event. */
   delegationId?: string;
+  /**
+   * @spec mission#intent-submission-evidence — the VERIFIED Intent Submission
+   * Evidence facts of the child submission (stage-2 output). Landed on the
+   * child record's `submission_evidence`, outside all anchors.
+   */
+  submissionEvidence?: IntentSubmissionEvidenceFact[];
 }
 
 export interface ChildResult {
@@ -439,6 +446,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     authority_set: childAuthority,
     intent_hash: intentHash(parent.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(parent.issuer, proposal as never) } : {}),
+    ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),
     // @spec child-delegation#attenuation — authority_hash over the CHILD set.
     authority_hash: childAuthorityHash,
     // Subject and human accountability are inherited from the Parent Mission

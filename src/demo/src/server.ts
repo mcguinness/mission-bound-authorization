@@ -109,10 +109,14 @@ async function main() {
   // The mission covers reading, wire execution, and remittance (the JIT-gated
   // action). The base token + its DPoP key are held server-side to drive the
   // resource calls and the AROP transaction endpoint.
+  // The wire value is the Mission Intent Submission envelope; the semantic
+  // task context is its `intent` member.
   const missionIntent = JSON.stringify({
-    goal: "Pay approved Acme invoices and send remittance",
-    resources: [CANONICAL_RESOURCE],
-    expires_at: "2027-01-01T00:00:00Z",
+    intent: {
+      goal: "Pay approved Acme invoices and send remittance",
+      resources: [CANONICAL_RESOURCE],
+      expires_at: "2027-01-01T00:00:00Z",
+    },
   });
   // The authority proposal rides the standard RFC 9396 authorization_details
   // parameter, pushed through PAR alongside mission_intent.
@@ -489,7 +493,9 @@ async function main() {
   // enriched approver queue surfaces it as a type:"mission" entry (goal + derived).
   app.post("/agent/submit", async (c) => {
     const b = await readJson(c);
-    const missionIntent = typeof b.intent === "string" ? b.intent : JSON.stringify(b.intent ?? {});
+    // The shaper proposes the SEMANTIC Intent; the wire submission is the
+    // Mission Intent Submission envelope wrapped below.
+    const semanticIntent = typeof b.intent === "string" ? b.intent : JSON.stringify(b.intent ?? {});
     const rawDetails = b.authorization_details;
     const authorizationDetails =
       rawDetails == null ? undefined : typeof rawDetails === "string" ? rawDetails : JSON.stringify(rawDetails);
@@ -497,13 +503,15 @@ async function main() {
     // the approver the goal and the authority they are about to grant.
     let goal: string;
     let derived: AuthEntry[];
+    let missionIntent: string;
     try {
-      const parsed = stack.kernel.validateIntent(missionIntent);
+      const parsed = stack.kernel.validateIntent(semanticIntent);
       const proposal = authorizationDetails
         ? stack.kernel.validateProposal(authorizationDetails, parsed.resources)
         : undefined;
       derived = stack.kernel.derive(parsed, proposal) as unknown as AuthEntry[];
       goal = String((parsed as unknown as { goal?: unknown }).goal ?? "");
+      missionIntent = JSON.stringify({ intent: parsed });
     } catch (e) {
       return c.json({ error: (e as Error).message }, 400);
     }

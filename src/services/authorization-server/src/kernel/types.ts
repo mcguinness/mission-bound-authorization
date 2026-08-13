@@ -20,6 +20,55 @@ export interface MissionIntent {
 }
 
 /**
+ * @spec mission#submission-via-par, mission#intent-submission-evidence — one
+ * presented Intent Submission Evidence entry: a typed artifact submitted in
+ * support of claims about the Intent (inbound, client-presented — distinct
+ * from the family's EMITTED Evidence objects). The REQUIRED `type` owns the
+ * entry's remaining members, closed schema, and verification procedure (the
+ * RAR type-dispatch discipline); an unknown type or an entry failing its
+ * type's validation is refused, never silently ignored. Evidence is
+ * authenticated policy input, never authority: it is never copied into the
+ * Authority Set and never substitutes for the approval event.
+ */
+export type IntentSubmissionEvidenceEntry = {
+  type: string;
+} & {
+  [k: string]: JsonValue | undefined;
+};
+
+/**
+ * @spec mission#submission-via-par — the Mission Intent Submission envelope:
+ * the VALUE of the `mission_intent` parameter. Its own closed top level:
+ * `intent` (the semantic Mission Intent, the exact object `intent_hash`
+ * commits) and OPTIONAL `evidence` (Intent Submission Evidence entries,
+ * outside the `intent_hash` commitment, so intent-bound evidence can name the
+ * hash without self-reference). The retired bare-Intent parameter shape is
+ * refused.
+ */
+export interface MissionIntentSubmission {
+  intent: MissionIntent;
+  /** Present iff a non-empty `evidence` array was submitted. */
+  evidence?: IntentSubmissionEvidenceEntry[];
+}
+
+/**
+ * @spec mission#intent-submission-evidence — one VERIFIED evidence fact as the
+ * Mission Record lands it: the entry type, the digest of the presented
+ * artifact, the verification time, and the type-defined verified output facts.
+ * Recorded provenance metadata OUTSIDE every integrity anchor (the
+ * `approval_basis` treatment): trusted via the Mission Issuer's immutable
+ * record, not an independently verifiable association. Empty in this
+ * implementation today — no evidence types are registered, so every presented
+ * entry is refused before verification — but the record plumbing is real.
+ */
+export interface IntentSubmissionEvidenceFact {
+  type: string;
+  artifact_hash: string;
+  verified_at: string;
+  facts?: Record<string, JsonValue>;
+}
+
+/**
  * @spec attenuation#root-mapping, child-delegation#fanout — a delegate matcher:
  * the actor (or actor class) a delegation right may be conferred on. Matched by
  * `sub` (exact) or `sub_profile` (class membership). Shared shape between the
@@ -340,6 +389,16 @@ export interface MissionRecord {
    * and is NOT carried on the `mission` token claim.
    */
   proposal_hash?: string;
+  /**
+   * @spec mission#intent-submission-evidence — the VERIFIED Intent Submission
+   * Evidence facts recorded at approval (present iff any evidence verified).
+   * Provenance metadata OUTSIDE all integrity anchors — never folded into
+   * `intent_hash` or `authority_hash` — trusted via this immutable record (the
+   * `approval_basis` treatment), and never carried on the `mission` token
+   * claim. Always absent today: no evidence types are registered, so every
+   * presented entry is refused at intake before verification.
+   */
+  submission_evidence?: IntentSubmissionEvidenceFact[];
   subject: { iss: string; sub: string };
   approver: { iss: string; sub: string };
   /**

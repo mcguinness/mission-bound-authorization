@@ -21,7 +21,11 @@ export interface DpopKeys {
 }
 
 export interface IssueOpts {
-  /** The untrusted mission_intent task context (JSON string), carried via PAR. */
+  /**
+   * The untrusted `mission_intent` parameter VALUE, carried via PAR: the
+   * Mission Intent Submission envelope `{intent, evidence?}` as a JSON string
+   * (the semantic task context is its `intent` member).
+   */
   missionIntent: string;
   /**
    * @spec mission#authority-proposal — the authority proposal: a JSON string

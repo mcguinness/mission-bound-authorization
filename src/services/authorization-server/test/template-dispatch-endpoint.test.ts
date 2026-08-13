@@ -127,11 +127,14 @@ function readOnlyTemplateBody(): Record<string, unknown> {
 }
 
 /** A read-only Mission Intent: invoice.read only, within both ceilings. */
+// @spec mission#submission-via-par — the wire value is the Submission envelope.
 function readOnlyIntent(): string {
   return JSON.stringify({
-    goal: "reconcile Acme invoices",
-    resources: [RESOURCE],
-    expires_at: FAR_FUTURE,
+    intent: {
+      goal: "reconcile Acme invoices",
+      resources: [RESOURCE],
+      expires_at: FAR_FUTURE,
+    },
   });
 }
 
@@ -256,9 +259,11 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     // FIRST derivation succeeds) but is dropped from the read-only template's
     // ceiling (only .read/.list actions survive there).
     const intent = JSON.stringify({
-      goal: "schedule a payment",
-      resources: [RESOURCE],
-      expires_at: FAR_FUTURE,
+      intent: {
+        goal: "schedule a payment",
+        resources: [RESOURCE],
+        expires_at: FAR_FUTURE,
+      },
     });
     const res = await dispatch({
       templateId: template_id,
@@ -294,9 +299,11 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     expect(DISPATCH_PROHIBITED_ACTIONS).toContain("payments:payment.execute");
 
     const intent = JSON.stringify({
-      goal: "execute a payment",
-      resources: [RESOURCE],
-      expires_at: FAR_FUTURE,
+      intent: {
+        goal: "execute a payment",
+        resources: [RESOURCE],
+        expires_at: FAR_FUTURE,
+      },
     });
     const res = await dispatch({ templateId: template_id, intent, dispatchEventId: "evt-prohibited" });
     const body = (await res.json()) as { mission_denial_reason?: string };

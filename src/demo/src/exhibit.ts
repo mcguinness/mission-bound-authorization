@@ -371,9 +371,10 @@ function aamTemplateBody(issuer: string, seq: number): Record<string, unknown> {
   };
 }
 
-/** A request pair: the task-context mission_intent plus the authority proposal
- *  that rides beside it as the standard RFC 9396 authorization_details
- *  parameter (both JSON strings, exactly as they go on the wire). */
+/** A request pair: the mission_intent Submission envelope ({intent} — the
+ *  task context is its `intent` member) plus the authority proposal that rides
+ *  beside it as the standard RFC 9396 authorization_details parameter (both
+ *  JSON strings, exactly as they go on the wire). */
 interface IntentPair {
   missionIntent: string;
   authorizationDetails: string;
@@ -386,9 +387,11 @@ interface IntentPair {
 function aamLowConsequenceIntent(): IntentPair {
   return {
     missionIntent: JSON.stringify({
-      goal: "nightly reconciliation of Acme invoices (read-only)",
-      resources: [CANONICAL_RESOURCE],
-      expires_at: AAM_FAR_FUTURE,
+      intent: {
+        goal: "nightly reconciliation of Acme invoices (read-only)",
+        resources: [CANONICAL_RESOURCE],
+        expires_at: AAM_FAR_FUTURE,
+      },
     }),
     authorizationDetails: JSON.stringify([
       {
@@ -412,9 +415,11 @@ function aamLowConsequenceIntent(): IntentPair {
 function aamIntent(): IntentPair {
   return {
     missionIntent: JSON.stringify({
-      goal: "nightly reconciliation of Acme invoices",
-      resources: [CANONICAL_RESOURCE],
-      expires_at: AAM_FAR_FUTURE,
+      intent: {
+        goal: "nightly reconciliation of Acme invoices",
+        resources: [CANONICAL_RESOURCE],
+        expires_at: AAM_FAR_FUTURE,
+      },
     }),
     authorizationDetails: JSON.stringify([
       {
@@ -432,9 +437,11 @@ function aamIntent(): IntentPair {
 function aamOverCeilingIntent(): IntentPair {
   return {
     missionIntent: JSON.stringify({
-      goal: "schedule a payment (exceeds the reconciliation ceiling)",
-      resources: [CANONICAL_RESOURCE],
-      expires_at: AAM_FAR_FUTURE,
+      intent: {
+        goal: "schedule a payment (exceeds the reconciliation ceiling)",
+        resources: [CANONICAL_RESOURCE],
+        expires_at: AAM_FAR_FUTURE,
+      },
     }),
     authorizationDetails: JSON.stringify([
       {
@@ -1077,10 +1084,14 @@ async function main() {
     "nothing is granted here; the proposal is untrusted input the issuer will bound at approval.",
   );
   hop("Agent", "Agent (self)", "compose mission_intent + authorization_details", "in-process; submitted via PAR in step 2");
+  // The wire value is the Mission Intent Submission envelope; the semantic
+  // task context is its `intent` member (what intent_hash commits).
   const missionIntent = JSON.stringify({
-    goal: "Pay approved Acme invoices for Q3 and post the corresponding ledger entries",
-    resources: [CANONICAL_RESOURCE, SAAS_RESOURCE],
-    expires_at: "2027-01-01T00:00:00Z",
+    intent: {
+      goal: "Pay approved Acme invoices for Q3 and post the corresponding ledger entries",
+      resources: [CANONICAL_RESOURCE, SAAS_RESOURCE],
+      expires_at: "2027-01-01T00:00:00Z",
+    },
   });
   // The authority proposal rides the standard RFC 9396 authorization_details
   // request parameter pushed beside mission_intent, never inside the Intent.
@@ -1099,7 +1110,7 @@ async function main() {
       actions: ["ledger:vendor.read", "ledger:journal.write"],
     },
   ]);
-  block("mission_intent (submitted via PAR, mission_intent parameter)", JSON.parse(missionIntent));
+  block("mission_intent (the Submission envelope, submitted via PAR)", JSON.parse(missionIntent));
   block("authorization_details (submitted via PAR, standard RFC 9396 parameter)", JSON.parse(authorizationDetails));
   note("This is a proposal. Nothing here grants authority; the issuer derives and bounds it at approval.");
 

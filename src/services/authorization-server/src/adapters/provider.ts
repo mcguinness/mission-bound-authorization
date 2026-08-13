@@ -29,6 +29,48 @@ import Provider, { errors, type Configuration, type KoaContextWithOIDC, type Res
 export const InvalidAuthorizationDetails = (errors as unknown as {
   InvalidAuthorizationDetails: new (message?: string) => Error;
 }).InvalidAuthorizationDetails;
+
+/**
+ * @spec mission#intent-submission-evidence — `invalid_mission_intent_evidence`,
+ * the core-registered OAuth error for Intent Submission Evidence dispatch
+ * failures (an entry of an unsupported `type`, an entry failing its type's
+ * validation, a policy-required type absent). Envelope STRUCTURAL failures
+ * (bare shape, unknown member, missing `type`, bounds) stay invalid_request.
+ */
+export class InvalidMissionIntentEvidence extends errors.CustomOIDCProviderError {
+  constructor(description?: string) {
+    super("invalid_mission_intent_evidence", description);
+  }
+}
+
+/** Map an intake {@link IntentError} onto its OAuth error class. */
+export function intentErrorToOidc(e: IntentError): Error {
+  switch (e.code) {
+    case "invalid_authorization_details":
+      return new InvalidAuthorizationDetails(e.message);
+    case "invalid_mission_intent_evidence":
+      return new InvalidMissionIntentEvidence(e.message);
+    default:
+      return new errors.InvalidRequest(e.message);
+  }
+}
+
+/**
+ * @spec mission#intent-submission-evidence — resolve the policy-REQUIRED
+ * evidence types for a submission (the anti-downgrade hook), BEFORE
+ * derivation: the deployment-global set
+ * ({@link AdapterOptions.requiredIntentEvidenceTypes}) unioned with the
+ * presenting client's registered `required_intent_evidence_types` metadata.
+ */
+export function requiredEvidenceTypesFor(opts: AdapterOptions, clientMeta?: unknown): string[] {
+  const set = new Set(opts.requiredIntentEvidenceTypes ?? []);
+  const per = (clientMeta as { required_intent_evidence_types?: unknown } | undefined)
+    ?.required_intent_evidence_types;
+  if (Array.isArray(per)) {
+    for (const t of per) if (typeof t === "string") set.add(t);
+  }
+  return [...set];
+}
 import {
   DEFERRED_GRANT_TYPE,
   DeferralError,
@@ -97,6 +139,16 @@ export interface AdapterOptions {
   publicJwks: { keys: Record<string, unknown>[] };
   /** Test-only headless adjudication (D40): disabled unless set. */
   allowHeadlessAdjudication?: boolean;
+  /**
+   * @spec mission#intent-submission-evidence — the GLOBAL policy-required
+   * Intent Submission Evidence types (the anti-downgrade hook): resolved
+   * BEFORE derivation on every submission carrier, unioned with the
+   * presenting client's registered `required_intent_evidence_types`. A
+   * required type absent from a submission refuses it
+   * (invalid_mission_intent_evidence); success without evidence never
+   * satisfies a requirement. Empty as shipped (no evidence types exist).
+   */
+  requiredIntentEvidenceTypes?: string[];
   approverRoleSubs: Set<string>;
   /** Access-token lifetime (seconds) for issued mission tokens. Default 300. */
   accessTokenTTL?: number;
@@ -339,7 +391,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
     // oidc-provider retains it on the client registration; read by the RAR
     // validate hook below to reject a governed client's bare
     // authorization_details request.
-    extraClientMetadata: { properties: ["mission_governed"] },
+    extraClientMetadata: { properties: ["mission_governed", "required_intent_evidence_types"] },
     async findAccount(_ctx, id) {
       const user = USERS.find((u) => u.sub === id);
       return {
@@ -432,17 +484,24 @@ export function buildProvider(opts: AdapterOptions): Provider {
       },
     },
     extraParams: {
-      // @spec mission#submission-via-par — PAR-only carriage. Concrete authority
-      // is proposed via the standard authorization_details parameter pushed
-      // alongside mission_intent (@spec mission#authority-proposal); the Intent
-      // itself carries no authority members (an Intent with the retired
-      // proposed_authority member fails the closed-top-level rule in
-      // validateIntent).
+      // @spec mission#submission-via-par — PAR-only carriage. The parameter
+      // VALUE is the Mission Intent Submission envelope {intent, evidence?}:
+      // the bare-Intent shape is refused, presented evidence is typed and
+      // bounded (unknown type refused, never silently ignored), and
+      // intent_hash commits exactly the inner semantic `intent`. Concrete
+      // authority is proposed via the standard authorization_details parameter
+      // pushed alongside mission_intent (@spec mission#authority-proposal);
+      // the Intent itself carries no authority members (an Intent with the
+      // retired proposed_authority member fails the closed-top-level rule).
       async mission_intent(ctx, value) {
         if (value === undefined) return;
-        const params = (ctx as { oidc: { params: Record<string, unknown> } }).oidc.params;
+        const oidc = (ctx as {
+          oidc: { params: Record<string, unknown>; client?: { clientId: string } };
+        }).oidc;
+        const params = oidc.params;
         try {
-          const intent = kernel.validateIntent(String(value));
+          const submission = kernel.validateSubmission(String(value));
+          const { intent } = submission;
           // @spec mission#authority-proposal — the intake cross-check that needs
           // the parsed Intent: each proposed entry's resource MUST be among the
           // Intent's resources (invalid_request), the array strict-parses
@@ -453,11 +512,23 @@ export function buildProvider(opts: AdapterOptions): Provider {
           if (typeof proposalRaw === "string") {
             kernel.validateProposal(proposalRaw, intent.resources);
           }
+          // @spec mission#intent-submission-evidence — STAGE-2 verification at
+          // submission time (required types resolved BEFORE derivation; the
+          // presenter is the PAR-authenticated client, no cnf at this carrier).
+          // The verified FACTS recorded at approval are re-derived at decide()
+          // from the interaction's immutable pushed parameters (the same
+          // TOCTOU rule as the proposal re-derivation).
+          const clientId = oidc.client?.clientId ?? String(params.client_id ?? "");
+          await kernel.verifySubmissionEvidence({
+            intent,
+            ...(submission.evidence ? { evidence: submission.evidence } : {}),
+            presenter: { clientId },
+            required: requiredEvidenceTypesFor(opts, oidc.client),
+            requestContext: { carrier: "par" },
+          });
         } catch (e) {
           if (e instanceof IntentError) {
-            throw e.code === "invalid_request"
-              ? new errors.InvalidRequest(e.message)
-              : new InvalidAuthorizationDetails(e.message);
+            throw intentErrorToOidc(e);
           }
           throw e;
         }
@@ -1056,7 +1127,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     if (interactionMatch && ctx.method === "GET") {
       const details = await provider.interactionDetails(ctx.req, ctx.res);
       const params = details.params as Record<string, unknown>;
-      const intent = kernel.validateIntent(String(params.mission_intent));
+      // @spec mission#submission-via-par — the pushed parameter is the
+      // Submission envelope; the approval renders the SEMANTIC intent (the
+      // object intent_hash commits), never the envelope.
+      const submission = kernel.validateSubmission(String(params.mission_intent));
+      const intent = submission.intent;
       // @spec mission#authority-proposal — the proposal rides the pushed
       // authorization_details parameter; the rendering distinguishes the
       // submitted proposal (untrusted) from the derived Authority Set (what
@@ -1066,9 +1141,34 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ? kernel.validateProposal(params.authorization_details, intent.resources)
           : undefined;
       const authority = kernel.derive(intent, proposal);
+      // @spec mission#intent-submission-evidence — MATERIAL verified
+      // provenance is INPUT to the approval rendering: the Approver sees the
+      // normalized verified facts (never the raw artifacts), re-verified from
+      // the interaction's immutable pushed parameters. Evidence whose validity
+      // LAPSED since the push (freshness/status) refuses here, before render.
+      let provenance: Awaited<ReturnType<typeof kernel.verifySubmissionEvidence>>;
+      try {
+        provenance = await kernel.verifySubmissionEvidence({
+          intent,
+          ...(submission.evidence ? { evidence: submission.evidence } : {}),
+          presenter: { clientId: String(params.client_id ?? "") },
+          required: requiredEvidenceTypesFor(
+            opts,
+            opts.clients.find((c) => c.client_id === params.client_id),
+          ),
+          requestContext: { carrier: "par" },
+        });
+      } catch (e) {
+        if (e instanceof IntentError) {
+          ctx.status = 400;
+          ctx.body = { error: e.code, error_description: e.message };
+          return;
+        }
+        throw e;
+      }
       ctx.status = 200;
       ctx.set("content-type", "text/html; charset=utf-8");
-      ctx.body = renderApprovalPage(interactionMatch[1] as string, intent, authority, proposal);
+      ctx.body = renderApprovalPage(interactionMatch[1] as string, intent, authority, proposal, provenance);
       return;
     }
     const decideMatch = ctx.path.match(/^\/interaction\/([^/]+)\/decide$/);
@@ -1856,13 +1956,42 @@ async function handleMissionDispatchGrant(
     return;
   }
 
-  let intent: MissionIntent;
+  // @spec mission#submission-via-par — this carrier adopts the Submission
+  // envelope: `mission_intent` carries {intent, evidence?}.
+  let submission: ReturnType<typeof kernel.validateSubmission>;
   try {
-    intent = kernel.validateIntent(missionIntentRaw);
+    submission = kernel.validateSubmission(missionIntentRaw);
   } catch (e) {
     ctx.status = 400;
-    ctx.body = { error: "invalid_request", error_description: e instanceof Error ? e.message : "invalid mission_intent" };
+    ctx.body = {
+      error: e instanceof IntentError ? e.code : "invalid_request",
+      error_description: e instanceof Error ? e.message : "invalid mission_intent",
+    };
     return;
+  }
+  const intent = submission.intent;
+  // @spec mission#intent-submission-evidence — STAGE-2 verification (required
+  // types resolved BEFORE derivation; the presenter is the AUTHENTICATED
+  // dispatcher). Dispatch has its own idempotency (dispatch_event_id inside
+  // dispatchFromTemplate) but no D69 creation fingerprint; verification runs
+  // here on every dispatch request, and a retried dispatch of a completed
+  // event recovers below regardless of these facts (same instance returned).
+  let submissionEvidence: Awaited<ReturnType<typeof kernel.verifySubmissionEvidence>>;
+  try {
+    submissionEvidence = await kernel.verifySubmissionEvidence({
+      intent,
+      ...(submission.evidence ? { evidence: submission.evidence } : {}),
+      presenter: { clientId: client.clientId },
+      required: requiredEvidenceTypesFor(opts, client),
+      requestContext: { carrier: "mission-dispatch" },
+    });
+  } catch (e) {
+    if (e instanceof IntentError) {
+      ctx.status = 400;
+      ctx.body = { error: e.code, error_description: e.message };
+      return;
+    }
+    throw e;
   }
 
   // @spec mission#authority-proposal — the dispatcher's authority proposal
@@ -1903,6 +2032,7 @@ async function handleMissionDispatchGrant(
       recipient,
       intent,
       ...(proposedAuthority ? { proposedAuthority } : {}),
+      ...(submissionEvidence?.length ? { submissionEvidence } : {}),
       subject: { iss: template.issuer, sub: template.approver.sub },
       policyVersion: DERIVATION_POLICY.policy_version,
       dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,
@@ -2011,7 +2141,35 @@ async function decide(
 ) {
   const details = await provider.interactionDetails(ctx.req, ctx.res);
   const params = details.params as Record<string, unknown>;
-  const intent = opts.kernel.validateIntent(String(params.mission_intent));
+  // @spec mission#submission-via-par — re-parse the pushed Submission envelope;
+  // approval and intent_hash cover exactly the semantic `intent`.
+  const submission = opts.kernel.validateSubmission(String(params.mission_intent));
+  const intent = submission.intent;
+  // @spec mission#intent-submission-evidence — STAGE-2 verification re-runs at
+  // the DECISION over the interaction's immutable pushed parameters (the same
+  // TOCTOU rule as the proposal/derivation re-computation below): the facts
+  // recorded on the Mission are the ones verified in the approved context, and
+  // evidence that expired between rendering and decision refuses here.
+  let submissionEvidence: Awaited<ReturnType<typeof opts.kernel.verifySubmissionEvidence>>;
+  try {
+    submissionEvidence = await opts.kernel.verifySubmissionEvidence({
+      intent,
+      ...(submission.evidence ? { evidence: submission.evidence } : {}),
+      presenter: { clientId: String(params.client_id ?? "") },
+      required: requiredEvidenceTypesFor(
+        opts,
+        opts.clients.find((c) => c.client_id === params.client_id),
+      ),
+      requestContext: { carrier: "par" },
+    });
+  } catch (e) {
+    if (e instanceof IntentError) {
+      ctx.status = 400;
+      ctx.body = { error: e.code, error_description: e.message };
+      return;
+    }
+    throw e;
+  }
   // @spec mission#authority-proposal, mission#integrity-anchors (TOCTOU) — the
   // task and the proposal are re-read from the interaction's pushed parameters
   // (immutable for the life of the interaction uid) and the Authority Set is
@@ -2048,6 +2206,10 @@ async function decide(
   const record = opts.kernel.approve({
     intent: intent as MissionIntent,
     ...(proposedAuthority ? { proposedAuthority } : {}),
+    // @spec mission#intent-submission-evidence — the verified facts land on
+    // the Mission Record (outside all anchors), request-derived, never
+    // fabricated downstream.
+    ...(submissionEvidence?.length ? { submissionEvidence } : {}),
     subject: { iss: opts.issuer, sub: subject },
     approver: { iss: opts.issuer, sub: approver },
     clientId: String(params.client_id),
@@ -2074,17 +2236,30 @@ async function decide(
   });
 }
 
-function renderApprovalPage(uid: string, intent: unknown, authority: unknown, proposal?: unknown): string {
+function renderApprovalPage(
+  uid: string,
+  intent: unknown,
+  authority: unknown,
+  proposal?: unknown,
+  provenance?: unknown[],
+): string {
   // @spec mission#approval-event — the rendering distinguishes the submitted
   // proposal (untrusted client input) from the derived Authority Set (what
   // approval grants); the proposal section appears only when one was submitted.
   const proposalSection = proposal
     ? `<h2>Proposed authority (submitted, untrusted)</h2><pre>${escapeHtml(JSON.stringify(proposal, null, 2))}</pre>`
     : "";
+  // @spec mission#intent-submission-evidence — MATERIAL verified provenance is
+  // rendered to the Approver as normalized FACTS (never raw artifacts); the
+  // section appears only when evidence verified.
+  const provenanceSection = provenance?.length
+    ? `<h2>Verified intent provenance</h2><pre>${escapeHtml(JSON.stringify(provenance, null, 2))}</pre>`
+    : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
 <h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
 ${proposalSection}
+${provenanceSection}
 <h2>Derived authority (what approval grants)</h2><pre>${escapeHtml(JSON.stringify(authority, null, 2))}</pre>
 <form method="post" action="/interaction/${uid}/decide" enctype="application/json">
 <button name="decision" value="approve">Approve</button>

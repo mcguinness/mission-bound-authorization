@@ -154,10 +154,13 @@ async function issueBaseMission(expiresAt: string = FAR_EXP): Promise<{
   const challenge = Buffer.from(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
   ).toString("base64url");
+  // @spec mission#submission-via-par — the wire value is the Submission envelope.
   const intent = JSON.stringify({
-    goal: "Pay Acme invoices and send remittance",
-    resources: [RESOURCE],
-    expires_at: expiresAt,
+    intent: {
+      goal: "Pay Acme invoices and send remittance",
+      resources: [RESOURCE],
+      expires_at: expiresAt,
+    },
   });
   const par = await fetch(`${ISSUER}/request`, {
     method: "POST",
@@ -286,9 +289,11 @@ async function createChildViaExchange(subjectToken: string, parentId: string): P
     creation_request_id: crypto.randomUUID(),
     parent: parentId,
     mission_intent: JSON.stringify({
-      goal: "Extract Acme invoices",
-      resources: [RESOURCE],
-      expires_at: FAR_EXP,
+      intent: {
+        goal: "Extract Acme invoices",
+        resources: [RESOURCE],
+        expires_at: FAR_EXP,
+      },
     }),
     authorization_details: JSON.stringify(confinedAuthority()),
     child_actor: JSON.stringify({ sub: "subagent-invoice-extractor", sub_profile: "ai_agent" }),

@@ -224,7 +224,9 @@ async function refreshFamily(refreshToken: string): Promise<Response> {
  * prohibited-class rule requires for payments:remittance.send.
  */
 function approveHumanMission(intentJson: string, proposedAuthority?: AuthorityEntry[]): { id: string } {
-  const intent = as.kernel.validateIntent(intentJson);
+  // The SAME wire string the Dispatch submitted (the Submission envelope) is
+  // reused unmodified: parse it as the envelope and approve its semantic intent.
+  const intent = as.kernel.validateSubmission(intentJson).intent;
   const record = as.kernel.approve({
     intent,
     ...(proposedAuthority ? { proposedAuthority } : {}),
@@ -294,9 +296,11 @@ function lowConsequenceProposal(): AuthorityEntry[] {
 
 function lowConsequenceIntent(): string {
   return JSON.stringify({
-    goal: "nightly reconciliation of Acme invoices (read-only)",
-    resources: [RESOURCE],
-    expires_at: FAR_FUTURE,
+    intent: {
+      goal: "nightly reconciliation of Acme invoices (read-only)",
+      resources: [RESOURCE],
+      expires_at: FAR_FUTURE,
+    },
   });
 }
 
@@ -321,9 +325,11 @@ function reconciliationProposal(): AuthorityEntry[] {
 
 function reconciliationIntent(): string {
   return JSON.stringify({
-    goal: "nightly reconciliation of Acme invoices",
-    resources: [RESOURCE],
-    expires_at: FAR_FUTURE,
+    intent: {
+      goal: "nightly reconciliation of Acme invoices",
+      resources: [RESOURCE],
+      expires_at: FAR_FUTURE,
+    },
   });
 }
 
@@ -342,9 +348,11 @@ function overCeilingProposal(): AuthorityEntry[] {
 
 function overCeilingIntent(): string {
   return JSON.stringify({
-    goal: "schedule a payment (exceeds the reconciliation ceiling)",
-    resources: [RESOURCE],
-    expires_at: FAR_FUTURE,
+    intent: {
+      goal: "schedule a payment (exceeds the reconciliation ceiling)",
+      resources: [RESOURCE],
+      expires_at: FAR_FUTURE,
+    },
   });
 }
 

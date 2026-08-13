@@ -46,7 +46,24 @@ export {
   type IngestionEvidenceInput,
 } from "./kernel/issuer-evidence.js";
 export type { ProtectedEventSource } from "./adapters/provider.js";
-export { validateAuthorityProposal, validateMissionIntent, IntentError } from "./kernel/intent.js";
+export {
+  DEFAULT_MAX_EVIDENCE_ENTRIES,
+  DEFAULT_MAX_EVIDENCE_ENTRY_BYTES,
+  INTENT_SUBMISSION_EVIDENCE_TYPES,
+  IntentError,
+  type IntentSubmissionEvidenceType,
+  type IntentSubmissionEvidenceVerifyInput,
+  type IntentSubmissionPresenter,
+  provisionalIntentHash,
+  registerIntentSubmissionEvidenceType,
+  type SubmissionEvidenceBounds,
+  unregisterIntentSubmissionEvidenceType,
+  validateAuthorityProposal,
+  validateIntentSubmissionEvidence,
+  validateMissionIntent,
+  validateMissionIntentSubmission,
+  verifyIntentSubmissionEvidence,
+} from "./kernel/intent.js";
 export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
 export { delegatePermitted, type DelegateCandidate } from "./kernel/delegate-matcher.js";
 export {
@@ -333,6 +350,13 @@ export interface BuiltAs {
 export async function buildAuthorizationServer(opts: {
   issuer: string;
   allowHeadlessAdjudication?: boolean;
+  /**
+   * @spec mission#intent-submission-evidence — the deployment-GLOBAL
+   * policy-required Intent Submission Evidence types (the anti-downgrade
+   * hook), unioned per submission with the presenting client's registered
+   * `required_intent_evidence_types`. Empty as shipped.
+   */
+  requiredIntentEvidenceTypes?: string[];
   /** The resource's txn-challenge keys, for the transaction endpoint. */
   resourceTxnJwks?: { keys: JWK[] };
   /** AROP transaction task store (AS vouches; owns the txn pending id, D37). */
@@ -524,6 +548,9 @@ export async function buildAuthorizationServer(opts: {
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
+    ...(opts.requiredIntentEvidenceTypes
+      ? { requiredIntentEvidenceTypes: opts.requiredIntentEvidenceTypes }
+      : {}),
     approverRoleSubs: new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub)),
     accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
     txnKey: txnKeys.privateKey,
