@@ -50,6 +50,7 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
@@ -515,6 +516,42 @@ the same `mission` claim and dies with the same Mission. Use offline
 attenuation when a sub-agent needs a narrower token under the same
 Mission, fast, at fan-out scale; use a Child Mission when it needs its
 own durable, separately revocable Mission.
+
+# Actor Attribution on the Chain {#actor-attribution}
+
+The chain identifies holders by key possession: each token binds its
+holder through `cnf`, and possession is proven at use. This document
+defines no actor-identity member on chain tokens. A profile that adds
+named-actor attribution to chain artifacts, as cross-organizational
+delegation requires, is bound by the following model.
+
+Each artifact names only its own hop's actor. The complete actor
+history is reconstructed from the validated root-to-leaf chain; it is
+never duplicated as a nested history inside each artifact, and a
+consumer MUST reject a chain that presents conflicting or duplicated
+actor representations. A materialized nested `act` projection
+({{RFC8693}}, shaped per the Actor Profile,
+{{I-D.draft-mcguinness-oauth-actor-profile}}) is constructed from the
+validated chain at a consuming boundary, a PDP, an introspection
+responder, or a destination Authorization Server; it is not carried
+on the artifacts.
+
+The root actor is asserted by the Mission Issuer and bound to the
+root presenter key: the root names the originally approved agent, so
+the approved-agent identity travels with the chain instead of resting
+on a Mission Record the verifier may not hold. A parent signature on
+a later hop proves only that the parent delegated to the child key;
+it does not authenticate the identity values the parent asserts. A
+named actor on a holder-created hop therefore counts only when the
+issuer-qualified actor identifier is independently bound to that
+hop's `cnf` key through a validated workload credential or
+attestation. Absent that binding the hop is key-only: its asserted
+identity is informational provenance at most and MUST NOT satisfy an
+eligibility matcher (the issuance profile's `allowed_delegates` or a
+`sub_profile` selector, {{I-D.draft-mcguinness-oauth-mission}}) or
+otherwise influence authorization; where policy requires a named
+actor and the binding is absent or invalid, verification fails
+closed.
 
 # Worked Example {#example}
 

@@ -4,12 +4,52 @@
     "revision": "fdfaa5b"
   },
   "model": {
-    "roles": ["AS", "client", "RS", "PDP", "PEP", "verifier"],
-    "strengths": ["MUST", "MUST NOT", "SHOULD", "MAY", "stated"],
-    "assertions": ["refusal", "ignore", "output-bound", "no-side-effect", "replay", "privacy", "concurrency"],
-    "surfaces": ["par", "authorization-endpoint", "token-endpoint", "introspection", "derivation", "verification"],
-    "levels": ["unit", "endpoint", "cross-component", "concurrency"],
-    "capabilities": ["core.introspection"]
+    "roles": [
+      "AS",
+      "client",
+      "RS",
+      "PDP",
+      "PEP",
+      "verifier"
+    ],
+    "strengths": [
+      "MUST",
+      "MUST NOT",
+      "SHOULD",
+      "MAY",
+      "stated"
+    ],
+    "assertions": [
+      "refusal",
+      "ignore",
+      "output-bound",
+      "no-side-effect",
+      "replay",
+      "privacy",
+      "concurrency"
+    ],
+    "surfaces": [
+      "par",
+      "authorization-endpoint",
+      "token-endpoint",
+      "introspection",
+      "derivation",
+      "verification",
+      "lifecycle-endpoint",
+      "signals"
+    ],
+    "levels": [
+      "unit",
+      "endpoint",
+      "cross-component",
+      "concurrency"
+    ],
+    "capabilities": [
+      "core.introspection",
+      "status.lifecycle",
+      "status.discharge",
+      "signals.events"
+    ]
   },
   "requirements": [
     {
@@ -19,7 +59,9 @@
       "text": "The AS MUST reject with `invalid_request` a `mission_intent` presented on a front-channel authorization request that does not use a PAR-issued `request_uri`",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "authorization-endpoint",
       "assertion": "refusal",
       "observation": {
@@ -36,7 +78,9 @@
       "text": "a `mission_intent` submitted outside the Request Object in the same push MUST be rejected with `invalid_request`",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
@@ -54,7 +98,9 @@
       "facet": "evidence-count-and-per-entry-size",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
@@ -86,7 +132,9 @@
       "facet": "envelope-total-intent-total-and-array-lengths",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
@@ -103,7 +151,9 @@
       "text": "the AS MUST ignore any `mission_intent`, `authorization_details`, `scope`, or `resource` presented, and MUST NOT let such a value widen the authority derived from the pushed parameters",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "authorization-endpoint",
       "assertion": "ignore",
       "observation": {
@@ -120,7 +170,9 @@
       "text": "an object carrying duplicate member names is rejected at parse time, before the parsed data model exists",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
@@ -143,7 +195,7 @@
         },
         {
           "file": "src/packages/mission-core/test/anchors.test.ts",
-          "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
+          "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
           "level": "unit",
           "surface": "verification"
         }
@@ -156,7 +208,9 @@
       "text": "A verifier MUST reject a digest whose algorithm prefix it does not recognize",
       "role": "verifier",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "verification",
       "assertion": "refusal",
       "observation": {
@@ -167,7 +221,7 @@
       "tests": [
         {
           "file": "src/packages/mission-core/test/anchors.test.ts",
-          "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+          "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
           "level": "unit",
           "surface": "verification"
         }
@@ -180,7 +234,9 @@
       "text": "An AS MUST reject `max_derivations` below 1 with `invalid_request`",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
@@ -205,7 +261,9 @@
       "text": "the AS MUST maintain a per-Mission count of **derivations** and MUST refuse with `invalid_grant` any derivation that would exceed the bound",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "token-endpoint",
       "assertion": "refusal",
       "observation": {
@@ -230,7 +288,9 @@
       "text": "A derivation that fails, including one refused for exceeding the bound, MUST NOT be counted",
       "role": "AS",
       "strength": "MUST NOT",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "token-endpoint",
       "assertion": "no-side-effect",
       "observation": {
@@ -255,7 +315,9 @@
       "text": "the AS SHOULD include, alongside `error`, the `mission_error` token-error-response member",
       "role": "AS",
       "strength": "SHOULD",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "token-endpoint",
       "assertion": "output-bound",
       "observation": {
@@ -273,7 +335,9 @@
       "text": "an AS whose policy cannot accept the proposed `expires_at` refuses with `invalid_authorization_details` rather than rewriting it",
       "role": "AS",
       "strength": "stated",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
@@ -292,7 +356,9 @@
       "text": "The mapping is a lookup, never synthesis; the AS refuses an Intent that matches no configured mapping with `invalid_authorization_details`",
       "role": "AS",
       "strength": "stated",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "derivation",
       "assertion": "refusal",
       "observation": {
@@ -310,7 +376,9 @@
       "text": "an AS MUST NOT derive Mission-bound authority from a client-supplied `mission_id`",
       "role": "AS",
       "strength": "MUST NOT",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "token-endpoint",
       "assertion": "output-bound",
       "observation": {
@@ -327,7 +395,9 @@
       "text": "A credential the Mission Issuer derives MUST have an `exp` that does not exceed the Mission's `expires_at`",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "token-endpoint",
       "assertion": "output-bound",
       "observation": {
@@ -352,7 +422,9 @@
       "text": "The AS MUST NOT issue a Mission-bound token whose `scope` exceeds the Authority Set",
       "role": "AS",
       "strength": "MUST NOT",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "token-endpoint",
       "assertion": "output-bound",
       "observation": {
@@ -369,7 +441,10 @@
       "text": "the AS MUST return `active: false` and include `mission.state` giving the reason",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "capability", "capability": "core.introspection" },
+      "applicability": {
+        "kind": "capability",
+        "capability": "core.introspection"
+      },
       "surface": "introspection",
       "assertion": "output-bound",
       "observation": {
@@ -399,7 +474,10 @@
       "text": "MUST authenticate the calling party",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "capability", "capability": "core.introspection" },
+      "applicability": {
+        "kind": "capability",
+        "capability": "core.introspection"
+      },
       "surface": "introspection",
       "assertion": "privacy",
       "observation": {
@@ -429,7 +507,10 @@
       "text": "MUST return Mission data only to a caller authorized to receive it, in particular a Resource Server that is an audience of the token",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "capability", "capability": "core.introspection" },
+      "applicability": {
+        "kind": "capability",
+        "capability": "core.introspection"
+      },
       "surface": "introspection",
       "assertion": "privacy",
       "observation": {
@@ -453,7 +534,10 @@
       "text": "MUST audience-filter the response, returning the `authorization_details` entries and Mission data relevant to the caller's audience and not disclosing entries addressed to other audiences",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "capability", "capability": "core.introspection" },
+      "applicability": {
+        "kind": "capability",
+        "capability": "core.introspection"
+      },
       "surface": "introspection",
       "assertion": "privacy",
       "observation": {
@@ -476,6 +560,524 @@
           "surface": "introspection"
         }
       ]
+    },
+    {
+      "id": "core.anchors.entry-commitment",
+      "spec": "draft-mcguinness-oauth-mission.md",
+      "anchor": "integrity-anchors",
+      "text": "the **Authority Set entry commitment**, the envelope above with `typ` `mission-authority-entry`, `iss` the Mission `issuer`, and `value` a single Authority Set entry object exactly as recorded",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "verification",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "the displayed entry reproduces the displayed digest exactly, and member insertion order does not change the digest"
+      },
+      "level": "unit",
+      "coverage": "tested",
+      "tests": [
+        {
+          "file": "src/packages/mission-core/test/anchors.test.ts",
+          "name": "Authority Set entry commitment (@spec mission#integrity-anchors) > reproduces the core test vector exactly",
+          "level": "unit",
+          "surface": "verification"
+        },
+        {
+          "file": "src/packages/mission-core/test/anchors.test.ts",
+          "name": "Authority Set entry commitment (@spec mission#integrity-anchors) > resolves different member insertion order to the same digest",
+          "level": "unit",
+          "surface": "verification"
+        }
+      ]
+    },
+    {
+      "id": "status.discharge.grant-distinct-from-lifecycle",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-authority",
+      "text": "Authorization for `discharge` requires a distinct `mission_discharge` scope or an equivalent deployment-defined grant.",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "refusal",
+      "observation": {
+        "normative": "a discharge request from a caller with no distinct mission_discharge grant (or deployment-defined equivalent) is refused, never treated as authorized"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server integration test for the discharge operation, asserting refusal for a caller holding mission_lifecycle but not mission_discharge."
+    },
+    {
+      "id": "status.discharge.lifecycle-grant-not-implied",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-authority",
+      "text": "or being the Mission's Subject, Approver, or an administrator, MUST NOT by itself imply discharge authority",
+      "role": "AS",
+      "strength": "MUST NOT",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "refusal",
+      "observation": {
+        "normative": "a caller who is the Mission's Subject, Approver, or an administrator, but lacks the distinct discharge grant, is refused a discharge request"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server integration test for the discharge operation, asserting refusal for the Subject/Approver/administrator role alone."
+    },
+    {
+      "id": "status.discharge.anti-oracle-collapse",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-anti-oracle",
+      "text": "An unknown `mission_id`, an unknown `entry_digest`, an unknown `condition_digest`, an entry with no `terminal_when`, an `event_type` that does not match the condition `condition_digest` names, and a caller not authorized for that target all collapse to the endpoint's existing `not_found` treatment",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "privacy",
+      "observation": {
+        "normative": "an unknown mission_id, entry_digest, or condition_digest, an entry carrying no terminal_when, an event_type that does not match the condition condition_digest names, and an unauthorized-target caller all produce the identical not_found response"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server integration test asserting identical not_found bodies across the six anti-oracle cases."
+    },
+    {
+      "id": "status.discharge.selector-mismatch-refusal",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-operation",
+      "text": "a mismatch joins the `not_found` collapse, since distinguishing it would reveal information about a condition selected by digest",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "refusal",
+      "observation": {
+        "normative": "an event_type that does not match the condition named by condition_digest joins the not_found collapse rather than receiving a distinguishing error"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server integration test for the discharge operation, mismatched event_type/condition_digest pair, asserting a not_found response indistinguishable from the other collapse cases."
+    },
+    {
+      "id": "status.discharge.duplicate-entry-equivalence",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-operation",
+      "text": "One `entry_digest` discharges every recorded entry resolving to that digest as a single equivalence-class transition, and therefore one version increment",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "discharging one of several byte-identical Mission-record entries discharges all of them as one equivalence-class transition with exactly one version increment"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server integration test with two byte-identical entries, asserting a single discharge and a single version increment."
+    },
+    {
+      "id": "status.discharge.nonce-replay",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "idempotency",
+      "text": "retransmit carrying a `nonce` already seen for that client and `mission_id`, together with a request byte-identical to the original, the AS MUST replay the original response rather than re-execute the operation.",
+      "role": "AS",
+      "strength": "MUST",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.lifecycle"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "replay",
+      "observation": {
+        "normative": "a retransmitted lifecycle request with the same nonce and byte-identical body replays the original signed response rather than re-executing the operation"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server lifecycle-endpoint idempotency test, same-nonce same-body retransmit."
+    },
+    {
+      "id": "status.discharge.nonce-conflict-refusal",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "idempotency",
+      "text": "The same `nonce` paired with a request that is not byte-identical to the original MUST be refused `invalid_request`",
+      "role": "AS",
+      "strength": "MUST",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.lifecycle"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "refusal",
+      "observation": {
+        "normative": "a retransmitted nonce paired with a non-identical request body is refused invalid_request, never answered with the unrelated original response"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server lifecycle-endpoint idempotency test, same-nonce different-body retransmit."
+    },
+    {
+      "id": "status.discharge.same-nonce-verbatim-replay",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-idempotency",
+      "text": "The stored signed response is returned verbatim, per the `nonce` rule above.",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "replay",
+      "observation": {
+        "normative": "a discharge retransmission with the same nonce and a byte-identical request returns the stored signed response verbatim, unchanged, including its original nonce"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server discharge idempotency test, same nonce and byte-identical request, asserting the identical prior signed envelope is returned."
+    },
+    {
+      "id": "status.discharge.event-replay",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-idempotency",
+      "text": "It issues a new signed envelope that echoes the new `nonce` and carries the stored operation result: the same `outcome` and selectors, and the original `prior_version` and `current_version` the first commit produced.",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "replay",
+      "observation": {
+        "normative": "a repeated discharge request sharing (discharge authority, mission_id, entry_digest, condition_digest, event_id) and the same assertion fingerprint but a new nonce performs no state-changing work and returns a freshly signed envelope echoing the new nonce, carrying the stored outcome, selectors, and the original prior_version and current_version"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server discharge idempotency test, same event tuple and fingerprint, different nonce, asserting a fresh envelope (not the original signed response) carrying the original versions and no re-latch."
+    },
+    {
+      "id": "status.discharge.event-fingerprint-conflict",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-idempotency",
+      "text": "the same tuple with a different fingerprint is refused `conflict`",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "refusal",
+      "observation": {
+        "normative": "the same (discharge authority, mission_id, entry_digest, condition_digest, event_id) tuple asserted with a different event assertion fingerprint is refused conflict"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server discharge idempotency test, same event tuple, changed evidence_ref/observed_at."
+    },
+    {
+      "id": "status.discharge.event-cross-target-valid",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-idempotency",
+      "text": "the same `event_id` asserted against another Mission, entry, or condition is a valid, independent assertion, since one real-world event legitimately fans out to more than one target.",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "reusing the same event_id against a different mission_id, entry_digest, or condition_digest is processed as an independent discharge, not refused as a duplicate or conflict"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server discharge idempotency test, same event_id across two distinct Missions."
+    },
+    {
+      "id": "status.discharge.already-discharged-noop",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-operation",
+      "text": "MUST NOT discharge the entry again or increment the version again",
+      "role": "AS",
+      "strength": "MUST NOT",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "no-side-effect",
+      "observation": {
+        "normative": "a delivery presenting any valid condition against an already-discharged entry, whether a sibling condition or the same condition under a different event_id, is acknowledged already_discharged without re-latching the entry or incrementing the state version"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server discharge test, both a sibling condition and the same condition under a different event_id, against an already-discharged entry."
+    },
+    {
+      "id": "status.discharge.terminal-noop",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-operation",
+      "text": "A delivery reaching the endpoint after `completed`, `revoked`, `expired`, or another terminal state returns an authenticated `terminal_noop` acknowledgement",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "no-side-effect",
+      "observation": {
+        "normative": "a discharge request against a Mission already in a terminal state returns terminal_noop with no transition and no version increment"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server discharge test against a revoked/expired/completed Mission."
+    },
+    {
+      "id": "status.discharge.suspended-applies",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-operation",
+      "text": "`discharge` applies while the Mission is `active` or `suspended`: a suspended Mission still narrows monotonically.",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "a discharge request against a suspended Mission succeeds and narrows the entry exactly as it would for an active Mission"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server discharge test against a suspended Mission."
+    },
+    {
+      "id": "status.discharge.signed-result-binding",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-result",
+      "text": "one of `discharged` (this request committed the latch), `already_discharged` (a sibling condition, or the same condition under a different `event_id`, presented against an already-latched entry), or `terminal_noop` (the Mission was already in a terminal state).",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "the signed discharge_result's outcome member is discharged, already_discharged, or terminal_noop matching the actual transition, alongside entry_digest, condition_digest, event_id, prior_version, and current_version"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server discharge test, asserting the discharge_result shape and outcome value for each of the three outcomes."
+    },
+    {
+      "id": "status.discharge.atomic-commit",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-operation",
+      "text": "The entry latch (or its equivalence-class latch), the version increment, the audit and result record, and the durable propagation work (an outbox entry or a signal enqueue) commit as one unit.",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "concurrency",
+      "observation": {
+        "normative": "the entry latch, version increment, audit and result record, and durable propagation work (outbox entry or signal enqueue) are never observed partially committed under concurrent or interrupted delivery"
+      },
+      "level": "concurrency",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server concurrency test, concurrent duplicate discharge requests racing the same entry."
+    },
+    {
+      "id": "status.discharge.child-propagation",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-operation",
+      "text": "the child-delegation profile's entry-wise propagation to an already-justified Child Mission",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "token-endpoint",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "a Child Mission's derivation consults, or is otherwise gated by, the committed parent latch until child materialization completes, so a Child Mission already justified by a parent entry cannot derive that entry once the parent's discharge commit lands, even though the child-delegation profile's own materialization is asynchronous",
+        "local": "requires the deployment to also adopt the child-delegation profile"
+      },
+      "level": "cross-component",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: cross-component test spanning the discharge operation and child-delegation derivation gating, racing a child derivation against the parent's discharge commit before materialization completes."
+    },
+    {
+      "id": "status.discharge.policy-resolution-on-condition-entry",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-authority",
+      "text": "The AS MUST resolve and validate the selector whenever a condition first enters an immutable Mission-record entry",
+      "role": "AS",
+      "strength": "MUST",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "refusal",
+      "observation": {
+        "normative": "discharge_policy is resolved and validated whenever a condition enters an immutable Mission-record entry, including a condition a derived entry adds after activation (child creation, expansion, or another derivation), refusing the Intent or derivation when the selector maps to nothing"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server integration test asserting discharge_policy resolution/refusal for a condition introduced by a derivation after Mission activation (child creation or expansion), not only at initial approval."
+    },
+    {
+      "id": "status.discharge.evidence-non-dereference-non-authorization",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-operation",
+      "text": "The AS MUST NOT dereference `evidence_ref` in baseline processing and MUST NOT treat either member as authorization input.",
+      "role": "AS",
+      "strength": "MUST NOT",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "no-side-effect",
+      "observation": {
+        "normative": "the AS never dereferences evidence_ref during baseline discharge processing and never treats evidence_ref or evidence_digest as input to an authorization decision"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server discharge test asserting no outbound fetch of evidence_ref and no authorization-decision dependency on either evidence member."
+    },
+    {
+      "id": "status.discharge.validation-order-before-terminal-noop",
+      "spec": "draft-mcguinness-oauth-mission-status.md",
+      "anchor": "discharge-anti-oracle",
+      "text": "The AS validates selector existence (`mission_id`, `entry_digest`, and `condition_digest` all resolve, the entry carries `terminal_when`, and `event_type` matches the named condition), then condition membership (the named condition belongs to the named entry), then target authorization",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "capability",
+        "capability": "status.discharge"
+      },
+      "surface": "lifecycle-endpoint",
+      "assertion": "privacy",
+      "observation": {
+        "normative": "the AS checks selector existence, condition membership, and target authorization before returning terminal_noop, so a terminal Mission cannot be used to test whether a selector resolves"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: authorization-server discharge test against a terminal Mission with an unknown entry_digest or condition_digest, asserting the not_found collapse rather than terminal_noop."
+    },
+    {
+      "id": "signals.discharge.authority-changed-rematerialize",
+      "spec": "draft-mcguinness-oauth-mission-signals.md",
+      "anchor": "consumer-behavior",
+      "text": "before further consequential reliance when an in-order event carries `authority_changed` true, even when `state` equals `prior_state` and no version gap exists.",
+      "role": "RS",
+      "strength": "MUST",
+      "applicability": {
+        "kind": "capability",
+        "capability": "signals.events"
+      },
+      "surface": "signals",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "a consumer that receives an in-order mission.lifecycle-change event with authority_changed true rematerializes its effective authority view via Mission Status before further consequential reliance, even with state unchanged and no version gap"
+      },
+      "level": "cross-component",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: signals consumer-behavior test, in-order active-to-active event carrying authority_changed true."
+    },
+    {
+      "id": "signals.discharge.producer-authority-changed-emit",
+      "spec": "draft-mcguinness-oauth-mission-signals.md",
+      "anchor": "discharge-compatibility",
+      "text": "a Mission Issuer MUST emit `authority_changed` true on the `mission.lifecycle-change` event a discharge commit produces",
+      "role": "AS",
+      "strength": "MUST",
+      "applicability": {
+        "kind": "capability",
+        "capability": "signals.events"
+      },
+      "surface": "signals",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "a Mission Issuer that commits a discharge and emits Signals events sets authority_changed true on the mission.lifecycle-change event the commit produces",
+        "local": "requires the deployment to also adopt the Status profile's completion/discharge capability"
+      },
+      "level": "cross-component",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: cross-component test spanning the discharge operation and Signals event emission, asserting authority_changed true on the produced event."
+    },
+    {
+      "id": "signals.discharge.producer-gating-undeclared-stream",
+      "spec": "draft-mcguinness-oauth-mission-signals.md",
+      "anchor": "discharge-compatibility",
+      "text": "a Mission Issuer MUST NOT deliver a `mission.lifecycle-change` event whose effective-authority change is represented by `authority_changed` alone (a discharge commit, {{I-D.draft-mcguinness-oauth-mission-status}}) to a stream whose consumer has not declared `authority_changed` in `mission_capabilities_supported`",
+      "role": "AS",
+      "strength": "MUST NOT",
+      "applicability": {
+        "kind": "capability",
+        "capability": "signals.events"
+      },
+      "surface": "signals",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "a stream whose consumer has not declared authority_changed in mission_capabilities_supported never receives a mission.lifecycle-change event carrying authority_changed true",
+        "local": "requires the deployment to also adopt the Status profile's completion/discharge capability"
+      },
+      "level": "cross-component",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Planned test surface: signals delivery test, discharge commit against a stream lacking the authority_changed capability declaration, asserting no event delivered on that stream."
     }
   ]
 }

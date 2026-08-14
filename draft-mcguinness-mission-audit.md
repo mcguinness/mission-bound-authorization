@@ -27,6 +27,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-oauth-mission-signals:
+    title: "Mission Lifecycle Signals for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -126,14 +134,6 @@ normative:
 informative:
   RFC8610:
   I-D.draft-ietf-scitt-scrapi:
-  I-D.draft-mcguinness-oauth-mission-signals:
-    title: "Mission Lifecycle Signals for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -479,7 +479,7 @@ defined, and registered where it is, by the profile the row cites.
 | Evidence type | Canonical bytes (hashed) | `payload-preimage-content-type` | Operational `typ` | Producer |
 |---|---|---|---|---|
 | Approval event | Mission record at creation, `state` excluded, canonicalized | `application/mission-approval-record+json` | none | `issuer` |
-| Lifecycle transition | Signals SET as issued; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `secevent+jwt`, else none | `issuer` |
+| Lifecycle transition | Signals SET as issued, as the signals profile fixes; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `secevent+jwt`, else none | `issuer` |
 | Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | none | `issuer` |
 | Consent evidence | complete retained object, `evidence_envelope` included (JCS) | `application/mission-consent-evidence+json` | `mission-consent-evidence+jws` | `issuer` |
 | Approval governance | complete record including `envelope` (JCS), the record-digest preimage | `application/mission-approval-governance+json` | `application/mission-approval-governance+json` | `issuer` |

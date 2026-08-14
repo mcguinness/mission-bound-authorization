@@ -390,9 +390,13 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   REQUIRED when the deployment runs the containment profile
   ({{I-D.draft-mcguinness-oauth-mission-containment}}), which defines
   the overlay and requires this member on every
-  `mission.lifecycle-change` event, so a consumer can tell an
-  active-to-active version bump that narrows authority from one that
-  does not.
+  `mission.lifecycle-change` event. It composes with `authority_changed`
+  below under one rule: every effective-authority narrowing, containment
+  included, sets `authority_changed` true. `containment_version` is
+  containment's own precise generation counter, tracking containment's
+  narrowing sequence for a containment-aware consumer; it does not by
+  itself substitute for `authority_changed` on a transition where
+  `state` is unchanged.
 
 `authority_hash` (string, optional):
 : the `authority_hash` the issuance profile commits at approval
@@ -400,6 +404,22 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   profile's option, as a reference to the Authority Set the current
   containment overlay narrows
   ({{I-D.draft-mcguinness-oauth-mission-containment}}).
+
+`authority_changed` (boolean, conditional, default false):
+: true when the committed transition changes the Mission's effective
+  authority without changing `state`. The discriminator is
+  deliberately generic: it carries no detail of what changed, and in
+  particular no entry digest is disclosed on this event. REQUIRED
+  with value true on any `mission.lifecycle-change` event whose commit
+  narrows effective authority without changing `state`, whichever
+  overlay narrowed it: an entry discharge
+  ({{I-D.draft-mcguinness-oauth-mission-status}}) is the current case,
+  containment ({{I-D.draft-mcguinness-oauth-mission-containment}}) is
+  another, and a future issuer-held narrowing overlay is expected to
+  set it the same way; delivery of such an event is itself subject to
+  the gate of {{discharge-compatibility}}. OPTIONAL, and absent or
+  false, on any other transition, meaning it does not narrow effective
+  authority beyond `state`.
 
 Following the issuance profile's forward-compatibility rule, an event
 consumer MUST treat every `state` value other than `active` as
@@ -573,11 +593,23 @@ On receiving and verifying ({{set-protection}}) a
   ({{I-D.draft-mcguinness-oauth-mission-containment}}) and the event
   carries a `containment_version` greater than the `containment_version`
   of the authority view it last materialized for that `mission.id`,
-  even when `state` equals `prior_state`. This covers the sequential
-  case the version-gap rule above does not: an active-to-active
-  containment transition where nothing in `state` signals that
-  authority narrowed. The version-gap rule stays the fallback for the
-  coarse case, a missed event.
+  even when `state` equals `prior_state`. Under this document's
+  discriminator rule such a transition also carries `authority_changed`
+  true ({{lifecycle-event}}), so a consumer that applies the rule below
+  already rematerializes on it; a containment-aware consumer tracking
+  `containment_version` directly reaches the same result independently.
+- Rematerialize its effective authority view for the Mission through
+  the Mission Status operation
+  ({{I-D.draft-mcguinness-oauth-mission-status}}) before further
+  consequential reliance when an in-order event carries
+  `authority_changed` true, even when `state` equals `prior_state` and
+  no version gap exists. This rule binds every consumer, not only one
+  that is containment-aware: every transition that narrows effective
+  authority without changing `state`, containment included, sets
+  `authority_changed` ({{lifecycle-event}}), so a consumer that reads
+  only `authority_changed` rematerializes on any of them. The
+  version-gap rule stays the fallback for the coarse case, a missed
+  event.
 - Acknowledge the event per the SSF delivery method in use.
 
 A consumer MUST NOT treat the event as authority to change Mission
@@ -591,10 +623,12 @@ NOT reject an event solely for a missing OPTIONAL member (notably
 `tenant`). A consumer matches the event type by the exact URI the
 Mission Issuer's Transmitter Configuration Metadata advertises, so
 the event-type namespace can change without a change to this
-profile's semantics. On adoption, the URI is expected to migrate to
-an IETF- or foundation-controlled namespace (for example a
-`urn:ietf:params` URN or an OpenID Foundation schema URI), with a
-provisional `urn:ietf:params` URN serving in the interim.
+profile's semantics. After allocation, the URI is expected to
+migrate to an IETF- or foundation-controlled namespace (a
+`urn:ietf:params` URN or an OpenID Foundation schema URI) as a
+wire-identifier change landing with dual-recognition compatibility;
+until such a namespace is allocated and a change controller exists,
+the author-controlled URI remains the deployable identifier.
 
 A consumer anchors freshness to stream liveness, not to per-Mission
 age. The Shared Signals Framework {{OIDC-SSF}} provides a stream
@@ -618,6 +652,43 @@ reliance. The Mission Status operation is the RECOMMENDED fallback
 surface. A consumer that cannot verify its stream, or that was down
 and may have missed events, applies the same rule rather than
 continuing on possibly stale state.
+
+# Discharge Compatibility {#discharge-compatibility}
+
+`authority_changed` true ({{lifecycle-event}}) is a breaking change
+for a consumer built before this member existed: such a consumer
+ignores the unknown member, accepts an in-order active-to-active
+version increment, and keeps a stale Authority Set, exactly the
+failure `authority_changed` exists to prevent. This document
+therefore gates delivery of such an event on a declared consumer
+capability rather than assuming every receiver understands the
+member.
+
+A receiver declares support by adding `authority_changed` to
+`mission_capabilities_supported`, a new receiver-supplied member of
+the Shared Signals Framework {{OIDC-SSF}} Stream Configuration
+object, alongside the object's `events_requested` and `delivery`
+members ({{event-stream}}): a JSON array of strings. This document
+defines one value, `authority_changed`, naming support for the
+rematerialization rule of {{consumer-behavior}}. The `mission_`
+prefix keeps this document's extension collision-safe on an object
+it does not own; the member rides an object the Shared Signals
+Framework already defines and needs no IANA action.
+
+The gate binds exactly the events whose authority change is carried
+only by the new member: a Mission Issuer MUST NOT deliver a
+`mission.lifecycle-change` event whose effective-authority change is
+represented by `authority_changed` alone (a discharge commit,
+{{I-D.draft-mcguinness-oauth-mission-status}}) to a stream whose
+consumer has not declared `authority_changed` in
+`mission_capabilities_supported`. An event whose narrowing is also
+represented by `containment_version` follows the containment
+profile's existing delivery and consumer rules unchanged
+({{I-D.draft-mcguinness-oauth-mission-containment}}); the member is
+still set on it, and a declared consumer applies one rule to both.
+Where Signals is used, a Mission Issuer MUST emit
+`authority_changed` true on the `mission.lifecycle-change` event a
+discharge commit produces.
 
 # Relationship to Revocation Propagation {#event-driven}
 
@@ -702,8 +773,10 @@ This document is OPTIONAL. An implementation that claims it:
 - as a **Mission Issuer**, emits a signed `mission.lifecycle-change`
   SET ({{lifecycle-event}}, {{set-protection}}) on every committed
   Mission lifecycle transition, supports at least one SSF delivery
-  method ({{event-stream}}), and advertises
-  `mission_event_stream_endpoint` ({{as-metadata}});
+  method ({{event-stream}}), advertises
+  `mission_event_stream_endpoint` ({{as-metadata}}), and, where a
+  committed transition would carry `authority_changed` true, gates its
+  delivery per {{discharge-compatibility}};
 - as a **consumer**, verifies and applies received events per
   {{set-protection}} and {{consumer-behavior}}.
 
@@ -797,11 +870,15 @@ the author-controlled `schemas.karlmcguinness.com` namespace:
   claims: `mission` (carrying `id` and `issuer`), `state`, `version`,
   `committed_at`, `expires_at`. Conditional event-body claims:
   `prior_state` (required on transition emissions, absent on the
-  approval-event emission) and `suspend_until` with `on_expiry` (present
-  only on a transition to `suspended` under a deadline). Optional
-  event-body claims: `tenant`, `reason`, `successor` (`successor`
-  present only on a `superseded` transition). See {{lifecycle-event}}
-  for the schema.
+  approval-event emission), `suspend_until` with `on_expiry` (present
+  only on a transition to `suspended` under a deadline), and
+  `authority_changed` (required true on any event whose commit
+  narrows effective authority without changing `state`, the discharge
+  commit being the current case, delivery subject to the gate of
+  {{discharge-compatibility}}; optional and defaulting to false
+  otherwise). Optional event-body claims: `tenant`, `reason`, and
+  `successor` (present only on a `superseded` transition). See
+  {{lifecycle-event}} for the schema.
 
 This event type uses the OpenID Shared Signals Framework {{OIDC-SSF}}
 SET shape. The standalone Mission Issuer binding

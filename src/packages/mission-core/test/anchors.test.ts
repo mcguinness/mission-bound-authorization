@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  AUTHORITY_ENTRY_TYP,
   authorityHash,
   canonicalize,
+  computeAnchor,
   DuplicateMemberError,
   intentHash,
   parseStrictJson,
@@ -107,5 +109,47 @@ describe("parseStrictJson", () => {
 
   it("rejects trailing input", () => {
     expect(() => parseStrictJson('{"a":1} garbage')).toThrow(SyntaxError);
+  });
+});
+
+// Core § integrity-anchors, the Authority Set entry commitment vector.
+const ENTRY_COMMITMENT_V1 = {
+  type: "mission_resource_access",
+  resource: "https://erp.example.com",
+  actions: ["invoices.read"],
+  constraints: {
+    resource_issued_after: "2026-07-01T00:00:00Z",
+    resource_issued_before: "2026-09-30T23:59:59Z",
+  },
+  delegation: {
+    max_depth: 2,
+    allowed_delegates: [{ sub_profile: "ai_agent" }],
+  },
+};
+
+describe("Authority Set entry commitment (@spec mission#integrity-anchors)", () => {
+  it("reproduces the core test vector exactly", () => {
+    expect(computeAnchor(AUTHORITY_ENTRY_TYP, ISS, ENTRY_COMMITMENT_V1)).toBe(
+      "sha-256:OUrwTnuirT29YxQmMSyiJce8W1PfGryvrVViQ1lJCqQ",
+    );
+  });
+
+  it("resolves different member insertion order to the same digest", () => {
+    const reordered = {
+      delegation: {
+        allowed_delegates: [{ sub_profile: "ai_agent" }],
+        max_depth: 2,
+      },
+      actions: ["invoices.read"],
+      constraints: {
+        resource_issued_before: "2026-09-30T23:59:59Z",
+        resource_issued_after: "2026-07-01T00:00:00Z",
+      },
+      resource: "https://erp.example.com",
+      type: "mission_resource_access",
+    };
+    expect(computeAnchor(AUTHORITY_ENTRY_TYP, ISS, reordered)).toBe(
+      computeAnchor(AUTHORITY_ENTRY_TYP, ISS, ENTRY_COMMITMENT_V1),
+    );
   });
 });
