@@ -3866,11 +3866,30 @@ profile controls, following the Collision-Resistant Name guidance of
 profiles that extend this document share a namespace coordinated
 through this document series' change controller, or a registry a
 future revision establishes, for this reason.<a href="#section-6.3-4" class="pilcrow">¶</a></p>
-<p id="section-6.3-5">SHA-256 is the only digest algorithm this document defines and is
+<p id="section-6.3-5">One further committed object is defined here because several
+companions reference it: the <strong>Authority Set entry commitment</strong>, the
+envelope above with <code>typ</code> <code>mission-authority-entry</code>, <code>iss</code> the
+Mission <code>issuer</code>, and <code>value</code> a single Authority Set entry object
+exactly as recorded. A companion that cites an entry by digest (a
+decision record naming the entry it evaluated, containment or
+completion state keyed to an entry) computes it this way and this
+way only. Entries whose canonical commitment envelopes are identical
+produce the same digest, and within one Mission record every
+recorded entry resolving to the same digest forms one selector
+equivalence class; the class is defined by the canonical bytes,
+never by pre-canonical source text the record does not preserve. The
+commitment is not a globally unique entry identifier: the envelope
+binds the issuer, not the Mission, so a protocol that uses it to
+select or cite an entry <span class="bcp14">MUST</span> bind it to the Mission <code>issuer</code> and
+Mission identifier whose recorded Authority Set is searched, directly
+or through an enclosing object whose integrity protection binds
+them. This document adds no Mission-record member for it
+(<a href="#test-vectors" class="auto internal xref">Appendix B</a>).<a href="#section-6.3-5" class="pilcrow">¶</a></p>
+<p id="section-6.3-6">SHA-256 is the only digest algorithm this document defines and is
 mandatory to implement; the <code>sha-256:</code> prefix identifies it. The
 prefix is the algorithm-agility mechanism, and the reject-unknown,
 no-downgrade rule binding every prefixed digest is stated once in
-<a href="#commitment-mechanisms" class="auto internal xref">Section 6.5</a>.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
+<a href="#commitment-mechanisms" class="auto internal xref">Section 6.5</a>.<a href="#section-6.3-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="canonicalization">
@@ -7919,11 +7938,47 @@ resource_access"}]}
 proposal_hash = sha-256:udzftXYQy0pvYNxz4KgtmyL_EV8ry4DhIbBFfwILEBA
 </pre><a href="#appendix-B-27" class="pilcrow">¶</a>
 </div>
-<p id="appendix-B-28">An implementation that canonicalizes the same <code>value</code> under the same
+<p id="appendix-B-28">The entry commitment (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>) is computed over one
+immutable Mission-record Authority Set entry, never an issued or
+narrowed token projection. Over this entry:<a href="#appendix-B-28" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-B-29">
+<pre>
+{
+  "type": "mission_resource_access",
+  "resource": "https://erp.example.com",
+  "actions": ["invoices.read"],
+  "constraints": {
+    "resource_issued_after": "2026-07-01T00:00:00Z",
+    "resource_issued_before": "2026-09-30T23:59:59Z"
+  },
+  "delegation": {
+    "max_depth": 2,
+    "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+  }
+}
+</pre><a href="#appendix-B-29" class="pilcrow">¶</a>
+</div>
+<p id="appendix-B-30">as the envelope <code>value</code> with <code>typ</code> <code>mission-authority-entry</code>:<a href="#appendix-B-30" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="appendix-B-31">
+<pre>
+{"iss":"https://as.example.com","typ":"mission-authority-entry","v
+alue":{"actions":["invoices.read"],"constraints":{"resource_issued
+_after":"2026-07-01T00:00:00Z","resource_issued_before":"2026-09-
+30T23:59:59Z"},"delegation":{"allowed_delegates":[{"sub_profile":"
+ai_agent"}],"max_depth":2},"resource":"https://erp.example.com","t
+ype":"mission_resource_access"}}
+</pre><a href="#appendix-B-31" class="pilcrow">¶</a>
+</div>
+<div class="lang-text sourcecode" id="appendix-B-32">
+<pre>
+entry_digest = sha-256:OUrwTnuirT29YxQmMSyiJce8W1PfGryvrVViQ1lJCqQ
+</pre><a href="#appendix-B-32" class="pilcrow">¶</a>
+</div>
+<p id="appendix-B-33">An implementation that canonicalizes the same <code>value</code> under the same
 <code>typ</code> and <code>iss</code>, computes SHA-256, and encodes as <code>sha-256:</code> followed by
 base64url with no padding (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>) reproduces these
 anchors exactly. A divergence indicates a JCS or encoding difference to
-resolve before interoperating.<a href="#appendix-B-28" class="pilcrow">¶</a></p>
+resolve before interoperating.<a href="#appendix-B-33" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="document-history">
@@ -7935,7 +7990,13 @@ resolve before interoperating.<a href="#appendix-B-28" class="pilcrow">¶</a></p
 <p id="appendix-C-2">-01<a href="#appendix-C-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-C-3.1">
-          <p id="appendix-C-3.1.1">Breaking change to the Intent carriage shape: the <code>mission_intent</code>
+          <p id="appendix-C-3.1.1">The Authority Set entry commitment: the committed-object <code>typ</code>
+            <code>mission-authority-entry</code> over a single recorded entry, with its
+Mission-binding rule, selector equivalence class, and test vector
+(<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>, <a href="#test-vectors" class="auto internal xref">Appendix B</a>).<a href="#appendix-C-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-3.2">
+          <p id="appendix-C-3.2.1">Breaking change to the Intent carriage shape: the <code>mission_intent</code>
 parameter value is the Mission Intent Submission envelope
 (<a href="#submission-via-par" class="auto internal xref">Section 4.1</a>), <code>intent</code> plus an <span class="bcp14">OPTIONAL</span> typed
 <code>evidence</code> array, and the bare-Intent value is refused under the
@@ -7949,10 +8010,10 @@ anti-downgrade rule, evidence invalidation across shaping and
 revision, the presenter conjunction, verification-cost bounds, the
 <code>invalid_mission_intent_evidence</code> error registration, and the
 <code>submission_evidence</code> record member as record-trusted provenance
-metadata.<a href="#appendix-C-3.1.1" class="pilcrow">¶</a></p>
+metadata.<a href="#appendix-C-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-3.2">
-          <p id="appendix-C-3.2.1">Breaking change to the authority-proposal carriage: the proposal
+        <li class="normal" id="appendix-C-3.3">
+          <p id="appendix-C-3.3.1">Breaking change to the authority-proposal carriage: the proposal
 moves from the Intent's <code>proposed_authority</code> member, which is
 removed, to the standard top-level <code>authorization_details</code>
 parameter pushed alongside <code>mission_intent</code>
@@ -7964,64 +8025,64 @@ proposal, recorded on the Mission and surfaced through
 introspection, never on the <code>mission</code> claim. Worked examples and
 test vectors are recomputed; an approval-event rule recomputing
 every recorded anchor and a Mission-governed-client bare-request
-rejection accompany the change.<a href="#appendix-C-3.2.1" class="pilcrow">¶</a></p>
+rejection accompany the change.<a href="#appendix-C-3.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-3.3">
-          <p id="appendix-C-3.3.1">Derivation is mechanical, in two modes: narrowing (<span class="bcp14">RECOMMENDED</span>)
+        <li class="normal" id="appendix-C-3.4">
+          <p id="appendix-C-3.4.1">Derivation is mechanical, in two modes: narrowing (<span class="bcp14">RECOMMENDED</span>)
 and template. The deterministic-reproducibility and
 policy-inspectability rules are retired, <code>policy_version</code> stays as
 an opaque audit correlator, generative derivation is demoted to a
 local-policy extension, and the derivation trust boundary (no
 portable Intent semantics) is stated. Template mode publishes its
 mapping space as deployment documentation and distinguishes
-no-mapping from policy refusals.<a href="#appendix-C-3.3.1" class="pilcrow">¶</a></p>
+no-mapping from policy refusals.<a href="#appendix-C-3.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-3.4">
-          <p id="appendix-C-3.4.1">New wire surface: the <code>mission_error</code> and <code>derivations_remaining</code>
+        <li class="normal" id="appendix-C-3.5">
+          <p id="appendix-C-3.5.1">New wire surface: the <code>mission_error</code> and <code>derivations_remaining</code>
 introspection members, the <code>mission_denial</code> WWW-Authenticate
 attribute, and the <code>mission_constraints_supported</code>
 protected-resource metadata member. The <code>mission</code> claim gains an
 <span class="bcp14">OPTIONAL</span> <code>expires_at</code>; the <code>mission_id</code> token-response parameter
-is promoted to <span class="bcp14">SHOULD</span>.<a href="#appendix-C-3.4.1" class="pilcrow">¶</a></p>
+is promoted to <span class="bcp14">SHOULD</span>.<a href="#appendix-C-3.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-3.5">
-          <p id="appendix-C-3.5.1">Authority vocabulary: four new Common Constraints (<code>time_window</code>,
+        <li class="normal" id="appendix-C-3.6">
+          <p id="appendix-C-3.6.1">Authority vocabulary: four new Common Constraints (<code>time_window</code>,
 <code>data_classification</code>, <code>allowed_tools</code>,
 <code>requires_action_approval</code>) with <code>prefix</code>-match fixes; the
 <span class="bcp14">OPTIONAL</span> <code>controls.agent_deployment</code> class pin; <code>max_derivations</code>
-sizing guidance.<a href="#appendix-C-3.5.1" class="pilcrow">¶</a></p>
+sizing guidance.<a href="#appendix-C-3.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-3.6">
-          <p id="appendix-C-3.6.1">Delegation hardening: delegation-authorization policy applies at
+        <li class="normal" id="appendix-C-3.7">
+          <p id="appendix-C-3.7.1">Delegation hardening: delegation-authorization policy applies at
 every exchange, <code>allowed_delegates</code> is <span class="bcp14">RECOMMENDED</span> and its absence
 is never a blanket grant, self-exchange is accepted only from the
 Mission's <code>client_id</code>, and the delegated-token routing guardrail
-is raised to <span class="bcp14">MUST NOT</span>.<a href="#appendix-C-3.6.1" class="pilcrow">¶</a></p>
+is raised to <span class="bcp14">MUST NOT</span>.<a href="#appendix-C-3.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-3.7">
-          <p id="appendix-C-3.7.1">Model precision: the Mission-referenced, Mission-derived, and
+        <li class="normal" id="appendix-C-3.8">
+          <p id="appendix-C-3.8.1">Model precision: the Mission-referenced, Mission-derived, and
 Mission-bound token-class taxonomy; anchors as independent
 commitments with <code>authority_hash</code> an audit correlator at a
 narrowed-token Resource Server; the subset rule named
 representational, not semantic; approval-event sequencing named as
 an extensibility seam; Intent carriage closed to the form-encoded
-PAR parameter.<a href="#appendix-C-3.7.1" class="pilcrow">¶</a></p>
+PAR parameter.<a href="#appendix-C-3.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-3.8">
-          <p id="appendix-C-3.8.1">Operational and privacy: verification-key retention anchored to
+        <li class="normal" id="appendix-C-3.9">
+          <p id="appendix-C-3.9.1">Operational and privacy: verification-key retention anchored to
 the audit horizon, issuer-key custody and per-artifact-class <code>kid</code>
 guidance, a Mission-record and evidence-access privacy section,
 and extended token lifetimes scoped to fully runtime-gated tokens
-with single-audience narrowing as the splitting mechanism.<a href="#appendix-C-3.8.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-3.9">
-          <p id="appendix-C-3.9.1">Editorial throughout, no normative change: requirement lists for
-the PAR submission and rendering duties, twice-stated rules
-reduced to one home, a third integrity-anchor test vector, and
-registry hygiene.<a href="#appendix-C-3.9.1" class="pilcrow">¶</a></p>
+with single-audience narrowing as the splitting mechanism.<a href="#appendix-C-3.9.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-3.10">
-          <p id="appendix-C-3.10.1">External review resolutions: GNAP and capability-system prior art
+          <p id="appendix-C-3.10.1">Editorial throughout, no normative change: requirement lists for
+the PAR submission and rendering duties, twice-stated rules
+reduced to one home, a third integrity-anchor test vector, and
+registry hygiene.<a href="#appendix-C-3.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-3.11">
+          <p id="appendix-C-3.11.1">External review resolutions: GNAP and capability-system prior art
 positioned in Relationship to Other Authorization Objects; the
 <code>mission</code> claim named as the actor-freezing wire signal, with the
 Resource Server routing guardrail and a new Security
@@ -8030,7 +8091,7 @@ and RFC 9700 promoted to normative and the OAuth Actor Profile
 reference demoted to informative; an actual Common Constraints
 IANA registry replacing the future-revision deferral; and new
 Security Considerations on composition's effective ceiling and the
-containment materialized-capability residual.<a href="#appendix-C-3.10.1" class="pilcrow">¶</a></p>
+containment materialized-capability residual.<a href="#appendix-C-3.11.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-C-4">-00<a href="#appendix-C-4" class="pilcrow">¶</a></p>
