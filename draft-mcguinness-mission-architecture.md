@@ -2599,6 +2599,13 @@ every one.
   another trust domain without widening, and verification needs no
   session with the issuer (oauth-mission-cross-domain;
   mission-mandate).
+- **R19**: Delegation history follows authorization continuity, never
+  organizational topology: within one approved Mission the actor
+  chain nests and extends across any boundary, a new approval basis
+  (child, successor, fresh approval) restarts it, and the chain is
+  attribution, never authority (oauth-mission;
+  oauth-mission-child-delegation; oauth-mission-expansion;
+  oauth-mission-attenuation).
 
 # Mission Document Map {#document-map}
 

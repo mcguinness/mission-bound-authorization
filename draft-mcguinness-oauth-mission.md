@@ -3627,6 +3627,21 @@ entity-profiles vocabulary those instance profiles use; the Actor
 Profile {{I-D.draft-mcguinness-oauth-actor-profile}} remains the
 structural reference for the actor object.
 
+Delegation history follows authorization continuity, never
+organizational topology. Within one approved Mission, delegation
+nests: each hop extends the `act` chain, whatever organization the
+delegate belongs to. A new approval basis begins its own chain: a
+Child Mission's actor chain restarts at the child actor
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), an
+Expansion successor begins afresh under its own approval
+({{I-D.draft-mcguinness-oauth-mission-expansion}}), and the boundary
+is always the approval, not the org chart. The `act` chain is
+attribution, never authority: it names who acted, for audit, policy
+input, and the eligibility matching of {{delegation-constraints}},
+while authority flows only from the Mission's Authority Set under
+the subset rule, and no `act` entry grants, widens, or substitutes
+for any of it.
+
 ## Adopted Model: client_id Names the Requesting Client {#client-id-rebinding}
 
 This profile keeps `client_id`'s ordinary meaning under {{RFC8693}}
