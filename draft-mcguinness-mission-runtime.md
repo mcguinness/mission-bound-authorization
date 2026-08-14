@@ -27,6 +27,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC9711:
   RFC3339:
   RFC6749:
   RFC6750:
@@ -68,6 +69,8 @@ informative:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-ietf-oauth-attestation-based-client-auth:
+  I-D.draft-ietf-oauth-spiffe-client-auth:
   I-D.draft-mcguinness-oauth-actor-receipts:
   I-D.draft-mcguinness-oauth-actor-proofs:
   I-D.draft-mcguinness-mission-audit:
@@ -1010,7 +1013,11 @@ per-instance keys, taking custody of each instance's key rather than
 one shared key; or the mediating PEP is itself the attested instance
 that obtained the token, presenting the instance assertion and holding
 the instance key. In both shapes that profile's no-shared-key rule and
-this section's custody rules are satisfied together.
+this section's custody rules are satisfied together. The IETF's
+attestation-based client authentication work
+({{I-D.draft-ietf-oauth-attestation-based-client-auth}},
+{{I-D.draft-ietf-oauth-spiffe-client-auth}}) is the adjacent
+standardization of this instance-authentication slot.
 
 This narrows, and does not eliminate, the compromised-agent exposure.
 The mediating PEP becomes a trusted component whose compromise is
@@ -2505,8 +2512,8 @@ statement, a self-declared artifact: the wire alone does not let a
 relying party distinguish a deployment that built the declared
 isolation from one that only published the statement. A deployment
 claiming either MUST bind the statement to execution-environment
-attestation, presenting Entity Attestation Token evidence under the
-AI-agent-instance profile
+attestation, presenting Entity Attestation Token {{RFC9711}} evidence
+under the AI-agent-instance profile
 ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) covering the
 isolation properties the statement declares, and MUST NOT represent
 the claim as met without it. The requirement is scoped to these two

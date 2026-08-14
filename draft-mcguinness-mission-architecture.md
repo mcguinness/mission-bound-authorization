@@ -41,6 +41,8 @@ informative:
   RFC8693:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-ietf-oauth-attestation-based-client-auth:
+  I-D.draft-ietf-oauth-spiffe-client-auth:
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
@@ -855,7 +857,11 @@ Agent (client):
   ({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
   {{I-D.draft-mcguinness-oauth-ai-agent-instance}}), which sharpens
   delegation chains, joins, and evidence attribution to instance
-  granularity without touching the Mission model.
+  granularity without touching the Mission model. The IETF is
+  standardizing adjacent attestation-based client authentication
+  ({{I-D.draft-ietf-oauth-attestation-based-client-auth}},
+  {{I-D.draft-ietf-oauth-spiffe-client-auth}}); these companions
+  occupy the same slot with Mission vocabulary.
 
 Subject:
 : The user or system on whose behalf the Mission is approved, an
@@ -1092,7 +1098,9 @@ Mission (why the authority exists):
   the binding derives one, its Authority Set.
 
 An agent registry is a complementary dependency, not part of the
-Mission system. Where one exists, the Mission Issuer and the PDP
+Mission system; an A2A AgentCard directory is one example source,
+authenticated and consumed like any other state source. Where one
+exists, the Mission Issuer and the PDP
 consume a small, stable slice of it:
 
 - the agent identifier and its owner,

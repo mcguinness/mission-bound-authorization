@@ -45,6 +45,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8725:
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
@@ -408,7 +409,8 @@ typ:
   Section 4.1.9 the value omits the `application/` prefix of the media
   type registered in {{iana}}. The distinct `typ` domain-separates the
   binding so a binding digest can never be read as an authority
-  artifact.
+  artifact, the explicit-typing discipline of the JWT BCP
+  ({{RFC8725}}, Section 3.11).
 
 alg:
 : REQUIRED. An asymmetric JWS algorithm. `none` MUST NOT be used.

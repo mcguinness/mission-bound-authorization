@@ -48,6 +48,12 @@ normative:
     date: 2026
 
 informative:
+  OIDF-FED:
+    title: "OpenID Federation 1.1"
+    target: https://openid.net/specs/openid-federation-1_1.html
+    author:
+      - org: OpenID Foundation
+    date: 2026
   I-D.draft-araut-oauth-transaction-tokens-for-agents:
   MCP:
     title: "Model Context Protocol: Authorization"
@@ -404,7 +410,9 @@ exists before the first grant is issued.
   ({{I-D.draft-mcguinness-oauth-id-assertion-framework}},
   {{I-D.draft-mcguinness-oauth-domain-authorized-issuer}}) are
   concrete ways to publish and evaluate this policy instead of
-  hand-maintaining a list.
+  hand-maintaining a list. OpenID Federation 1.1 ({{OIDF-FED}}) is
+  one possible mechanism for establishing and publishing this trust;
+  nothing here requires or profiles it.
 - The resource-to-AS mapping: which Resource AS is authoritative for
   which `resource` values, the mapping audience scoping is computed
   under ({{audience-scope}}).

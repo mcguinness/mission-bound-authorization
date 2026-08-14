@@ -55,6 +55,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8725:
   RFC9110:
   RFC9700:
   I-D.draft-mcguinness-oauth-mission-expansion:
@@ -404,7 +405,9 @@ carries `typ` of `mission-status-response+jwt` and a `kid` identifying
 the signing key. Per {{RFC7515}} Section 4.1.9 the `typ` header omits
 the `application/` prefix; the full media type
 `application/mission-status-response+jwt` (registered in {{iana}}) is
-used as the HTTP `Content-Type`.
+used as the HTTP `Content-Type`. Explicit typing follows the JWT BCP
+({{RFC8725}}, Section 3.11): the `typ` is the defense against token
+type confusion.
 
 {{RFC9701}} signed introspection responses are scoped to token
 introspection and do not apply to a lookup keyed by `mission_id`; the

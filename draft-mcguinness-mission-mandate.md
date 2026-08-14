@@ -41,6 +41,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8725:
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
@@ -248,7 +249,9 @@ The protected header MUST carry:
 `typ`:
 : REQUIRED. `mission-mandate+jwt`. Per {{RFC7515}} Section 4.1.9 the
   value omits the `application/` prefix of the media type registered
-  in {{iana}}.
+  in {{iana}}. Explicit typing follows the JWT BCP ({{RFC8725}},
+  Section 3.11): the `typ` is the defense against token type
+  confusion.
 
 `alg`:
 : REQUIRED. An asymmetric JWS algorithm. `none` MUST NOT be used.

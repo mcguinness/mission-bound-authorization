@@ -96,8 +96,10 @@ informative:
 Mission-Bound Runtime Enforcement: AuthZEN Profile
 {{I-D.draft-mcguinness-mission-authzen}} carries the decision request
 that permits a consequential action against a Mission's approved
-authority. For an action sourced from a discovered catalog, an MCP
-tool, an OpenAPI operation, or an equivalent capability source, the
+authority. For an action sourced from a discovered catalog (the MCP
+Registry is one example catalog source, authenticated like any
+capability source), an MCP tool, an OpenAPI operation, or an
+equivalent capability source, the
 invoked identity can drift from what the catalog served at approval.
 This document defines the companion binding that ties an approved
 catalog entry to the capability source it was derived from: the
