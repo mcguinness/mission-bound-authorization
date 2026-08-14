@@ -886,10 +886,12 @@ narrowed `scope`. It has the following members:
   shorter lifetime under applicable policy or an already-approved
   bound; a longer one requires a new submitted value through a
   creation or fresh-approval path that authorizes it. A malformed or
-  already-past value is refused with `invalid_request` (the member
-  rides `mission_intent`, and the request may carry no
-  `authorization_details` for an `invalid_authorization_details`
-  refusal to describe).
+  already-past value is refused with `invalid_request` at submission
+  acceptance (the member rides `mission_intent`, and the request may
+  carry no `authorization_details` for an
+  `invalid_authorization_details` refusal to describe); acceptance
+  does not freeze time, and Mission creation re-checks the effective
+  expiry atomically at the commit ({{approval-event}}).
 
 `controls`:
 : OPTIONAL. An object of machine-actionable bounds. This
@@ -2019,7 +2021,16 @@ At the approval event the AS MUST, in order:
    activate policy without personally holding every operational
    permission. The AS MUST refuse when either relationship cannot be
    established.
-4. Render for consent the derived Authority Set in human-meaningful
+4. Establish the effective Mission expiry: the requested
+   `intent.expires_at` ceiling narrowed by applicable AS policy and
+   any ceiling an applicable Mission-creating profile defines
+   ({{mission-record}}). The established value MUST NOT be later than
+   the requested ceiling and MUST be in the future when established.
+   The next step renders exactly this value, and the record commits
+   exactly the rendered value; a change to an applicable policy or
+   ceiling before the commit forces re-establishment and re-rendering
+   before approval.
+5. Render for consent the derived Authority Set in human-meaningful
    terms, with the `goal`, `constraints`, the effective `expires_at`
    (and, when it differs, the requested `intent.expires_at`, so the
    Approver sees the narrowing; the approval commits the effective
@@ -2045,13 +2056,20 @@ At the approval event the AS MUST, in order:
    The Authority Set, not the Intent, is the consent object because
    derivation is local policy: nothing commits that the derived
    authority faithfully reflects the goal the Approver read.
-5. Compute the integrity anchors ({{integrity-anchors}}):
+6. Compute the integrity anchors ({{integrity-anchors}}):
    `authority_hash` over the consented Authority Set, `intent_hash`
    over the approved Mission Intent, and, when an authority proposal
    was submitted ({{authority-proposal}}), `proposal_hash` over the
    submitted `authorization_details` array.
-6. Create the Mission record ({{mission-record}}) in the `active`
-   state, atomically with issuance of the authorization code.
+7. Create the Mission record ({{mission-record}}) in the `active`
+   state, atomically with issuance of the authorization code. The
+   commit MUST verify atomically that the effective expiry is
+   strictly later than the creation instant: acceptance of the
+   submission does not freeze time, and where the requested ceiling
+   passed while the approval was pending, completion creates no
+   Mission. A deferred or relocated approval flow inherits this
+   check at its own creation commit, with the completion error each
+   flow defines.
 
 The atomic coupling of the approval decision to authorization-code
 issuance is this flow's shape, not the model's: a companion profile
@@ -2176,17 +2194,20 @@ informational reference only:
 presenting it authorizes nothing ({{lifecycle}}), and a client MUST
 NOT derive authority from it.
 
-Alongside it, this document defines `mission_expires_at` as a
-token-endpoint response parameter: an RFC 3339 string carrying the
-Mission Record's effective `expires_at` ({{mission-record}}). An AS
-MUST return it on the success response that first delivers a newly
-created Mission's credential and SHOULD return it beside `mission_id`
-on other Mission-bound token responses: `expires_in` describes the
-access token's lifetime, not the Mission's, and the effective expiry
-may be shorter than the requested `intent.expires_at`. It is the one
-family-owned surface for the effective expiry across Mission-creating
-flows, and it is informational in the same way: presenting it
-authorizes nothing.
+Alongside it, this document defines `mission_expires_at`: an RFC
+3339 string carrying the Mission Record's effective `expires_at`
+({{mission-record}}), the common member of every Mission-creating
+success response, whatever surface completes the creation. The
+success response that first delivers a newly created Mission's
+identifier or credential MUST carry it, and a Mission-bound token
+response SHOULD carry it beside `mission_id`: `expires_in` describes
+the access token's lifetime, not the Mission's, and the effective
+expiry may be shorter than the requested `intent.expires_at`. A
+creation replay deduplicated under `approval_event_id`
+({{mission-record}}) returns the committed effective value
+unchanged. On OAuth token responses the member is additionally
+registered as a token-endpoint response parameter ({{iana}}). It is
+informational in the same way: presenting it authorizes nothing.
 
 ## Single Accountable Approver {#multi-party-approval}
 

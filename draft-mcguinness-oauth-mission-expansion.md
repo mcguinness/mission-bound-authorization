@@ -759,11 +759,22 @@ silently outlived its predecessor would let expansion launder a
 longer-lived Mission past the originally approved horizon.
 
 The completing success response, the resolving poll or the code
-redemption, carries the effective value in the issuance profile's
-`mission_expires_at` response member. An auditor recomputes the
-bound, the minimum of the submitted request and the predecessor's
-`expires_at`, or the disclosed extension the consent event records,
-and matches the successor record against it.
+redemption, MUST carry the effective value in the issuance profile's
+`mission_expires_at` response member. Completion inherits the
+issuance profile's atomic creation-time check: where the
+submission's `intent.expires_at` passes while the expansion is
+pending, completion creates no successor Mission and the exchange
+fails with this profile's denial semantics ({{denial-reasons}}).
+
+An auditor verifies the successor record by inequalities, never by
+matching a recomputed minimum: in every case the effective value is
+no later than the submission's `intent.expires_at`; without an
+approved extension it is also no later than the predecessor's
+`expires_at`; with one, it is later than the predecessor's
+`expires_at` and no later than the requested ceiling, the Mission
+Issuer's policy permits the extension, and the exact effective value
+was rendered and approved at the expansion consent event. Any
+further shortening is justified by recorded policy.
 
 # The Predecessor Mission Reference {#predecessor-member}
 
