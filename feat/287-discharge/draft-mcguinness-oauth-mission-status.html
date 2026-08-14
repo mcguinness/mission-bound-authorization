@@ -2431,85 +2431,118 @@ projection.<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
           <dd style="margin-left: 1.5em" id="section-6.2-2.6">
             <p id="section-6.2-2.6.1"><span class="bcp14">REQUIRED</span>. A string. Echoed from the fired condition and
 cross-checked against the condition <code>condition_digest</code> names: a
-mismatch is refused (<a href="#discharge-anti-oracle" class="auto internal xref">Section 6.2.2</a>). <code>event_type</code> is
-never a selector by itself.<a href="#section-6.2-2.6.1" class="pilcrow">¶</a></p>
+mismatch joins the <code>not_found</code> collapse, since distinguishing it
+would reveal information about a condition selected by digest
+(<a href="#discharge-anti-oracle" class="auto internal xref">Section 6.2.2</a>). <code>event_type</code> is never a selector by
+itself.<a href="#section-6.2-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.2-2.7">
 <code>event_id</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.2-2.8">
-            <p id="section-6.2-2.8.1"><span class="bcp14">REQUIRED</span>. A string. The identifier of the asserted external
-occurrence, used for evidence correlation and for the event-level
-deduplication of <a href="#discharge-idempotency" class="auto internal xref">Section 6.2.3</a>. It is distinct from
-<code>nonce</code>, the HTTP retry key of <a href="#idempotency" class="auto internal xref">Section 6.8</a>.<a href="#section-6.2-2.8.1" class="pilcrow">¶</a></p>
+            <p id="section-6.2-2.8.1"><span class="bcp14">REQUIRED</span>. A string, <code>1*128( ALPHA / DIGIT / "-" / "_" / ":" / "." )</code>
+              <span>[<a href="#RFC5234" class="cite xref">RFC5234</a>]</span>. The identifier of the asserted external occurrence,
+used for evidence correlation and for the event-level deduplication
+of <a href="#discharge-idempotency" class="auto internal xref">Section 6.2.3</a>. It is distinct from <code>nonce</code>, the HTTP
+retry key of <a href="#idempotency" class="auto internal xref">Section 6.8</a>.<a href="#section-6.2-2.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.2-2.9">
-<code>evidence_ref</code>, <code>evidence_digest</code>:</dt>
+<code>evidence_ref</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.2-2.10">
-            <p id="section-6.2-2.10.1"><span class="bcp14">OPTIONAL</span>. Strings. Bounded audit metadata about the asserted
-occurrence. The AS <span class="bcp14">MUST NOT</span> dereference <code>evidence_ref</code> in baseline
-processing and <span class="bcp14">MUST NOT</span> treat either member as authorization input.<a href="#section-6.2-2.10.1" class="pilcrow">¶</a></p>
+            <p id="section-6.2-2.10.1"><span class="bcp14">OPTIONAL</span>. A URI, maximum 512 characters. A reference to evidence of
+the asserted occurrence.<a href="#section-6.2-2.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.2-2.11">
-<code>observed_at</code>:</dt>
+<code>evidence_digest</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.2-2.12">
-            <p id="section-6.2-2.12.1"><span class="bcp14">OPTIONAL</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time: a caller assertion. The
-AS validates it for syntax and reasonable clock bounds only, never as
-trusted ordering or freshness, and records its own commit time as
-<code>received_at</code> in audit.<a href="#section-6.2-2.12.1" class="pilcrow">¶</a></p>
+            <p id="section-6.2-2.12.1"><span class="bcp14">OPTIONAL</span>. A string, the family's prefixed digest form (<code>sha-256:</code>
+plus base64url, no-padding encoding), classified as a raw-octet
+digest (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Commitment
+Mechanisms"): computed over the exact octets of the referenced
+artifact as exchanged, with no canonicalization. <code>evidence_ref</code> and
+<code>evidence_digest</code> <span class="bcp14">MAY</span> both appear: when they do, <code>evidence_digest</code>
+              <span class="bcp14">MUST</span> commit the bytes <code>evidence_ref</code> names. Present alone,
+<code>evidence_digest</code> is independent audit metadata.<a href="#section-6.2-2.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-6.2-3">Semantics:<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-3"><code>evidence_ref</code> and <code>evidence_digest</code> are bounded audit metadata about
+the asserted occurrence. The AS <span class="bcp14">MUST NOT</span> dereference <code>evidence_ref</code>
+in baseline processing and <span class="bcp14">MUST NOT</span> treat either member as
+authorization input.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.2-4">
+          <dt id="section-6.2-4.1">
+<code>observed_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-4.2">
+            <p id="section-6.2-4.2.1"><span class="bcp14">OPTIONAL</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time: a caller assertion. The
+AS validates it for syntax and reasonable clock bounds only, never as
+trusted ordering or freshness, and records its own commit time as
+<code>received_at</code> in audit.<a href="#section-6.2-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-6.2-5">Semantics:<a href="#section-6.2-5" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-6.2-4.1">
-            <p id="section-6.2-4.1.1"><strong>Entry-level OR latch.</strong> The entry's <code>terminal_when</code> discharges on
+<li class="normal" id="section-6.2-6.1">
+            <p id="section-6.2-6.1.1"><strong>Entry-level OR latch.</strong> The entry's <code>terminal_when</code> discharges on
 any condition being met (<a href="#terminal-when" class="auto internal xref">Section 7.2</a>); the request names the
 condition that fired. The committed state is one monotonic latch on
 the entry, or on its selector equivalence class, one
 state-version increment, one audit record, and one notification. A
-later delivery naming a sibling condition of an already-discharged
-entry is acknowledged <code>already_discharged</code> (<a href="#discharge-result" class="auto internal xref">Section 6.2.4</a>) and
-<span class="bcp14">MUST NOT</span> discharge the entry again or increment the version again.
-The latch <span class="bcp14">MUST NOT</span> revert, and issuance gating for a discharged
-entry is unchanged (<a href="#discharge" class="auto internal xref">Section 7.3</a>).<a href="#section-6.2-4.1.1" class="pilcrow">¶</a></p>
+later delivery presenting any valid condition against an
+already-discharged entry, a sibling condition, or the same
+condition under a different <code>event_id</code>, is acknowledged
+<code>already_discharged</code> (<a href="#discharge-result" class="auto internal xref">Section 6.2.4</a>) and <span class="bcp14">MUST NOT</span> discharge
+the entry again or increment the version again; an exact event
+replay (the same tuple and the same fingerprint) is handled first by
+the dedup rule of <a href="#discharge-idempotency" class="auto internal xref">Section 6.2.3</a>. The latch <span class="bcp14">MUST NOT</span>
+revert, and issuance gating for a discharged entry is unchanged
+(<a href="#discharge" class="auto internal xref">Section 7.3</a>).<a href="#section-6.2-6.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.2-4.2">
-            <p id="section-6.2-4.2.1"><strong>Duplicate entries.</strong> One <code>entry_digest</code> discharges every
+          <li class="normal" id="section-6.2-6.2">
+            <p id="section-6.2-6.2.1"><strong>Duplicate entries.</strong> One <code>entry_digest</code> discharges every
 recorded entry resolving to that digest as a single
 equivalence-class transition, and therefore one version increment,
 under the Authority Set entry commitment's selector
 equivalence-class rule
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.2-4.2.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.2-6.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.2-4.3">
-            <p id="section-6.2-4.3.1"><strong>States.</strong> <code>discharge</code> applies while the Mission is <code>active</code> or
+          <li class="normal" id="section-6.2-6.3">
+            <p id="section-6.2-6.3.1"><strong>States.</strong> <code>discharge</code> applies while the Mission is <code>active</code> or
 <code>suspended</code>: a suspended Mission still narrows monotonically. A
 delivery reaching the endpoint after <code>completed</code>, <code>revoked</code>,
 <code>expired</code>, or another terminal state returns an authenticated
 <code>terminal_noop</code> acknowledgement (<a href="#discharge-result" class="auto internal xref">Section 6.2.4</a>) and <span class="bcp14">MUST NOT</span>
 create a transition or a version increment. <code>discharge</code> never
 changes Mission-level state; a deployment that also tracks
-all-entry completion invokes <code>complete</code> separately.<a href="#section-6.2-4.3.1" class="pilcrow">¶</a></p>
+all-entry completion invokes <code>complete</code> separately. The AS reaches
+this determination only after the selector and authorization
+validation of <a href="#discharge-anti-oracle" class="auto internal xref">Section 6.2.2</a>, so a terminal Mission is
+never a shortcut past those checks.<a href="#section-6.2-6.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.2-4.4">
-            <p id="section-6.2-4.4.1"><strong>No <code>expected_version</code>.</strong> A stale-version refusal would delay a
+          <li class="normal" id="section-6.2-6.4">
+            <p id="section-6.2-6.4.1"><strong>No <code>expected_version</code>.</strong> A stale-version refusal would delay a
 safety-reducing operation; the digest selectors above and the
 idempotency rules of <a href="#discharge-idempotency" class="auto internal xref">Section 6.2.3</a> are the guards
-instead.<a href="#section-6.2-4.4.1" class="pilcrow">¶</a></p>
+instead.<a href="#section-6.2-6.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.2-4.5">
-            <p id="section-6.2-4.5.1"><strong>Atomicity.</strong> The entry latch (or its equivalence-class latch), the
-version increment, the audit record, and the signed operation
-response commit as one transaction or outbox unit. Where the
-deployment also runs a companion that requires further propagation
-on the same commit, for example the child-delegation profile's
+          <li class="normal" id="section-6.2-6.5">
+            <p id="section-6.2-6.5.1"><strong>Atomicity.</strong> The entry latch (or its equivalence-class latch), the
+version increment, the audit and result record, and the durable
+propagation work (an outbox entry or a signal enqueue) commit as
+one unit. Where the deployment emits lifecycle events
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), the signal enqueue
+is part of that same unit. Downstream materialization from the
+durable propagation work, including the child-delegation profile's
 entry-wise propagation to an already-justified Child Mission
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), or emits
-lifecycle events (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>),
-that work is part of the same atomic unit.<a href="#section-6.2-4.5.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), is
+asynchronous and is not claimed atomic with this commit. Instead, a
+Child Mission's derivation <span class="bcp14">MUST</span> consult, or otherwise be gated by,
+the committed parent latch until that materialization completes, so
+no Child Mission can derive the discharged parent authority in the
+gap between the parent's commit and the child's materialized view.<a href="#section-6.2-6.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <div id="discharge-authority">
@@ -2534,11 +2567,21 @@ asserting principal.<a href="#section-6.2.1-2" class="pilcrow">¶</a></p>
 <p id="section-6.2.1-3">A <code>terminal_when</code> condition <span class="bcp14">MAY</span> carry <code>discharge_policy</code> (<span class="bcp14">OPTIONAL</span>): a
 stable, opaque selector naming the AS-side authority mapping for that
 condition (<a href="#iana-terminal-when" class="auto internal xref">Section 13.4</a>). The AS <span class="bcp14">MUST</span> resolve and validate
-the selector at approval or activation, refusing an Intent whose
-selector maps to nothing; the AS records the resolved mapping's
-identifier and version issuer-side. The member is never a raw
-principal or workload structure, and the requesting client cannot
-select an unapproved fallback.<a href="#section-6.2.1-3" class="pilcrow">¶</a></p>
+the selector whenever a condition first enters an immutable
+Mission-record entry: at Mission creation, and at every later point
+where a derived entry can carry a new condition (child creation,
+expansion, Token Exchange or other derivation, and any further profile
+that adds a condition), refusing the Intent or the derivation whose
+selector maps to nothing. The AS binds the resolved mapping's
+identifier and version to that exact <code>condition_digest</code> in
+issuer-held metadata. A requesting client <span class="bcp14">MUST NOT</span> select an
+arbitrary otherwise-valid policy merely because adding a condition is
+narrowing: an unchecked choice of mapping for a newly added condition
+could still force the premature discharge that <a href="#completion-security" class="auto internal xref">Section 11.6</a>
+warns against, a denial-of-service on the task and an early
+retirement of its own guardrail. The member is never a raw principal
+or workload structure, and the requesting client cannot select an
+unapproved fallback.<a href="#section-6.2.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="discharge-anti-oracle">
@@ -2547,11 +2590,22 @@ select an unapproved fallback.<a href="#section-6.2.1-3" class="pilcrow">¶</a><
 <a href="#section-6.2.2" class="section-number selfRef">6.2.2. </a><a href="#name-discharge-anti-oracle" class="section-name selfRef">Discharge Anti-Oracle</a>
           </h4>
 <p id="section-6.2.2-1">An unknown <code>mission_id</code>, an unknown <code>entry_digest</code>, an unknown
-<code>condition_digest</code>, an entry with no <code>terminal_when</code>, and a caller not
-authorized for that target all collapse to the endpoint's existing
-<code>not_found</code> treatment (<a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>). Authentication
+<code>condition_digest</code>, an entry with no <code>terminal_when</code>, an <code>event_type</code>
+that does not match the condition <code>condition_digest</code> names, and a
+caller not authorized for that target all collapse to the endpoint's
+existing <code>not_found</code> treatment (<a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>). Authentication
 failure remains <code>unauthorized</code> (401). Detailed refusal reasons live
 only in issuer audit records.<a href="#section-6.2.2-1" class="pilcrow">¶</a></p>
+<p id="section-6.2.2-2">The AS validates selector existence (<code>mission_id</code>, <code>entry_digest</code>, and
+<code>condition_digest</code> all resolve, the entry carries <code>terminal_when</code>, and
+<code>event_type</code> matches the named condition), then condition membership
+(the named condition belongs to the named entry), then target
+authorization (the discharge authority mapping of
+<a href="#discharge-authority" class="auto internal xref">Section 6.2.1</a>), before returning any <code>terminal_noop</code>
+acknowledgement (<a href="#discharge-result" class="auto internal xref">Section 6.2.4</a>). This order keeps a terminal
+Mission from acting as a selector-existence oracle: every case the
+collapse above refuses is checked before a terminal Mission is ever
+distinguished from one whose selectors do not resolve.<a href="#section-6.2.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="discharge-idempotency">
@@ -2560,23 +2614,61 @@ only in issuer audit records.<a href="#section-6.2.2-1" class="pilcrow">¶</a></
 <a href="#section-6.2.3" class="section-number selfRef">6.2.3. </a><a href="#name-idempotency-nonce-and-event" class="section-name selfRef">Idempotency: <code>nonce</code> and <code>event_id</code></a>
           </h4>
 <p id="section-6.2.3-1"><code>discharge</code> keeps two identities apart. <code>nonce</code> stays the HTTP
-operation retry key under <a href="#idempotency" class="auto internal xref">Section 6.8</a>'s rules, hardened as that
-section now states: a retransmission with the same <code>nonce</code> and a
-byte-identical request replays the original signed response, and the
-same <code>nonce</code> with a different request is refused <code>invalid_request</code>,
-never answered with an unrelated original response.<a href="#section-6.2.3-1" class="pilcrow">¶</a></p>
+operation retry key under <a href="#idempotency" class="auto internal xref">Section 6.8</a>'s rules: a retransmission
+with the same <code>nonce</code> and a byte-identical request returns the stored
+signed response verbatim. The same <code>nonce</code> with a different request is
+refused <code>invalid_request</code>, never answered with an unrelated original
+response.<a href="#section-6.2.3-1" class="pilcrow">¶</a></p>
 <p id="section-6.2.3-2"><code>event_id</code> deduplicates the external occurrence, scoped by
 (authenticated discharge authority, <code>mission_id</code>, <code>entry_digest</code>,
-<code>condition_digest</code>, <code>event_id</code>): the same tuple with the same
-assertion fingerprint (the request's canonical bytes excluding
-<code>nonce</code>) replays the prior signed result; the same tuple with a
-different assertion is refused <code>conflict</code>; the same <code>event_id</code>
-asserted against another Mission, entry, or condition is a valid,
-independent assertion, since one real-world event legitimately fans
-out to more than one target.<a href="#section-6.2.3-2" class="pilcrow">¶</a></p>
-<p id="section-6.2.3-3">When both rules could apply, the <code>nonce</code> rule is evaluated first,
+<code>condition_digest</code>, <code>event_id</code>). A response's <code>nonce</code> <span class="bcp14">MUST</span> equal the
+one just sent (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>), so a retry that supplies
+a fresh <code>nonce</code>, as an at-least-once sender legitimately does, cannot
+receive the original signed response verbatim. Two cases follow:<a href="#section-6.2.3-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.2.3-3.1">
+              <p id="section-6.2.3-3.1.1"><strong>Same <code>nonce</code>, same request.</strong> The stored signed response is
+returned verbatim, per the <code>nonce</code> rule above.<a href="#section-6.2.3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.3-3.2">
+              <p id="section-6.2.3-3.2.1"><strong>New <code>nonce</code>, same event tuple and the same assertion
+fingerprint</strong> (defined below). The AS performs no state-changing
+work: no re-latch, no version increment. It issues a new signed
+envelope that echoes the new <code>nonce</code> and carries the stored
+operation result: the same <code>outcome</code> and selectors, and the
+original <code>prior_version</code> and <code>current_version</code> the first commit
+produced.<a href="#section-6.2.3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-6.2.3-4"><strong>Event assertion fingerprint.</strong> A semantic assertion object, never
+raw form bytes: the JSON object with exactly the decoded members
+<code>operation</code> (the literal string <code>discharge</code>), <code>mission_id</code>,
+<code>entry_digest</code>, <code>condition_digest</code>, <code>event_type</code>, <code>event_id</code>, and,
+when present, <code>evidence_ref</code>, <code>evidence_digest</code>, and <code>observed_at</code>.
+The object is canonicalized under the issuance profile's
+canonicalization (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Canonicalization Rules") and digested as a canonical-object digest
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Commitment
+Mechanisms"), since protocol context already fixes what the object
+commits. <code>nonce</code>, client authentication material, the DPoP proof, and
+transport headers are outside the fingerprint: none of them enter the
+assertion object, and none of them affect its value.<a href="#section-6.2.3-4" class="pilcrow">¶</a></p>
+<p id="section-6.2.3-5">Over the (discharge authority, <code>mission_id</code>, <code>entry_digest</code>,
+<code>condition_digest</code>, <code>event_id</code>) tuple: the same tuple with the same
+fingerprint is the replay case above; the same tuple with a different
+fingerprint is refused <code>conflict</code>; the same <code>event_id</code> asserted
+against another Mission, entry, or condition is a valid, independent
+assertion, since one real-world event legitimately fans out to more
+than one target.<a href="#section-6.2.3-5" class="pilcrow">¶</a></p>
+<p id="section-6.2.3-6">When both rules could apply, the <code>nonce</code> rule is evaluated first,
 since it governs the HTTP exchange; the <code>event_id</code> rule governs across
-distinct exchanges.<a href="#section-6.2.3-3" class="pilcrow">¶</a></p>
+distinct exchanges.<a href="#section-6.2.3-6" class="pilcrow">¶</a></p>
+<p id="section-6.2.3-7"><strong>Retention.</strong> Event-dedup state <span class="bcp14">MUST</span> be retained at least as long as
+the deployment's published retry horizon and the replayable result's
+usable lifetime, and <span class="bcp14">MAY</span> be bounded by the Mission record's own
+retention. After eviction, a repeated assertion is processed fresh
+against the latch and yields <code>already_discharged</code> with no version
+increment, which is safe because the latch is monotonic.<a href="#section-6.2.3-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="discharge-result">
@@ -2598,17 +2690,23 @@ Status Response envelope (<a href="#mission-status-response" class="auto interna
 <code>outcome</code>:</dt>
             <dd style="margin-left: 1.5em" id="section-6.2.4-2.4">
               <p id="section-6.2.4-2.4.1">one of <code>discharged</code> (this request committed the latch),
-<code>already_discharged</code> (a sibling condition of an already-discharged
+<code>already_discharged</code> (a sibling condition, or the same condition
+under a different <code>event_id</code>, presented against an already-latched
 entry), or <code>terminal_noop</code> (the Mission was already in a terminal
-state).<a href="#section-6.2.4-2.4.1" class="pilcrow">¶</a></p>
+state). An exact event replay is handled first by the dedup rule
+(<a href="#discharge-idempotency" class="auto internal xref">Section 6.2.3</a>), never reaching this determination as a
+fresh <code>already_discharged</code>.<a href="#section-6.2.4-2.4.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
 <dt id="section-6.2.4-2.5">
 <code>prior_version</code>, <code>current_version</code>:</dt>
             <dd style="margin-left: 1.5em" id="section-6.2.4-2.6">
-              <p id="section-6.2.4-2.6.1">the Mission's state version immediately before and after this
-request. They are equal for <code>already_discharged</code> and
-<code>terminal_noop</code>.<a href="#section-6.2.4-2.6.1" class="pilcrow">¶</a></p>
+              <p id="section-6.2.4-2.6.1">the Mission's state version immediately before and after the
+commit this result reports. For a request that itself commits, that
+commit is this request's own. For the new-<code>nonce</code> fresh-envelope
+case of <a href="#discharge-idempotency" class="auto internal xref">Section 6.2.3</a>, which commits nothing, these are
+the versions the original commit produced, unchanged. They are equal
+for <code>already_discharged</code> and <code>terminal_noop</code>.<a href="#section-6.2.4-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 </dl>
@@ -2916,12 +3014,21 @@ or private-key JWT. Its discovery mirrors that endpoint: the accepted
 methods in <code>mission_lifecycle_endpoint_auth_methods_supported</code> and, for
 <code>private_key_jwt</code>, the accepted client-assertion algorithms in
 <code>mission_lifecycle_endpoint_auth_signing_alg_values_supported</code>
-(<a href="#as-metadata" class="auto internal xref">Section 9</a>); the sender-constrained access-token path through this
-endpoint's OAuth Protected Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>. A private-key
-JWT <code>client_assertion</code> <span class="bcp14">MUST</span> name the <code>mission_lifecycle_endpoint</code> URL in
-<code>aud</code>, and a presented access token <span class="bcp14">MUST</span> be audience-restricted to this
-endpoint's protected-resource identifier, exactly as at the Mission
-Status endpoint.<a href="#section-6.5-1" class="pilcrow">¶</a></p>
+(<a href="#as-metadata" class="auto internal xref">Section 9</a>). For the sender-constrained access-token path, this
+endpoint is an OAuth protected resource exactly as the Mission Status
+endpoint is: the AS publishes, in its Protected Resource Metadata for
+this resource <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>, the <code>resource</code> identifier the token's
+audience <span class="bcp14">MUST</span> name and the scopes it requires (<code>scopes_supported</code>):
+<code>mission_lifecycle</code> for <code>revoke</code>, <code>suspend</code>, <code>resume</code>, and <code>complete</code>
+(<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>), and, where the deployment offers
+<code>discharge</code>, <code>mission_discharge</code> as well (<a href="#discharge-authority" class="auto internal xref">Section 6.2.1</a>). A
+private-key JWT <code>client_assertion</code> <span class="bcp14">MUST</span> name the
+<code>mission_lifecycle_endpoint</code> URL in <code>aud</code>, and a presented access token
+<span class="bcp14">MUST</span> be audience-restricted to this endpoint's protected-resource
+identifier, exactly as at the Mission Status endpoint. Direct mTLS or
+private-key-JWT callers continue to use the deployment-defined
+equivalent grant, never a scope, exactly as <code>discharge</code> itself does
+(<a href="#discharge-authority" class="auto internal xref">Section 6.2.1</a>).<a href="#section-6.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authorization">
@@ -3295,7 +3402,8 @@ are deployment- or registry-defined and opaque to this document, as
 <dt id="section-7.2-2.2.2.3">
 <code>discharge_policy</code>:</dt>
               <dd style="margin-left: 1.5em" id="section-7.2-2.2.2.4">
-                <p id="section-7.2-2.2.2.4.1"><span class="bcp14">OPTIONAL</span>. A string. A stable, opaque selector naming the AS-side
+                <p id="section-7.2-2.2.2.4.1"><span class="bcp14">OPTIONAL</span>. A string, <code>1*64( ALPHA / DIGIT / "-" / "_" / ":" / "." )</code>
+                  <span>[<a href="#RFC5234" class="cite xref">RFC5234</a>]</span>, opaque. A stable selector naming the AS-side
 discharge-authority mapping for this condition
 (<a href="#discharge-authority" class="auto internal xref">Section 6.2.1</a>).<a href="#section-7.2-2.2.2.4.1" class="pilcrow">¶</a></p>
 </dd>
@@ -3374,9 +3482,10 @@ other means, such as a private status query or a recorded
 administrative action, invokes the same commit internally once it has
 decided.<a href="#section-7.3.1-1" class="pilcrow">¶</a></p>
 <p id="section-7.3.1-2">Once committed, a discharge is recorded as Authorization-Server-side
-state and <span class="bcp14">MUST NOT</span> revert: a later delivery naming a sibling condition
-of an already-discharged entry is acknowledged <code>already_discharged</code>
-(<a href="#discharge-result" class="auto internal xref">Section 6.2.4</a>) and does not restore the entry's authority.<a href="#section-7.3.1-2" class="pilcrow">¶</a></p>
+state and <span class="bcp14">MUST NOT</span> revert: a later delivery presenting any valid
+condition against an already-discharged entry is acknowledged
+<code>already_discharged</code> (<a href="#discharge-result" class="auto internal xref">Section 6.2.4</a>) and does not restore the
+entry's authority.<a href="#section-7.3.1-2" class="pilcrow">¶</a></p>
 <p id="section-7.3.1-3">A committed discharge is a committed metadata-only change for the
 purposes of the state version (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>): the
 Mission's state version increments at the commit, so a materialized
@@ -4355,6 +4464,10 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <dt id="RFC3339">[RFC3339]</dt>
         <dd>
 <span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC5234">[RFC5234]</dt>
+        <dd>
+<span class="refAuthor">Crocker, D., Ed.</span> and <span class="refAuthor">P. Overell</span>, <span class="refTitle">"Augmented BNF for Syntax Specifications: ABNF"</span>, <span class="seriesInfo">STD 68</span>, <span class="seriesInfo">RFC 5234</span>, <span class="seriesInfo">DOI 10.17487/RFC5234</span>, <time datetime="2008-01" class="refDate">January 2008</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc5234">https://www.rfc-editor.org/rfc/rfc5234</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC6838">[RFC6838]</dt>
         <dd>
