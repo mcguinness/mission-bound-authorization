@@ -759,6 +759,15 @@ record whose signing key is not published for that scope, so one
 component's key cannot sign evidence for a resource, audience, or
 scope it does not serve.
 
+Where the selected signing key is identified as compromised under the
+deployment's published key status, the verifier MUST apply the
+compromise-boundary rule of {{evidence-integrity-signing-keys}}
+before treating the signature as verified: only an independently
+trusted existence proof over the complete signed artifact, or its
+unambiguous typed digest, establishing existence before the boundary
+permits the remaining steps to continue, and the record's own
+timestamps never satisfy it.
+
 The JWS protected header MUST carry:
 
 - `kid`: a key identifier resolvable in the emitter's published JWKS
@@ -1400,7 +1409,10 @@ so the digest cannot be read as committing to any other record type.
 ## Receipt Verification {#receipt-verification}
 
 A verifier MUST perform the following steps, in order, and MUST NOT
-rely on a receipt if any step fails:
+rely on a receipt if any step fails. Where the receipt issuer's
+signing key is identified as compromised, these steps are
+additionally governed by the compromise-boundary rule of
+{{evidence-integrity-signing-keys}}:
 
 1. Verify the receipt's `evidence_envelope`: decode the JWS payload,
    compute the JCS canonical bytes of the receipt with
@@ -1587,7 +1599,7 @@ requirement to this document or the runtime profile.
 |---|---|---|---|
 | Parameter-bound | A verified Decision Evidence record authenticates the digest of the parameters evaluated ({{decision-evidence-object}}), and linked Execution Evidence authenticates the authorized and effective digest pair, exposing equality or deviation ({{execution-evidence-object}}); the link to the parameters themselves is established by recomputing the digest over the normalized parameter object | Binding to what a human approved holds where action-bound approval is required and used, the rendering derives from the same normalized parameters by a trusted component, and the dynamic link verifies ({{I-D.draft-mcguinness-mission-runtime}}) | That the human understood the rendering, or that the action occurred: the outcome record is the emitter's signed assertion |
 | Key-isolated | Origin and integrity: each record is signed by the emitter's published key, bound to its scope and audience ({{decision-evidence-integrity}}) | The runtime profile's agent-isolated evidence-emission condition, claimed per emitter and scope in the Enforcement Scope Statement ({{I-D.draft-mcguinness-mission-runtime}}): the key is non-exportable to and inaccessible from the agent, signing is invocable only by the emitter's authenticated emission path, and the record is constructed by that path from its authoritative state and independently validated request inputs, with the caller unable to supply the completed record or assert the authoritative facts | The truth of the emitter's assertion; the correctness or non-compromise of the PDP, PEP, executor, harness, signer, or their inputs; the completeness or ordering of the evidence stream; or that an effect occurred because a signed outcome asserts it |
-| Session-independent | A verifier can verify a retained record without a live session and without possession or validity of the credential that carried the action ({{evidence-integrity-signing-keys}}); retired keys stay resolvable for the retention window, and evidence signed after a declared key compromise is unverifiable rather than verified | None | That the session or credential was valid at decision or execution time, or that the Mission is active now: those are record contents and linked state evidence, not consequences of signature verification |
+| Session-independent | A verifier can verify a retained record without a live session and without possession or validity of the credential that carried the action ({{evidence-integrity-signing-keys}}); retired keys stay resolvable for the retention window, and a key identified as compromised is governed by the compromise-boundary rule of {{evidence-integrity-signing-keys}}: carried timestamps never establish that a signature predates the boundary | None | That the session or credential was valid at decision or execution time, or that the Mission is active now: those are record contents and linked state evidence, not consequences of signature verification |
 | Third-party-verifiable | Scoped independent verification: a party with access to the Enforcement Scope Statement's published keys verifies a record independently of the emitting deployment ({{evidence-integrity-signing-keys}}) | Durable offline verification: a party holding retained or configured producer and Transparency Service trust anchors verifies without contacting either operator, where a Receipt and the evidence bytes are retained; cross-domain verifiability additionally requires the audit profile's independent-operator condition ({{I-D.draft-mcguinness-mission-audit}}) | That an unknown producer key is trusted, that the signed assertion is true, or that the evidence feed is complete |
 {: title="Evidence properties: what the records prove, and under which conditions"}
 
@@ -1705,6 +1717,24 @@ A RECEIPT VERIFIER conforming to this document MUST perform the
 algorithm of {{receipt-verification}} and reject a Mission Receipt on
 any of its failure conditions.
 
+## Compromise-Boundary Outcomes {#compromise-vectors}
+
+A VERIFIER and a RECEIPT VERIFIER conform to the compromise-boundary
+rule ({{evidence-integrity-signing-keys}}) when each of the following
+holds:
+
+- a self-asserted pre-boundary timestamp does not rescue a record
+  signed under a compromised key;
+- a verified independent proof over the complete signed artifact, with
+  an authenticated time before the boundary, permits the ordinary
+  verification algorithm to continue;
+- a proof whose authenticated time is at or after the boundary does
+  not;
+- failure to obtain or verify the proof yields not-verified, an audit
+  failure, never verified and never a finding of tampering; and
+- the same outcomes hold for Mission Receipts and for harness
+  evidence.
+
 # Security Considerations {#security-considerations}
 
 The runtime profile's Security Considerations
@@ -1739,11 +1769,30 @@ likewise. The retired-key rule of the issuance profile's key
 management ({{I-D.draft-mcguinness-oauth-mission}}) extends to
 evidence signing keys: a retired signing key MUST remain resolvable
 in the published key set for at least the evidence retention window,
-so records signed before a rotation stay verifiable after it. The
-compromise exception carries over with it: a key known or suspected
-compromised is published as revoked or marked with a compromise time,
-per the core rule, and evidence signed under it after that time is
-unverifiable rather than verified.
+so records signed before a rotation stay verifiable after it. How a verifier learns that a key is compromised is
+deployment-defined, per the published key status. Once the signing
+key is identified as compromised, the compromise-boundary rule
+applies. A verifier MUST NOT use timestamps carried by an artifact to
+determine whether its signature predates a compromise boundary. It
+MUST NOT treat an artifact under that key as verified unless an
+independently trusted proof commits to the complete signed artifact,
+or to its unambiguous typed digest, and establishes its existence
+before that boundary. Such a proof establishes only that those bytes
+existed by the proof time; it does not establish the truth of the
+artifact, the actual signature time, or that the key was not
+compromised earlier. This rule applies whether or not the deployment
+adopted the audit profile: registration under the audit profile
+({{I-D.draft-mcguinness-mission-audit}}) or a trusted timestamp is
+the optional recovery mechanism, and without one, a record under the
+compromised key is not verified merely because it claims a
+pre-boundary time. For a Receipt-based proof, the verifier completes
+the audit profile's Receipt verification in full, including the
+Transparency Service signature, the authenticated registration time,
+the inclusion proof, the type binding, and the digest linkage to the
+complete evidence bytes; a bare inclusion path or a payload timestamp
+is insufficient. An artifact refused under this rule is not verified;
+that outcome is an audit failure, not an integrity failure, and the
+absence of an independent proof is not itself evidence of tampering.
 
 Implementations MUST reject evidence whose `format` is unsupported
 rather than accepting it unverified.
@@ -1777,11 +1826,11 @@ verifiers ({{receipt-chaining}}); a deployment that needs global
 ordering or inclusion runs the audit transparency profile or anchors
 the chain head independently.
 
-A compromised receipt-issuer signing key inherits the emitter-key
-considerations of {{evidence-integrity-signing-keys}}: a key known or
-suspected compromised is published as revoked or marked with a
-compromise time, and a receipt signed under it after that time is
-unverifiable rather than verified.
+A compromised receipt-issuer signing key is governed by the
+compromise-boundary rule of {{evidence-integrity-signing-keys}},
+applied during Receipt verification ({{receipt-verification}}):
+timestamps carried by a receipt never establish that its signature
+predates the boundary.
 
 # Privacy Considerations {#privacy-considerations}
 
