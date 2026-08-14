@@ -1774,10 +1774,12 @@ rather than inventing a state.<a href="#section-6-3" class="pilcrow">¶</a></p>
 <code>tenant</code>). A consumer matches the event type by the exact URI the
 Mission Issuer's Transmitter Configuration Metadata advertises, so
 the event-type namespace can change without a change to this
-profile's semantics. On adoption, the URI is expected to migrate to
-an IETF- or foundation-controlled namespace (for example a
-<code>urn:ietf:params</code> URN or an OpenID Foundation schema URI), with a
-provisional <code>urn:ietf:params</code> URN serving in the interim.<a href="#section-6-4" class="pilcrow">¶</a></p>
+profile's semantics. After allocation, the URI is expected to
+migrate to an IETF- or foundation-controlled namespace (a
+<code>urn:ietf:params</code> URN or an OpenID Foundation schema URI) as a
+wire-identifier change landing with dual-recognition compatibility;
+until such a namespace is allocated and a change controller exists,
+the author-controlled URI remains the deployable identifier.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <p id="section-6-5">A consumer anchors freshness to stream liveness, not to per-Mission
 age. The Shared Signals Framework <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> provides a stream
 verification event. A Mission Issuer <span class="bcp14">MAY</span> additionally emit a periodic

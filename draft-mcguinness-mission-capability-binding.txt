@@ -16,17 +16,20 @@ Abstract
    Mission-Bound Runtime Enforcement: AuthZEN Profile
    [I-D.draft-mcguinness-mission-authzen] carries the decision request
    that permits a consequential action against a Mission's approved
-   authority.  For an action sourced from a discovered catalog, an MCP
-   tool, an OpenAPI operation, or an equivalent capability source, the
-   invoked identity can drift from what the catalog served at approval.
-   This document defines the companion binding that ties an approved
-   catalog entry to the capability source it was derived from: the
-   tool_id, source, and content digest recorded at derivation and
-   verified at decision time, the per-capability extraction rule that
-   computes the digest, the capability_drift denial reason as a
-   coordinated extension of the AuthZEN binding's runtime denial
-   classification, and the mapping onto the OpenID AuthZEN Profile for
-   Model Context Protocol Tool Authorization (COAZ) for MCP deployments.
+   authority.  For an action sourced from a discovered catalog (the MCP
+   Registry, [MCP-REGISTRY], is one example catalog source; its contents
+   are discovery metadata, never authority for a server's effective
+   capabilities), an MCP tool, an OpenAPI operation, or an equivalent
+   capability source, the invoked identity can drift from what the
+   catalog served at approval.  This document defines the companion
+   binding that ties an approved catalog entry to the capability source
+   it was derived from: the tool_id, source, and content digest recorded
+   at derivation and verified at decision time, the per-capability
+   extraction rule that computes the digest, the capability_drift denial
+   reason as a coordinated extension of the AuthZEN binding's runtime
+   denial classification, and the mapping onto the OpenID AuthZEN
+   Profile for Model Context Protocol Tool Authorization (COAZ) for MCP
+   deployments.
 
 About This Document
 
@@ -526,6 +529,10 @@ Table of Contents
               client-instance-assertion-01, 24 June 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-client-instance-assertion-01>.
+
+   [MCP-REGISTRY]
+              Model Context Protocol Project, "The MCP Registry", 2026,
+              <https://modelcontextprotocol.io/registry/about>.
 
 Acknowledgments
 

@@ -675,7 +675,13 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-client-instance-assertion],
       [I-D.draft-mcguinness-oauth-ai-agent-instance]), which sharpens
       delegation chains, joins, and evidence attribution to instance
-      granularity without touching the Mission model.
+      granularity without touching the Mission model.  Attestation-based
+      client authentication and SPIFFE
+      ([I-D.draft-ietf-oauth-attestation-based-client-auth],
+      [I-D.draft-ietf-oauth-spiffe-client-auth]) can supply client-
+      instance authentication and workload credentials beneath these
+      profiles; they do not define the Mission actor, delegation,
+      intent, lifecycle, or evidence semantics defined here.
 
    Subject:  The user or system on whose behalf the Mission is approved,
       an (iss, sub) pair recorded immutably at approval (the core).
@@ -897,8 +903,12 @@ Table of Contents
       its Authority Set.
 
    An agent registry is a complementary dependency, not part of the
-   Mission system.  Where one exists, the Mission Issuer and the PDP
-   consume a small, stable slice of it:
+   Mission system; an A2A AgentCard directory ([A2A]) is one example
+   source.  Discovery contents are not authority for workload identity,
+   authorization, or effective capabilities: a deployment applies local
+   admission policy and independently verifies the relevant credential,
+   resource metadata, and capability evidence.  Where one exists, the
+   Mission Issuer and the PDP consume a small, stable slice of it:
 
    *  the agent identifier and its owner,
 
@@ -2815,6 +2825,26 @@ Table of Contents
    This document makes no IANA request.
 
 24.  Informative References
+
+   [A2A]      A2A Project, "Agent2Agent (A2A) Protocol Specification,
+              Version 1.0", 2026,
+              <https://a2a-protocol.org/v1.0.0/specification/>.
+
+   [I-D.draft-ietf-oauth-attestation-based-client-auth]
+              Looker, T., Bastian, P., and C. Bormann, "OAuth 2.0
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-ietf-oauth-attestation-
+              based-client-auth-10, 6 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              attestation-based-client-auth-10>.
+
+   [I-D.draft-ietf-oauth-spiffe-client-auth]
+              Schwenkschuster, A., Kasselman, P., Rose, S., Thorgersen,
+              S., and N. Cam-Winget, "OAuth SPIFFE Client
+              Authentication", Work in Progress, Internet-Draft, draft-
+              ietf-oauth-spiffe-client-auth-02, 15 June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              spiffe-client-auth-02>.
 
    [I-D.draft-mcguinness-aauth-mission-expiry]
               McGuinness, K., "AAuth Mission Expiry", 2026,

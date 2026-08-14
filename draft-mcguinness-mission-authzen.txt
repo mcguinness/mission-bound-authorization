@@ -2356,7 +2356,7 @@ Table of Contents
 
 13.1.  Normative References
 
-   [ARAP]     McGuinness, K., "AuthZEN Access Request and Approval
+   [ARAP]     OpenID Foundation, "AuthZEN Access Request and Approval
               Profile - Draft 1", 2026,
               <https://openid.github.io/authzen/authzen-access-request-
               approval-profile-1_0.html>.

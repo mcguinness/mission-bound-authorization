@@ -1884,7 +1884,8 @@ verifiable provenance that would require, are future work.<a href="#section-1.9-
           <li class="normal" id="section-1.9-2.6">
             <p id="section-1.9-2.6.1"><strong>Decentralized agent identity.</strong> Agent identity and credentialing
 are out of scope (<span>[<a href="#I-D.draft-klrc-aiagent-auth" class="cite xref">I-D.draft-klrc-aiagent-auth</a>]</span>, and workload
-identity efforts such as WIMSE); this profile governs the
+identity efforts such as WIMSE,
+<span>[<a href="#I-D.draft-ietf-wimse-arch" class="cite xref">I-D.draft-ietf-wimse-arch</a>]</span>); this profile governs the
 approved-task artifact those identities act within, not the
 identities themselves.<a href="#section-1.9-2.6.1" class="pilcrow">¶</a></p>
 </li>
@@ -7426,9 +7427,17 @@ registry's policy until it is published.<a href="#section-18.9-7" class="pilcrow
         <dd>
 <span class="refAuthor">Cecchetti, S.</span>, <span class="refTitle">"Cedar Profile for OAuth 2.0 Rich Authorization Requests"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-cecchetti-oauth-rar-cedar-02</span>, <time datetime="2024-02-21" class="refDate">21 February 2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-cecchetti-oauth-rar-cedar-02">https://datatracker.ietf.org/doc/html/draft-cecchetti-oauth-rar-cedar-02</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-ietf-oauth-spiffe-client-auth">[I-D.draft-ietf-oauth-spiffe-client-auth]</dt>
+        <dd>
+<span class="refAuthor">Schwenkschuster, A.</span>, <span class="refAuthor">Kasselman, P.</span>, <span class="refAuthor">Rose, S.</span>, <span class="refAuthor">Thorgersen, S.</span>, and <span class="refAuthor">N. Cam-Winget</span>, <span class="refTitle">"OAuth SPIFFE Client Authentication"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-spiffe-client-auth-02</span>, <time datetime="2026-06-15" class="refDate">15 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-spiffe-client-auth-02">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-spiffe-client-auth-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-ietf-oauth-transaction-tokens">[I-D.draft-ietf-oauth-transaction-tokens]</dt>
         <dd>
 <span class="refAuthor">Tulshibagwale, A.</span>, <span class="refAuthor">Fletcher, G.</span>, and <span class="refAuthor">P. Kasselman</span>, <span class="refTitle">"Transaction Tokens"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-transaction-tokens-11</span>, <time datetime="2026-07-30" class="refDate">30 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens-11">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens-11</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-ietf-wimse-arch">[I-D.draft-ietf-wimse-arch]</dt>
+        <dd>
+<span class="refAuthor">Salowey, J. A.</span>, <span class="refAuthor">Rosomakho, Y.</span>, and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"Workload Identity in a Multi System Environment (WIMSE) Architecture"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-wimse-arch-08</span>, <time datetime="2026-07-06" class="refDate">6 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-wimse-arch-08">https://datatracker.ietf.org/doc/html/draft-ietf-wimse-arch-08</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-klrc-aiagent-auth">[I-D.draft-klrc-aiagent-auth]</dt>
         <dd>
@@ -7528,7 +7537,7 @@ registry's policy until it is published.<a href="#section-18.9-7" class="pilcrow
 <dd class="break"></dd>
 <dt id="MCP">[MCP]</dt>
         <dd>
-<span class="refAuthor">Model Context Protocol Project</span>, <span class="refTitle">"Model Context Protocol: Authorization"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization">https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization</a>&gt;</span>. </dd>
+<span class="refAuthor">Model Context Protocol Project</span>, <span class="refTitle">"Model Context Protocol: Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization">https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC7009">[RFC7009]</dt>
         <dd>
@@ -7579,8 +7588,10 @@ under Mission <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>.<a href="#append
         <h3 id="name-stage-0-agent-identity-by-r">
 <a href="#appendix-A.1" class="section-number selfRef">A.1. </a><a href="#name-stage-0-agent-identity-by-r" class="section-name selfRef">Stage 0: Agent Identity (by Reference)</a>
         </h3>
-<p id="appendix-A.1-1">The agent is an OAuth client with a workload identity (for example a
-WIMSE or SPIFFE identity), and <code>alice</code> has delegated to it through an
+<p id="appendix-A.1-1">The agent is an OAuth client with a workload identity (for example,
+a workload identity established using WIMSE or SPIFFE,
+<span>[<a href="#I-D.draft-ietf-wimse-arch" class="cite xref">I-D.draft-ietf-wimse-arch</a>]</span>,
+<span>[<a href="#I-D.draft-ietf-oauth-spiffe-client-auth" class="cite xref">I-D.draft-ietf-oauth-spiffe-client-auth</a>]</span>), and <code>alice</code> has delegated to it through an
 ordinary authorization-code flow, per
 <span>[<a href="#I-D.draft-klrc-aiagent-auth" class="cite xref">I-D.draft-klrc-aiagent-auth</a>]</span>: <code>client_id</code> is the agent and the
 token <code>sub</code> is <code>alice</code>. This document adds the Mission layer on top of

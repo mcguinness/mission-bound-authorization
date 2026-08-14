@@ -1396,7 +1396,10 @@ Table of Contents
 
    On success the MAS mints a Mission Join Assertion: a signed JWT
    [RFC7519] whose protected header carries the typ mission-join+jwt and
-   a kid resolvable in the MAS's jwks_uri.  Its claims:
+   a kid resolvable in the MAS's jwks_uri; exact validation of that typ,
+   with mutually exclusive validation rules for the artifact profiles,
+   implements the substitution defense of [RFC8725], Sections 3.11 and
+   3.12.  Its claims:
 
    iss:  REQUIRED.  The MAS's issuer URL.
 
@@ -2376,6 +2379,11 @@ Table of Contents
               and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
               DOI 10.17487/RFC8693, January 2020,
               <https://www.rfc-editor.org/rfc/rfc8693>.
+
+   [RFC8725]  Sheffer, Y., Hardt, D., and M. Jones, "JSON Web Token Best
+              Current Practices", BCP 225, RFC 8725,
+              DOI 10.17487/RFC8725, February 2020,
+              <https://www.rfc-editor.org/rfc/rfc8725>.
 
    [RFC9635]  Richer, J., Ed. and F. Imbault, "Grant Negotiation and
               Authorization Protocol (GNAP)", RFC 9635,

@@ -501,9 +501,9 @@ Table of Contents
 
    *  *Decentralized agent identity.* Agent identity and credentialing
       are out of scope ([I-D.draft-klrc-aiagent-auth], and workload
-      identity efforts such as WIMSE); this profile governs the
-      approved-task artifact those identities act within, not the
-      identities themselves.
+      identity efforts such as WIMSE, [I-D.draft-ietf-wimse-arch]); this
+      profile governs the approved-task artifact those identities act
+      within, not the identities themselves.
 
    *  *Cross-audience unlinkability.* A single canonical Mission
       Identifier and the authority_hash it shares deliberately let any
@@ -5083,12 +5083,28 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-cecchetti-
               oauth-rar-cedar-02>.
 
+   [I-D.draft-ietf-oauth-spiffe-client-auth]
+              Schwenkschuster, A., Kasselman, P., Rose, S., Thorgersen,
+              S., and N. Cam-Winget, "OAuth SPIFFE Client
+              Authentication", Work in Progress, Internet-Draft, draft-
+              ietf-oauth-spiffe-client-auth-02, 15 June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              spiffe-client-auth-02>.
+
    [I-D.draft-ietf-oauth-transaction-tokens]
               Tulshibagwale, A., Fletcher, G., and P. Kasselman,
               "Transaction Tokens", Work in Progress, Internet-Draft,
               draft-ietf-oauth-transaction-tokens-11, 30 July 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
               transaction-tokens-11>.
+
+   [I-D.draft-ietf-wimse-arch]
+              Salowey, J. A., Rosomakho, Y., and H. Tschofenig,
+              "Workload Identity in a Multi System Environment (WIMSE)
+              Architecture", Work in Progress, Internet-Draft, draft-
+              ietf-wimse-arch-08, 6 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-wimse-
+              arch-08>.
 
    [I-D.draft-klrc-aiagent-auth]
               Kasselman, P., Lombardo, J., Rosomakho, Y., Campbell, B.,
@@ -5229,8 +5245,8 @@ Table of Contents
               niyikiza-oauth-attenuating-agent-tokens-01>.
 
    [MCP]      Model Context Protocol Project, "Model Context Protocol:
-              Authorization", 2025, <https://modelcontextprotocol.io/
-              specification/2025-06-18/basic/authorization>.
+              Authorization", 2026, <https://modelcontextprotocol.io/
+              specification/2026-07-28/basic/authorization>.
 
    [RFC7009]  Lodderstedt, T., Ed., Dronia, S., and M. Scurtescu, "OAuth
               2.0 Token Revocation", RFC 7009, DOI 10.17487/RFC7009,
@@ -5278,12 +5294,14 @@ Appendix A.  End-to-End Example (Non-Normative)
 
 A.1.  Stage 0: Agent Identity (by Reference)
 
-   The agent is an OAuth client with a workload identity (for example a
-   WIMSE or SPIFFE identity), and alice has delegated to it through an
-   ordinary authorization-code flow, per [I-D.draft-klrc-aiagent-auth]:
-   client_id is the agent and the token sub is alice.  This document
-   adds the Mission layer on top of that identity; Stage 0 is otherwise
-   unchanged from that specification.
+   The agent is an OAuth client with a workload identity (for example, a
+   workload identity established using WIMSE or SPIFFE,
+   [I-D.draft-ietf-wimse-arch],
+   [I-D.draft-ietf-oauth-spiffe-client-auth]), and alice has delegated
+   to it through an ordinary authorization-code flow, per
+   [I-D.draft-klrc-aiagent-auth]: client_id is the agent and the token
+   sub is alice.  This document adds the Mission layer on top of that
+   identity; Stage 0 is otherwise unchanged from that specification.
 
 A.2.  Stage 1: Mission Creation
 

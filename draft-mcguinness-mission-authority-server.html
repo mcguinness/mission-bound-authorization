@@ -2940,7 +2940,10 @@ costs one evaluation rather than many.<a href="#section-11.1-10" class="pilcrow"
         </h3>
 <p id="section-11.2-1">On success the MAS mints a Mission Join Assertion: a signed JWT
 <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> whose protected header carries the <code>typ</code>
-          <code>mission-join+jwt</code> and a <code>kid</code> resolvable in the MAS's <code>jwks_uri</code>. Its
+          <code>mission-join+jwt</code> and a <code>kid</code> resolvable in the MAS's <code>jwks_uri</code>;
+exact validation of that <code>typ</code>, with mutually exclusive validation
+rules for the artifact profiles, implements the substitution defense
+of <span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span>, Sections 3.11 and 3.12. Its
 claims:<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-11.2-2">
           <dt id="section-11.2-2.1">
@@ -4153,6 +4156,10 @@ document requests no IANA action for it.<a href="#section-18.4-1" class="pilcrow
 <dt id="RFC8693">[RFC8693]</dt>
         <dd>
 <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8725">[RFC8725]</dt>
+        <dd>
+<span class="refAuthor">Sheffer, Y.</span>, <span class="refAuthor">Hardt, D.</span>, and <span class="refAuthor">M. Jones</span>, <span class="refTitle">"JSON Web Token Best Current Practices"</span>, <span class="seriesInfo">BCP 225</span>, <span class="seriesInfo">RFC 8725</span>, <span class="seriesInfo">DOI 10.17487/RFC8725</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8725">https://www.rfc-editor.org/rfc/rfc8725</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9635">[RFC9635]</dt>
       <dd>

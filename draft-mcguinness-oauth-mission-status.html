@@ -1689,7 +1689,10 @@ carries <code>typ</code> of <code>mission-status-response+jwt</code> and a <code
 the signing key. Per <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Section 4.1.9 the <code>typ</code> header omits
 the <code>application/</code> prefix; the full media type
 <code>application/mission-status-response+jwt</code> (registered in <a href="#iana" class="auto internal xref">Section 13</a>) is
-used as the HTTP <code>Content-Type</code>.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+used as the HTTP <code>Content-Type</code>. Exact validation of the protected
+<code>typ</code> value, together with mutually exclusive validation rules for
+the artifact profiles, implements the substitution defense of
+<span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span>, Sections 3.11 and 3.12.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
 <p id="section-3.4-2"><span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span> signed introspection responses are scoped to token
 introspection and do not apply to a lookup keyed by <code>mission_id</code>; the
 dedicated Mission Status operation therefore uses a new media type and a
@@ -4207,6 +4210,10 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8725">[RFC8725]</dt>
+        <dd>
+<span class="refAuthor">Sheffer, Y.</span>, <span class="refAuthor">Hardt, D.</span>, and <span class="refAuthor">M. Jones</span>, <span class="refTitle">"JSON Web Token Best Current Practices"</span>, <span class="seriesInfo">BCP 225</span>, <span class="seriesInfo">RFC 8725</span>, <span class="seriesInfo">DOI 10.17487/RFC8725</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8725">https://www.rfc-editor.org/rfc/rfc8725</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9110">[RFC9110]</dt>
         <dd>

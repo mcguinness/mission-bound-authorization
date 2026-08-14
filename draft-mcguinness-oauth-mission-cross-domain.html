@@ -1408,9 +1408,10 @@ grant profile that meets the requirements of <a href="#cross-domain-grant" class
 names the ID-JAG, it is illustrating with the recommended profile and
 applies equally to any conforming cross-domain grant.<a href="#section-4-2" class="pilcrow">¶</a></p>
 <p id="section-4-3">The grant shape this document profiles is already deployed: the
-Model Context Protocol's Cross App Access extension carries the same
-Identity Assertion JWT Authorization Grant between enterprise
-identity providers and MCP applications (<span>[<a href="#MCP" class="cite xref">MCP</a>]</span>), a shipped surface
+Model Context Protocol's Enterprise-Managed Authorization extension
+carries the same Identity Assertion JWT
+Authorization Grant between enterprise identity providers and MCP
+applications (<span>[<a href="#MCP-EMA" class="cite xref">MCP-EMA</a>]</span>), a shipped surface
 for the pattern this profile attaches Mission context to.<a href="#section-4-3" class="pilcrow">¶</a></p>
 <p id="section-4-4">This document is a thin Mission-bound profile of the cross-domain
 grant, not merely <code>mission</code>-claim carriage: beyond attaching and
@@ -1573,7 +1574,9 @@ domain-authorized-issuer method
 (<span>[<a href="#I-D.draft-mcguinness-oauth-id-assertion-framework" class="cite xref">I-D.draft-mcguinness-oauth-id-assertion-framework</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-oauth-domain-authorized-issuer" class="cite xref">I-D.draft-mcguinness-oauth-domain-authorized-issuer</a>]</span>) are
 concrete ways to publish and evaluate this policy instead of
-hand-maintaining a list.<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
+hand-maintaining a list. OpenID Federation for OpenID Connect 1.1
+(<span>[<a href="#OIDF-FED" class="cite xref">OIDF-FED</a>]</span>) is one possible mechanism for establishing and
+publishing this trust; nothing here requires or profiles it.<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.2">
           <p id="section-8-2.2.1">The resource-to-AS mapping: which Resource AS is authoritative for
@@ -2401,9 +2404,13 @@ registered by the issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-m
         <dd>
 <span class="refAuthor">Zhu, L.</span> and <span class="refAuthor">Z. Berg</span>, <span class="refTitle">"Delegated Refresh Tokens for OAuth 2.0 Token Exchange"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-zhu-oauth-async-delegation-05</span>, <time datetime="2026-08-03" class="refDate">3 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05">https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="MCP">[MCP]</dt>
+<dt id="MCP-EMA">[MCP-EMA]</dt>
+        <dd>
+<span class="refAuthor">Model Context Protocol Project</span>, <span class="refTitle">"Model Context Protocol: Enterprise-Managed Authorization"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://modelcontextprotocol.io/extensions/auth/enterprise-managed-authorization">https://modelcontextprotocol.io/extensions/auth/enterprise-managed-authorization</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="OIDF-FED">[OIDF-FED]</dt>
       <dd>
-<span class="refAuthor">Model Context Protocol Project</span>, <span class="refTitle">"Model Context Protocol: Authorization"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization">https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization</a>&gt;</span>. </dd>
+<span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID Federation for OpenID Connect 1.1"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://openid.net/specs/openid-federation-connect-1_1-final.html">https://openid.net/specs/openid-federation-connect-1_1-final.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
