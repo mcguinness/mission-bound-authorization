@@ -366,3 +366,41 @@ function childrenNoBroader(
 export function isSubsetSet(candidate: AuthorityEntry[], granted: AuthorityEntry[]): boolean {
   return candidate.every((c) => granted.some((g) => isSubsetEntry(c, g)));
 }
+
+/**
+ * @spec mission#introspection, containment#containment-plane — project a
+ * candidate Authority Set through a TARGET's current effective set: an entry
+ * survives only where both share a `resource`, narrowed to the ACTIONS
+ * intersection; the candidate's own `constraints`/`delegation` ride through
+ * UNCHANGED (never inherited from the target). This is deliberately NOT
+ * {@link deriveAuthoritySet}'s ceiling narrowing: that function inherits a
+ * ceiling's `delegation`/`max_amount`/`vendors` onto an operand that omits
+ * them (the derivation-time GRANT semantics, correct for turning a proposal
+ * into issued authority) and THROWS on an unimplemented Common Constraint or a
+ * malformed `max_amount` (correct at derivation time, wrong at introspection
+ * time, which must stay total and fail-closed-by-dropping, never by
+ * throwing). Projecting a credential's ALREADY-ISSUED authority through the
+ * Mission's current effective set must never WIDEN it with a target-side
+ * grant it never carried, so nothing is inherited; containment's `remove`
+ * shape is `{resource, actions}` only, so it can never narrow a
+ * `max_amount`/`vendors`/`delegation` value — keeping the candidate's own is
+ * therefore correct, not lossy. Total and non-throwing: an unresolvable
+ * pairing simply drops the entry. Order follows `candidate`. Shared by the
+ * containment refresh-path re-projection (provider.ts rarThroughContainment,
+ * continuation-grant.ts) and the introspection credential/Mission-authority
+ * intersection (@spec mission#caller-authorization-and-minimization).
+ */
+export function projectThroughEffective(
+  candidate: readonly AuthorityEntry[],
+  effective: readonly AuthorityEntry[],
+): AuthorityEntry[] {
+  const out: AuthorityEntry[] = [];
+  for (const detail of candidate) {
+    const eff = effective.find((e) => e.resource === detail.resource);
+    if (!eff) continue; // the whole resource is absent from the target set
+    const actions = detail.actions.filter((a) => eff.actions.includes(a));
+    if (actions.length === 0) continue; // every action absent from the target set
+    out.push(actions.length === detail.actions.length ? detail : { ...detail, actions });
+  }
+  return out;
+}

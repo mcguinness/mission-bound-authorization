@@ -92,7 +92,7 @@ import {
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
 import { UnknownProtectedEventError } from "../kernel/containment.js";
-import { isSubsetSet } from "../kernel/derive.js";
+import { isSubsetSet, projectThroughEffective } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError, LifecycleConflictError, type MissionKernel } from "../kernel/kernel.js";
@@ -123,6 +123,7 @@ import {
   type DispatchReason,
 } from "../kernel/template.js";
 import type { TemplateStore } from "../kernel/template-store.js";
+import { TokenIssuanceStore } from "../kernel/token-issuance-store.js";
 
 /**
  * @spec mission-template#dispatch — the impl-local grant type a dispatcher
@@ -266,6 +267,16 @@ export interface AdapterOptions {
    * invalid_dpop_proof.
    */
   dpopProofReplay?: DpopProofReplay;
+  /**
+   * @spec mission#introspection (issue #541 P1-2) — the (iss, jti) -> grantId
+   * issuance index, consulted by introspection's per-token individual-
+   * revocation check (never `record.grant_id`, which is only the Mission's
+   * OWN approval grant). Defaulted by buildProvider when unset, matching the
+   * `creationIdempotency`/`dpopProofReplay` idiom: a caller that omits it
+   * still gets a working (if throwaway, per-instance) index, rather than every
+   * access token silently introspecting bare `active: false`.
+   */
+  tokenIssuanceStore?: TokenIssuanceStore;
 }
 
 /**
@@ -344,6 +355,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
   opts.creationIdempotency ??= new CreationIdempotencyStore(kernel);
   // @spec RFC 9449 — proof-jti replay protection for the manual DPoP blocks.
   opts.dpopProofReplay ??= newDpopProofReplay();
+  // @spec mission#introspection (issue #541 P1-2) — the issuance index is NOT
+  // optional wiring either: default it so a caller that omits it still gets
+  // correct (fail-closed) individual revocation, never a silent "every access
+  // token introspects active:false" footgun.
+  opts.tokenIssuanceStore ??= new TokenIssuanceStore();
 
   // Containment refresh-path conformance: a stored oidc grant copies its rar
   // at issuance, so a refresh (or a late code redemption) could echo a
@@ -650,6 +666,30 @@ export function buildProvider(opts: AdapterOptions): Provider {
   };
 
   const provider = new Provider(opts.issuer, configuration);
+
+  // @spec mission#introspection (issue #541 P1-2) — record EVERY minted access
+  // token's issuance binding: (iss, jti) -> the grantId it was ACTUALLY minted
+  // under. A provider-level hook (not a per-callsite edit at each `new
+  // provider.AccessToken(...)`) so it covers every mint path uniformly — the
+  // standard authorization_code/refresh_token grant (oidc-provider mints these
+  // internally, never through a call site this package controls), async-
+  // delegation, deferred, child-redemption, and mission-dispatch/expansion —
+  // and any future one, without per-callsite wiring. oidc-provider's base
+  // token model emits `${kind}.saved` when the adapter persists a payload and
+  // `${kind}.issued` when it does not (a signed-only JWT access token, this
+  // deployment's ONLY access-token format, stores no adapter payload); both
+  // are subscribed so a future opaque/encrypted-format change stays covered.
+  const recordTokenIssuance = (at: { jti?: string; grantId?: string; rar?: unknown }) => {
+    if (!at.jti || !at.grantId) return;
+    opts.tokenIssuanceStore?.record({
+      iss: opts.issuer,
+      jti: at.jti,
+      grantId: at.grantId,
+      authorizationDetails: (Array.isArray(at.rar) ? at.rar : []) as AuthorityEntry[],
+    });
+  };
+  provider.on("access_token.issued", recordTokenIssuance);
+  provider.on("access_token.saved", recordTokenIssuance);
 
   // @spec DTR (draft-gerber-oauth-deferred-token-response-00): the AROP deferred
   // grant on the REAL /token endpoint. Registered AFTER construction so the URN
@@ -1112,6 +1152,48 @@ async function handleChildJwtBearerGrant(
   ctx.set("cache-control", "no-store");
 }
 
+/**
+ * @spec mission#introspection (issue #541 P1-2) — liveness of the grant/family
+ * that ACTUALLY minted a credential (never `record.grant_id`, the Mission's
+ * own approval grant, which stays live independent of any per-delegation
+ * family sharing the Mission). `wasEverFamily` disambiguates a recognized-but-
+ * now-terminal family (liveness IS the family store's own terminal flag,
+ * regardless of the underlying oidc-provider Grant's existence — an
+ * `invalidate()` call never touches the Grant store) from an ordinary
+ * approval-grant id (liveness is the oidc-provider Grant's own existence).
+ */
+async function isGrantLive(opts: AdapterOptions, provider: Provider, grantId: string): Promise<boolean> {
+  if (opts.familyStore?.wasEverFamily(grantId)) {
+    return opts.familyStore.resolve(grantId) !== undefined;
+  }
+  return !!(await provider.Grant.find(grantId).catch(() => undefined));
+}
+
+/**
+ * @spec mission#caller-authorization-and-minimization (cleanup, issue #541) —
+ * map each disclosed audience to the RESOURCE identifiers it authorizes
+ * disclosure for, via the principal's registered `audience_resources`
+ * (config/introspection.json). An OAuth `aud`/resource-indicator value is NOT
+ * required to be byte-equal to an Authority Set entry's `resource` (the core
+ * explicitly allows a deployment's own audience-to-resource mapping); an
+ * audience absent from the map defaults to IDENTITY (itself).
+ */
+export function resourcesForAudiences(
+  audiences: readonly string[],
+  mapping: Record<string, string[]> | undefined,
+): Set<string> {
+  const out = new Set<string>();
+  for (const aud of audiences) {
+    const mapped = mapping?.[aud];
+    if (mapped?.length) {
+      for (const r of mapped) out.add(r);
+    } else {
+      out.add(aud);
+    }
+  }
+  return out;
+}
+
 function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const { kernel } = opts;
   const jwksResolver = createLocalJWKSet(opts.publicJwks as never);
@@ -1121,23 +1203,45 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const txnTasks = new Map<string, TxnHandle>();
 
   /**
+   * @spec RFC 6749 Appendix B — decode HTTP Basic client credentials: the
+   * scheme token is case-insensitive ("Basic"/"basic"/"BASIC" all valid), the
+   * credentials are base64, split on the FIRST colon (a secret MAY itself
+   * contain one), and each half is percent-DECODED per the Appendix B
+   * application/x-www-form-urlencoded profile (`%20` for space; `+` is never
+   * special here, unlike a query-string decoder). A malformed percent-
+   * sequence fails closed (undefined), never throws.
+   */
+  const parseBasicAuth = (raw: string): { id: string; secret: string } | undefined => {
+    const m = /^Basic\s+(.+)$/i.exec(raw);
+    if (!m) return undefined;
+    const decoded = Buffer.from(m[1] as string, "base64").toString("utf8");
+    const sep = decoded.indexOf(":");
+    const rawId = sep >= 0 ? decoded.slice(0, sep) : decoded;
+    const rawSecret = sep >= 0 ? decoded.slice(sep + 1) : "";
+    try {
+      return { id: decodeURIComponent(rawId), secret: decodeURIComponent(rawSecret) };
+    } catch {
+      return undefined;
+    }
+  };
+
+  /**
    * @spec mission#caller-authorization-and-minimization — authenticate the RFC
    * 7662 caller as a REGISTERED introspection principal (HTTP Basic against
-   * the config-registered secret, compared timing-safely). The principal's
-   * authorized audiences and disclosure privileges come from that server-side
-   * registration, never from a caller-supplied value. On failure the 401 is
-   * written and no token processing occurs.
+   * the config-registered secret, compared timing-safely, via {@link
+   * parseBasicAuth}). The principal's authorized audiences and disclosure
+   * privileges come from that server-side registration, never from a
+   * caller-supplied value. On failure the 401 is written and no token
+   * processing occurs.
    */
   const authenticateIntrospection = (ctx: KoaCtx): IntrospectionPrincipal | undefined => {
-    const auth = ctx.get("authorization") ?? "";
-    if (auth.startsWith("Basic ")) {
-      const decoded = Buffer.from(auth.slice(6), "base64").toString("utf8");
-      const sep = decoded.indexOf(":");
-      const id = sep >= 0 ? decoded.slice(0, sep) : decoded;
-      const secret = sep >= 0 ? decoded.slice(sep + 1) : "";
-      const principal = (opts.introspectionPrincipals ?? []).find((p) => p.principal_id === id);
+    const creds = parseBasicAuth(ctx.get("authorization") ?? "");
+    if (creds) {
+      const principal = (opts.introspectionPrincipals ?? []).find(
+        (p) => p.principal_id === creds.id,
+      );
       if (principal) {
-        const a = Buffer.from(secret);
+        const a = Buffer.from(creds.secret);
         const b = Buffer.from(principal.secret);
         if (a.length === b.length && timingSafeEqual(a, b)) return principal;
       }
@@ -1508,7 +1612,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       }
       ctx.status = 200;
       const inactive = { active: false };
-      const caller = { audiences: principal.audiences, disclose: new Set<string>(principal.disclose) };
+      const caller = { disclose: new Set<string>(principal.disclose) };
 
       // A Mission-bound refresh token is an opaque value (no JWS segments) and
       // introspects under the SAME composite rule (@spec mission#composite-active).
@@ -1523,6 +1627,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
               iat?: number;
               exp?: number;
               jkt?: string;
+              resource?: unknown;
+              rar?: unknown;
             }
           | undefined;
         // Unknown, expired, rotated-and-consumed, or revoked (destroyed): bare false.
@@ -1536,10 +1642,20 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ctx.body = inactive;
           return;
         }
-        // Caller visibility for an audience-less credential: the caller must be
-        // an audience of the Mission's EFFECTIVE authority.
-        const effective = kernel.effectiveAuthoritySet(record);
-        if (!effective.some((e) => principal.audiences.includes(e.resource))) {
+        // Caller visibility (@spec mission#caller-authorization-and-minimization
+        // cleanup — issue #541): the TOKEN-VISIBLE audience is its own recorded
+        // RFC 8707 `resource` when the refresh token carries one, narrowed by
+        // the caller's registration — never the caller's FULL registration
+        // regardless of what this particular token was scoped to. A refresh
+        // token recording no resource (unscoped) falls back to the caller's
+        // full registration (unchanged from the pre-#541 rule).
+        const rtResource = typeof rt.resource === "string" ? rt.resource : undefined;
+        const visibleAudiences = rtResource
+          ? principal.audiences.includes(rtResource)
+            ? [rtResource]
+            : []
+          : principal.audiences;
+        if (visibleAudiences.length === 0) {
           ctx.body = inactive;
           return;
         }
@@ -1548,12 +1664,29 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ctx.body = { active: false, mission };
           return;
         }
-        // Grant-scoped individual revocation applies to the refresh token too
-        // (an active Mission whose grant is gone was revoked at token level).
-        if (!(await provider.Grant.find(rt.grantId).catch(() => undefined))) {
+        // Individual revocation (@spec mission#introspection — issue #541
+        // P1-2): the grant/family that issued THIS refresh token. Unlike the
+        // stateless access-token branch below, a refresh token is a STORED
+        // object, so `rt.grantId` is already the token's own actual minting
+        // grant (no issuance-index lookup needed) — but liveness itself must
+        // still be family-aware: an invalidated (not merely destroyed)
+        // delegation family leaves the underlying oidc-provider Grant intact.
+        if (!(await isGrantLive(opts, provider, rt.grantId))) {
           ctx.body = inactive;
           return;
         }
+        // Top-level authorization_details (@spec mission#introspection —
+        // P1-1, RFC 9396 §9.2): intersect the refresh token's OWN recorded
+        // rar with the Mission's CURRENT effective authority (approved minus
+        // containment applied since issuance), then audience-minimize via
+        // the caller's registered audience-to-resource mapping (cleanup: an
+        // `aud`/resource-indicator value need not be byte-equal to a RAR
+        // `resource`).
+        const credentialAuthority = Array.isArray(rt.rar) ? (rt.rar as AuthorityEntry[]) : [];
+        const effective = kernel.effectiveAuthoritySet(record);
+        const narrowed = projectThroughEffective(credentialAuthority, effective);
+        const resourceSet = resourcesForAudiences(visibleAudiences, principal.audience_resources);
+        const authorization_details = narrowed.filter((e) => resourceSet.has(e.resource));
         ctx.body = {
           active: true,
           iss: opts.issuer,
@@ -1563,6 +1696,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ...(typeof rt.iat === "number" ? { iat: rt.iat } : {}),
           ...(rt.jti ? { jti: rt.jti } : {}),
           ...(rt.jkt ? { cnf: { jkt: rt.jkt } } : {}),
+          authorization_details,
           mission,
         };
         return;
@@ -1575,8 +1709,84 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           issuer: opts.issuer,
           typ: "at+jwt",
         });
-        // Mission resolution: a token the AS cannot bind to a known Mission is
-        // unresolvable; no Mission or token detail is recovered from failure.
+
+        // @spec mission#introspection, RFC 9068 — the REQUIRED, TYPED claim
+        // set, checked BEFORE any Mission resolution. jose validates iss/typ
+        // (and exp/iat/nbf ONLY when present) but does not itself require
+        // exp/iat/jti/sub/client_id to exist: an AS-signed at+jwt omitting
+        // one would otherwise still resolve. Missing or mistyped -> bare
+        // false; no Mission or token detail is recovered from failure.
+        if (
+          typeof payload.exp !== "number" ||
+          typeof payload.iat !== "number" ||
+          typeof payload.jti !== "string" ||
+          !payload.jti ||
+          typeof payload.sub !== "string" ||
+          !payload.sub ||
+          typeof payload.client_id !== "string" ||
+          !payload.client_id
+        ) {
+          ctx.body = inactive;
+          return;
+        }
+        const jti: string = payload.jti;
+        const sub: string = payload.sub;
+        const clientId: string = payload.client_id;
+        const exp: number = payload.exp;
+        const iat: number = payload.iat;
+
+        // @spec mission#the-mission-claim — the Mission profile's claim
+        // shape, when a `mission` member is present at all; its total
+        // ABSENCE is the pre-existing, distinct "unresolvable" case handled
+        // by the Mission lookup below (never Mission-bound), not a
+        // malformed shape.
+        const missionClaimRaw = payload.mission;
+        if (missionClaimRaw !== undefined) {
+          const m = missionClaimRaw as Record<string, unknown> | null;
+          if (
+            typeof m !== "object" ||
+            m === null ||
+            typeof m.id !== "string" ||
+            !m.id ||
+            typeof m.issuer !== "string" ||
+            !m.issuer ||
+            typeof m.authority_hash !== "string" ||
+            !m.authority_hash
+          ) {
+            ctx.body = inactive;
+            return;
+          }
+        }
+
+        // @spec mission#authorization-derivation — every access token this AS
+        // mints carries `authorization_details` (possibly an empty array);
+        // its absence is malformed, not merely undisclosed. Each entry MUST
+        // carry a non-empty string `type` + `resource` and an actions array
+        // (the mission_resource_access minimum this endpoint's intersection
+        // needs downstream). Malformed (e.g. an array of bare strings) ->
+        // bare false.
+        const rawDetails = payload.authorization_details;
+        const isWellFormedEntry = (d: unknown): d is AuthorityEntry => {
+          if (typeof d !== "object" || d === null) return false;
+          const e = d as Record<string, unknown>;
+          return (
+            typeof e.type === "string" &&
+            e.type !== "" &&
+            typeof e.resource === "string" &&
+            e.resource !== "" &&
+            Array.isArray(e.actions) &&
+            e.actions.every((a) => typeof a === "string")
+          );
+        };
+        if (!Array.isArray(rawDetails) || !rawDetails.every(isWellFormedEntry)) {
+          ctx.body = inactive;
+          return;
+        }
+        const credentialAuthority = rawDetails as AuthorityEntry[];
+
+        // Mission resolution: a token the AS cannot bind to a known Mission
+        // is unresolvable; no Mission or token detail is recovered from
+        // failure.
         const missionId = (payload.mission as { id?: string } | undefined)?.id;
         const record = missionId ? kernel.get(missionId) : undefined;
         if (!record) {
@@ -1596,38 +1806,56 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           // Composite non-active: the token is itself valid but the Mission is
           // not `active`; per the core's governed RFC 7662 deviation the
           // response carries ONLY the minimized `mission` projection with
-          // `mission.state`, never top-level token detail. Mission-level
-          // revocation destroys the grant too, so the grant arm below never
-          // demotes a non-active Mission's REQUIRED state report to bare false.
+          // `mission.state`, NEVER top-level token/authorization detail
+          // (@spec mission#introspection — issue #541). Mission-level
+          // revocation destroys the grant too, so the individual-revocation
+          // check below never demotes a non-active Mission's REQUIRED state
+          // report to bare false.
           ctx.body = { active: false, mission };
           return;
         }
-        // Individual revocation: a stateless at+jwt has no per-token record
-        // (jwt-format tokens are never stored), so token-level revocation is
-        // grant-scoped: with the Mission still `active`, a missing grant means
-        // the credential family was individually revoked (RFC 7009), and a
-        // revoked token discloses nothing. A Mission bound to no grant is
-        // gated by Mission state alone.
-        if (
-          record.grant_id &&
-          !(await provider.Grant.find(record.grant_id).catch(() => undefined))
-        ) {
+        // Individual revocation (@spec mission#introspection — issue #541
+        // P1-2): resolve the grant/family that ACTUALLY minted THIS token
+        // via the issuance index — never `record.grant_id` (the Mission's
+        // own approval grant), which stays live independent of a
+        // per-delegation family sharing the Mission. Destroying or
+        // invalidating that family must not leave its already-issued tokens
+        // introspecting active. A token this AS has no issuance record for
+        // is treated as NOT VERIFIED, never active (the stateless-JWT
+        // forgery/rogue-mint surface this index closes).
+        const issuance = opts.tokenIssuanceStore?.resolve(opts.issuer, jti);
+        if (!issuance || !(await isGrantLive(opts, provider, issuance.grantId))) {
           ctx.body = inactive;
           return;
         }
+
+        // Top-level authorization_details (@spec mission#introspection —
+        // P1-1, RFC 9396 §9.2): intersect the credential's OWN authority
+        // (its verified JWT claim, read above) with the Mission's CURRENT
+        // effective authority (approved minus containment applied since
+        // issuance), then audience-minimize via the caller's registered
+        // audience-to-resource mapping. Never the Mission's full effective
+        // set: a narrowed/attenuated token must never introspect as though
+        // it held authority it was never issued.
+        const effective = kernel.effectiveAuthoritySet(record);
+        const narrowed = projectThroughEffective(credentialAuthority, effective);
+        const resourceSet = resourcesForAudiences(visible, principal.audience_resources);
+        const authorization_details = narrowed.filter((e) => resourceSet.has(e.resource));
+
         const cnf = payload.cnf as { jkt?: string } | undefined;
         ctx.body = {
           active: true,
           iss: payload.iss,
-          sub: payload.sub,
+          sub,
           aud: visible.length === 1 ? visible[0] : visible,
-          client_id: payload.client_id,
-          exp: payload.exp,
-          iat: payload.iat,
-          jti: payload.jti,
+          client_id: clientId,
+          exp,
+          iat,
+          jti,
           ...(typeof payload.scope === "string" ? { scope: payload.scope } : {}),
           ...(cnf ? { cnf } : {}),
           token_type: cnf?.jkt ? "DPoP" : "Bearer",
+          authorization_details,
           mission,
         };
       } catch {
@@ -1733,6 +1961,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       meta.delegated_refresh_token_profile_supported = true;
       meta.service_catalog_endpoint = `${opts.issuer}/service-catalog`;
       meta.introspection_endpoint = `${opts.issuer}/introspect`;
+      // @spec mission#caller-authorization-and-minimization (cleanup, issue
+      // #541) — advertise the introspection endpoint's actual authentication
+      // method (registered-principal HTTP Basic, authenticateIntrospection
+      // above), matching RFC 8414's *_endpoint_auth_methods_supported idiom.
+      meta.introspection_endpoint_auth_methods_supported = ["client_secret_basic"];
       meta.transaction_authorization_endpoint = `${opts.issuer}/transaction`;
       // @spec mission#other-types, I-D.draft-zehavi-oauth-rar-metadata — the
       // metadata endpoint is the source of truth for "AS-supported types"; its

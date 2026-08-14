@@ -996,25 +996,31 @@ export class MissionKernel {
 
   /**
    * @spec mission#introspection + mission#caller-authorization-and-minimization
-   * — the audience-minimized `mission` member for an AUTHENTICATED,
-   * authorized introspection caller. Core members always (the claim set plus
-   * `state` and `version`); `derivations_remaining` when
-   * `controls.max_derivations` is in force (committed issuances counted);
-   * `authorization_details` is the EFFECTIVE set (approved minus containment)
-   * filtered to the caller's authorized audiences; `containment_version`
-   * whenever containment applies. Issuer-only audit members are authority to
-   * assert, not authorization to disclose: `proposal_hash` requires the
-   * caller's `provenance` privilege and the Status List reference its
-   * `status_list` privilege.
+   * — the core Mission projection for an AUTHENTICATED, authorized
+   * introspection caller: the claim set plus `state` and `version`;
+   * `derivations_remaining` when `controls.max_derivations` is in force
+   * (committed issuances counted); `containment_version` whenever containment
+   * applies. Issuer-only audit members are authority to assert, not
+   * authorization to disclose: `proposal_hash` requires the caller's
+   * `provenance` privilege and the Status List reference its `status_list`
+   * privilege.
+   *
+   * Deliberately carries NO `authorization_details`: {@link
+   * MissionKernel.effectiveAuthoritySet} is the Mission's FULL effective
+   * authority, never the presented credential's OWN (possibly narrower)
+   * authority, so folding it in here would let a narrowed/attenuated token
+   * introspect as though it held the Mission's entire authority (the P1-1
+   * fix, issue #541). The top-level RFC 9396 `authorization_details` member
+   * is the adapter's job: intersect the credential's own authority with
+   * {@link MissionKernel.effectiveAuthoritySet} (see
+   * kernel/derive.ts#projectThroughEffective) and audience-minimize that
+   * result, never this method's return value.
    */
   introspectionProjection(
     record: MissionRecord,
-    caller: { audiences: readonly string[]; disclose: ReadonlySet<string> },
+    caller: { disclose: ReadonlySet<string> },
   ): Record<string, unknown> {
     const fresh = this.applyExpiry(record);
-    const scoped = this.effectiveAuthoritySet(fresh).filter((e) =>
-      caller.audiences.includes(e.resource),
-    );
     return {
       ...this.missionClaim(fresh),
       state: fresh.state,
@@ -1022,7 +1028,6 @@ export class MissionKernel {
       ...(fresh.max_derivations !== null
         ? { derivations_remaining: Math.max(0, fresh.max_derivations - fresh.derivation_count) }
         : {}),
-      authorization_details: scoped,
       ...(caller.disclose.has("provenance") && fresh.proposal_hash
         ? { proposal_hash: fresh.proposal_hash }
         : {}),

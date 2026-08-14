@@ -100,6 +100,23 @@ export class DelegationFamilyStore {
   }
 
   /**
+   * @spec mission#introspection — whether `grantId` was EVER recorded as a
+   * delegation family, in ANY state (active or terminal). {@link resolve}
+   * alone cannot distinguish "never a family" (liveness is decided elsewhere,
+   * e.g. the Mission approval grant) from "was a family, now terminal"
+   * (liveness IS this store's terminal flag, regardless of the underlying
+   * oidc-provider Grant's own existence) — both return undefined. A caller
+   * that must tell those apart (introspection's per-token individual-
+   * revocation check, issue #541 P1-2) checks this FIRST.
+   */
+  wasEverFamily(grantId: string): boolean {
+    const row = this.db
+      .prepare("SELECT 1 FROM delegation_families WHERE grant_id = ?")
+      .get(grantId);
+    return row !== undefined;
+  }
+
+  /**
    * Read accessor: the grant ids of every family for a Mission, in ANY state
    * (ordered by record time), so a caller can drive revocation of each grant
    * even after the families were marked terminal.
