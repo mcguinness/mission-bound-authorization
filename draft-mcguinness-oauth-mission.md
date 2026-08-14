@@ -3536,6 +3536,20 @@ the following:
   derivation event; the AS MUST refuse it unless the Mission is
   `active` ({{lifecycle}}).
 
+Delegation history follows authorization continuity, not
+organizational topology. The `act` chain nests (`act.act`) exactly
+while authority continues under the same approved Mission; a new
+approval basis, a Child Mission
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) or an
+expansion successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
+begins its own delegation basis and its own chain; and no boundary of
+organization, network, or deployment topology by itself restarts or
+extends a chain. The chain is attribution, never authority: an `act`
+entry identifies an actor, an asserted actor identity grants nothing,
+and a consumer MUST NOT treat the chain as proof that authority
+narrowed; the `authorization_details` subset relations prove that
+({{subset}}).
+
 Where a deployment authenticates client instances
 ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}; for AI
 agents, its agent profile
