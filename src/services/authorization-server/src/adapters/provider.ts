@@ -4,10 +4,12 @@
  * Wiring facts verified by the pre-flight spike (src/spikes/SPIKE-REPORT.md).
  */
 
+import { timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   DERIVATION_POLICY,
   DEV_SERVICE_TOKEN,
+  type IntrospectionPrincipal,
   DISPATCH_PROHIBITED_ACTIONS,
   USERS,
   WRITE_ACTIONS,
@@ -152,6 +154,12 @@ export interface AdapterOptions {
   approverRoleSubs: Set<string>;
   /** Access-token lifetime (seconds) for issued mission tokens. Default 300. */
   accessTokenTTL?: number;
+  /**
+   * @spec mission#caller-authorization-and-minimization — the registered RFC
+   * 7662 introspection principals (config-driven): each caller's authorized
+   * audiences and disclosure privileges. Empty means no caller can introspect.
+   */
+  introspectionPrincipals?: IntrospectionPrincipal[];
   /** AS-txn signing key + kid: signs txn-bound, single-use approval tokens. */
   txnKey?: CryptoKey;
   txnKid?: string;
@@ -1112,6 +1120,34 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   // opaque handle the AS minted against the validated challenge (AROP; D42).
   const txnTasks = new Map<string, TxnHandle>();
 
+  /**
+   * @spec mission#caller-authorization-and-minimization — authenticate the RFC
+   * 7662 caller as a REGISTERED introspection principal (HTTP Basic against
+   * the config-registered secret, compared timing-safely). The principal's
+   * authorized audiences and disclosure privileges come from that server-side
+   * registration, never from a caller-supplied value. On failure the 401 is
+   * written and no token processing occurs.
+   */
+  const authenticateIntrospection = (ctx: KoaCtx): IntrospectionPrincipal | undefined => {
+    const auth = ctx.get("authorization") ?? "";
+    if (auth.startsWith("Basic ")) {
+      const decoded = Buffer.from(auth.slice(6), "base64").toString("utf8");
+      const sep = decoded.indexOf(":");
+      const id = sep >= 0 ? decoded.slice(0, sep) : decoded;
+      const secret = sep >= 0 ? decoded.slice(sep + 1) : "";
+      const principal = (opts.introspectionPrincipals ?? []).find((p) => p.principal_id === id);
+      if (principal) {
+        const a = Buffer.from(secret);
+        const b = Buffer.from(principal.secret);
+        if (a.length === b.length && timingSafeEqual(a, b)) return principal;
+      }
+    }
+    ctx.status = 401;
+    ctx.set("WWW-Authenticate", 'Basic realm="introspection"');
+    ctx.body = { error: "invalid_client" };
+    return undefined;
+  };
+
   const requireServiceToken = (ctx: KoaCtx): boolean => {
     if (ctx.get("x-service-token") !== DEV_SERVICE_TOKEN) {
       ctx.status = 401;
@@ -1452,31 +1488,150 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       return;
     }
 
-    // --- Adapter introspection (@spec mission#introspection; RFC 7662) ---
-    // JWT ATs cannot use the provider's introspection endpoint (spike
-    // finding); this route mirrors the JWT claim set per CIA-CORE.
+    // --- Adapter introspection (@spec mission#introspection, #composite-active,
+    // #caller-authorization-and-minimization; RFC 7662; issue #526) ---
+    // JWT ATs cannot use the provider's introspection endpoint (spike finding),
+    // so the adapter owns the RFC 7662 surface: an AUTHENTICATED introspection
+    // principal (registered audiences + disclosure privileges), STRICT token
+    // resolution (signature, expected issuer, at+jwt class, time validity,
+    // stored-token presence, Mission resolution), caller visibility, and only
+    // then the composite-active matrix over the audience-minimized projection.
     if (ctx.path === "/introspect" && ctx.method === "POST") {
-      if (!requireServiceToken(ctx)) return;
+      const principal = authenticateIntrospection(ctx);
+      if (!principal) return;
       const body = await readJsonBody(ctx.req);
+      const token = typeof body.token === "string" ? body.token : undefined;
+      if (!token) {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: "token is required" };
+        return;
+      }
       ctx.status = 200;
+      const inactive = { active: false };
+      const caller = { audiences: principal.audiences, disclose: new Set<string>(principal.disclose) };
+
+      // A Mission-bound refresh token is an opaque value (no JWS segments) and
+      // introspects under the SAME composite rule (@spec mission#composite-active).
+      if (token.split(".").length !== 3) {
+        const rt = (await provider.RefreshToken.find(token).catch(() => undefined)) as
+          | {
+              grantId?: string;
+              consumed?: unknown;
+              accountId?: string;
+              clientId?: string;
+              jti?: string;
+              iat?: number;
+              exp?: number;
+              jkt?: string;
+            }
+          | undefined;
+        // Unknown, expired, rotated-and-consumed, or revoked (destroyed): bare false.
+        if (!rt?.grantId || rt.consumed) {
+          ctx.body = inactive;
+          return;
+        }
+        const fam = opts.familyStore?.resolve(rt.grantId);
+        const record = kernel.findByGrant(rt.grantId) ?? (fam ? kernel.get(fam.missionId) : undefined);
+        if (!record) {
+          ctx.body = inactive;
+          return;
+        }
+        // Caller visibility for an audience-less credential: the caller must be
+        // an audience of the Mission's EFFECTIVE authority.
+        const effective = kernel.effectiveAuthoritySet(record);
+        if (!effective.some((e) => principal.audiences.includes(e.resource))) {
+          ctx.body = inactive;
+          return;
+        }
+        const mission = kernel.introspectionProjection(record, caller);
+        if (mission.state !== "active") {
+          ctx.body = { active: false, mission };
+          return;
+        }
+        // Grant-scoped individual revocation applies to the refresh token too
+        // (an active Mission whose grant is gone was revoked at token level).
+        if (!(await provider.Grant.find(rt.grantId).catch(() => undefined))) {
+          ctx.body = inactive;
+          return;
+        }
+        ctx.body = {
+          active: true,
+          iss: opts.issuer,
+          ...(rt.accountId ? { sub: rt.accountId } : {}),
+          ...(rt.clientId ? { client_id: rt.clientId } : {}),
+          ...(typeof rt.exp === "number" ? { exp: rt.exp } : {}),
+          ...(typeof rt.iat === "number" ? { iat: rt.iat } : {}),
+          ...(rt.jti ? { jti: rt.jti } : {}),
+          ...(rt.jkt ? { cnf: { jkt: rt.jkt } } : {}),
+          mission,
+        };
+        return;
+      }
+
       try {
-        const { payload } = await jwtVerify(String(body.token), jwksResolver);
-        const mission = payload.mission as { id?: string } | undefined;
-        const record = mission?.id ? kernel.get(mission.id) : undefined;
+        // Strict resolution: signature over the published keys, the expected
+        // issuer, the at+jwt token class, and time validity.
+        const { payload } = await jwtVerify(token, jwksResolver, {
+          issuer: opts.issuer,
+          typ: "at+jwt",
+        });
+        // Mission resolution: a token the AS cannot bind to a known Mission is
+        // unresolvable; no Mission or token detail is recovered from failure.
+        const missionId = (payload.mission as { id?: string } | undefined)?.id;
+        const record = missionId ? kernel.get(missionId) : undefined;
+        if (!record) {
+          ctx.body = inactive;
+          return;
+        }
+        // Caller visibility: the caller must be an audience of the token; the
+        // disclosed `aud` is the caller-visible intersection.
+        const aud = Array.isArray(payload.aud) ? payload.aud : payload.aud ? [payload.aud] : [];
+        const visible = aud.filter((a) => principal.audiences.includes(a));
+        if (visible.length === 0) {
+          ctx.body = inactive;
+          return;
+        }
+        const mission = kernel.introspectionProjection(record, caller);
+        if (mission.state !== "active") {
+          // Composite non-active: the token is itself valid but the Mission is
+          // not `active`; per the core's governed RFC 7662 deviation the
+          // response carries ONLY the minimized `mission` projection with
+          // `mission.state`, never top-level token detail. Mission-level
+          // revocation destroys the grant too, so the grant arm below never
+          // demotes a non-active Mission's REQUIRED state report to bare false.
+          ctx.body = { active: false, mission };
+          return;
+        }
+        // Individual revocation: a stateless at+jwt has no per-token record
+        // (jwt-format tokens are never stored), so token-level revocation is
+        // grant-scoped: with the Mission still `active`, a missing grant means
+        // the credential family was individually revoked (RFC 7009), and a
+        // revoked token discloses nothing. A Mission bound to no grant is
+        // gated by Mission state alone.
+        if (
+          record.grant_id &&
+          !(await provider.Grant.find(record.grant_id).catch(() => undefined))
+        ) {
+          ctx.body = inactive;
+          return;
+        }
+        const cnf = payload.cnf as { jkt?: string } | undefined;
         ctx.body = {
           active: true,
           iss: payload.iss,
           sub: payload.sub,
-          aud: payload.aud,
+          aud: visible.length === 1 ? visible[0] : visible,
           client_id: payload.client_id,
           exp: payload.exp,
           iat: payload.iat,
           jti: payload.jti,
-          cnf: payload.cnf,
-          ...(record ? { mission: kernel.introspectionMission(record) } : {}),
+          ...(typeof payload.scope === "string" ? { scope: payload.scope } : {}),
+          ...(cnf ? { cnf } : {}),
+          token_type: cnf?.jkt ? "DPoP" : "Bearer",
+          mission,
         };
       } catch {
-        ctx.body = { active: false };
+        ctx.body = inactive;
       }
       return;
     }

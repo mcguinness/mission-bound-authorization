@@ -1,6 +1,7 @@
 /** Assembly: kernel + adapters + keys. Used by server.ts and tests. */
 
 import {
+  INTROSPECTION_PRINCIPALS,
   ACTOR_PROFILES,
   CANONICAL_RESOURCE,
   CONTAINMENT_POLICY,
@@ -315,6 +316,12 @@ export interface BuiltAs {
   governedClientJwk: Record<string, unknown>;
   canonicalResource: string;
   /**
+   * @spec mission#introspection — the AS token-signing PRIVATE JWK, exposed so
+   * a test can craft adversarial at+jwt inputs (wrong issuer, unknown Mission,
+   * wrong typ, expired) against the strict introspection resolver.
+   */
+  tokenSigningJwk: Record<string, unknown>;
+  /**
    * @spec id-continuation-assertion — the continuation handle store, exposed so a
    * test/exhibit can seed anchors and handles and observe terminal propagation.
    */
@@ -553,6 +560,9 @@ export async function buildAuthorizationServer(opts: {
       : {}),
     approverRoleSubs: new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub)),
     accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
+    // @spec mission#caller-authorization-and-minimization — the registered
+    // RFC 7662 introspection principals (config/introspection.json).
+    introspectionPrincipals: INTROSPECTION_PRINCIPALS,
     txnKey: txnKeys.privateKey,
     txnKid: asTxn.kid,
     // @spec child-delegation#child-client-identity — sign the child-bound RFC 7523
@@ -598,6 +608,7 @@ export async function buildAuthorizationServer(opts: {
     childClientJwk: child.privateJwk,
     governedClientJwk: governed.privateJwk,
     canonicalResource: CANONICAL_RESOURCE,
+    tokenSigningJwk: tokenJwk,
     continuationStore,
     delegationFamilyStore,
     templateStore,

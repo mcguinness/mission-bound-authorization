@@ -995,6 +995,45 @@ export class MissionKernel {
   }
 
   /**
+   * @spec mission#introspection + mission#caller-authorization-and-minimization
+   * — the audience-minimized `mission` member for an AUTHENTICATED,
+   * authorized introspection caller. Core members always (the claim set plus
+   * `state` and `version`); `derivations_remaining` when
+   * `controls.max_derivations` is in force (committed issuances counted);
+   * `authorization_details` is the EFFECTIVE set (approved minus containment)
+   * filtered to the caller's authorized audiences; `containment_version`
+   * whenever containment applies. Issuer-only audit members are authority to
+   * assert, not authorization to disclose: `proposal_hash` requires the
+   * caller's `provenance` privilege and the Status List reference its
+   * `status_list` privilege.
+   */
+  introspectionProjection(
+    record: MissionRecord,
+    caller: { audiences: readonly string[]; disclose: ReadonlySet<string> },
+  ): Record<string, unknown> {
+    const fresh = this.applyExpiry(record);
+    const scoped = this.effectiveAuthoritySet(fresh).filter((e) =>
+      caller.audiences.includes(e.resource),
+    );
+    return {
+      ...this.missionClaim(fresh),
+      state: fresh.state,
+      version: fresh.version,
+      ...(fresh.max_derivations !== null
+        ? { derivations_remaining: Math.max(0, fresh.max_derivations - fresh.derivation_count) }
+        : {}),
+      authorization_details: scoped,
+      ...(caller.disclose.has("provenance") && fresh.proposal_hash
+        ? { proposal_hash: fresh.proposal_hash }
+        : {}),
+      ...(fresh.containment
+        ? { containment_version: fresh.containment.containment_version }
+        : {}),
+      ...(caller.disclose.has("status_list") ? this.statusListRef(fresh) : {}),
+    };
+  }
+
+  /**
    * @spec status#status-list — the referenced-token status object (`idx`,
    * `uri`) for a participating Mission; empty for a non-participant so the
    * member is absent.

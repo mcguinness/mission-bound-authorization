@@ -721,6 +721,41 @@ function loadClients(): [ClientSeed, ...ClientSeed[]] {
 
 const CLIENTS = loadClients();
 
+/**
+ * @spec mission#caller-authorization-and-minimization — one registered RFC 7662
+ * introspection principal (a protected-resource caller): its stable
+ * identifier, its shared secret (dev-grade; a production deployment uses real
+ * client authentication), the audiences it is authorized to introspect, and
+ * its explicit disclosure privileges ("provenance" -> `proposal_hash`,
+ * "status_list" -> the Status List reference). The audience decision is
+ * derived from this registration, never from a caller-supplied value.
+ */
+export interface IntrospectionPrincipal {
+  principal_id: string;
+  secret: string;
+  audiences: string[];
+  disclose: string[];
+}
+
+/** Load + validate config/introspection.json (registered introspection principals). */
+function loadIntrospectionPrincipals(): IntrospectionPrincipal[] {
+  const file = "introspection.json";
+  const arr = asArray(file, readJson(file), "introspection");
+  return arr.map((raw, i) => {
+    const obj = asObject(file, raw, `introspection[${i}]`);
+    const ctx = `introspection[${i}]`;
+    return {
+      principal_id: reqString(file, obj, "principal_id", ctx),
+      secret: reqString(file, obj, "secret", ctx),
+      audiences: reqStringArray(file, obj, "audiences", ctx),
+      disclose: reqStringArray(file, obj, "disclose", ctx),
+    };
+  });
+}
+
+/** The validated introspection principals (@see loadIntrospectionPrincipals). */
+export const INTROSPECTION_PRINCIPALS: IntrospectionPrincipal[] = loadIntrospectionPrincipals();
+
 /** Build a confidential client (private_key_jwt) from a seed: fresh key per boot (D25). */
 async function buildSeededClient(client: ClientSeed): Promise<SeededClient> {
   const { publicKey, privateKey } = await generateKeyPair(client.key.alg, { extractable: true });
