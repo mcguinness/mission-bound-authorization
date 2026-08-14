@@ -357,7 +357,10 @@ A Consent Disclosure object has these members:
 
 `mission_summary`:
 : REQUIRED. An object presenting the task to the Approver. It MUST carry
-  the rendered `goal`, the rendered `expires_at`, a display of the
+  the rendered `goal`, the rendered effective `expires_at` (with the
+  requested `intent.expires_at` beside it when the two differ, per the
+  issuance profile's approval rendering,
+  {{I-D.draft-mcguinness-oauth-mission}}), a display of the
   Subject, and a display of the Approver. Presentation wording is free.
 
 `authority_summary`:

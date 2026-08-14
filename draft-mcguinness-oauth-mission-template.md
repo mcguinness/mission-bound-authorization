@@ -315,7 +315,7 @@ A Mission Template is a consented object with these members:
 `instance_lifetime`:
 : REQUIRED. A duration. The per-instance lifetime clamp: a dispatched
   Mission's `expires_at` is clamped to no more than this from its
-  creation ({{dispatch}}).
+  committed `created_at` ({{dispatch}}).
 
 `max_active`:
 : REQUIRED. An integer. The maximum number of Missions dispatched from
@@ -504,9 +504,14 @@ The Mission Issuer adjudicates a Dispatch in this order:
      own Intent and final Authority Set, never over the template; the
      template commits the ceiling under `template_hash`
      ({{template-hash}});
-   - `expires_at` is clamped to the minimum of the dispatch intent's
-     requested expiry, the template's `instance_lifetime` from creation,
-     and the template's `expires_at`; and
+   - `expires_at` is the effective Mission expiry of the issuance
+     profile's requested-versus-effective rule
+     ({{I-D.draft-mcguinness-oauth-mission}}): the minimum of the
+     dispatch intent's requested `expires_at`, the committed Mission
+     `created_at` plus the template's `instance_lifetime`, and the
+     template's `expires_at`. The lifetime addend is measured from the
+     committed `created_at`, not a separate clock read, so audit
+     recomputation is exact; and
    - `template` lineage member is set ({{template-member}}).
 
 A Dispatch MUST be idempotent per dispatch event identifier. The
@@ -607,6 +612,12 @@ the instance, sender-constrained to the Dispatcher's key:
 
 `mission_id`:
 : REQUIRED. The dispatched Mission's identifier.
+
+`mission_expires_at`:
+: REQUIRED. The instance's effective Mission expiry, the issuance
+  profile's common Mission-creating response member
+  ({{I-D.draft-mcguinness-oauth-mission}}). `expires_in` above
+  describes only the access token.
 
 `authorization_details`:
 : REQUIRED. The instance's effective Authority Set.
@@ -726,7 +737,12 @@ Mission an authorized auditor can:
   instance was checked against is the one the human consented to;
 - re-run the subset check of the instance's Authority Set against the
   Template Ceiling ({{dispatch}}), confirming the instance is within the
-  ceiling; and
+  ceiling;
+- recompute the instance's effective `expires_at` as the minimum of
+  the dispatch intent's requested `expires_at`, the committed
+  `created_at` plus `instance_lifetime`, and the template's
+  `expires_at` ({{dispatch}}), and match it to the recorded value, so
+  the granted lifetime is exactly the three-way clamp; and
 - verify that the instance's `approver` equals the template's approver
   at the recorded `template_version`, so the accountable principal is
   the human who consented to that version of the template.

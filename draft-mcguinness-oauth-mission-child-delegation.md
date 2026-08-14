@@ -680,6 +680,11 @@ response shape:
 `mission_id`:
 : REQUIRED. The Child Mission identifier.
 
+`mission_expires_at`:
+: REQUIRED. The Child Mission's effective `expires_at`, the issuance
+  profile's common Mission-creating response member
+  ({{I-D.draft-mcguinness-oauth-mission}}).
+
 `parent`:
 : REQUIRED. The `parent` member of {{parent-member}}.
 
@@ -1052,9 +1057,14 @@ A Child Mission MUST be bounded by the Parent Mission:
   under the subset rule of {{I-D.draft-mcguinness-oauth-mission}};
 - the child MUST NOT include a resource, action, constraint relaxation,
   or delegation right not present in the parent;
-- the child's `expires_at` MUST NOT be later than the parent's
-  `expires_at` (so it transitively caps every child-derived token's
-  `exp`, per {{I-D.draft-mcguinness-oauth-mission}});
+- the child's effective `expires_at` MUST NOT be later than the child
+  submission's `intent.expires_at`, the requested ceiling of the
+  issuance profile's requested-versus-effective rule, nor later than
+  the parent's `expires_at` (so it transitively caps every
+  child-derived token's `exp`, per
+  {{I-D.draft-mcguinness-oauth-mission}}); an auditor recomputes the
+  bound as the minimum of the two and matches the child record
+  against it;
 - the child MUST be created only where the applicable parent entry's
   `delegation` member carries a `children` object ({{fanout}});
 - a child entry's `delegation` policy MUST NOT be broader than the
