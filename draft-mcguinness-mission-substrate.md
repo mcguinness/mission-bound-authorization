@@ -298,6 +298,33 @@ substrate-native mechanism.  A binding MUST NOT describe a bare value
 as globally identifying a Mission when its uniqueness actually
 depends on unstated local context.
 
+## Authority Roles {#authority-roles}
+
+A binding identifies the authorities responsible for the functions it
+uses.  Roles MAY be co-located in one implementation, but their
+semantics remain distinct, and a provider statement MUST NOT use
+colocation to imply that one role's assertion establishes another
+role's fact.  The roles are:
+
+* the approval authority;
+* the lifecycle authority;
+* the accountable owner;
+* the approved-context commitment authority;
+* the Actor identity authority;
+* the deployment or workload identity authority, where applicable;
+* the authority-source authority, where structured authority is
+  composed;
+* the artifact projection or credential issuer;
+* the resource decision authority;
+* the correlation or joining authority; and
+* the evidence authority.
+
+The kernel requires the approval and lifecycle authorities.  The
+other roles appear when the corresponding capability is claimed.
+Higher-assurance profiles can require preventive or evidentiary
+independence between roles; the kernel requires only that they never
+collapse silently ({{capability-confusion}}).
+
 ## Actor Binding {#actor-binding}
 
 At approval, the Controller MUST bind the Mission Context to the
@@ -631,11 +658,29 @@ parent under that relation.  Unsupported or incomparable values MUST
 fail closed.  The Statement MUST identify each narrowing point and
 the component that performs the comparison.
 
+Every covered transition is classified as exactly one of:
+
+`preserve`:
+: the same authoritative fact remains applicable across the
+  transition;
+
+`attenuate`:
+: the result's validity derives from a provable no-broader-than
+  relationship to its declared parent under the claimed relation; or
+
+`decide_anew`:
+: a target-recognized authority makes a fresh decision under its own
+  policy.
+
+Incomparability routes to refusal or to `decide_anew`; a translation
+between vocabularies is never silently treated as attenuation.
+
 The claim can cover a single authorization language or delegation
 chain.  It MUST NOT be presented as constraining fresh authorization
 decisions made under a different resource-owned policy or at an
 uncovered protocol hop.  A binding can correlate those decisions with
-the same Mission while leaving them outside this capability.
+the same Mission while leaving them outside this capability; in the
+classification above those decisions are `decide_anew`.
 
 ## Credential-Bound {#credential-bound}
 
@@ -656,10 +701,39 @@ protected protocol parameter, or a verified join.  A reference copied
 from Actor-controlled input without Controller or credential-issuer
 validation does not satisfy this capability.
 
-The Statement MUST distinguish a credential cryptographically issued
-under the Mission from a credential merely correlated with a Mission
-by an external join.  Either can be useful, but they provide different
-assurance and MUST NOT share an unqualified claim.
+A Credential-Bound claim MUST select which of the following fact
+semantics the mechanism establishes, and a claim MUST NOT say
+"Mission-bound" without that selection:
+
+* correlation only;
+* artifact issuance under the Mission;
+* authority derivation under the Mission;
+* lifecycle-gated issuance; or
+* current state as of an observation.
+
+These are separate facts: none follows from another, they provide
+different assurance, and the issued-under and correlation-only
+semantics MUST NOT share an unqualified claim.  Actor or presenter
+proof is a separate element of the claim: a bearer artifact can be
+Mission-bound under any of these semantics while offering a weaker
+holder guarantee.
+
+## Authorized Context Correlation {#authorized-context-correlation}
+
+A binding claiming **Authorized Context Correlation** MUST supply an
+authorized association among independently established facts, such as
+the Mission, the Subject, the Actor (and the Deployment and executing
+instance where the binding distinguishes them), an authority
+artifact, a request or transaction, and a target resource.  The claim
+MUST identify the joining authority, the association policy, the
+proof inputs, conflict handling, the association's lifetime and
+revocation, its audience, and its substitution protection.
+
+Matching strings or timestamps do not satisfy this capability: the
+association is an authorized fact established by the joining
+authority, not an observation that two values coincide.  This
+capability is required whenever one authority did not itself bind all
+required facts in the applicable context ({{context-splicing}}).
 
 ## Independently Verifiable {#independently-verifiable}
 
@@ -819,6 +893,7 @@ The following is a non-normative skeleton:
 | Structured Authority | not supplied | -- | -- | Approved Context is descriptive |
 | Monotonic Derivation | not supplied | -- | -- | No authority comparison relation is defined |
 | Credential-Bound | supplied | always | Native authorization artifact | Covers correlation, not context disclosure |
+| Authorized Context Correlation | supplied | Verified join active | Join assertions | Joining authority is the Controller |
 | Independently Verifiable | supplied | Signed receipt profile active | Signed receipts | Proves approval as of issuance, not current state |
 | Portable Evidence | not supplied | -- | -- | Governance record is Controller-local |
 {: title="Illustrative Mission Substrate Statement capability table"}
@@ -862,6 +937,16 @@ same Mission Reference and Controller namespace.  An implementation
 that joins values from different namespaces or accepts an Actor-supplied
 reference without authentication can attribute unrelated authority or
 activity to a Mission.
+
+## Context Splicing {#context-splicing}
+
+An attacker can combine valid identity evidence, a valid credential,
+and a valid Mission from different transactions.  Each piece verifies
+on its own; the composite is unauthorized.  Authorized Context
+Correlation ({{authorized-context-correlation}}) is required whenever
+one authority did not itself bind all required facts in the
+applicable context, and a consumer MUST NOT treat co-presentation of
+independently valid facts as an authorized association.
 
 ## Controller Compromise
 
@@ -946,6 +1031,7 @@ and an extension or deployment can change a row.
 | Structured Authority | OAuth authorization details and their type-specific semantics | Can use the OAuth Mission authority representation | Not inherent in the Mission description; scopes or a resource-owned structured language can supply it for their own decision boundary |
 | Monotonic Derivation | Applies where the OAuth profile defines and checks its no-broader-than relation | Applies to MAS-governed authority operations; not automatically to an unchanged AS | Not a baseline cross-hop property; a structured resource policy can define monotonicity within its own vocabulary |
 | Credential-Bound | Mission-bound OAuth credential | Not supplied by the MAS alone; supplied when a verified join or a cooperating credential issuer is active | Native Mission reference can be credential-bound where the PS or federated AS carries and validates it; not every access mode does |
+| Authorized Context Correlation | Native grant binding associates the Mission, Subject, client, and credential at issuance | Native: the MAS join and Join Assertion machinery | The PS binds the Mission, person, agent, and token natively at decision time |
 | Independently Verifiable | Supplied where signed credentials expose the property and verification material | Supplied when signed artifacts expose the property | A resource can verify a credential, but cannot thereby independently verify private contextual Mission content or the PS's full reasoning |
 | Portable Evidence | Supplied only by evidence, Mandate, or audit profiles that define portable artifacts | Likewise supplied only when an evidence profile is active | A PS-local Mission log is not portable evidence; signed receipts or checkpoints would be an extension |
 {: title="Illustrative capability mapping for existing architectures"}
@@ -1028,6 +1114,13 @@ contract was generalized from.  The terms correspond as follows:
 
 A family document that maps its own vocabulary to the kernel's MUST
 use these correspondences.
+
+The authority-role map ({{authority-roles}}) aligns with the core's
+Authority Sources: the `authority_source` record member and its three
+sources (user-delegated, service-owned, organizational) are the OAuth
+binding's realization of the authority-source authority role, and its
+source ceiling is that role's assertion staying within the named
+source's authority.
 
 Precedence is scoped, not global.  For the OAuth-native binding, the
 core's definitions govern that mapping; this document governs the
