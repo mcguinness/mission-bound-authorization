@@ -1193,13 +1193,9 @@ to this artifact's retention bound
 ({{I-D.draft-mcguinness-oauth-mission}}): a retired
 harness signing key MUST remain resolvable in the published key set
 for at least the evidence retention window. For a key identified as
-compromised, verification is governed by the evidence companion's
-compromise-boundary rule
-({{I-D.draft-mcguinness-mission-runtime-evidence}}): timestamps
-carried by an artifact never establish that its signature predates
-the boundary, and only an independently trusted existence proof over
-the complete signed artifact restores verification for pre-boundary
-artifacts.
+compromised, verification of harness evidence is governed by the
+evidence companion's complete compromise-boundary rule
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 ## Harness Evidence Object {#harness-evidence-object}
 

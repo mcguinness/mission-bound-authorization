@@ -190,7 +190,7 @@
         },
         {
           "file": "src/packages/mission-core/test/anchors.test.ts",
-          "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
+          "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
           "level": "unit",
           "surface": "verification"
         }
@@ -216,7 +216,7 @@
       "tests": [
         {
           "file": "src/packages/mission-core/test/anchors.test.ts",
-          "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+          "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
           "level": "unit",
           "surface": "verification"
         }
@@ -542,6 +542,198 @@
         {
           "file": "src/packages/mission-core/test/anchors.test.ts",
           "name": "Authority Set entry commitment (@spec mission#integrity-anchors) > resolves different member insertion order to the same digest",
+          "level": "unit",
+          "surface": "verification"
+        }
+      ]
+    },
+    {
+      "id": "evidence.compromise.no-self-timestamp",
+      "spec": "draft-mcguinness-mission-runtime-evidence.md",
+      "anchor": "evidence-integrity-signing-keys",
+      "text": "A verifier MUST NOT use a timestamp asserted by the target artifact, or authenticated only by the target artifact's compromised signing key, to place that artifact before the boundary",
+      "role": "verifier",
+      "strength": "MUST NOT",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "verification",
+      "assertion": "refusal",
+      "observation": {
+        "normative": "an artifact under a compromised key is not verified on the strength of its own asserted timestamps; only the authenticated time of an independently trusted recovery proof places it before the boundary"
+      },
+      "level": "unit",
+      "coverage": "tested",
+      "tests": [
+        {
+          "file": "src/packages/mission-core/test/compromise-boundary.test.ts",
+          "name": "compromise-boundary rule (@spec runtime-evidence#evidence-integrity-signing-keys) > artifact kind: record > a self-asserted pre-boundary timestamp never rescues a compromised-key artifact",
+          "level": "unit",
+          "surface": "verification"
+        },
+        {
+          "file": "src/packages/mission-core/test/compromise-boundary.test.ts",
+          "name": "compromise-boundary rule (@spec runtime-evidence#evidence-integrity-signing-keys) > artifact kind: record > a proof authenticated exactly at the boundary does not rescue",
+          "level": "unit",
+          "surface": "verification"
+        },
+        {
+          "file": "src/packages/mission-core/test/compromise-boundary.test.ts",
+          "name": "compromise-boundary rule (@spec runtime-evidence#evidence-integrity-signing-keys) > artifact kind: record > a proof authenticated after the boundary does not rescue",
+          "level": "unit",
+          "surface": "verification"
+        }
+      ]
+    },
+    {
+      "id": "evidence.compromise.no-inferred-boundary",
+      "spec": "draft-mcguinness-mission-runtime-evidence.md",
+      "anchor": "evidence-integrity-signing-keys",
+      "text": "the verifier MUST NOT infer a boundary from artifact timestamps, its own clock, or an implementation default",
+      "role": "verifier",
+      "strength": "MUST NOT",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "verification",
+      "assertion": "refusal",
+      "observation": {
+        "normative": "a key identified as compromised with no authenticated boundary from the deployment-defined key-status mechanism yields not-verified, with no boundary substituted"
+      },
+      "level": "unit",
+      "coverage": "tested",
+      "tests": [
+        {
+          "file": "src/packages/mission-core/test/compromise-boundary.test.ts",
+          "name": "compromise-boundary rule (@spec runtime-evidence#evidence-integrity-signing-keys) > artifact kind: record > compromised with no authenticated boundary is not verified, even with a valid proof",
+          "level": "unit",
+          "surface": "verification"
+        }
+      ]
+    },
+    {
+      "id": "evidence.compromise.proof-key-recursion",
+      "spec": "draft-mcguinness-mission-runtime-evidence.md",
+      "anchor": "evidence-integrity-signing-keys",
+      "text": "where a key authenticating the proof is itself identified as compromised, the proof is subject to this same rule for that key and qualifies only through a distinct independent pre-boundary anchor",
+      "role": "verifier",
+      "strength": "stated",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "verification",
+      "assertion": "refusal",
+      "observation": {
+        "normative": "a recovery proof authenticated by a compromised key rescues nothing without a distinct independent pre-boundary anchor, and rescues with one"
+      },
+      "level": "unit",
+      "coverage": "tested",
+      "tests": [
+        {
+          "file": "src/packages/mission-core/test/compromise-boundary.test.ts",
+          "name": "compromise-boundary rule (@spec runtime-evidence#evidence-integrity-signing-keys) > artifact kind: record > a proof under a compromised proof key cannot rescue without a distinct anchor",
+          "level": "unit",
+          "surface": "verification"
+        },
+        {
+          "file": "src/packages/mission-core/test/compromise-boundary.test.ts",
+          "name": "compromise-boundary rule (@spec runtime-evidence#evidence-integrity-signing-keys) > artifact kind: record > a proof under a compromised proof key with a distinct independent pre-boundary anchor rescues",
+          "level": "unit",
+          "surface": "verification"
+        }
+      ]
+    },
+    {
+      "id": "evidence.compromise.result-axes",
+      "spec": "draft-mcguinness-mission-runtime-evidence.md",
+      "anchor": "evidence-integrity-signing-keys",
+      "text": "A missing, unavailable, or unresolvable proof is an audit failure; a presented proof that fails its own cryptographic or commitment verification is an integrity failure of the proof",
+      "role": "verifier",
+      "strength": "stated",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "verification",
+      "assertion": "refusal",
+      "observation": {
+        "normative": "the underlying record stays not-verified on both axes, the failure kind distinguishes audit failure from proof integrity failure, and neither is recorded as a tampering finding"
+      },
+      "level": "unit",
+      "coverage": "tested",
+      "tests": [
+        {
+          "file": "src/packages/mission-core/test/compromise-boundary.test.ts",
+          "name": "compromise-boundary rule (@spec runtime-evidence#evidence-integrity-signing-keys) > artifact kind: record > a missing, unavailable, or unresolvable proof is an audit failure, never tampering",
+          "level": "unit",
+          "surface": "verification"
+        },
+        {
+          "file": "src/packages/mission-core/test/compromise-boundary.test.ts",
+          "name": "compromise-boundary rule (@spec runtime-evidence#evidence-integrity-signing-keys) > artifact kind: record > a presented proof failing its own verification is an integrity failure of the proof",
+          "level": "unit",
+          "surface": "verification"
+        }
+      ]
+    },
+    {
+      "id": "evidence.compromise.pre-boundary-proof-continues",
+      "spec": "draft-mcguinness-mission-runtime-evidence.md",
+      "anchor": "compromise-vectors",
+      "text": "a verified independent proof over the complete signed artifact or its unambiguous typed digest, with an authenticated time before the boundary, permits the ordinary verification algorithm to continue",
+      "role": "verifier",
+      "strength": "stated",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "verification",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "both proof commitment arms rescue: complete signed artifact and unambiguous typed digest, strictly before the authenticated boundary"
+      },
+      "level": "unit",
+      "coverage": "tested",
+      "tests": [
+        {
+          "file": "src/packages/mission-core/test/compromise-boundary.test.ts",
+          "name": "compromise-boundary rule (@spec runtime-evidence#evidence-integrity-signing-keys) > artifact kind: record > a verified pre-boundary proof over the complete signed artifact permits continuation",
+          "level": "unit",
+          "surface": "verification"
+        },
+        {
+          "file": "src/packages/mission-core/test/compromise-boundary.test.ts",
+          "name": "compromise-boundary rule (@spec runtime-evidence#evidence-integrity-signing-keys) > artifact kind: record > a verified pre-boundary proof over the unambiguous typed digest permits continuation",
+          "level": "unit",
+          "surface": "verification"
+        }
+      ]
+    },
+    {
+      "id": "evidence.compromise.artifact-kind-parity",
+      "spec": "draft-mcguinness-mission-runtime-evidence.md",
+      "anchor": "compromise-vectors",
+      "text": "the same outcomes hold for Mission Receipts and for harness evidence",
+      "role": "verifier",
+      "strength": "stated",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "verification",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "the full outcome matrix is executed identically for runtime evidence records, Mission Receipts, and harness evidence"
+      },
+      "level": "unit",
+      "coverage": "tested",
+      "tests": [
+        {
+          "file": "src/packages/mission-core/test/compromise-boundary.test.ts",
+          "name": "compromise-boundary rule (@spec runtime-evidence#evidence-integrity-signing-keys) > artifact kind: mission-receipt > a verified pre-boundary proof over the complete signed artifact permits continuation",
+          "level": "unit",
+          "surface": "verification"
+        },
+        {
+          "file": "src/packages/mission-core/test/compromise-boundary.test.ts",
+          "name": "compromise-boundary rule (@spec runtime-evidence#evidence-integrity-signing-keys) > artifact kind: harness-evidence > a verified pre-boundary proof over the complete signed artifact permits continuation",
           "level": "unit",
           "surface": "verification"
         }
