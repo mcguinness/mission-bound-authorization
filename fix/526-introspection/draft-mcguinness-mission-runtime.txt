@@ -988,7 +988,13 @@ Table of Contents
    shared key; or the mediating PEP is itself the attested instance that
    obtained the token, presenting the instance assertion and holding the
    instance key.  In both shapes that profile's no-shared-key rule and
-   this section's custody rules are satisfied together.
+   this section's custody rules are satisfied together.  Attestation-
+   based client authentication and SPIFFE
+   ([I-D.draft-ietf-oauth-attestation-based-client-auth],
+   [I-D.draft-ietf-oauth-spiffe-client-auth]) can supply the client-
+   instance authentication and workload credentials beneath this custody
+   layer; they do not define the Mission actor, delegation, intent,
+   lifecycle, or evidence semantics.
 
    This narrows, and does not eliminate, the compromised-agent exposure.
    The mediating PEP becomes a trusted component whose compromise is out
@@ -2724,13 +2730,13 @@ Table of Contents
    distinguish a deployment that built the declared isolation from one
    that only published the statement.  A deployment claiming either MUST
    bind the statement to execution-environment attestation, presenting
-   Entity Attestation Token evidence under the AI-agent-instance profile
-   ([I-D.draft-mcguinness-oauth-ai-agent-instance]) covering the
-   isolation properties the statement declares, and MUST NOT represent
-   the claim as met without it.  The requirement is scoped to these two
-   High-Assurance Agent claims; base runtime conformance does not
-   require attestation, and a deployment claiming only the base profile
-   MAY publish its scope statement unattested.
+   Entity Attestation Token [RFC9711] evidence under the AI-agent-
+   instance profile ([I-D.draft-mcguinness-oauth-ai-agent-instance])
+   covering the isolation properties the statement declares, and MUST
+   NOT represent the claim as met without it.  The requirement is scoped
+   to these two High-Assurance Agent claims; base runtime conformance
+   does not require attestation, and a deployment claiming only the base
+   profile MAY publish its scope statement unattested.
 
 13.  Negative Conformance Tests
 
@@ -3256,6 +3262,11 @@ Table of Contents
               RFC 9700, DOI 10.17487/RFC9700, January 2025,
               <https://www.rfc-editor.org/rfc/rfc9700>.
 
+   [RFC9711]  Lundblade, L., Mandyam, G., O'Donoghue, J., and C.
+              Wallace, "The Entity Attestation Token (EAT)", RFC 9711,
+              DOI 10.17487/RFC9711, April 2025,
+              <https://www.rfc-editor.org/rfc/rfc9711>.
+
    [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
               Protected Resource Metadata", RFC 9728,
               DOI 10.17487/RFC9728, April 2025,
@@ -3266,6 +3277,22 @@ Table of Contents
    [AUTHZEN]  OpenID Foundation, "OpenID AuthZEN Authorization API 1.0",
               2026, <https://openid.net/specs/authorization-api-
               1_0-final.html>.
+
+   [I-D.draft-ietf-oauth-attestation-based-client-auth]
+              Looker, T., Bastian, P., and C. Bormann, "OAuth 2.0
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-ietf-oauth-attestation-
+              based-client-auth-10, 6 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              attestation-based-client-auth-10>.
+
+   [I-D.draft-ietf-oauth-spiffe-client-auth]
+              Schwenkschuster, A., Kasselman, P., Rose, S., Thorgersen,
+              S., and N. Cam-Winget, "OAuth SPIFFE Client
+              Authentication", Work in Progress, Internet-Draft, draft-
+              ietf-oauth-spiffe-client-auth-02, 15 June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              spiffe-client-auth-02>.
 
    [I-D.draft-jiang-oauth-intent-admission]
               Jiang, Y., Lun, L., Song, Y., and F. Liu, "Intent

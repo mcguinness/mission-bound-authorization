@@ -391,7 +391,9 @@ Table of Contents
       Section 4.1.9 the value omits the application/ prefix of the media
       type registered in Section 13.  The distinct typ domain-separates
       the binding so a binding digest can never be read as an authority
-      artifact.
+      artifact: exact validation of the typ, with mutually exclusive
+      validation rules for the artifact profiles, implements the
+      substitution defense of [RFC8725], Sections 3.11 and 3.12.
 
    alg:  REQUIRED.  An asymmetric JWS algorithm. none MUST NOT be used.
 
@@ -774,6 +776,11 @@ Informative References
    [IN-TOTO]  Cloud Native Computing Foundation, "in-toto: A Framework
               to Secure the Integrity of the Software Supply Chain",
               2024, <https://in-toto.io/>.
+
+   [RFC8725]  Sheffer, Y., Hardt, D., and M. Jones, "JSON Web Token Best
+              Current Practices", BCP 225, RFC 8725,
+              DOI 10.17487/RFC8725, February 2020,
+              <https://www.rfc-editor.org/rfc/rfc8725>.
 
    [SLSA]     Open Source Security Foundation, "Supply-chain Levels for
               Software Artifacts (SLSA)", 2023,

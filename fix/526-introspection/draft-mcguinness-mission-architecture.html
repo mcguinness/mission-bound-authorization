@@ -2009,7 +2009,13 @@ client-instance-assertion profile and its AI-agent profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>), which sharpens
 delegation chains, joins, and evidence attribution to instance
-granularity without touching the Mission model.<a href="#section-10-2.2.2" class="pilcrow">¶</a></p>
+granularity without touching the Mission model.
+Attestation-based client authentication and SPIFFE
+(<span>[<a href="#I-D.draft-ietf-oauth-attestation-based-client-auth" class="cite xref">I-D.draft-ietf-oauth-attestation-based-client-auth</a>]</span>,
+<span>[<a href="#I-D.draft-ietf-oauth-spiffe-client-auth" class="cite xref">I-D.draft-ietf-oauth-spiffe-client-auth</a>]</span>) can supply
+client-instance authentication and workload credentials beneath
+these profiles; they do not define the Mission actor, delegation,
+intent, lifecycle, or evidence semantics defined here.<a href="#section-10-2.2.2" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-10-2.3">Subject:</dt>
@@ -2304,7 +2310,12 @@ the binding derives one, its Authority Set.<a href="#section-10.2-2.6.1" class="
         <dd class="break"></dd>
 </dl>
 <p id="section-10.2-3">An agent registry is a complementary dependency, not part of the
-Mission system. Where one exists, the Mission Issuer and the PDP
+Mission system; an A2A AgentCard directory (<span>[<a href="#A2A" class="cite xref">A2A</a>]</span>) is one example
+source. Discovery contents are not authority for workload identity,
+authorization, or effective capabilities: a deployment applies local
+admission policy and independently verifies the relevant credential,
+resource metadata, and capability evidence. Where one
+exists, the Mission Issuer and the PDP
 consume a small, stable slice of it:<a href="#section-10.2-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-10.2-4.1">
@@ -4643,6 +4654,18 @@ minimization and retention duties applying there.<a href="#section-22-2" class="
 <a href="#section-24" class="section-number selfRef">24. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
       </h2>
 <dl class="references">
+<dt id="A2A">[A2A]</dt>
+      <dd>
+<span class="refAuthor">A2A Project</span>, <span class="refTitle">"Agent2Agent (A2A) Protocol Specification, Version 1.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://a2a-protocol.org/v1.0.0/specification/">https://a2a-protocol.org/v1.0.0/specification/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-ietf-oauth-attestation-based-client-auth">[I-D.draft-ietf-oauth-attestation-based-client-auth]</dt>
+      <dd>
+<span class="refAuthor">Looker, T.</span>, <span class="refAuthor">Bastian, P.</span>, and <span class="refAuthor">C. Bormann</span>, <span class="refTitle">"OAuth 2.0 Attestation-Based Client Authentication"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-attestation-based-client-auth-10</span>, <time datetime="2026-07-06" class="refDate">6 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-attestation-based-client-auth-10">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-attestation-based-client-auth-10</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-ietf-oauth-spiffe-client-auth">[I-D.draft-ietf-oauth-spiffe-client-auth]</dt>
+      <dd>
+<span class="refAuthor">Schwenkschuster, A.</span>, <span class="refAuthor">Kasselman, P.</span>, <span class="refAuthor">Rose, S.</span>, <span class="refAuthor">Thorgersen, S.</span>, and <span class="refAuthor">N. Cam-Winget</span>, <span class="refTitle">"OAuth SPIFFE Client Authentication"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-spiffe-client-auth-02</span>, <time datetime="2026-06-15" class="refDate">15 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-spiffe-client-auth-02">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-spiffe-client-auth-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-aauth-mission-expiry">[I-D.draft-mcguinness-aauth-mission-expiry]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"AAuth Mission Expiry"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html</a>&gt;</span>. </dd>

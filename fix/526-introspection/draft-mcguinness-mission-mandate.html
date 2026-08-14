@@ -1469,7 +1469,10 @@ Mandate's wire and evidence form.<a href="#section-5-1" class="pilcrow">¶</a></
           <dd style="margin-left: 1.5em" id="section-5.1-2.2">
             <p id="section-5.1-2.2.1"><span class="bcp14">REQUIRED</span>. <code>mission-mandate+jwt</code>. Per <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Section 4.1.9 the
 value omits the <code>application/</code> prefix of the media type registered
-in <a href="#iana" class="auto internal xref">Section 13</a>.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
+in <a href="#iana" class="auto internal xref">Section 13</a>. Exact validation of the protected <code>typ</code> value,
+together with mutually exclusive validation rules for the artifact
+profiles, implements the substitution defense of <span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span>,
+Sections 3.11 and 3.12.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.1-2.3">
@@ -2752,8 +2755,12 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8725">[RFC8725]</dt>
+      <dd>
+<span class="refAuthor">Sheffer, Y.</span>, <span class="refAuthor">Hardt, D.</span>, and <span class="refAuthor">M. Jones</span>, <span class="refTitle">"JSON Web Token Best Current Practices"</span>, <span class="seriesInfo">BCP 225</span>, <span class="seriesInfo">RFC 8725</span>, <span class="seriesInfo">DOI 10.17487/RFC8725</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8725">https://www.rfc-editor.org/rfc/rfc8725</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>

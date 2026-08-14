@@ -14,12 +14,14 @@ and optional token introspection. This document
 defines the Mission state-management surfaces it defers: the Mission
 Status operation (keyed by  mission_id ) with signed responses, the
 Mission projection for token introspection, the Mission Lifecycle
-endpoint with  revoke ,  suspend ,  resume , and  complete  operations,
-the  suspended  and  completed  states with the consolidated lifecycle
-state machine this profile owns, and revocation-propagation guidance.
+endpoint with  revoke ,  suspend ,  resume ,  complete , and  discharge 
+operations, the  suspended  and  completed  states with the consolidated
+lifecycle state machine this profile owns, and revocation-propagation
+guidance.
 It also defines Mission completion at the entry grain:  terminal_when ,
-a completion condition that discharges an Authority Set entry once the
-task the entry was granted for is done.
+a completion condition met when an authenticated  discharge  command or
+trusted deployment-internal adjudication commits that the task an entry
+was granted for is done.
 Each capability is independently optional; an implementation can adopt
 any subset, and one that adopts none remains a conforming issuance
 profile. 
@@ -1104,12 +1106,14 @@ and optional token introspection. This document
 defines the Mission state-management surfaces it defers: the Mission
 Status operation (keyed by <code>mission_id</code>) with signed responses, the
 Mission projection for token introspection, the Mission Lifecycle
-endpoint with <code>revoke</code>, <code>suspend</code>, <code>resume</code>, and <code>complete</code> operations,
-the <code>suspended</code> and <code>completed</code> states with the consolidated lifecycle
-state machine this profile owns, and revocation-propagation guidance.
+endpoint with <code>revoke</code>, <code>suspend</code>, <code>resume</code>, <code>complete</code>, and <code>discharge</code>
+operations, the <code>suspended</code> and <code>completed</code> states with the consolidated
+lifecycle state machine this profile owns, and revocation-propagation
+guidance.
 It also defines Mission completion at the entry grain: <code>terminal_when</code>,
-a completion condition that discharges an Authority Set entry once the
-task the entry was granted for is done.
+a completion condition met when an authenticated <code>discharge</code> command or
+trusted deployment-internal adjudication commits that the task an entry
+was granted for is done.
 Each capability is independently optional; an implementation can adopt
 any subset, and one that adopts none remains a conforming issuance
 profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
@@ -1218,28 +1222,45 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-operations" class="internal xref">Operations</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
-                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-legal-transitions" class="internal xref">Legal Transitions</a></p>
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-entry-discharge-operation" class="internal xref">Entry Discharge Operation</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2.2.1">
+                    <p id="section-toc.1-1.6.2.2.2.1.1"><a href="#section-6.2.1" class="auto internal xref">6.2.1</a>.  <a href="#name-discharge-authority" class="internal xref">Discharge Authority</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2.2.2">
+                    <p id="section-toc.1-1.6.2.2.2.2.1"><a href="#section-6.2.2" class="auto internal xref">6.2.2</a>.  <a href="#name-discharge-anti-oracle" class="internal xref">Discharge Anti-Oracle</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2.2.3">
+                    <p id="section-toc.1-1.6.2.2.2.3.1"><a href="#section-6.2.3" class="auto internal xref">6.2.3</a>.  <a href="#name-idempotency-nonce-and-event" class="internal xref">Idempotency: <code>nonce</code> and <code>event_id</code></a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2.2.4">
+                    <p id="section-toc.1-1.6.2.2.2.4.1"><a href="#section-6.2.4" class="auto internal xref">6.2.4</a>.  <a href="#name-discharge-result" class="internal xref">Discharge Result</a></p>
+</li>
+                </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
-                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-consolidated-state-machine" class="internal xref">Consolidated State Machine</a></p>
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-legal-transitions" class="internal xref">Legal Transitions</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.4">
-                <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-authentication-2" class="internal xref">Authentication</a></p>
+                <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-consolidated-state-machine" class="internal xref">Consolidated State Machine</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.5">
-                <p id="section-toc.1-1.6.2.5.1"><a href="#section-6.5" class="auto internal xref">6.5</a>.  <a href="#name-authorization" class="internal xref">Authorization</a></p>
+                <p id="section-toc.1-1.6.2.5.1"><a href="#section-6.5" class="auto internal xref">6.5</a>.  <a href="#name-authentication-2" class="internal xref">Authentication</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.6">
-                <p id="section-toc.1-1.6.2.6.1"><a href="#section-6.6" class="auto internal xref">6.6</a>.  <a href="#name-worked-examples" class="internal xref">Worked Examples</a></p>
+                <p id="section-toc.1-1.6.2.6.1"><a href="#section-6.6" class="auto internal xref">6.6</a>.  <a href="#name-authorization" class="internal xref">Authorization</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.7">
-                <p id="section-toc.1-1.6.2.7.1"><a href="#section-6.7" class="auto internal xref">6.7</a>.  <a href="#name-idempotency-and-conflicts" class="internal xref">Idempotency and Conflicts</a></p>
+                <p id="section-toc.1-1.6.2.7.1"><a href="#section-6.7" class="auto internal xref">6.7</a>.  <a href="#name-worked-examples" class="internal xref">Worked Examples</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.8">
-                <p id="section-toc.1-1.6.2.8.1"><a href="#section-6.8" class="auto internal xref">6.8</a>.  <a href="#name-relationship-to-rfc-7009" class="internal xref">Relationship to RFC 7009</a></p>
+                <p id="section-toc.1-1.6.2.8.1"><a href="#section-6.8" class="auto internal xref">6.8</a>.  <a href="#name-idempotency-and-conflicts" class="internal xref">Idempotency and Conflicts</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.9">
-                <p id="section-toc.1-1.6.2.9.1"><a href="#section-6.9" class="auto internal xref">6.9</a>.  <a href="#name-deferred-lifecycle-capabili" class="internal xref">Deferred Lifecycle Capabilities</a></p>
+                <p id="section-toc.1-1.6.2.9.1"><a href="#section-6.9" class="auto internal xref">6.9</a>.  <a href="#name-relationship-to-rfc-7009" class="internal xref">Relationship to RFC 7009</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.10">
+                <p id="section-toc.1-1.6.2.10.1"><a href="#section-6.10" class="auto internal xref">6.10</a>. <a href="#name-deferred-lifecycle-capabili" class="internal xref">Deferred Lifecycle Capabilities</a></p>
 </li>
             </ul>
 </li>
@@ -1420,14 +1441,15 @@ response (<a href="#introspection-projection" class="auto internal xref">Section
 </li>
         <li class="normal" id="section-1-3.3">
           <p id="section-1-3.3.1">A <strong>Mission Lifecycle endpoint</strong> (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>)
-for explicit <code>revoke</code>, <code>suspend</code>, <code>resume</code>, and <code>complete</code>
-transitions, distinct from <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> token revocation.<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
+for explicit <code>revoke</code>, <code>suspend</code>, <code>resume</code>, <code>complete</code>, and
+<code>discharge</code> operations, distinct from <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> token revocation.<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.4">
           <p id="section-1-3.4.1"><strong>Mission completion and entry discharge</strong> (<a href="#completion" class="auto internal xref">Section 7</a>): the
 <code>terminal_when</code> completion condition, carried in a
-<code>mission_resource_access</code> entry's <code>constraints</code>, that discharges
-the entry once the task it was granted for is done.<a href="#section-1-3.4.1" class="pilcrow">¶</a></p>
+<code>mission_resource_access</code> entry's <code>constraints</code>, and the
+authenticated <code>discharge</code> operation (<a href="#discharge-operation" class="auto internal xref">Section 6.2</a>) that
+commits it once the task the entry was granted for is done.<a href="#section-1-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.5">
           <p id="section-1-3.5.1"><strong>Revocation propagation</strong> guidance
@@ -1689,7 +1711,10 @@ carries <code>typ</code> of <code>mission-status-response+jwt</code> and a <code
 the signing key. Per <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Section 4.1.9 the <code>typ</code> header omits
 the <code>application/</code> prefix; the full media type
 <code>application/mission-status-response+jwt</code> (registered in <a href="#iana" class="auto internal xref">Section 13</a>) is
-used as the HTTP <code>Content-Type</code>.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+used as the HTTP <code>Content-Type</code>. Exact validation of the protected
+<code>typ</code> value, together with mutually exclusive validation rules for
+the artifact profiles, implements the substitution defense of
+<span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span>, Sections 3.11 and 3.12.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
 <p id="section-3.4-2"><span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span> signed introspection responses are scoped to token
 introspection and do not apply to a lookup keyed by <code>mission_id</code>; the
 dedicated Mission Status operation therefore uses a new media type and a
@@ -1826,7 +1851,7 @@ Mission across every surface: an event consumer that
 re-established state through this operation re-seats its gap
 detection on it (the last-applied Signals version becomes this
 value, <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), a
-lifecycle mutation can guard on it (<a href="#idempotency" class="auto internal xref">Section 6.7</a>), and a
+lifecycle mutation can guard on it (<a href="#idempotency" class="auto internal xref">Section 6.8</a>), and a
 materialized policy view names the value it materialized
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-3.4-10.2.2.8.1" class="pilcrow">¶</a></p>
 </li>
@@ -2013,6 +2038,13 @@ recognizes it.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
           <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
+                <code>invalid_request</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">400</td>
+              <td class="text-left" rowspan="1" colspan="1">Malformed request: an unparseable body, a required member missing or malformed, an invalid member combination, or a retransmitted <code>nonce</code> paired with a request that is not byte-identical to the original (<a href="#idempotency" class="auto internal xref">Section 6.8</a>).</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
                 <code>unauthorized</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">401</td>
@@ -2030,7 +2062,7 @@ recognizes it.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
                 <code>conflict</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">409</td>
-              <td class="text-left" rowspan="1" colspan="1">Lifecycle operation not legal from the current state (<a href="#idempotency" class="auto internal xref">Section 6.7</a>).</td>
+              <td class="text-left" rowspan="1" colspan="1">Lifecycle operation not legal from the current state (<a href="#idempotency" class="auto internal xref">Section 6.8</a>).</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -2038,7 +2070,7 @@ recognizes it.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
 </td>
               <td class="text-left" rowspan="1" colspan="1">409</td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>expected_version</code> differs from the current state version (<a href="#idempotency" class="auto internal xref">Section 6.7</a>).</td>
+                <code>expected_version</code> differs from the current state version (<a href="#idempotency" class="auto internal xref">Section 6.8</a>).</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -2076,11 +2108,34 @@ Cache-Control: no-store
 }
 </pre><a href="#section-3.7-8" class="pilcrow">¶</a>
 </div>
-<p id="section-3.7-9">The body <span class="bcp14">MUST</span> contain <code>error</code>, <code>error_description</code>, and <code>nonce</code>, and
-<span class="bcp14">MUST NOT</span> contain any member that would let a caller distinguish
-unknown from unauthorized references. For <code>rate_limited</code>, the response
-<span class="bcp14">SHOULD</span> include a <code>Retry-After</code> header <span>[<a href="#RFC9110" class="cite xref">RFC9110</a>]</span> and a <code>retry_after</code>
-body member in seconds.<a href="#section-3.7-9" class="pilcrow">¶</a></p>
+<p id="section-3.7-9">The body <span class="bcp14">MUST</span> contain <code>error</code> and <code>error_description</code>, and <span class="bcp14">MUST</span>
+additionally contain <code>nonce</code> when the request carried a well-formed
+<code>nonce</code>. A request whose <code>nonce</code> is absent or malformed is refused
+<code>invalid_request</code> with no <code>nonce</code> member echoed. The body <span class="bcp14">MUST NOT</span>
+contain any member that would let a caller distinguish unknown from
+unauthorized references. For <code>rate_limited</code>, the response <span class="bcp14">SHOULD</span>
+include a <code>Retry-After</code> header <span>[<a href="#RFC9110" class="cite xref">RFC9110</a>]</span> and a <code>retry_after</code> body
+member in seconds.<a href="#section-3.7-9" class="pilcrow">¶</a></p>
+<p id="section-3.7-10">The OAuth-shaped surfaces of this family, this Status and Lifecycle
+endpoint, Mission Management
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>, and the Mission
+Authority Server's submission surface
+<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>, share the
+<code>error</code>/<code>error_description</code> JSON body idiom for consistency with the
+OAuth-shaped APIs they compose with. Each surface's exact member
+requiredness is its own: here and in Mission Management,
+<code>error_description</code> and <code>nonce</code> are <span class="bcp14">REQUIRED</span>; the Mission Authority
+Server makes <code>error_description</code> <span class="bcp14">OPTIONAL</span> and adds the MAS-only
+<code>error_reason</code>. The body is <code>application/json</code> with <code>Cache-Control:
+no-store</code>. <code>error_description</code> is diagnostic and is never
+authorization input. <code>nonce</code> correlates the response to the request in
+support of the signed-response and retry model of <a href="#idempotency" class="auto internal xref">Section 6.8</a> and
+is not, by itself, replay protection, per the absent-or-malformed-<code>nonce</code>
+rule above. RFC 9457 <span>[<a href="#RFC9457" class="cite xref">RFC9457</a>]</span> problem details
+is neither used on these surfaces nor disparaged: the AuthZEN binding
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span> carries it where that
+ecosystem does, and a future non-OAuth-shaped HTTP API in this family
+<span class="bcp14">MAY</span> choose it.<a href="#section-3.7-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2281,14 +2336,15 @@ core's external-surface convention
 <code>operation</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.1-2.4">
             <p id="section-6.1-2.4.1"><span class="bcp14">REQUIRED</span>. A string. One of <code>revoke</code>, <code>suspend</code>,
-<code>resume</code>, <code>complete</code>.<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
+<code>resume</code>, <code>complete</code>, <code>discharge</code>.<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.1-2.5">
 <code>reason</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.1-2.6">
             <p id="section-6.1-2.6.1"><span class="bcp14">OPTIONAL</span>. A string. A human-readable reason recorded in
-audit, maximum 1024 characters.<a href="#section-6.1-2.6.1" class="pilcrow">¶</a></p>
+audit, maximum 1024 characters. Not used by <code>discharge</code>, which
+records its own request members in audit (<a href="#discharge-operation" class="auto internal xref">Section 6.2</a>).<a href="#section-6.1-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.1-2.7">
@@ -2314,44 +2370,372 @@ transition the AS applies when <code>suspend_until</code> passes.<a href="#secti
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-6.1-3">The operations are:<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-3">The <code>discharge</code> operation carries additional <span class="bcp14">REQUIRED</span> and <span class="bcp14">OPTIONAL</span>
+members of its own, defined in <a href="#discharge-operation" class="auto internal xref">Section 6.2</a>.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-4">The operations are:<a href="#section-6.1-4" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-6.1-4.1">
-            <p id="section-6.1-4.1.1"><code>revoke</code>: terminate the Mission; transition to <code>revoked</code>.<a href="#section-6.1-4.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-6.1-5.1">
+            <p id="section-6.1-5.1.1"><code>revoke</code>: terminate the Mission; transition to <code>revoked</code>.<a href="#section-6.1-5.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.1-4.2">
-            <p id="section-6.1-4.2.1"><code>suspend</code>: pause the Mission; transition to <code>suspended</code>.<a href="#section-6.1-4.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-6.1-5.2">
+            <p id="section-6.1-5.2.1"><code>suspend</code>: pause the Mission; transition to <code>suspended</code>.<a href="#section-6.1-5.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.1-4.3">
-            <p id="section-6.1-4.3.1"><code>resume</code>: return a suspended Mission to <code>active</code>.<a href="#section-6.1-4.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-6.1-5.3">
+            <p id="section-6.1-5.3.1"><code>resume</code>: return a suspended Mission to <code>active</code>.<a href="#section-6.1-5.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-6.1-4.4">
-            <p id="section-6.1-4.4.1"><code>complete</code>: mark the Mission completed; transition to <code>completed</code>.<a href="#section-6.1-4.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-6.1-5.4">
+            <p id="section-6.1-5.4.1"><code>complete</code>: mark the Mission completed; transition to <code>completed</code>.<a href="#section-6.1-5.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-5.5">
+            <p id="section-6.1-5.5.1"><code>discharge</code>: commit that a <code>terminal_when</code> completion condition
+(<a href="#terminal-when" class="auto internal xref">Section 7.2</a>) has fired, discharging a Mission-record entry.
+It changes no Mission-level state and is defined in its own
+subsection (<a href="#discharge-operation" class="auto internal xref">Section 6.2</a>).<a href="#section-6.1-5.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-6.1-5">A <code>suspend</code> <span class="bcp14">MAY</span> carry <code>suspend_until</code> with a <span class="bcp14">REQUIRED</span> <code>on_expiry</code>. When
+<p id="section-6.1-6">A <code>suspend</code> <span class="bcp14">MAY</span> carry <code>suspend_until</code> with a <span class="bcp14">REQUIRED</span> <code>on_expiry</code>. When
 <code>suspend_until</code> passes, the AS <span class="bcp14">MUST</span> apply <code>on_expiry</code> (transition to
 <code>active</code> for <code>resume</code>, or to <code>revoked</code> for <code>revoke</code>) and emit the
 corresponding transition, without a further request. While the Mission
 is <code>suspended</code> under a deadline, both <code>suspend_until</code> and <code>on_expiry</code>
 surface in the signed Mission Status Response (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>)
-so a consumer sees the pending outcome.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
+so a consumer sees the pending outcome.<a href="#section-6.1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="discharge-operation">
+<section id="section-6.2">
+        <h3 id="name-entry-discharge-operation">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-entry-discharge-operation" class="section-name selfRef">Entry Discharge Operation</a>
+        </h3>
+<p id="section-6.2-1"><code>discharge</code> commits that a <code>terminal_when</code> completion condition
+(<a href="#terminal-when" class="auto internal xref">Section 7.2</a>) has fired, discharging the named Mission-record
+entry (<a href="#discharge" class="auto internal xref">Section 7.3</a>). Beyond <code>mission_id</code> and <code>nonce</code>, it requires:<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.2-2">
+          <dt id="section-6.2-2.1">
+<code>entry_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-2.2">
+            <p id="section-6.2-2.2.1"><span class="bcp14">REQUIRED</span>. A string. The Authority Set entry commitment
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) of the
+<code>mission_resource_access</code> entry to discharge, computed over the
+immutable Mission-record entry, never over a narrowed token
+projection.<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-2.3">
+<code>condition_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-2.4">
+            <p id="section-6.2-2.4.1"><span class="bcp14">REQUIRED</span>. A string. The digest identifying the single
+<code>terminal_when</code> condition that fired, defined beside that member
+(<a href="#terminal-when" class="auto internal xref">Section 7.2</a>).<a href="#section-6.2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-2.5">
+<code>event_type</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-2.6">
+            <p id="section-6.2-2.6.1"><span class="bcp14">REQUIRED</span>. A string. Echoed from the fired condition and
+cross-checked against the condition <code>condition_digest</code> names: a
+mismatch joins the <code>not_found</code> collapse, since distinguishing it
+would reveal information about a condition selected by digest
+(<a href="#discharge-anti-oracle" class="auto internal xref">Section 6.2.2</a>). <code>event_type</code> is never a selector by
+itself.<a href="#section-6.2-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-2.7">
+<code>event_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-2.8">
+            <p id="section-6.2-2.8.1"><span class="bcp14">REQUIRED</span>. A string, <code>1*128( ALPHA / DIGIT / "-" / "_" / ":" / "." )</code>
+              <span>[<a href="#RFC5234" class="cite xref">RFC5234</a>]</span>. The identifier of the asserted external occurrence,
+used for evidence correlation and for the event-level deduplication
+of <a href="#discharge-idempotency" class="auto internal xref">Section 6.2.3</a>. It is distinct from <code>nonce</code>, the HTTP
+retry key of <a href="#idempotency" class="auto internal xref">Section 6.8</a>.<a href="#section-6.2-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-2.9">
+<code>evidence_ref</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-2.10">
+            <p id="section-6.2-2.10.1"><span class="bcp14">OPTIONAL</span>. A URI, maximum 512 characters. A reference to evidence of
+the asserted occurrence.<a href="#section-6.2-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.2-2.11">
+<code>evidence_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-2.12">
+            <p id="section-6.2-2.12.1"><span class="bcp14">OPTIONAL</span>. A string, the family's prefixed digest form (<code>sha-256:</code>
+plus base64url, no-padding encoding), classified as a raw-octet
+digest (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Commitment
+Mechanisms"): computed over the exact octets of the referenced
+artifact as exchanged, with no canonicalization. <code>evidence_ref</code> and
+<code>evidence_digest</code> <span class="bcp14">MAY</span> both appear: when they do, <code>evidence_digest</code>
+              <span class="bcp14">MUST</span> commit the bytes <code>evidence_ref</code> names. Present alone,
+<code>evidence_digest</code> is independent audit metadata.<a href="#section-6.2-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-6.2-3"><code>evidence_ref</code> and <code>evidence_digest</code> are bounded audit metadata about
+the asserted occurrence. The AS <span class="bcp14">MUST NOT</span> dereference <code>evidence_ref</code>
+in baseline processing and <span class="bcp14">MUST NOT</span> treat either member as
+authorization input.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.2-4">
+          <dt id="section-6.2-4.1">
+<code>observed_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.2-4.2">
+            <p id="section-6.2-4.2.1"><span class="bcp14">OPTIONAL</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time: a caller assertion. The
+AS validates it for syntax and reasonable clock bounds only, never as
+trusted ordering or freshness, and records its own commit time as
+<code>received_at</code> in audit.<a href="#section-6.2-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-6.2-5">Semantics:<a href="#section-6.2-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.2-6.1">
+            <p id="section-6.2-6.1.1"><strong>Entry-level OR latch.</strong> The entry's <code>terminal_when</code> discharges on
+any condition being met (<a href="#terminal-when" class="auto internal xref">Section 7.2</a>); the request names the
+condition that fired. The committed state is one monotonic latch on
+the entry, or on its selector equivalence class, one
+state-version increment, one audit record, and one notification. A
+later delivery presenting any valid condition against an
+already-discharged entry, a sibling condition, or the same
+condition under a different <code>event_id</code>, is acknowledged
+<code>already_discharged</code> (<a href="#discharge-result" class="auto internal xref">Section 6.2.4</a>) and <span class="bcp14">MUST NOT</span> discharge
+the entry again or increment the version again; an exact event
+replay (the same tuple and the same fingerprint) is handled first by
+the dedup rule of <a href="#discharge-idempotency" class="auto internal xref">Section 6.2.3</a>. The latch <span class="bcp14">MUST NOT</span>
+revert, and issuance gating for a discharged entry is unchanged
+(<a href="#discharge" class="auto internal xref">Section 7.3</a>).<a href="#section-6.2-6.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.2-6.2">
+            <p id="section-6.2-6.2.1"><strong>Duplicate entries.</strong> One <code>entry_digest</code> discharges every
+recorded entry resolving to that digest as a single
+equivalence-class transition, and therefore one version increment,
+under the Authority Set entry commitment's selector
+equivalence-class rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.2-6.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.2-6.3">
+            <p id="section-6.2-6.3.1"><strong>States.</strong> <code>discharge</code> applies while the Mission is <code>active</code> or
+<code>suspended</code>: a suspended Mission still narrows monotonically. A
+delivery reaching the endpoint after <code>completed</code>, <code>revoked</code>,
+<code>expired</code>, or another terminal state returns an authenticated
+<code>terminal_noop</code> acknowledgement (<a href="#discharge-result" class="auto internal xref">Section 6.2.4</a>) and <span class="bcp14">MUST NOT</span>
+create a transition or a version increment. <code>discharge</code> never
+changes Mission-level state; a deployment that also tracks
+all-entry completion invokes <code>complete</code> separately. The AS reaches
+this determination only after the selector and authorization
+validation of <a href="#discharge-anti-oracle" class="auto internal xref">Section 6.2.2</a>, so a terminal Mission is
+never a shortcut past those checks.<a href="#section-6.2-6.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.2-6.4">
+            <p id="section-6.2-6.4.1"><strong>No <code>expected_version</code>.</strong> A stale-version refusal would delay a
+safety-reducing operation; the digest selectors above and the
+idempotency rules of <a href="#discharge-idempotency" class="auto internal xref">Section 6.2.3</a> are the guards
+instead.<a href="#section-6.2-6.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.2-6.5">
+            <p id="section-6.2-6.5.1"><strong>Atomicity.</strong> The entry latch (or its equivalence-class latch), the
+version increment, the audit and result record, and the durable
+propagation work (an outbox entry or a signal enqueue) commit as
+one unit. Where the deployment emits lifecycle events
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), the signal enqueue
+is part of that same unit. Downstream materialization from the
+durable propagation work, including the child-delegation profile's
+entry-wise propagation to an already-justified Child Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), is
+asynchronous and is not claimed atomic with this commit. Instead, a
+Child Mission's derivation <span class="bcp14">MUST</span> consult, or otherwise be gated by,
+the committed parent latch until that materialization completes, so
+no Child Mission can derive the discharged parent authority in the
+gap between the parent's commit and the child's materialized view.<a href="#section-6.2-6.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<div id="discharge-authority">
+<section id="section-6.2.1">
+          <h4 id="name-discharge-authority">
+<a href="#section-6.2.1" class="section-number selfRef">6.2.1. </a><a href="#name-discharge-authority" class="section-name selfRef">Discharge Authority</a>
+          </h4>
+<p id="section-6.2.1-1">Authorization for <code>discharge</code> requires a distinct <code>mission_discharge</code>
+scope or an equivalent deployment-defined grant. Possession of the
+<code>mission_lifecycle</code> scope (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>), or being
+the Mission's Subject, Approver, or an administrator, <span class="bcp14">MUST NOT</span> by
+itself imply discharge authority: a <code>terminal_when</code> condition is
+asserted by a resource or event authority, not by whoever may revoke,
+suspend, resume, or complete the Mission.<a href="#section-6.2.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.2.1-2">The baseline authority mapping is AS authorization policy keyed by
+<code>event_type</code>: the deployment publishes which authenticated principal (a
+client or workload identity, with its resource boundary where
+applicable) may assert each event type. Authentication uses the
+mechanism set of <a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>, sender-constrained
+where the deployment's profile requires it, and <span class="bcp14">MUST</span> bind the
+asserting principal.<a href="#section-6.2.1-2" class="pilcrow">¶</a></p>
+<p id="section-6.2.1-3">A <code>terminal_when</code> condition <span class="bcp14">MAY</span> carry <code>discharge_policy</code> (<span class="bcp14">OPTIONAL</span>): a
+stable, opaque selector naming the AS-side authority mapping for that
+condition (<a href="#iana-terminal-when" class="auto internal xref">Section 13.4</a>). The AS <span class="bcp14">MUST</span> resolve and validate
+the selector whenever a condition first enters an immutable
+Mission-record entry: at Mission creation, and at every later point
+where a derived entry can carry a new condition (child creation,
+expansion, Token Exchange or other derivation, and any further profile
+that adds a condition), refusing the Intent or the derivation whose
+selector maps to nothing. The AS binds the resolved mapping's
+identifier and version to that exact <code>condition_digest</code> in
+issuer-held metadata. A requesting client <span class="bcp14">MUST NOT</span> select an
+arbitrary otherwise-valid policy merely because adding a condition is
+narrowing: an unchecked choice of mapping for a newly added condition
+could still force the premature discharge that <a href="#completion-security" class="auto internal xref">Section 11.6</a>
+warns against, a denial-of-service on the task and an early
+retirement of its own guardrail. The member is never a raw principal
+or workload structure, and the requesting client cannot select an
+unapproved fallback.<a href="#section-6.2.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="discharge-anti-oracle">
+<section id="section-6.2.2">
+          <h4 id="name-discharge-anti-oracle">
+<a href="#section-6.2.2" class="section-number selfRef">6.2.2. </a><a href="#name-discharge-anti-oracle" class="section-name selfRef">Discharge Anti-Oracle</a>
+          </h4>
+<p id="section-6.2.2-1">An unknown <code>mission_id</code>, an unknown <code>entry_digest</code>, an unknown
+<code>condition_digest</code>, an entry with no <code>terminal_when</code>, an <code>event_type</code>
+that does not match the condition <code>condition_digest</code> names, and a
+caller not authorized for that target all collapse to the endpoint's
+existing <code>not_found</code> treatment (<a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>). Authentication
+failure remains <code>unauthorized</code> (401). Detailed refusal reasons live
+only in issuer audit records.<a href="#section-6.2.2-1" class="pilcrow">¶</a></p>
+<p id="section-6.2.2-2">The AS validates selector existence (<code>mission_id</code>, <code>entry_digest</code>, and
+<code>condition_digest</code> all resolve, the entry carries <code>terminal_when</code>, and
+<code>event_type</code> matches the named condition), then condition membership
+(the named condition belongs to the named entry), then target
+authorization (the discharge authority mapping of
+<a href="#discharge-authority" class="auto internal xref">Section 6.2.1</a>), before returning any <code>terminal_noop</code>
+acknowledgement (<a href="#discharge-result" class="auto internal xref">Section 6.2.4</a>). This order keeps a terminal
+Mission from acting as a selector-existence oracle: every case the
+collapse above refuses is checked before a terminal Mission is ever
+distinguished from one whose selectors do not resolve.<a href="#section-6.2.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="discharge-idempotency">
+<section id="section-6.2.3">
+          <h4 id="name-idempotency-nonce-and-event">
+<a href="#section-6.2.3" class="section-number selfRef">6.2.3. </a><a href="#name-idempotency-nonce-and-event" class="section-name selfRef">Idempotency: <code>nonce</code> and <code>event_id</code></a>
+          </h4>
+<p id="section-6.2.3-1"><code>discharge</code> keeps two identities apart. <code>nonce</code> stays the HTTP
+operation retry key under <a href="#idempotency" class="auto internal xref">Section 6.8</a>'s rules: a retransmission
+with the same <code>nonce</code> and a byte-identical request returns the stored
+signed response verbatim. The same <code>nonce</code> with a different request is
+refused <code>invalid_request</code>, never answered with an unrelated original
+response.<a href="#section-6.2.3-1" class="pilcrow">¶</a></p>
+<p id="section-6.2.3-2"><code>event_id</code> deduplicates the external occurrence, scoped by
+(authenticated discharge authority, <code>mission_id</code>, <code>entry_digest</code>,
+<code>condition_digest</code>, <code>event_id</code>). A response's <code>nonce</code> <span class="bcp14">MUST</span> equal the
+one just sent (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>), so a retry that supplies
+a fresh <code>nonce</code>, as an at-least-once sender legitimately does, cannot
+receive the original signed response verbatim. Two cases follow:<a href="#section-6.2.3-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.2.3-3.1">
+              <p id="section-6.2.3-3.1.1"><strong>Same <code>nonce</code>, same request.</strong> The stored signed response is
+returned verbatim, per the <code>nonce</code> rule above.<a href="#section-6.2.3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.3-3.2">
+              <p id="section-6.2.3-3.2.1"><strong>New <code>nonce</code>, same event tuple and the same assertion
+fingerprint</strong> (defined below). The AS performs no state-changing
+work: no re-latch, no version increment. It issues a new signed
+envelope that echoes the new <code>nonce</code> and carries the stored
+operation result: the same <code>outcome</code> and selectors, and the
+original <code>prior_version</code> and <code>current_version</code> the first commit
+produced.<a href="#section-6.2.3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-6.2.3-4"><strong>Event assertion fingerprint.</strong> A semantic assertion object, never
+raw form bytes: the JSON object with exactly the decoded members
+<code>operation</code> (the literal string <code>discharge</code>), <code>mission_id</code>,
+<code>entry_digest</code>, <code>condition_digest</code>, <code>event_type</code>, <code>event_id</code>, and,
+when present, <code>evidence_ref</code>, <code>evidence_digest</code>, and <code>observed_at</code>.
+The object is canonicalized under the issuance profile's
+canonicalization (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Canonicalization Rules") and digested as a canonical-object digest
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Commitment
+Mechanisms"), since protocol context already fixes what the object
+commits. <code>nonce</code>, client authentication material, the DPoP proof, and
+transport headers are outside the fingerprint: none of them enter the
+assertion object, and none of them affect its value.<a href="#section-6.2.3-4" class="pilcrow">¶</a></p>
+<p id="section-6.2.3-5">Over the (discharge authority, <code>mission_id</code>, <code>entry_digest</code>,
+<code>condition_digest</code>, <code>event_id</code>) tuple: the same tuple with the same
+fingerprint is the replay case above; the same tuple with a different
+fingerprint is refused <code>conflict</code>; the same <code>event_id</code> asserted
+against another Mission, entry, or condition is a valid, independent
+assertion, since one real-world event legitimately fans out to more
+than one target.<a href="#section-6.2.3-5" class="pilcrow">¶</a></p>
+<p id="section-6.2.3-6">When both rules could apply, the <code>nonce</code> rule is evaluated first,
+since it governs the HTTP exchange; the <code>event_id</code> rule governs across
+distinct exchanges.<a href="#section-6.2.3-6" class="pilcrow">¶</a></p>
+<p id="section-6.2.3-7"><strong>Retention.</strong> Event-dedup state <span class="bcp14">MUST</span> be retained at least as long as
+the deployment's published retry horizon and the replayable result's
+usable lifetime, and <span class="bcp14">MAY</span> be bounded by the Mission record's own
+retention. After eviction, a repeated assertion is processed fresh
+against the latch and yields <code>already_discharged</code> with no version
+increment, which is safe because the latch is monotonic.<a href="#section-6.2.3-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="discharge-result">
+<section id="section-6.2.4">
+          <h4 id="name-discharge-result">
+<a href="#section-6.2.4" class="section-number selfRef">6.2.4. </a><a href="#name-discharge-result" class="section-name selfRef">Discharge Result</a>
+          </h4>
+<p id="section-6.2.4-1">On success, <code>discharge</code> returns the endpoint's existing signed Mission
+Status Response envelope (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>), carrying a
+<code>discharge_result</code> object as a sibling of <code>mission</code>:<a href="#section-6.2.4-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.2.4-2">
+            <dt id="section-6.2.4-2.1">
+<code>entry_digest</code>, <code>condition_digest</code>, <code>event_id</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-6.2.4-2.2">
+              <p id="section-6.2.4-2.2.1">the request's own selectors, echoed.<a href="#section-6.2.4-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-6.2.4-2.3">
+<code>outcome</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-6.2.4-2.4">
+              <p id="section-6.2.4-2.4.1">one of <code>discharged</code> (this request committed the latch),
+<code>already_discharged</code> (a sibling condition, or the same condition
+under a different <code>event_id</code>, presented against an already-latched
+entry), or <code>terminal_noop</code> (the Mission was already in a terminal
+state). An exact event replay is handled first by the dedup rule
+(<a href="#discharge-idempotency" class="auto internal xref">Section 6.2.3</a>), never reaching this determination as a
+fresh <code>already_discharged</code>.<a href="#section-6.2.4-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-6.2.4-2.5">
+<code>prior_version</code>, <code>current_version</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-6.2.4-2.6">
+              <p id="section-6.2.4-2.6.1">the Mission's state version immediately before and after the
+commit this result reports. For a request that itself commits, that
+commit is this request's own. For the new-<code>nonce</code> fresh-envelope
+case of <a href="#discharge-idempotency" class="auto internal xref">Section 6.2.3</a>, which commits nothing, these are
+the versions the original commit produced, unchanged. They are equal
+for <code>already_discharged</code> and <code>terminal_noop</code>.<a href="#section-6.2.4-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+</dl>
+<p id="section-6.2.4-3">With the echoed <code>nonce</code>, this is the durable acknowledgement an
+at-least-once sender stops retrying against.<a href="#section-6.2.4-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="legal-transitions">
-<section id="section-6.2">
+<section id="section-6.3">
         <h3 id="name-legal-transitions">
-<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-legal-transitions" class="section-name selfRef">Legal Transitions</a>
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-legal-transitions" class="section-name selfRef">Legal Transitions</a>
         </h3>
-<p id="section-6.2-1">An operation is legal only from the source states below. A terminal
+<p id="section-6.3-1">An operation is legal only from the source states below. A terminal
 state (<code>revoked</code>, <code>expired</code>, <code>completed</code>, or the companion-defined
 <code>superseded</code> and <code>cascaded</code>) admits no transition. An operation whose
 resulting state equals the current state, terminal or not, is
-idempotent success (<a href="#idempotency" class="auto internal xref">Section 6.7</a>).<a href="#section-6.2-1" class="pilcrow">¶</a></p>
-<p id="section-6.2-2"><code>resume</code> is the sole exception: it is legal only from <code>suspended</code>
+idempotent success (<a href="#idempotency" class="auto internal xref">Section 6.8</a>). This table governs Mission-level
+state; <code>discharge</code> produces no Mission-state transition and is not a
+row of it, following instead the entry-grain rules of
+<a href="#discharge-operation" class="auto internal xref">Section 6.2</a>.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+<p id="section-6.3-2"><code>resume</code> is the sole exception: it is legal only from <code>suspended</code>
 (its resulting state, <code>active</code>, is also the baseline a Mission holds
 before any suspension), so <code>resume</code> on an <code>active</code> or terminal
-Mission is a conflict, not idempotent success.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+Mission is a conflict, not idempotent success.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
 <table class="center" id="table-3">
           <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
@@ -2408,25 +2792,25 @@ Mission is a conflict, not idempotent success.<a href="#section-6.2-2" class="pi
             </tr>
           </tbody>
         </table>
-<p id="section-6.2-4"><code>complete</code> is legal from <code>suspended</code> as well as <code>active</code>: completion is
+<p id="section-6.3-4"><code>complete</code> is legal from <code>suspended</code> as well as <code>active</code>: completion is
 a monotonic narrowing to a terminal state and needs no derivation
 window, so a suspended Mission need not first be resumed to be
-completed.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
-<p id="section-6.2-5">Requests are adjudicated by the single rule of <a href="#idempotency" class="auto internal xref">Section 6.7</a>: an
+completed.<a href="#section-6.3-4" class="pilcrow">¶</a></p>
+<p id="section-6.3-5">Requests are adjudicated by the single rule of <a href="#idempotency" class="auto internal xref">Section 6.8</a>: an
 operation whose resulting state equals the Mission's current state is
 idempotent success, with the <code>resume</code> exception above. Any other
 operation not legal from the current state, including <code>resume</code> on a
 Mission that is not <code>suspended</code>, is refused as a conflict. A Mission
 that reaches its <code>expires_at</code> transitions to <code>expired</code> independently of
-this endpoint, from <code>active</code> or <code>suspended</code>.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
+this endpoint, from <code>active</code> or <code>suspended</code>.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="state-machine">
-<section id="section-6.3">
+<section id="section-6.4">
         <h3 id="name-consolidated-state-machine">
-<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-consolidated-state-machine" class="section-name selfRef">Consolidated State Machine</a>
+<a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-consolidated-state-machine" class="section-name selfRef">Consolidated State Machine</a>
         </h3>
-<p id="section-6.3-1">This profile owns the extension of the issuance profile's lifecycle
+<p id="section-6.4-1">This profile owns the extension of the issuance profile's lifecycle
 state space (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
 Lifecycle and Gating"). The table below is the authoritative view of
 that space: every state, every transition, and the source of the event
@@ -2434,8 +2818,10 @@ that drives it. Event sources are the lifecycle endpoint (an operation
 of <a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>), the expiry clock (a deadline
 reached without a request), and companion adjudication (a transition a
 companion profile commits). The lifecycle-endpoint rows are exactly the
-operations of <a href="#legal-transitions" class="auto internal xref">Section 6.2</a>. Only <code>active</code> permits derivation;
-every other state is non-deriving.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+Mission-state-changing operations of <a href="#legal-transitions" class="auto internal xref">Section 6.3</a>; <code>discharge</code>
+(<a href="#discharge-operation" class="auto internal xref">Section 6.2</a>) is a lifecycle-endpoint operation that
+changes no Mission state and so is not a row of this table. Only
+<code>active</code> permits derivation; every other state is non-deriving.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-4">
           <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
 <thead>
@@ -2605,7 +2991,7 @@ every other state is non-deriving.<a href="#section-6.3-1" class="pilcrow">¶</a
             </tr>
           </tbody>
         </table>
-<p id="section-6.3-3"><code>revoke</code> and the Mission's <code>expires_at</code> both apply in <code>suspended</code> as
+<p id="section-6.4-3"><code>revoke</code> and the Mission's <code>expires_at</code> both apply in <code>suspended</code> as
 well as <code>active</code>, so a suspended Mission can still be terminated or
 expire. The <code>superseded</code> and <code>cascaded</code> rows are companion-defined and
 shown here for reference:
@@ -2616,47 +3002,60 @@ committed by the child-delegation profile only when a parent reaches a
 terminal state. A <code>suspended</code> parent holds a dependent Child Mission
 non-active reversibly rather than driving it to <code>cascaded</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Neither
-companion state is produced by this profile's endpoint.<a href="#section-6.3-3" class="pilcrow">¶</a></p>
+companion state is produced by this profile's endpoint.<a href="#section-6.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authentication">
-<section id="section-6.4">
+<section id="section-6.5">
         <h3 id="name-authentication-2">
-<a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-authentication-2" class="section-name selfRef">Authentication</a>
+<a href="#section-6.5" class="section-number selfRef">6.5. </a><a href="#name-authentication-2" class="section-name selfRef">Authentication</a>
         </h3>
-<p id="section-6.4-1">The lifecycle endpoint uses the same authentication mechanisms as the
+<p id="section-6.5-1">The lifecycle endpoint uses the same authentication mechanisms as the
 Mission Status endpoint (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>): mTLS client
 authentication, a sender-constrained access token (DPoP- or mTLS-bound),
 or private-key JWT. Its discovery mirrors that endpoint: the accepted
 methods in <code>mission_lifecycle_endpoint_auth_methods_supported</code> and, for
 <code>private_key_jwt</code>, the accepted client-assertion algorithms in
 <code>mission_lifecycle_endpoint_auth_signing_alg_values_supported</code>
-(<a href="#as-metadata" class="auto internal xref">Section 9</a>); the sender-constrained access-token path through this
-endpoint's OAuth Protected Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>. A private-key
-JWT <code>client_assertion</code> <span class="bcp14">MUST</span> name the <code>mission_lifecycle_endpoint</code> URL in
-<code>aud</code>, and a presented access token <span class="bcp14">MUST</span> be audience-restricted to this
-endpoint's protected-resource identifier, exactly as at the Mission
-Status endpoint.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+(<a href="#as-metadata" class="auto internal xref">Section 9</a>). For the sender-constrained access-token path, this
+endpoint is an OAuth protected resource exactly as the Mission Status
+endpoint is: the AS publishes, in its Protected Resource Metadata for
+this resource <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>, the <code>resource</code> identifier the token's
+audience <span class="bcp14">MUST</span> name and the scopes it requires (<code>scopes_supported</code>):
+<code>mission_lifecycle</code> for <code>revoke</code>, <code>suspend</code>, <code>resume</code>, and <code>complete</code>
+(<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>), and, where the deployment offers
+<code>discharge</code>, <code>mission_discharge</code> as well (<a href="#discharge-authority" class="auto internal xref">Section 6.2.1</a>). A
+private-key JWT <code>client_assertion</code> <span class="bcp14">MUST</span> name the
+<code>mission_lifecycle_endpoint</code> URL in <code>aud</code>, and a presented access token
+<span class="bcp14">MUST</span> be audience-restricted to this endpoint's protected-resource
+identifier, exactly as at the Mission Status endpoint. Direct mTLS or
+private-key-JWT callers continue to use the deployment-defined
+equivalent grant, never a scope, exactly as <code>discharge</code> itself does
+(<a href="#discharge-authority" class="auto internal xref">Section 6.2.1</a>).<a href="#section-6.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authorization">
-<section id="section-6.5">
+<section id="section-6.6">
         <h3 id="name-authorization">
-<a href="#section-6.5" class="section-number selfRef">6.5. </a><a href="#name-authorization" class="section-name selfRef">Authorization</a>
+<a href="#section-6.6" class="section-number selfRef">6.6. </a><a href="#name-authorization" class="section-name selfRef">Authorization</a>
         </h3>
-<p id="section-6.5-1">The AS authorizes lifecycle operations against deployment policy. This
+<p id="section-6.6-1">This section governs <code>revoke</code>, <code>suspend</code>, <code>resume</code>, and <code>complete</code>;
+<code>discharge</code> has its own distinct authority model
+(<a href="#discharge-authority" class="auto internal xref">Section 6.2.1</a>), which a <code>mission_lifecycle</code> grant under this
+section <span class="bcp14">MUST NOT</span> imply.<a href="#section-6.6-1" class="pilcrow">¶</a></p>
+<p id="section-6.6-2">The AS authorizes lifecycle operations against deployment policy. This
 document sets the minimum authorization semantics and leaves finer
 policy deployment-defined. Every authenticated caller, whatever its
 authentication mechanism (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>), <span class="bcp14">MUST</span> be
 governed by an explicit lifecycle authorization: a <code>mission_lifecycle</code>
 scope or a deployment-defined equivalent grant that names who may
 perform the transition. The AS <span class="bcp14">MUST</span> refuse a caller that carries no
-such authorization.<a href="#section-6.5-1" class="pilcrow">¶</a></p>
-<p id="section-6.5-2">The acting party, and where the AS checks the lifecycle
-authorization, follow from the authentication case:<a href="#section-6.5-2" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-6.5-3">
-<li id="section-6.5-3.1">
-            <p id="section-6.5-3.1.1">When an access token authenticates the call, the token identifies
+such authorization.<a href="#section-6.6-2" class="pilcrow">¶</a></p>
+<p id="section-6.6-3">The acting party, and where the AS checks the lifecycle
+authorization, follow from the authentication case:<a href="#section-6.6-3" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6.6-4">
+<li id="section-6.6-4.1">
+            <p id="section-6.6-4.1.1">When an access token authenticates the call, the token identifies
 the parties per the issuance profile's access-token model
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): for a delegated access
 token its <code>sub</code> denotes the resource owner (the represented party),
@@ -2668,40 +3067,40 @@ DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or mTLS
 <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> sender constraint binds the presenter to a key; it does
 not change what <code>sub</code> denotes. The acting party is the calling party
 so identified, and the presented token <span class="bcp14">MUST</span> carry the lifecycle
-authorization the AS checks against it.<a href="#section-6.5-3.1.1" class="pilcrow">¶</a></p>
+authorization the AS checks against it.<a href="#section-6.6-4.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-6.5-3.2">
-            <p id="section-6.5-3.2.1">When the caller authenticates directly as a client (mTLS client
+          <li id="section-6.6-4.2">
+            <p id="section-6.6-4.2.1">When the caller authenticates directly as a client (mTLS client
 authentication <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> or private-key JWT <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>), the
 authenticated client is the acting party. The AS <span class="bcp14">MUST</span> check the
-deployment-defined lifecycle grant bound to that client.<a href="#section-6.5-3.2.1" class="pilcrow">¶</a></p>
+deployment-defined lifecycle grant bound to that client.<a href="#section-6.6-4.2.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-6.5-4">In every case the AS <span class="bcp14">MUST</span> record the acting party and <span class="bcp14">SHOULD</span> reflect
+<p id="section-6.6-5">In every case the AS <span class="bcp14">MUST</span> record the acting party and <span class="bcp14">SHOULD</span> reflect
 it in the signed response's audit surface: the response envelope's
 <code>sub</code>, distinct from any access token's <code>sub</code>, or a deployment-defined
-audit member of the Mission Status Response.<a href="#section-6.5-4" class="pilcrow">¶</a></p>
-<p id="section-6.5-5">Which parties may perform which operation is deployment-defined. Typical
+audit member of the Mission Status Response.<a href="#section-6.6-5" class="pilcrow">¶</a></p>
+<p id="section-6.6-6">Which parties may perform which operation is deployment-defined. Typical
 deployments authorize <code>revoke</code> to the Mission's Subject or Approver and
 to administrators; <code>suspend</code> and <code>resume</code> to administrators; and
-<code>complete</code> to the requesting client or an administrator.<a href="#section-6.5-5" class="pilcrow">¶</a></p>
-<p id="section-6.5-6">Because <code>resume</code> returns a suspended Mission to <code>active</code> and so undoes
+<code>complete</code> to the requesting client or an administrator.<a href="#section-6.6-6" class="pilcrow">¶</a></p>
+<p id="section-6.6-7">Because <code>resume</code> returns a suspended Mission to <code>active</code> and so undoes
 the containment a <code>suspend</code> established, a deployment <span class="bcp14">SHOULD</span> require a
 distinct or elevated authorization for <code>resume</code>, mirroring the
 treatment of bulk <code>resume</code> in Mission Management
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>).<a href="#section-6.5-6" class="pilcrow">¶</a></p>
-<p id="section-6.5-7">The AS <span class="bcp14">MUST</span> refuse an unauthorized lifecycle request with the
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>).<a href="#section-6.6-7" class="pilcrow">¶</a></p>
+<p id="section-6.6-8">The AS <span class="bcp14">MUST</span> refuse an unauthorized lifecycle request with the
 not-found response shape of <a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>, so the endpoint
-does not act as a Mission enumeration oracle.<a href="#section-6.5-7" class="pilcrow">¶</a></p>
+does not act as a Mission enumeration oracle.<a href="#section-6.6-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="worked-examples">
-<section id="section-6.6">
+<section id="section-6.7">
         <h3 id="name-worked-examples">
-<a href="#section-6.6" class="section-number selfRef">6.6. </a><a href="#name-worked-examples" class="section-name selfRef">Worked Examples</a>
+<a href="#section-6.7" class="section-number selfRef">6.7. </a><a href="#name-worked-examples" class="section-name selfRef">Worked Examples</a>
         </h3>
-<p id="section-6.6-1">Revoke request:<a href="#section-6.6-1" class="pilcrow">¶</a></p>
-<div class="lang-http-message sourcecode" id="section-6.6-2">
+<p id="section-6.7-1">Revoke request:<a href="#section-6.7-1" class="pilcrow">¶</a></p>
+<div class="lang-http-message sourcecode" id="section-6.7-2">
 <pre>
 POST /as/mission/lifecycle HTTP/1.1
 Host: as.example.com
@@ -2713,9 +3112,9 @@ mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &amp;operation=revoke
 &amp;reason=Quarterly+reconcile+completed+early
 &amp;nonce=nonce_8Y3vN0sM6tP1xR9bQ5
-</pre><a href="#section-6.6-2" class="pilcrow">¶</a>
+</pre><a href="#section-6.7-2" class="pilcrow">¶</a>
 </div>
-<p id="section-6.6-3">Revoke success response: the AS returns the updated status as a signed
+<p id="section-6.7-3">Revoke success response: the AS returns the updated status as a signed
 Mission Status Response (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>). Because the
 Lifecycle request carries no <code>audience</code>, the response is state-only: the
 AS sets <code>aud</code> to the authenticated requester and omits
@@ -2724,18 +3123,18 @@ audience-scoped authority). Here the response envelope's <code>sub</code>,
 distinct from any access token's <code>sub</code>, carries the acting party: the
 calling client identified by <code>client_id</code>. The AS records that acting
 party and reflects it in this signed response as well as in its audit
-log.<a href="#section-6.6-3" class="pilcrow">¶</a></p>
-<div class="lang-http-message sourcecode" id="section-6.6-4">
+log.<a href="#section-6.7-3" class="pilcrow">¶</a></p>
+<div class="lang-http-message sourcecode" id="section-6.7-4">
 <pre>
 HTTP/1.1 200 OK
 Content-Type: application/mission-status-response+jwt
 Cache-Control: no-store
 
 eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
-</pre><a href="#section-6.6-4" class="pilcrow">¶</a>
+</pre><a href="#section-6.7-4" class="pilcrow">¶</a>
 </div>
-<p id="section-6.6-5">Decoded JWS payload:<a href="#section-6.6-5" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-6.6-6">
+<p id="section-6.7-5">Decoded JWS payload:<a href="#section-6.7-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.7-6">
 <pre>
 {
   "iss": "https://as.example.com",
@@ -2755,15 +3154,15 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
     "fresh_until": "2026-11-02T08:54:05Z"
   }
 }
-</pre><a href="#section-6.6-6" class="pilcrow">¶</a>
+</pre><a href="#section-6.7-6" class="pilcrow">¶</a>
 </div>
-<p id="section-6.6-7">The AS records the operation, actor, time, and any <code>reason</code> in its
+<p id="section-6.7-7">The AS records the operation, actor, time, and any <code>reason</code> in its
 audit log; the response confirms the outcome through the updated
-<code>state</code>.<a href="#section-6.6-7" class="pilcrow">¶</a></p>
-<p id="section-6.6-8">Suspend request with a deadline, here also carrying the <span class="bcp14">OPTIONAL</span>
+<code>state</code>.<a href="#section-6.7-7" class="pilcrow">¶</a></p>
+<p id="section-6.7-8">Suspend request with a deadline, here also carrying the <span class="bcp14">OPTIONAL</span>
           <code>expected_version</code> guard against deciding over stale state
-(<a href="#idempotency" class="auto internal xref">Section 6.7</a>):<a href="#section-6.6-8" class="pilcrow">¶</a></p>
-<div class="lang-http-message sourcecode" id="section-6.6-9">
+(<a href="#idempotency" class="auto internal xref">Section 6.8</a>):<a href="#section-6.7-8" class="pilcrow">¶</a></p>
+<div class="lang-http-message sourcecode" id="section-6.7-9">
 <pre>
 POST /as/mission/lifecycle HTTP/1.1
 Host: as.example.com
@@ -2778,12 +3177,12 @@ mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &amp;expected_version=5
 &amp;reason=Pending+quarterly+access+review
 &amp;nonce=nonce_4Dq2mV8kX1sB7nR3tW
-</pre><a href="#section-6.6-9" class="pilcrow">¶</a>
+</pre><a href="#section-6.7-9" class="pilcrow">¶</a>
 </div>
-<p id="section-6.6-10">Suspend success response: the signed Mission Status Response reports
+<p id="section-6.7-10">Suspend success response: the signed Mission Status Response reports
 <code>suspended</code> and surfaces the pending outcome, carrying <code>suspend_until</code>
-and <code>on_expiry</code> in <code>mission</code> alongside <code>state</code>. Decoded JWS payload:<a href="#section-6.6-10" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-6.6-11">
+and <code>on_expiry</code> in <code>mission</code> alongside <code>state</code>. Decoded JWS payload:<a href="#section-6.7-10" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.7-11">
 <pre>
 {
   "iss": "https://as.example.com",
@@ -2805,32 +3204,36 @@ and <code>on_expiry</code> in <code>mission</code> alongside <code>state</code>.
     "fresh_until": "2026-11-02T08:20:45Z"
   }
 }
-</pre><a href="#section-6.6-11" class="pilcrow">¶</a>
+</pre><a href="#section-6.7-11" class="pilcrow">¶</a>
 </div>
-<p id="section-6.6-12">When <code>suspend_until</code> passes without a <code>resume</code>, the AS applies
+<p id="section-6.7-12">When <code>suspend_until</code> passes without a <code>resume</code>, the AS applies
 <code>on_expiry</code> and transitions the Mission to <code>revoked</code> without a further
-request.<a href="#section-6.6-12" class="pilcrow">¶</a></p>
+request.<a href="#section-6.7-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="idempotency">
-<section id="section-6.7">
+<section id="section-6.8">
         <h3 id="name-idempotency-and-conflicts">
-<a href="#section-6.7" class="section-number selfRef">6.7. </a><a href="#name-idempotency-and-conflicts" class="section-name selfRef">Idempotency and Conflicts</a>
+<a href="#section-6.8" class="section-number selfRef">6.8. </a><a href="#name-idempotency-and-conflicts" class="section-name selfRef">Idempotency and Conflicts</a>
         </h3>
-<p id="section-6.7-1">The request <code>nonce</code> (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>, Operations) is
+<p id="section-6.8-1">The request <code>nonce</code> (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>, Operations) is
 the idempotency key. The AS <span class="bcp14">MUST</span> deduplicate lifecycle requests by the
 triple (client, <code>mission_id</code>, <code>nonce</code>) for a bounded window. On a
 retransmit carrying a <code>nonce</code> already seen for that client and
-<code>mission_id</code>, the AS <span class="bcp14">MUST</span> replay the original response rather than
-re-execute the operation. The window <span class="bcp14">MUST</span> be at least the validity
+<code>mission_id</code>, together with a request byte-identical to the original,
+the AS <span class="bcp14">MUST</span> replay the original response rather than re-execute the
+operation. The same <code>nonce</code> paired with a request that is not
+byte-identical to the original <span class="bcp14">MUST</span> be refused <code>invalid_request</code>
+(<a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>); the AS <span class="bcp14">MUST NOT</span> answer it with the
+unrelated original response. The window <span class="bcp14">MUST</span> be at least the validity
 span of the signed response the AS would replay (its <code>iat</code> to <code>exp</code>,
 <a href="#mission-status-response" class="auto internal xref">Section 3.4</a>), so any retransmit that could still
 present a live response is deduplicated. A deployment <span class="bcp14">MAY</span> use a longer
 window. This makes a retransmit safe against reordering: a
 delayed <code>suspend</code> retry that arrives after a <code>resume</code> is recognized as
 a duplicate and replays the original <code>suspend</code> response, so it cannot
-re-suspend an already-resumed Mission.<a href="#section-6.7-1" class="pilcrow">¶</a></p>
-<p id="section-6.7-2">Deduplication guards a retransmitted request; it does not guard a
+re-suspend an already-resumed Mission.<a href="#section-6.8-1" class="pilcrow">¶</a></p>
+<p id="section-6.8-2">Deduplication guards a retransmitted request; it does not guard a
 valid request decided over stale state, a fresh <code>suspend</code> issued from
 a console that has not yet seen a newer <code>resume</code>. For that a
 lifecycle request <span class="bcp14">MAY</span> carry <code>expected_version</code>, the state version
@@ -2840,47 +3243,50 @@ the AS <span class="bcp14">MUST</span> refuse the operation with HTTP 409 and er
 current state version differs. A deployment <span class="bcp14">SHOULD</span> require
 <code>expected_version</code> on the operations it classifies high-risk. The
 <code>nonce</code> remains the replay key; the two guards are independent, one
-against duplicate delivery, one against stale decisions.<a href="#section-6.7-2" class="pilcrow">¶</a></p>
-<p id="section-6.7-3">Lifecycle operations follow one rule. An operation whose resulting
-state (<a href="#legal-transitions" class="auto internal xref">Section 6.2</a>) equals the Mission's current state is
-idempotent success, terminal or not: the AS returns the current
-Mission Status Response, with no state change and no event emitted.
-Any other operation not legal from the current state (for example
-<code>suspend</code> against a terminal state) is a conflict: the AS <span class="bcp14">MUST</span> refuse
-it with HTTP 409 and a JSON body whose error symbol is <code>conflict</code>,
-leaving the Mission state unchanged.<a href="#section-6.7-3" class="pilcrow">¶</a></p>
-<p id="section-6.7-4"><code>resume</code> is the sole exception to the idempotent-success arm. It is
+against duplicate delivery, one against stale decisions.<a href="#section-6.8-2" class="pilcrow">¶</a></p>
+<p id="section-6.8-3">Lifecycle operations that change Mission state follow one rule. An
+operation whose resulting state (<a href="#legal-transitions" class="auto internal xref">Section 6.3</a>) equals the
+Mission's current state is idempotent success, terminal or not: the AS
+returns the current Mission Status Response, with no state change and
+no event emitted. Any other operation not legal from the current state
+(for example <code>suspend</code> against a terminal state) is a conflict: the AS
+<span class="bcp14">MUST</span> refuse it with HTTP 409 and a JSON body whose error symbol is
+<code>conflict</code>, leaving the Mission state unchanged. <code>discharge</code> changes no
+Mission state, so this rule does not bind it; its own idempotency and
+outcome vocabulary are defined in <a href="#discharge-idempotency" class="auto internal xref">Section 6.2.3</a> and
+<a href="#discharge-result" class="auto internal xref">Section 6.2.4</a>.<a href="#section-6.8-3" class="pilcrow">¶</a></p>
+<p id="section-6.8-4"><code>resume</code> is the sole exception to the idempotent-success arm. It is
 legal only from <code>suspended</code>, and its resulting state <code>active</code> is also
 the baseline a Mission holds before any suspension, so <code>resume</code> on an
 <code>active</code> Mission (one never suspended, or already resumed) or on a
-terminal Mission is not idempotent success but a conflict.<a href="#section-6.7-4" class="pilcrow">¶</a></p>
-<p id="section-6.7-5">One idempotent case carries metadata. A <code>suspend</code> against a
+terminal Mission is not idempotent success but a conflict.<a href="#section-6.8-4" class="pilcrow">¶</a></p>
+<p id="section-6.8-5">One idempotent case carries metadata. A <code>suspend</code> against a
 <code>suspended</code> Mission whose <code>suspend_until</code> or <code>on_expiry</code> differ from
 the recorded values <span class="bcp14">MUST</span> update the recorded values, emitting the
 corresponding transition-metadata change and reporting the updated
 values in the response; silent acceptance without effect is not
-conforming.<a href="#section-6.7-5" class="pilcrow">¶</a></p>
+conforming.<a href="#section-6.8-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="relationship-to-rfc-7009">
-<section id="section-6.8">
+<section id="section-6.9">
         <h3 id="name-relationship-to-rfc-7009">
-<a href="#section-6.8" class="section-number selfRef">6.8. </a><a href="#name-relationship-to-rfc-7009" class="section-name selfRef">Relationship to RFC 7009</a>
+<a href="#section-6.9" class="section-number selfRef">6.9. </a><a href="#name-relationship-to-rfc-7009" class="section-name selfRef">Relationship to RFC 7009</a>
         </h3>
-<p id="section-6.8-1">A Mission revocation through this endpoint cascades to credentials
+<p id="section-6.9-1">A Mission revocation through this endpoint cascades to credentials
 derived from the Mission per the AS's advertised revocation
 propagation (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 8</a>). The AS <span class="bcp14">MAY</span> additionally invoke
 <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> token revocation for specific outstanding tokens when it
 knows their <code>jti</code>. <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> alone does NOT revoke a Mission; the
-lifecycle endpoint is the authoritative Mission state change.<a href="#section-6.8-1" class="pilcrow">¶</a></p>
+lifecycle endpoint is the authoritative Mission state change.<a href="#section-6.9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="deferred-lifecycle">
-<section id="section-6.9">
+<section id="section-6.10">
         <h3 id="name-deferred-lifecycle-capabili">
-<a href="#section-6.9" class="section-number selfRef">6.9. </a><a href="#name-deferred-lifecycle-capabili" class="section-name selfRef">Deferred Lifecycle Capabilities</a>
+<a href="#section-6.10" class="section-number selfRef">6.10. </a><a href="#name-deferred-lifecycle-capabili" class="section-name selfRef">Deferred Lifecycle Capabilities</a>
         </h3>
-<p id="section-6.9-1">This endpoint operates on one Mission at a time. Mission enumeration
+<p id="section-6.10-1">This endpoint operates on one Mission at a time. Mission enumeration
 and bulk lifecycle operations for incident response, such as revoking
 every Mission for a compromised Subject, client, or tenant, are
 specified separately by Mission Management
@@ -2888,8 +3294,8 @@ specified separately by Mission Management
 not require them. The following capabilities remain deferred to future
 work. Approver transfer or re-anchoring, changing the party that
 anchors a Mission's consent, is not defined here. Administrative
-monotonic narrowing, such as shortening a Mission's <code>expires_at</code>
-or retiring a single Authority Set entry, is not defined here.<a href="#section-6.9-1" class="pilcrow">¶</a></p>
+monotonic narrowing, such as shortening a Mission's <code>expires_at</code>, is
+not defined here.<a href="#section-6.10-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2937,10 +3343,9 @@ its parent's completion conditions unchanged and <span class="bcp14">MAY</span> 
 way constraints may be added or tightened but never dropped.<a href="#section-7-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-5.3">
-          <p id="section-7-5.3.1"><strong>Discharge fails closed.</strong> A consumer that does not understand
-<code>terminal_when</code> refuses the entry rather than ignoring the condition,
-and an Authorization Server that cannot determine a condition's status
-refuses to derive.<a href="#section-7-5.3.1" class="pilcrow">¶</a></p>
+          <p id="section-7-5.3.1"><strong>Discharge fails closed on the constraint.</strong> A consumer that does
+not understand <code>terminal_when</code> refuses the entry rather than
+ignoring the condition.<a href="#section-7-5.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-6">The threat analysis of these properties, including why a
@@ -2998,19 +3403,12 @@ are deployment- or registry-defined and opaque to this document, as
 </dd>
               <dd class="break"></dd>
 <dt id="section-7.2-2.2.2.3">
-<code>event_source</code>:</dt>
+<code>discharge_policy</code>:</dt>
               <dd style="margin-left: 1.5em" id="section-7.2-2.2.2.4">
-                <p id="section-7.2-2.2.2.4.1"><span class="bcp14">OPTIONAL</span>. A string. A URI the Authorization Server consults to
-determine whether the event has occurred (<a href="#determining" class="auto internal xref">Section 7.3.1</a>).<a href="#section-7.2-2.2.2.4.1" class="pilcrow">¶</a></p>
-</dd>
-              <dd class="break"></dd>
-<dt id="section-7.2-2.2.2.5">
-<code>max_staleness</code>:</dt>
-              <dd style="margin-left: 1.5em" id="section-7.2-2.2.2.6">
-                <p id="section-7.2-2.2.2.6.1"><span class="bcp14">OPTIONAL</span>. A string. An ISO 8601 duration, matching the <code>duration</code>
-rule in Appendix A of <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>, bounding how stale the
-Authorization Server's view of the event <span class="bcp14">MAY</span> be when it gates
-issuance.<a href="#section-7.2-2.2.2.6.1" class="pilcrow">¶</a></p>
+                <p id="section-7.2-2.2.2.4.1"><span class="bcp14">OPTIONAL</span>. A string, <code>1*64( ALPHA / DIGIT / "-" / "_" / ":" / "." )</code>
+                  <span>[<a href="#RFC5234" class="cite xref">RFC5234</a>]</span>, opaque. A stable selector naming the AS-side
+discharge-authority mapping for this condition
+(<a href="#discharge-authority" class="auto internal xref">Section 6.2.1</a>).<a href="#section-7.2-2.2.2.4.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
 </dl>
@@ -3029,12 +3427,18 @@ is one reproducible array. Whether a
 condition has fired is evaluated state, not part of <code>authority_hash</code>;
 folding fired status into the anchor would make the committed authority
 time-varying.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
-<p id="section-7.2-4"><code>terminal_when</code> is the enforceable counterpart of the inert
+<p id="section-7.2-4"><code>condition_digest</code>, used to select a condition on the <code>discharge</code>
+operation (<a href="#discharge-operation" class="auto internal xref">Section 6.2</a>), is a canonical-object digest
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) over the exact canonical bytes
+of the single condition object, in the issuance profile's encoded
+form: the same canonical form the registration's no-duplicate rule
+above already fixes as condition identity (<a href="#iana-terminal-when" class="auto internal xref">Section 13.4</a>).<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+<p id="section-7.2-5"><code>terminal_when</code> is the enforceable counterpart of the inert
 <code>success_criteria</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), which
 remains inert: <code>success_criteria</code> describe completion for the Approver,
 <code>terminal_when</code> acts on it. It is distinct from a cumulative
 consumption bound, which meters volume;
-a <code>terminal_when</code> condition is a single external event.<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+a <code>terminal_when</code> condition is a single external event.<a href="#section-7.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="discharge">
@@ -3059,7 +3463,7 @@ transition a Mission whose entries are all discharged to the
 (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 6</a>), but this section does not require
 it. Such a transition is performed through the <code>complete</code> operation,
 as an issuer-initiated lifecycle operation, so the consolidated state
-machine's event sources remain authoritative (<a href="#state-machine" class="auto internal xref">Section 6.3</a>).<a href="#section-7.3-2" class="pilcrow">¶</a></p>
+machine's event sources remain authoritative (<a href="#state-machine" class="auto internal xref">Section 6.4</a>).<a href="#section-7.3-2" class="pilcrow">¶</a></p>
 <p id="section-7.3-3">Discharge gates new derivations only. A token already issued for an entry
 remains valid until it expires, as with revocation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A deployment that needs prompt
@@ -3070,79 +3474,33 @@ discharged entry at the point of use (<a href="#runtime" class="auto internal xr
           <h4 id="name-determining-discharge">
 <a href="#section-7.3.1" class="section-number selfRef">7.3.1. </a><a href="#name-determining-discharge" class="section-name selfRef">Determining Discharge</a>
           </h4>
-<p id="section-7.3.1-1">The Authorization Server determines whether a condition has been met from
-the <code>event_source</code>, within <code>max_staleness</code> when present. When
-<code>max_staleness</code> is absent, the Authorization Server <span class="bcp14">MUST</span> re-evaluate the
-condition at each derivation, so <code>terminal_when</code> never goes inert:
-absence of <code>max_staleness</code> removes the tolerance for a cached view, it
-does not relieve the freshness duty.<a href="#section-7.3.1-1" class="pilcrow">¶</a></p>
-<p id="section-7.3.1-2">The mechanism is deployment-defined (a status query, a received
-signal, a recorded administrative action). This document defines one
-interoperable event-source profile a deployment <span class="bcp14">MAY</span> use: the
-<code>event_source</code> URI is retrieved over authenticated HTTPS and returns
-a signed JSON status document, a JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>, with these members:<a href="#section-7.3.1-2" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-7.3.1-3.1">
-              <p id="section-7.3.1-3.1.1"><code>occurred</code>: <span class="bcp14">REQUIRED</span>. A boolean, true when the event has occurred.<a href="#section-7.3.1-3.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-7.3.1-3.2">
-              <p id="section-7.3.1-3.2.1"><code>observed_at</code>: <span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time at which the
-status was observed.<a href="#section-7.3.1-3.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-7.3.1-3.3">
-              <p id="section-7.3.1-3.3.1"><code>event_type</code>: <span class="bcp14">REQUIRED</span>. A string, the <code>event_type</code> the document
-reports.<a href="#section-7.3.1-3.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-7.3.1-3.4">
-              <p id="section-7.3.1-3.4.1"><code>source</code>: <span class="bcp14">REQUIRED</span>. A URI identifying the reporting source.<a href="#section-7.3.1-3.4.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-<p id="section-7.3.1-4">The Authorization Server verifies the JWS against key material it
-resolves for the <code>source</code> identity, not for the <code>event_source</code>
-origin:<a href="#section-7.3.1-4" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-7.3.1-5">
-<li id="section-7.3.1-5.1">
-              <p id="section-7.3.1-5.1.1">the protected header's <code>kid</code> <span class="bcp14">MUST</span> resolve to a key the <code>source</code>
-publishes through an authenticated channel (for example its
-JWKS); and<a href="#section-7.3.1-5.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li id="section-7.3.1-5.2">
-              <p id="section-7.3.1-5.2.1">the resolved signer identity <span class="bcp14">MUST</span> be the <code>source</code> the
-Authorization Server trusts for this <code>event_type</code>.<a href="#section-7.3.1-5.2.1" class="pilcrow">¶</a></p>
-</li>
-          </ol>
-<p id="section-7.3.1-6">A signature that does not chain to a trusted <code>source</code> for the
-<code>event_type</code> leaves the condition indeterminate, and the
-Authorization Server fails closed as below.<a href="#section-7.3.1-6" class="pilcrow">¶</a></p>
-<p id="section-7.3.1-7">Other source mechanisms remain deployment-defined. The Mission Issuer
-<span class="bcp14">MUST</span> authenticate and integrity-verify any event source outside its own
-trust domain before acting on its report.<a href="#section-7.3.1-7" class="pilcrow">¶</a></p>
-<p id="section-7.3.1-8">The <code>event_source</code> <span class="bcp14">SHOULD</span> lie outside the Mission's own writable
-authority: an agent that can write to the source can drive its own
-discharge or suppress it. Where the <code>event_source</code> is on an origin
-the Mission holds write authority to, the Authorization Server <span class="bcp14">MUST</span>
-determine discharge through an integrity mechanism, such as the
-signed status document above, whose signing key the Mission cannot
-influence.<a href="#section-7.3.1-8" class="pilcrow">¶</a></p>
-<p id="section-7.3.1-9">Once the Authorization Server observes that a condition has been met, the
-discharge is recorded as Authorization-Server-side state and <span class="bcp14">MUST NOT</span>
-revert, regardless of any later report from the event source: a source
-that afterward reports the event as not occurred does not restore the
-entry's authority.<a href="#section-7.3.1-9" class="pilcrow">¶</a></p>
-<p id="section-7.3.1-10">A committed discharge is a committed metadata-only change for the
+<p id="section-7.3.1-1">A discharge is committed one of two ways: through the <code>discharge</code>
+operation (<a href="#discharge-operation" class="auto internal xref">Section 6.2</a>), or by deployment-internal
+adjudication the issuer trusts, recorded under the same audited basis
+as any other lifecycle commit. This document defines no interoperable
+event-source polling profile of its own: the <code>discharge</code> operation is
+the interoperable path. An event-driven deployment wires its event bus
+to the lifecycle call. A deployment that determines completion by
+other means, such as a private status query or a recorded
+administrative action, invokes the same commit internally once it has
+decided.<a href="#section-7.3.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.3.1-2">Once committed, a discharge is recorded as Authorization-Server-side
+state and <span class="bcp14">MUST NOT</span> revert: a later delivery presenting any valid
+condition against an already-discharged entry is acknowledged
+<code>already_discharged</code> (<a href="#discharge-result" class="auto internal xref">Section 6.2.4</a>) and does not restore the
+entry's authority.<a href="#section-7.3.1-2" class="pilcrow">¶</a></p>
+<p id="section-7.3.1-3">A committed discharge is a committed metadata-only change for the
 purposes of the state version (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>): the
 Mission's state version increments at the commit, so a materialized
 policy view that commits a state version
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) is detectably obsolete
-after a discharge. A dedicated discharge signal remains deferred
-(<a href="#visibility" class="auto internal xref">Section 7.3.2</a>); the version movement is what makes the change
-observable in the interim.<a href="#section-7.3.1-10" class="pilcrow">¶</a></p>
-<p id="section-7.3.1-11">If the Authorization Server cannot determine whether a condition has been
-met, for example because <code>event_source</code> is unreachable within
-<code>max_staleness</code>, it <span class="bcp14">MUST</span> treat the entry as possibly discharged and
-refuse to derive it, as it fails closed for stale Mission state. Discharge
-removes authority, so the conservative action when status is unknown is
-to withhold issuance, never to issue.<a href="#section-7.3.1-11" class="pilcrow">¶</a></p>
+after a discharge. Where Signals is deployed, the commit is carried by
+the generic <code>authority_changed</code> discriminator
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>); where Signals is not
+deployed, the version movement is what makes the change observable.<a href="#section-7.3.1-3" class="pilcrow">¶</a></p>
+<p id="section-7.3.1-4">Before the AS receives and commits a discharge, it continues issuing
+against the entry. The posture this implies is stated plainly in
+<a href="#completion-security" class="auto internal xref">Section 11.6</a>.<a href="#section-7.3.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="visibility">
@@ -3158,9 +3516,11 @@ discharged entry from the <code>authorization_details</code> they return. This i
 consistent with the audience filtering those surfaces already apply: a
 discharged entry, like an entry addressed to another audience, is not
 authority the caller may rely on.<a href="#section-7.3.2-1" class="pilcrow">¶</a></p>
-<p id="section-7.3.2-2">A per-entry discharge lifecycle signal is future work for the Mission
-Lifecycle Signals profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>;
-this document defines no discharge event.<a href="#section-7.3.2-2" class="pilcrow">¶</a></p>
+<p id="section-7.3.2-2">Where Signals is deployed, a discharge commit rides the
+<code>mission.lifecycle-change</code> event's generic <code>authority_changed</code>
+discriminator <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>: an
+active-to-active event carrying it signals that the Mission's
+effective authority narrowed even though <code>state</code> did not change.<a href="#section-7.3.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3278,26 +3638,30 @@ bounded to under 500 USD and discharged when the Q3 close is finalized:<a href="
       "max_amount": { "amount": "500.00", "currency": "USD" },
       "terminal_when": [
         { "event_type": "accounting-period-closed",
-          "event_source": "https://close.example.com/periods/2026-Q3",
-          "max_staleness": "PT15M" } ] } }
+          "discharge_policy": "close-management-2026-q3" } ] } }
 ]
 </pre><a href="#section-7.8-2" class="pilcrow">¶</a>
 </div>
-<p id="section-7.8-3">The <code>event_source</code> is on a separate close-management origin the Mission
-has no write authority to, so the agent cannot drive its own discharge
-(<a href="#determining" class="auto internal xref">Section 7.3.1</a>).<a href="#section-7.8-3" class="pilcrow">¶</a></p>
-<p id="section-7.8-4">While the period is open, the Authorization Server derives both entries.
-When the finance team finalizes the Q3 close, the <code>event_source</code> reports
-the period closed. From then on the Authorization Server refuses to
-derive the write entry: a refresh returns a token carrying only the read
-entry. The Mission stays <code>active</code>, so the agent can still read the
-ledger to finish its reconciliation report, but it can no longer post
-journal entries. No revoke and no clock was needed; the write authority
-retired itself when the task it was granted for completed.<a href="#section-7.8-4" class="pilcrow">¶</a></p>
-<p id="section-7.8-5">If the <code>event_source</code> were unreachable when the agent refreshed, the
-Authorization Server would treat the write entry as possibly discharged
-and omit it, rather than risk issuing authority for a task that may have
-ended (<a href="#determining" class="auto internal xref">Section 7.3.1</a>).<a href="#section-7.8-5" class="pilcrow">¶</a></p>
+<p id="section-7.8-3"><code>discharge_policy</code> names the AS-side authority mapping approved for
+this condition: the close-management system's workload identity, not
+<code>alice</code>'s agent, may assert <code>accounting-period-closed</code>
+(<a href="#discharge-authority" class="auto internal xref">Section 6.2.1</a>). The agent cannot drive its own discharge: it
+holds no <code>mission_discharge</code> authorization for that <code>event_type</code>.<a href="#section-7.8-3" class="pilcrow">¶</a></p>
+<p id="section-7.8-4">While the period is open, the Authorization Server derives both
+entries. When the finance team finalizes the Q3 close, the
+close-management system calls <code>discharge</code> on the Mission Lifecycle
+endpoint, naming the write entry's <code>entry_digest</code>, this condition's
+<code>condition_digest</code>, <code>event_type</code> <code>accounting-period-closed</code>, and an
+<code>event_id</code> for its own occurrence record. The Authorization Server
+authenticates the caller against the resolved <code>discharge_policy</code>
+mapping, commits the latch, and returns a signed <code>discharge_result</code> of
+outcome <code>discharged</code> (<a href="#discharge-result" class="auto internal xref">Section 6.2.4</a>). From then on the
+Authorization Server refuses to derive the write entry: a refresh
+returns a token carrying only the read entry. The Mission stays
+<code>active</code>, so the agent can still read the ledger to finish its
+reconciliation report, but it can no longer post journal entries. No
+revoke and no clock was needed; the write authority retired itself
+when the task it was granted for completed.<a href="#section-7.8-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="completion-conformance">
@@ -3308,16 +3672,18 @@ ended (<a href="#determining" class="auto internal xref">Section 7.3.1</a>).<a h
 <p id="section-7.9-1">An Authorization Server claiming the completion capability <span class="bcp14">MUST</span>:<a href="#section-7.9-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7.9-2.1">
-            <p id="section-7.9-2.1.1">treat an entry whose <code>terminal_when</code> has been met as discharged and
-refuse to derive it (<a href="#discharge" class="auto internal xref">Section 7.3</a>);<a href="#section-7.9-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-7.9-2.1.1">treat an entry whose <code>terminal_when</code> has been discharged as
+discharged and refuse to derive it (<a href="#discharge" class="auto internal xref">Section 7.3</a>);<a href="#section-7.9-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.9-2.2">
-            <p id="section-7.9-2.2.1">refuse to derive an entry whose discharge status it cannot determine
-(<a href="#determining" class="auto internal xref">Section 7.3.1</a>);<a href="#section-7.9-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-7.9-2.2.1">commit a discharge only through the <code>discharge</code> operation, meeting
+its authority, anti-oracle, idempotency, and atomicity requirements
+(<a href="#discharge-operation" class="auto internal xref">Section 6.2</a>), or through an equivalently audited
+deployment-internal adjudication (<a href="#determining" class="auto internal xref">Section 7.3.1</a>);<a href="#section-7.9-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.9-2.3">
-            <p id="section-7.9-2.3.1">record an observed discharge as latched state that <span class="bcp14">MUST NOT</span> revert on a
-later source report (<a href="#determining" class="auto internal xref">Section 7.3.1</a>);<a href="#section-7.9-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-7.9-2.3.1">record a committed discharge as latched state that <span class="bcp14">MUST NOT</span> revert
+(<a href="#determining" class="auto internal xref">Section 7.3.1</a>);<a href="#section-7.9-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.9-2.4">
             <p id="section-7.9-2.4.1">carry every parent completion condition into a derived entry when
@@ -3725,9 +4091,8 @@ cannot use <code>terminal_when</code> to widen authority, and the worst it can d
 is retire its own authority sooner. That is not an escalation, but a
 forced premature discharge is a denial-of-service on the task
 (authority the task still needs is withdrawn) and, where discharge is
-relied on as a guardrail, retires that guardrail early. The
-event-source integrity and independence requirements below bound who
-can force it.<a href="#section-11.6-2.1.1" class="pilcrow">¶</a></p>
+relied on as a guardrail, retires that guardrail early. Discharge
+authority (<a href="#discharge-authority" class="auto internal xref">Section 6.2.1</a>) bounds who can force it.<a href="#section-11.6-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.6-2.2">
             <p id="section-11.6-2.2.1">Fail closed on unknown constraint. A consumer that does not understand
@@ -3737,34 +4102,30 @@ entry continue to be narrowed, projected, or enforced, defeating
 discharge.<a href="#section-11.6-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.6-2.3">
-            <p id="section-11.6-2.3.1">Fail closed on unknown status. When discharge status is
-indeterminate the Authorization Server withholds issuance
-(<a href="#determining" class="auto internal xref">Section 7.3.1</a>); a deployment that fails open here defeats the
-control.<a href="#section-11.6-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-11.6-2.3.1">Notification delivery is a temporary widening, not a fail-closed
+property. Before the AS receives and commits a discharge, it
+continues issuing against the entry: a lost or suppressed
+notification is a temporary widening relative to the real-world
+event, bounded by authenticated at-least-once delivery with retries
+to an idempotent acknowledgement (<a href="#discharge-result" class="auto internal xref">Section 6.2.4</a>), monitoring
+and reconciliation, and the Mission's and its tokens' own lifetimes.
+This is not a fail-closed property: a deployment requiring
+cannot-determine-means-no-issuance runs a synchronous status or
+policy check outside this baseline.<a href="#section-11.6-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.6-2.4">
-            <p id="section-11.6-2.4.1">Trusted event source. <code>event_source</code> is a trusted input to issuance: a
-party that can make the source report "not yet complete" can keep an
-entry derivable past its true completion, and one that can make it
-report "complete" can force a premature discharge. The Mission Issuer
-<span class="bcp14">MUST</span> authenticate and integrity-verify an event source outside its own
-trust domain (<a href="#determining" class="auto internal xref">Section 7.3.1</a>), and <span class="bcp14">SHOULD</span> prefer sources within it.
-The <code>event_source</code> <span class="bcp14">SHOULD</span> lie outside the Mission's own writable
-authority, so an agent cannot drive or suppress its own discharge; the
-signed status document verified against the <code>source</code> identity is the
-interoperable integrity mechanism where it cannot (<a href="#determining" class="auto internal xref">Section 7.3.1</a>).<a href="#section-11.6-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-11.6-2.4.1">RS enforcement honesty. A stateless Resource Server cannot evaluate
+issuer-held discharge state from the token alone; it honors the
+issued token until expiry. Prompt cutoff on a discharged entry
+requires status (<a href="#mission-status" class="auto internal xref">Section 3</a>), introspection
+(<a href="#introspection-projection" class="auto internal xref">Section 4</a>), or runtime enforcement
+(<a href="#runtime" class="auto internal xref">Section 7.7</a>); an entry constraint the enforcing party does not
+understand still fails closed (<a href="#forward-compat" class="auto internal xref">Section 7.5</a>).<a href="#section-11.6-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.6-2.5">
-            <p id="section-11.6-2.5.1">Event-source availability. Fail-closed discharge gives issuance an
-availability dependency on <code>event_source</code> within <code>max_staleness</code>: an
-unreachable source withholds the entry (<a href="#determining" class="auto internal xref">Section 7.3.1</a>). Event
-sources inside the issuer's trust domain are <span class="bcp14">RECOMMENDED</span>, for latency
-as well as trust.<a href="#section-11.6-2.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-11.6-2.6">
-            <p id="section-11.6-2.6.1">Already-issued tokens. The window between discharge and the expiry
+            <p id="section-11.6-2.5.1">Already-issued tokens. The window between discharge and the expiry
 of a token already issued is the same residual revocation carries,
-bounded the same way (<a href="#discharge" class="auto internal xref">Section 7.3</a>, <a href="#runtime" class="auto internal xref">Section 7.7</a>).<a href="#section-11.6-2.6.1" class="pilcrow">¶</a></p>
+bounded the same way (<a href="#discharge" class="auto internal xref">Section 7.3</a>, <a href="#runtime" class="auto internal xref">Section 7.7</a>).<a href="#section-11.6-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -3821,14 +4182,20 @@ profile's privacy considerations.<a href="#section-12.2-1" class="pilcrow">¶</a
         <h3 id="name-completion-condition-disclo">
 <a href="#section-12.3" class="section-number selfRef">12.3. </a><a href="#name-completion-condition-disclo" class="section-name selfRef">Completion Condition Disclosure</a>
         </h3>
-<p id="section-12.3-1">A <code>terminal_when</code> condition can reveal task structure: <code>event_type</code> and
-<code>event_source</code> may name a business event, a case, or a record whose mere
-existence is sensitive, and they ride the token where the entry is
-carried. A deployment <span class="bcp14">SHOULD</span> treat them as it treats other authority
-detail, and <span class="bcp14">SHOULD</span> avoid event identifiers that disclose more than the
-consuming party needs. Consulting an <code>event_source</code> also reveals the
-Authorization Server's interest in that event; a deployment <span class="bcp14">SHOULD</span> weigh
-that exposure when the source is operated by another party.<a href="#section-12.3-1" class="pilcrow">¶</a></p>
+<p id="section-12.3-1">A <code>terminal_when</code> condition can reveal task structure: <code>event_type</code> may
+name a business event, a case, or a record whose mere existence is
+sensitive, and it rides the token where the entry is carried. A
+deployment <span class="bcp14">SHOULD</span> treat it as it treats other authority detail, and
+<span class="bcp14">SHOULD</span> avoid event identifiers that disclose more than the consuming
+party needs. <code>discharge_policy</code> is an opaque selector and does not
+itself name a business event, but its resolution is deployment-defined
+and <span class="bcp14">MAY</span> correlate with a class of sensitive events; a deployment
+<span class="bcp14">SHOULD</span> weigh that when publishing its meaning. The <code>event_id</code>,
+<code>evidence_ref</code>, <code>evidence_digest</code>, and <code>observed_at</code> a <code>discharge</code>
+request carries (<a href="#discharge-operation" class="auto internal xref">Section 6.2</a>) do not ride the token; they
+land only in issuer audit records, which deployments <span class="bcp14">MUST</span> treat as
+Mission information-disclosure surfaces per the audit-logging rule
+above.<a href="#section-12.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4015,11 +4382,13 @@ registration's required fields:<a href="#section-13.4-1" class="pilcrow">¶</a><
 </li>
           <li class="normal" id="section-13.4-2.2">
             <p id="section-13.4-2.2.1">Value Space: a JSON array of one or more completion-condition
-objects, each with a
-<span class="bcp14">REQUIRED</span> <code>event_type</code> (string), an <span class="bcp14">OPTIONAL</span> <code>event_source</code> (string, a
-URI), and an <span class="bcp14">OPTIONAL</span> <code>max_staleness</code> (string, an ISO 8601 duration);
-no two conditions in one array share a canonical form
-(<a href="#terminal-when" class="auto internal xref">Section 7.2</a>).<a href="#section-13.4-2.2.1" class="pilcrow">¶</a></p>
+objects, each with a <span class="bcp14">REQUIRED</span> <code>event_type</code> (string) and an <span class="bcp14">OPTIONAL</span>
+              <code>discharge_policy</code> (string, an opaque selector); no two conditions
+in one array share a canonical form (<a href="#terminal-when" class="auto internal xref">Section 7.2</a>). This Value
+Space is a breaking change, while this experimental draft's
+registration is still open, to the one a prior revision registered:
+<code>event_source</code> and <code>max_staleness</code> are removed and <code>discharge_policy</code>
+is added.<a href="#section-13.4-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.4-2.3">
             <p id="section-13.4-2.3.1">Subset Rule: a candidate value is no broader than a reference value
@@ -4098,6 +4467,10 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <dt id="RFC3339">[RFC3339]</dt>
         <dd>
 <span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC5234">[RFC5234]</dt>
+        <dd>
+<span class="refAuthor">Crocker, D., Ed.</span> and <span class="refAuthor">P. Overell</span>, <span class="refTitle">"Augmented BNF for Syntax Specifications: ABNF"</span>, <span class="seriesInfo">STD 68</span>, <span class="seriesInfo">RFC 5234</span>, <span class="seriesInfo">DOI 10.17487/RFC5234</span>, <time datetime="2008-01" class="refDate">January 2008</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc5234">https://www.rfc-editor.org/rfc/rfc5234</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC6838">[RFC6838]</dt>
         <dd>
@@ -4208,9 +4581,17 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC8725">[RFC8725]</dt>
+        <dd>
+<span class="refAuthor">Sheffer, Y.</span>, <span class="refAuthor">Hardt, D.</span>, and <span class="refAuthor">M. Jones</span>, <span class="refTitle">"JSON Web Token Best Current Practices"</span>, <span class="seriesInfo">BCP 225</span>, <span class="seriesInfo">RFC 8725</span>, <span class="seriesInfo">DOI 10.17487/RFC8725</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8725">https://www.rfc-editor.org/rfc/rfc8725</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC9110">[RFC9110]</dt>
         <dd>
 <span class="refAuthor">Fielding, R., Ed.</span>, <span class="refAuthor">Nottingham, M., Ed.</span>, and <span class="refAuthor">J. Reschke, Ed.</span>, <span class="refTitle">"HTTP Semantics"</span>, <span class="seriesInfo">STD 97</span>, <span class="seriesInfo">RFC 9110</span>, <span class="seriesInfo">DOI 10.17487/RFC9110</span>, <time datetime="2022-06" class="refDate">June 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9110">https://www.rfc-editor.org/rfc/rfc9110</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9457">[RFC9457]</dt>
+        <dd>
+<span class="refAuthor">Nottingham, M.</span>, <span class="refAuthor">Wilde, E.</span>, and <span class="refAuthor">S. Dalal</span>, <span class="refTitle">"Problem Details for HTTP APIs"</span>, <span class="seriesInfo">RFC 9457</span>, <span class="seriesInfo">DOI 10.17487/RFC9457</span>, <time datetime="2023-07" class="refDate">July 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9457">https://www.rfc-editor.org/rfc/rfc9457</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9700">[RFC9700]</dt>
       <dd>

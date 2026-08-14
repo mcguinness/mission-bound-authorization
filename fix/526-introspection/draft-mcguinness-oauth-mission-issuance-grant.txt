@@ -437,7 +437,10 @@ Table of Contents
    validate, in an order that fails closed:
 
    1.  the JOSE typ is mission-issuance-grant+jwt; any other type is not
-       this profile (Section 7);
+       this profile (Section 7): exact validation of the typ, with
+       mutually exclusive validation rules for the artifact profiles,
+       implements the substitution defense of [RFC8725], Sections 3.11
+       and 3.12;
 
    2.  the signature, under a kid resolving in the published key
        material of an iss its local policy trusts for issuance joins;
@@ -937,6 +940,11 @@ Table of Contents
               and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
               DOI 10.17487/RFC8693, January 2020,
               <https://www.rfc-editor.org/rfc/rfc8693>.
+
+   [RFC8725]  Sheffer, Y., Hardt, D., and M. Jones, "JSON Web Token Best
+              Current Practices", BCP 225, RFC 8725,
+              DOI 10.17487/RFC8725, February 2020,
+              <https://www.rfc-editor.org/rfc/rfc8725>.
 
 Acknowledgments
 

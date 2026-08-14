@@ -20,14 +20,15 @@ Abstract
    Mission state-management surfaces it defers: the Mission Status
    operation (keyed by mission_id) with signed responses, the Mission
    projection for token introspection, the Mission Lifecycle endpoint
-   with revoke, suspend, resume, and complete operations, the suspended
-   and completed states with the consolidated lifecycle state machine
-   this profile owns, and revocation-propagation guidance.  It also
-   defines Mission completion at the entry grain: terminal_when, a
-   completion condition that discharges an Authority Set entry once the
-   task the entry was granted for is done.  Each capability is
-   independently optional; an implementation can adopt any subset, and
-   one that adopts none remains a conforming issuance profile.
+   with revoke, suspend, resume, complete, and discharge operations, the
+   suspended and completed states with the consolidated lifecycle state
+   machine this profile owns, and revocation-propagation guidance.  It
+   also defines Mission completion at the entry grain: terminal_when, a
+   completion condition met when an authenticated discharge command or
+   trusted deployment-internal adjudication commits that the task an
+   entry was granted for is done.  Each capability is independently
+   optional; an implementation can adopt any subset, and one that adopts
+   none remains a conforming issuance profile.
 
 About This Document
 
@@ -89,14 +90,19 @@ Table of Contents
    5.  Mission Status List
    6.  Mission Lifecycle Endpoint
      6.1.  Operations
-     6.2.  Legal Transitions
-     6.3.  Consolidated State Machine
-     6.4.  Authentication
-     6.5.  Authorization
-     6.6.  Worked Examples
-     6.7.  Idempotency and Conflicts
-     6.8.  Relationship to RFC 7009
-     6.9.  Deferred Lifecycle Capabilities
+     6.2.  Entry Discharge Operation
+       6.2.1.  Discharge Authority
+       6.2.2.  Discharge Anti-Oracle
+       6.2.3.  Idempotency: nonce and event_id
+       6.2.4.  Discharge Result
+     6.3.  Legal Transitions
+     6.4.  Consolidated State Machine
+     6.5.  Authentication
+     6.6.  Authorization
+     6.7.  Worked Examples
+     6.8.  Idempotency and Conflicts
+     6.9.  Relationship to RFC 7009
+     6.10. Deferred Lifecycle Capabilities
    7.  Mission Completion and Entry Discharge
      7.1.  Relationship to the Issuance Profile
      7.2.  Entry Completion Conditions
@@ -166,13 +172,14 @@ Table of Contents
       response (Section 4).
 
    *  A *Mission Lifecycle endpoint* (Section 6) for explicit revoke,
-      suspend, resume, and complete transitions, distinct from [RFC7009]
-      token revocation.
+      suspend, resume, complete, and discharge operations, distinct from
+      [RFC7009] token revocation.
 
    *  *Mission completion and entry discharge* (Section 7): the
       terminal_when completion condition, carried in a
-      mission_resource_access entry's constraints, that discharges the
-      entry once the task it was granted for is done.
+      mission_resource_access entry's constraints, and the authenticated
+      discharge operation (Section 6.2) that commits it once the task
+      the entry was granted for is done.
 
    *  *Revocation propagation* guidance (Section 8): a
       mission_max_stale_seconds bound and how to size token lifetimes to
@@ -384,7 +391,10 @@ Table of Contents
    signing key.  Per [RFC7515] Section 4.1.9 the typ header omits the
    application/ prefix; the full media type application/mission-status-
    response+jwt (registered in Section 13) is used as the HTTP Content-
-   Type.
+   Type.  Exact validation of the protected typ value, together with
+   mutually exclusive validation rules for the artifact profiles,
+   implements the substitution defense of [RFC8725], Sections 3.11 and
+   3.12.
 
    [RFC9701] signed introspection responses are scoped to token
    introspection and do not apply to a lookup keyed by mission_id; the
@@ -509,7 +519,7 @@ Table of Contents
          seats its gap detection on it (the last-applied Signals version
          becomes this value,
          [I-D.draft-mcguinness-oauth-mission-signals]), a lifecycle
-         mutation can guard on it (Section 6.7), and a materialized
+         mutation can guard on it (Section 6.8), and a materialized
          policy view names the value it materialized
          ([I-D.draft-mcguinness-mission-runtime]).
 
@@ -642,26 +652,33 @@ Table of Contents
 
    Wire error codes (carried in the error member of a JSON body):
 
-      +===============+======+======================================+
-      | error         | HTTP | Description                          |
-      +===============+======+======================================+
-      | unauthorized  | 401  | Request not authenticated.           |
-      +---------------+------+--------------------------------------+
-      | not_found     | 404  | Reference does not exist OR is not   |
-      |               |      | visible.                             |
-      +---------------+------+--------------------------------------+
-      | conflict      | 409  | Lifecycle operation not legal from   |
-      |               |      | the current state (Section 6.7).     |
-      +---------------+------+--------------------------------------+
-      | stale_version | 409  | expected_version differs from the    |
-      |               |      | current state version (Section 6.7). |
-      +---------------+------+--------------------------------------+
-      | rate_limited  | 429  | Consumer is rate-limited.            |
-      +---------------+------+--------------------------------------+
-      | unavailable   | 503  | AS temporarily cannot serve status.  |
-      +---------------+------+--------------------------------------+
+   +=================+======+=========================================+
+   | error           | HTTP | Description                             |
+   +=================+======+=========================================+
+   | invalid_request | 400  | Malformed request: an unparseable body, |
+   |                 |      | a required member missing or malformed, |
+   |                 |      | an invalid member combination, or a     |
+   |                 |      | retransmitted nonce paired with a       |
+   |                 |      | request that is not byte-identical to   |
+   |                 |      | the original (Section 6.8).             |
+   +-----------------+------+-----------------------------------------+
+   | unauthorized    | 401  | Request not authenticated.              |
+   +-----------------+------+-----------------------------------------+
+   | not_found       | 404  | Reference does not exist OR is not      |
+   |                 |      | visible.                                |
+   +-----------------+------+-----------------------------------------+
+   | conflict        | 409  | Lifecycle operation not legal from the  |
+   |                 |      | current state (Section 6.8).            |
+   +-----------------+------+-----------------------------------------+
+   | stale_version   | 409  | expected_version differs from the       |
+   |                 |      | current state version (Section 6.8).    |
+   +-----------------+------+-----------------------------------------+
+   | rate_limited    | 429  | Consumer is rate-limited.               |
+   +-----------------+------+-----------------------------------------+
+   | unavailable     | 503  | AS temporarily cannot serve status.     |
+   +-----------------+------+-----------------------------------------+
 
-                                  Table 2
+                                 Table 2
 
    Note the distinction between the two access failures: unauthorized
    (401) means the request carried no valid authentication, whereas a
@@ -681,11 +698,35 @@ Table of Contents
      "nonce": "nonce_K9pV4nT2sR7mB1xQ"
    }
 
-   The body MUST contain error, error_description, and nonce, and MUST
-   NOT contain any member that would let a caller distinguish unknown
-   from unauthorized references.  For rate_limited, the response SHOULD
+   The body MUST contain error and error_description, and MUST
+   additionally contain nonce when the request carried a well-formed
+   nonce.  A request whose nonce is absent or malformed is refused
+   invalid_request with no nonce member echoed.  The body MUST NOT
+   contain any member that would let a caller distinguish unknown from
+   unauthorized references.  For rate_limited, the response SHOULD
    include a Retry-After header [RFC9110] and a retry_after body member
    in seconds.
+
+   The OAuth-shaped surfaces of this family, this Status and Lifecycle
+   endpoint, Mission Management
+   [I-D.draft-mcguinness-oauth-mission-management], and the Mission
+   Authority Server's submission surface
+   [I-D.draft-mcguinness-mission-authority-server], share the error/
+   error_description JSON body idiom for consistency with the OAuth-
+   shaped APIs they compose with.  Each surface's exact member
+   requiredness is its own: here and in Mission Management,
+   error_description and nonce are REQUIRED; the Mission Authority
+   Server makes error_description OPTIONAL and adds the MAS-only
+   error_reason.  The body is application/json with Cache-Control: no-
+   store. error_description is diagnostic and is never authorization
+   input. nonce correlates the response to the request in support of the
+   signed-response and retry model of Section 6.8 and is not, by itself,
+   replay protection, per the absent-or-malformed-nonce rule above.  RFC
+   9457 [RFC9457] problem details is neither used on these surfaces nor
+   disparaged: the AuthZEN binding
+   [I-D.draft-mcguinness-mission-authzen] carries it where that
+   ecosystem does, and a future non-OAuth-shaped HTTP API in this family
+   MAY choose it.
 
 4.  Token Introspection Mission Projection
 
@@ -858,10 +899,11 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission]).
 
    operation:  REQUIRED.  A string.  One of revoke, suspend, resume,
-      complete.
+      complete, discharge.
 
    reason:  OPTIONAL.  A string.  A human-readable reason recorded in
-      audit, maximum 1024 characters.
+      audit, maximum 1024 characters.  Not used by discharge, which
+      records its own request members in audit (Section 6.2).
 
    suspend_until:  OPTIONAL.  An RFC 3339 [RFC3339] date-time.  Valid
       only on the suspend operation.  When present, it sets a deadline
@@ -874,6 +916,9 @@ Table of Contents
 
    nonce:  REQUIRED.  A string.  A client-generated nonce.
 
+   The discharge operation carries additional REQUIRED and OPTIONAL
+   members of its own, defined in Section 6.2.
+
    The operations are:
 
    *  revoke: terminate the Mission; transition to revoked.
@@ -884,6 +929,11 @@ Table of Contents
 
    *  complete: mark the Mission completed; transition to completed.
 
+   *  discharge: commit that a terminal_when completion condition
+      (Section 7.2) has fired, discharging a Mission-record entry.  It
+      changes no Mission-level state and is defined in its own
+      subsection (Section 6.2).
+
    A suspend MAY carry suspend_until with a REQUIRED on_expiry.  When
    suspend_until passes, the AS MUST apply on_expiry (transition to
    active for resume, or to revoked for revoke) and emit the
@@ -892,13 +942,261 @@ Table of Contents
    on_expiry surface in the signed Mission Status Response (Section 3.4)
    so a consumer sees the pending outcome.
 
-6.2.  Legal Transitions
+6.2.  Entry Discharge Operation
+
+   discharge commits that a terminal_when completion condition
+   (Section 7.2) has fired, discharging the named Mission-record entry
+   (Section 7.3).  Beyond mission_id and nonce, it requires:
+
+   entry_digest:  REQUIRED.  A string.  The Authority Set entry
+      commitment ([I-D.draft-mcguinness-oauth-mission]) of the
+      mission_resource_access entry to discharge, computed over the
+      immutable Mission-record entry, never over a narrowed token
+      projection.
+
+   condition_digest:  REQUIRED.  A string.  The digest identifying the
+      single terminal_when condition that fired, defined beside that
+      member (Section 7.2).
+
+   event_type:  REQUIRED.  A string.  Echoed from the fired condition
+      and cross-checked against the condition condition_digest names: a
+      mismatch joins the not_found collapse, since distinguishing it
+      would reveal information about a condition selected by digest
+      (Section 6.2.2). event_type is never a selector by itself.
+
+   event_id:  REQUIRED.  A string, 1*128( ALPHA / DIGIT / "-" / "_" /
+      ":" / "." ) [RFC5234].  The identifier of the asserted external
+      occurrence, used for evidence correlation and for the event-level
+      deduplication of Section 6.2.3.  It is distinct from nonce, the
+      HTTP retry key of Section 6.8.
+
+   evidence_ref:  OPTIONAL.  A URI, maximum 512 characters.  A reference
+      to evidence of the asserted occurrence.
+
+   evidence_digest:  OPTIONAL.  A string, the family's prefixed digest
+      form (sha-256: plus base64url, no-padding encoding), classified as
+      a raw-octet digest ([I-D.draft-mcguinness-oauth-mission],
+      Section "Commitment Mechanisms"): computed over the exact octets
+      of the referenced artifact as exchanged, with no canonicalization.
+      evidence_ref and evidence_digest MAY both appear: when they do,
+      evidence_digest MUST commit the bytes evidence_ref names.  Present
+      alone, evidence_digest is independent audit metadata.
+
+   evidence_ref and evidence_digest are bounded audit metadata about the
+   asserted occurrence.  The AS MUST NOT dereference evidence_ref in
+   baseline processing and MUST NOT treat either member as authorization
+   input.
+
+   observed_at:  OPTIONAL.  An RFC 3339 [RFC3339] date-time: a caller
+      assertion.  The AS validates it for syntax and reasonable clock
+      bounds only, never as trusted ordering or freshness, and records
+      its own commit time as received_at in audit.
+
+   Semantics:
+
+   *  *Entry-level OR latch.* The entry's terminal_when discharges on
+      any condition being met (Section 7.2); the request names the
+      condition that fired.  The committed state is one monotonic latch
+      on the entry, or on its selector equivalence class, one state-
+      version increment, one audit record, and one notification.  A
+      later delivery presenting any valid condition against an already-
+      discharged entry, a sibling condition, or the same condition under
+      a different event_id, is acknowledged already_discharged
+      (Section 6.2.4) and MUST NOT discharge the entry again or
+      increment the version again; an exact event replay (the same tuple
+      and the same fingerprint) is handled first by the dedup rule of
+      Section 6.2.3.  The latch MUST NOT revert, and issuance gating for
+      a discharged entry is unchanged (Section 7.3).
+
+   *  *Duplicate entries.* One entry_digest discharges every recorded
+      entry resolving to that digest as a single equivalence-class
+      transition, and therefore one version increment, under the
+      Authority Set entry commitment's selector equivalence-class rule
+      ([I-D.draft-mcguinness-oauth-mission]).
+
+   *  *States.* discharge applies while the Mission is active or
+      suspended: a suspended Mission still narrows monotonically.  A
+      delivery reaching the endpoint after completed, revoked, expired,
+      or another terminal state returns an authenticated terminal_noop
+      acknowledgement (Section 6.2.4) and MUST NOT create a transition
+      or a version increment. discharge never changes Mission-level
+      state; a deployment that also tracks all-entry completion invokes
+      complete separately.  The AS reaches this determination only after
+      the selector and authorization validation of Section 6.2.2, so a
+      terminal Mission is never a shortcut past those checks.
+
+   *  *No expected_version.* A stale-version refusal would delay a
+      safety-reducing operation; the digest selectors above and the
+      idempotency rules of Section 6.2.3 are the guards instead.
+
+   *  *Atomicity.* The entry latch (or its equivalence-class latch), the
+      version increment, the audit and result record, and the durable
+      propagation work (an outbox entry or a signal enqueue) commit as
+      one unit.  Where the deployment emits lifecycle events
+      ([I-D.draft-mcguinness-oauth-mission-signals]), the signal enqueue
+      is part of that same unit.  Downstream materialization from the
+      durable propagation work, including the child-delegation profile's
+      entry-wise propagation to an already-justified Child Mission
+      ([I-D.draft-mcguinness-oauth-mission-child-delegation]), is
+      asynchronous and is not claimed atomic with this commit.  Instead,
+      a Child Mission's derivation MUST consult, or otherwise be gated
+      by, the committed parent latch until that materialization
+      completes, so no Child Mission can derive the discharged parent
+      authority in the gap between the parent's commit and the child's
+      materialized view.
+
+6.2.1.  Discharge Authority
+
+   Authorization for discharge requires a distinct mission_discharge
+   scope or an equivalent deployment-defined grant.  Possession of the
+   mission_lifecycle scope (Section 6), or being the Mission's Subject,
+   Approver, or an administrator, MUST NOT by itself imply discharge
+   authority: a terminal_when condition is asserted by a resource or
+   event authority, not by whoever may revoke, suspend, resume, or
+   complete the Mission.
+
+   The baseline authority mapping is AS authorization policy keyed by
+   event_type: the deployment publishes which authenticated principal (a
+   client or workload identity, with its resource boundary where
+   applicable) may assert each event type.  Authentication uses the
+   mechanism set of Section 3.2, sender-constrained where the
+   deployment's profile requires it, and MUST bind the asserting
+   principal.
+
+   A terminal_when condition MAY carry discharge_policy (OPTIONAL): a
+   stable, opaque selector naming the AS-side authority mapping for that
+   condition (Section 13.4).  The AS MUST resolve and validate the
+   selector whenever a condition first enters an immutable Mission-
+   record entry: at Mission creation, and at every later point where a
+   derived entry can carry a new condition (child creation, expansion,
+   Token Exchange or other derivation, and any further profile that adds
+   a condition), refusing the Intent or the derivation whose selector
+   maps to nothing.  The AS binds the resolved mapping's identifier and
+   version to that exact condition_digest in issuer-held metadata.  A
+   requesting client MUST NOT select an arbitrary otherwise-valid policy
+   merely because adding a condition is narrowing: an unchecked choice
+   of mapping for a newly added condition could still force the
+   premature discharge that Section 11.6 warns against, a denial-of-
+   service on the task and an early retirement of its own guardrail.
+   The member is never a raw principal or workload structure, and the
+   requesting client cannot select an unapproved fallback.
+
+6.2.2.  Discharge Anti-Oracle
+
+   An unknown mission_id, an unknown entry_digest, an unknown
+   condition_digest, an entry with no terminal_when, an event_type that
+   does not match the condition condition_digest names, and a caller not
+   authorized for that target all collapse to the endpoint's existing
+   not_found treatment (Section 3.7).  Authentication failure remains
+   unauthorized (401).  Detailed refusal reasons live only in issuer
+   audit records.
+
+   The AS validates selector existence (mission_id, entry_digest, and
+   condition_digest all resolve, the entry carries terminal_when, and
+   event_type matches the named condition), then condition membership
+   (the named condition belongs to the named entry), then target
+   authorization (the discharge authority mapping of Section 6.2.1),
+   before returning any terminal_noop acknowledgement (Section 6.2.4).
+   This order keeps a terminal Mission from acting as a selector-
+   existence oracle: every case the collapse above refuses is checked
+   before a terminal Mission is ever distinguished from one whose
+   selectors do not resolve.
+
+6.2.3.  Idempotency: nonce and event_id
+
+   discharge keeps two identities apart. nonce stays the HTTP operation
+   retry key under Section 6.8's rules: a retransmission with the same
+   nonce and a byte-identical request returns the stored signed response
+   verbatim.  The same nonce with a different request is refused
+   invalid_request, never answered with an unrelated original response.
+
+   event_id deduplicates the external occurrence, scoped by
+   (authenticated discharge authority, mission_id, entry_digest,
+   condition_digest, event_id).  A response's nonce MUST equal the one
+   just sent (Section 3.4), so a retry that supplies a fresh nonce, as
+   an at-least-once sender legitimately does, cannot receive the
+   original signed response verbatim.  Two cases follow:
+
+   *  *Same nonce, same request.* The stored signed response is returned
+      verbatim, per the nonce rule above.
+
+   *  *New nonce, same event tuple and the same assertion fingerprint*
+      (defined below).  The AS performs no state-changing work: no re-
+      latch, no version increment.  It issues a new signed envelope that
+      echoes the new nonce and carries the stored operation result: the
+      same outcome and selectors, and the original prior_version and
+      current_version the first commit produced.
+
+   *Event assertion fingerprint.* A semantic assertion object, never raw
+   form bytes: the JSON object with exactly the decoded members
+   operation (the literal string discharge), mission_id, entry_digest,
+   condition_digest, event_type, event_id, and, when present,
+   evidence_ref, evidence_digest, and observed_at.  The object is
+   canonicalized under the issuance profile's canonicalization
+   ([I-D.draft-mcguinness-oauth-mission], Section "Canonicalization
+   Rules") and digested as a canonical-object digest
+   ([I-D.draft-mcguinness-oauth-mission], Section "Commitment
+   Mechanisms"), since protocol context already fixes what the object
+   commits. nonce, client authentication material, the DPoP proof, and
+   transport headers are outside the fingerprint: none of them enter the
+   assertion object, and none of them affect its value.
+
+   Over the (discharge authority, mission_id, entry_digest,
+   condition_digest, event_id) tuple: the same tuple with the same
+   fingerprint is the replay case above; the same tuple with a different
+   fingerprint is refused conflict; the same event_id asserted against
+   another Mission, entry, or condition is a valid, independent
+   assertion, since one real-world event legitimately fans out to more
+   than one target.
+
+   When both rules could apply, the nonce rule is evaluated first, since
+   it governs the HTTP exchange; the event_id rule governs across
+   distinct exchanges.
+
+   *Retention.* Event-dedup state MUST be retained at least as long as
+   the deployment's published retry horizon and the replayable result's
+   usable lifetime, and MAY be bounded by the Mission record's own
+   retention.  After eviction, a repeated assertion is processed fresh
+   against the latch and yields already_discharged with no version
+   increment, which is safe because the latch is monotonic.
+
+6.2.4.  Discharge Result
+
+   On success, discharge returns the endpoint's existing signed Mission
+   Status Response envelope (Section 3.4), carrying a discharge_result
+   object as a sibling of mission:
+
+   entry_digest, condition_digest, event_id:  the request's own
+      selectors, echoed.
+
+   outcome:  one of discharged (this request committed the latch),
+      already_discharged (a sibling condition, or the same condition
+      under a different event_id, presented against an already-latched
+      entry), or terminal_noop (the Mission was already in a terminal
+      state).  An exact event replay is handled first by the dedup rule
+      (Section 6.2.3), never reaching this determination as a fresh
+      already_discharged.
+
+   prior_version, current_version:  the Mission's state version
+      immediately before and after the commit this result reports.  For
+      a request that itself commits, that commit is this request's own.
+      For the new-nonce fresh-envelope case of Section 6.2.3, which
+      commits nothing, these are the versions the original commit
+      produced, unchanged.  They are equal for already_discharged and
+      terminal_noop.
+
+   With the echoed nonce, this is the durable acknowledgement an at-
+   least-once sender stops retrying against.
+
+6.3.  Legal Transitions
 
    An operation is legal only from the source states below.  A terminal
    state (revoked, expired, completed, or the companion-defined
    superseded and cascaded) admits no transition.  An operation whose
    resulting state equals the current state, terminal or not, is
-   idempotent success (Section 6.7).
+   idempotent success (Section 6.8).  This table governs Mission-level
+   state; discharge produces no Mission-state transition and is not a
+   row of it, following instead the entry-grain rules of Section 6.2.
 
    resume is the sole exception: it is legal only from suspended (its
    resulting state, active, is also the baseline a Mission holds before
@@ -924,7 +1222,7 @@ Table of Contents
    window, so a suspended Mission need not first be resumed to be
    completed.
 
-   Requests are adjudicated by the single rule of Section 6.7: an
+   Requests are adjudicated by the single rule of Section 6.8: an
    operation whose resulting state equals the Mission's current state is
    idempotent success, with the resume exception above.  Any other
    operation not legal from the current state, including resume on a
@@ -932,7 +1230,7 @@ Table of Contents
    that reaches its expires_at transitions to expired independently of
    this endpoint, from active or suspended.
 
-6.3.  Consolidated State Machine
+6.4.  Consolidated State Machine
 
    This profile owns the extension of the issuance profile's lifecycle
    state space ([I-D.draft-mcguinness-oauth-mission], Section "Mission
@@ -942,8 +1240,10 @@ Table of Contents
    operation of Section 6), the expiry clock (a deadline reached without
    a request), and companion adjudication (a transition a companion
    profile commits).  The lifecycle-endpoint rows are exactly the
-   operations of Section 6.2.  Only active permits derivation; every
-   other state is non-deriving.
+   Mission-state-changing operations of Section 6.3; discharge
+   (Section 6.2) is a lifecycle-endpoint operation that changes no
+   Mission state and so is not a row of this table.  Only active permits
+   derivation; every other state is non-deriving.
 
     +===========+====================+==================+============+
     | From      | Event              | Event source     | To         |
@@ -1004,7 +1304,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  Neither
    companion state is produced by this profile's endpoint.
 
-6.4.  Authentication
+6.5.  Authentication
 
    The lifecycle endpoint uses the same authentication mechanisms as the
    Mission Status endpoint (Section 3.2): mTLS client authentication, a
@@ -1013,14 +1313,26 @@ Table of Contents
    mission_lifecycle_endpoint_auth_methods_supported and, for
    private_key_jwt, the accepted client-assertion algorithms in
    mission_lifecycle_endpoint_auth_signing_alg_values_supported
-   (Section 9); the sender-constrained access-token path through this
-   endpoint's OAuth Protected Resource Metadata [RFC9728].  A private-
-   key JWT client_assertion MUST name the mission_lifecycle_endpoint URL
-   in aud, and a presented access token MUST be audience-restricted to
-   this endpoint's protected-resource identifier, exactly as at the
-   Mission Status endpoint.
+   (Section 9).  For the sender-constrained access-token path, this
+   endpoint is an OAuth protected resource exactly as the Mission Status
+   endpoint is: the AS publishes, in its Protected Resource Metadata for
+   this resource [RFC9728], the resource identifier the token's audience
+   MUST name and the scopes it requires (scopes_supported):
+   mission_lifecycle for revoke, suspend, resume, and complete
+   (Section 6), and, where the deployment offers discharge,
+   mission_discharge as well (Section 6.2.1).  A private-key JWT
+   client_assertion MUST name the mission_lifecycle_endpoint URL in aud,
+   and a presented access token MUST be audience-restricted to this
+   endpoint's protected-resource identifier, exactly as at the Mission
+   Status endpoint.  Direct mTLS or private-key-JWT callers continue to
+   use the deployment-defined equivalent grant, never a scope, exactly
+   as discharge itself does (Section 6.2.1).
 
-6.5.  Authorization
+6.6.  Authorization
+
+   This section governs revoke, suspend, resume, and complete; discharge
+   has its own distinct authority model (Section 6.2.1), which a
+   mission_lifecycle grant under this section MUST NOT imply.
 
    The AS authorizes lifecycle operations against deployment policy.
    This document sets the minimum authorization semantics and leaves
@@ -1073,7 +1385,7 @@ Table of Contents
    found response shape of Section 3.7, so the endpoint does not act as
    a Mission enumeration oracle.
 
-6.6.  Worked Examples
+6.7.  Worked Examples
 
    Revoke request:
 
@@ -1131,7 +1443,7 @@ Table of Contents
 
    Suspend request with a deadline, here also carrying the OPTIONAL
    expected_version guard against deciding over stale state
-   (Section 6.7):
+   (Section 6.8):
 
    POST /as/mission/lifecycle HTTP/1.1
    Host: as.example.com
@@ -1175,20 +1487,24 @@ Table of Contents
    When suspend_until passes without a resume, the AS applies on_expiry
    and transitions the Mission to revoked without a further request.
 
-6.7.  Idempotency and Conflicts
+6.8.  Idempotency and Conflicts
 
    The request nonce (Section 6, Operations) is the idempotency key.
    The AS MUST deduplicate lifecycle requests by the triple (client,
    mission_id, nonce) for a bounded window.  On a retransmit carrying a
-   nonce already seen for that client and mission_id, the AS MUST replay
-   the original response rather than re-execute the operation.  The
-   window MUST be at least the validity span of the signed response the
-   AS would replay (its iat to exp, Section 3.4), so any retransmit that
-   could still present a live response is deduplicated.  A deployment
-   MAY use a longer window.  This makes a retransmit safe against
-   reordering: a delayed suspend retry that arrives after a resume is
-   recognized as a duplicate and replays the original suspend response,
-   so it cannot re-suspend an already-resumed Mission.
+   nonce already seen for that client and mission_id, together with a
+   request byte-identical to the original, the AS MUST replay the
+   original response rather than re-execute the operation.  The same
+   nonce paired with a request that is not byte-identical to the
+   original MUST be refused invalid_request (Section 3.7); the AS MUST
+   NOT answer it with the unrelated original response.  The window MUST
+   be at least the validity span of the signed response the AS would
+   replay (its iat to exp, Section 3.4), so any retransmit that could
+   still present a live response is deduplicated.  A deployment MAY use
+   a longer window.  This makes a retransmit safe against reordering: a
+   delayed suspend retry that arrives after a resume is recognized as a
+   duplicate and replays the original suspend response, so it cannot re-
+   suspend an already-resumed Mission.
 
    Deduplication guards a retransmitted request; it does not guard a
    valid request decided over stale state, a fresh suspend issued from a
@@ -1202,14 +1518,16 @@ Table of Contents
    guards are independent, one against duplicate delivery, one against
    stale decisions.
 
-   Lifecycle operations follow one rule.  An operation whose resulting
-   state (Section 6.2) equals the Mission's current state is idempotent
-   success, terminal or not: the AS returns the current Mission Status
-   Response, with no state change and no event emitted.  Any other
-   operation not legal from the current state (for example suspend
-   against a terminal state) is a conflict: the AS MUST refuse it with
-   HTTP 409 and a JSON body whose error symbol is conflict, leaving the
-   Mission state unchanged.
+   Lifecycle operations that change Mission state follow one rule.  An
+   operation whose resulting state (Section 6.3) equals the Mission's
+   current state is idempotent success, terminal or not: the AS returns
+   the current Mission Status Response, with no state change and no
+   event emitted.  Any other operation not legal from the current state
+   (for example suspend against a terminal state) is a conflict: the AS
+   MUST refuse it with HTTP 409 and a JSON body whose error symbol is
+   conflict, leaving the Mission state unchanged. discharge changes no
+   Mission state, so this rule does not bind it; its own idempotency and
+   outcome vocabulary are defined in Section 6.2.3 and Section 6.2.4.
 
    resume is the sole exception to the idempotent-success arm.  It is
    legal only from suspended, and its resulting state active is also the
@@ -1223,7 +1541,7 @@ Table of Contents
    transition-metadata change and reporting the updated values in the
    response; silent acceptance without effect is not conforming.
 
-6.8.  Relationship to RFC 7009
+6.9.  Relationship to RFC 7009
 
    A Mission revocation through this endpoint cascades to credentials
    derived from the Mission per the AS's advertised revocation
@@ -1232,7 +1550,7 @@ Table of Contents
    jti.  [RFC7009] alone does NOT revoke a Mission; the lifecycle
    endpoint is the authoritative Mission state change.
 
-6.9.  Deferred Lifecycle Capabilities
+6.10.  Deferred Lifecycle Capabilities
 
    This endpoint operates on one Mission at a time.  Mission enumeration
    and bulk lifecycle operations for incident response, such as revoking
@@ -1243,8 +1561,7 @@ Table of Contents
    future work.  Approver transfer or re-anchoring, changing the party
    that anchors a Mission's consent, is not defined here.
    Administrative monotonic narrowing, such as shortening a Mission's
-   expires_at or retiring a single Authority Set entry, is not defined
-   here.
+   expires_at, is not defined here.
 
 7.  Mission Completion and Entry Discharge
 
@@ -1285,10 +1602,9 @@ Table of Contents
       its parent's completion conditions unchanged and MAY add more, the
       same way constraints may be added or tightened but never dropped.
 
-   *  *Discharge fails closed.* A consumer that does not understand
-      terminal_when refuses the entry rather than ignoring the
-      condition, and an Authorization Server that cannot determine a
-      condition's status refuses to derive.
+   *  *Discharge fails closed on the constraint.* A consumer that does
+      not understand terminal_when refuses the entry rather than
+      ignoring the condition.
 
    The threat analysis of these properties, including why a prompt-
    injected agent cannot use discharge to escalate and the forced-
@@ -1332,14 +1648,10 @@ Table of Contents
          this document, as purpose is
          ([I-D.draft-mcguinness-oauth-mission]).
 
-      event_source:  OPTIONAL.  A string.  A URI the Authorization
-         Server consults to determine whether the event has occurred
-         (Section 7.3.1).
-
-      max_staleness:  OPTIONAL.  A string.  An ISO 8601 duration,
-         matching the duration rule in Appendix A of [RFC3339], bounding
-         how stale the Authorization Server's view of the event MAY be
-         when it gates issuance.
+      discharge_policy:  OPTIONAL.  A string, 1*64( ALPHA / DIGIT / "-"
+         / "_" / ":" / "." ) [RFC5234], opaque.  A stable selector
+         naming the AS-side discharge-authority mapping for this
+         condition (Section 6.2.1).
 
    The terminal_when array is part of the entry's constraints and so of
    the Authority Set: it is committed by authority_hash and reproducible
@@ -1352,6 +1664,13 @@ Table of Contents
    reproducible array.  Whether a condition has fired is evaluated
    state, not part of authority_hash; folding fired status into the
    anchor would make the committed authority time-varying.
+
+   condition_digest, used to select a condition on the discharge
+   operation (Section 6.2), is a canonical-object digest
+   ([I-D.draft-mcguinness-oauth-mission]) over the exact canonical bytes
+   of the single condition object, in the issuance profile's encoded
+   form: the same canonical form the registration's no-duplicate rule
+   above already fixes as condition identity (Section 13.4).
 
    terminal_when is the enforceable counterpart of the inert
    success_criteria ([I-D.draft-mcguinness-oauth-mission]), which
@@ -1380,7 +1699,7 @@ Table of Contents
    but this section does not require it.  Such a transition is performed
    through the complete operation, as an issuer-initiated lifecycle
    operation, so the consolidated state machine's event sources remain
-   authoritative (Section 6.3).
+   authoritative (Section 6.4).
 
    Discharge gates new derivations only.  A token already issued for an
    entry remains valid until it expires, as with revocation
@@ -1390,75 +1709,35 @@ Table of Contents
 
 7.3.1.  Determining Discharge
 
-   The Authorization Server determines whether a condition has been met
-   from the event_source, within max_staleness when present.  When
-   max_staleness is absent, the Authorization Server MUST re-evaluate
-   the condition at each derivation, so terminal_when never goes inert:
-   absence of max_staleness removes the tolerance for a cached view, it
-   does not relieve the freshness duty.
+   A discharge is committed one of two ways: through the discharge
+   operation (Section 6.2), or by deployment-internal adjudication the
+   issuer trusts, recorded under the same audited basis as any other
+   lifecycle commit.  This document defines no interoperable event-
+   source polling profile of its own: the discharge operation is the
+   interoperable path.  An event-driven deployment wires its event bus
+   to the lifecycle call.  A deployment that determines completion by
+   other means, such as a private status query or a recorded
+   administrative action, invokes the same commit internally once it has
+   decided.
 
-   The mechanism is deployment-defined (a status query, a received
-   signal, a recorded administrative action).  This document defines one
-   interoperable event-source profile a deployment MAY use: the
-   event_source URI is retrieved over authenticated HTTPS and returns a
-   signed JSON status document, a JWS [RFC7515], with these members:
-
-   *  occurred: REQUIRED.  A boolean, true when the event has occurred.
-
-   *  observed_at: REQUIRED.  An RFC 3339 [RFC3339] date-time at which
-      the status was observed.
-
-   *  event_type: REQUIRED.  A string, the event_type the document
-      reports.
-
-   *  source: REQUIRED.  A URI identifying the reporting source.
-
-   The Authorization Server verifies the JWS against key material it
-   resolves for the source identity, not for the event_source origin:
-
-   1.  the protected header's kid MUST resolve to a key the source
-       publishes through an authenticated channel (for example its
-       JWKS); and
-
-   2.  the resolved signer identity MUST be the source the Authorization
-       Server trusts for this event_type.
-
-   A signature that does not chain to a trusted source for the
-   event_type leaves the condition indeterminate, and the Authorization
-   Server fails closed as below.
-
-   Other source mechanisms remain deployment-defined.  The Mission
-   Issuer MUST authenticate and integrity-verify any event source
-   outside its own trust domain before acting on its report.
-
-   The event_source SHOULD lie outside the Mission's own writable
-   authority: an agent that can write to the source can drive its own
-   discharge or suppress it.  Where the event_source is on an origin the
-   Mission holds write authority to, the Authorization Server MUST
-   determine discharge through an integrity mechanism, such as the
-   signed status document above, whose signing key the Mission cannot
-   influence.
-
-   Once the Authorization Server observes that a condition has been met,
-   the discharge is recorded as Authorization-Server-side state and MUST
-   NOT revert, regardless of any later report from the event source: a
-   source that afterward reports the event as not occurred does not
-   restore the entry's authority.
+   Once committed, a discharge is recorded as Authorization-Server-side
+   state and MUST NOT revert: a later delivery presenting any valid
+   condition against an already-discharged entry is acknowledged
+   already_discharged (Section 6.2.4) and does not restore the entry's
+   authority.
 
    A committed discharge is a committed metadata-only change for the
    purposes of the state version (Section 3.4): the Mission's state
    version increments at the commit, so a materialized policy view that
    commits a state version ([I-D.draft-mcguinness-mission-runtime]) is
-   detectably obsolete after a discharge.  A dedicated discharge signal
-   remains deferred (Section 7.3.2); the version movement is what makes
-   the change observable in the interim.
+   detectably obsolete after a discharge.  Where Signals is deployed,
+   the commit is carried by the generic authority_changed discriminator
+   ([I-D.draft-mcguinness-oauth-mission-signals]); where Signals is not
+   deployed, the version movement is what makes the change observable.
 
-   If the Authorization Server cannot determine whether a condition has
-   been met, for example because event_source is unreachable within
-   max_staleness, it MUST treat the entry as possibly discharged and
-   refuse to derive it, as it fails closed for stale Mission state.
-   Discharge removes authority, so the conservative action when status
-   is unknown is to withhold issuance, never to issue.
+   Before the AS receives and commits a discharge, it continues issuing
+   against the entry.  The posture this implies is stated plainly in
+   Section 11.6.
 
 7.3.2.  Discharge Visibility
 
@@ -1471,10 +1750,11 @@ Table of Contents
    like an entry addressed to another audience, is not authority the
    caller may rely on.
 
-   A per-entry discharge lifecycle signal is future work for the Mission
-   Lifecycle Signals profile
-   [I-D.draft-mcguinness-oauth-mission-signals]; this document defines
-   no discharge event.
+   Where Signals is deployed, a discharge commit rides the
+   mission.lifecycle-change event's generic authority_changed
+   discriminator [I-D.draft-mcguinness-oauth-mission-signals]: an
+   active-to-active event carrying it signals that the Mission's
+   effective authority narrowed even though state did not change.
 
 7.4.  Subset Rule
 
@@ -1570,41 +1850,45 @@ Table of Contents
          "max_amount": { "amount": "500.00", "currency": "USD" },
          "terminal_when": [
            { "event_type": "accounting-period-closed",
-             "event_source": "https://close.example.com/periods/2026-Q3",
-             "max_staleness": "PT15M" } ] } }
+             "discharge_policy": "close-management-2026-q3" } ] } }
    ]
 
-   The event_source is on a separate close-management origin the Mission
-   has no write authority to, so the agent cannot drive its own
-   discharge (Section 7.3.1).
+   discharge_policy names the AS-side authority mapping approved for
+   this condition: the close-management system's workload identity, not
+   alice's agent, may assert accounting-period-closed (Section 6.2.1).
+   The agent cannot drive its own discharge: it holds no
+   mission_discharge authorization for that event_type.
 
    While the period is open, the Authorization Server derives both
-   entries.  When the finance team finalizes the Q3 close, the
-   event_source reports the period closed.  From then on the
-   Authorization Server refuses to derive the write entry: a refresh
-   returns a token carrying only the read entry.  The Mission stays
-   active, so the agent can still read the ledger to finish its
-   reconciliation report, but it can no longer post journal entries.  No
-   revoke and no clock was needed; the write authority retired itself
-   when the task it was granted for completed.
-
-   If the event_source were unreachable when the agent refreshed, the
-   Authorization Server would treat the write entry as possibly
-   discharged and omit it, rather than risk issuing authority for a task
-   that may have ended (Section 7.3.1).
+   entries.  When the finance team finalizes the Q3 close, the close-
+   management system calls discharge on the Mission Lifecycle endpoint,
+   naming the write entry's entry_digest, this condition's
+   condition_digest, event_type accounting-period-closed, and an
+   event_id for its own occurrence record.  The Authorization Server
+   authenticates the caller against the resolved discharge_policy
+   mapping, commits the latch, and returns a signed discharge_result of
+   outcome discharged (Section 6.2.4).  From then on the Authorization
+   Server refuses to derive the write entry: a refresh returns a token
+   carrying only the read entry.  The Mission stays active, so the agent
+   can still read the ledger to finish its reconciliation report, but it
+   can no longer post journal entries.  No revoke and no clock was
+   needed; the write authority retired itself when the task it was
+   granted for completed.
 
 7.9.  Completion Conformance
 
    An Authorization Server claiming the completion capability MUST:
 
-   *  treat an entry whose terminal_when has been met as discharged and
-      refuse to derive it (Section 7.3);
+   *  treat an entry whose terminal_when has been discharged as
+      discharged and refuse to derive it (Section 7.3);
 
-   *  refuse to derive an entry whose discharge status it cannot
-      determine (Section 7.3.1);
+   *  commit a discharge only through the discharge operation, meeting
+      its authority, anti-oracle, idempotency, and atomicity
+      requirements (Section 6.2), or through an equivalently audited
+      deployment-internal adjudication (Section 7.3.1);
 
-   *  record an observed discharge as latched state that MUST NOT revert
-      on a later source report (Section 7.3.1);
+   *  record a committed discharge as latched state that MUST NOT revert
+      (Section 7.3.1);
 
    *  carry every parent completion condition into a derived entry when
       narrowing, permitting only added conditions (Section 7.4);
@@ -1911,8 +2195,8 @@ Table of Contents
       not an escalation, but a forced premature discharge is a denial-
       of-service on the task (authority the task still needs is
       withdrawn) and, where discharge is relied on as a guardrail,
-      retires that guardrail early.  The event-source integrity and
-      independence requirements below bound who can force it.
+      retires that guardrail early.  Discharge authority (Section 6.2.1)
+      bounds who can force it.
 
    *  Fail closed on unknown constraint.  A consumer that does not
       understand the terminal_when constraint MUST refuse the entry
@@ -1920,28 +2204,24 @@ Table of Contents
       entry continue to be narrowed, projected, or enforced, defeating
       discharge.
 
-   *  Fail closed on unknown status.  When discharge status is
-      indeterminate the Authorization Server withholds issuance
-      (Section 7.3.1); a deployment that fails open here defeats the
-      control.
+   *  Notification delivery is a temporary widening, not a fail-closed
+      property.  Before the AS receives and commits a discharge, it
+      continues issuing against the entry: a lost or suppressed
+      notification is a temporary widening relative to the real-world
+      event, bounded by authenticated at-least-once delivery with
+      retries to an idempotent acknowledgement (Section 6.2.4),
+      monitoring and reconciliation, and the Mission's and its tokens'
+      own lifetimes.  This is not a fail-closed property: a deployment
+      requiring cannot-determine-means-no-issuance runs a synchronous
+      status or policy check outside this baseline.
 
-   *  Trusted event source. event_source is a trusted input to issuance:
-      a party that can make the source report "not yet complete" can
-      keep an entry derivable past its true completion, and one that can
-      make it report "complete" can force a premature discharge.  The
-      Mission Issuer MUST authenticate and integrity-verify an event
-      source outside its own trust domain (Section 7.3.1), and SHOULD
-      prefer sources within it.  The event_source SHOULD lie outside the
-      Mission's own writable authority, so an agent cannot drive or
-      suppress its own discharge; the signed status document verified
-      against the source identity is the interoperable integrity
-      mechanism where it cannot (Section 7.3.1).
-
-   *  Event-source availability.  Fail-closed discharge gives issuance
-      an availability dependency on event_source within max_staleness:
-      an unreachable source withholds the entry (Section 7.3.1).  Event
-      sources inside the issuer's trust domain are RECOMMENDED, for
-      latency as well as trust.
+   *  RS enforcement honesty.  A stateless Resource Server cannot
+      evaluate issuer-held discharge state from the token alone; it
+      honors the issued token until expiry.  Prompt cutoff on a
+      discharged entry requires status (Section 3), introspection
+      (Section 4), or runtime enforcement (Section 7.7); an entry
+      constraint the enforcing party does not understand still fails
+      closed (Section 7.5).
 
    *  Already-issued tokens.  The window between discharge and the
       expiry of a token already issued is the same residual revocation
@@ -1978,15 +2258,19 @@ Table of Contents
 
 12.3.  Completion Condition Disclosure
 
-   A terminal_when condition can reveal task structure: event_type and
-   event_source may name a business event, a case, or a record whose
-   mere existence is sensitive, and they ride the token where the entry
-   is carried.  A deployment SHOULD treat them as it treats other
-   authority detail, and SHOULD avoid event identifiers that disclose
-   more than the consuming party needs.  Consulting an event_source also
-   reveals the Authorization Server's interest in that event; a
-   deployment SHOULD weigh that exposure when the source is operated by
-   another party.
+   A terminal_when condition can reveal task structure: event_type may
+   name a business event, a case, or a record whose mere existence is
+   sensitive, and it rides the token where the entry is carried.  A
+   deployment SHOULD treat it as it treats other authority detail, and
+   SHOULD avoid event identifiers that disclose more than the consuming
+   party needs. discharge_policy is an opaque selector and does not
+   itself name a business event, but its resolution is deployment-
+   defined and MAY correlate with a class of sensitive events; a
+   deployment SHOULD weigh that when publishing its meaning.  The
+   event_id, evidence_ref, evidence_digest, and observed_at a discharge
+   request carries (Section 6.2) do not ride the token; they land only
+   in issuer audit records, which deployments MUST treat as Mission
+   information-disclosure surfaces per the audit-logging rule above.
 
 13.  IANA Considerations
 
@@ -2100,10 +2384,13 @@ Table of Contents
    *  Key Name: terminal_when
 
    *  Value Space: a JSON array of one or more completion-condition
-      objects, each with a REQUIRED event_type (string), an OPTIONAL
-      event_source (string, a URI), and an OPTIONAL max_staleness
-      (string, an ISO 8601 duration); no two conditions in one array
-      share a canonical form (Section 7.2).
+      objects, each with a REQUIRED event_type (string) and an OPTIONAL
+      discharge_policy (string, an opaque selector); no two conditions
+      in one array share a canonical form (Section 7.2).  This Value
+      Space is a breaking change, while this experimental draft's
+      registration is still open, to the one a prior revision
+      registered: event_source and max_staleness are removed and
+      discharge_policy is added.
 
    *  Subset Rule: a candidate value is no broader than a reference
       value when the candidate's condition array contains every
@@ -2164,6 +2451,11 @@ Normative References
    [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
               Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
               <https://www.rfc-editor.org/rfc/rfc3339>.
+
+   [RFC5234]  Crocker, D., Ed. and P. Overell, "Augmented BNF for Syntax
+              Specifications: ABNF", STD 68, RFC 5234,
+              DOI 10.17487/RFC5234, January 2008,
+              <https://www.rfc-editor.org/rfc/rfc5234>.
 
    [RFC6838]  Freed, N., Klensin, J., and T. Hansen, "Media Type
               Specifications and Registration Procedures", BCP 13,
@@ -2293,10 +2585,19 @@ Informative References
               authorization/draft-mcguinness-oauth-mission-
               signals.html>.
 
+   [RFC8725]  Sheffer, Y., Hardt, D., and M. Jones, "JSON Web Token Best
+              Current Practices", BCP 225, RFC 8725,
+              DOI 10.17487/RFC8725, February 2020,
+              <https://www.rfc-editor.org/rfc/rfc8725>.
+
    [RFC9110]  Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
               Ed., "HTTP Semantics", STD 97, RFC 9110,
               DOI 10.17487/RFC9110, June 2022,
               <https://www.rfc-editor.org/rfc/rfc9110>.
+
+   [RFC9457]  Nottingham, M., Wilde, E., and S. Dalal, "Problem Details
+              for HTTP APIs", RFC 9457, DOI 10.17487/RFC9457, July 2023,
+              <https://www.rfc-editor.org/rfc/rfc9457>.
 
    [RFC9700]  Lodderstedt, T., Bradley, J., Labunets, A., and D. Fett,
               "Best Current Practice for OAuth 2.0 Security", BCP 240,
