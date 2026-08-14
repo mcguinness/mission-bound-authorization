@@ -434,6 +434,21 @@ Table of Contents
       supplies it and the PDP uses it as a content-addressed correlator.
       When present it is checked as in Section 5.
 
+   subject:  OPTIONAL.  A closed object with exactly iss and sub: the
+      Mission's origin principal, value-unchanged from the Mission
+      Record, per the cross-domain profile's Origin Principal rules
+      ([I-D.draft-mcguinness-oauth-mission-cross-domain]).  REQUIRED for
+      a request claiming that profile.  The PEP populates it only from a
+      verified token or delegation chain, or from trusted local token
+      metadata, never from an unverified request value.  The PDP applies
+      the origin-principal mapping check of the PDP-side consistency
+      checks (Section 5): the two subject namespaces are related only
+      through the mapping's output, never by direct comparison.  The
+      AuthZEN subject (the authenticated local token subject) and
+      context.actor (the acting lineage) keep their meanings: the three
+      roles remain semantically distinct even when two identifiers
+      happen to be equal.
+
    This context anchors the Mission's approved Authority Set through
    authority_hash.  Where a Mission participates in a companion that
    overlays evaluated authority on top of the approved set, for example
@@ -898,69 +913,101 @@ Table of Contents
    requires, the PDP MUST verify that the AuthZEN-carried envelope is
    self-consistent:
 
-   1.  When present, the Mission state conveyed in
-       context.mission_state_observation.state is exactly active; every
-       other value, recognized or not, is non-active per the issuance
-       profile's forward-compatibility rule
-       ([I-D.draft-mcguinness-oauth-mission]) and the PDP returns
-       mission_inactive (Section 6.5).  Where state establishment is
-       placed with the PDP and the member is absent (Section 5.6), the
-       PDP MUST establish state from its own source or deny with
-       stale_state.  A PDP with direct access to a Mission state source
-       MUST prefer its own fresher view over
-       context.mission_state_observation.state, and MUST return
-       mission_inactive when its view disagrees with the PEP-supplied
-       state.  PEP-supplied state is a floor, never a substitute for a
-       state source the PDP can itself consult.
+   1.   When present, the Mission state conveyed in
+        context.mission_state_observation.state is exactly active; every
+        other value, recognized or not, is non-active per the issuance
+        profile's forward-compatibility rule
+        ([I-D.draft-mcguinness-oauth-mission]) and the PDP returns
+        mission_inactive (Section 6.5).  Where state establishment is
+        placed with the PDP and the member is absent (Section 5.6), the
+        PDP MUST establish state from its own source or deny with
+        stale_state.  A PDP with direct access to a Mission state source
+        MUST prefer its own fresher view over
+        context.mission_state_observation.state, and MUST return
+        mission_inactive when its view disagrees with the PEP-supplied
+        state.  PEP-supplied state is a floor, never a substitute for a
+        state source the PDP can itself consult.
 
-   2.  The id and authority_hash in context.mission equal the mission_id
-       and authority_hash committed in the materialized policy view the
-       PDP has loaded for this Mission
-       ([I-D.draft-mcguinness-mission-runtime]); the PDP returns
-       view_inconsistent on any inequality.
+   2.   The id and authority_hash in context.mission equal the
+        mission_id and authority_hash committed in the materialized
+        policy view the PDP has loaded for this Mission
+        ([I-D.draft-mcguinness-mission-runtime]); the PDP returns
+        view_inconsistent on any inequality.
 
-   3.  When context.mission.policy_view_id is present, it MUST equal the
-       loaded view's policy_view_id, and the PDP returns
-       view_inconsistent on inequality.
+   3.   When context.mission.policy_view_id is present, it MUST equal
+        the loaded view's policy_view_id, and the PDP returns
+        view_inconsistent on inequality.
 
-   4.  When context.mission_state_observation.version is present, the
-       PDP compares it against its own tracked Mission state version,
-       recorded in Decision Evidence rather than echoed on the response
-       ([I-D.draft-mcguinness-mission-runtime-evidence]), never against
-       policy_view_id, which commits to authority only (Section 4), and
-       treats a mismatch as staleness (stale_state): one side has missed
-       a committed change.
+   4.   When context.mission_state_observation.version is present, the
+        PDP compares it against its own tracked Mission state version,
+        recorded in Decision Evidence rather than echoed on the response
+        ([I-D.draft-mcguinness-mission-runtime-evidence]), never against
+        policy_view_id, which commits to authority only (Section 4), and
+        treats a mismatch as staleness (stale_state): one side has
+        missed a committed change.
 
-   5.  A PDP MUST NOT fail a decision solely because the optional
-       policy_view_id or policy_version was omitted; the view the PDP
-       loaded is authoritative.
+   5.   A PDP MUST NOT fail a decision solely because the optional
+        policy_view_id or policy_version was omitted; the view the PDP
+        loaded is authoritative.
 
-   6.  When context.credential.expires_at is present, it has not passed;
-       otherwise the PDP returns credential_invalid.
+   6.   When context.credential.expires_at is present, it has not
+        passed; otherwise the PDP returns credential_invalid.
 
-   7.  The freshness conveyed in context.mission_state_observation the
-       PEP supplied is within the deployment's staleness bound;
-       otherwise the PDP returns stale_state, with the freshness-window
-       violation in the denial reason.
+   7.   The freshness conveyed in context.mission_state_observation the
+        PEP supplied is within the deployment's staleness bound;
+        otherwise the PDP returns stale_state, with the freshness-window
+        violation in the denial reason.
 
-   8.  For an action whose class requires parameter binding
-       ([I-D.draft-mcguinness-mission-runtime]),
-       action.properties.parameter_digest MUST be present; if it is
-       absent the PDP returns parameter_violation.  When
-       action.properties.parameters is also present, the PDP-recomputed
-       digest MUST match action.properties.parameter_digest, otherwise
-       parameter_violation.  When parameters is omitted under the
-       privacy carve-out (Section 5.5), the PDP MUST still be able to
-       evaluate every applicable parameter constraint from the digest,
-       the supplied action.properties.parameter_attributes, or local
-       state, and returns parameter_violation if it cannot.  A
-       parameter-bound action MUST NOT be permitted without a verified
-       parameter_digest.
+   8.   For an action whose class requires parameter binding
+        ([I-D.draft-mcguinness-mission-runtime]),
+        action.properties.parameter_digest MUST be present; if it is
+        absent the PDP returns parameter_violation.  When
+        action.properties.parameters is also present, the PDP-recomputed
+        digest MUST match action.properties.parameter_digest, otherwise
+        parameter_violation.  When parameters is omitted under the
+        privacy carve-out (Section 5.5), the PDP MUST still be able to
+        evaluate every applicable parameter constraint from the digest,
+        the supplied action.properties.parameter_attributes, or local
+        state, and returns parameter_violation if it cannot.  A
+        parameter-bound action MUST NOT be permitted without a verified
+        parameter_digest.
 
-   9.  A deployment adopting Mission Capability Binding applies that
-       companion's source checks and its capability_drift extension
-       reason ([I-D.draft-mcguinness-mission-capability-binding]); this
-       binding consumes an already established action identity.
+   9.   A deployment adopting Mission Capability Binding applies that
+        companion's source checks and its capability_drift extension
+        reason ([I-D.draft-mcguinness-mission-capability-binding]); this
+        binding consumes an already established action identity.
+
+   10.  For a request claiming the cross-domain Origin Principal profile
+        ([I-D.draft-mcguinness-oauth-mission-cross-domain]), the PDP
+        establishes the mapped local principal and requires it to equal
+        the authenticated request subject before entitlement lookup:
+
+      mapped_subject =
+        map(context.mission.subject, audience, tenant, mapping_policy)
+
+      require mapped_subject ==
+        (subject.properties.iss, subject.id)
+
+      entitlement = lookup_current_entitlement(mapped_subject)
+
+        Direct equality between context.mission.subject and the request
+        subject is wrong by construction: the two occupy different
+        namespaces, and only the mapping's output is comparable.  The
+        PDP is authoritative for the mapping in the default placement.
+        A deployment that instead places mapping at the PEP MUST convey
+        it as a structured, integrity-protected mapping observation
+        carrying its source, the mapping-policy identifier and version,
+        the issuer-qualified input, the local output, the observation
+        time, and a validity bound; the PDP verifies it as it verifies
+        context.mission_state_observation.  A failed, missing,
+        ambiguous, or stale result at either step denies with the
+        profile's principal_mapping_failed extension reason
+        ([I-D.draft-mcguinness-oauth-mission-cross-domain],
+        Section 6.5); entitlement staleness beyond the declared bound
+        denies likewise.  The permit and its evidence bind to both the
+        origin and the mapped local identity through the
+        principal_mapping evidence object
+        ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
 5.14.  Clock skew
 
@@ -2389,6 +2436,12 @@ Table of Contents
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-cross-domain]
+              McGuinness, K., "Mission Cross-Domain Projection for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-cross-
+              domain.html>.
 
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth

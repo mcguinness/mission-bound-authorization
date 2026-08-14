@@ -1532,7 +1532,11 @@ members are <span class="bcp14">REQUIRED</span> here. <code>mission.issuer</code
 <code>subject</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.2-1.10">
             <p id="section-5.2-1.10.1"><span class="bcp14">REQUIRED</span>. An object with <code>iss</code> and <code>sub</code>, the Mission record's
-<code>subject</code>.<a href="#section-5.2-1.10.1" class="pilcrow">¶</a></p>
+<code>subject</code>: the same value the cross-domain Origin Principal profile
+carries as <code>mission.subject</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>), so a Mandate
+presentation and a conforming credential identify one origin
+principal by value.<a href="#section-5.2-1.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.2-1.11">

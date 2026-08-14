@@ -100,6 +100,7 @@ Table of Contents
    7.  Evidence Properties
    8.  Extension Members
    9.  Conformance
+     9.1.  Compromise-Boundary Outcomes
    10. Security Considerations
      10.1.  Decision Evidence versus Execution Evidence
      10.2.  Evidence integrity and signing keys
@@ -748,6 +749,15 @@ Table of Contents
    for that scope, so one component's key cannot sign evidence for a
    resource, audience, or scope it does not serve.
 
+   Where the selected signing key is identified as compromised by the
+   deployment-defined key-status mechanism, the verifier MUST apply the
+   compromise-boundary rule of Section 10.2 before treating the
+   signature as verified: only an independently trusted existence proof
+   over the complete signed artifact, or its unambiguous typed digest,
+   establishing existence before the authenticated boundary permits the
+   remaining steps to continue, and the record's own asserted timestamps
+   never satisfy it.
+
    The JWS protected header MUST carry:
 
    *  kid: a key identifier resolvable in the emitter's published JWKS
@@ -1329,7 +1339,10 @@ Table of Contents
 6.5.  Receipt Verification
 
    A verifier MUST perform the following steps, in order, and MUST NOT
-   rely on a receipt if any step fails:
+   rely on a receipt if any step fails.  Where the receipt issuer's
+   signing key is identified as compromised, these steps are
+   additionally governed by the compromise-boundary rule of
+   Section 10.2:
 
    1.  Verify the receipt's evidence_envelope: decode the JWS payload,
        compute the JCS canonical bytes of the receipt with
@@ -1593,15 +1606,25 @@ Table of Contents
    |           |resolvable   |                                         |of signature|
    |           |for the      |                                         |verification|
    |           |retention    |                                         |            |
-   |           |window, and  |                                         |            |
-   |           |evidence     |                                         |            |
-   |           |signed after |                                         |            |
-   |           |a declared   |                                         |            |
+   |           |window, and a|                                         |            |
    |           |key          |                                         |            |
-   |           |compromise is|                                         |            |
-   |           |unverifiable |                                         |            |
-   |           |rather than  |                                         |            |
-   |           |verified     |                                         |            |
+   |           |identified as|                                         |            |
+   |           |compromised  |                                         |            |
+   |           |is governed  |                                         |            |
+   |           |by the       |                                         |            |
+   |           |compromise-  |                                         |            |
+   |           |boundary rule|                                         |            |
+   |           |of           |                                         |            |
+   |           |Section 10.2:|                                         |            |
+   |           |an artifact's|                                         |            |
+   |           |own asserted |                                         |            |
+   |           |timestamps   |                                         |            |
+   |           |never        |                                         |            |
+   |           |establish    |                                         |            |
+   |           |that its     |                                         |            |
+   |           |signature    |                                         |            |
+   |           |predates the |                                         |            |
+   |           |boundary     |                                         |            |
    +-----------+-------------+-----------------------------------------+------------+
    |Third-     |Scoped       |Durable offline verification: a party    |That an     |
    |party-     |independent  |holding retained or configured producer  |unknown     |
@@ -1683,6 +1706,21 @@ Table of Contents
       reference; this member formalizes that requirement as a
       coordinated extension.
 
+   principal_mapping:  OPTIONAL.  An object, recorded on Decision
+      Evidence and Refusal Records when the decision evaluated the
+      cross-domain Origin Principal profile's mapping
+      ([I-D.draft-mcguinness-oauth-mission-cross-domain]), and on the
+      issuance-time derivation record for the mapping decision itself.
+      Sub-members: origin (REQUIRED, a protected origin-subject
+      reference), local (REQUIRED, a protected local-subject reference),
+      policy (REQUIRED, an object with id and version naming the mapping
+      policy applied), observed_at (REQUIRED, an RFC 3339 date-time),
+      and valid_until (REQUIRED, an RFC 3339 date-time, the
+      observation's validity bound).  Protected references follow the
+      privacy rule of this document (Section 11.1).  Execution Evidence
+      joins the mapping through evaluation_id rather than carrying the
+      object again.  Registered and owned by the cross-domain profile.
+
 9.  Conformance
 
    This document defines conformance for four roles: a PRODUCER that
@@ -1740,6 +1778,39 @@ Table of Contents
    algorithm of Section 6.5 and reject a Mission Receipt on any of its
    failure conditions.
 
+9.1.  Compromise-Boundary Outcomes
+
+   A VERIFIER and a RECEIPT VERIFIER conform to the compromise-boundary
+   rule (Section 10.2) when each of the following holds:
+
+   *  a self-asserted pre-boundary timestamp does not rescue a record
+      signed under a compromised key;
+
+   *  a key identified as compromised with no authenticated boundary
+      available yields not-verified, with no boundary inferred from
+      artifact timestamps, the verifier's clock, or a default;
+
+   *  a verified independent proof over the complete signed artifact or
+      its unambiguous typed digest, with an authenticated time before
+      the boundary, permits the ordinary verification algorithm to
+      continue;
+
+   *  a proof whose authenticated time is at or after the boundary does
+      not;
+
+   *  the underlying record stays not-verified in every failure case: a
+      missing, unavailable, or unresolvable proof is an audit failure, a
+      presented proof failing its own cryptographic or commitment
+      verification is an integrity failure of the proof, and neither is
+      a finding of tampering against the underlying evidence;
+
+   *  a proof authenticated by a key itself identified as compromised
+      qualifies only through a distinct independent pre-boundary anchor;
+      and
+
+   *  the same outcomes hold for Mission Receipts and for harness
+      evidence.
+
 10.  Security Considerations
 
    The runtime profile's Security Considerations
@@ -1773,11 +1844,45 @@ Table of Contents
    management ([I-D.draft-mcguinness-oauth-mission]) extends to evidence
    signing keys: a retired signing key MUST remain resolvable in the
    published key set for at least the evidence retention window, so
-   records signed before a rotation stay verifiable after it.  The
-   compromise exception carries over with it: a key known or suspected
-   compromised is published as revoked or marked with a compromise time,
-   per the core rule, and evidence signed under it after that time is
-   unverifiable rather than verified.
+   records signed before a rotation stay verifiable after it.  The key's
+   compromise status, and the authenticated compromise boundary, come
+   from the deployment-defined key-status mechanism.  Once the signing
+   key is identified as compromised, the compromise-boundary rule
+   applies.  A verifier MUST NOT use a timestamp asserted by the target
+   artifact, or authenticated only by the target artifact's compromised
+   signing key, to place that artifact before the boundary; it MAY use
+   the authenticated time of an independently trusted recovery proof
+   after verifying that proof under the proof's own non-compromised
+   trust path.  It MUST NOT treat an artifact under a compromised key as
+   verified unless such a proof commits to the complete signed artifact,
+   or to its unambiguous typed digest, and establishes its existence
+   before that boundary.  Where the key is identified as compromised but
+   no authenticated boundary is available, the artifact is not verified:
+   the verifier MUST NOT infer a boundary from artifact timestamps, its
+   own clock, or an implementation default.  Such a proof establishes
+   only that those bytes existed by the proof time; it does not
+   establish the truth of the artifact, the actual signature time, or
+   that the key was not compromised earlier.  This rule applies whether
+   or not the deployment adopted the audit profile: registration under
+   the audit profile ([I-D.draft-mcguinness-mission-audit]) or a trusted
+   timestamp is the optional recovery mechanism, and without one, a
+   record under the compromised key is not verified merely because it
+   claims a pre-boundary time.  For a Receipt-based proof, the verifier
+   completes the audit profile's Receipt verification in full, including
+   the Transparency Service signature, the authenticated registration
+   time, the inclusion proof, the type binding, and the digest linkage
+   to the complete evidence bytes; a bare inclusion path or a payload
+   timestamp is insufficient.  Independently trusted requires a valid,
+   non-compromised proof-verification path: where a key authenticating
+   the proof is itself identified as compromised, the proof is subject
+   to this same rule for that key and qualifies only through a distinct
+   independent pre-boundary anchor; otherwise it cannot rescue the
+   artifact.  An artifact refused under this rule is not verified in
+   every case.  A missing, unavailable, or unresolvable proof is an
+   audit failure; a presented proof that fails its own cryptographic or
+   commitment verification is an integrity failure of the proof.
+   Neither outcome by itself establishes that the underlying evidence
+   was altered.
 
    Implementations MUST reject evidence whose format is unsupported
    rather than accepting it unverified.
@@ -1811,11 +1916,10 @@ Table of Contents
    runs the audit transparency profile or anchors the chain head
    independently.
 
-   A compromised receipt-issuer signing key inherits the emitter-key
-   considerations of Section 10.2: a key known or suspected compromised
-   is published as revoked or marked with a compromise time, and a
-   receipt signed under it after that time is unverifiable rather than
-   verified.
+   A compromised receipt-issuer signing key is governed by the
+   compromise-boundary rule of Section 10.2, applied during Receipt
+   verification (Section 6.5): timestamps asserted by the receipt itself
+   never establish that its signature predates the boundary.
 
 11.  Privacy Considerations
 
@@ -1833,6 +1937,23 @@ Table of Contents
    timing.  These records are PII sinks and SHOULD be access-controlled
    to audit consumers with a legitimate need, encrypted at rest, and
    retained per the window of Section 5.
+
+   Where the cross-domain Origin Principal profile is in use
+   ([I-D.draft-mcguinness-oauth-mission-cross-domain]), retained records
+   SHOULD carry the composed principal_mapping extension member
+   (Section 8) with protected subject references, not raw identities,
+   unless the raw identity is necessary for the stated audit purpose.  A
+   protected subject reference is one of: an audit-domain-scoped keyed
+   pseudonym (an HMAC under an audit key, carried with a method
+   identifier, a key identifier, and rotation semantics); a random
+   opaque mapping reference resolvable by authorized auditors; or, only
+   where cross-record correlation is explicitly intended, the
+   deterministic public digest of the family anchor idiom
+   ([I-D.draft-mcguinness-oauth-mission]) with typ mission-origin-
+   subject over the closed {iss, sub} object.  A deterministic digest of
+   an enumerable identifier is dictionary-attackable: it is correlation
+   infrastructure, not concealment, and a deployment using it MUST
+   disclose that limitation.
 
 11.2.  Parameter exposure
 
@@ -2073,6 +2194,12 @@ Table of Contents
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-cross-domain]
+              McGuinness, K., "Mission Cross-Domain Projection for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-cross-
+              domain.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
