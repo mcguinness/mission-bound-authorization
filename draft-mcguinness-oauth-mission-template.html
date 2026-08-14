@@ -1498,7 +1498,7 @@ cannot mint a Mission for a party the human did not consent to.<a href="#section
         <dd style="margin-left: 1.5em" id="section-5-2.16">
           <p id="section-5-2.16.1"><span class="bcp14">REQUIRED</span>. A duration. The per-instance lifetime clamp: a dispatched
 Mission's <code>expires_at</code> is clamped to no more than this from its
-creation (<a href="#dispatch" class="auto internal xref">Section 7</a>).<a href="#section-5-2.16.1" class="pilcrow">¶</a></p>
+committed <code>created_at</code> (<a href="#dispatch" class="auto internal xref">Section 7</a>).<a href="#section-5-2.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.17">
@@ -1747,9 +1747,18 @@ template commits the ceiling under <code>template_hash</code>
 (<a href="#template-hash" class="auto internal xref">Section 5.1</a>);<a href="#section-7-4.7.2.3.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-7-4.7.2.4">
-              <p id="section-7-4.7.2.4.1"><code>expires_at</code> is clamped to the minimum of the dispatch intent's
-requested expiry, the template's <code>instance_lifetime</code> from creation,
-and the template's <code>expires_at</code>; and<a href="#section-7-4.7.2.4.1" class="pilcrow">¶</a></p>
+              <p id="section-7-4.7.2.4.1"><code>expires_at</code> is the effective Mission expiry of the issuance
+profile's requested-versus-effective rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): the minimum of the
+dispatch intent's requested <code>expires_at</code>, the committed Mission
+<code>created_at</code> plus the template's <code>instance_lifetime</code>, and the
+template's <code>expires_at</code>. The lifetime addend is measured from the
+committed <code>created_at</code>, not a separate clock read, so audit
+recomputation is exact. These are the complete expiry inputs for
+Dispatch: a deployment that needs a tighter standing-consent
+lifetime records it in <code>instance_lifetime</code> or the template's
+<code>expires_at</code> under a newly consented <code>template_version</code>, rather
+than applying an undisclosed fourth clamp; and<a href="#section-7-4.7.2.4.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-7-4.7.2.5">
               <p id="section-7-4.7.2.5.1"><code>template</code> lineage member is set (<a href="#template-member" class="auto internal xref">Section 7.1</a>).<a href="#section-7-4.7.2.5.1" class="pilcrow">¶</a></p>
@@ -1894,9 +1903,18 @@ uses DPoP).<a href="#section-7.2-5.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.2-5.9">
-<code>authorization_details</code>:</dt>
+<code>mission_expires_at</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.2-5.10">
-            <p id="section-7.2-5.10.1"><span class="bcp14">REQUIRED</span>. The instance's effective Authority Set.<a href="#section-7.2-5.10.1" class="pilcrow">¶</a></p>
+            <p id="section-7.2-5.10.1"><span class="bcp14">REQUIRED</span>. The instance's effective Mission expiry, the issuance
+profile's common Mission-creating response member
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). <code>expires_in</code> above
+describes only the access token.<a href="#section-7.2-5.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-5.11">
+<code>authorization_details</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-5.12">
+            <p id="section-7.2-5.12.1"><span class="bcp14">REQUIRED</span>. The instance's effective Authority Set.<a href="#section-7.2-5.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2056,12 +2074,19 @@ instance was checked against is the one the human consented to;<a href="#section
         <li class="normal" id="section-11-2.2">
           <p id="section-11-2.2.1">re-run the subset check of the instance's Authority Set against the
 Template Ceiling (<a href="#dispatch" class="auto internal xref">Section 7</a>), confirming the instance is within the
-ceiling; and<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
+ceiling;<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.3">
-          <p id="section-11-2.3.1">verify that the instance's <code>approver</code> equals the template's approver
+          <p id="section-11-2.3.1">recompute the instance's effective <code>expires_at</code> as the minimum of
+the dispatch intent's requested <code>expires_at</code>, the committed
+<code>created_at</code> plus <code>instance_lifetime</code>, and the template's
+<code>expires_at</code> (<a href="#dispatch" class="auto internal xref">Section 7</a>), and match it to the recorded value, so
+the granted lifetime is exactly the three-way clamp; and<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.4">
+          <p id="section-11-2.4.1">verify that the instance's <code>approver</code> equals the template's approver
 at the recorded <code>template_version</code>, so the accountable principal is
-the human who consented to that version of the template.<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
+the human who consented to that version of the template.<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-11-3">Each Dispatch <span class="bcp14">MUST</span> record the Dispatch Policy <code>id</code> and <code>version</code> that

@@ -287,7 +287,7 @@ Table of Contents
 
    instance_lifetime:  REQUIRED.  A duration.  The per-instance lifetime
       clamp: a dispatched Mission's expires_at is clamped to no more
-      than this from its creation (Section 7).
+      than this from its committed created_at (Section 7).
 
    max_active:  REQUIRED.  An integer.  The maximum number of Missions
       dispatched from this template that may be active at once.  A
@@ -488,9 +488,19 @@ Table of Contents
           template; the template commits the ceiling under template_hash
           (Section 5.1);
 
-       *  expires_at is clamped to the minimum of the dispatch intent's
-          requested expiry, the template's instance_lifetime from
-          creation, and the template's expires_at; and
+       *  expires_at is the effective Mission expiry of the issuance
+          profile's requested-versus-effective rule
+          ([I-D.draft-mcguinness-oauth-mission]): the minimum of the
+          dispatch intent's requested expires_at, the committed Mission
+          created_at plus the template's instance_lifetime, and the
+          template's expires_at.  The lifetime addend is measured from
+          the committed created_at, not a separate clock read, so audit
+          recomputation is exact.  These are the complete expiry inputs
+          for Dispatch: a deployment that needs a tighter standing-
+          consent lifetime records it in instance_lifetime or the
+          template's expires_at under a newly consented
+          template_version, rather than applying an undisclosed fourth
+          clamp; and
 
        *  template lineage member is set (Section 7.1).
 
@@ -585,6 +595,11 @@ Table of Contents
    expires_in:  REQUIRED.  The access token's lifetime in seconds.
 
    mission_id:  REQUIRED.  The dispatched Mission's identifier.
+
+   mission_expires_at:  REQUIRED.  The instance's effective Mission
+      expiry, the issuance profile's common Mission-creating response
+      member ([I-D.draft-mcguinness-oauth-mission]). expires_in above
+      describes only the access token.
 
    authorization_details:  REQUIRED.  The instance's effective Authority
       Set.
@@ -713,7 +728,13 @@ Table of Contents
 
    *  re-run the subset check of the instance's Authority Set against
       the Template Ceiling (Section 7), confirming the instance is
-      within the ceiling; and
+      within the ceiling;
+
+   *  recompute the instance's effective expires_at as the minimum of
+      the dispatch intent's requested expires_at, the committed
+      created_at plus instance_lifetime, and the template's expires_at
+      (Section 7), and match it to the recorded value, so the granted
+      lifetime is exactly the three-way clamp; and
 
    *  verify that the instance's approver equals the template's approver
       at the recorded template_version, so the accountable principal is

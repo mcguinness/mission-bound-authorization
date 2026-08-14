@@ -2074,12 +2074,22 @@ carries:<a href="#section-6-1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.3">
-<code>authorization_details</code>:</dt>
+<code>mission_expires_at</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.4">
-          <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span>. An array. The consented Authority Set, so the client
+          <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span>. A string. The Mission's effective <code>expires_at</code>, the
+issuance profile's common Mission-creating response member
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): this response is the
+success response that first delivers the newly created Mission's
+identifier, and no OAuth credential accompanies it here.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.5">
+<code>authorization_details</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.6">
+          <p id="section-6-2.6.1"><span class="bcp14">REQUIRED</span>. An array. The consented Authority Set, so the client
 learns its granted authority here; this response is the MAS
 counterpart of the issuance profile's token-response
-<code>authorization_details</code> echo.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+<code>authorization_details</code> echo.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2094,6 +2104,7 @@ Cache-Control: no-store
   "submission_id": "sub_4qV9rL3tY6sB1zN0eF7jB8K2nP",
   "status": "approved",
   "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "mission_expires_at": "2026-12-31T23:59:59Z",
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
@@ -4250,6 +4261,7 @@ Cache-Control: no-store
   "submission_id": "sub_4qV9rL3tY6sB1zN0eF7jB8K2nP",
   "status": "approved",
   "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "mission_expires_at": "2026-12-31T23:59:59Z",
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",

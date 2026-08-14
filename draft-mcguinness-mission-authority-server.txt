@@ -684,6 +684,13 @@ Table of Contents
 
    mission_id:  REQUIRED.  A string.  The Mission's identifier.
 
+   mission_expires_at:  REQUIRED.  A string.  The Mission's effective
+      expires_at, the issuance profile's common Mission-creating
+      response member ([I-D.draft-mcguinness-oauth-mission]): this
+      response is the success response that first delivers the newly
+      created Mission's identifier, and no OAuth credential accompanies
+      it here.
+
    authorization_details:  REQUIRED.  An array.  The consented Authority
       Set, so the client learns its granted authority here; this
       response is the MAS counterpart of the issuance profile's token-
@@ -699,6 +706,7 @@ Table of Contents
      "submission_id": "sub_4qV9rL3tY6sB1zN0eF7jB8K2nP",
      "status": "approved",
      "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+     "mission_expires_at": "2026-12-31T23:59:59Z",
      "authorization_details": [
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
@@ -2454,6 +2462,7 @@ A.2.  Poll to Approved
      "submission_id": "sub_4qV9rL3tY6sB1zN0eF7jB8K2nP",
      "status": "approved",
      "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+     "mission_expires_at": "2026-12-31T23:59:59Z",
      "authorization_details": [
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",

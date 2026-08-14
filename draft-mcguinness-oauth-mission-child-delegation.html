@@ -2004,9 +2004,17 @@ not apply to this artifact.<a href="#section-6.6-5.6.1" class="pilcrow">¶</a></
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.6-5.9">
-<code>parent</code>:</dt>
+<code>mission_expires_at</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.6-5.10">
-            <p id="section-6.6-5.10.1"><span class="bcp14">REQUIRED</span>. The <code>parent</code> member of <a href="#parent-member" class="auto internal xref">Section 7</a>.<a href="#section-6.6-5.10.1" class="pilcrow">¶</a></p>
+            <p id="section-6.6-5.10.1"><span class="bcp14">REQUIRED</span>. The Child Mission's effective <code>expires_at</code>, the issuance
+profile's common Mission-creating response member
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.6-5.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.6-5.11">
+<code>parent</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.6-5.12">
+            <p id="section-6.6-5.12.1"><span class="bcp14">REQUIRED</span>. The <code>parent</code> member of <a href="#parent-member" class="auto internal xref">Section 7</a>.<a href="#section-6.6-5.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2501,9 +2509,19 @@ under the subset rule of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" cl
 or delegation right not present in the parent;<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.3">
-          <p id="section-8-2.3.1">the child's <code>expires_at</code> <span class="bcp14">MUST NOT</span> be later than the parent's
-<code>expires_at</code> (so it transitively caps every child-derived token's
-<code>exp</code>, per <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.3.1">the child's effective <code>expires_at</code> <span class="bcp14">MUST NOT</span> be later than the child
+submission's <code>intent.expires_at</code>, the requested ceiling of the
+issuance profile's requested-versus-effective rule, nor later than
+the parent's <code>expires_at</code> (so it transitively caps every
+child-derived token's <code>exp</code>, per
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); an auditor verifies those
+two inequalities and that any further shortening is justified by
+recorded policy, never by matching a recomputed minimum, since the
+issuance profile permits additional shortening under applicable AS
+policy; child creation inherits the issuance profile's atomic
+creation-time check, so a requested ceiling that passes while the
+creation is pending completes as this profile's creation failure,
+never as a Child Mission;<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.4">
           <p id="section-8-2.4.1">the child <span class="bcp14">MUST</span> be created only where the applicable parent entry's

@@ -2093,14 +2093,35 @@ live Child Missions exist.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
         <h3 id="name-successor-expiry">
 <a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-successor-expiry" class="section-name selfRef">Successor expiry</a>
         </h3>
-<p id="section-5.4-1">The successor's <code>expires_at</code> <span class="bcp14">MUST NOT</span> exceed the predecessor's
+<p id="section-5.4-1">The successor's effective <code>expires_at</code> follows the issuance profile's
+requested-versus-effective rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). It <span class="bcp14">MUST NOT</span> be later than
+the expansion submission's <code>intent.expires_at</code>, the requested
+ceiling. It <span class="bcp14">MUST NOT</span> exceed the predecessor's
 <code>expires_at</code> unless the Mission Issuer's policy explicitly permits
 extension and the extension is disclosed to the Approver at the
-expansion consent event. Expansion is an authority-addition mechanism,
-not a lifetime-extension mechanism. The issuance profile caps every
-derived credential's <code>exp</code> at the Mission's <code>expires_at</code>; a successor that
+expansion consent event, which records the exact approved extension
+ceiling. Expansion is an authority-addition mechanism, not a silent
+lifetime-extension mechanism. The issuance profile caps every derived
+credential's <code>exp</code> at the Mission's <code>expires_at</code>; a successor that
 silently outlived its predecessor would let expansion launder a
 longer-lived Mission past the originally approved horizon.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+<p id="section-5.4-2">The completing success response, the resolving poll or the code
+redemption, <span class="bcp14">MUST</span> carry the effective value in the issuance profile's
+<code>mission_expires_at</code> response member. Completion inherits the
+issuance profile's atomic creation-time check: where the
+submission's <code>intent.expires_at</code> passes while the expansion is
+pending, completion creates no successor Mission and the exchange
+fails with this profile's denial semantics (<a href="#denial-reasons" class="auto internal xref">Section 12</a>).<a href="#section-5.4-2" class="pilcrow">¶</a></p>
+<p id="section-5.4-3">An auditor verifies the successor record by inequalities, never by
+matching a recomputed minimum: in every case the effective value is
+no later than the submission's <code>intent.expires_at</code>; without an
+approved extension it is also no later than the predecessor's
+<code>expires_at</code>; with one, it <span class="bcp14">MAY</span> be later than the predecessor's
+<code>expires_at</code> only when the Mission Issuer's policy permits the
+extension and the exact effective value was rendered and approved at
+the expansion consent event. Any further shortening is justified by
+recorded policy.<a href="#section-5.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
