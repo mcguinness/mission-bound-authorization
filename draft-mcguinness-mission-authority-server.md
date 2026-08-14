@@ -621,6 +621,17 @@ A consumer MUST ignore members it does not recognize.
 | `rate_limited` | 429 | Caller is rate-limited. |
 | `unavailable` | 503 | MAS temporarily cannot serve the request. |
 
+This aligns with the OAuth-shaped surfaces' shared error idiom
+{{I-D.draft-mcguinness-oauth-mission-status}}: an `error`/
+`error_description` JSON object body, `application/json` with
+`Cache-Control: no-store`, and `error_description` diagnostic and
+never authorization input. This surface's own requiredness stays as
+above: `error_description` and `error_reason` are OPTIONAL, and
+`error_reason` is MAS-specific. The MAS does not carry `nonce`; that
+member's requiredness on the status and lifecycle surfaces
+({{I-D.draft-mcguinness-oauth-mission-status}}) and on Mission
+Management does not extend here, a deliberate, frozen divergence.
+
 # Mission Approval {#mission-approval}
 
 Approval at a MAS is natively asynchronous: there is no authorization
