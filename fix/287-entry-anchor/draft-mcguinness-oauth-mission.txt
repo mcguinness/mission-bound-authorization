@@ -2159,9 +2159,18 @@ Table of Contents
    issuer, and value a single Authority Set entry object exactly as
    recorded.  A companion that cites an entry by digest (a decision
    record naming the entry it evaluated, containment or completion state
-   keyed to an entry) computes it this way and this way only; byte-
-   identical entries share a digest and form one equivalence class.
-   This document adds no Mission-record member for it (Appendix B).
+   keyed to an entry) computes it this way and this way only.  Entries
+   whose canonical commitment envelopes are identical produce the same
+   digest, and within one Mission record every recorded entry resolving
+   to the same digest forms one selector equivalence class; the class is
+   defined by the canonical bytes, never by pre-canonical source text
+   the record does not preserve.  The commitment is not a globally
+   unique entry identifier: the envelope binds the issuer, not the
+   Mission, so a protocol that uses it to select or cite an entry MUST
+   bind it to the Mission issuer and Mission identifier whose recorded
+   Authority Set is searched, directly or through an enclosing object
+   whose integrity protection binds them.  This document adds no
+   Mission-record member for it (Appendix B).
 
    SHA-256 is the only digest algorithm this document defines and is
    mandatory to implement; the sha-256: prefix identifies it.  The
@@ -5564,9 +5573,25 @@ Appendix B.  Integrity Anchor Test Vectors
 
    proposal_hash = sha-256:udzftXYQy0pvYNxz4KgtmyL_EV8ry4DhIbBFfwILEBA
 
-   The entry commitment (Section 6.3) over the first entry of the
-   Authority Set above, as the envelope value with typ mission-
-   authority-entry:
+   The entry commitment (Section 6.3) is computed over one immutable
+   Mission-record Authority Set entry, never an issued or narrowed token
+   projection.  Over this entry:
+
+   {
+     "type": "mission_resource_access",
+     "resource": "https://erp.example.com",
+     "actions": ["invoices.read"],
+     "constraints": {
+       "resource_issued_after": "2026-07-01T00:00:00Z",
+       "resource_issued_before": "2026-09-30T23:59:59Z"
+     },
+     "delegation": {
+       "max_depth": 2,
+       "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+     }
+   }
+
+   as the envelope value with typ mission-authority-entry:
 
    {"iss":"https://as.example.com","typ":"mission-authority-entry","v
    alue":{"actions":["invoices.read"],"constraints":{"resource_issued
@@ -5588,6 +5613,11 @@ Appendix C.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  The Authority Set entry commitment: the committed-object typ
+      mission-authority-entry over a single recorded entry, with its
+      Mission-binding rule, selector equivalence class, and test vector
+      (Section 6.3, Appendix B).
 
    *  Breaking change to the Intent carriage shape: the mission_intent
       parameter value is the Mission Intent Submission envelope
