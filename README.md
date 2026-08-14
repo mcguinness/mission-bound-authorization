@@ -105,7 +105,7 @@ with contextual governance applied by the Person Server when it is on
 the path.
 
 The **core** defines the model and its OAuth 2.0 binding. Everything
-else is an OPTIONAL companion profile that layers on without changing
+else is an optional companion profile that layers on without changing
 it.
 
 ## The architecture
@@ -399,7 +399,7 @@ unratified individual draft (OAuth 2.0 RAR Metadata and Error
 Remediation): an AS that advertises Mission-bound authorization
 support MUST advertise the authorization-details type-metadata
 endpoint that draft defines, and its reference to the OAuth Actor
-Profile is informative and confined to its OPTIONAL Delegation
+Profile is informative and confined to its optional Delegation
 capability; **status** depends on the OAuth Status List (a
 working-group document); **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
@@ -513,7 +513,7 @@ builds on this one.
 How a client-side "shaper" turns a user's request into a candidate
 Mission Intent before it is submitted. The shaper only proposes: its
 output is untrusted input until the Mission Issuer validates, narrows,
-and derives authority from it. OPTIONAL Shaping Evidence records how
+and derives authority from it. Optional Shaping Evidence records how
 the proposal was produced. (Informational.)
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-shaping.html)
@@ -976,7 +976,7 @@ and optionally its Authority Set), minted by the Mission Issuer. It is
 evidence, not a credential: presenting it authorizes nothing. It lets a
 cross-domain verifier, an external rail deriving its own vertical
 mandate, or an auditor know what was approved without a token exchange;
-current state still comes from Status or Signals. OPTIONAL selective
+current state still comes from Status or Signals. Optional selective
 disclosure via SD-JWT.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-mandate.html)

@@ -70,6 +70,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8725:
   RFC9110:
   RFC9700:
   I-D.draft-mcguinness-oauth-mission-expansion:
@@ -234,6 +235,10 @@ Per {{RFC7515}} Section 4.1.9 the `typ` header omits the
 `application/` prefix. The full media type
 `application/mission-management-response+jwt` (registered in {{iana}})
 is used as the HTTP `Content-Type`, with `Cache-Control: no-store`.
+Exact validation of the protected `typ` value, together with
+mutually exclusive validation rules for the artifact profiles,
+implements the substitution defense of {{RFC8725}}, Sections 3.11
+and 3.12.
 
 The signed payload carries the members of {{enumeration-response}},
 {{dry-run}}, or {{manifest}}, plus the envelope members:

@@ -4,12 +4,47 @@
     "revision": "fdfaa5b"
   },
   "model": {
-    "roles": ["AS", "client", "RS", "PDP", "PEP", "verifier"],
-    "strengths": ["MUST", "MUST NOT", "SHOULD", "MAY", "stated"],
-    "assertions": ["refusal", "ignore", "output-bound", "no-side-effect", "replay", "privacy", "concurrency"],
-    "surfaces": ["par", "authorization-endpoint", "token-endpoint", "introspection", "derivation", "verification"],
-    "levels": ["unit", "endpoint", "cross-component", "concurrency"],
-    "capabilities": ["core.introspection"]
+    "roles": [
+      "AS",
+      "client",
+      "RS",
+      "PDP",
+      "PEP",
+      "verifier"
+    ],
+    "strengths": [
+      "MUST",
+      "MUST NOT",
+      "SHOULD",
+      "MAY",
+      "stated"
+    ],
+    "assertions": [
+      "refusal",
+      "ignore",
+      "output-bound",
+      "no-side-effect",
+      "replay",
+      "privacy",
+      "concurrency"
+    ],
+    "surfaces": [
+      "par",
+      "authorization-endpoint",
+      "token-endpoint",
+      "introspection",
+      "derivation",
+      "verification"
+    ],
+    "levels": [
+      "unit",
+      "endpoint",
+      "cross-component",
+      "concurrency"
+    ],
+    "capabilities": [
+      "core.introspection"
+    ]
   },
   "requirements": [
     {
@@ -19,7 +54,9 @@
       "text": "The AS MUST reject with `invalid_request` a `mission_intent` presented on a front-channel authorization request that does not use a PAR-issued `request_uri`",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "authorization-endpoint",
       "assertion": "refusal",
       "observation": {
@@ -36,7 +73,9 @@
       "text": "a `mission_intent` submitted outside the Request Object in the same push MUST be rejected with `invalid_request`",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
@@ -54,7 +93,9 @@
       "facet": "evidence-count-and-per-entry-size",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
@@ -86,7 +127,9 @@
       "facet": "envelope-total-intent-total-and-array-lengths",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
@@ -103,7 +146,9 @@
       "text": "the AS MUST ignore any `mission_intent`, `authorization_details`, `scope`, or `resource` presented, and MUST NOT let such a value widen the authority derived from the pushed parameters",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "authorization-endpoint",
       "assertion": "ignore",
       "observation": {
@@ -120,7 +165,9 @@
       "text": "an object carrying duplicate member names is rejected at parse time, before the parsed data model exists",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
@@ -143,7 +190,7 @@
         },
         {
           "file": "src/packages/mission-core/test/anchors.test.ts",
-          "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
+          "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
           "level": "unit",
           "surface": "verification"
         }
@@ -156,7 +203,9 @@
       "text": "A verifier MUST reject a digest whose algorithm prefix it does not recognize",
       "role": "verifier",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "verification",
       "assertion": "refusal",
       "observation": {
@@ -167,7 +216,7 @@
       "tests": [
         {
           "file": "src/packages/mission-core/test/anchors.test.ts",
-          "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+          "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
           "level": "unit",
           "surface": "verification"
         }
@@ -180,7 +229,9 @@
       "text": "An AS MUST reject `max_derivations` below 1 with `invalid_request`",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
@@ -205,7 +256,9 @@
       "text": "the AS MUST maintain a per-Mission count of **derivations** and MUST refuse with `invalid_grant` any derivation that would exceed the bound",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "token-endpoint",
       "assertion": "refusal",
       "observation": {
@@ -230,7 +283,9 @@
       "text": "A derivation that fails, including one refused for exceeding the bound, MUST NOT be counted",
       "role": "AS",
       "strength": "MUST NOT",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "token-endpoint",
       "assertion": "no-side-effect",
       "observation": {
@@ -255,7 +310,9 @@
       "text": "the AS SHOULD include, alongside `error`, the `mission_error` token-error-response member",
       "role": "AS",
       "strength": "SHOULD",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "token-endpoint",
       "assertion": "output-bound",
       "observation": {
@@ -273,7 +330,9 @@
       "text": "an AS whose policy cannot accept the proposed `expires_at` refuses with `invalid_authorization_details` rather than rewriting it",
       "role": "AS",
       "strength": "stated",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
@@ -292,7 +351,9 @@
       "text": "The mapping is a lookup, never synthesis; the AS refuses an Intent that matches no configured mapping with `invalid_authorization_details`",
       "role": "AS",
       "strength": "stated",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "derivation",
       "assertion": "refusal",
       "observation": {
@@ -310,7 +371,9 @@
       "text": "an AS MUST NOT derive Mission-bound authority from a client-supplied `mission_id`",
       "role": "AS",
       "strength": "MUST NOT",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "token-endpoint",
       "assertion": "output-bound",
       "observation": {
@@ -327,7 +390,9 @@
       "text": "A credential the Mission Issuer derives MUST have an `exp` that does not exceed the Mission's `expires_at`",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "token-endpoint",
       "assertion": "output-bound",
       "observation": {
@@ -352,7 +417,9 @@
       "text": "The AS MUST NOT issue a Mission-bound token whose `scope` exceeds the Authority Set",
       "role": "AS",
       "strength": "MUST NOT",
-      "applicability": { "kind": "unconditional" },
+      "applicability": {
+        "kind": "unconditional"
+      },
       "surface": "token-endpoint",
       "assertion": "output-bound",
       "observation": {
@@ -369,7 +436,10 @@
       "text": "the AS MUST return `active: false` and include `mission.state` giving the reason",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "capability", "capability": "core.introspection" },
+      "applicability": {
+        "kind": "capability",
+        "capability": "core.introspection"
+      },
       "surface": "introspection",
       "assertion": "output-bound",
       "observation": {
@@ -388,7 +458,10 @@
       "text": "MUST authenticate the calling party",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "capability", "capability": "core.introspection" },
+      "applicability": {
+        "kind": "capability",
+        "capability": "core.introspection"
+      },
       "surface": "introspection",
       "assertion": "privacy",
       "observation": {
@@ -406,7 +479,10 @@
       "text": "MUST return Mission data only to a caller authorized to receive it, in particular a Resource Server that is an audience of the token",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "capability", "capability": "core.introspection" },
+      "applicability": {
+        "kind": "capability",
+        "capability": "core.introspection"
+      },
       "surface": "introspection",
       "assertion": "privacy",
       "observation": {
@@ -424,7 +500,10 @@
       "text": "MUST audience-filter the response, returning the `authorization_details` entries and Mission data relevant to the caller's audience and not disclosing entries addressed to other audiences",
       "role": "AS",
       "strength": "MUST",
-      "applicability": { "kind": "capability", "capability": "core.introspection" },
+      "applicability": {
+        "kind": "capability",
+        "capability": "core.introspection"
+      },
       "surface": "introspection",
       "assertion": "privacy",
       "observation": {
@@ -435,6 +514,38 @@
       "coverage": "blocked",
       "tests": [],
       "blocked_by": "#526"
+    },
+    {
+      "id": "core.anchors.entry-commitment",
+      "spec": "draft-mcguinness-oauth-mission.md",
+      "anchor": "integrity-anchors",
+      "text": "the **Authority Set entry commitment**, the envelope above with `typ` `mission-authority-entry`, `iss` the Mission `issuer`, and `value` a single Authority Set entry object exactly as recorded",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "verification",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "the displayed entry reproduces the displayed digest exactly, and member insertion order does not change the digest"
+      },
+      "level": "unit",
+      "coverage": "tested",
+      "tests": [
+        {
+          "file": "src/packages/mission-core/test/anchors.test.ts",
+          "name": "Authority Set entry commitment (@spec mission#integrity-anchors) > reproduces the core test vector exactly",
+          "level": "unit",
+          "surface": "verification"
+        },
+        {
+          "file": "src/packages/mission-core/test/anchors.test.ts",
+          "name": "Authority Set entry commitment (@spec mission#integrity-anchors) > resolves different member insertion order to the same digest",
+          "level": "unit",
+          "surface": "verification"
+        }
+      ]
     }
   ]
 }

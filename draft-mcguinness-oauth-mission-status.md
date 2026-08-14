@@ -55,6 +55,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8725:
   RFC9110:
   RFC9700:
   I-D.draft-mcguinness-oauth-mission-expansion:
@@ -404,7 +405,10 @@ carries `typ` of `mission-status-response+jwt` and a `kid` identifying
 the signing key. Per {{RFC7515}} Section 4.1.9 the `typ` header omits
 the `application/` prefix; the full media type
 `application/mission-status-response+jwt` (registered in {{iana}}) is
-used as the HTTP `Content-Type`.
+used as the HTTP `Content-Type`. Exact validation of the protected
+`typ` value, together with mutually exclusive validation rules for
+the artifact profiles, implements the substitution defense of
+{{RFC8725}}, Sections 3.11 and 3.12.
 
 {{RFC9701}} signed introspection responses are scoped to token
 introspection and do not apply to a lookup keyed by `mission_id`; the

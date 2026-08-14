@@ -110,6 +110,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8725:
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
@@ -1407,7 +1408,10 @@ costs one evaluation rather than many.
 
 On success the MAS mints a Mission Join Assertion: a signed JWT
 {{RFC7519}} whose protected header carries the `typ`
-`mission-join+jwt` and a `kid` resolvable in the MAS's `jwks_uri`. Its
+`mission-join+jwt` and a `kid` resolvable in the MAS's `jwks_uri`;
+exact validation of that `typ`, with mutually exclusive validation
+rules for the artifact profiles, implements the substitution defense
+of {{RFC8725}}, Sections 3.11 and 3.12. Its
 claims:
 
 `iss`:
