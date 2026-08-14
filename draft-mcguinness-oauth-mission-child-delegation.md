@@ -1062,9 +1062,11 @@ A Child Mission MUST be bounded by the Parent Mission:
   issuance profile's requested-versus-effective rule, nor later than
   the parent's `expires_at` (so it transitively caps every
   child-derived token's `exp`, per
-  {{I-D.draft-mcguinness-oauth-mission}}); an auditor recomputes the
-  bound as the minimum of the two and matches the child record
-  against it;
+  {{I-D.draft-mcguinness-oauth-mission}}). An auditor recomputes that
+  ceiling as the minimum of the two and verifies that the child record
+  is no later. Where applicable AS policy shortened the child further,
+  the auditor resolves the recorded `policy_version`, recomputes that
+  additional ceiling, and matches the record to the resulting minimum;
 - the child MUST be created only where the applicable parent entry's
   `delegation` member carries a `children` object ({{fanout}});
 - a child entry's `delegation` policy MUST NOT be broader than the

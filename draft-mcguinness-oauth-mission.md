@@ -885,11 +885,18 @@ narrowed `scope`. It has the following members:
   ({{mission-record}}). An AS or Mission-creating profile MAY grant a
   shorter lifetime under applicable policy or an already-approved
   bound; a longer one requires a new submitted value through a
-  creation or fresh-approval path that authorizes it. A malformed or
-  already-past value is refused with `invalid_request` (the member
-  rides `mission_intent`, and the request may carry no
+  creation or fresh-approval path that authorizes it. On a new
+  creation attempt, after any idempotency-recovery lookup a
+  Mission-creating profile requires, the AS MUST refuse a malformed
+  value or one not later than its current time with `invalid_request`
+  (the member rides `mission_intent`, and the request may carry no
   `authorization_details` for an `invalid_authorization_details`
-  refusal to describe).
+  refusal to describe). A pending or interactive approval MUST repeat
+  the time check at activation and MUST NOT commit an already-expired
+  Mission. A request that resolves to an already-committed operation
+  is a recovery, not a new creation attempt: it returns the stored
+  outcome under that profile's idempotency rules even when the
+  requested ceiling has since passed.
 
 `controls`:
 : OPTIONAL. An object of machine-actionable bounds. This
@@ -2019,8 +2026,9 @@ At the approval event the AS MUST, in order:
    activate policy without personally holding every operational
    permission. The AS MUST refuse when either relationship cannot be
    established.
-4. Render for consent the derived Authority Set in human-meaningful
-   terms, with the `goal`, `constraints`, the effective `expires_at`
+4. Establish the effective `expires_at` under the applicable policy,
+   then render for consent the derived Authority Set in human-meaningful
+   terms, with the `goal`, `constraints`, that effective `expires_at`
    (and, when it differs, the requested `intent.expires_at`, so the
    Approver sees the narrowing; the approval commits the effective
    Mission Record while `intent_hash` commits the verbatim request),
@@ -2126,13 +2134,14 @@ does not prove that the carried entries belong to the approved set;
 the relationship is asserted by the AS's signed token and depends on
 the AS applying the subset rule correctly (see {{consent-binding}}).
 
-If the task, the authority proposal, or the derived Authority Set
+If the task, the authority proposal, the derived Authority Set, the
+effective `expires_at`, or a policy input establishing any of them
 changes between approval rendering and the approval decision, the AS
-MUST recompute the anchors the Mission records (`intent_hash` and
-`authority_hash`, and `proposal_hash` where a proposal was
-submitted) and MUST NOT create the
-Mission without the Approver's consent to the changed context, each
-anchor computed over the context actually approved (the
+MUST recompute the affected values and the anchors the Mission records
+(`intent_hash` and `authority_hash`, and `proposal_hash` where a
+proposal was submitted) and MUST NOT create the Mission without the
+Approver's consent to the changed context, each anchor computed over
+the context actually approved (the
 approval-event rule of {{I-D.draft-mcguinness-mission-substrate}},
 stated here across this document's commitments). Committing the
 proposal separately keeps the anchors from equivocating: a proposal
@@ -2177,8 +2186,8 @@ presenting it authorizes nothing ({{lifecycle}}), and a client MUST
 NOT derive authority from it.
 
 Alongside it, this document defines `mission_expires_at` as a
-token-endpoint response parameter: an RFC 3339 string carrying the
-Mission Record's effective `expires_at` ({{mission-record}}). An AS
+token-endpoint response parameter: the exact RFC 3339 string recorded
+as the Mission Record's effective `expires_at` ({{mission-record}}). An AS
 MUST return it on the success response that first delivers a newly
 created Mission's credential and SHOULD return it beside `mission_id`
 on other Mission-bound token responses: `expires_in` describes the
@@ -2611,8 +2620,9 @@ this profile defines:
 `expires_at`:
 : REQUIRED. A string. An RFC 3339 date-time: the AS-established
   effective Mission expiry, after which the AS MUST NOT derive tokens
-  under the Mission. It MUST NOT be later than `intent.expires_at`,
-  the requested ceiling ({{mission-intent}}). Shortening under
+  under the Mission. It MUST be later than `created_at` and MUST NOT
+  be later than `intent.expires_at`, the requested ceiling
+  ({{mission-intent}}). Shortening under
   applicable AS policy, or under an already-approved parent,
   predecessor, or standing-consent bound a Mission-creating profile
   defines, is ordinary narrowing of the granted lifetime, not
@@ -2835,6 +2845,7 @@ carried intact:
   "token_type": "DPoP",
   "expires_in": 300,
   "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "mission_expires_at": "2026-12-31T23:59:59Z",
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
@@ -5383,11 +5394,13 @@ resolve before interoperating.
 - Requested versus effective expiry: `intent.expires_at` is the
   client's requested not-after ceiling and the Mission Record's
   `expires_at` is the AS-established effective lifetime, never later
-  than the request (`invalid_request` for a malformed or already-past
-  value; the exact-mirror rule and the `invalid_authorization_details`
-  refusal are replaced). The new `mission_expires_at` token-response
-  parameter carries the effective value on every Mission-creating
-  success response.
+  than the request (`invalid_request` for a malformed or non-future new
+  request; delayed approval rechecks at activation, while idempotent
+  recovery returns the stored outcome; the exact-mirror rule and the
+  `invalid_authorization_details` refusal are replaced). Approval
+  reconsent covers a changed effective expiry. The new
+  `mission_expires_at` token-response parameter carries the exact
+  effective value on every Mission-creating success response.
 - The Authority Set entry commitment: the committed-object `typ`
   `mission-authority-entry` over a single recorded entry, with its
   Mission-binding rule, selector equivalence class, and test vector

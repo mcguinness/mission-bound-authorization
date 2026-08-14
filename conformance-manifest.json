@@ -332,22 +332,99 @@
       "id": "core.intent.expires-at-refusal",
       "spec": "draft-mcguinness-oauth-mission.md",
       "anchor": "mission-intent",
-      "text": "an AS whose policy cannot accept the proposed `expires_at` refuses with `invalid_authorization_details` rather than rewriting it",
+      "text": "the AS MUST refuse a malformed value or one not later than its current time with `invalid_request`",
       "role": "AS",
-      "strength": "stated",
+      "strength": "MUST",
       "applicability": {
         "kind": "unconditional"
       },
       "surface": "par",
       "assertion": "refusal",
       "observation": {
-        "normative": "unacceptable proposed expires_at fails invalid_authorization_details; the AS never rewrites the value"
+        "normative": "a new creation attempt with malformed or non-future intent.expires_at fails invalid_request; a delayed approval repeats the check before activation",
+        "local": "malformed RFC 3339 syntax is tested at the parser; past-at-intake and expiry-during-approval remain outstanding"
       },
       "level": "endpoint",
-      "coverage": "blocked",
-      "tests": [],
-      "blocked_by": "#525",
-      "notes": "Cross-document contradiction with the Mission Template three-way clamp; no test pins either behavior until #525 resolves."
+      "coverage": "partial",
+      "tests": [
+        {
+          "file": "src/services/authorization-server/test/kernel.test.ts",
+          "name": "intent validation (@spec mission#submission-via-par) > rejects missing required members and bad expires_at",
+          "level": "unit",
+          "surface": "par"
+        }
+      ]
+    },
+    {
+      "id": "core.record.effective-expiry-positive",
+      "spec": "draft-mcguinness-oauth-mission.md",
+      "anchor": "mission-record",
+      "text": "It MUST be later than `created_at`",
+      "role": "AS",
+      "strength": "MUST",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "derivation",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "a Mission is never committed already expired, including after a delayed approval"
+      },
+      "level": "cross-component",
+      "coverage": "todo",
+      "tests": []
+    },
+    {
+      "id": "core.record.effective-expiry-request-ceiling",
+      "spec": "draft-mcguinness-oauth-mission.md",
+      "anchor": "mission-record",
+      "text": "MUST NOT be later than `intent.expires_at`",
+      "role": "AS",
+      "strength": "MUST NOT",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "derivation",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "a newly committed Mission's effective expiry never exceeds the submitted requested ceiling",
+        "local": "Template and Child Mission clamp paths are tested; direct policy shortening, Expansion, and all idempotent-recovery paths remain outstanding"
+      },
+      "level": "cross-component",
+      "coverage": "partial",
+      "tests": [
+        {
+          "file": "src/services/authorization-server/test/template.test.ts",
+          "name": "dispatch gates (@spec mission-template#dispatch-refusals) > clamps expires_at to the earliest of intent / now+lifetime / template (verbatim)",
+          "level": "unit",
+          "surface": "derivation"
+        },
+        {
+          "file": "src/services/authorization-server/test/child-delegation.test.ts",
+          "name": "child mission creation (@spec child-delegation#child-creation, #parent-member) > clamps the child expires_at to the parent's (@spec child-delegation#attenuation)",
+          "level": "unit",
+          "surface": "derivation"
+        }
+      ]
+    },
+    {
+      "id": "core.grant-binding.mission-expires-at-response",
+      "spec": "draft-mcguinness-oauth-mission.md",
+      "anchor": "grant-binding",
+      "text": "An AS MUST return it on the success response that first delivers a newly created Mission's credential",
+      "role": "AS",
+      "strength": "MUST",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "token-endpoint",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "the first credential-delivery response for every Mission-creating flow carries mission_expires_at equal to the effective Mission record value"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": []
     },
     {
       "id": "core.derivation.configured-mapping-lookup",

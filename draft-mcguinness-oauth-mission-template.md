@@ -511,7 +511,11 @@ The Mission Issuer adjudicates a Dispatch in this order:
      `created_at` plus the template's `instance_lifetime`, and the
      template's `expires_at`. The lifetime addend is measured from the
      committed `created_at`, not a separate clock read, so audit
-     recomputation is exact; and
+     recomputation is exact. These are the complete expiry inputs for
+     Dispatch: a deployment that needs a tighter standing-consent
+     lifetime records it in `instance_lifetime` or the template's
+     `expires_at` under a newly consented `template_version`, rather
+     than applying an undisclosed fourth clamp; and
    - `template` lineage member is set ({{template-member}}).
 
 A Dispatch MUST be idempotent per dispatch event identifier. The
