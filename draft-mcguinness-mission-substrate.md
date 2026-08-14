@@ -784,25 +784,47 @@ For the kernel, the Statement MUST provide a checkable mapping for:
    retention.
 
 The Statement MUST then include a capability table with one row for
-each capability in {{capabilities}}.  Each row MUST say `supported`,
-`not supported`, or `conditional`.  A supported or conditional row
-MUST cite the binding sections that satisfy the capability, state its
-mode and operational scope, and list material limitations.  A
-conditional row MUST state the extension, deployment property, or
-cooperating component that supplies the condition.
+each capability in {{capabilities}}.  Each row MUST say `supplied` or
+`not supplied`: a capability is supplied in a named scope when the
+row's stated activation conditions hold, or it is not supplied.
+There is no third state.  The retired `conditional` state conflated
+four different facts, what a specification defines, what an
+implementation supports, what a deployment enables, and where the
+resulting property applies; an activation condition states them
+separately.  A supplied row MUST:
+
+* cite the binding sections that satisfy the capability;
+* state its mode and operational scope;
+* state its activation conditions: the extension, deployment
+  configuration, or cooperating component that must hold for the
+  property to be supplied in that scope, or `always`;
+* state its temporal elements: the fact's freshness at use, the
+  decision or artifact lifetime, and the residual interval after the
+  Mission becomes non-active, each stated directly or expressly
+  inherited from the reliance floor of {{bounded-reliance}};
+* state its failure behavior for absent, stale, unknown,
+  incomparable, invalid, or unavailable input; and
+* list material limitations.
+
+An extension can itself publish a provider claim as a Statement
+extension; a deployment profile declares which extensions and
+activation conditions are active.
 
 The following is a non-normative skeleton:
 
-| Capability | Claim | Scope and defining sections | Limitations |
-| --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supported | Controller permission decisions | Previously issued resource credentials expire independently |
-| State-Observable | conditional | Status extension | Maximum staleness is deployment-configured |
-| Structured Authority | not supported | -- | Approved Context is descriptive |
-| Monotonic Derivation | not supported | -- | No authority comparison relation is defined |
-| Credential-Bound | supported | Native authorization artifact | Covers correlation, not context disclosure |
-| Independently Verifiable | conditional | Signed receipt profile | Proves approval as of issuance, not current state |
-| Portable Evidence | not supported | -- | Governance record is Controller-local |
+| Capability | Claim | Activation | Scope and defining sections | Limitations |
+| --- | --- | --- | --- | --- |
+| Lifecycle-Gated Authorization | supplied | always | Controller permission decisions | Previously issued resource credentials expire independently |
+| State-Observable | supplied | Status extension active | Status responses | Maximum staleness is deployment-configured |
+| Structured Authority | not supplied | -- | -- | Approved Context is descriptive |
+| Monotonic Derivation | not supplied | -- | -- | No authority comparison relation is defined |
+| Credential-Bound | supplied | always | Native authorization artifact | Covers correlation, not context disclosure |
+| Independently Verifiable | supplied | Signed receipt profile active | Signed receipts | Proves approval as of issuance, not current state |
+| Portable Evidence | not supplied | -- | -- | Governance record is Controller-local |
 {: title="Illustrative Mission Substrate Statement capability table"}
+
+A real Statement also carries each supplied row's temporal elements
+and failure behavior; the skeleton omits those columns for width.
 
 Text outside the Statement cannot silently broaden a capability claim.
 If another specification adds a capability, that specification MUST
@@ -821,7 +843,8 @@ Consumers need to match every required property to an explicit
 capability claim and its scope.
 
 A secure implementation fails closed when a required capability is
-absent, conditional but unavailable, or outside its declared scope.
+absent, claimed with unmet activation conditions, or outside its
+declared scope.
 It does not upgrade a kernel-only reference because its syntax
 resembles a credential claim or content digest.
 
@@ -919,12 +942,12 @@ and an extension or deployment can change a row.
 | --- | --- | --- | --- |
 | Contextual-governance kernel | Native Mission record, AS controller, OAuth client/subject mappings | Native Mission record, MAS controller, explicit join boundary | Native Mission reference and PS-controlled contextual Mission |
 | Lifecycle-Gated Authorization | AS gates covered token issuance and derivation | MAS gates its own decisions; OAuth credential issuance requires a cooperating credential issuer | PS gates covered permission or token decisions; coverage depends on the AAuth access mode |
-| State-Observable | Conditional on Status, introspection, or signal support | Conditional on the exposed MAS status mechanism | Not implied by the private Mission blob; requires a management or state extension for other consumers |
+| State-Observable | Supplied when a status, introspection, or signal mechanism is active | Supplied when the MAS exposes a status mechanism | Not implied by the private Mission blob; requires a management or state extension for other consumers |
 | Structured Authority | OAuth authorization details and their type-specific semantics | Can use the OAuth Mission authority representation | Not inherent in the Mission description; scopes or a resource-owned structured language can supply it for their own decision boundary |
 | Monotonic Derivation | Applies where the OAuth profile defines and checks its no-broader-than relation | Applies to MAS-governed authority operations; not automatically to an unchanged AS | Not a baseline cross-hop property; a structured resource policy can define monotonicity within its own vocabulary |
-| Credential-Bound | Mission-bound OAuth credential | Not supplied by the MAS alone; conditional on a verified join or cooperating credential issuer | Native Mission reference can be credential-bound where the PS or federated AS carries and validates it; not every access mode does |
-| Independently Verifiable | Possible where signed credentials expose the property and verification material | Conditional on signed artifacts and the property they expose | A resource can verify a credential, but cannot thereby independently verify private contextual Mission content or the PS's full reasoning |
-| Portable Evidence | Supplied only by evidence, Mandate, or audit profiles that define portable artifacts | Likewise conditional on an evidence profile | A PS-local Mission log is not portable evidence; signed receipts or checkpoints would be an extension |
+| Credential-Bound | Mission-bound OAuth credential | Not supplied by the MAS alone; supplied when a verified join or a cooperating credential issuer is active | Native Mission reference can be credential-bound where the PS or federated AS carries and validates it; not every access mode does |
+| Independently Verifiable | Supplied where signed credentials expose the property and verification material | Supplied when signed artifacts expose the property | A resource can verify a credential, but cannot thereby independently verify private contextual Mission content or the PS's full reasoning |
+| Portable Evidence | Supplied only by evidence, Mandate, or audit profiles that define portable artifacts | Likewise supplied only when an evidence profile is active | A PS-local Mission log is not portable evidence; signed receipts or checkpoints would be an extension |
 {: title="Illustrative capability mapping for existing architectures"}
 
 ## OAuth-Native Mapping
@@ -938,9 +961,9 @@ Monotonic Derivation within the authorization-detail types and
 operations covered by that relation.
 
 Those are strengths of the OAuth binding, not kernel requirements.
-State observation remains conditional on a status, introspection, or
+State observation is supplied when a status, introspection, or
 signals mechanism such as
-{{I-D.draft-mcguinness-oauth-mission-status}}.  Independent
+{{I-D.draft-mcguinness-oauth-mission-status}} is active.  Independent
 verification is limited to the properties actually present in a
 verifiable credential; current state and undisclosed context do not
 follow from a Mission identifier or hash alone.
@@ -954,8 +977,8 @@ It does not, by itself, prove that an OAuth access token was issued
 under a Mission.  A verified join can establish correlation, and a
 cooperating credential issuer can add stronger lifecycle and
 credential-binding properties.  The MAS Statement needs to describe
-those as conditional capabilities and preserve the boundary between
-MAS assertions and Authorization Server behavior.
+those with their activation conditions and preserve the boundary
+between MAS assertions and Authorization Server behavior.
 
 ## AAuth-Native Mapping
 
