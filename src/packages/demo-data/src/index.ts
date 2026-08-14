@@ -92,6 +92,32 @@ function reqStringArray(
   return v as string[];
 }
 
+/**
+ * An OPTIONAL map of string -> string array (e.g. audience -> resource URIs).
+ * Absent is valid (returns undefined, the caller's identity-default case);
+ * present MUST be an object whose every value is a non-empty string array.
+ */
+function optStringArrayMap(
+  file: string,
+  obj: Record<string, unknown>,
+  key: string,
+  ctx: string,
+): Record<string, string[]> | undefined {
+  const v = obj[key];
+  if (v === undefined) return undefined;
+  if (v === null || typeof v !== "object" || Array.isArray(v)) {
+    throw new ConfigError(file, `${ctx}.${key} must be an object mapping strings to string arrays`);
+  }
+  const out: Record<string, string[]> = {};
+  for (const [k, arr] of Object.entries(v as Record<string, unknown>)) {
+    if (!Array.isArray(arr) || !arr.every((x) => typeof x === "string")) {
+      throw new ConfigError(file, `${ctx}.${key}.${k} must be a string array`);
+    }
+    out[k] = arr as string[];
+  }
+  return out;
+}
+
 function reqEnum<T extends string>(
   file: string,
   obj: Record<string, unknown>,
@@ -720,6 +746,52 @@ function loadClients(): [ClientSeed, ...ClientSeed[]] {
 }
 
 const CLIENTS = loadClients();
+
+/**
+ * @spec mission#caller-authorization-and-minimization — one registered RFC 7662
+ * introspection principal (a protected-resource caller): its stable
+ * identifier, its shared secret (dev-grade; a production deployment uses real
+ * client authentication), the audiences it is authorized to introspect, and
+ * its explicit disclosure privileges ("provenance" -> `proposal_hash`,
+ * "status_list" -> the Status List reference). The audience decision is
+ * derived from this registration, never from a caller-supplied value.
+ */
+export interface IntrospectionPrincipal {
+  principal_id: string;
+  secret: string;
+  audiences: string[];
+  disclose: string[];
+  /**
+   * @spec mission#caller-authorization-and-minimization (cleanup, issue #541)
+   * — OPTIONAL deployment mapping from an OAuth `aud`/resource-indicator
+   * value this principal is registered for to the Authority Set `resource`
+   * identifier(s) it corresponds to. An OAuth audience need not be byte-equal
+   * to a RAR `resource` (the core explicitly allows a deployment's own
+   * mapping); an audience absent from this map defaults to IDENTITY (itself).
+   */
+  audience_resources?: Record<string, string[]>;
+}
+
+/** Load + validate config/introspection.json (registered introspection principals). */
+function loadIntrospectionPrincipals(): IntrospectionPrincipal[] {
+  const file = "introspection.json";
+  const arr = asArray(file, readJson(file), "introspection");
+  return arr.map((raw, i) => {
+    const obj = asObject(file, raw, `introspection[${i}]`);
+    const ctx = `introspection[${i}]`;
+    const audienceResources = optStringArrayMap(file, obj, "audience_resources", ctx);
+    return {
+      principal_id: reqString(file, obj, "principal_id", ctx),
+      secret: reqString(file, obj, "secret", ctx),
+      audiences: reqStringArray(file, obj, "audiences", ctx),
+      disclose: reqStringArray(file, obj, "disclose", ctx),
+      ...(audienceResources ? { audience_resources: audienceResources } : {}),
+    };
+  });
+}
+
+/** The validated introspection principals (@see loadIntrospectionPrincipals). */
+export const INTROSPECTION_PRINCIPALS: IntrospectionPrincipal[] = loadIntrospectionPrincipals();
 
 /** Build a confidential client (private_key_jwt) from a seed: fresh key per boot (D25). */
 async function buildSeededClient(client: ClientSeed): Promise<SeededClient> {

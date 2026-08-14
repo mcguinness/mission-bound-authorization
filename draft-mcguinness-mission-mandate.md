@@ -41,6 +41,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8725:
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
@@ -248,7 +249,10 @@ The protected header MUST carry:
 `typ`:
 : REQUIRED. `mission-mandate+jwt`. Per {{RFC7515}} Section 4.1.9 the
   value omits the `application/` prefix of the media type registered
-  in {{iana}}.
+  in {{iana}}. Exact validation of the protected `typ` value,
+  together with mutually exclusive validation rules for the artifact
+  profiles, implements the substitution defense of {{RFC8725}},
+  Sections 3.11 and 3.12.
 
 `alg`:
 : REQUIRED. An asymmetric JWS algorithm. `none` MUST NOT be used.
@@ -281,7 +285,11 @@ The protected header MUST carry:
 
 `subject`:
 : REQUIRED. An object with `iss` and `sub`, the Mission record's
-  `subject`.
+  `subject`: the same value the cross-domain Origin Principal profile
+  carries as `mission.subject`
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), so a Mandate
+  presentation and a conforming credential identify one origin
+  principal by value.
 
 `approver`:
 : REQUIRED. An object with `iss` and `sub`, the Mission record's

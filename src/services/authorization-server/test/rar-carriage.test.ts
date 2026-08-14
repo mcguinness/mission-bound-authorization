@@ -22,7 +22,7 @@
 
 import { type Server } from "node:http";
 import { computeAnchor, PROPOSED_AUTHORITY_TYP, proposalHash } from "@mission/core";
-import { DERIVATION_POLICY, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { DERIVATION_POLICY } from "@mission/demo-data";
 import { buildInsufficientAuthorization } from "@mission/mcp-payments";
 import { exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -508,8 +508,11 @@ describe("end-to-end issuance under the new carriage", () => {
     expect(record?.proposal_hash).toBe(proposalHash(ISSUER, OVER_ASK as never));
     const introspection = await fetch(`${ISSUER}/introspect`, {
       method: "POST",
-      headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
-      body: JSON.stringify({ token: body.access_token }),
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        authorization: `Basic ${Buffer.from("rs-payments:dev-introspection-rs-payments").toString("base64")}`,
+      },
+      body: new URLSearchParams({ token: body.access_token }).toString(),
     });
     const intro = (await introspection.json()) as {
       active: boolean;

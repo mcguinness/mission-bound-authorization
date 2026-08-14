@@ -52,6 +52,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8725:
   I-D.draft-mcguinness-oauth-mission-template:
     title: "Mission Template for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
@@ -1009,7 +1010,11 @@ representation, the JWS itself rather than its payload: the payload's
 identifier stays `application/mission-consent-evidence+json`, the value
 the audit profile's evidence-type table and its
 `payload-preimage-content-type` carry
-({{I-D.draft-mcguinness-mission-audit}}). A verifier:
+({{I-D.draft-mcguinness-mission-audit}}). Exact validation of the
+protected `typ`, together with the profile-specific JWS validation
+rules below, supplies a substitution defense analogous to
+{{RFC8725}}, Sections 3.11 and 3.12; this object is not a JWT and
+inherits no other JWT BCP requirement. A verifier:
 
 1. removes `evidence_envelope`;
 2. canonicalizes the remaining Consent Evidence object with JCS;

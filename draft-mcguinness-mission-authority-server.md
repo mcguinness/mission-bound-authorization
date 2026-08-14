@@ -110,6 +110,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8725:
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
@@ -619,6 +620,17 @@ A consumer MUST ignore members it does not recognize.
 | `not_found` | 404 | A referenced submission or Mission does not exist OR is not visible to the caller. |
 | `rate_limited` | 429 | Caller is rate-limited. |
 | `unavailable` | 503 | MAS temporarily cannot serve the request. |
+
+This aligns with the OAuth-shaped surfaces' shared error idiom
+{{I-D.draft-mcguinness-oauth-mission-status}}: an `error`/
+`error_description` JSON object body, `application/json` with
+`Cache-Control: no-store`, and `error_description` diagnostic and
+never authorization input. This surface's own requiredness stays as
+above: `error_description` and `error_reason` are OPTIONAL, and
+`error_reason` is MAS-specific. The MAS does not carry `nonce`; that
+member's requiredness on the status and lifecycle surfaces
+({{I-D.draft-mcguinness-oauth-mission-status}}) and on Mission
+Management does not extend here, a deliberate, frozen divergence.
 
 # Mission Approval {#mission-approval}
 
@@ -1407,7 +1419,10 @@ costs one evaluation rather than many.
 
 On success the MAS mints a Mission Join Assertion: a signed JWT
 {{RFC7519}} whose protected header carries the `typ`
-`mission-join+jwt` and a `kid` resolvable in the MAS's `jwks_uri`. Its
+`mission-join+jwt` and a `kid` resolvable in the MAS's `jwks_uri`;
+exact validation of that `typ`, with mutually exclusive validation
+rules for the artifact profiles, implements the substitution defense
+of {{RFC8725}}, Sections 3.11 and 3.12. Its
 claims:
 
 `iss`:

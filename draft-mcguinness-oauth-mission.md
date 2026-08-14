@@ -64,6 +64,8 @@ normative:
       ISO: "4217:2015"
 
 informative:
+  I-D.draft-ietf-wimse-arch:
+  I-D.draft-ietf-oauth-spiffe-client-auth:
   RFC8126:
   RFC7009:
   RFC8935:
@@ -102,10 +104,10 @@ informative:
     date: 2022
   MCP:
     title: "Model Context Protocol: Authorization"
-    target: https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization
+    target: https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization
     author:
       - org: Model Context Protocol Project
-    date: 2025
+    date: 2026
   AuthZEN.ARAP:
     title: "OpenID AuthZEN Access Request and Approval Profile 1.0"
     target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
@@ -584,7 +586,8 @@ considered and where it belongs, not that it was overlooked.
   verifiable provenance that would require, are future work.
 - **Decentralized agent identity.** Agent identity and credentialing
   are out of scope ({{I-D.draft-klrc-aiagent-auth}}, and workload
-  identity efforts such as WIMSE); this profile governs the
+  identity efforts such as WIMSE,
+  {{I-D.draft-ietf-wimse-arch}}); this profile governs the
   approved-task artifact those identities act within, not the
   identities themselves.
 - **Cross-audience unlinkability.** A single canonical Mission
@@ -2266,6 +2269,26 @@ profiles that extend this document share a namespace coordinated
 through this document series' change controller, or a registry a
 future revision establishes, for this reason.
 
+One further committed object is defined here because several
+companions reference it: the **Authority Set entry commitment**, the
+envelope above with `typ` `mission-authority-entry`, `iss` the
+Mission `issuer`, and `value` a single Authority Set entry object
+exactly as recorded. A companion that cites an entry by digest (a
+decision record naming the entry it evaluated, containment or
+completion state keyed to an entry) computes it this way and this
+way only. Entries whose canonical commitment envelopes are identical
+produce the same digest, and within one Mission record every
+recorded entry resolving to the same digest forms one selector
+equivalence class; the class is defined by the canonical bytes,
+never by pre-canonical source text the record does not preserve. The
+commitment is not a globally unique entry identifier: the envelope
+binds the issuer, not the Mission, so a protocol that uses it to
+select or cite an entry MUST bind it to the Mission `issuer` and
+Mission identifier whose recorded Authority Set is searched, directly
+or through an enclosing object whose integrity protection binds
+them. This document adds no Mission-record member for it
+({{test-vectors}}).
+
 SHA-256 is the only digest algorithm this document defines and is
 mandatory to implement; the `sha-256:` prefix identifies it. The
 prefix is the algorithm-agility mechanism, and the reject-unknown,
@@ -3542,6 +3565,20 @@ the following:
 - **Each delegation is gated.** Issuing a delegated token is a
   derivation event; the AS MUST refuse it unless the Mission is
   `active` ({{lifecycle}}).
+
+Delegation history follows authorization continuity, not
+organizational topology. The `act` chain nests (`act.act`) exactly
+while authority continues under the same approved Mission; a new
+approval basis, a Child Mission
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) or an
+expansion successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
+begins its own delegation basis and its own chain; and no boundary of
+organization, network, or deployment topology by itself restarts or
+extends a chain. The chain is attribution, never authority: an `act`
+entry identifies an actor, an asserted actor identity grants nothing,
+and a consumer MUST NOT treat the chain as proof that authority
+narrowed; the `authorization_details` subset relations prove that
+({{subset}}).
 
 Where a deployment authenticates client instances
 ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}; for AI
@@ -4954,8 +4991,10 @@ under Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`.
 
 ## Stage 0: Agent Identity (by Reference)
 
-The agent is an OAuth client with a workload identity (for example a
-WIMSE or SPIFFE identity), and `alice` has delegated to it through an
+The agent is an OAuth client with a workload identity (for example,
+a workload identity established using WIMSE or SPIFFE,
+{{I-D.draft-ietf-wimse-arch}},
+{{I-D.draft-ietf-oauth-spiffe-client-auth}}), and `alice` has delegated to it through an
 ordinary authorization-code flow, per
 {{I-D.draft-klrc-aiagent-auth}}: `client_id` is the agent and the
 token `sub` is `alice`. This document adds the Mission layer on top of
@@ -5294,6 +5333,41 @@ resource_access"}]}
 proposal_hash = sha-256:udzftXYQy0pvYNxz4KgtmyL_EV8ry4DhIbBFfwILEBA
 ~~~
 
+The entry commitment ({{integrity-anchors}}) is computed over one
+immutable Mission-record Authority Set entry, never an issued or
+narrowed token projection. Over this entry:
+
+~~~ json
+{
+  "type": "mission_resource_access",
+  "resource": "https://erp.example.com",
+  "actions": ["invoices.read"],
+  "constraints": {
+    "resource_issued_after": "2026-07-01T00:00:00Z",
+    "resource_issued_before": "2026-09-30T23:59:59Z"
+  },
+  "delegation": {
+    "max_depth": 2,
+    "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+  }
+}
+~~~
+
+as the envelope `value` with `typ` `mission-authority-entry`:
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-authority-entry","v
+alue":{"actions":["invoices.read"],"constraints":{"resource_issued
+_after":"2026-07-01T00:00:00Z","resource_issued_before":"2026-09-
+30T23:59:59Z"},"delegation":{"allowed_delegates":[{"sub_profile":"
+ai_agent"}],"max_depth":2},"resource":"https://erp.example.com","t
+ype":"mission_resource_access"}}
+~~~
+
+~~~ text
+entry_digest = sha-256:OUrwTnuirT29YxQmMSyiJce8W1PfGryvrVViQ1lJCqQ
+~~~
+
 An implementation that canonicalizes the same `value` under the same
 `typ` and `iss`, computes SHA-256, and encodes as `sha-256:` followed by
 base64url with no padding ({{integrity-anchors}}) reproduces these
@@ -5314,6 +5388,10 @@ resolve before interoperating.
   refusal are replaced). The new `mission_expires_at` token-response
   parameter carries the effective value on every Mission-creating
   success response.
+- The Authority Set entry commitment: the committed-object `typ`
+  `mission-authority-entry` over a single recorded entry, with its
+  Mission-binding rule, selector equivalence class, and test vector
+  ({{integrity-anchors}}, {{test-vectors}}).
 - Breaking change to the Intent carriage shape: the `mission_intent`
   parameter value is the Mission Intent Submission envelope
   ({{submission-via-par}}), `intent` plus an OPTIONAL typed

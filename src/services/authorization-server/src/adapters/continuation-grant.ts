@@ -35,7 +35,7 @@ import {
   validateContinuationAssertion,
 } from "../kernel/continuation-assertion.js";
 import { ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain.js";
-import { isSubsetSet } from "../kernel/derive.js";
+import { isSubsetSet, projectThroughEffective } from "../kernel/derive.js";
 import { UniqueViolationError } from "@mission/store";
 import {
   type CreationOperation,
@@ -781,7 +781,10 @@ async function deliverAsyncDelegationFamily(
  * family grant's issuance-time rar through the Mission's CURRENT effective set
  * (approved minus contained) for a RESUMED delivery, exactly as the provider's
  * rarThroughContainment does for refresh responses. No containment -> the same
- * array (fast path).
+ * array (fast path). The narrowing itself is {@link projectThroughEffective}
+ * (shared with provider.ts and the introspection credential/Mission-authority
+ * intersection, @spec mission#introspection): actions-only narrowing, nothing
+ * inherited from the target.
  */
 function projectRarThroughEffective(
   kernel: AdapterOptions["kernel"],
@@ -789,16 +792,7 @@ function projectRarThroughEffective(
   rar: AuthorityEntry[],
 ): AuthorityEntry[] {
   if (!record.containment) return rar;
-  const effective = kernel.effectiveAuthoritySet(record);
-  const filtered: AuthorityEntry[] = [];
-  for (const detail of rar) {
-    const eff = effective.find((e) => e.resource === detail.resource);
-    if (!eff) continue; // the whole entry is contained
-    const actions = detail.actions.filter((a) => eff.actions.includes(a));
-    if (actions.length === 0) continue; // every action contained
-    filtered.push(actions.length === detail.actions.length ? detail : { ...detail, actions });
-  }
-  return filtered;
+  return projectThroughEffective(rar, kernel.effectiveAuthoritySet(record));
 }
 
 /**
