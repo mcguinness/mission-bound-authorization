@@ -53,23 +53,22 @@ describe("compromise-boundary rule (@spec runtime-evidence#evidence-integrity-si
 
       it("compromised with no authenticated boundary is not verified, even with a valid proof", () => {
         expectAudit(
-          evaluateCompromiseBoundary(
-            COMPROMISED_NO_BOUNDARY,
-            VALID_PRE("complete-artifact"),
-          ),
+          evaluateCompromiseBoundary(COMPROMISED_NO_BOUNDARY, VALID_PRE("complete-artifact")),
         );
       });
 
       it("a verified pre-boundary proof over the complete signed artifact permits continuation", () => {
-        expect(
-          evaluateCompromiseBoundary(COMPROMISED, VALID_PRE("complete-artifact")),
-        ).toEqual({ applicable: true, verified: true });
+        expect(evaluateCompromiseBoundary(COMPROMISED, VALID_PRE("complete-artifact"))).toEqual({
+          applicable: true,
+          verified: true,
+        });
       });
 
       it("a verified pre-boundary proof over the unambiguous typed digest permits continuation", () => {
-        expect(
-          evaluateCompromiseBoundary(COMPROMISED, VALID_PRE("typed-digest")),
-        ).toEqual({ applicable: true, verified: true });
+        expect(evaluateCompromiseBoundary(COMPROMISED, VALID_PRE("typed-digest"))).toEqual({
+          applicable: true,
+          verified: true,
+        });
       });
 
       it("a proof authenticated exactly at the boundary does not rescue", () => {
@@ -92,9 +91,7 @@ describe("compromise-boundary rule (@spec runtime-evidence#evidence-integrity-si
 
       it("a missing, unavailable, or unresolvable proof is an audit failure, never tampering", () => {
         for (const reason of ["missing", "unavailable", "unresolvable"] as const) {
-          expectAudit(
-            evaluateCompromiseBoundary(COMPROMISED, { presented: false, reason }),
-          );
+          expectAudit(evaluateCompromiseBoundary(COMPROMISED, { presented: false, reason }));
         }
       });
 

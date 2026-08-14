@@ -19,11 +19,7 @@ export type SigningKeyStatus =
 
 export type ProofCommitment = "complete-artifact" | "typed-digest";
 
-export type ProofFailure =
-  | "signature"
-  | "inclusion"
-  | "type-binding"
-  | "digest-linkage";
+export type ProofFailure = "signature" | "inclusion" | "type-binding" | "digest-linkage";
 
 /** An independently trusted existence proof, as presented to the verifier. */
 export type RecoveryProof =
