@@ -27,6 +27,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC3339:
   RFC6234:
   RFC6838:
@@ -1654,6 +1662,23 @@ a common wire carrier.
   reference; this member formalizes that requirement as a coordinated
   extension.
 
+`principal_mapping`:
+: OPTIONAL. An object, recorded on Decision Evidence and Refusal
+  Records when the decision evaluated the cross-domain Origin
+  Principal profile's mapping
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), and on the
+  issuance-time derivation record for the mapping decision itself.
+  Sub-members: `origin` (REQUIRED, a protected origin-subject
+  reference), `local` (REQUIRED, a protected local-subject
+  reference), `policy` (REQUIRED, an object with `id` and `version`
+  naming the mapping policy applied), `observed_at` (REQUIRED, an RFC
+  3339 date-time), and `valid_until` (REQUIRED, an RFC 3339
+  date-time, the observation's validity bound). Protected references
+  follow the privacy rule of this document ({{evidence-pii}}).
+  Execution Evidence joins the mapping through `evaluation_id` rather
+  than carrying the object again. Registered and owned by the
+  cross-domain profile.
+
 # Conformance {#conformance}
 
 This document defines conformance for four roles: a PRODUCER that
@@ -1791,7 +1816,7 @@ The runtime profile's evidence-privacy guidance
 ({{I-D.draft-mcguinness-mission-runtime}}) applies in full. This
 section addresses the concrete records this document defines.
 
-## Evidence as PII sinks
+## Evidence as PII sinks {#evidence-pii}
 
 Decision Evidence, Execution Evidence, and Refusal Records carry the
 authenticated
@@ -1803,6 +1828,24 @@ timing. These records are PII sinks and SHOULD
 be access-controlled to audit consumers with a legitimate need,
 encrypted at rest, and retained per the window of
 {{execution-evidence-object}}.
+
+Where the cross-domain Origin Principal profile is in use
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), retained
+records SHOULD carry the composed `principal_mapping` extension
+member ({{evidence-extensions}}) with protected subject references,
+not raw identities, unless the raw identity is necessary for the
+stated audit purpose. A protected subject reference is one of: an
+audit-domain-scoped keyed pseudonym (an HMAC under an audit key,
+carried with a method identifier, a key identifier, and rotation
+semantics); a random opaque mapping reference resolvable by
+authorized auditors; or, only where cross-record correlation is
+explicitly intended, the deterministic public digest of the family
+anchor idiom ({{I-D.draft-mcguinness-oauth-mission}}) with typ
+`mission-origin-subject` over the closed `{iss, sub}` object. A
+deterministic digest of an enumerable identifier is
+dictionary-attackable: it is correlation infrastructure, not
+concealment, and a deployment using it MUST disclose that
+limitation.
 
 ## Parameter exposure
 
