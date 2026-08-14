@@ -48,6 +48,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime-evidence:
     title: "Mission Runtime Evidence"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
@@ -730,6 +738,13 @@ mapping itself local. This document requires that the Mission binding
 (`mission.id`, `mission.issuer`, and `authority_hash`) and the
 audience-scoped `authorization_details` remain bounded as described
 here.
+
+In the substrate's transition classification
+({{I-D.draft-mcguinness-mission-substrate}}), the origin's
+audience-scoped projection is `attenuate` (a provable no-broader-than
+relation to the approved set) and the Resource AS's local re-mint is
+`decide_anew` (a fresh decision under local policy): local issuance
+is never a silent attenuation of the origin's authority.
 
 Downstream, `authority_hash` is an immutable audit and correlation
 anchor to the originating AS's consent commitment. A Resource AS and
