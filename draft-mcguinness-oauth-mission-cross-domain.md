@@ -266,7 +266,7 @@ applies equally to any conforming cross-domain grant.
 
 The grant shape this document profiles is already deployed: the
 Model Context Protocol's Enterprise-Managed Authorization extension
-(Cross App Access) carries the same Identity Assertion JWT
+carries the same Identity Assertion JWT
 Authorization Grant between enterprise identity providers and MCP
 applications ({{MCP-EMA}}), a shipped surface
 for the pattern this profile attaches Mission context to.

@@ -26,8 +26,8 @@ author:
 
 informative:
   A2A:
-    title: "Agent2Agent (A2A) Protocol Specification"
-    target: https://a2a-protocol.org/latest/specification/
+    title: "Agent2Agent (A2A) Protocol Specification, Version 1.0"
+    target: https://a2a-protocol.org/v1.0.0/specification/
     author:
       - org: A2A Project
     date: 2026

@@ -1007,11 +1007,11 @@ representation, the JWS itself rather than its payload: the payload's
 identifier stays `application/mission-consent-evidence+json`, the value
 the audit profile's evidence-type table and its
 `payload-preimage-content-type` carry
-({{I-D.draft-mcguinness-mission-audit}}). The explicit-typing
-discipline of the JWT BCP ({{RFC8725}}, Section 3.11) applies to
-this JWS by analogy: the protected `typ` is the type-confusion
-defense, and the object is not a JWT and inherits no other JWT BCP
-requirement. A verifier:
+({{I-D.draft-mcguinness-mission-audit}}). Exact validation of the
+protected `typ`, together with the profile-specific JWS validation
+rules below, supplies a substitution defense analogous to
+{{RFC8725}}, Sections 3.11 and 3.12; this object is not a JWT and
+inherits no other JWT BCP requirement. A verifier:
 
 1. removes `evidence_envelope`;
 2. canonicalizes the remaining Consent Evidence object with JCS;
