@@ -285,7 +285,11 @@ The protected header MUST carry:
 
 `subject`:
 : REQUIRED. An object with `iss` and `sub`, the Mission record's
-  `subject`.
+  `subject`: the same value the cross-domain Origin Principal profile
+  carries as `mission.subject`
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), so a Mandate
+  presentation and a conforming credential identify one origin
+  principal by value.
 
 `approver`:
 : REQUIRED. An object with `iss` and `sub`, the Mission record's

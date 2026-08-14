@@ -61,6 +61,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
@@ -1801,6 +1809,18 @@ timing. These records are PII sinks and SHOULD
 be access-controlled to audit consumers with a legitimate need,
 encrypted at rest, and retained per the window of
 {{execution-evidence-object}}.
+
+Where the cross-domain Origin Principal profile is in use
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), Decision
+Evidence, Execution Evidence, and derivation records SHOULD carry the
+origin principal as an issuer-qualified digest together with the
+mapping-policy identifier and version, not as the raw identity,
+unless the raw identity is necessary for the stated audit purpose.
+The digest is computed with the family anchor idiom
+({{I-D.draft-mcguinness-oauth-mission}}) with typ
+`mission-origin-subject` over the closed `{iss, sub}` object, so it
+is domain-separated, deterministic, and comparable across records
+without disclosing the identifier.
 
 ## Parameter exposure
 

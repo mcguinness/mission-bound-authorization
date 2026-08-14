@@ -96,6 +96,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC9457:
   RFC9470:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
@@ -457,6 +465,20 @@ so a change in state never mints a new `policy_view_id`
   the current view, so a PEP need not supply it; a PEP that has the
   value supplies it and the PDP uses it as a content-addressed
   correlator. When present it is checked as in {{pdp-request}}.
+
+`subject`:
+: OPTIONAL. A closed object with exactly `iss` and `sub`: the
+  Mission's origin principal, value-unchanged from the Mission
+  Record, per the cross-domain profile's Origin Principal rules
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). REQUIRED for
+  a request claiming that profile. The PEP populates it only from a
+  verified token or delegation chain, or from trusted local token
+  metadata, never from an unverified request value. The PDP compares
+  it with the identity used for local-entitlement lookup and binds
+  the permit and its evidence to both the origin and the local
+  subject identity. The AuthZEN `subject` (the authenticated local
+  token subject) and `context.actor` (the acting lineage) keep their
+  meanings: the three identities never collapse.
 
 This context anchors the Mission's approved Authority Set through
 `authority_hash`. Where a Mission participates in a companion that

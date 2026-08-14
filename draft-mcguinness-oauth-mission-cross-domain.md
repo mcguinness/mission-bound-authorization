@@ -48,6 +48,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   OIDF-FED:
     title: "OpenID Federation for OpenID Connect 1.1"
     target: https://openid.net/specs/openid-federation-connect-1_1-final.html
@@ -572,8 +580,9 @@ Mission-bound access token plays no part here. The identity the
 issued grant conveys *to* the Resource AS is the Mission's Subject,
 which the AS populates from the Mission's recorded `subject` and
 which the Resource AS resolves locally per the identity chaining
-rules (this document defines no cross-domain subject mapping,
-{{validation-at-resource-as}}).
+rules ({{validation-at-resource-as}}; account linking stays local,
+and the Origin Principal profile standardizes the mapping input and
+its invariants, {{origin-principal}}).
 
 Sender-constraining is REQUIRED for the cross-domain grant, stronger
 than the RECOMMENDED level the issuance profile sets for the primary
@@ -709,15 +718,18 @@ matcher, an actor-type class rather than a domain-relative identifier
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Delegation
 Constraints").
 
-This document does not define cross-domain subject mapping. A Resource
-AS consuming a Mission-bound cross-domain grant resolves the subject
-of any local token according to the cross-domain grant profile in use
-(the Identity Assertion Authorization Grant profile in the recommended
-case), the OAuth identity chaining architecture, and its local trust
-and account-linking policy. This document only requires that the
-Mission binding (`mission.id`, `mission.issuer`, and `authority_hash`)
-and the audience-scoped `authorization_details` remain bounded as
-described here.
+This document defines no universal account-linking protocol. A
+Resource AS consuming a Mission-bound cross-domain grant resolves the
+subject of any local token according to the cross-domain grant
+profile in use (the Identity Assertion Authorization Grant profile in
+the recommended case), the OAuth identity chaining architecture, and
+its local trust and account-linking policy. The Origin Principal
+profile ({{origin-principal}}) standardizes the mapping input, the
+continuity invariant, and the authorization rule while leaving the
+mapping itself local. This document requires that the Mission binding
+(`mission.id`, `mission.issuer`, and `authority_hash`) and the
+audience-scoped `authorization_details` remain bounded as described
+here.
 
 Downstream, `authority_hash` is an immutable audit and correlation
 anchor to the originating AS's consent commitment. A Resource AS and
@@ -733,6 +745,173 @@ A Resource AS or auditor that needs to verify the conveyed entries
 against the approved commitment MAY obtain a Mission Mandate
 ({{I-D.draft-mcguinness-mission-mandate}}) and recompute
 `authority_hash` per that profile.
+
+# The Origin Principal Profile {#origin-principal}
+
+This OPTIONAL profile preserves the on-behalf-of principal across
+organizational boundaries and makes authorization at every point of
+use dual-axis: the agent's delegated authority and that principal's
+current entitlement are independent requirements. A deployment that
+does not claim it keeps this document's baseline unchanged.
+
+Three identities stay deliberately separate and are never collapsed:
+
+| Identity | Wire location | Meaning |
+|---|---|---|
+| Origin principal | `mission.subject` (`{iss, sub}`) | Immutable on-behalf-of principal approved by the Mission Issuer |
+| Local subject | JWT `sub` with JWT `iss` | Destination-domain principal mapped from the origin principal |
+| Acting workload(s) | `client_id`, `act`, presenter `cnf` | The client and delegation lineage exercising authority |
+
+## The `mission.subject` Member {#mission-subject}
+
+`subject`:
+: REQUIRED on a credential, delegation chain, or projected local
+  token claiming this profile. A closed object carried in the
+  `mission` claim, containing exactly `iss` (REQUIRED, the Subject's
+  home issuer) and `sub` (REQUIRED, the Subject within that issuer's
+  namespace). The value MUST equal the immutable `subject` of the
+  originating Mission Record, and the invariant is VALUE equality of
+  the closed object: the member survives re-signing and
+  re-serialization at every hop and projection, so byte comparison of
+  a serialization is not the test. It is identity provenance and a
+  constraint input; it MUST NOT grant or widen authority. A generic
+  Mission consumer ignores it under the issuance profile's open-claim
+  rule; a consumer claiming this profile MUST verify it or fail
+  closed. No display name, email, organization, role, group,
+  entitlement, or assurance member is permitted in the object: those
+  change independently and would turn the invariant into stale
+  identity state. The member MUST NOT contain human-readable PII.
+
+Each surface has one attestation authority. On a holder-mediated
+delegation chain the value is root-attested: the Mission Issuer signs
+it into the root, and chain validation verifies it unchanged at every
+hop, so no per-hop identity binding is needed for this member. On a
+projected local token the destination Resource AS's signature attests
+that it copied the verified value. On an introspection response the
+responding AS asserts it, gated by the disclosure rule below.
+
+## Origin Issuance {#origin-principal-issuance}
+
+Before placing `mission.subject` on a credential, the Mission Issuer
+MUST take it from the approved immutable Mission Record, never from a
+token request parameter; MUST keep the local token `sub` the
+injective AS-local mapping of that same Subject the issuance profile
+requires at approval ({{I-D.draft-mcguinness-oauth-mission}}); and
+MUST disclose it only to audiences permitted by Mission policy and
+the deployment's privacy policy. The Subject cannot be replaced by
+the current agent, approver, Mission owner, tenant, or a local
+account selected by the client.
+
+The identifier's linkability is fixed at Mission creation, because
+the invariant forbids per-destination substitution afterward. Two
+properties are available, chosen at the record: the default is
+pairwise-at-origin (the record `subject` is the home issuer's
+pairwise identifier for the Mission Issuer's sector, so chain
+participants can correlate with each other within and across this
+Subject's Missions but not with the Subject's other relationships);
+the stronger option is a per-Mission subject pseudonym established by
+the home issuer at record creation (participants correlate within one
+Mission only, and destination entitlement resolution goes through the
+governed mapping of {{origin-principal-mapping}}). A deployment
+declares which property it provides; a per-destination pairwise value
+is not constructible under the invariant.
+
+## Mapping at a Destination {#origin-principal-mapping}
+
+A Resource AS consuming a conforming grant or delegation chain
+establishes a mapping from (`mission.subject.iss`,
+`mission.subject.sub`) to a destination-local (`iss`, `sub`) under a
+named local mapping policy. The mapping MUST be based on the
+authenticated issuer-qualified input, never a bare `sub`; established
+by the Resource AS or an identity service it trusts, never asserted
+by the agent; scoped to the destination audience or tenant; subject
+to current disablement, unlinking, and reassignment state; and
+recorded with the mapping-policy identifier and version and a digest
+of the issuer-qualified input and local output. It MUST be injective
+within the mapping scope unless the deployment explicitly operates a
+governed many-to-one service account and treats the loss of
+individual attribution as a lower assurance class. This
+destination-side rule is distinct from the issuance profile's
+issuer-side injective mapping at approval, which is unchanged.
+
+The local access token keeps ordinary OAuth semantics: `iss` is the
+Resource AS, `sub` is the destination-local subject, `client_id` is
+the requesting client, `act` is the local delegation lineage
+({{I-D.draft-mcguinness-oauth-mission}}), and `mission.subject` is
+the unchanged origin principal. The Resource AS signature attests the
+mapping for the token's audience and lifetime; no separate
+subject-mapping assertion is defined.
+
+## Mapping Continuity {#origin-principal-continuity}
+
+Every downstream consumer MUST compare `mission.subject` with the
+value it verified upstream before local mapping or reliance. Removal,
+substitution, a different `iss` with the same `sub`, a different
+`sub` under the same `iss`, or a shape change invalidates the
+complete chain or grant. Re-mapping at each Resource AS is expected,
+because local accounts are local facts; replacing the origin
+principal is not, and a destination-local `sub` never becomes the
+origin for later hops. If a mapping is missing, ambiguous, disabled,
+stale beyond the declared bound, or names a principal not permitted
+for the requested tenant or audience, the Resource AS MUST refuse
+issuance or the relying party MUST deny; no account or relationship
+is created merely because a valid chain was presented, absent a
+separately governed provisioning flow.
+
+## Dual-Axis Authorization {#dual-axis}
+
+At every point of use under this profile, the effective authority is
+the intersection of the verified delegated `authorization_details`,
+the current entitlement of the mapped origin principal, and current
+resource and deployment policy. All three are required: delegated
+agent authority does not confer a missing principal relationship, a
+principal entitlement does not authorize an action absent from the
+delegated set, and an approval or mapping record never bypasses
+current policy. A role or relationship granted through an
+access-request workflow is governance state observed on a fresh
+decision, never a bearer bypass. A deployment claiming this profile
+MUST declare the source and maximum staleness of local principal
+entitlement, separately from its Mission-state freshness declaration;
+when current entitlement cannot be established within the declared
+bound, the decision fails closed. This is the profile's conformance
+bar: deployments not claiming it keep the issuance profile's
+lifetime-bounded baseline.
+
+## Disclosure and Evidence {#origin-principal-disclosure}
+
+`mission.subject` is a correlation handle. Tokens carrying it MUST be
+narrowed to one Resource AS or Resource Server audience; a Resource
+AS MUST NOT copy it into tokens for unrelated audiences. An
+introspection responder, the issuer or a Resource AS, MUST disclose
+it only to a caller holding an explicit `origin_principal` disclosure
+privilege under the issuance profile's caller authorization and
+minimization rules ({{I-D.draft-mcguinness-oauth-mission}}).
+Retained evidence SHOULD carry the issuer-qualified subject digest
+and mapping-policy version defined by the runtime evidence companion
+({{I-D.draft-mcguinness-mission-runtime-evidence}}) instead of the
+raw value, unless the raw identity is necessary for the stated audit
+purpose; the trust agreement states the purpose and retention period
+for the mapping.
+
+## Example (Non-Normative)
+
+One origin principal, two valid local mappings, one invariant value.
+The origin issuer's chain and both destination tokens carry:
+
+~~~json
+"mission": {
+  "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "issuer": "https://as.origin.example",
+  "authority_hash": "sha-256:5bIi6JURtxBtod8WtezufytnypnNE86se44ndaL6-W0",
+  "subject": { "iss": "https://id.origin.example", "sub": "p-7QxT2m" }
+}
+~~~
+
+Resource AS B maps it to `sub` `emp-4417` under its `iss`; Resource
+AS C maps it to `sub` `alice.w` under its own. Both local tokens keep
+`mission.subject` unchanged, each destination's PDP checks its own
+current entitlement for its mapped local principal, and neither local
+`sub` ever appears as the origin principal downstream.
 
 # Error Responses {#error-responses}
 
@@ -784,6 +963,10 @@ through the grant, not a value the Resource AS recomputes from its
 audience-scoped subset ({{I-D.draft-mcguinness-oauth-mission}},
 Section "Consent Binding").
 
+A Resource AS claiming the Origin Principal profile additionally
+reports `mission.subject` on this response, under that profile's
+disclosure rule ({{origin-principal-disclosure}}).
+
 # Authorization Server Metadata {#as-metadata}
 
 Discovery uses existing metadata; this document defines no new
@@ -831,6 +1014,14 @@ A **Resource AS**:
 
 A Resource AS is not required to implement the issuance profile's Mission
 Issuer role.
+
+Either role MAY additionally claim the **Origin Principal profile**
+({{origin-principal}}): it carries or verifies `mission.subject` as
+that profile requires, verifies value invariance before mapping or
+reliance, applies the mapping and continuity rules, authorizes
+dual-axis with a declared entitlement-freshness bound, and applies
+the profile's disclosure and minimization rules. The claim is
+per-deployment and independent of the base role.
 
 # Security Considerations
 
@@ -931,6 +1122,14 @@ alone, so the approval reflects what the projection can actually reach
 in aggregate.
 
 # Privacy Considerations
+
+The Origin Principal profile makes an otherwise origin-local identity
+visible across audiences ({{origin-principal}}): its linkability
+property is fixed at Mission creation (pairwise-at-origin by default,
+a per-Mission pseudonym for stronger unlinkability), participants in
+one Mission necessarily correlate within it, and the member never
+carries human-readable PII. Logs and evidence keep digests where the
+raw value is not needed ({{origin-principal-disclosure}}).
 
 The cross-domain grant and every local token minted from it carry the
 canonical `mission_id`, `mission.issuer`, and `authority_hash`
