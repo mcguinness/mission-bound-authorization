@@ -85,8 +85,7 @@ normative:
     title: "AuthZEN Access Request and Approval Profile - Draft 1"
     author:
       -
-        ins: K. McGuinness
-        name: Karl McGuinness
+        org: OpenID Foundation
     date: 2026
   AUTHZEN-OBL:
     target: https://openid.github.io/authzen/authzen-obligations-profile-1_0.html

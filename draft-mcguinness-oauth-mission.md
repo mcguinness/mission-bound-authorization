@@ -64,6 +64,8 @@ normative:
       ISO: "4217:2015"
 
 informative:
+  I-D.draft-ietf-wimse-arch:
+  I-D.draft-ietf-oauth-spiffe-client-auth:
   RFC8126:
   RFC7009:
   RFC8935:
@@ -102,10 +104,10 @@ informative:
     date: 2022
   MCP:
     title: "Model Context Protocol: Authorization"
-    target: https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization
+    target: https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization
     author:
       - org: Model Context Protocol Project
-    date: 2025
+    date: 2026
   AuthZEN.ARAP:
     title: "OpenID AuthZEN Access Request and Approval Profile 1.0"
     target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
@@ -584,7 +586,8 @@ considered and where it belongs, not that it was overlooked.
   verifiable provenance that would require, are future work.
 - **Decentralized agent identity.** Agent identity and credentialing
   are out of scope ({{I-D.draft-klrc-aiagent-auth}}, and workload
-  identity efforts such as WIMSE); this profile governs the
+  identity efforts such as WIMSE,
+  {{I-D.draft-ietf-wimse-arch}}); this profile governs the
   approved-task artifact those identities act within, not the
   identities themselves.
 - **Cross-audience unlinkability.** A single canonical Mission
@@ -4939,8 +4942,10 @@ under Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`.
 
 ## Stage 0: Agent Identity (by Reference)
 
-The agent is an OAuth client with a workload identity (for example a
-WIMSE or SPIFFE identity), and `alice` has delegated to it through an
+The agent is an OAuth client with a workload identity (for example,
+a workload identity established using WIMSE or SPIFFE,
+{{I-D.draft-ietf-wimse-arch}},
+{{I-D.draft-ietf-oauth-spiffe-client-auth}}), and `alice` has delegated to it through an
 ordinary authorization-code flow, per
 {{I-D.draft-klrc-aiagent-auth}}: `client_id` is the agent and the
 token `sub` is `alice`. This document adds the Mission layer on top of

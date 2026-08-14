@@ -63,6 +63,15 @@ Two bounds:
   establish it; the citation may then stay informative.
 
 
+## Document History Convention
+
+Only the core carries a Document History appendix today. A companion
+adds its own by touch: the next substantive revision of a companion
+adds `# Document History {#document-history}` with a real entry
+describing that revision. Empty stubs are never bulk-added; git
+history remains the pre-publication record, and the appendix records
+substantive deltas between published revisions.
+
 ## Conformance Traceability Convention
 
 Every new or changed externally testable normative requirement
