@@ -507,7 +507,9 @@ canonicalization, and integrity envelope a deployment emits.
 `entry_digest`:
 : OPTIONAL. A string. The integrity-anchor encoded digest
   ({{I-D.draft-mcguinness-oauth-mission}}) of that entry, for a
-  deployment that does not record the entry in full. A record of a
+  deployment that does not record the entry in full. It is the
+  issuance profile's Authority Set entry commitment
+  ({{I-D.draft-mcguinness-oauth-mission}}). A record of a
   permit MUST carry `authorizing_entry` or `entry_digest`, per the
   runtime record requirements
   ({{I-D.draft-mcguinness-mission-runtime}}).
