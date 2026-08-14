@@ -5424,7 +5424,20 @@ derivation event; the AS <span class="bcp14">MUST</span> refuse it unless the Mi
 <code>active</code> (<a href="#lifecycle" class="auto internal xref">Section 9</a>).<a href="#section-11-4.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-11-5">Where a deployment authenticates client instances
+<p id="section-11-5">Delegation history follows authorization continuity, not
+organizational topology. The <code>act</code> chain nests (<code>act.act</code>) exactly
+while authority continues under the same approved Mission; a new
+approval basis, a Child Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) or an
+expansion successor (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>),
+begins its own delegation basis and its own chain; and no boundary of
+organization, network, or deployment topology by itself restarts or
+extends a chain. The chain is attribution, never authority: an <code>act</code>
+entry identifies an actor, an asserted actor identity grants nothing,
+and a consumer <span class="bcp14">MUST NOT</span> treat the chain as proof that authority
+narrowed; the <code>authorization_details</code> subset relations prove that
+(<a href="#subset" class="auto internal xref">Section 5.1</a>).<a href="#section-11-5" class="pilcrow">¶</a></p>
+<p id="section-11-6">Where a deployment authenticates client instances
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>; for AI
 agents, its agent profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>), the delegate
@@ -5439,7 +5452,7 @@ matcher can select instance-grade actors
 used here (<code>ai_agent</code>, <code>client_instance</code>) are drawn from the
 entity-profiles vocabulary those instance profiles use; the Actor
 Profile <span>[<a href="#I-D.draft-mcguinness-oauth-actor-profile" class="cite xref">I-D.draft-mcguinness-oauth-actor-profile</a>]</span> remains the
-structural reference for the actor object.<a href="#section-11-5" class="pilcrow">¶</a></p>
+structural reference for the actor object.<a href="#section-11-6" class="pilcrow">¶</a></p>
 <div id="client-id-rebinding">
 <section id="section-11.1">
         <h3 id="name-adopted-model-client_id-nam">

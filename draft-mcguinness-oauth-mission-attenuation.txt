@@ -89,14 +89,15 @@ Table of Contents
      8.1.  Edge Validation
    9.  The Kill Switch Requires Runtime Enforcement
    10. Relationship to Other Delegation
-   11. Worked Example
-   12. Conformance
-   13. Security Considerations
-   14. Privacy Considerations
-   15. IANA Considerations
-   16. References
-     16.1.  Normative References
-     16.2.  Informative References
+   11. Actor Attribution on the Chain
+   12. Worked Example
+   13. Conformance
+   14. Security Considerations
+   15. Privacy Considerations
+   16. IANA Considerations
+   17. References
+     17.1.  Normative References
+     17.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -120,7 +121,7 @@ Table of Contents
    issuer-mediated child delegation
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  The saving
    is amortization, not elimination: because a root's lifetime is kept
-   short (Section 13), the holder returns to the issuer once per subtree
+   short (Section 14), the holder returns to the issuer once per subtree
    per root-lifetime window to mint the root, and every narrowing within
    that window is then offline.  The issuer leaves the per-fork hot
    path; it is not removed from the deployment.
@@ -279,7 +280,7 @@ Table of Contents
 
    *  the issuer SHOULD mint separate roots per delegation class rather
       than mix entries of differing delegation policy on one root, which
-      also serves the per-subtree disclosure minimization of Section 14.
+      also serves the per-subtree disclosure minimization of Section 15.
 
    The root's authority MUST be within the Mission's approved authority
    under this mapping and the issuance profile's subset rule.  An
@@ -492,7 +493,7 @@ Table of Contents
    presentation state evaluation picks up, so an attenuation root
    already in a holder's possession keeps minting against the Mission's
    pre-containment authority until the root's own exp or del_max_depth
-   ends it, or the Mission itself is revoked or expires (Section 13).
+   ends it, or the Mission itself is revoked or expires (Section 14).
 
    A cached chain does not bypass this: a chain held in a harness cache
    is still re-checked against current Mission state on every
@@ -524,7 +525,42 @@ Table of Contents
    the same Mission, fast, at fan-out scale; use a Child Mission when it
    needs its own durable, separately revocable Mission.
 
-11.  Worked Example
+11.  Actor Attribution on the Chain
+
+   The chain identifies holders by key possession: each token binds its
+   holder through cnf, and possession is proven at use.  This document
+   defines no actor-identity member on chain tokens.  A profile that
+   adds named-actor attribution to chain artifacts, as cross-
+   organizational delegation requires, is bound by the following model.
+
+   Each artifact names only its own hop's actor.  The complete actor
+   history is reconstructed from the validated root-to-leaf chain; it is
+   never duplicated as a nested history inside each artifact, and a
+   consumer MUST reject a chain that presents conflicting or duplicated
+   actor representations.  A materialized nested act projection
+   ([RFC8693], shaped per the Actor Profile,
+   [I-D.draft-mcguinness-oauth-actor-profile]) is constructed from the
+   validated chain at a consuming boundary, a PDP, an introspection
+   responder, or a destination Authorization Server; it is not carried
+   on the artifacts.
+
+   The root actor is asserted by the Mission Issuer and bound to the
+   root presenter key: the root names the originally approved agent, so
+   the approved-agent identity travels with the chain instead of resting
+   on a Mission Record the verifier may not hold.  A parent signature on
+   a later hop proves only that the parent delegated to the child key;
+   it does not authenticate the identity values the parent asserts.  A
+   named actor on a holder-created hop therefore counts only when the
+   issuer-qualified actor identifier is independently bound to that
+   hop's cnf key through a validated workload credential or attestation.
+   Absent that binding the hop is key-only: its asserted identity is
+   informational provenance at most and MUST NOT satisfy an eligibility
+   matcher (the issuance profile's allowed_delegates or a sub_profile
+   selector, [I-D.draft-mcguinness-oauth-mission]) or otherwise
+   influence authorization; where policy requires a named actor and the
+   binding is absent or invalid, verification fails closed.
+
+12.  Worked Example
 
    An orchestrator agent (s6BhdRkqt3), acting for alice under Mission
    msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9- to reconcile Q3 invoices, holds
@@ -640,7 +676,7 @@ Table of Contents
    is refused the same way, as a re-bound chain, not read as a narrower
    grant.
 
-12.  Conformance
+13.  Conformance
 
    A Mission Issuer conforming to this profile MUST bound a Mission-
    bound attenuation root by the Mission's Authority Set (Section 5.1)
@@ -672,7 +708,7 @@ Table of Contents
    A deployment MUST NOT claim this profile on a path that does not
    enforce Mission state.
 
-13.  Security Considerations
+14.  Security Considerations
 
    The security considerations of the issuance profile, the runtime
    profile, and the attenuation substrate apply.  This profile adds:
@@ -745,7 +781,7 @@ Table of Contents
       its del_depth, and its par_hash, so offline derivations are
       reconstructable in audit.
 
-14.  Privacy Considerations
+15.  Privacy Considerations
 
    The mission claim (id, issuer, authority_hash) rides every token in
    an attenuation chain unchanged (Section 7), so every consumer of any
@@ -774,7 +810,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime]) as the privacy-relevant
    record of offline derivations and protect it accordingly.
 
-15.  IANA Considerations
+16.  IANA Considerations
 
    A Mission-bound attenuation root carries the mission claim, which the
    issuance profile registers as an open object, and the
@@ -795,9 +831,9 @@ Table of Contents
 
    *  mission_attenuation_root
 
-16.  References
+17.  References
 
-16.1.  Normative References
+17.1.  Normative References
 
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
@@ -840,12 +876,19 @@ Table of Contents
               DOI 10.17487/RFC9396, May 2023,
               <https://www.rfc-editor.org/rfc/rfc9396>.
 
-16.2.  Informative References
+17.2.  Informative References
 
    [I-D.draft-mcguinness-mission-harness]
               McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-harness.html>.
+
+   [I-D.draft-mcguinness-oauth-actor-profile]
+              McGuinness, K., "OAuth Actor Profile for Delegation", Work
+              in Progress, Internet-Draft, draft-mcguinness-oauth-actor-
+              profile-00, 30 April 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-actor-profile-00>.
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",

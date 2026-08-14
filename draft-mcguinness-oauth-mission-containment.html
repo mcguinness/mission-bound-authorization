@@ -1368,7 +1368,7 @@ issuance profile.<a href="#section-2-2" class="pilcrow">¶</a></p>
 implementable alone. It reuses, without restating, that profile's
 Mission, Mission Intent, Authority Set and entry shape, integrity
 anchors, <code>mission</code> claim, subset rule, and lifecycle gating, and the
-Status profile's state version and event-source verification
+Status profile's state version
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). It uses the terms
 Agent (Client), Subject, Approver, Mission Issuer, Authority Set,
 Mission, and derived token as defined in the issuance profile.<a href="#section-3-1" class="pilcrow">¶</a></p>
@@ -1672,7 +1672,9 @@ the Approver committed inside the Authority Set; containment removes
 capability because a protected event fired, under issuer-held policy
 the anchor never carried. Both are evaluated state; both commit as
 metadata-only state-version increments; derivation excludes both
-(<a href="#derivation-gating" class="auto internal xref">Section 10</a>).<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+(<a href="#derivation-gating" class="auto internal xref">Section 10</a>). Discharge identifies the retired entry by the
+issuance profile's Authority Set entry commitment
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1733,11 +1735,9 @@ from the deployment's monitoring, and the tainted-session event of
 open-world discovery (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>).<a href="#section-9-1" class="pilcrow">¶</a></p>
 <p id="section-9-2">A protected event is a trusted input to authority: the Mission Issuer
 <span class="bcp14">MUST</span> authenticate and integrity-verify an event source outside its
-own trust domain before acting on its report. The Status profile's
-signed event-source profile, a JWS status document verified against
-the <code>source</code> identity rather than the transport origin, is the
-interoperable mechanism
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-9-2" class="pilcrow">¶</a></p>
+own trust domain before acting on its report. The mechanism is
+deployment-defined; this document defines no interoperable
+event-source profile of its own.<a href="#section-9-2" class="pilcrow">¶</a></p>
 <p id="section-9-3">A protected event whose authenticity or applicability is
 indeterminate fails closed. The Mission Issuer <span class="bcp14">MUST</span> either commit the
 narrowing the policy maps to the event or withhold derivation of the
