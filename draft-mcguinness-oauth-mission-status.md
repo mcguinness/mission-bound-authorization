@@ -30,6 +30,7 @@ author:
 
 normative:
   RFC3339:
+  RFC5234:
   RFC6838:
   RFC7009:
   I-D.draft-ietf-oauth-status-list:
@@ -934,19 +935,36 @@ entry ({{discharge}}). Beyond `mission_id` and `nonce`, it requires:
 `event_type`:
 : REQUIRED. A string. Echoed from the fired condition and
   cross-checked against the condition `condition_digest` names: a
-  mismatch is refused ({{discharge-anti-oracle}}). `event_type` is
-  never a selector by itself.
+  mismatch joins the `not_found` collapse, since distinguishing it
+  would reveal information about a condition selected by digest
+  ({{discharge-anti-oracle}}). `event_type` is never a selector by
+  itself.
 
 `event_id`:
-: REQUIRED. A string. The identifier of the asserted external
-  occurrence, used for evidence correlation and for the event-level
-  deduplication of {{discharge-idempotency}}. It is distinct from
-  `nonce`, the HTTP retry key of {{idempotency}}.
+: REQUIRED. A string, `1*128( ALPHA / DIGIT / "-" / "_" / ":" / "." )`
+  {{RFC5234}}. The identifier of the asserted external occurrence,
+  used for evidence correlation and for the event-level deduplication
+  of {{discharge-idempotency}}. It is distinct from `nonce`, the HTTP
+  retry key of {{idempotency}}.
 
-`evidence_ref`, `evidence_digest`:
-: OPTIONAL. Strings. Bounded audit metadata about the asserted
-  occurrence. The AS MUST NOT dereference `evidence_ref` in baseline
-  processing and MUST NOT treat either member as authorization input.
+`evidence_ref`:
+: OPTIONAL. A URI, maximum 512 characters. A reference to evidence of
+  the asserted occurrence.
+
+`evidence_digest`:
+: OPTIONAL. A string, the family's prefixed digest form (`sha-256:`
+  plus base64url, no-padding encoding), classified as a raw-octet
+  digest ({{I-D.draft-mcguinness-oauth-mission}}, Section "Commitment
+  Mechanisms"): computed over the exact octets of the referenced
+  artifact as exchanged, with no canonicalization. `evidence_ref` and
+  `evidence_digest` MAY both appear: when they do, `evidence_digest`
+  MUST commit the bytes `evidence_ref` names. Present alone,
+  `evidence_digest` is independent audit metadata.
+
+`evidence_ref` and `evidence_digest` are bounded audit metadata about
+the asserted occurrence. The AS MUST NOT dereference `evidence_ref`
+in baseline processing and MUST NOT treat either member as
+authorization input.
 
 `observed_at`:
 : OPTIONAL. An RFC 3339 {{RFC3339}} date-time: a caller assertion. The
@@ -961,11 +979,15 @@ Semantics:
   condition that fired. The committed state is one monotonic latch on
   the entry, or on its selector equivalence class, one
   state-version increment, one audit record, and one notification. A
-  later delivery naming a sibling condition of an already-discharged
-  entry is acknowledged `already_discharged` ({{discharge-result}}) and
-  MUST NOT discharge the entry again or increment the version again.
-  The latch MUST NOT revert, and issuance gating for a discharged
-  entry is unchanged ({{discharge}}).
+  later delivery presenting any valid condition against an
+  already-discharged entry, a sibling condition, or the same
+  condition under a different `event_id`, is acknowledged
+  `already_discharged` ({{discharge-result}}) and MUST NOT discharge
+  the entry again or increment the version again; an exact event
+  replay (the same tuple and the same fingerprint) is handled first by
+  the dedup rule of {{discharge-idempotency}}. The latch MUST NOT
+  revert, and issuance gating for a discharged entry is unchanged
+  ({{discharge}}).
 - **Duplicate entries.** One `entry_digest` discharges every
   recorded entry resolving to that digest as a single
   equivalence-class transition, and therefore one version increment,
@@ -979,20 +1001,28 @@ Semantics:
   `terminal_noop` acknowledgement ({{discharge-result}}) and MUST NOT
   create a transition or a version increment. `discharge` never
   changes Mission-level state; a deployment that also tracks
-  all-entry completion invokes `complete` separately.
+  all-entry completion invokes `complete` separately. The AS reaches
+  this determination only after the selector and authorization
+  validation of {{discharge-anti-oracle}}, so a terminal Mission is
+  never a shortcut past those checks.
 - **No `expected_version`.** A stale-version refusal would delay a
   safety-reducing operation; the digest selectors above and the
   idempotency rules of {{discharge-idempotency}} are the guards
   instead.
 - **Atomicity.** The entry latch (or its equivalence-class latch), the
-  version increment, the audit record, and the signed operation
-  response commit as one transaction or outbox unit. Where the
-  deployment also runs a companion that requires further propagation
-  on the same commit, for example the child-delegation profile's
+  version increment, the audit and result record, and the durable
+  propagation work (an outbox entry or a signal enqueue) commit as
+  one unit. Where the deployment emits lifecycle events
+  ({{I-D.draft-mcguinness-oauth-mission-signals}}), the signal enqueue
+  is part of that same unit. Downstream materialization from the
+  durable propagation work, including the child-delegation profile's
   entry-wise propagation to an already-justified Child Mission
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), or emits
-  lifecycle events ({{I-D.draft-mcguinness-oauth-mission-signals}}),
-  that work is part of the same atomic unit.
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), is
+  asynchronous and is not claimed atomic with this commit. Instead, a
+  Child Mission's derivation MUST consult, or otherwise be gated by,
+  the committed parent latch until that materialization completes, so
+  no Child Mission can derive the discharged parent authority in the
+  gap between the parent's commit and the child's materialized view.
 
 ### Discharge Authority {#discharge-authority}
 
@@ -1015,43 +1045,101 @@ asserting principal.
 A `terminal_when` condition MAY carry `discharge_policy` (OPTIONAL): a
 stable, opaque selector naming the AS-side authority mapping for that
 condition ({{iana-terminal-when}}). The AS MUST resolve and validate
-the selector at approval or activation, refusing an Intent whose
-selector maps to nothing; the AS records the resolved mapping's
-identifier and version issuer-side. The member is never a raw
-principal or workload structure, and the requesting client cannot
-select an unapproved fallback.
+the selector whenever a condition first enters an immutable
+Mission-record entry: at Mission creation, and at every later point
+where a derived entry can carry a new condition (child creation,
+expansion, Token Exchange or other derivation, and any further profile
+that adds a condition), refusing the Intent or the derivation whose
+selector maps to nothing. The AS binds the resolved mapping's
+identifier and version to that exact `condition_digest` in
+issuer-held metadata. A requesting client MUST NOT select an
+arbitrary otherwise-valid policy merely because adding a condition is
+narrowing: an unchecked choice of mapping for a newly added condition
+could still force the premature discharge that {{completion-security}}
+warns against, a denial-of-service on the task and an early
+retirement of its own guardrail. The member is never a raw principal
+or workload structure, and the requesting client cannot select an
+unapproved fallback.
 
 ### Discharge Anti-Oracle {#discharge-anti-oracle}
 
 An unknown `mission_id`, an unknown `entry_digest`, an unknown
-`condition_digest`, an entry with no `terminal_when`, and a caller not
-authorized for that target all collapse to the endpoint's existing
-`not_found` treatment ({{mission-status-errors}}). Authentication
+`condition_digest`, an entry with no `terminal_when`, an `event_type`
+that does not match the condition `condition_digest` names, and a
+caller not authorized for that target all collapse to the endpoint's
+existing `not_found` treatment ({{mission-status-errors}}). Authentication
 failure remains `unauthorized` (401). Detailed refusal reasons live
 only in issuer audit records.
+
+The AS validates selector existence (`mission_id`, `entry_digest`, and
+`condition_digest` all resolve, the entry carries `terminal_when`, and
+`event_type` matches the named condition), then condition membership
+(the named condition belongs to the named entry), then target
+authorization (the discharge authority mapping of
+{{discharge-authority}}), before returning any `terminal_noop`
+acknowledgement ({{discharge-result}}). This order keeps a terminal
+Mission from acting as a selector-existence oracle: every case the
+collapse above refuses is checked before a terminal Mission is ever
+distinguished from one whose selectors do not resolve.
 
 ### Idempotency: `nonce` and `event_id` {#discharge-idempotency}
 
 `discharge` keeps two identities apart. `nonce` stays the HTTP
-operation retry key under {{idempotency}}'s rules, hardened as that
-section now states: a retransmission with the same `nonce` and a
-byte-identical request replays the original signed response, and the
-same `nonce` with a different request is refused `invalid_request`,
-never answered with an unrelated original response.
+operation retry key under {{idempotency}}'s rules: a retransmission
+with the same `nonce` and a byte-identical request returns the stored
+signed response verbatim. The same `nonce` with a different request is
+refused `invalid_request`, never answered with an unrelated original
+response.
 
 `event_id` deduplicates the external occurrence, scoped by
 (authenticated discharge authority, `mission_id`, `entry_digest`,
-`condition_digest`, `event_id`): the same tuple with the same
-assertion fingerprint (the request's canonical bytes excluding
-`nonce`) replays the prior signed result; the same tuple with a
-different assertion is refused `conflict`; the same `event_id`
-asserted against another Mission, entry, or condition is a valid,
-independent assertion, since one real-world event legitimately fans
-out to more than one target.
+`condition_digest`, `event_id`). A response's `nonce` MUST equal the
+one just sent ({{mission-status-response}}), so a retry that supplies
+a fresh `nonce`, as an at-least-once sender legitimately does, cannot
+receive the original signed response verbatim. Two cases follow:
+
+- **Same `nonce`, same request.** The stored signed response is
+  returned verbatim, per the `nonce` rule above.
+- **New `nonce`, same event tuple and the same assertion
+  fingerprint** (defined below). The AS performs no state-changing
+  work: no re-latch, no version increment. It issues a new signed
+  envelope that echoes the new `nonce` and carries the stored
+  operation result: the same `outcome` and selectors, and the
+  original `prior_version` and `current_version` the first commit
+  produced.
+
+**Event assertion fingerprint.** A semantic assertion object, never
+raw form bytes: the JSON object with exactly the decoded members
+`operation` (the literal string `discharge`), `mission_id`,
+`entry_digest`, `condition_digest`, `event_type`, `event_id`, and,
+when present, `evidence_ref`, `evidence_digest`, and `observed_at`.
+The object is canonicalized under the issuance profile's
+canonicalization ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Canonicalization Rules") and digested as a canonical-object digest
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Commitment
+Mechanisms"), since protocol context already fixes what the object
+commits. `nonce`, client authentication material, the DPoP proof, and
+transport headers are outside the fingerprint: none of them enter the
+assertion object, and none of them affect its value.
+
+Over the (discharge authority, `mission_id`, `entry_digest`,
+`condition_digest`, `event_id`) tuple: the same tuple with the same
+fingerprint is the replay case above; the same tuple with a different
+fingerprint is refused `conflict`; the same `event_id` asserted
+against another Mission, entry, or condition is a valid, independent
+assertion, since one real-world event legitimately fans out to more
+than one target.
 
 When both rules could apply, the `nonce` rule is evaluated first,
 since it governs the HTTP exchange; the `event_id` rule governs across
 distinct exchanges.
+
+**Retention.** Event-dedup state MUST be retained at least as long as
+the deployment's published retry horizon and the replayable result's
+usable lifetime, and MAY be bounded by the Mission record's own
+retention. After eviction, a repeated assertion is processed fresh
+against the latch and yields `already_discharged` with no version
+increment, which is safe because the latch is monotonic.
 
 ### Discharge Result {#discharge-result}
 
@@ -1064,14 +1152,20 @@ Status Response envelope ({{mission-status-response}}), carrying a
 
 `outcome`:
 : one of `discharged` (this request committed the latch),
-  `already_discharged` (a sibling condition of an already-discharged
+  `already_discharged` (a sibling condition, or the same condition
+  under a different `event_id`, presented against an already-latched
   entry), or `terminal_noop` (the Mission was already in a terminal
-  state).
+  state). An exact event replay is handled first by the dedup rule
+  ({{discharge-idempotency}}), never reaching this determination as a
+  fresh `already_discharged`.
 
 `prior_version`, `current_version`:
-: the Mission's state version immediately before and after this
-  request. They are equal for `already_discharged` and
-  `terminal_noop`.
+: the Mission's state version immediately before and after the
+  commit this result reports. For a request that itself commits, that
+  commit is this request's own. For the new-`nonce` fresh-envelope
+  case of {{discharge-idempotency}}, which commits nothing, these are
+  the versions the original commit produced, unchanged. They are equal
+  for `already_discharged` and `terminal_noop`.
 
 With the echoed `nonce`, this is the durable acknowledgement an
 at-least-once sender stops retrying against.
@@ -1166,12 +1260,21 @@ or private-key JWT. Its discovery mirrors that endpoint: the accepted
 methods in `mission_lifecycle_endpoint_auth_methods_supported` and, for
 `private_key_jwt`, the accepted client-assertion algorithms in
 `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
-({{as-metadata}}); the sender-constrained access-token path through this
-endpoint's OAuth Protected Resource Metadata {{RFC9728}}. A private-key
-JWT `client_assertion` MUST name the `mission_lifecycle_endpoint` URL in
-`aud`, and a presented access token MUST be audience-restricted to this
-endpoint's protected-resource identifier, exactly as at the Mission
-Status endpoint.
+({{as-metadata}}). For the sender-constrained access-token path, this
+endpoint is an OAuth protected resource exactly as the Mission Status
+endpoint is: the AS publishes, in its Protected Resource Metadata for
+this resource {{RFC9728}}, the `resource` identifier the token's
+audience MUST name and the scopes it requires (`scopes_supported`):
+`mission_lifecycle` for `revoke`, `suspend`, `resume`, and `complete`
+({{mission-lifecycle-endpoint}}), and, where the deployment offers
+`discharge`, `mission_discharge` as well ({{discharge-authority}}). A
+private-key JWT `client_assertion` MUST name the
+`mission_lifecycle_endpoint` URL in `aud`, and a presented access token
+MUST be audience-restricted to this endpoint's protected-resource
+identifier, exactly as at the Mission Status endpoint. Direct mTLS or
+private-key-JWT callers continue to use the deployment-defined
+equivalent grant, never a scope, exactly as `discharge` itself does
+({{discharge-authority}}).
 
 ## Authorization
 
@@ -1511,7 +1614,8 @@ naming convention ({{iana}}).
     `purpose` is ({{I-D.draft-mcguinness-oauth-mission}}).
 
   `discharge_policy`:
-  : OPTIONAL. A string. A stable, opaque selector naming the AS-side
+  : OPTIONAL. A string, `1*64( ALPHA / DIGIT / "-" / "_" / ":" / "." )`
+    {{RFC5234}}, opaque. A stable selector naming the AS-side
     discharge-authority mapping for this condition
     ({{discharge-authority}}).
 
@@ -1584,9 +1688,10 @@ administrative action, invokes the same commit internally once it has
 decided.
 
 Once committed, a discharge is recorded as Authorization-Server-side
-state and MUST NOT revert: a later delivery naming a sibling condition
-of an already-discharged entry is acknowledged `already_discharged`
-({{discharge-result}}) and does not restore the entry's authority.
+state and MUST NOT revert: a later delivery presenting any valid
+condition against an already-discharged entry is acknowledged
+`already_discharged` ({{discharge-result}}) and does not restore the
+entry's authority.
 
 A committed discharge is a committed metadata-only change for the
 purposes of the state version ({{mission-status-response}}): the
