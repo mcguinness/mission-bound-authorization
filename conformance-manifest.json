@@ -329,10 +329,10 @@
       "tests": []
     },
     {
-      "id": "core.intent.expires-at-refusal",
+      "id": "core.intent.requested-expiry-invalid-request",
       "spec": "draft-mcguinness-oauth-mission.md",
       "anchor": "mission-intent",
-      "text": "the AS MUST refuse a malformed value or one not later than its current time with `invalid_request`",
+      "text": "At submission acceptance, the AS MUST refuse a malformed or already-past value with `invalid_request`",
       "role": "AS",
       "strength": "MUST",
       "applicability": {
@@ -341,44 +341,18 @@
       "surface": "par",
       "assertion": "refusal",
       "observation": {
-        "normative": "a new creation attempt with malformed or non-future intent.expires_at fails invalid_request; a delayed approval repeats the check before activation",
-        "local": "malformed RFC 3339 syntax is tested at the parser; past-at-intake and expiry-during-approval remain outstanding"
+        "normative": "a mission_intent whose expires_at is malformed or already past fails invalid_request at submission acceptance; the AS never rewrites the requested value"
       },
       "level": "endpoint",
-      "coverage": "partial",
-      "tests": [
-        {
-          "file": "src/services/authorization-server/test/kernel.test.ts",
-          "name": "intent validation (@spec mission#submission-via-par) > rejects missing required members and bad expires_at",
-          "level": "unit",
-          "surface": "par"
-        }
-      ]
-    },
-    {
-      "id": "core.record.effective-expiry-positive",
-      "spec": "draft-mcguinness-oauth-mission.md",
-      "anchor": "mission-record",
-      "text": "It MUST be later than `created_at`",
-      "role": "AS",
-      "strength": "MUST",
-      "applicability": {
-        "kind": "unconditional"
-      },
-      "surface": "derivation",
-      "assertion": "output-bound",
-      "observation": {
-        "normative": "a Mission is never committed already expired, including after a delayed approval"
-      },
-      "level": "cross-component",
       "coverage": "todo",
-      "tests": []
+      "tests": [],
+      "notes": "Executable tests ride the #245 suite; row replaces the pre-#525 invalid_authorization_details behavior."
     },
     {
-      "id": "core.record.effective-expiry-request-ceiling",
+      "id": "core.record.effective-not-later-than-requested",
       "spec": "draft-mcguinness-oauth-mission.md",
       "anchor": "mission-record",
-      "text": "MUST NOT be later than `intent.expires_at`",
+      "text": "MUST NOT be later than `intent.expires_at`, the requested ceiling",
       "role": "AS",
       "strength": "MUST NOT",
       "applicability": {
@@ -387,31 +361,58 @@
       "surface": "derivation",
       "assertion": "output-bound",
       "observation": {
-        "normative": "a newly committed Mission's effective expiry never exceeds the submitted requested ceiling",
-        "local": "Template and Child Mission clamp paths are tested; direct policy shortening, Expansion, and all idempotent-recovery paths remain outstanding"
+        "normative": "the committed Mission Record expires_at is never later than the submitted intent.expires_at"
       },
-      "level": "cross-component",
-      "coverage": "partial",
-      "tests": [
-        {
-          "file": "src/services/authorization-server/test/template.test.ts",
-          "name": "dispatch gates (@spec mission-template#dispatch-refusals) > clamps expires_at to the earliest of intent / now+lifetime / template (verbatim)",
-          "level": "unit",
-          "surface": "derivation"
-        },
-        {
-          "file": "src/services/authorization-server/test/child-delegation.test.ts",
-          "name": "child mission creation (@spec child-delegation#child-creation, #parent-member) > clamps the child expires_at to the parent's (@spec child-delegation#attenuation)",
-          "level": "unit",
-          "surface": "derivation"
-        }
-      ]
+      "level": "unit",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Executable tests ride the #245 suite."
     },
     {
-      "id": "core.grant-binding.mission-expires-at-response",
+      "id": "core.record.applicable-shortening",
+      "spec": "draft-mcguinness-oauth-mission.md",
+      "anchor": "mission-record",
+      "text": "Shortening under applicable AS policy, or under an already-approved parent, predecessor, or standing-consent bound a Mission-creating profile defines, is ordinary narrowing of the granted lifetime, not Authority Set derivation",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "derivation",
+      "assertion": "output-bound",
+      "observation": {
+        "normative": "an applicable policy or profile ceiling shortens the effective expiry below the requested ceiling without touching Authority Set derivation"
+      },
+      "level": "unit",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Executable tests ride the #245 suite."
+    },
+    {
+      "id": "core.creation.atomic-expiry-check",
+      "spec": "draft-mcguinness-oauth-mission.md",
+      "anchor": "approval-event",
+      "text": "The commit MUST verify atomically that the effective expiry is strictly later than the creation instant",
+      "role": "AS",
+      "strength": "MUST",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "token-endpoint",
+      "assertion": "refusal",
+      "observation": {
+        "normative": "a requested ceiling that passes while approval is pending completes as no Mission; deferred and relocated flows inherit the check at their own creation commit"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Executable tests ride the #245 suite; per-flow completion errors are each profile's."
+    },
+    {
+      "id": "core.response.mission-expires-at-on-creation",
       "spec": "draft-mcguinness-oauth-mission.md",
       "anchor": "grant-binding",
-      "text": "An AS MUST return it on the success response that first delivers a newly created Mission's credential",
+      "text": "The success response that first delivers a newly created Mission's identifier or credential MUST carry it",
       "role": "AS",
       "strength": "MUST",
       "applicability": {
@@ -420,11 +421,32 @@
       "surface": "token-endpoint",
       "assertion": "output-bound",
       "observation": {
-        "normative": "the first credential-delivery response for every Mission-creating flow carries mission_expires_at equal to the effective Mission record value"
+        "normative": "every Mission-creating success response carries mission_expires_at with the committed effective value"
       },
       "level": "endpoint",
       "coverage": "todo",
-      "tests": []
+      "tests": [],
+      "notes": "Executable tests ride the #245 suite; the member is the common Mission-creation response member, additionally registered for OAuth token responses."
+    },
+    {
+      "id": "core.response.replay-returns-committed-value",
+      "spec": "draft-mcguinness-oauth-mission.md",
+      "anchor": "grant-binding",
+      "text": "A creation replay deduplicated under the applicable operation identifier (`approval_event_id` for direct approval ({{mission-record}}), or the identifier a Mission-creating profile defines) returns the committed effective value unchanged",
+      "role": "AS",
+      "strength": "stated",
+      "applicability": {
+        "kind": "unconditional"
+      },
+      "surface": "token-endpoint",
+      "assertion": "replay",
+      "observation": {
+        "normative": "an idempotent creation replay returns mission_expires_at equal to the committed record value, never a recomputed one"
+      },
+      "level": "endpoint",
+      "coverage": "todo",
+      "tests": [],
+      "notes": "Executable tests ride the #245 suite."
     },
     {
       "id": "core.derivation.configured-mapping-lookup",
