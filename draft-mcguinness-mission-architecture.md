@@ -2102,6 +2102,64 @@ freshly approved unit Missions with deferred approval
 volume: the experimental profile changes the unit economics, not the
 governance shape.
 
+## A Worked Composition {#worked-composition}
+
+This non-normative example composes an Action-Enforced deployment
+from four providers, none of which is the OAuth binding, to show that
+the substrate contract ({{I-D.draft-mcguinness-mission-substrate}})
+carries the weight: an AAuth agent acts under a PS-governed Mission
+and calls a payment API whose authority vocabulary is owned by the
+resource.
+
+Four components publish provider claims:
+
+| Provider | Capability supplied | Scope |
+| --- | --- | --- |
+| AAuth Person Server | Contextual-governance kernel; Lifecycle-Gated Authorization | PS permission decisions and PS-brokered issuance |
+| AAuth Mission Management | State-Observable | The payment PDP, maximum staleness five seconds |
+| Payment policy adapter | Structured Authority | Payment API actions and constraints under the payment policy's own versioned vocabulary |
+| Payment gateway PEP/PDP | Authorized Context Correlation | The `schedule_payment` and `release_payment` routes |
+{: title="Provider claims in the worked composition"}
+
+Action-time enforcement and decision evidence are supplied by the
+runtime profile and its evidence companion at the gateway
+({{I-D.draft-mcguinness-mission-runtime}}); they consume the
+capability claims above as decision inputs. The deployment
+declaration names the four providers, the two routes, and the
+consequence class; no machine-readable declaration format is defined
+(the Mission Deployment Profile's schema remains reserved future
+work, {{deployment-profile}}), and the declaration is ordinary
+deployment documentation.
+
+The composition succeeds with these results and limits:
+
+| Requirement | Provider | Result and material limit |
+| --- | --- | --- |
+| Kernel | AAuth Person Server | Satisfied; native private Mission context and lifecycle |
+| Current state | AAuth Mission Management | Satisfied; five-second staleness within the profile's declared maximum |
+| Structured authority | Payment policy adapter | Satisfied only inside the payment vocabulary; no cross-resource claim |
+| Authorized join | Payment gateway | Satisfied; the gateway validates PS provenance, Actor proof, the request, and the adapter's output before joining them |
+| Action-time enforcement | Runtime profile at the gateway | Satisfied for the two named routes; direct payment-API routes are prohibited or declared uncovered |
+| Evidence | Evidence companion at the gateway | Satisfied through the decision; approval-to-effect completeness additionally requires execution evidence |
+{: title="Composition result"}
+
+Two classifications make the example honest. The payment authority's
+fresh decision is `decide_anew` in the substrate's transition
+classification, never an attenuation of AAuth authority across
+vocabularies; and the AAuth Mission context never becomes a Rich
+Authorization Request object. AAuth supplies work continuity, the
+payment authority decides permission in its own vocabulary, and the
+gateway is the scoped joining and enforcement authority.
+
+The same composition fails when any of the following holds: the
+state source is disabled with no equivalent fresh local read; the
+adapter publishes descriptive strings rather than machine-evaluable
+semantics; the gateway accepts a Mission reference from the agent
+without validated provenance (context splicing); the state source's
+staleness exceeds the declared maximum; a direct route bypasses the
+gateway; or the payment-vocabulary claim is generalized to another
+resource's vocabulary.
+
 # Mission Assurance Levels {#assurance-levels}
 
 Two questions get asked of a Mission deployment: what to deploy for a
@@ -2203,6 +2261,26 @@ The levels, cumulative:
   reliance, a revocation cutoff within that bound, without
   per-action enforcement: a half-step into the next level, not a
   level of its own.
+
+  A deployment demonstrates Baseline Issuance with at least the
+  following, the level's minimum test set; the executable rows live
+  in the family's conformance vectors:
+
+  1. approval creates an active Mission and, where the binding
+     issues credentials, a Mission-bound credential;
+  2. no credential outlives the Mission's effective expiry;
+  3. refresh while the Mission is active succeeds within policy;
+  4. a terminal transition prevents new issuance and refresh;
+  5. an unknown lifecycle state prevents issuance (the
+     forward-compatibility rule: only `active` permits reliance);
+  6. a credential from another Mission cannot be substituted (the
+     reference and its Controller namespace bind together);
+  7. a bare client-supplied Mission identifier creates no binding
+     (the grant, never the identifier, determines the Mission);
+  8. a lost state dependency follows the deployment's declared
+     failure behavior; and
+  9. the observed residual after a transition does not exceed the
+     published reliance bound.
 
 **Runtime-Enforced**:
 : adds a PEP/PDP decision on every consequential action, a trusted
