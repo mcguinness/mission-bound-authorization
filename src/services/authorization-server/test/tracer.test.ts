@@ -263,10 +263,10 @@ describe("M1 tracer slice", () => {
     const res = await fetch(`${ISSUER}/introspect`, {
       method: "POST",
       headers: {
-        "content-type": "application/json",
-        "x-service-token": DEV_SERVICE_TOKEN,
+        "content-type": "application/x-www-form-urlencoded",
+        authorization: `Basic ${Buffer.from("rs-payments:dev-introspection-rs-payments").toString("base64")}`,
       },
-      body: JSON.stringify({ token: accessToken }),
+      body: new URLSearchParams({ token: accessToken }).toString(),
     });
     const body = (await res.json()) as { active: boolean; mission?: { state: string } };
     expect(body.active).toBe(true);
@@ -327,8 +327,11 @@ describe("M1 tracer slice", () => {
 
     const res3 = await fetch(`${ISSUER}/introspect`, {
       method: "POST",
-      headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
-      body: JSON.stringify({ token: accessToken }),
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        authorization: `Basic ${Buffer.from("rs-payments:dev-introspection-rs-payments").toString("base64")}`,
+      },
+      body: new URLSearchParams({ token: accessToken }).toString(),
     });
     const body = (await res3.json()) as { mission?: { state: string } };
     expect(body.mission?.state).toBe("revoked");

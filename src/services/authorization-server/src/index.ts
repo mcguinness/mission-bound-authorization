@@ -1,6 +1,7 @@
 /** Assembly: kernel + adapters + keys. Used by server.ts and tests. */
 
 import {
+  INTROSPECTION_PRINCIPALS,
   ACTOR_PROFILES,
   CANONICAL_RESOURCE,
   CONTAINMENT_POLICY,
@@ -284,6 +285,26 @@ function rootMissionContinuation(store: ContinuationStore, record: MissionRecord
   });
 }
 
+/**
+ * @spec mission#introspection (issue #541 P1-4) — strip EVERY RFC 7517/7518
+ * private-key member so a JWK is safe to publish on jwks_uri: an EC key's
+ * sole private member is `d`, but an RSA key ALSO carries `p, q, dp, dq, qi`
+ * (the CRT primes/exponents) — stripping only `d` from an RSA private JWK
+ * (the naive EC-shaped strip) still publishes the private primes. `asToken`
+ * is RS256 (config/topology.json), so this matters for the injected
+ * test-signing-key path below.
+ */
+function publicJwkOf(jwk: JWK): Record<string, unknown> {
+  const { d: _d, p: _p, q: _q, dp: _dp, dq: _dq, qi: _qi, ...pub } = jwk as JWK & {
+    p?: string;
+    q?: string;
+    dp?: string;
+    dq?: string;
+    qi?: string;
+  };
+  return pub;
+}
+
 export interface BuiltAs {
   provider: Provider;
   kernel: MissionKernel;
@@ -389,6 +410,16 @@ export async function buildAuthorizationServer(opts: {
    * production leaves this undefined and relies on config.
    */
   actorProfiles?: Record<string, string>;
+  /**
+   * @spec mission#introspection (issue #541 P1-4) — TEST-ONLY: inject the AT
+   * signing key (a private JWK matching {@link TOPOLOGY.keys.asToken}'s alg)
+   * instead of generating one per boot. Lets a test craft adversarial at+jwt
+   * fixtures against the strict introspection resolver from ITS OWN retained
+   * copy of the private half, without this function ever handing the
+   * production signing key back through {@link BuiltAs}. Production callers
+   * MUST omit this.
+   */
+  testTokenSigningJwk?: JWK;
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
@@ -396,15 +427,36 @@ export async function buildAuthorizationServer(opts: {
   // as-continuation signs the continuation ID-JAG (an identity grant gets its
   // own signing key, discoverable on the AS jwks_uri AND trusted by the RAS).
   const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
-  const tokenKeys = await generateKeyPair(asToken.alg, { extractable: true });
+  // @spec mission#introspection (issue #541 P1-4) — the AT signing key is the
+  // ONE key a test legitimately needs the private half of, to craft
+  // adversarial at+jwt fixtures against the strict introspection resolver
+  // (missing claims, wrong issuer, narrowed authorization_details, ...).
+  // Rather than exporting the production private key from BuiltAs (handing
+  // every in-process consumer the root key needed to mint arbitrary access
+  // tokens), a test MAY inject its OWN key here; production callers omit
+  // `testTokenSigningJwk` and get the usual per-boot generated key (D25).
+  // The test keeps its own copy of what it injected; nothing signing-capable
+  // is ever returned from this function.
+  let tokenPrivateKey: CryptoKey;
+  let tokenJwk: Record<string, unknown>;
+  let tokenJwkPub: Record<string, unknown>;
+  if (opts.testTokenSigningJwk) {
+    const injected = { ...opts.testTokenSigningJwk, kid: asToken.kid, alg: asToken.alg, use: "sig" };
+    tokenPrivateKey = (await importJWK(injected as JWK, asToken.alg)) as CryptoKey;
+    tokenJwk = injected;
+    tokenJwkPub = publicJwkOf(injected as JWK);
+  } else {
+    const tokenKeys = await generateKeyPair(asToken.alg, { extractable: true });
+    tokenPrivateKey = tokenKeys.privateKey;
+    tokenJwk = { ...(await exportJWK(tokenKeys.privateKey)), kid: asToken.kid, alg: asToken.alg, use: "sig" };
+    tokenJwkPub = { ...(await exportJWK(tokenKeys.publicKey)), kid: asToken.kid, alg: asToken.alg, use: "sig" };
+  }
   const statusKeys = await generateKeyPair(asStatus.alg, { extractable: true });
   const txnKeys = await generateKeyPair(asTxn.alg, { extractable: true });
   const continuationKeys = await generateKeyPair(asContinuation.alg, { extractable: true });
-  const tokenJwk = { ...(await exportJWK(tokenKeys.privateKey)), kid: asToken.kid, alg: asToken.alg, use: "sig" };
   const statusJwkPriv = { ...(await exportJWK(statusKeys.privateKey)), kid: asStatus.kid, alg: asStatus.alg, use: "sig" };
   const txnJwkPriv = { ...(await exportJWK(txnKeys.privateKey)), kid: asTxn.kid, alg: asTxn.alg, use: "sig" };
   const continuationJwkPriv = { ...(await exportJWK(continuationKeys.privateKey)), kid: asContinuation.kid, alg: asContinuation.alg, use: "sig" };
-  const tokenJwkPub = { ...(await exportJWK(tokenKeys.publicKey)), kid: asToken.kid, alg: asToken.alg, use: "sig" };
   const statusJwkPub = { ...(await exportJWK(statusKeys.publicKey)), kid: asStatus.kid, alg: asStatus.alg, use: "sig" };
   const txnJwkPub = { ...(await exportJWK(txnKeys.publicKey)), kid: asTxn.kid, alg: asTxn.alg, use: "sig" };
   const continuationJwkPub = { ...(await exportJWK(continuationKeys.publicKey)), kid: asContinuation.kid, alg: asContinuation.alg, use: "sig" };
@@ -553,11 +605,14 @@ export async function buildAuthorizationServer(opts: {
       : {}),
     approverRoleSubs: new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub)),
     accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
+    // @spec mission#caller-authorization-and-minimization — the registered
+    // RFC 7662 introspection principals (config/introspection.json).
+    introspectionPrincipals: INTROSPECTION_PRINCIPALS,
     txnKey: txnKeys.privateKey,
     txnKid: asTxn.kid,
     // @spec child-delegation#child-client-identity — sign the child-bound RFC 7523
     // authorization grant with the AS token key (verifies on the jwks_uri).
-    childGrantKey: tokenKeys.privateKey,
+    childGrantKey: tokenPrivateKey,
     childGrantKid: asToken.kid,
     childGrantAlg: asToken.alg,
     // @spec id-continuation-assertion — the RFC 8693 token-exchange continuation

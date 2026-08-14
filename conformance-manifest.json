@@ -322,7 +322,7 @@
       "assertion": "output-bound",
       "observation": {
         "normative": "lifecycle refusals carry mission_error with one of mission_revoked, mission_expired, mission_superseded, derivations_exhausted",
-        "local": "implementation emits mission_denial_reason with the kernel reason set instead; recorded SHOULD-level departure, tracked in #526"
+        "local": "implementation emits mission_denial_reason with the kernel reason set instead; recorded SHOULD-level departure"
       },
       "level": "endpoint",
       "coverage": "todo",
@@ -448,13 +448,24 @@
       "surface": "introspection",
       "assertion": "output-bound",
       "observation": {
-        "normative": "a valid token on a revoked or expired Mission introspects as active: false plus mission.state",
-        "local": "provider currently returns bare {active:false} with no mission member; red-first tests and the paired fix are #526"
+        "normative": "a valid token on a revoked or expired Mission introspects as active: false plus mission.state"
       },
       "level": "endpoint",
-      "coverage": "blocked",
-      "tests": [],
-      "blocked_by": "#526"
+      "coverage": "tested",
+      "tests": [
+        {
+          "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+          "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state revoked, NO top-level or mission authorization_details",
+          "level": "endpoint",
+          "surface": "introspection"
+        },
+        {
+          "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+          "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > Mission-expired composite: active:false with state expired",
+          "level": "endpoint",
+          "surface": "introspection"
+        }
+      ]
     },
     {
       "id": "core.introspection.caller-authentication",
@@ -473,9 +484,21 @@
         "normative": "an unauthenticated introspection caller receives no Mission detail"
       },
       "level": "endpoint",
-      "coverage": "blocked",
-      "tests": [],
-      "blocked_by": "#526"
+      "coverage": "tested",
+      "tests": [
+        {
+          "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+          "name": "caller authentication (@spec mission#caller-authorization-and-minimization) > refuses an unauthenticated call with 401 + WWW-Authenticate",
+          "level": "endpoint",
+          "surface": "introspection"
+        },
+        {
+          "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+          "name": "caller authentication (@spec mission#caller-authorization-and-minimization) > the retired shared x-service-token header does not authenticate",
+          "level": "endpoint",
+          "surface": "introspection"
+        }
+      ]
     },
     {
       "id": "core.introspection.caller-authorization",
@@ -494,9 +517,15 @@
         "normative": "a caller not authorized for the token receives no Mission detail"
       },
       "level": "endpoint",
-      "coverage": "blocked",
-      "tests": [],
-      "blocked_by": "#526"
+      "coverage": "tested",
+      "tests": [
+        {
+          "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+          "name": "strict token resolution: bare active:false, no Mission or token detail > wrong-audience caller: the ENTIRE response is minimized",
+          "level": "endpoint",
+          "surface": "introspection"
+        }
+      ]
     },
     {
       "id": "core.introspection.audience-minimization",
@@ -513,12 +542,24 @@
       "assertion": "privacy",
       "observation": {
         "normative": "the response discloses only the entries and Mission data relevant to the caller's audience",
-        "local": "no audience filtering exists in the handler; red-first tests and the paired fix are #526"
+        "local": "the disclosed set is the intersection of the caller's registration and the token-visible audience, mapped to resources per deployment configuration"
       },
       "level": "endpoint",
-      "coverage": "blocked",
-      "tests": [],
-      "blocked_by": "#526"
+      "coverage": "tested",
+      "tests": [
+        {
+          "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+          "name": "active composite + projection matrix (@spec mission#composite-active) > multi-audience Mission: authorization_details filter to the caller's audience",
+          "level": "endpoint",
+          "surface": "introspection"
+        },
+        {
+          "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+          "name": "audience-to-resource mapping (cleanup, issue #541): an OAuth aud need not be byte-equal to a RAR resource > a mapped audience contributes its FULL mapped resource set, not itself",
+          "level": "unit",
+          "surface": "introspection"
+        }
+      ]
     },
     {
       "id": "core.anchors.entry-commitment",
