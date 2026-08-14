@@ -73,6 +73,12 @@ normative:
     date: 2026
 
 informative:
+  MCP-REGISTRY:
+    title: "The MCP Registry"
+    target: https://modelcontextprotocol.io/registry/about
+    author:
+      - org: Model Context Protocol Project
+    date: 2026
   COAZ:
     target: https://openid.github.io/authzen/authzen-mcp-profile-1_0.html
     title: "AuthZEN Profile for Model Context Protocol Tool Authorization - Draft 1"
@@ -97,8 +103,9 @@ Mission-Bound Runtime Enforcement: AuthZEN Profile
 {{I-D.draft-mcguinness-mission-authzen}} carries the decision request
 that permits a consequential action against a Mission's approved
 authority. For an action sourced from a discovered catalog (the MCP
-Registry is one example catalog source, authenticated like any
-capability source), an MCP tool, an OpenAPI operation, or an
+Registry, {{MCP-REGISTRY}}, is one example catalog source; its
+contents are discovery metadata, never authority for a server's
+effective capabilities), an MCP tool, an OpenAPI operation, or an
 equivalent capability source, the
 invoked identity can drift from what the catalog served at approval.
 This document defines the companion binding that ties an approved

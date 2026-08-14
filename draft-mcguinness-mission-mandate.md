@@ -249,9 +249,10 @@ The protected header MUST carry:
 `typ`:
 : REQUIRED. `mission-mandate+jwt`. Per {{RFC7515}} Section 4.1.9 the
   value omits the `application/` prefix of the media type registered
-  in {{iana}}. Explicit typing follows the JWT BCP ({{RFC8725}},
-  Section 3.11): the `typ` is the defense against token type
-  confusion.
+  in {{iana}}. Exact validation of the protected `typ` value,
+  together with mutually exclusive validation rules for the artifact
+  profiles, implements the substitution defense of {{RFC8725}},
+  Sections 3.11 and 3.12.
 
 `alg`:
 : REQUIRED. An asymmetric JWS algorithm. `none` MUST NOT be used.

@@ -104,10 +104,10 @@ informative:
     date: 2022
   MCP:
     title: "Model Context Protocol: Authorization"
-    target: https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization
+    target: https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization
     author:
       - org: Model Context Protocol Project
-    date: 2025
+    date: 2026
   AuthZEN.ARAP:
     title: "OpenID AuthZEN Access Request and Approval Profile 1.0"
     target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
@@ -4922,8 +4922,9 @@ under Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`.
 
 ## Stage 0: Agent Identity (by Reference)
 
-The agent is an OAuth client with a workload identity (for example a
-WIMSE or SPIFFE identity, {{I-D.draft-ietf-wimse-arch}},
+The agent is an OAuth client with a workload identity (for example,
+a workload identity established using WIMSE or SPIFFE,
+{{I-D.draft-ietf-wimse-arch}},
 {{I-D.draft-ietf-oauth-spiffe-client-auth}}), and `alice` has delegated to it through an
 ordinary authorization-code flow, per
 {{I-D.draft-klrc-aiagent-auth}}: `client_id` is the agent and the

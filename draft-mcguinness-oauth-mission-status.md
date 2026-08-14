@@ -405,9 +405,10 @@ carries `typ` of `mission-status-response+jwt` and a `kid` identifying
 the signing key. Per {{RFC7515}} Section 4.1.9 the `typ` header omits
 the `application/` prefix; the full media type
 `application/mission-status-response+jwt` (registered in {{iana}}) is
-used as the HTTP `Content-Type`. Explicit typing follows the JWT BCP
-({{RFC8725}}, Section 3.11): the `typ` is the defense against token
-type confusion.
+used as the HTTP `Content-Type`. Exact validation of the protected
+`typ` value, together with mutually exclusive validation rules for
+the artifact profiles, implements the substitution defense of
+{{RFC8725}}, Sections 3.11 and 3.12.
 
 {{RFC9701}} signed introspection responses are scoped to token
 introspection and do not apply to a lookup keyed by `mission_id`; the

@@ -455,8 +455,10 @@ redemption to the grant's `client_id`. The consuming AS MUST validate,
 in an order that fails closed:
 
 1. the JOSE `typ` is `mission-issuance-grant+jwt`; any other type is
-   not this profile ({{relationships}}), the explicit-typing
-   defense of the JWT BCP ({{RFC8725}}, Section 3.11);
+   not this profile ({{relationships}}): exact validation of the
+   `typ`, with mutually exclusive validation rules for the artifact
+   profiles, implements the substitution defense of {{RFC8725}},
+   Sections 3.11 and 3.12;
 2. the signature, under a `kid` resolving in the published key
    material of an `iss` its local policy trusts for issuance joins;
 3. `aud` names this AS; `exp` and `iat` are within the 300-second

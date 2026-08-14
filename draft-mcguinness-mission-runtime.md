@@ -1013,11 +1013,13 @@ per-instance keys, taking custody of each instance's key rather than
 one shared key; or the mediating PEP is itself the attested instance
 that obtained the token, presenting the instance assertion and holding
 the instance key. In both shapes that profile's no-shared-key rule and
-this section's custody rules are satisfied together. The IETF's
-attestation-based client authentication work
+this section's custody rules are satisfied together.
+Attestation-based client authentication and SPIFFE
 ({{I-D.draft-ietf-oauth-attestation-based-client-auth}},
-{{I-D.draft-ietf-oauth-spiffe-client-auth}}) is the adjacent
-standardization of this instance-authentication slot.
+{{I-D.draft-ietf-oauth-spiffe-client-auth}}) can supply the
+client-instance authentication and workload credentials beneath this
+custody layer; they do not define the Mission actor, delegation,
+intent, lifecycle, or evidence semantics.
 
 This narrows, and does not eliminate, the compromised-agent exposure.
 The mediating PEP becomes a trusted component whose compromise is

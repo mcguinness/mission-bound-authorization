@@ -1409,8 +1409,9 @@ costs one evaluation rather than many.
 On success the MAS mints a Mission Join Assertion: a signed JWT
 {{RFC7519}} whose protected header carries the `typ`
 `mission-join+jwt` and a `kid` resolvable in the MAS's `jwks_uri`;
-explicit typing follows the JWT BCP ({{RFC8725}}, Section 3.11) as
-the defense against token type confusion. Its
+exact validation of that `typ`, with mutually exclusive validation
+rules for the artifact profiles, implements the substitution defense
+of {{RFC8725}}, Sections 3.11 and 3.12. Its
 claims:
 
 `iss`:

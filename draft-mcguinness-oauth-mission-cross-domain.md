@@ -49,15 +49,15 @@ normative:
 
 informative:
   OIDF-FED:
-    title: "OpenID Federation 1.1"
-    target: https://openid.net/specs/openid-federation-1_1.html
+    title: "OpenID Federation for OpenID Connect 1.1"
+    target: https://openid.net/specs/openid-federation-connect-1_1-final.html
     author:
       - org: OpenID Foundation
     date: 2026
   I-D.draft-araut-oauth-transaction-tokens-for-agents:
-  MCP:
-    title: "Model Context Protocol: Authorization"
-    target: https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization
+  MCP-EMA:
+    title: "Model Context Protocol: Enterprise-Managed Authorization"
+    target: https://modelcontextprotocol.io/extensions/auth/enterprise-managed-authorization
     author:
       - org: Model Context Protocol Project
     date: 2025
@@ -265,9 +265,10 @@ names the ID-JAG, it is illustrating with the recommended profile and
 applies equally to any conforming cross-domain grant.
 
 The grant shape this document profiles is already deployed: the
-Model Context Protocol's Cross App Access extension carries the same
-Identity Assertion JWT Authorization Grant between enterprise
-identity providers and MCP applications ({{MCP}}), a shipped surface
+Model Context Protocol's Enterprise-Managed Authorization extension
+(Cross App Access) carries the same Identity Assertion JWT
+Authorization Grant between enterprise identity providers and MCP
+applications ({{MCP-EMA}}), a shipped surface
 for the pattern this profile attaches Mission context to.
 
 This document is a thin Mission-bound profile of the cross-domain
@@ -410,9 +411,9 @@ exists before the first grant is issued.
   ({{I-D.draft-mcguinness-oauth-id-assertion-framework}},
   {{I-D.draft-mcguinness-oauth-domain-authorized-issuer}}) are
   concrete ways to publish and evaluate this policy instead of
-  hand-maintaining a list. OpenID Federation 1.1 ({{OIDF-FED}}) is
-  one possible mechanism for establishing and publishing this trust;
-  nothing here requires or profiles it.
+  hand-maintaining a list. OpenID Federation for OpenID Connect 1.1
+  ({{OIDF-FED}}) is one possible mechanism for establishing and
+  publishing this trust; nothing here requires or profiles it.
 - The resource-to-AS mapping: which Resource AS is authoritative for
   which `resource` values, the mapping audience scoping is computed
   under ({{audience-scope}}).
