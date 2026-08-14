@@ -754,7 +754,10 @@ use dual-axis: the agent's delegated authority and that principal's
 current entitlement are independent requirements. A deployment that
 does not claim it keeps this document's baseline unchanged.
 
-Three identities stay deliberately separate and are never collapsed:
+Three identity roles are deliberately separate. The roles remain
+semantically distinct even when two identifiers happen to be equal,
+as with an identity-preserving mapping, a shared origin and
+destination issuer, or a service principal acting for itself:
 
 | Identity | Wire location | Meaning |
 |---|---|---|
@@ -780,7 +783,18 @@ Three identities stay deliberately separate and are never collapsed:
   closed. No display name, email, organization, role, group,
   entitlement, or assurance member is permitted in the object: those
   change independently and would turn the invariant into stale
-  identity state. The member MUST NOT contain human-readable PII.
+  identity state. The `sub` value MUST be an opaque pseudonymous
+  identifier and MUST NOT carry directly identifying attributes; an
+  opaque persistent identifier remains sensitive correlation data,
+  personal data even when opaque, subject to the disclosure rules of
+  {{origin-principal-disclosure}}.
+
+The closed `{iss, sub}` shape suffices only when that pair is
+globally unambiguous. Where uniqueness at the home issuer requires a
+tenant qualifier, the deployment uses a tenant-specific issuer
+identifier or a `sub` encoding that preserves uniqueness; a
+deployment that cannot express the principal unambiguously in the
+pair cannot claim this profile.
 
 Each surface has one attestation authority. On a holder-mediated
 delegation chain the value is root-attested: the Mission Issuer signs
@@ -802,19 +816,33 @@ the deployment's privacy policy. The Subject cannot be replaced by
 the current agent, approver, Mission owner, tenant, or a local
 account selected by the client.
 
+The profile composes with the identity grant; it does not replace
+it. On a cross-domain grant carried as an ID-JAG
+({{cross-domain-grant}}), the grant's issuer-qualified `sub` remains
+the identity grant's subject, and `mission.subject` remains the
+immutable Mission-record origin principal. At issuance the Mission
+Issuer MUST establish that both identify the same principal under
+its recorded injective mapping; its signature over the grant attests
+that association. Neither value independently selects an account.
+
 The identifier's linkability is fixed at Mission creation, because
 the invariant forbids per-destination substitution afterward. Two
-properties are available, chosen at the record: the default is
-pairwise-at-origin (the record `subject` is the home issuer's
-pairwise identifier for the Mission Issuer's sector, so chain
-participants can correlate with each other within and across this
-Subject's Missions but not with the Subject's other relationships);
-the stronger option is a per-Mission subject pseudonym established by
-the home issuer at record creation (participants correlate within one
-Mission only, and destination entitlement resolution goes through the
-governed mapping of {{origin-principal-mapping}}). A deployment
-declares which property it provides; a per-destination pairwise value
-is not constructible under the invariant.
+properties are available, chosen at the record. The default is an
+origin-sector pseudonym with cross-destination Mission correlation:
+the record `subject` is the home issuer's pseudonym for the Mission
+Issuer's sector, the same value is deliberately disclosed to every
+destination the Mission reaches, and it remains correlatable across
+this Subject's Missions while staying unlinkable to the Subject's
+other relationships. The RECOMMENDED stronger option, where
+destination mapping infrastructure supports it, is a per-Mission
+subject pseudonym established by the home issuer at record creation:
+participants correlate within one Mission only, and destination
+entitlement resolution goes through the governed mapping of
+{{origin-principal-mapping}}. A deployment declares which property it
+provides; onward disclosure beyond the audiences Mission policy and
+privacy policy permit requires authorization; and a
+destination-pairwise value is not constructible under the invariance
+rule.
 
 ## Mapping at a Destination {#origin-principal-mapping}
 
@@ -833,6 +861,12 @@ governed many-to-one service account and treats the loss of
 individual attribution as a lower assurance class. This
 destination-side rule is distinct from the issuance profile's
 issuer-side injective mapping at approval, which is unchanged.
+
+On redemption of an ID-JAG-carried grant, the Resource AS MUST
+establish that the identity grant's subject and `mission.subject`
+resolve to the same destination-local principal, and MUST refuse
+with `invalid_grant` when they do not; neither value may select a
+different account than the other.
 
 The local access token keeps ordinary OAuth semantics: `iss` is the
 Resource AS, `sub` is the destination-local subject, `client_id` is
@@ -873,7 +907,11 @@ decision, never a bearer bypass. A deployment claiming this profile
 MUST declare the source and maximum staleness of local principal
 entitlement, separately from its Mission-state freshness declaration;
 when current entitlement cannot be established within the declared
-bound, the decision fails closed. This is the profile's conformance
+bound, the decision fails closed. Under a runtime binding that
+classifies denials, a failed, missing, ambiguous, or stale mapping or
+entitlement step carries the `principal_mapping_failed` extension
+denial reason, which this profile registers per that binding's
+extension rule. This is the profile's conformance
 bar: deployments not claiming it keep the issuance profile's
 lifetime-bounded baseline.
 
@@ -886,11 +924,13 @@ introspection responder, the issuer or a Resource AS, MUST disclose
 it only to a caller holding an explicit `origin_principal` disclosure
 privilege under the issuance profile's caller authorization and
 minimization rules ({{I-D.draft-mcguinness-oauth-mission}}).
-Retained evidence SHOULD carry the issuer-qualified subject digest
-and mapping-policy version defined by the runtime evidence companion
-({{I-D.draft-mcguinness-mission-runtime-evidence}}) instead of the
-raw value, unless the raw identity is necessary for the stated audit
-purpose; the trust agreement states the purpose and retention period
+The runtime evidence companion defines the composed
+`principal_mapping` evidence object and the protected
+subject-reference rule for retained records
+({{I-D.draft-mcguinness-mission-runtime-evidence}}); a deployment
+claiming both composes them, keeping raw identifiers out of retained
+evidence unless the raw identity is necessary for the stated audit
+purpose. The trust agreement states the purpose and retention period
 for the mapping.
 
 ## Example (Non-Normative)
@@ -1016,12 +1056,27 @@ A Resource AS is not required to implement the issuance profile's Mission
 Issuer role.
 
 Either role MAY additionally claim the **Origin Principal profile**
-({{origin-principal}}): it carries or verifies `mission.subject` as
-that profile requires, verifies value invariance before mapping or
-reliance, applies the mapping and continuity rules, authorizes
-dual-axis with a declared entitlement-freshness bound, and applies
-the profile's disclosure and minimization rules. The claim is
-per-deployment and independent of the base role.
+({{origin-principal}}). The claim is per-deployment, independent of
+the base role, and covers each of the following as a distinct
+conformance item:
+
+- identity-grant subject consistency at issuance and redemption
+  ({{origin-principal-issuance}}, {{origin-principal-mapping}});
+- value invariance of `mission.subject` across every hop, projection,
+  and response ({{mission-subject}});
+- the origin-to-local mapping rules, including refusal on a stale,
+  ambiguous, disabled, or tenant-wrong mapping
+  ({{origin-principal-mapping}}, {{origin-principal-continuity}});
+- dual-axis authorization with a declared entitlement-freshness
+  bound, failing closed ({{dual-axis}});
+- the `origin_principal` introspection disclosure privilege, pinning
+  both privileged disclosure and omission for an audience-authorized
+  but unprivileged caller ({{origin-principal-disclosure}});
+- evidence mapping binding through the runtime evidence companion's
+  `principal_mapping` object
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}); and
+- omission of the member from tokens for unrelated audiences
+  ({{origin-principal-disclosure}}).
 
 # Security Considerations
 

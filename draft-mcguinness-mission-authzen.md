@@ -26,6 +26,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -96,14 +104,6 @@ normative:
     date: 2026
 
 informative:
-  I-D.draft-mcguinness-oauth-mission-cross-domain:
-    title: "Mission Cross-Domain Projection for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   RFC9457:
   RFC9470:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
@@ -473,12 +473,14 @@ so a change in state never mints a new `policy_view_id`
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). REQUIRED for
   a request claiming that profile. The PEP populates it only from a
   verified token or delegation chain, or from trusted local token
-  metadata, never from an unverified request value. The PDP compares
-  it with the identity used for local-entitlement lookup and binds
-  the permit and its evidence to both the origin and the local
-  subject identity. The AuthZEN `subject` (the authenticated local
-  token subject) and `context.actor` (the acting lineage) keep their
-  meanings: the three identities never collapse.
+  metadata, never from an unverified request value. The PDP applies
+  the origin-principal mapping check of the PDP-side consistency
+  checks ({{pdp-request}}): the two subject namespaces are related
+  only through the mapping's output, never by direct comparison. The
+  AuthZEN `subject` (the authenticated local token subject) and
+  `context.actor` (the acting lineage) keep their meanings: the three
+  roles remain semantically distinct even when two identifiers happen
+  to be equal.
 
 This context anchors the Mission's approved Authority Set through
 `authority_hash`. Where a Mission participates in a companion that
@@ -1027,6 +1029,39 @@ self-consistent:
    companion's source checks and its `capability_drift` extension
    reason ({{I-D.draft-mcguinness-mission-capability-binding}}); this
    binding consumes an already established action identity.
+10. For a request claiming the cross-domain Origin Principal profile
+    ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), the PDP
+    establishes the mapped local principal and requires it to equal
+    the authenticated request subject before entitlement lookup:
+
+    ~~~
+    mapped_subject =
+      map(context.mission.subject, audience, tenant, mapping_policy)
+
+    require mapped_subject ==
+      (subject.properties.iss, subject.id)
+
+    entitlement = lookup_current_entitlement(mapped_subject)
+    ~~~
+
+    Direct equality between `context.mission.subject` and the request
+    subject is wrong by construction: the two occupy different
+    namespaces, and only the mapping's output is comparable. The PDP
+    is authoritative for the mapping in the default placement. A
+    deployment that instead places mapping at the PEP MUST convey it
+    as a structured, integrity-protected mapping observation carrying
+    its source, the mapping-policy identifier and version, the
+    issuer-qualified input, the local output, the observation time,
+    and a validity bound; the PDP verifies it as it verifies
+    `context.mission_state_observation`. A failed, missing,
+    ambiguous, or stale result at either step denies with the
+    profile's `principal_mapping_failed` extension reason
+    ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
+    {{runtime-denial-classification}}); entitlement staleness beyond
+    the declared bound denies likewise. The permit and its evidence
+    bind to both the origin and the mapped local identity through the
+    `principal_mapping` evidence object
+    ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 ## Clock skew {#clock-skew}
 
