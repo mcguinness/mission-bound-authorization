@@ -392,7 +392,10 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   the overlay and requires this member on every
   `mission.lifecycle-change` event, so a consumer can tell an
   active-to-active version bump that narrows authority from one that
-  does not.
+  does not. It composes with `authority_changed` below: containment
+  keeps its own version counter for a containment-aware consumer,
+  while `authority_changed` is the generic discriminator every
+  consumer reads regardless of which overlay narrowed authority.
 
 `authority_hash` (string, optional):
 : the `authority_hash` the issuance profile commits at approval
@@ -400,6 +403,17 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   profile's option, as a reference to the Authority Set the current
   containment overlay narrows
   ({{I-D.draft-mcguinness-oauth-mission-containment}}).
+
+`authority_changed` (boolean, optional, default false):
+: true when the committed transition changes the Mission's effective
+  authority without changing `state`: an entry discharge
+  ({{I-D.draft-mcguinness-oauth-mission-status}}) is the current case,
+  and a future issuer-held narrowing overlay is expected to set it the
+  same way. The discriminator is deliberately generic: it carries no
+  detail of what changed, and in particular no entry digest is
+  disclosed on this event. Absent or false means this transition does
+  not narrow effective authority beyond what `state` and
+  `containment_version` already communicate.
 
 Following the issuance profile's forward-compatibility rule, an event
 consumer MUST treat every `state` value other than `active` as
@@ -578,6 +592,19 @@ On receiving and verifying ({{set-protection}}) a
   containment transition where nothing in `state` signals that
   authority narrowed. The version-gap rule stays the fallback for the
   coarse case, a missed event.
+- Rematerialize its effective authority view for the Mission through
+  the Mission Status operation
+  ({{I-D.draft-mcguinness-oauth-mission-status}}) before further
+  consequential reliance when an in-order event carries
+  `authority_changed` true, even when `state` equals `prior_state` and
+  no version gap exists. Unlike the containment-specific rule above,
+  this rule binds every consumer, not only one that is
+  containment-aware: the discharge commit of the Status profile
+  ({{I-D.draft-mcguinness-oauth-mission-status}}) sets
+  `authority_changed`, and a future issuer-held narrowing overlay is
+  expected to set it the same way, so a consumer that reads only
+  `authority_changed` still rematerializes on either. The version-gap
+  rule stays the fallback for the coarse case, a missed event.
 - Acknowledge the event per the SSF delivery method in use.
 
 A consumer MUST NOT treat the event as authority to change Mission
@@ -800,8 +827,8 @@ the author-controlled `schemas.karlmcguinness.com` namespace:
   approval-event emission) and `suspend_until` with `on_expiry` (present
   only on a transition to `suspended` under a deadline). Optional
   event-body claims: `tenant`, `reason`, `successor` (`successor`
-  present only on a `superseded` transition). See {{lifecycle-event}}
-  for the schema.
+  present only on a `superseded` transition), and `authority_changed`.
+  See {{lifecycle-event}} for the schema.
 
 This event type uses the OpenID Shared Signals Framework {{OIDC-SSF}}
 SET shape. The standalone Mission Issuer binding

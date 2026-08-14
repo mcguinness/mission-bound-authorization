@@ -238,7 +238,7 @@ This document depends normatively on the issuance profile and is not
 implementable alone. It reuses, without restating, that profile's
 Mission, Mission Intent, Authority Set and entry shape, integrity
 anchors, `mission` claim, subset rule, and lifecycle gating, and the
-Status profile's state version and event-source verification
+Status profile's state version
 ({{I-D.draft-mcguinness-oauth-mission-status}}). It uses the terms
 Agent (Client), Subject, Approver, Mission Issuer, Authority Set,
 Mission, and derived token as defined in the issuance profile.
@@ -433,7 +433,9 @@ the Approver committed inside the Authority Set; containment removes
 capability because a protected event fired, under issuer-held policy
 the anchor never carried. Both are evaluated state; both commit as
 metadata-only state-version increments; derivation excludes both
-({{derivation-gating}}).
+({{derivation-gating}}). Discharge identifies the retired entry by the
+issuance profile's Authority Set entry commitment
+({{I-D.draft-mcguinness-oauth-mission}}).
 
 # The Contain Transition {#contain-transition}
 
@@ -477,11 +479,9 @@ open-world discovery ({{I-D.draft-mcguinness-mission-discovery}}).
 
 A protected event is a trusted input to authority: the Mission Issuer
 MUST authenticate and integrity-verify an event source outside its
-own trust domain before acting on its report. The Status profile's
-signed event-source profile, a JWS status document verified against
-the `source` identity rather than the transport origin, is the
-interoperable mechanism
-({{I-D.draft-mcguinness-oauth-mission-status}}).
+own trust domain before acting on its report. The mechanism is
+deployment-defined; this document defines no interoperable
+event-source profile of its own.
 
 A protected event whose authenticity or applicability is
 indeterminate fails closed. The Mission Issuer MUST either commit the
