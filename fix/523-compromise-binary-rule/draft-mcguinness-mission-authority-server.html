@@ -1991,6 +1991,16 @@ could be derived for. It reflects the client's own input and <span class="bcp14"
             </tr>
           </tbody>
         </table>
+<p id="section-4.3-5">This aligns with the OAuth-shaped surfaces' shared error idiom
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>: an <code>error</code>/
+<code>error_description</code> JSON object body, <code>application/json</code> with
+<code>Cache-Control: no-store</code>, and <code>error_description</code> diagnostic and
+never authorization input. This surface's own requiredness stays as
+above: <code>error_description</code> and <code>error_reason</code> are <span class="bcp14">OPTIONAL</span>, and
+<code>error_reason</code> is MAS-specific. The MAS does not carry <code>nonce</code>; that
+member's requiredness on the status and lifecycle surfaces
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) and on Mission
+Management does not extend here, a deliberate, frozen divergence.<a href="#section-4.3-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
