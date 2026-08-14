@@ -43,5 +43,13 @@ export type {
   StopPolicy,
 } from "./binding.js";
 export { canonicalize, type JsonValue } from "./canonicalize.js";
+export {
+  type CompromiseBoundaryOutcome,
+  evaluateCompromiseBoundary,
+  type ProofCommitment,
+  type ProofFailure,
+  type RecoveryProof,
+  type SigningKeyStatus,
+} from "./compromise-boundary.js";
 export { compareAmounts, InvalidAmountError, isValidAmount } from "./decimal-amount.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";

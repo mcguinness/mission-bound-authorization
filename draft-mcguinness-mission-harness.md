@@ -1192,11 +1192,10 @@ That key follows the issuance profile's retired-key rule, extended
 to this artifact's retention bound
 ({{I-D.draft-mcguinness-oauth-mission}}): a retired
 harness signing key MUST remain resolvable in the published key set
-for at least the evidence retention window. The compromise exception
-carries over with it: a key known or suspected compromised is
-published as revoked or marked with a compromise time, per the core
-rule, and evidence signed under it after that time is unverifiable
-rather than verified.
+for at least the evidence retention window. For a key identified as
+compromised, verification of harness evidence is governed by the
+evidence companion's complete compromise-boundary rule
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 ## Harness Evidence Object {#harness-evidence-object}
 
