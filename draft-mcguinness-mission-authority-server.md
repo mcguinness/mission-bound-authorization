@@ -35,7 +35,14 @@ normative:
   RFC8259:
   RFC8615:
   RFC9110:
+  RFC9421:
   RFC9651:
+  MCP-META:
+    title: "Model Context Protocol: Base Protocol"
+    target: https://modelcontextprotocol.io/specification/2025-11-25/basic/index
+    author:
+      - org: Model Context Protocol Project
+    date: 2025
   RFC9068:
   RFC9325:
   I-D.draft-mcguinness-oauth-mission:
@@ -1285,10 +1292,13 @@ the action under the Mission's Authority Set and permits:
 The AuthZEN profile's denial-reason extensibility rule permits a
 companion profile to extend the denial-reason set by specification,
 and requires a consumer to treat an unrecognized reason as a deny
-({{I-D.draft-mcguinness-mission-authzen}}). `mission_mismatch` is such
-an extension: where this profile is implemented, it is a member of
-that denial-reason set. A consumer that does not implement this
-profile treats it as that rule requires: the action stays refused.
+({{I-D.draft-mcguinness-mission-authzen}}). `mission_mismatch` and
+`mission_reference_conflict` ({{reference-verification}}) are such
+extensions: where this profile is implemented, they are members of
+that denial-reason set, and neither requires IANA action under the
+AuthZEN profile's extension-by-specification model. A consumer that
+does not implement this profile treats them as that rule requires:
+the action stays refused.
 
 Example AuthZEN denial for a credential whose `client_id` does not
 match the referenced Mission:
@@ -1385,20 +1395,26 @@ Mission-Reference: id="msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   trailer field.
 - The value is a Dictionary carrying exactly two members, both
   REQUIRED: `id`, a String carrying the Mission identifier, and
-  `issuer`, a String carrying the MAS issuer identifier in its
-  canonical URI form. Structured Field Strings are ASCII: an issuer
-  whose canonical form is not ASCII is represented in its URI-encoded
-  ASCII form, and comparison is byte-wise over the canonical form.
-- A receiver MUST accept `id` values up to 256 characters and
-  `issuer` values up to 512 characters, and MAY treat longer values
-  as malformed.
-- The Dictionary is closed: a member this document does not define
-  makes the reference malformed unless a profile the deployment
-  adopts defines it by specification; a receiver MUST NOT act on a
-  member it does not implement.
-- A sender MUST send at most one field line. A receiver parses under
-  {{RFC9651}}; field lines that do not combine into exactly one valid
-  Dictionary, or any parse failure, make the reference malformed.
+  `issuer`, a String carrying the exact issuer identifier the MAS
+  publishes in its metadata ({{discovery}}). A MAS participating in
+  this profile MUST publish an ASCII issuer identifier (Structured
+  Field Strings are ASCII); the sender copies that published string
+  with no URI normalization of any kind, and equality is byte
+  equality of the exact string.
+- A sender MUST NOT emit an `id` longer than 256 characters or an
+  `issuer` longer than 512 characters; a receiver MUST treat a longer
+  value as malformed.
+- {{RFC9651}} parsing keeps the last of duplicate Dictionary keys, so
+  parse success alone is not enough. A receiver MUST reject as
+  malformed, before map collapse: a duplicate `id` or `issuer`
+  occurrence, a parameter on either member, an Inner List or any
+  non-String value, and any member other than the two defined here.
+  A profile the deployment adopts MAY define an additional member by
+  specification; a receiver MUST NOT act on a member it does not
+  implement.
+- A sender MUST send exactly one field line. Field lines that do not
+  combine into exactly one Dictionary satisfying every rule above, or
+  any parse failure, make the reference malformed.
 - A malformed, missing, or stripped reference fails closed wherever
   Mission governance is required: governed work with no establishable
   Mission reference is refused before evaluation, per the runtime
@@ -1411,8 +1427,9 @@ For a tool call governed through MCP, the reference rides the
 request's `params._meta` object on each `tools/call`, never tool
 arguments and never session state, under the key
 `com.karlmcguinness.mission/reference`, a reverse-DNS-prefixed key in
-a namespace this family's author controls (MCP reserves its own
-`_meta` prefixes):
+a namespace this family's author controls, per the pinned MCP
+revision's `_meta` rules ({{MCP-META}}; MCP reserves its own `_meta`
+prefixes):
 
 ~~~ json
 {
@@ -1431,7 +1448,11 @@ a namespace this family's author controls (MCP reserves its own
 ~~~
 
 The value carries exactly `mission_id` and `issuer`, with the tuple
-semantics of {{reference-tuple}} unchanged. Unknown `_meta` keys are
+semantics of {{reference-tuple}} unchanged. The value object is
+closed the same way as the HTTP field: a receiver MUST reject
+duplicate JSON member names at parse time, a member other than
+`mission_id` and `issuer`, a non-string member value, and the
+propagation key appearing more than once in `_meta`. Unknown `_meta` keys are
 extensible metadata an ordinary MCP server may ignore; a server that
 silently ignores this key is not a conforming Mission PEP. Where a
 tool is governed as Mission-required, absent negotiated or configured
@@ -1463,15 +1484,17 @@ section's.
   subject-or-client join failure, and `mission_reference_conflict` is
   reference sources naming different Missions or an unusable
   reference.
-- The reference attributes the request it accompanies. Session-scoped
-  stickiness is a deployment choice recorded in the Enforcement Scope
-  Statement, and per-request carriage is required wherever the
-  runtime profile requires per-action evaluation.
+- The selection assertion applies only to the request it accompanies:
+  it selects the Mission the join is evaluated against, and does not
+  by itself establish request provenance or attribution.
+  Session-scoped stickiness is a deployment choice recorded in the
+  Enforcement Scope Statement, and per-request carriage is required
+  wherever the runtime profile requires per-action evaluation.
 - The field rides the deployment's TLS, which authenticates the
   channel endpoint, never which component attached the value:
   transport protection does not upgrade self-asserted attribution.
-  Where HTTP Message Signatures are deployed on the request, the
-  signature MUST cover `Mission-Reference`.
+  Where HTTP Message Signatures {{RFC9421}} are deployed on the
+  request, the signature MUST cover `Mission-Reference`.
 
 Example denial for a propagated reference conflicting with the PEP's
 recorded binding:
@@ -2258,6 +2281,7 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 
 - Field Name: Mission-Reference
 - Status: permanent
+- Structured Type: Dictionary
 - Reference: this document, {{mission-reference-field}}
 - Comments: none
 

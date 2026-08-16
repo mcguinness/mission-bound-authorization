@@ -26,6 +26,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-mission-authority-server:
+    title: "Mission Authority Server"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC3339:
   RFC8259:
   RFC8785:
@@ -63,14 +71,6 @@ normative:
     date: 2026
 
 informative:
-  I-D.draft-mcguinness-mission-authority-server:
-    title: "Mission Authority Server"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
