@@ -1838,6 +1838,14 @@ or a deployment-defined policy.<a href="#section-6-2.18.1" class="pilcrow">¶</a
 </dl>
 <p id="section-6-3">The Mission binding grants no authority. It is the pointer that tells
 the harness which Mission state it must check before continuing work.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">Where governed requests pass through a gateway PEP that is not the
+harness process, the harness <span class="bcp14">SHOULD</span> attach the Mission reference to
+each governed request it originates, from this recorded binding,
+using the Mission Authority Server profile's Mission Reference
+Propagation channel
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>): harness
+attachment is the stronger attribution provenance that channel names,
+against agent self-selection among concurrent same-party Missions.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <div id="binding-inheritance">
 <section id="section-6.1">
         <h3 id="name-binding-inheritance">
@@ -3361,6 +3369,10 @@ of <a href="#harness-evidence" class="auto internal xref">Section 15</a> is loca
 <a href="#section-21.1" class="section-number selfRef">21.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>

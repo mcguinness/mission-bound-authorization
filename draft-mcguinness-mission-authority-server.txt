@@ -104,39 +104,46 @@ Table of Contents
      8.5.  Expansion Example
    9.  Mission Discovery
    10. Mission Join
-   11. Mission Join Assertion
-     11.1.  Assertion Request
-     11.2.  The Assertion
-     11.3.  PDP Consumption
-   12. Limitations
-   13. The Enterprise Mission Authority Profile
-     13.1.  Estate Prerequisites
-     13.2.  The Enterprise Mapping Contract
-     13.3.  Policy View Distribution
-   14. Deployment
-     14.1.  Topology
-     14.2.  Connector Patterns
-     14.3.  Progressive Adoption
-   15. Conformance
-   16. Security Considerations
-     16.1.  Join Spoofing
-     16.2.  Join Assertion Trust
-     16.3.  Expansion and Child-Creation Binding
-     16.4.  Ambient Authority of Ungated Tokens
-     16.5.  MAS Availability
-     16.6.  Signing-Key Custody
-     16.7.  MAS Compromise
-     16.8.  Approval Surface Authentication
-   17. Privacy Considerations
-   18. IANA Considerations
-     18.1.  Well-Known URI Registration
-     18.2.  Mission Authority Server Metadata Registry
-     18.3.  Media Type Registration
-       18.3.1.  Mission Join Assertion Media Type
-     18.4.  Runtime Denial Reason
-   19. References
-     19.1.  Normative References
-     19.2.  Informative References
+   11. Mission Reference Propagation
+     11.1.  The Reference Tuple
+     11.2.  HTTP Carriage: Mission-Reference
+     11.3.  MCP Carriage
+     11.4.  Verification and Conflict
+     11.5.  Forwarding and Privacy
+   12. Mission Join Assertion
+     12.1.  Assertion Request
+     12.2.  The Assertion
+     12.3.  PDP Consumption
+   13. Limitations
+   14. The Enterprise Mission Authority Profile
+     14.1.  Estate Prerequisites
+     14.2.  The Enterprise Mapping Contract
+     14.3.  Policy View Distribution
+   15. Deployment
+     15.1.  Topology
+     15.2.  Connector Patterns
+     15.3.  Progressive Adoption
+   16. Conformance
+   17. Security Considerations
+     17.1.  Join Spoofing
+     17.2.  Join Assertion Trust
+     17.3.  Expansion and Child-Creation Binding
+     17.4.  Ambient Authority of Ungated Tokens
+     17.5.  MAS Availability
+     17.6.  Signing-Key Custody
+     17.7.  MAS Compromise
+     17.8.  Approval Surface Authentication
+   18. Privacy Considerations
+   19. IANA Considerations
+     19.1.  HTTP Field Name Registration
+     19.2.  Well-Known URI Registration
+     19.3.  Mission Authority Server Metadata Registry
+     19.4.  Media Type Registration
+       19.4.1.  Mission Join Assertion Media Type
+     19.5.  Runtime Denial Reason
+   20. References
+     20.1.  Normative References
+     20.2.  Informative References
    Appendix A.  MAS-Mode End-to-End Example
      A.1.  Submit
      A.2.  Poll to Approved
@@ -176,7 +183,7 @@ Table of Contents
    [I-D.draft-mcguinness-mission-runtime] unchanged.
 
    A deployment that changes its AS gets Mission-bound credentials and
-   issuance gating, which the MAS mode does not provide (Section 12).
+   issuance gating, which the MAS mode does not provide (Section 13).
    The MAS is nonetheless a peer binding, not a staging area: decoupling
    governance from token issuance is an architectural choice some
    deployments make deliberately and keep.  Lacking a Mission-bound
@@ -202,11 +209,11 @@ Table of Contents
    even where it controls its AS, to keep governance decoupled from
    token issuance or to govern with one Mission Issuer across many
    Authorization Servers, accepting the enforcement posture of
-   Section 12.  A deployment that wants Mission-bound tokens and
+   Section 13.  A deployment that wants Mission-bound tokens and
    issuance gating implements the issuance profile; a deployment that
    cannot deploy runtime enforcement over its consequential action paths
    obtains records but no enforcement from this profile and SHOULD NOT
-   claim it (Section 12).
+   claim it (Section 13).
 
    The Mission Join (Section 10) is the newest mechanism in the family
    and not yet exercised in deployment; a deployment that can implement
@@ -292,7 +299,7 @@ Table of Contents
        state at decision time.  Standing artifacts carry their own
        bounds: a signed Mission Status is relied on within its declared
        freshness window (Section 7), and a Join Assertion within the
-       introspected token's lifetime (Section 11).  Tokens of the
+       introspected token's lifetime (Section 12).  Tokens of the
        unchanged Authorization Server are not represented as Mission-
        governed artifacts.
 
@@ -359,7 +366,7 @@ Table of Contents
    |             |           |Assertion binds one      | Server issued |
    |             |           |introspected token more  | the token     |
    |             |           |strongly (Section 10,    | under the     |
-   |             |           |Section 11)              | Mission       |
+   |             |           |Section 12)              | Mission       |
    +-------------+-----------+-------------------------+---------------+
    |Independently|supported  |Signed Mission Status    | Does not      |
    |Verifiable   |           |proves record and state  | prove AS      |
@@ -778,7 +785,7 @@ Table of Contents
    only; every mechanism (supersession, reconciliation, lineage, strict
    subset, fan-out, cascade, and the closed code sets) remains owned by
    its profile and applies here by reference (Section 8.3, Section 8.4).
-   The capability is OPTIONAL (Section 15).
+   The capability is OPTIONAL (Section 16).
 
 8.1.  Submission Carriage
 
@@ -875,13 +882,13 @@ Table of Contents
    client can request these operations for any of that client's
    Missions, where the token-exchange possession proof would limit it to
    the Missions whose Mission-bound access token it holds and can prove
-   control of (Section 16.3).
+   control of (Section 17.3).
 
    Where the deployment authenticates client instances
    ([I-D.draft-mcguinness-oauth-client-instance-assertion]), the MAS
    SHOULD bind at instance granularity rather than at the bare
    client_id, and a Mission Join Assertion for the predecessor or parent
-   (Section 11), presented with the submission, strengthens the proof to
+   (Section 12), presented with the submission, strengthens the proof to
    a named runtime instance holding a sender-constrained credential that
    verifiably joins to that Mission.
 
@@ -1019,7 +1026,7 @@ Table of Contents
 9.  Mission Discovery
 
    A MAS publishes a metadata document at the well-known URI [RFC8615]
-   path /.well-known/mission-authority-server, registered in Section 18:
+   path /.well-known/mission-authority-server, registered in Section 19:
    a JSON object served over TLS as application/json.  The document's
    location is constructed from the issuer, following the metadata-
    location rule of [RFC8414]:
@@ -1071,7 +1078,7 @@ Table of Contents
       dpop_bound_token.
 
    mission_join_assertion_endpoint:  OPTIONAL.  A string containing a
-      URL.  The join-assertion endpoint (Section 11).  Present when the
+      URL.  The join-assertion endpoint (Section 12).  Present when the
       MAS mints Mission Join Assertions.
 
    mission_event_stream_endpoint:  OPTIONAL.  A string containing a URL.
@@ -1125,13 +1132,13 @@ Table of Contents
    profile's load-bearing mechanism: it is what a permit "under this
    Mission" rests on when no cryptographic binding exists.  This section
    defines the baseline mapping join; the Mission Join Assertion
-   (Section 11) is the enterprise-mode join built on it, and the
+   (Section 12) is the enterprise-mode join built on it, and the
    Enterprise profile requires it for the high-consequence classes
-   (Section 13).
+   (Section 14).
 
    The join also has a ceiling no assertion raises: it proves the
    credential belongs to the Mission's parties, never that it was issued
-   for the Mission (Section 12).  For the high-consequence classes,
+   for the Mission (Section 13).  For the high-consequence classes,
    association is therefore not the terminal architecture.  The issuance
    join ([I-D.draft-mcguinness-oauth-mission-issuance-grant]) or native
    Mission-bound issuance restores cryptographic derivation.  A
@@ -1176,7 +1183,7 @@ Table of Contents
        authorization MUST be explicit, an enumerated policy, never a
        default.  Where the AS and MAS client namespaces differ, the
        deployment MUST record the client mapping in its mapping contract
-       (Section 13.2), exactly as for subjects.
+       (Section 14.2), exactly as for subjects.
 
    5.  *Delegate narrowing.* When the joined party is a delegate rather
        than the Mission's client_id, the PDP MUST narrow the effective
@@ -1221,7 +1228,7 @@ Table of Contents
    integrity therefore rests wholly within the PEP trust base, and a PEP
    that misattests the subject or client widens the join.  The
    credential-bound join, where the acting token itself is inspected, is
-   the Mission Join Assertion (Section 11), where the MAS resolves the
+   the Mission Join Assertion (Section 12), where the MAS resolves the
    token centrally and binds its assertion to that token's digest and
    key.
 
@@ -1231,7 +1238,7 @@ Table of Contents
    constrained, with DPoP or mutual TLS at the unchanged AS.  For the
    high-consequence action classes they MUST be.  With a pure bearer
    token, any holder inside the (subject, client) equivalence class
-   joins (Section 16.1).
+   joins (Section 17.1).
 
    A successful join, in the AuthZEN binding: the PEP supplies
    context.mission populated from its Mission binding, with
@@ -1277,10 +1284,13 @@ Table of Contents
    The AuthZEN profile's denial-reason extensibility rule permits a
    companion profile to extend the denial-reason set by specification,
    and requires a consumer to treat an unrecognized reason as a deny
-   ([I-D.draft-mcguinness-mission-authzen]). mission_mismatch is such an
-   extension: where this profile is implemented, it is a member of that
-   denial-reason set.  A consumer that does not implement this profile
-   treats it as that rule requires: the action stays refused.
+   ([I-D.draft-mcguinness-mission-authzen]). mission_mismatch and
+   mission_reference_conflict (Section 11.4) are such extensions: where
+   this profile is implemented, they are members of that denial-reason
+   set, and neither requires IANA action under the AuthZEN profile's
+   extension-by-specification model.  A consumer that does not implement
+   this profile treats them as that rule requires: the action stays
+   refused.
 
    Example AuthZEN denial for a credential whose client_id does not
    match the referenced Mission:
@@ -1300,11 +1310,11 @@ Table of Contents
    The join proves that the credential belongs to the same subject and
    client the Mission names.  It does not prove the credential was
    derived under the Mission; no MAS-mode mechanism can, because the AS
-   issues tokens with no knowledge of Missions (Section 12,
-   Section 16.1).
+   issues tokens with no knowledge of Missions (Section 13,
+   Section 17.1).
 
    A deployment MAY move the join's verification from each PDP to the
-   MAS with the Mission Join Assertion (Section 11).  That upgrade
+   MAS with the Mission Join Assertion (Section 12).  That upgrade
    strengthens who verifies the join, not what the join can prove.
 
    Where the deployment's Authorization Server issues tokens under the
@@ -1318,7 +1328,186 @@ Table of Contents
    client_id: the validated instance joins, not every workload in the
    client_id equivalence class.
 
-11.  Mission Join Assertion
+11.  Mission Reference Propagation
+
+   The Mission Join consumes a Mission reference the PEP supplies, and
+   join rule 1 names two sources: the PEP's own recorded Mission binding
+   and deployment configuration (Section 10).  When the gateway PEP is
+   not the process that holds the binding (an MCP gateway, an egress
+   proxy), neither source exists at the enforcement boundary, and
+   nothing has said how the requesting side names the Mission a given
+   request runs under.  This section defines that channel.
+
+   The carried value is an untrusted *Mission-selection assertion*: it
+   routes the request to a Mission for the join to verify.  The Mission
+   Join verifies the referenced Mission and its subject and client
+   relationship and supplies the authoritative state and anchors; in the
+   baseline same-party case neither the carriage nor the join proves
+   that this particular request was created under that Mission.  Who
+   attached the value is what strengthens attribution: a trusted harness
+   attaching it from its recorded Mission binding
+   ([I-D.draft-mcguinness-mission-harness]) attests more than the agent
+   naming its own Mission, the deployment's Enforcement Scope Statement
+   records which party attaches it, and grading what an established join
+   proves is the join-assurance concern, not this channel's.
+
+11.1.  The Reference Tuple
+
+   The propagated value is exactly the Mission reference tuple:
+   mission_id and issuer, compared as the canonical (issuer, mission_id)
+   pair under the issuance profile's comparison rules
+   ([I-D.draft-mcguinness-oauth-mission]).  The channel carries nothing
+   else: state, integrity anchors, authority, and policy data always
+   come from the MAS's signed Mission Status response (Section 4.2), and
+   a request carrying any of them in this channel MUST be refused, never
+   silently ignored, so ambiguity is detectable rather than absorbed.
+   The tuple is single-homed: each carriage below maps this one tuple,
+   and a new carrier profiles it rather than defining a second.
+
+11.2.  HTTP Carriage: Mission-Reference
+
+   Mission-Reference is an HTTP request field [RFC9110] whose value is a
+   Structured Fields Dictionary [RFC9651] (shown wrapped for layout; the
+   field is one line):
+
+   POST /call HTTP/1.1
+   Host: gateway.example.com
+   Authorization: Bearer 2YotnFZFEjr1zCsicMWpAA
+   Mission-Reference: id="msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+     issuer="https://mas.example.com"
+
+   *  The field is a request header field and MUST NOT be sent as a
+      trailer field.
+
+   *  The value is a Dictionary carrying exactly two members, both
+      REQUIRED: id, a String carrying the Mission identifier, and
+      issuer, a String carrying the exact issuer identifier the MAS
+      publishes in its metadata (Section 9).  A MAS participating in
+      this profile MUST publish an ASCII issuer identifier (Structured
+      Field Strings are ASCII); the sender copies that published string
+      with no URI normalization of any kind, and equality is byte
+      equality of the exact string.
+
+   *  A sender MUST NOT emit an id longer than 256 characters or an
+      issuer longer than 512 characters; a receiver MUST treat a longer
+      value as malformed.
+
+   *  [RFC9651] parsing keeps the last of duplicate Dictionary keys, so
+      parse success alone is not enough.  A receiver MUST reject as
+      malformed, before map collapse: a duplicate id or issuer
+      occurrence, a parameter on either member, an Inner List or any
+      non-String value, and any member other than the two defined here.
+      A profile the deployment adopts MAY define an additional member by
+      specification; a receiver MUST NOT act on a member it does not
+      implement.
+
+   *  A sender MUST send exactly one field line.  Field lines that do
+      not combine into exactly one Dictionary satisfying every rule
+      above, or any parse failure, make the reference malformed.
+
+   *  A malformed, missing, or stripped reference fails closed wherever
+      Mission governance is required: governed work with no
+      establishable Mission reference is refused before evaluation, per
+      the runtime profile's preconditions
+      ([I-D.draft-mcguinness-mission-runtime]).
+
+11.3.  MCP Carriage
+
+   For a tool call governed through MCP, the reference rides the
+   request's params._meta object on each tools/call, never tool
+   arguments and never session state, under the key
+   com.karlmcguinness.mission/reference, a reverse-DNS-prefixed key in a
+   namespace this family's author controls, per the pinned MCP
+   revision's _meta rules ([MCP-META]; MCP reserves its own _meta
+   prefixes):
+
+   {
+     "method": "tools/call",
+     "params": {
+       "name": "post_journal_entry",
+       "arguments": { "amount": "500.00", "currency": "USD" },
+       "_meta": {
+         "com.karlmcguinness.mission/reference": {
+           "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+           "issuer": "https://mas.example.com"
+         }
+       }
+     }
+   }
+
+   The value carries exactly mission_id and issuer, with the tuple
+   semantics of Section 11.1 unchanged.  The value object is closed the
+   same way as the HTTP field: a receiver MUST reject duplicate JSON
+   member names at parse time, a member other than mission_id and
+   issuer, a non-string member value, and the propagation key appearing
+   more than once in _meta.  Unknown _meta keys are extensible metadata
+   an ordinary MCP server may ignore; a server that silently ignores
+   this key is not a conforming Mission PEP.  Where a tool is governed
+   as Mission-required, absent negotiated or configured propagation
+   support the call MUST be refused, never run as ordinary ungoverned
+   execution.  A future MCP extension or capability mechanism may
+   supersede this carriage; the tuple's semantics stay this section's.
+
+11.4.  Verification and Conflict
+
+   *  The value is a selection assertion, never authority: its presence
+      or content grants nothing, the Mission is established only through
+      the Mission Join (Section 10), and an unverified reference MUST
+      NOT establish the Mission, the runtime profile's externally-
+      established rule ([I-D.draft-mcguinness-mission-runtime]).
+
+   *  Where the acting credential carries a mission claim, the
+      credential-carried reference governs, and a propagated reference
+      naming a different Mission is a deny.
+
+   *  Where the PEP's own binding source (a harness-recorded binding,
+      deployment configuration) names a different Mission than the
+      propagated reference, the conflict is a deny, never a silent pick-
+      one.
+
+   *  An attribution conflict, or a malformed reference where governance
+      requires one, is denied with the mission_reference_conflict denial
+      reason, a member this profile adds to the AuthZEN denial-reason
+      set under its extensibility rule beside mission_mismatch
+      (Section 10): mission_mismatch stays the subject-or-client join
+      failure, and mission_reference_conflict is reference sources
+      naming different Missions or an unusable reference.
+
+   *  The selection assertion applies only to the request it
+      accompanies: it selects the Mission the join is evaluated against,
+      and does not by itself establish request provenance or
+      attribution.  Session-scoped stickiness is a deployment choice
+      recorded in the Enforcement Scope Statement, and per-request
+      carriage is required wherever the runtime profile requires per-
+      action evaluation.
+
+   *  The field rides the deployment's TLS, which authenticates the
+      channel endpoint, never which component attached the value:
+      transport protection does not upgrade self-asserted attribution.
+      Where HTTP Message Signatures [RFC9421] are deployed on the
+      request, the signature MUST cover Mission-Reference.
+
+   Example denial for a propagated reference conflicting with the PEP's
+   recorded binding:
+
+   {
+     "decision": false,
+     "context": {
+       "decision_id": "dec_2nP4qV9rL3tY6sB1zN0eF7jB8K",
+       "denial_reason": "mission_reference_conflict"
+     }
+   }
+
+11.5.  Forwarding and Privacy
+
+   The tuple is a stable correlator and lands in gateway logs.  An
+   intermediary MUST NOT copy the field or the _meta key onto a request
+   to an unrelated authority domain, and a terminating PEP SHOULD remove
+   it before forwarding unless the downstream recipient participates in
+   the same verified binding.  The issuance profile's Mission Identifier
+   correlation considerations apply to logged values.
+
+12.  Mission Join Assertion
 
    The Mission Join of Section 10 rests on subject and client mapping
    tables that every PDP operates and keeps correct.  This section
@@ -1331,7 +1520,7 @@ Table of Contents
    the TLS and caller-authentication requirements of the mission
    submission endpoint (Section 4).
 
-11.1.  Assertion Request
+12.1.  Assertion Request
 
    The PEP, or the client acting for it, POSTs a JSON object:
 
@@ -1411,7 +1600,7 @@ Table of Contents
    the assertion's lifetime, so a burst of re-mints for an unchanged
    token costs one evaluation rather than many.
 
-11.2.  The Assertion
+12.2.  The Assertion
 
    On success the MAS mints a Mission Join Assertion: a signed JWT
    [RFC7519] whose protected header carries the typ mission-join+jwt and
@@ -1426,7 +1615,7 @@ Table of Contents
       authority_hash.
 
    token:  REQUIRED.  An object containing sha256, the token digest as
-      in Section 11.1, and jkt, the thumbprint of the token's cnf public
+      in Section 12.1, and jkt, the thumbprint of the token's cnf public
       key [RFC7638].
 
    iat:  REQUIRED.  Issuance time.
@@ -1439,7 +1628,7 @@ Table of Contents
       was not minted for.
 
    mapping_version:  OPTIONAL.  A string.  The mapping contract version
-      (Section 13.2) under which the subject and client joins were
+      (Section 14.2) under which the subject and client joins were
       evaluated.  RECOMMENDED where the MAS publishes a mapping
       contract, so each join is attributable to the mapping that
       produced it.
@@ -1458,7 +1647,7 @@ Table of Contents
    member carries the JWT.  Each minting is a join evidence event: the
    MAS records the Mission reference, the token digest and thumbprint,
    the authenticated caller, the mapping version where one is published
-   (Section 13.2), and the validity window, retained for the audit
+   (Section 14.2), and the validity window, retained for the audit
    horizon.
 
    Example claims:
@@ -1479,7 +1668,7 @@ Table of Contents
      "exp": 1793608200
    }
 
-11.3.  PDP Consumption
+12.3.  PDP Consumption
 
    A PDP presented with a Join Assertion verifies, in place of the
    mapping checks of Section 10 steps 3 and 4:
@@ -1507,7 +1696,7 @@ Table of Contents
    a PDP MUST NOT treat possession of an assertion as authority, per the
    family rule that references and binding proofs grant nothing.
 
-12.  Limitations
+13.  Limitations
 
    This section states what MAS-only deployment does not provide.  These
    are structural properties of the mode, not implementation quality
@@ -1535,13 +1724,13 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-client-instance-assertion]);
 
    *  whether Mission Join Assertions are required, which they SHOULD be
-      for the high-consequence classes (Section 11); and
+      for the high-consequence classes (Section 12); and
 
    *  which action paths are covered by runtime enforcement, since
       nothing at the token layer covers the rest.
 
    An enterprise deployment carries this statement inside its mapping
-   contract (Section 13.2) rather than beside it, so the join's facts
+   contract (Section 14.2) rather than beside it, so the join's facts
    have one home.
 
    *No Mission-bound credentials.* Tokens carry no mission claim and no
@@ -1577,7 +1766,7 @@ Table of Contents
    possession proof.  Requests are bound to the predecessor or parent by
    authenticated client identity (Section 8.2), which proves the same
    registered client, not possession of a held Mission-bound access
-   token (Section 16.3).  Offline attenuation remains inapplicable in
+   token (Section 17.3).  Offline attenuation remains inapplicable in
    this mode because it requires the Mission-bound credential
    (Section 3).
 
@@ -1599,9 +1788,9 @@ Table of Contents
    for the resources of each consuming Authorization Server, while
    approval, the record, and the lifecycle remain here.
 
-13.  The Enterprise Mission Authority Profile
+14.  The Enterprise Mission Authority Profile
 
-   The conformance floor (Section 15) makes a MAS deployable.  This
+   The conformance floor (Section 16) makes a MAS deployable.  This
    profile is the operating profile for a MAS used as an estate's
    Mission control plane: it turns the floor's SHOULDs and OPTIONALs
    into the guarantees an enterprise deployment needs.  A deployment
@@ -1627,7 +1816,7 @@ Table of Contents
       published in the Enforcement Scope Statement.
 
    *  *Join Assertion.* The MAS MUST offer the Mission Join Assertion
-      (Section 11).  For the high-consequence classes the PDP MUST
+      (Section 12).  For the high-consequence classes the PDP MUST
       require one.
 
    *  *Instance-bound joins.* Where the acting credential carries a
@@ -1640,7 +1829,7 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-client-instance-assertion]); where a
       deployment has no instance-identity substrate, the high-
       consequence join binds only (subject, client), and the shared-
-      client_id residual of Section 16.1 remains, stated in the Mission
+      client_id residual of Section 17.1 remains, stated in the Mission
       Deployment Profile's residual_risks.
 
    *  *Runtime enforcement.* Consequential actions MUST be enforced
@@ -1678,7 +1867,7 @@ Table of Contents
    coverage, and residual risks as a Mission Deployment Profile
    ([I-D.draft-mcguinness-mission-architecture]).
 
-13.1.  Estate Prerequisites
+14.1.  Estate Prerequisites
 
    The profile's mandatory path runs through the deployment's unchanged
    Authorization Server, and it assumes capabilities there:
@@ -1686,14 +1875,14 @@ Table of Contents
    claiming the profile a deployment confirms its estate AS provides:
 
    *  *Token introspection.* [RFC7662] introspection reachable by the
-      MAS, under credentials the deployment protects (Section 16.2); the
-      MAS cannot mint a Join Assertion without it (Section 11.1).
+      MAS, under credentials the deployment protects (Section 17.2); the
+      MAS cannot mint a Join Assertion without it (Section 12.1).
 
    *  *Sender-constrained issuance.* DPoP-bound or mutual-TLS-bound
       access tokens for the agent clients acting in the high-consequence
       classes: the join requires sender-constraint for those classes
       (Section 10), and the MAS MUST NOT mint an assertion for a token
-      without a cnf key (Section 11.1).
+      without a cnf key (Section 12.1).
 
    *  *cnf in introspection.* Introspection responses that report the
       token's cnf confirmation, since the assertion binds the key
@@ -1701,16 +1890,16 @@ Table of Contents
 
    An estate whose Authorization Server cannot provide these still joins
    under the mapping join at the conformance floor (Section 10,
-   Section 15); it does not claim this profile.  The digest pair of
-   Section 11.1 further assumes an introspection surface that resolves a
+   Section 16); it does not claim this profile.  The digest pair of
+   Section 12.1 further assumes an introspection surface that resolves a
    token by digest, which mainstream Authorization Servers do not
    provide; a deployment plans for the access_token form.
 
-13.2.  The Enterprise Mapping Contract
+14.2.  The Enterprise Mapping Contract
 
    The dominant MAS risk is a coarse or drifting join: shared client_id
    values, many-to-one directory mappings, and workload identity that
-   the join collapses (Section 16.1).  An enterprise MAS MUST publish a
+   the join collapses (Section 17.1).  An enterprise MAS MUST publish a
    mapping contract stating, for the joins it performs:
 
    *  the subject namespace mapping (how a credential's authenticated
@@ -1733,10 +1922,10 @@ Table of Contents
       mission_mismatch on any unresolved or ambiguous mapping.
 
    A MAS that mints Join Assertions SHOULD carry the version in each
-   assertion's mapping_version claim (Section 11.2), so a mapping change
+   assertion's mapping_version claim (Section 12.2), so a mapping change
    is attributable in join evidence, not only detectable in documents.
 
-13.3.  Policy View Distribution
+14.3.  Policy View Distribution
 
    An enterprise MAS MAY serve audience-scoped Authority Set views, or
    the runtime profile's materialized policy view
@@ -1749,12 +1938,12 @@ Table of Contents
    rules, carries the Mission's authority_hash as its consent anchor,
    and does not widen authority beyond the Authority Set.
 
-14.  Deployment
+15.  Deployment
 
    This section is non-normative.  It shows where a MAS lands in a real
    estate and how a deployment adopts it incrementally.
 
-14.1.  Topology
+15.1.  Topology
 
    A typical MAS deployment runs the MAS beside the existing identity
    provider and Authorization Server, changing neither:
@@ -1769,7 +1958,7 @@ Table of Contents
 
    *  the PDP runs the runtime profile's decision contract and its
       AuthZEN binding, drawing authority from the MAS-served Authority
-      Set or a materialized policy view (Section 13.3);
+      Set or a materialized policy view (Section 14.3);
 
    *  the MAS mints a Join Assertion after introspecting the presented
       token, so the PDP verifies one signed proof rather than a mapping
@@ -1785,7 +1974,7 @@ Table of Contents
    with no mapped issuer as outside this profile's governance rather
    than inventing one.
 
-14.2.  Connector Patterns
+15.2.  Connector Patterns
 
    The PEP is wherever consequential effects can be refused before they
    happen.  Common placements, all non-normative:
@@ -1812,7 +2001,7 @@ Table of Contents
    runtime profile's Enforcement Scope Statement is where that coverage
    is stated ([I-D.draft-mcguinness-mission-runtime]).
 
-14.3.  Progressive Adoption
+15.3.  Progressive Adoption
 
    A MAS is adopted level by level across the Mission Assurance Levels
    ([I-D.draft-mcguinness-mission-architecture]), each phase
@@ -1825,7 +2014,7 @@ Table of Contents
    (phases 5 and 6) restores the token-layer gate.  "No AS code change"
    holds in every mode; what changes is the claim, and a high-
    consequence enforcement claim requires issuance mode's machinery or
-   the Estate Prerequisites' AS features (Section 13.1), never records
+   the Estate Prerequisites' AS features (Section 14.1), never records
    alone:
 
    1.  The MAS records Missions and approvals: governance and audit of
@@ -1842,7 +2031,7 @@ Table of Contents
        runtime profile (the Runtime-Enforced level).
 
    4.  Join Assertions and instance-bound joins harden the join for the
-       high-consequence classes (the Enterprise profile, Section 13).
+       high-consequence classes (the Enterprise profile, Section 14).
 
    5.  Estate Authorization Servers adopt the issuance join
        ([I-D.draft-mcguinness-oauth-mission-issuance-grant]), redeeming
@@ -1869,7 +2058,7 @@ Table of Contents
    input; the service account retains only what no Mission yet governs,
    and that shrinking residue is the adoption metric.
 
-15.  Conformance
+16.  Conformance
 
    An implementation conforms in one of two roles.
 
@@ -1936,9 +2125,9 @@ Table of Contents
       [I-D.draft-mcguinness-mission-runtime-evidence], recording the
       Mission reference the join was verified against.
 
-16.  Security Considerations
+17.  Security Considerations
 
-16.1.  Join Spoofing
+17.1.  Join Spoofing
 
    A client cannot gain authority by asserting another party's
    mission_id: the join requires the subject and client the PEP
@@ -1950,7 +2139,7 @@ Table of Contents
       many-to-one (several AS accounts map to one directory subject),
       any credential in the equivalence class joins; a deployment SHOULD
       keep the mapping one-to-one for subjects that hold Missions, with
-      the granularity recorded in its mapping contract (Section 13.2).
+      the granularity recorded in its mapping contract (Section 14.2).
       The client join is coarse the same way where several workloads
       share one client_id: any of them joins.  Client instance
       assertions
@@ -1970,14 +2159,26 @@ Table of Contents
       client) equivalence class joins, which is why Section 10 requires
       sender-constraint for the high-consequence classes.
 
-   The Mission Join Assertion (Section 11) is the mitigation for the
+   *  *Same-party self-selection.* The propagation channel (Section 11)
+      lets the requesting side name the Mission, so an agent whose
+      subject and client join more than one active Mission chooses which
+      one a request runs under: a confused-deputy shape (least-
+      restrictive-Mission selection), not merely spoofing.  The join
+      bounds the choice to Missions whose parties match, each chosen
+      Mission's own authority bounds what the choice yields, and who
+      attaches the reference bounds it further: a trusted harness
+      attaching from its recorded binding, or a Mission Join Assertion
+      presented alongside, is the strong form, and the Enforcement Scope
+      Statement records the attachment provenance.
+
+   The Mission Join Assertion (Section 12) is the mitigation for the
    coarse-mapping and shared-client residuals: the MAS evaluates the
    mapping once, centrally, under its documented policy, and binds the
    result to one introspected token by digest and key thumbprint, so the
    join stops being a standing property of every credential in an
    equivalence class and becomes a minted, audited, token-bound event.
 
-16.2.  Join Assertion Trust
+17.2.  Join Assertion Trust
 
    A captured Join Assertion moves no authority: it names one token by
    digest and key thumbprint, so a replay without that token and its
@@ -1994,7 +2195,7 @@ Table of Contents
    independently at N PDPs, where one drifted table is a silent join
    widening.
 
-16.3.  Expansion and Child-Creation Binding
+17.3.  Expansion and Child-Creation Binding
 
    The native surfaces of Section 8 bind a request to its predecessor or
    parent by authenticated client identity, not by the token-exchange
@@ -2022,7 +2223,7 @@ Table of Contents
       request against a Mission the client is not bound to is
       indistinguishable from one against a Mission that does not exist.
 
-16.4.  Ambient Authority of Ungated Tokens
+17.4.  Ambient Authority of Ungated Tokens
 
    The central residual of this mode: tokens are ordinary OAuth tokens,
    so within their lifetime and scope they work wherever PEP coverage is
@@ -2030,9 +2231,9 @@ Table of Contents
    short token lifetimes at the AS, narrow scope hygiene for agent
    clients, and complete PEP coverage of consequential paths; none
    eliminates the residual, which only the issuance profile's gating
-   removes (Section 12).
+   removes (Section 13).
 
-16.5.  MAS Availability
+17.5.  MAS Availability
 
    The runtime layer fails closed when Mission state cannot be
    established within the staleness bound, so a MAS outage converts into
@@ -2042,7 +2243,7 @@ Table of Contents
    provisions MAS availability accordingly and sizes
    mission_max_stale_seconds to the caching it can tolerate.
 
-16.6.  Signing-Key Custody
+17.6.  Signing-Key Custody
 
    The MAS's signing key is the estate's Mission root of trust: it signs
    status and lifecycle responses, Join Assertions, and the issuer-
@@ -2052,11 +2253,11 @@ Table of Contents
    (status, Join Assertions) and long-lived artifacts (Mandates,
    Issuance Grants) under distinct kids in one jwks_uri, so custody can
    differ by blast radius.  The introspection credential the MAS holds
-   at the estate AS (Section 11.1) is secret material of the same tier:
+   at the estate AS (Section 12.1) is secret material of the same tier:
    its compromise forges joins
    ([I-D.draft-mcguinness-mission-security-model]).
 
-16.7.  MAS Compromise
+17.7.  MAS Compromise
 
    Compromise of a MAS is equivalent to Mission Issuer compromise: it
    can forge approvals, alter records, and report false state.  One
@@ -2070,7 +2271,7 @@ Table of Contents
    profile's key-retention rules keep archived state evidence
    verifiable.
 
-16.8.  Approval Surface Authentication
+17.8.  Approval Surface Authentication
 
    The MAS's review surface is the approval event surface, and the
    issuance profile's approval rules apply to it unchanged: the Approver
@@ -2081,7 +2282,7 @@ Table of Contents
    the anti-oracle property
    ([I-D.draft-mcguinness-oauth-mission-status]).
 
-17.  Privacy Considerations
+18.  Privacy Considerations
 
    A MAS holds task data centrally: every governed Mission Intent
    (goals, constraints, purposes) and every Mission record, outside the
@@ -2093,9 +2294,24 @@ Table of Contents
    horizon: records are retained at least that long, and SHOULD NOT be
    retained materially longer without a documented basis.
 
-18.  IANA Considerations
+19.  IANA Considerations
 
-18.1.  Well-Known URI Registration
+19.1.  HTTP Field Name Registration
+
+   This document registers the following in the "Hypertext Transfer
+   Protocol (HTTP) Field Name" registry ([RFC9110]):
+
+   *  Field Name: Mission-Reference
+
+   *  Status: permanent
+
+   *  Structured Type: Dictionary
+
+   *  Reference: this document, Section 11.2
+
+   *  Comments: none
+
+19.2.  Well-Known URI Registration
 
    IANA is requested to register the following in the "Well-Known URIs"
    registry [RFC8615]:
@@ -2110,7 +2326,7 @@ Table of Contents
 
    *  Related Information: none
 
-18.2.  Mission Authority Server Metadata Registry
+19.3.  Mission Authority Server Metadata Registry
 
    IANA is requested to create the "Mission Authority Server Metadata"
    registry.  The registration policy is Specification Required
@@ -2145,11 +2361,11 @@ Table of Contents
 
    *  jwks_uri
 
-18.3.  Media Type Registration
+19.4.  Media Type Registration
 
    This document registers one media type per [RFC6838].
 
-18.3.1.  Mission Join Assertion Media Type
+19.4.1.  Mission Join Assertion Media Type
 
    *  Type name: application
 
@@ -2161,7 +2377,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JWS Compact Serialization
 
-   *  Security considerations: see Section 16.2
+   *  Security considerations: see Section 17.2
 
    *  Interoperability considerations: see this document
 
@@ -2194,7 +2410,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-18.4.  Runtime Denial Reason
+19.5.  Runtime Denial Reason
 
    mission_mismatch extends the denial-reason set of
    [I-D.draft-mcguinness-mission-authzen] under that profile's denial-
@@ -2202,9 +2418,9 @@ Table of Contents
    reasons are AuthZEN extension data and are not registered in an IETF
    registry, so this document requests no IANA action for it.
 
-19.  References
+20.  References
 
-19.1.  Normative References
+20.1.  Normative References
 
    [I-D.draft-mcguinness-mission-approval-governance]
               McGuinness, K., "Mission Approval Governance", 2026,
@@ -2253,6 +2469,10 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-status.html>.
 
+   [MCP-META] Model Context Protocol Project, "Model Context Protocol:
+              Base Protocol", 2025, <https://modelcontextprotocol.io/
+              specification/2025-11-25/basic/index>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -2296,13 +2516,26 @@ Table of Contents
               Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
               2021, <https://www.rfc-editor.org/rfc/rfc9068>.
 
+   [RFC9110]  Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
+              Ed., "HTTP Semantics", STD 97, RFC 9110,
+              DOI 10.17487/RFC9110, June 2022,
+              <https://www.rfc-editor.org/rfc/rfc9110>.
+
    [RFC9325]  Sheffer, Y., Saint-Andre, P., and T. Fossati,
               "Recommendations for Secure Use of Transport Layer
               Security (TLS) and Datagram Transport Layer Security
               (DTLS)", BCP 195, RFC 9325, DOI 10.17487/RFC9325, November
               2022, <https://www.rfc-editor.org/rfc/rfc9325>.
 
-19.2.  Informative References
+   [RFC9421]  Backman, A., Ed., Richer, J., Ed., and M. Sporny, "HTTP
+              Message Signatures", RFC 9421, DOI 10.17487/RFC9421,
+              February 2024, <https://www.rfc-editor.org/rfc/rfc9421>.
+
+   [RFC9651]  Nottingham, M. and P. Kamp, "Structured Field Values for
+              HTTP", RFC 9651, DOI 10.17487/RFC9651, September 2024,
+              <https://www.rfc-editor.org/rfc/rfc9651>.
+
+20.2.  Informative References
 
    [I-D.draft-mcguinness-mission-architecture]
               McGuinness, K., "An Architecture for Mission-Bound

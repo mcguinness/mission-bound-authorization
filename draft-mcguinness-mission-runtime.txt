@@ -1572,7 +1572,9 @@ Table of Contents
       Authority Server profile defines the concrete join for this mode
       ([I-D.draft-mcguinness-mission-authority-server]), and the AAuth
       binding's reference propagation supplies the externally carried
-      reference for such a join ([I-D.draft-mcguinness-mission-aauth]).
+      reference for such a join ([I-D.draft-mcguinness-mission-aauth]),
+      as the MAS profile's Mission Reference Propagation channel does in
+      token-less MAS mode.
 
    The mode each enforcement scope uses is part of its Enforcement Scope
    Statement (Section 4.2).  In either mode, the established Mission is
