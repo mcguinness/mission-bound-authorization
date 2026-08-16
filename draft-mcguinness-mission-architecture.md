@@ -2909,6 +2909,11 @@ bound is AAuth's own `expires_at`, profiled by the expiry document
 : Experimental: cumulative consumption bounds and the metering that
   enforces them.
 
+`mission-transaction-authorization`:
+: Experimental: the transaction authorization challenge profiled for
+  the cross-domain case, minting a single-use action-bound token
+  after a fresh decision with a governed approval as input.
+
 **Agent runtime:**
 
 `mission-harness`:
