@@ -49,7 +49,8 @@
    "status.lifecycle",
    "status.discharge",
    "signals.events",
-   "cross-org.delegation"
+   "cross-org.delegation",
+   "txn-authz.action"
   ]
  },
  "requirements": [
@@ -196,7 +197,7 @@
     },
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
+     "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
      "level": "unit",
      "surface": "verification"
     }
@@ -222,7 +223,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+     "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
      "level": "unit",
      "surface": "verification"
     }
@@ -1753,6 +1754,166 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+  },
+  {
+   "id": "txn-authz.upstream.unchanged",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "upstream",
+   "text": "This profile runs the upstream protocol ({{I-D.draft-rosomakho-oauth-txn-challenge}}) without modification:",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Accept-Txn-Challenge header, transaction_authorization_required challenge, transaction_challenge parameter, endpoint, transaction_authorization_id, and polling run per the upstream draft"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "txn-authz.async.lifetimes",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "lifetimes",
+   "text": "the transaction token `exp` is bounded by the fresh revalidation\n  inputs of step 9 and the pending-handle expiry, NOT by the\n  already-consumed challenge `exp`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an approval completing after the challenge exp still yields a usable token bounded by fresh inputs and the pending-handle expiry"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "txn-authz.async.one-workflow",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "lifetimes",
+   "text": "One accepted challenge maps to exactly one pending workflow: a retry\nof the same accepted challenge returns the existing\n`transaction_authorization_id`, never a second approval task.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "surface": "token-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "a retry of the same accepted challenge returns the same pending handle and never opens a second approval task"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "txn-authz.atmostonce.txn-key",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "atomicity",
+   "text": "`txn` is the resource-scoped transaction and the resource's\n  **consumption key**: the resource consumes at most once per `txn`,\n  so two validly signed tokens carrying different `jti` for the same\n  `txn` still execute at most once; and",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "surface": "verification",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "two validly signed transaction tokens with different jti for the same txn execute at most once"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "txn-authz.token.restrictions",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "token",
+   "text": "The token\nadditionally MUST NOT be refreshed, exchanged or delegated\n({{RFC8693}} inputs refuse it), used as a cross-organizational\ndelegation root, or accepted as an ordinary Mission-bound token, and\nit is usable only for its recorded `txn`.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a transaction token is refused when refreshed, exchanged, offered as a cross-org root, or presented as an ordinary Mission token"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "txn-authz.token.identity-projection",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "token",
+   "text": "`sub`: the destination-local principal established by the projected\n  local Mission-bound token, never the approver or the approval\n  workflow;",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the token sub is the mapped local principal, aud is the single challenge issuer, cnf is the challenge key, and the approver never becomes sub/client_id/act"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "txn-authz.approval.fresh-decision",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "redemption",
+   "text": "Approval completion alone MUST NOT trigger\ntoken issuance and MUST NOT bypass step 9.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a completed approval never yields a token without the fresh authorization decision of step 9"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "txn-authz.parameters.versioned-profile",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "parameters",
+   "text": "Operation\nProfile resolution is deterministic and versioned: the TAS resolves\nthe exact `operation_profile.id` and `version` from the challenge and\nrecomputes the digest under that version.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "txn-authz.action"
+   },
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Operation Profile version change while approval is pending does not silently change normalization; the pinned version is used"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
   }
  ]
 }

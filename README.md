@@ -374,7 +374,8 @@ facts are the next subsection.
    to a ceiling, then dispatch Missions from it at machine speed),
    **metering**, **attenuation**, **cross-org-delegation** (recursive
    cross-organizational delegation over the attenuation chain),
-   **orchestration**, **discovery**
+   **transaction-authorization** (action-bound approval as a portable
+   single-use token across domains), **orchestration**, **discovery**
    (open-world encounters adjudicated against a pre-consented ceiling
    or by the binding's Controller in context, with the lying-resource
    and tainted-session floors),
@@ -753,6 +754,20 @@ the enforcement semantics the runtime profile owns or the record
 formats the runtime evidence companion owns.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.html)
+
+#### Mission Transaction Authorization Profile for OAuth 2.0
+
+Profiles the OAuth transaction authorization challenge for the
+Mission cross-domain case: a protected resource signs a challenge for
+one normalized operation, a trusted Transaction Authorization Server
+validates the challenge, the Mission or delegation chain, the
+presenter, and a governed approval, runs a fresh decision with the
+approval as input, and issues a sender-constrained, single-use
+transaction token the resource verifies offline. The approval is
+input, never a bearer bypass; the token carries no approval or
+evidence bag. Experimental; profiles an unratified individual draft.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-transaction-authorization.html)
 
 ### Alternate bindings and the substrate
 
