@@ -2931,6 +2931,11 @@ Table of Contents
    mission-metering:  Experimental: cumulative consumption bounds and
       the metering that enforces them.
 
+   oauth-mission-transaction-authorization:  Experimental: the
+      transaction authorization challenge profiled for the cross-domain
+      case, minting a single-use action-bound token after a fresh
+      decision with a governed approval as input.
+
    *Agent runtime:*
 
    mission-harness:  Binding sessions, queues, and sub-agent handles to
