@@ -1070,7 +1070,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 15 February 2027</td>
+<td class="center">Expires 17 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1083,12 +1083,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-14" class="published">14 August 2026</time>
+<time datetime="2026-08-16" class="published">16 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-15">15 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-17">17 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1153,7 +1153,7 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 15 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 17 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -5494,10 +5494,11 @@ expansion successor (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansi
 begins its own delegation basis and its own chain; and no boundary of
 organization, network, or deployment topology by itself restarts or
 extends a chain. The chain is attribution, never authority: an <code>act</code>
-entry identifies an actor, an asserted actor identity grants nothing,
-and a consumer <span class="bcp14">MUST NOT</span> treat the chain as proof that authority
-narrowed; the <code>authorization_details</code> subset relations prove that
-(<a href="#subset" class="auto internal xref">Section 5.1</a>).<a href="#section-11-5" class="pilcrow">¶</a></p>
+entry names who acted, for audit and as policy input to the
+eligibility matching of <a href="#delegation-constraints" class="auto internal xref">Section 11.3</a>, while an asserted
+actor identity grants nothing, and a consumer <span class="bcp14">MUST NOT</span> treat the
+chain as proof that authority narrowed; the <code>authorization_details</code>
+subset relations prove that (<a href="#subset" class="auto internal xref">Section 5.1</a>).<a href="#section-11-5" class="pilcrow">¶</a></p>
 <p id="section-11-6">Where a deployment authenticates client instances
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>; for AI
 agents, its agent profile
@@ -5514,20 +5515,6 @@ used here (<code>ai_agent</code>, <code>client_instance</code>) are drawn from t
 entity-profiles vocabulary those instance profiles use; the Actor
 Profile <span>[<a href="#I-D.draft-mcguinness-oauth-actor-profile" class="cite xref">I-D.draft-mcguinness-oauth-actor-profile</a>]</span> remains the
 structural reference for the actor object.<a href="#section-11-6" class="pilcrow">¶</a></p>
-<p id="section-11-7">Delegation history follows authorization continuity, never
-organizational topology. Within one approved Mission, delegation
-nests: each hop extends the <code>act</code> chain, whatever organization the
-delegate belongs to. A new approval basis begins its own chain: a
-Child Mission's actor chain restarts at the child actor
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), an
-Expansion successor begins afresh under its own approval
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and the boundary
-is always the approval, not the org chart. The <code>act</code> chain is
-attribution, never authority: it names who acted, for audit, policy
-input, and the eligibility matching of <a href="#delegation-constraints" class="auto internal xref">Section 11.3</a>,
-while authority flows only from the Mission's Authority Set under
-the subset rule, and no <code>act</code> entry grants, widens, or substitutes
-for any of it.<a href="#section-11-7" class="pilcrow">¶</a></p>
 <div id="client-id-rebinding">
 <section id="section-11.1">
         <h3 id="name-adopted-model-client_id-nam">

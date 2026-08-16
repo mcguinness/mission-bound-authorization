@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 15 February 2027</td>
+<td class="center">Expires 17 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1076,12 +1076,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-architecture-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-14" class="published">14 August 2026</time>
+<time datetime="2026-08-16" class="published">16 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-15">15 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-17">17 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 15 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 17 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1306,6 +1306,9 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
                 <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="auto internal xref">15.2</a>.  <a href="#name-entry-ramps-by-estate" class="internal xref">Entry Ramps by Estate</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.3">
+                <p id="section-toc.1-1.15.2.3.1"><a href="#section-15.3" class="auto internal xref">15.3</a>.  <a href="#name-a-worked-composition" class="internal xref">A Worked Composition</a></p>
 </li>
             </ul>
 </li>
@@ -3555,6 +3558,144 @@ volume: the experimental profile changes the unit economics, not the
 governance shape.<a href="#section-15.2-14" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="worked-composition">
+<section id="section-15.3">
+        <h3 id="name-a-worked-composition">
+<a href="#section-15.3" class="section-number selfRef">15.3. </a><a href="#name-a-worked-composition" class="section-name selfRef">A Worked Composition</a>
+        </h3>
+<p id="section-15.3-1">This non-normative example composes an Action-Enforced deployment
+from four providers, none of which is the OAuth binding, to show that
+the substrate contract (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>)
+carries the weight: an AAuth agent acts under a PS-governed Mission
+and calls a payment API whose authority vocabulary is owned by the
+resource.<a href="#section-15.3-1" class="pilcrow">¶</a></p>
+<p id="section-15.3-2">Four components publish provider claims:<a href="#section-15.3-2" class="pilcrow">¶</a></p>
+<span id="name-provider-claims-in-the-work"></span><table class="center" id="table-4">
+          <caption>
+<a href="#table-4" class="selfRef">Table 4</a>:
+<a href="#name-provider-claims-in-the-work" class="selfRef">Provider claims in the worked composition</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Provider</th>
+              <th class="text-left" rowspan="1" colspan="1">Capability supplied</th>
+              <th class="text-left" rowspan="1" colspan="1">Scope</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">AAuth Person Server</td>
+              <td class="text-left" rowspan="1" colspan="1">Contextual-governance kernel; Lifecycle-Gated Authorization</td>
+              <td class="text-left" rowspan="1" colspan="1">PS permission decisions and PS-brokered issuance</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">AAuth Mission Management</td>
+              <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
+              <td class="text-left" rowspan="1" colspan="1">The payment PDP, maximum staleness five seconds</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Payment policy adapter</td>
+              <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
+              <td class="text-left" rowspan="1" colspan="1">Payment API actions and constraints under the payment policy's own versioned vocabulary</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Payment gateway PEP/PDP</td>
+              <td class="text-left" rowspan="1" colspan="1">Authorized Context Correlation</td>
+              <td class="text-left" rowspan="1" colspan="1">The <code>schedule_payment</code> and <code>release_payment</code> routes</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-15.3-4">Action-time enforcement and decision evidence are supplied by the
+runtime profile and its evidence companion at the gateway
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); they consume the
+capability claims above as decision inputs. The provider claims are
+the deployment's own: the example assumes a deployment-local Mission
+Substrate Statement extension restating the AAuth binding's claims in
+the current Statement format (supplied, with Mission Management
+deployment as the State-Observable activation condition and the
+binding's temporal and failure elements), not that the published
+binding text already supplies them in that form. The deployment
+declaration names the four providers, the two routes, and the
+consequence class; no machine-readable declaration format is defined
+(the Mission Deployment Profile's schema remains reserved future
+work, <a href="#deployment-profile" class="auto internal xref">Section 17</a>), and the declaration is ordinary
+deployment documentation.<a href="#section-15.3-4" class="pilcrow">¶</a></p>
+<p id="section-15.3-5">The deployment runs PS-asserted access. Every resource token the
+gateway accepts is PS-issued or PS-brokered and carries the signed
+<code>mission_s256</code> reference, the protected propagation path;
+identity-based and resource-managed access are out of scope here,
+because those paths are not PS-gated and may ignore the reference.
+The gateway's join validates the carrying artifact's issuer (the
+Person Server), its audience (the payment API), the actor binding
+(the agent's key, proven on the request), and the request binding,
+before joining the PS evidence, the Actor proof, the request, and
+the adapter's output; the join is scoped to the two named routes
+with a lifetime no longer than the state observation's declared
+freshness, and a missing or conflicting input fails closed.<a href="#section-15.3-5" class="pilcrow">¶</a></p>
+<p id="section-15.3-6">The composition succeeds with these results and limits:<a href="#section-15.3-6" class="pilcrow">¶</a></p>
+<span id="name-composition-result"></span><table class="center" id="table-5">
+          <caption>
+<a href="#table-5" class="selfRef">Table 5</a>:
+<a href="#name-composition-result" class="selfRef">Composition result</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Requirement</th>
+              <th class="text-left" rowspan="1" colspan="1">Provider</th>
+              <th class="text-left" rowspan="1" colspan="1">Result and material limit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Kernel</td>
+              <td class="text-left" rowspan="1" colspan="1">AAuth Person Server</td>
+              <td class="text-left" rowspan="1" colspan="1">Satisfied; native private Mission context and lifecycle</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Current state</td>
+              <td class="text-left" rowspan="1" colspan="1">AAuth Mission Management</td>
+              <td class="text-left" rowspan="1" colspan="1">Satisfied; five-second staleness within the profile's declared maximum</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Structured authority</td>
+              <td class="text-left" rowspan="1" colspan="1">Payment policy adapter</td>
+              <td class="text-left" rowspan="1" colspan="1">Satisfied only inside the payment vocabulary; no cross-resource claim</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Authorized join</td>
+              <td class="text-left" rowspan="1" colspan="1">Payment gateway</td>
+              <td class="text-left" rowspan="1" colspan="1">Satisfied; the gateway validates PS provenance, Actor proof, the request, and the adapter's output before joining them</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Action-time enforcement</td>
+              <td class="text-left" rowspan="1" colspan="1">Runtime profile at the gateway</td>
+              <td class="text-left" rowspan="1" colspan="1">Satisfied for the two named routes; direct payment-API routes are prohibited or declared uncovered</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Evidence</td>
+              <td class="text-left" rowspan="1" colspan="1">Evidence companion at the gateway</td>
+              <td class="text-left" rowspan="1" colspan="1">Satisfied through the decision; approval-to-effect completeness additionally requires execution evidence</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-15.3-8">Two classifications make the example honest. The payment authority's
+fresh decision is <code>decide_anew</code> in the substrate's transition
+classification, never an attenuation of AAuth authority across
+vocabularies; and the AAuth Mission context never becomes a Rich
+Authorization Request object. AAuth supplies work continuity, the
+payment authority decides permission in its own vocabulary, and the
+gateway is the scoped joining and enforcement authority.<a href="#section-15.3-8" class="pilcrow">¶</a></p>
+<p id="section-15.3-9">The same composition fails when any of the following holds: the
+state source is disabled with no equivalent fresh local read; the
+adapter publishes descriptive strings rather than machine-evaluable
+semantics; the gateway accepts a Mission reference from the agent
+without validated provenance (context splicing); the state source's
+staleness exceeds the declared maximum; a direct route bypasses the
+gateway; the gateway accepts the reference on an identity-based or
+resource-managed request; or the payment-vocabulary claim is
+generalized to another resource's vocabulary.<a href="#section-15.3-9" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="assurance-levels">
@@ -3651,6 +3792,64 @@ published staleness bound
 reliance, a revocation cutoff within that bound, without
 per-action enforcement: a half-step into the next level, not a
 level of its own.<a href="#section-16-9.2.6" class="pilcrow">¶</a></p>
+<p id="section-16-9.2.7">A deployment demonstrates Baseline Issuance with the following
+minimum test set, scoped by the capabilities its Mission Substrate
+Statement claims, so a standalone MAS is never asked to prove a
+credential behavior it does not claim. The executable realization
+is planned in the family's conformance suite; no executable rows
+exist yet.<a href="#section-16-9.2.7" class="pilcrow">¶</a></p>
+<p id="section-16-9.2.8">Kernel, every Baseline deployment:<a href="#section-16-9.2.8" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-16-9.2.9">
+<li id="section-16-9.2.9.1">
+              <p id="section-16-9.2.9.1.1">approval creates an active Mission;<a href="#section-16-9.2.9.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-16-9.2.9.2">
+              <p id="section-16-9.2.9.2.1">an authenticated terminal transition takes effect in the
+Controller's own subsequent decisions; and<a href="#section-16-9.2.9.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-16-9.2.9.3">
+              <p id="section-16-9.2.9.3.1">the observed residual after a transition does not exceed the
+published reliance bound.<a href="#section-16-9.2.9.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ol>
+<p id="section-16-9.2.10">Credential-Bound, where claimed:<a href="#section-16-9.2.10" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-16-9.2.11">
+<li id="section-16-9.2.11.1">
+              <p id="section-16-9.2.11.1.1">no credential outlives the Mission's effective expiry; and<a href="#section-16-9.2.11.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-16-9.2.11.2">
+              <p id="section-16-9.2.11.2.1">a credential from another Mission cannot be substituted (the
+reference and its Controller namespace bind together).<a href="#section-16-9.2.11.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ol>
+<p id="section-16-9.2.12">Lifecycle-Gated Authorization, where claimed and limited to the
+operations named in the claim:<a href="#section-16-9.2.12" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-16-9.2.13">
+<li id="section-16-9.2.13.1">
+              <p id="section-16-9.2.13.1.1">an active Mission yields a positive result for a claimed
+operation within policy;<a href="#section-16-9.2.13.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-16-9.2.13.2">
+              <p id="section-16-9.2.13.2.1">a terminal transition prevents every claimed operation; and<a href="#section-16-9.2.13.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-16-9.2.13.3">
+              <p id="section-16-9.2.13.3.1">for every lifecycle-gated operation in the claimed scope,
+unavailable, invalid, stale, or unknown state prevents a
+positive result (the forward-compatibility rule: only <code>active</code>
+permits reliance, and lost state never fails open).<a href="#section-16-9.2.13.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ol>
+<p id="section-16-9.2.14">The OAuth binding additionally demonstrates:<a href="#section-16-9.2.14" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-16-9.2.15">
+<li id="section-16-9.2.15.1">
+              <p id="section-16-9.2.15.1.1">refresh while the Mission is active succeeds within policy and
+is refused after a terminal transition; and<a href="#section-16-9.2.15.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-16-9.2.15.2">
+              <p id="section-16-9.2.15.2.1">a bare client-supplied Mission identifier creates no binding:
+the grant, never the identifier, determines the Mission.<a href="#section-16-9.2.15.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ol>
 </dd>
         <dd class="break"></dd>
 <dt id="section-16-9.3">
@@ -3720,8 +3919,8 @@ authoritative for its own objects, and what a level grants varies
 with the binding; the Mission Deployment Profile
 (<a href="#deployment-profile" class="auto internal xref">Section 17</a>) is where a deployment states its own
 <code>mediated_action_classes</code> and exclusions.<a href="#section-16-10" class="pilcrow">¶</a></p>
-<table class="center" id="table-4">
-        <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
+<table class="center" id="table-6">
+        <caption><a href="#table-6" class="selfRef">Table 6</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Level</th>
@@ -3940,8 +4139,8 @@ that level leaves.<a href="#section-17-5" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-18-1">Each layer earns a specific property and leaves a specific residue.
 Stated as a table so a claim cannot be read as more than it is:<a href="#section-18-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-5">
-        <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
+<table class="center" id="table-7">
+        <caption><a href="#table-7" class="selfRef">Table 7</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Mechanism</th>
@@ -3998,8 +4197,8 @@ direction.<a href="#section-18-3" class="pilcrow">¶</a></p>
 <p id="section-18.1-1">Mission termination is one control in a larger containment surface.
 Each kill has a different blast radius, and an incident responder
 needs the whole matrix:<a href="#section-18.1-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-6">
-          <caption><a href="#table-6" class="selfRef">Table 6</a></caption>
+<table class="center" id="table-8">
+          <caption><a href="#table-8" class="selfRef">Table 8</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Control</th>
@@ -4252,12 +4451,17 @@ mission-mandate).<a href="#section-19.4-1.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-19.4-1.7">
             <p id="section-19.4-1.7.1"><strong>R19</strong>: Delegation history follows authorization continuity, never
-organizational topology: within one approved Mission the actor
-chain nests and extends across any boundary, a new approval basis
-(child, successor, fresh approval) restarts it, and the chain is
-attribution, never authority (oauth-mission;
-oauth-mission-child-delegation; oauth-mission-expansion;
-oauth-mission-attenuation).<a href="#section-19.4-1.7.1" class="pilcrow">¶</a></p>
+organizational topology. A Child Mission, an Expansion successor,
+or any fresh approval starts a new approval basis and actor chain;
+topology alone neither restarts nor extends one. Representation is profile-specific:
+issuer-mediated delegation nests <code>act</code>; holder-mediated attenuation
+reconstructs history from per-hop actors; and cross-domain
+projection carries no upstream <code>act</code> chain, so any
+destination-domain chain begins locally. Actor identity is
+attribution and policy input; it does not itself grant or prove
+authority (oauth-mission; oauth-mission-child-delegation;
+oauth-mission-expansion; oauth-mission-attenuation;
+oauth-mission-cross-domain).<a href="#section-19.4-1.7.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -4480,20 +4684,29 @@ cross-domain grant.<a href="#section-20-9.20.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-20-9.21">
-<code>oauth-mission-continuation</code>:</dt>
+<code>oauth-mission-cross-org-delegation</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-20-9.22">
-          <p id="section-20-9.22.1">The authorization-continuity profile: a Mission continues its
-authorization over identity-continuity transports (Identity
-Continuation, async delegation, cross-domain), state-gated, with the
-invariant that a continuation handle grants nothing.<a href="#section-20-9.22.1" class="pilcrow">¶</a></p>
+          <p id="section-20-9.22.1">Recursive cross-organizational delegation as a profile of offline
+attenuation: the chain is the portable authority proof, each hop
+names its own actor under the identity-binding rule, and projection
+turns a verified chain into a local token.<a href="#section-20-9.22.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-20-9.23">
-<code>oauth-id-continuation-assertion</code>:</dt>
+<code>oauth-mission-continuation</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-20-9.24">
-          <p id="section-20-9.24.1">A continuation transport: a short-lived token-exchange subject token
+          <p id="section-20-9.24.1">The authorization-continuity profile: a Mission continues its
+authorization over identity-continuity transports (Identity
+Continuation, async delegation, cross-domain), state-gated, with the
+invariant that a continuation handle grants nothing.<a href="#section-20-9.24.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-20-9.25">
+<code>oauth-id-continuation-assertion</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-20-9.26">
+          <p id="section-20-9.26.1">A continuation transport: a short-lived token-exchange subject token
 yielding an ID-JAG for an intra-domain hop, bound to a Mission's
-authorization by mission-continuation.<a href="#section-20-9.24.1" class="pilcrow">¶</a></p>
+authorization by mission-continuation.<a href="#section-20-9.26.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>

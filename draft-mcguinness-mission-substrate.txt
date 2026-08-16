@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          14 August 2026
-Expires: 15 February 2027
+Intended status: Standards Track                          16 August 2026
+Expires: 17 February 2027
 
 
                      Mission Substrate Requirements
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 February 2027.
+   This Internet-Draft will expire on 17 February 2027.
 
 Copyright Notice
 
@@ -86,31 +86,34 @@ Table of Contents
    2.  Conventions and Terminology
    3.  Contextual-Governance Kernel
      3.1.  Native Reference and Controller
-     3.2.  Actor Binding
-     3.3.  Approved Context and Immutability
-       3.3.1.  Default Commitment Construction
-     3.4.  Approval Event
-     3.5.  Basic Governance Gate
-     3.6.  Bounded Reliance
-     3.7.  Context Propagation
-     3.8.  Ordered Governance Record
+     3.2.  Authority Roles
+     3.3.  Actor Binding
+     3.4.  Approved Context and Immutability
+       3.4.1.  Default Commitment Construction
+     3.5.  Approval Event
+     3.6.  Basic Governance Gate
+     3.7.  Bounded Reliance
+     3.8.  Context Propagation
+     3.9.  Ordered Governance Record
    4.  Optional Capabilities
      4.1.  Lifecycle-Gated Authorization
      4.2.  State-Observable
      4.3.  Structured Authority
      4.4.  Monotonic Derivation
      4.5.  Credential-Bound
-     4.6.  Independently Verifiable
-     4.7.  Portable Evidence
+     4.6.  Authorized Context Correlation
+     4.7.  Independently Verifiable
+     4.8.  Portable Evidence
    5.  Composition by Capability
    6.  Mission Substrate Conformance
      6.1.  Mission Substrate Statement
    7.  Security Considerations
      7.1.  Capability Confusion
      7.2.  Reference and Context Substitution
-     7.3.  Controller Compromise
-     7.4.  State and Residual Authority
-     7.5.  Governance Record Integrity
+     7.3.  Context Splicing
+     7.4.  Controller Compromise
+     7.5.  State and Residual Authority
+     7.6.  Governance Record Integrity
    8.  Privacy Considerations
    9.  IANA Considerations
    10. References
@@ -121,6 +124,7 @@ Table of Contents
      A.2.  Standalone MAS Mapping
      A.3.  AAuth-Native Mapping
    Appendix B.  Mission-Bound Authorization Family Use
+     B.1.  OAuth Mission Binding Statement
    Acknowledgments
    Author's Address
 
@@ -266,7 +270,7 @@ Table of Contents
    Mission contextual governance.  It does not by itself mean that
    authority is portable, machine-evaluable, monotonically derived,
    credential-bound, or independently verifiable.  It does mean that no
-   reliance derived from a Mission is unbounded (Section 3.6).
+   reliance derived from a Mission is unbounded (Section 3.7).
 
 3.1.  Native Reference and Controller
 
@@ -300,7 +304,44 @@ Table of Contents
    as globally identifying a Mission when its uniqueness actually
    depends on unstated local context.
 
-3.2.  Actor Binding
+3.2.  Authority Roles
+
+   A binding identifies the authorities responsible for the functions it
+   uses.  Roles MAY be co-located in one implementation, but their
+   semantics remain distinct, and a provider statement MUST NOT use
+   colocation to imply that one role's assertion establishes another
+   role's fact.  The roles are:
+
+   *  the approval authority;
+
+   *  the lifecycle authority;
+
+   *  the accountable owner;
+
+   *  the approved-context commitment authority;
+
+   *  the Actor identity authority;
+
+   *  the deployment or workload identity authority, where applicable;
+
+   *  the authority-source authority, where structured authority is
+      composed;
+
+   *  the artifact projection or credential issuer;
+
+   *  the resource decision authority;
+
+   *  the correlation or joining authority; and
+
+   *  the evidence authority.
+
+   The kernel requires the approval and lifecycle authorities.  The
+   other roles appear when the corresponding capability is claimed.
+   Higher-assurance profiles can require preventive or evidentiary
+   independence between roles; the kernel requires only that they never
+   collapse silently (Section 7.1).
+
+3.3.  Actor Binding
 
    At approval, the Controller MUST bind the Mission Context to the
    Actor identity, key, workload identity, authenticated session, or
@@ -321,7 +362,7 @@ Table of Contents
    A binding that maps between identifiers MUST define which component
    performs the mapping and the assurance and ambiguity of that mapping.
 
-3.3.  Approved Context and Immutability
+3.4.  Approved Context and Immutability
 
    The binding MUST maintain either the Approved Context itself or a
    verifiable commitment to it.  After approval, the approved value MUST
@@ -355,7 +396,7 @@ Table of Contents
    is then verification material for parties holding the value, not a
    commitment in place of it.
 
-3.3.1.  Default Commitment Construction
+3.4.1.  Default Commitment Construction
 
    A binding MAY satisfy the duties above, for the Approved Context and
    for any other artifact it commits, with the following default
@@ -421,7 +462,7 @@ Table of Contents
    behavior when recognition sets differ, and the transition procedure
    itself.
 
-3.4.  Approval Event
+3.5.  Approval Event
 
    A binding MUST define a native approval ceremony that atomically
    creates an active Mission Context or has equivalent transactional
@@ -430,7 +471,7 @@ Table of Contents
    1.  authenticate the Approver at the assurance level required by the
        deployment;
 
-   2.  establish the Actor as specified in Section 3.2;
+   2.  establish the Actor as specified in Section 3.3;
 
    3.  present or otherwise make available to the Approver a faithful
        representation of the context being approved;
@@ -456,7 +497,7 @@ Table of Contents
    the binding claims and follows the Structured Authority capability
    (Section 4.3).
 
-3.5.  Basic Governance Gate
+3.6.  Basic Governance Gate
 
    Every binding MUST define an active predicate and a non-active
    outcome.  The underlying state vocabulary can be as small as active
@@ -481,10 +522,10 @@ Table of Contents
    revocation, expiry, or supersession as reasons without making each a
    distinct protocol state.
 
-3.6.  Bounded Reliance
+3.7.  Bounded Reliance
 
    Authority derived from a Mission MUST NOT be usable indefinitely.
-   For every positive decision under Section 3.5, and for every
+   For every positive decision under Section 3.6, and for every
    credential or other artifact the binding describes as governed by the
    Mission, the binding MUST state a reliance bound in at least one of
    two forms:
@@ -502,11 +543,11 @@ Table of Contents
    requires.  This floor requires no consumer-facing freshness source: a
    binding whose credential lifetimes sit inside the Mission's own bound
    satisfies it unmodified, as the OAuth core's stateless baseline does.
-   The bound gives the non-active transition of Section 3.5 its force: a
+   The bound gives the non-active transition of Section 3.6 its force: a
    party who causes a Mission to become non-active is assured that
    reliance under the Mission ends within the stated interval.
 
-3.7.  Context Propagation
+3.8.  Context Propagation
 
    Each positive governance decision and each artifact that a binding
    claims is Mission-governed MUST carry, or be unambiguously joinable
@@ -535,7 +576,7 @@ Table of Contents
    properties require binding-specific mechanisms and, where applicable,
    optional capabilities.
 
-3.8.  Ordered Governance Record
+3.9.  Ordered Governance Record
 
    The Controller MUST maintain an integrity-protected, ordered record
    of governance events for the Mission.  At minimum, the record MUST
@@ -655,11 +696,27 @@ Table of Contents
    fail closed.  The Statement MUST identify each narrowing point and
    the component that performs the comparison.
 
+   Every covered transition is classified as exactly one of:
+
+   preserve:  the same authoritative fact remains applicable across the
+      transition;
+
+   attenuate:  the result's validity derives from a provable no-broader-
+      than relationship to its declared parent under the claimed
+      relation; or
+
+   decide_anew:  a target-recognized authority makes a fresh decision
+      under its own policy.
+
+   Incomparability routes to refusal or to decide_anew; a translation
+   between vocabularies is never silently treated as attenuation.
+
    The claim can cover a single authorization language or delegation
    chain.  It MUST NOT be presented as constraining fresh authorization
    decisions made under a different resource-owned policy or at an
    uncovered protocol hop.  A binding can correlate those decisions with
-   the same Mission while leaving them outside this capability.
+   the same Mission while leaving them outside this capability; in the
+   classification above those decisions are decide_anew.
 
 4.5.  Credential-Bound
 
@@ -685,12 +742,45 @@ Table of Contents
    from Actor-controlled input without Controller or credential-issuer
    validation does not satisfy this capability.
 
-   The Statement MUST distinguish a credential cryptographically issued
-   under the Mission from a credential merely correlated with a Mission
-   by an external join.  Either can be useful, but they provide
-   different assurance and MUST NOT share an unqualified claim.
+   A Credential-Bound claim MUST select which of the following fact
+   semantics the mechanism establishes, and a claim MUST NOT say
+   "Mission-bound" without that selection:
 
-4.6.  Independently Verifiable
+   *  correlation only;
+
+   *  artifact issuance under the Mission;
+
+   *  authority derivation under the Mission;
+
+   *  lifecycle-gated issuance; or
+
+   *  current state as of an observation.
+
+   These are separate facts: none follows from another, they provide
+   different assurance, and the issued-under and correlation-only
+   semantics MUST NOT share an unqualified claim.  Actor or presenter
+   proof is a separate element of the claim: a bearer artifact can be
+   Mission-bound under any of these semantics while offering a weaker
+   holder guarantee.
+
+4.6.  Authorized Context Correlation
+
+   A binding claiming *Authorized Context Correlation* MUST supply an
+   authorized association among independently established facts, such as
+   the Mission, the Subject, the Actor (and the Deployment and executing
+   instance where the binding distinguishes them), an authority
+   artifact, a request or transaction, and a target resource.  The claim
+   MUST identify the joining authority, the association policy, the
+   proof inputs, conflict handling, the association's lifetime and
+   revocation, its audience, and its substitution protection.
+
+   Matching strings or timestamps do not satisfy this capability: the
+   association is an authorized fact established by the joining
+   authority, not an observation that two values coincide.  This
+   capability is required whenever one authority did not itself bind all
+   required facts in the applicable context (Section 7.3).
+
+4.7.  Independently Verifiable
 
    A binding claiming *Independently Verifiable* MUST let the named
    consumer verify a specified Mission property without an online query
@@ -710,7 +800,7 @@ Table of Contents
    or turn contextual governance into a machine-evaluable policy
    language.
 
-4.7.  Portable Evidence
+4.8.  Portable Evidence
 
    A binding claiming *Portable Evidence* MUST define evidence that can
    be transferred across the administrative boundary stated in the claim
@@ -820,12 +910,12 @@ Table of Contents
    4.  the Approved Context, its immutable boundary, and any commitment
        and verification procedure;
 
-   5.  the native approval ceremony and each step of Section 3.4;
+   5.  the native approval ceremony and each step of Section 3.5;
 
    6.  the active predicate, non-active outcome, authorized transition
        mechanisms, and effect on subsequent Controller decisions;
 
-   7.  the reliance bound of Section 3.6 for each decision and Mission-
+   7.  the reliance bound of Section 3.7 for each decision and Mission-
        governed artifact class: the stated maximum residual interval,
        the expiry rule, or both;
 
@@ -836,47 +926,91 @@ Table of Contents
        and retention.
 
    The Statement MUST then include a capability table with one row for
-   each capability in Section 4.  Each row MUST say supported, not
-   supported, or conditional.  A supported or conditional row MUST cite
-   the binding sections that satisfy the capability, state its mode and
-   operational scope, and list material limitations.  A conditional row
-   MUST state the extension, deployment property, or cooperating
-   component that supplies the condition.
+   each capability in Section 4.  Each row MUST say supplied or not
+   supplied: a capability is supplied in a named scope when the row's
+   stated activation conditions hold, or it is not supplied.  There is
+   no third state.  The retired conditional state conflated four
+   different facts, what a specification defines, what an implementation
+   supports, what a deployment enables, and where the resulting property
+   applies; an activation condition states them separately.  A supplied
+   row MUST:
+
+   *  cite the binding sections that satisfy the capability;
+
+   *  state its mode and operational scope;
+
+   *  state its activation conditions: the extension, deployment
+      configuration, or cooperating component that must hold for the
+      property to be supplied in that scope, or always;
+
+   *  state its temporal elements: the fact's freshness at use, the
+      decision or artifact lifetime, and the residual interval after the
+      Mission becomes non-active, each stated directly or expressly
+      inherited from the reliance floor of Section 3.7;
+
+   *  state its failure behavior for absent, stale, unknown,
+      incomparable, invalid, or unavailable input; and
+
+   *  list material limitations.
+
+   An extension can itself publish a provider claim as a Statement
+   extension; a deployment profile declares which extensions and
+   activation conditions are active.
 
    The following is a non-normative skeleton:
 
-   +================+===========+=============+=======================+
-   |Capability      |Claim      |Scope and    | Limitations           |
-   |                |           |defining     |                       |
-   |                |           |sections     |                       |
-   +================+===========+=============+=======================+
-   |Lifecycle-Gated |supported  |Controller   | Previously issued     |
-   |Authorization   |           |permission   | resource credentials  |
-   |                |           |decisions    | expire independently  |
-   +----------------+-----------+-------------+-----------------------+
-   |State-Observable|conditional|Status       | Maximum staleness is  |
-   |                |           |extension    | deployment-configured |
-   +----------------+-----------+-------------+-----------------------+
-   |Structured      |not        |--           | Approved Context is   |
-   |Authority       |supported  |             | descriptive           |
-   +----------------+-----------+-------------+-----------------------+
-   |Monotonic       |not        |--           | No authority          |
-   |Derivation      |supported  |             | comparison relation   |
-   |                |           |             | is defined            |
-   +----------------+-----------+-------------+-----------------------+
-   |Credential-Bound|supported  |Native       | Covers correlation,   |
-   |                |           |authorization| not context           |
-   |                |           |artifact     | disclosure            |
-   +----------------+-----------+-------------+-----------------------+
-   |Independently   |conditional|Signed       | Proves approval as of |
-   |Verifiable      |           |receipt      | issuance, not current |
-   |                |           |profile      | state                 |
-   +----------------+-----------+-------------+-----------------------+
-   |Portable        |not        |--           | Governance record is  |
-   |Evidence        |supported  |             | Controller-local      |
-   +----------------+-----------+-------------+-----------------------+
+   +=============+========+==========+===============+=================+
+   |Capability   |Claim   |Activation| Scope and     | Limitations     |
+   |             |        |          | defining      |                 |
+   |             |        |          | sections      |                 |
+   +=============+========+==========+===============+=================+
+   |Lifecycle-   |supplied|always    | Controller    | Previously      |
+   |Gated        |        |          | permission    | issued          |
+   |Authorization|        |          | decisions     | resource        |
+   |             |        |          |               | credentials     |
+   |             |        |          |               | expire          |
+   |             |        |          |               | independently   |
+   +-------------+--------+----------+---------------+-----------------+
+   |State-       |supplied|Status    | Status        | Maximum         |
+   |Observable   |        |extension | responses     | staleness is    |
+   |             |        |active    |               | deployment-     |
+   |             |        |          |               | configured      |
+   +-------------+--------+----------+---------------+-----------------+
+   |Structured   |not     |--        | --            | Approved        |
+   |Authority    |supplied|          |               | Context is      |
+   |             |        |          |               | descriptive     |
+   +-------------+--------+----------+---------------+-----------------+
+   |Monotonic    |not     |--        | --            | No authority    |
+   |Derivation   |supplied|          |               | comparison      |
+   |             |        |          |               | relation is     |
+   |             |        |          |               | defined         |
+   +-------------+--------+----------+---------------+-----------------+
+   |Credential-  |supplied|always    | Native        | Covers          |
+   |Bound        |        |          | authorization | correlation,    |
+   |             |        |          | artifact      | not context     |
+   |             |        |          |               | disclosure      |
+   +-------------+--------+----------+---------------+-----------------+
+   |Authorized   |supplied|Verified  | Join          | Joining         |
+   |Context      |        |join      | assertions    | authority is    |
+   |Correlation  |        |active    |               | the             |
+   |             |        |          |               | Controller      |
+   +-------------+--------+----------+---------------+-----------------+
+   |Independently|supplied|Signed    | Signed        | Proves          |
+   |Verifiable   |        |receipt   | receipts      | approval as     |
+   |             |        |profile   |               | of issuance,    |
+   |             |        |active    |               | not current     |
+   |             |        |          |               | state           |
+   +-------------+--------+----------+---------------+-----------------+
+   |Portable     |not     |--        | --            | Governance      |
+   |Evidence     |supplied|          |               | record is       |
+   |             |        |          |               | Controller-     |
+   |             |        |          |               | local           |
+   +-------------+--------+----------+---------------+-----------------+
 
-    Table 1: Illustrative Mission Substrate Statement capability table
+     Table 1: Illustrative Mission Substrate Statement capability table
+
+   A real Statement also carries each supplied row's temporal elements
+   and failure behavior; the skeleton omits those columns for width.
 
    Text outside the Statement cannot silently broaden a capability
    claim.  If another specification adds a capability, that
@@ -895,9 +1029,9 @@ Table of Contents
    explicit capability claim and its scope.
 
    A secure implementation fails closed when a required capability is
-   absent, conditional but unavailable, or outside its declared scope.
-   It does not upgrade a kernel-only reference because its syntax
-   resembles a credential claim or content digest.
+   absent, claimed with unmet activation conditions, or outside its
+   declared scope.  It does not upgrade a kernel-only reference because
+   its syntax resembles a credential claim or content digest.
 
 7.2.  Reference and Context Substitution
 
@@ -914,7 +1048,17 @@ Table of Contents
    supplied reference without authentication can attribute unrelated
    authority or activity to a Mission.
 
-7.3.  Controller Compromise
+7.3.  Context Splicing
+
+   An attacker can combine valid identity evidence, a valid credential,
+   and a valid Mission from different transactions.  Each piece verifies
+   on its own; the composite is unauthorized.  Authorized Context
+   Correlation (Section 4.6) is required whenever one authority did not
+   itself bind all required facts in the applicable context, and a
+   consumer MUST NOT treat co-presentation of independently valid facts
+   as an authorized association.
+
+7.4.  Controller Compromise
 
    The Controller is trusted for the kernel properties it asserts.  A
    compromised Controller can approve false context, bind the wrong
@@ -930,7 +1074,7 @@ Table of Contents
    decision, logging, and credential components.  Naming one logical
    Controller does not eliminate those internal trust boundaries.
 
-7.4.  State and Residual Authority
+7.5.  State and Residual Authority
 
    The kernel's non-active outcome stops new positive Controller
    governance decisions.  It does not automatically invalidate every
@@ -938,13 +1082,13 @@ Table of Contents
    state.  Lifecycle-Gated Authorization and State-Observable claims
    must state their coverage and residual interval.  Short credential
    lifetime can bound residual authority but is not instantaneous
-   termination.  The bounded-reliance floor (Section 3.6) guarantees
+   termination.  The bounded-reliance floor (Section 3.7) guarantees
    that a stated bound exists on every conforming path; it does not make
    any bound short.  A bound long enough to be vacuous defeats the
    floor's purpose; consumers evaluate the stated interval, not only its
    presence.
 
-7.5.  Governance Record Integrity
+7.6.  Governance Record Integrity
 
    An ordered record that is not externally witnessed can still be
    truncated or rewritten by a compromised Controller.  The kernel
@@ -1092,12 +1236,12 @@ Appendix A.  Binding Mapping Guidance
    |               |                | credential     | AAuth access    |
    |               |                | issuer         | mode            |
    +---------------+----------------+----------------+-----------------+
-   | State-        | Conditional on | Conditional on | Not implied by  |
-   | Observable    | Status,        | the exposed    | the private     |
-   |               | introspection, | MAS status     | Mission blob;   |
-   |               | or signal      | mechanism      | requires a      |
-   |               | support        |                | management or   |
-   |               |                |                | state           |
+   | State-        | Supplied when  | Supplied when  | Not implied by  |
+   | Observable    | a status,      | the MAS        | the private     |
+   |               | introspection, | exposes a      | Mission blob;   |
+   |               | or signal      | status         | requires a      |
+   |               | mechanism is   | mechanism      | management or   |
+   |               | active         |                | state           |
    |               |                |                | extension for   |
    |               |                |                | other           |
    |               |                |                | consumers       |
@@ -1128,20 +1272,29 @@ Appendix A.  Binding Mapping Guidance
    | Credential-   | Mission-bound  | Not supplied   | Native Mission  |
    | Bound         | OAuth          | by the MAS     | reference can   |
    |               | credential     | alone;         | be credential-  |
-   |               |                | conditional on | bound where     |
+   |               |                | supplied when  | bound where     |
    |               |                | a verified     | the PS or       |
-   |               |                | join or        | federated AS    |
+   |               |                | join or a      | federated AS    |
    |               |                | cooperating    | carries and     |
    |               |                | credential     | validates it;   |
-   |               |                | issuer         | not every       |
-   |               |                |                | access mode     |
+   |               |                | issuer is      | not every       |
+   |               |                | active         | access mode     |
    |               |                |                | does            |
    +---------------+----------------+----------------+-----------------+
-   | Independently | Possible where | Conditional on | A resource can  |
+   | Authorized    | Native grant   | Native: the    | The PS binds    |
+   | Context       | binding        | MAS join and   | the Mission,    |
+   | Correlation   | associates the | Join Assertion | person, agent,  |
+   |               | Mission,       | machinery      | and token       |
+   |               | Subject,       |                | natively at     |
+   |               | client, and    |                | decision time   |
+   |               | credential at  |                |                 |
+   |               | issuance       |                |                 |
+   +---------------+----------------+----------------+-----------------+
+   | Independently | Supplied where | Supplied when  | A resource can  |
    | Verifiable    | signed         | signed         | verify a        |
-   |               | credentials    | artifacts and  | credential,     |
-   |               | expose the     | the property   | but cannot      |
-   |               | property and   | they expose    | thereby         |
+   |               | credentials    | artifacts      | credential,     |
+   |               | expose the     | expose the     | but cannot      |
+   |               | property and   | property       | thereby         |
    |               | verification   |                | independently   |
    |               | material       |                | verify private  |
    |               |                |                | contextual      |
@@ -1151,11 +1304,11 @@ Appendix A.  Binding Mapping Guidance
    |               |                |                | reasoning       |
    +---------------+----------------+----------------+-----------------+
    | Portable      | Supplied only  | Likewise       | A PS-local      |
-   | Evidence      | by evidence,   | conditional on | Mission log is  |
-   |               | Mandate, or    | an evidence    | not portable    |
-   |               | audit profiles | profile        | evidence;       |
-   |               | that define    |                | signed          |
-   |               | portable       |                | receipts or     |
+   | Evidence      | by evidence,   | supplied only  | Mission log is  |
+   |               | Mandate, or    | when an        | not portable    |
+   |               | audit profiles | evidence       | evidence;       |
+   |               | that define    | profile is     | signed          |
+   |               | portable       | active         | receipts or     |
    |               | artifacts      |                | checkpoints     |
    |               |                |                | would be an     |
    |               |                |                | extension       |
@@ -1174,12 +1327,12 @@ A.1.  OAuth-Native Mapping
    operations covered by that relation.
 
    Those are strengths of the OAuth binding, not kernel requirements.
-   State observation remains conditional on a status, introspection, or
-   signals mechanism such as
-   [I-D.draft-mcguinness-oauth-mission-status].  Independent
-   verification is limited to the properties actually present in a
-   verifiable credential; current state and undisclosed context do not
-   follow from a Mission identifier or hash alone.
+   State observation is supplied when a status, introspection, or
+   signals mechanism such as [I-D.draft-mcguinness-oauth-mission-status]
+   is active.  Independent verification is limited to the properties
+   actually present in a verifiable credential; current state and
+   undisclosed context do not follow from a Mission identifier or hash
+   alone.
 
 A.2.  Standalone MAS Mapping
 
@@ -1190,8 +1343,8 @@ A.2.  Standalone MAS Mapping
    under a Mission.  A verified join can establish correlation, and a
    cooperating credential issuer can add stronger lifecycle and
    credential-binding properties.  The MAS Statement needs to describe
-   those as conditional capabilities and preserve the boundary between
-   MAS assertions and Authorization Server behavior.
+   those with their activation conditions and preserve the boundary
+   between MAS assertions and Authorization Server behavior.
 
 A.3.  AAuth-Native Mapping
 
@@ -1259,10 +1412,178 @@ Appendix B.  Mission-Bound Authorization Family Use
    A family document that maps its own vocabulary to the kernel's MUST
    use these correspondences.
 
+   The authority-role map (Section 3.2) aligns with the core's Authority
+   Sources: the authority_source record member and its three sources
+   (user-delegated, service-owned, organizational) are the OAuth
+   binding's realization of the authority-source authority role, and its
+   source ceiling is that role's assertion staying within the named
+   source's authority.
+
    Precedence is scoped, not global.  For the OAuth-native binding, the
    core's definitions govern that mapping; this document governs the
    kernel and capability vocabulary.  Neither document depends
    normatively on the other.
+
+B.1.  OAuth Mission Binding Statement
+
+   This section is the Mission Substrate Statement of the OAuth Mission
+   binding ([I-D.draft-mcguinness-oauth-mission]), hosted here so the
+   core remains self-contained with no companion normative dependency.
+   It applies to the core's editor's-draft lineage and to the kernel and
+   capability vocabulary of this document.  The core's own definitions
+   govern every mapped construct; this Statement claims no property the
+   core does not define.
+
+   For the kernel:
+
+   1.  The Mission Reference is mission_id: high-entropy, unambiguous
+       within the issuer namespace, compared by exact string equality
+       together with mission.issuer, never reassigned, retained for the
+       audit horizon, and disclosed beyond the issuer only on the
+       binding's authorized surfaces.
+
+   2.  The Controller is the Mission Issuer (the Authorization Server),
+       established through mission.issuer and the deployment's issuer
+       trust (AS metadata and published keys).
+
+   3.  The Actor handle is the authenticated OAuth client at approval;
+       the external Subject is fixed by the core's injective mapping;
+       delegates ride the act chain; child and successor lineage is
+       recorded through the parent and predecessor members; actor-type
+       classification uses sub_profile and instance assertions where
+       deployed.
+
+   4.  The Approved Context is the Mission Intent recorded verbatim, the
+       recorded authority proposal where one was submitted, and the
+       derived Authority Set; the immutable boundary is the record's
+       immutable members; commitments are the typed integrity anchors
+       (intent_hash, proposal_hash, authority_hash); a material change
+       obtains a new approval through an expansion successor.
+
+   5.  The approval ceremony is the core's approval event: authenticated
+       Approver, the distinct-approver rule for write-bearing Missions,
+       rendering of the derived Authority Set and the effective expiry,
+       and atomic record commit, with deferred, interactive, and
+       dispatch realizations.
+
+   6.  The active predicate is state equal to active, exactly; any other
+       value, recognized or not, is non-active; transitions are
+       authenticated lifecycle operations; a non-active Mission refuses
+       issuance and derivation.
+
+   7.  The reliance bound is the record's effective expires_at (never
+       later than the requested ceiling), which caps every derived
+       credential's exp; the maximum residual after a Mission becomes
+       non-active is the outstanding credential lifetime, bounded by the
+       deployment's declared access-token TTL.
+
+   8.  The propagation and join surfaces are: the mission claim
+       (artifact issuance under the Mission, authority derivation, and
+       lifecycle-gated issuance); the mission_id and mission_expires_at
+       response members (correlation only); the introspection projection
+       (state as of the response, caller authorization and minimization
+       applying); the Status surfaces (state as of a signed observation
+       with explicit freshness); and the grant binding (the issuer's
+       native association of Mission, Subject, client, and credential).
+
+   9.  The governance record is the Mission Record with its approval
+       evidence and lifecycle history, retained for the audit horizon,
+       with integrity resting on record custody and the typed anchors.
+
+   The capability table:
+
+   +=============+========+==============+=====================+============+
+   |Capability   |Claim   |Activation    |Scope and defining   |Limitations |
+   |             |        |              |sections             |            |
+   +=============+========+==============+=====================+============+
+   |Lifecycle-   |supplied|always        |State-gated issuance |Outstanding |
+   |Gated        |        |              |and every derivation |credentials |
+   |Authorization|        |              |gate                 |run to their|
+   |             |        |              |                     |own exp; the|
+   |             |        |              |                     |residual is |
+   |             |        |              |                     |bounded, not|
+   |             |        |              |                     |zero        |
+   +-------------+--------+--------------+---------------------+------------+
+   |State-       |supplied|Status,       |Those surfaces       |Staleness   |
+   |Observable   |        |introspection,|                     |bounded by  |
+   |             |        |or Signals    |                     |each        |
+   |             |        |companion     |                     |surface's   |
+   |             |        |active        |                     |declared    |
+   |             |        |              |                     |freshness   |
+   +-------------+--------+--------------+---------------------+------------+
+   |Structured   |supplied|always        |authorization_details|Semantics   |
+   |Authority    |        |              |with registered types|exist per   |
+   |             |        |              |and the Common       |registered  |
+   |             |        |              |Constraints          |type, not   |
+   |             |        |              |                     |universally |
+   +-------------+--------+--------------+---------------------+------------+
+   |Monotonic    |supplied|always        |The subset rule over |Covered     |
+   |Derivation   |        |              |covered types at     |transitions |
+   |             |        |              |every derivation,    |are         |
+   |             |        |              |delegation, and      |attenuate; a|
+   |             |        |              |attenuation point    |cross-      |
+   |             |        |              |                     |vocabulary  |
+   |             |        |              |                     |transition  |
+   |             |        |              |                     |is          |
+   |             |        |              |                     |decide_anew,|
+   |             |        |              |                     |never silent|
+   |             |        |              |                     |attenuation |
+   +-------------+--------+--------------+---------------------+------------+
+   |Credential-  |supplied|always        |The mission claim on |Fact        |
+   |Bound        |        |              |issued tokens        |semantics:  |
+   |             |        |              |                     |issuance    |
+   |             |        |              |                     |under the   |
+   |             |        |              |                     |Mission,    |
+   |             |        |              |                     |authority   |
+   |             |        |              |                     |derivation, |
+   |             |        |              |                     |lifecycle-  |
+   |             |        |              |                     |gated       |
+   |             |        |              |                     |issuance;   |
+   |             |        |              |                     |state-as-of |
+   |             |        |              |                     |only via the|
+   |             |        |              |                     |State-      |
+   |             |        |              |                     |Observable  |
+   |             |        |              |                     |surfaces    |
+   +-------------+--------+--------------+---------------------+------------+
+   |Authorized   |supplied|always        |The grant binding at |The joining |
+   |Context      |        |              |issuance             |authority is|
+   |Correlation  |        |              |                     |the issuer  |
+   |             |        |              |                     |itself;     |
+   |             |        |              |                     |cross-      |
+   |             |        |              |                     |authority   |
+   |             |        |              |                     |joins are   |
+   |             |        |              |                     |the Mission |
+   |             |        |              |                     |Authority   |
+   |             |        |              |                     |Server's    |
+   |             |        |              |                     |machinery,  |
+   |             |        |              |                     |not this    |
+   |             |        |              |                     |binding's   |
+   +-------------+--------+--------------+---------------------+------------+
+   |Independently|supplied|Mandate,      |Anchor recomputation |Signature   |
+   |Verifiable   |        |signed Status,|and signed artifacts |verification|
+   |             |        |or audit      |per those profiles   |never       |
+   |             |        |companion     |                     |establishes |
+   |             |        |active        |                     |current     |
+   |             |        |              |                     |state       |
+   +-------------+--------+--------------+---------------------+------------+
+   |Portable     |supplied|Evidence,     |Per those profiles   |The         |
+   |Evidence     |        |Mandate, or   |                     |governance  |
+   |             |        |audit         |                     |record is   |
+   |             |        |companion     |                     |otherwise   |
+   |             |        |active        |                     |issuer-local|
+   +-------------+--------+--------------+---------------------+------------+
+
+              Table 4: OAuth Mission binding capability table
+
+   Temporal elements: every issued credential's exp is capped by the
+   record's effective expires_at; state observations carry their
+   surface's declared freshness; the residual after non-active is the
+   outstanding credential lifetime under the deployment's declared TTL.
+   Failure behavior: an unknown lifecycle state is non-active; an
+   unresolvable reference, a failed anchor verification, and an unknown
+   authorization_details type fail closed; where a row's activation
+   condition does not hold, the property is not supplied and a consumer
+   MUST NOT rely on it.
 
    Ownership migrates by touch, not by relocation.  When a binding-
    neutral definition next changes substantively, the change MUST land

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          14 August 2026
-Expires: 15 February 2027
+Intended status: Standards Track                          16 August 2026
+Expires: 17 February 2027
 
 
              Mission Cross-Domain Projection for OAuth 2.0
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 February 2027.
+   This Internet-Draft will expire on 17 February 2027.
 
 Copyright Notice
 
@@ -527,15 +527,14 @@ Table of Contents
 
    A delegate, rather than the agent, crossing a trust domain directly
    and carrying its own narrowed authority into another domain is out of
-   scope for this document and deferred to future work.  Cross-domain
-   issuance here always projects the agent's Mission authority;
+   scope for this document, except through the cross-organizational
+   delegation companion's verified attenuation chain
+   ([I-D.draft-mcguinness-oauth-mission-cross-org-delegation]).  Cross-
+   domain issuance here always projects the agent's Mission authority;
    delegation within the target domain is performed by the Resource AS
-   (Section 10).  A sub-agent that must act in a different trust domain
-   under its own narrowed authority is therefore not covered by a single
-   hop; distributed multi-agent work across domains composes only
-   through the agent's projected authority or through separate Missions
-   per domain.  A delegate-carries-its-own-authority mode is future
-   work.
+   (Section 10).  A sub-agent acting in a different trust domain under
+   its own narrowed authority uses that companion's chain; this
+   document's single hop does not cover it.
 
    Two roles are distinct and easily conflated.  The grant the client
    presents to _obtain_ the cross-domain grant (the Mission's refresh
@@ -707,6 +706,13 @@ Table of Contents
    itself local.  This document requires that the Mission binding
    (mission.id, mission.issuer, and authority_hash) and the audience-
    scoped authorization_details remain bounded as described here.
+
+   In the substrate's transition classification
+   ([I-D.draft-mcguinness-mission-substrate]), the origin's audience-
+   scoped projection is attenuate (a provable no-broader-than relation
+   to the approved set) and the Resource AS's local re-mint is
+   decide_anew (a fresh decision under local policy): local issuance is
+   never a silent attenuation of the origin's authority.
 
    Downstream, authority_hash is an immutable audit and correlation
    anchor to the originating AS's consent commitment.  A Resource AS and
@@ -1174,14 +1180,21 @@ Table of Contents
 
    Because the cross-domain grant carries no act chain (Section 9), a
    Resource AS that issues delegated tokens of its own begins its
-   delegation depth at 0 (Section 10).  An entry's max_depth ceiling is
-   therefore enforced per domain, not globally across the projection: a
-   Mission delegable to depth N at the originating AS may be delegated a
-   further N hops inside each Resource AS domain that honors it.  A
-   deployment that needs a global bound on delegation depth across
-   domains constrains it out of band, through the resource-to-AS mapping
-   and each Resource AS's local policy (Section 8); this profile bounds
-   delegation depth only within a single domain.
+   delegation depth at 0.  This local depth is distinct from an
+   attenuation chain's global del_depth, which is monotonic across every
+   hop and organizational boundary
+   ([I-D.draft-mcguinness-oauth-mission-cross-org-delegation]):
+   projection-local depth starts after chain verification, and a
+   projected token cannot re-enter a chain.  A Resource AS of this
+   document begins its delegation depth at 0 (Section 10).  An entry's
+   max_depth ceiling is therefore enforced per domain, not globally
+   across the projection: a Mission delegable to depth N at the
+   originating AS may be delegated a further N hops inside each Resource
+   AS domain that honors it.  A deployment that needs a global bound on
+   delegation depth across domains constrains it out of band, through
+   the resource-to-AS mapping and each Resource AS's local policy
+   (Section 8); this profile bounds delegation depth only within a
+   single domain.
 
    Because the reset is per domain, projecting one Mission into M
    Resource AS domains multiplies the reachable depth: the aggregate
@@ -1339,6 +1352,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime-evidence.html>.
 
+   [I-D.draft-mcguinness-mission-substrate]
+              McGuinness, K., "Mission Substrate Requirements", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-substrate.html>.
+
    [I-D.draft-mcguinness-oauth-actor-receipts]
               McGuinness, K., "OAuth Actor Receipts for Delegation
               Provenance", Work in Progress, Internet-Draft, draft-
@@ -1376,6 +1394,12 @@ Table of Contents
               Continuity for Mission-Bound Authorization", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-continuation.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-cross-org-delegation]
+              McGuinness, K., "Mission Cross-Organizational Delegation
+              for OAuth 2.0", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
+              mission-cross-org-delegation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
