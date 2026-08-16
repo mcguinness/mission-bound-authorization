@@ -2600,12 +2600,17 @@ every one.
   session with the issuer (oauth-mission-cross-domain;
   mission-mandate).
 - **R19**: Delegation history follows authorization continuity, never
-  organizational topology: within one approved Mission the actor
-  chain nests and extends across any boundary, a new approval basis
-  (child, successor, fresh approval) restarts it, and the chain is
-  attribution, never authority (oauth-mission;
-  oauth-mission-child-delegation; oauth-mission-expansion;
-  oauth-mission-attenuation).
+  organizational topology. A Child Mission, an Expansion successor,
+  or any fresh approval starts a new approval basis and actor chain;
+  topology alone neither restarts nor extends one. Representation is profile-specific:
+  issuer-mediated delegation nests `act`; holder-mediated attenuation
+  reconstructs history from per-hop actors; and cross-domain
+  projection carries no upstream `act` chain, so any
+  destination-domain chain begins locally. Actor identity is
+  attribution and policy input; it does not itself grant or prove
+  authority (oauth-mission; oauth-mission-child-delegation;
+  oauth-mission-expansion; oauth-mission-attenuation;
+  oauth-mission-cross-domain).
 
 # Mission Document Map {#document-map}
 
