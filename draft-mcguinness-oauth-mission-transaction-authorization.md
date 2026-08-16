@@ -5,7 +5,6 @@ category: exp
 
 docname: draft-mcguinness-oauth-mission-transaction-authorization-latest
 submissiontype: IETF
-workgroup: Web Authorization Protocol
 number:
 date:
 consensus: true
@@ -19,7 +18,7 @@ keyword:
  - approval
 venue:
   github: "mcguinness/mission-bound-authorization"
-  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html"
+  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-txn-authorization.html"
 
 author:
  -
@@ -33,7 +32,7 @@ normative:
   RFC7519:
   RFC7800:
   RFC8693:
-  RFC8725:
+  RFC8705:
   RFC9396:
   RFC9449:
   I-D.draft-rosomakho-oauth-txn-challenge:
@@ -53,6 +52,20 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+
+informative:
+  RFC9068:
+  RFC9470:
+  I-D.draft-reece-wimse-cross-org-delegation:
+  I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
@@ -61,48 +74,12 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-runtime-evidence:
-    title: "Mission Runtime Evidence"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
+  ARAP:
+    target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
+    title: "AuthZEN Access Request and Approval Profile - Draft 1"
     author:
       -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-metering:
-    title: "Mission Metering"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-status:
-    title: "Mission Status for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-cross-domain:
-    title: "Mission Cross-Domain Projection for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-
-informative:
-  RFC9470:
-  I-D.draft-mcguinness-oauth-mission-cross-org-delegation:
-    title: "Mission Cross-Organizational Delegation for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
+        org: OpenID Foundation
     date: 2026
   I-D.draft-mcguinness-mission-approval-governance:
     title: "Mission Approval Governance"
@@ -120,9 +97,49 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-audit:
-    title: "Mission Audit"
+    title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-cross-org-delegation:
+    title: "Mission Cross-Organizational Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-status:
+    title: "Mission Status and Lifecycle for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
     author:
       -
         ins: K. McGuinness
@@ -131,500 +148,748 @@ informative:
 
 --- abstract
 
-Some delegated actions must stay subject to execution-time human
-authorization even after a Mission is approved: the authorization is
-bound to the concrete action, its parameters, the resource, the
-on-behalf-of principal, and the authorized presenter, and the result
-is usable at most once.  This document is a thin profile of the OAuth
-transaction authorization challenge for Mission-bound authorization.
-It runs the upstream challenge, endpoint, and polling unchanged and
-adds only the Mission-specific delta: the challenge and token bind the
-Mission, the approval is decision input to a fresh authorization
-decision rather than a bearer grant, the transaction token is
-restricted to its one recorded transaction, and enforcement happens at
-the point of use.  Cross-organizational delegation is projected to a
-locally consumable Mission-bound token first; this profile then runs
-over that single local credential.
+A delegated agent's Mission may require that a specific action, with
+its concrete parameters, be authorized fresh at the point of use,
+across an organizational boundary, without a live callback on the
+execution path. This document defines a Mission Transaction
+Authorization profile of the OAuth transaction authorization
+challenge {{I-D.draft-rosomakho-oauth-txn-challenge}}. It keeps that
+protocol's wire contract whole and adds only the Mission layer: the
+profiled challenge claims, `subject_token` credential carriage,
+Mission and authority validation, approval as decision input, the
+fresh decision, and the transaction-token profile.
 
 --- middle
 
 # Introduction
 
-The Mission approval event ({{I-D.draft-mcguinness-oauth-mission}})
-consents to a task and its authority bound; it does not consent to a
-specific action's concrete parameters at the point of use.  Mission
-Runtime defines the policy model for a fresh, action-bound approval,
-its concrete-parameter binding, its maximum age, and its
-time-of-check-to-time-of-use reverification, and states that the
-approval is decision input, never a bearer grant
-({{I-D.draft-mcguinness-mission-runtime}}, Section "Action-Bound
-Approval").  What Runtime leaves open is the portable wire workflow
-that obtains the approval and delivers an enforceable result.
+An agent's Mission can carry actions whose consequence warrants more
+than the Mission's own approval and more than a stronger
+authentication context. Cross-organizational delegation sharpens the
+requirement: {{I-D.draft-reece-wimse-cross-org-delegation}} describes
+delegated work that must remain subject to execution-time human
+authorization, bound to the concrete action, parameters, resource,
+on-behalf-of principal, and authorized presenter, surviving
+delegation, and usable at most once, without a live call back to the
+approval authority on the execution path.
 
-The OAuth transaction authorization challenge
-({{I-D.draft-rosomakho-oauth-txn-challenge}}) already defines that
-workflow: a capability header, a challenge, a transaction
-authorization endpoint, a pending handle, polling, and a token
-response.  This document does not restate or fork that protocol.  It
-is a thin delta that runs the upstream protocol unchanged and adds
-four Mission-specific things: the challenge and token bind the
-Mission; the approval is input to a fresh authorization decision; the
-transaction token is restricted to its one recorded transaction and
-cannot be refreshed, exchanged, or reused; and enforcement is at the
-point of use.
+The Mission family already supplies the policy model: the Common
+Constraint `requires_action_approval`
+({{I-D.draft-mcguinness-oauth-mission}}) designates an action as
+requiring a fresh approval and is monotonic under the subset rule, and
+Mission Runtime's action-bound approval
+({{I-D.draft-mcguinness-mission-runtime}}) defines concrete-parameter
+binding, a maximum age, a fresh decision, and atomic consumption. What
+neither defines is the portable wire workflow that carries an
+approval across a trust boundary to a resource that must enforce
+locally. This document supplies that workflow as a profile of the
+OAuth transaction authorization challenge
+{{I-D.draft-rosomakho-oauth-txn-challenge}}. The profile keeps that
+protocol's challenge type, request and response parameters,
+capability signal, endpoint, and asynchronous polling whole; it adds
+the Mission-profiled challenge claims, the credential carried to the
+transaction endpoint, Mission and authority validation, approval as
+decision input, the fresh decision, and the transaction-token
+profile.
 
-# Status: An Experimental Extension {#status}
+The approval is not authority. The transaction token is authority
+because a trusted issuer minted it after a fresh decision bounded by
+the Mission and the approved operation.
 
-This profile is experimental and profiles an unratified individual
-draft ({{I-D.draft-rosomakho-oauth-txn-challenge}}).  Where this
-document names an upstream artifact (a header, parameter, endpoint,
-claim, or error), the upstream definition governs and this document
-adds only Mission constraints.  Should an upstream change establish
-profile-specific challenge types or parameters, this profile follows
-the upstream registry rather than inventing a parallel one.  Upstream
-engagement, including the implementation-derived `parameter_digest`
-feedback, is tracked separately; this document consumes that work.
+This profile is the strict-delta consumer of the upstream protocol;
+engagement with that protocol's own evolution proceeds through the
+family's coordination process, outside this document.
 
-# Conventions and Terminology
+# Status: An Optional Extension {#optional-status}
+
+This document is optional. A deployment that satisfies action-bound
+approval by another means, a synchronous local decision, a bespoke
+callback, or no cross-organizational case at all, is fully conformant
+to the issuance profile and the runtime profile and is unaffected by
+this document. It places no new requirement on either.
+
+A deployment claims this profile only when it carries action-bound
+approval across a trust boundary through the transaction challenge
+and token defined here. The Mission, its Authority Set, the subset
+rule, and `requires_action_approval` are unchanged; this document
+governs only the portable wire result that a resource and a
+Transaction Authorization Server exchange to satisfy an action-bound
+approval requirement.
+
+This profile tracks an in-progress substrate. It depends normatively
+on the OAuth transaction authorization challenge
+({{I-D.draft-rosomakho-oauth-txn-challenge}}), an early Internet-Draft
+that is not ratified and whose details may change, so this profile is
+not yet a stable interface and will track the substrate as it
+evolves. It reuses, without restating, the upstream challenge type,
+parameters, endpoint, and polling states, and the Mission's own
+`mission` claim, `requires_action_approval`, `parameter_digest`, and
+`act` delegation chain exactly as those documents define them.
+Action-bound approval within a single trust domain, which needs only
+the runtime profile, is the stable path; deploy this profile for
+evaluation rather than as a stable interface. This document is
+Experimental for that reason, tracking its substrate and crossing to
+the stable tier by reclassification when the substrate does.
+
+# Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}
 
-This document uses the Mission family's terms from the issuance
-profile ({{I-D.draft-mcguinness-oauth-mission}}) and the runtime
-profile ({{I-D.draft-mcguinness-mission-runtime}}).
+This document uses Mission, Authority Set, Approver, Mission Issuer,
+`mission_resource_access`, and the subset rule as the issuance profile
+defines them ({{I-D.draft-mcguinness-oauth-mission}}); action-bound
+approval, the Operation Profile, `parameter_digest`, and Mission state
+freshness as the runtime profile defines them
+({{I-D.draft-mcguinness-mission-runtime}}); the envelope anchor,
+canonical-object digest, and raw-octet digest species of the default
+commitment construction as the substrate defines them
+({{I-D.draft-mcguinness-mission-substrate}}); and the transaction
+authorization challenge, its claims, its endpoint, and its pending and
+polling states as the OAuth transaction authorization challenge
+defines them ({{I-D.draft-rosomakho-oauth-txn-challenge}}).
 
 Transaction Authorization Server (TAS):
-: the OAuth Authorization Server in the functional role of the
-  upstream transaction authorization endpoint
-  ({{I-D.draft-rosomakho-oauth-txn-challenge}}), even where it is
-  deployed separately from the Mission Issuer.  It validates the
-  challenge, the presented Mission-bound token, the presenter, and a
-  governed approval, runs a fresh authorization decision, and issues
-  the transaction token.  The resource trusts its key and policy role
-  through pre-established metadata, never a request claim.
+: The OAuth Authorization Server acting in the role
+  {{I-D.draft-rosomakho-oauth-txn-challenge}} defines for the
+  transaction authorization endpoint: it validates the challenge,
+  applies the Mission validation and fresh-decision rules of this
+  profile, and mints the transaction token. A TAS instance MAY be the
+  Mission Issuer itself or an Authorization Server deployed separately
+  from it; this profile does not require either arrangement.
+
+Challenge-Issuing Resource:
+: The protected resource of
+  {{I-D.draft-rosomakho-oauth-txn-challenge}} in this profile: it
+  normalizes the requested operation, computes its `parameter_digest`,
+  and signs the transaction challenge with the Mission-profiled claims
+  of {{resource-challenge}}.
+
+Presenting Client:
+: The client of {{I-D.draft-rosomakho-oauth-txn-challenge}} in this
+  profile: it holds the challenge's confirmation key, obtains the
+  transaction token from the TAS, and presents the token to the
+  Challenge-Issuing Resource for execution.
+
+Transaction challenge:
+: The `transaction_challenge` of
+  {{I-D.draft-rosomakho-oauth-txn-challenge}}, typed
+  `txn-authz-challenge+jwt`, profiled by {{resource-challenge}} with
+  the Mission-profiled claims.
 
 Transaction token:
-: the sender-constrained, audience-restricted, single-use access
-  token the TAS issues on a permit ({{token}}).
+: The sender-constrained, single-audience, single-use JWT the TAS
+  mints of {{transaction-token}}, typed `application/mission-txn-token+jwt`.
 
-# Applicability and Composition {#applicability}
+# Applicability {#applicability}
 
-This profile is invoked when any of the following requires
-action-bound approval for a Mission-bound request: the matched
-Authority Set entry carries `constraints.requires_action_approval:
-true`; destination resource policy requires approval for the action or
-risk class; or a current local entitlement or governance rule
-requires it.  A delegated child MUST preserve
-`requires_action_approval: true` under the Common Constraints subset
-rule ({{I-D.draft-mcguinness-oauth-mission}}); `false` is equivalent
-to omission and cannot override a `true` ancestor, and this profile
-defines no second approval constraint.  Step-up authentication
-({{RFC9470}}) is a different lane: it strengthens the actor's
-authentication context and does not approve the transaction.
+This profile is invoked when any of these requires action-bound
+approval for a normalized operation:
 
-The credential this profile operates on is a single **local
-Mission-bound token**: an access token whose `mission` claim, `sub`,
-`client_id`, and `act` are established in the resource's own domain.
-Cross-organizational delegation is out of band to this profile:
-a delegation chain is verified and projected to a local Mission-bound
-token through the cross-domain projection exchange first
-({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}},
-{{I-D.draft-mcguinness-oauth-mission-cross-domain}}), and this profile
-then runs over that one local credential.  A TAS is not a
-chain-verifying endpoint: the projection has already established the
-local `sub`, `client_id`, `act`, audience, and origin-principal
-mapping, and the upstream chain survives in the projection's
-derivation evidence
-({{I-D.draft-mcguinness-mission-runtime-evidence}}), not in the
-transaction request.
+- the matched Authority Set entry carries
+  `constraints.requires_action_approval: true`;
+- destination resource policy requires approval for the action or
+  risk class; or
+- a current local entitlement or governance rule requires it.
 
-# The Upstream Protocol, Unchanged {#upstream}
+A delegated child MUST preserve `requires_action_approval: true`
+under the Common Constraints subset rule of
+{{I-D.draft-mcguinness-oauth-mission}}. `false` remains equivalent to
+omitting the member and cannot override a `true` ancestor. This
+profile defines no second approval constraint: `requires_action_approval`
+stays the only Authority Set designation this profile reads.
 
-This profile runs the upstream protocol
-({{I-D.draft-rosomakho-oauth-txn-challenge}}) without modification:
+Step-up authentication is not a substitute. A step-up obligation
+({{RFC9470}}) proves a stronger authentication context; it does not
+approve the transaction, and a Transaction Authorization Server MUST
+NOT treat a step-up context alone as satisfying an action-bound
+approval requirement. A durable role or relationship grant produced
+by a governance decision is also not an approval token: it becomes
+current governance state, and the fresh decision of
+{{challenge-redemption}} re-evaluates it like any other current
+policy input rather than consuming it as the approval itself.
 
-- a client advertises support with the `Accept-Txn-Challenge` request
-  header;
-- a protected resource that needs transaction authorization responds
-  with the `transaction_authorization_required` challenge in
-  `WWW-Authenticate`, carrying the signed challenge in the
-  `transaction_challenge` parameter;
-- the client presents the challenge to the
-  `transaction_authorization_endpoint` advertised in Authorization
-  Server metadata;
-- the endpoint returns a `transaction_authorization_id` pending
-  handle when authorization is not immediate, which the client polls;
-  and
-- the upstream error responses apply unchanged.
+# Resource Challenge {#resource-challenge}
 
-The TAS is the OAuth Authorization Server in the endpoint's
-functional role ({{applicability}}).  This document adds the Mission
-constraints in the sections below; it does not restate the upstream
-message flow.
+After receiving an ordinary Mission-bound request for an action that
+falls under {{applicability}}, the Challenge-Issuing Resource
+normalizes the operation under its Operation Profile and computes the
+runtime `parameter_digest` ({{I-D.draft-mcguinness-mission-runtime}}).
+When no valid transaction token is presented, the resource signals and
+returns a transaction authorization challenge exactly as the upstream
+protocol defines: the client's `Accept-Txn-Challenge` header gates the
+signal, the `transaction_authorization_required` error and
+`transaction_challenge` parameter carry the challenge, and the
+challenge is a JWT with protected header `typ`
+`txn-authz-challenge+jwt`
+({{I-D.draft-rosomakho-oauth-txn-challenge}} Sections 4.1, 4.2, and
+4.2.1). This document does not restate that mechanism.
 
-# Resource Challenge {#challenge}
+The challenge's REQUIRED claims `iss`, `aud`, `iat`, `exp`, `jti`,
+`txn`, `authorization_details`, and `reason`, and its OPTIONAL `act`
+and `reason_uri`, are exactly as
+{{I-D.draft-rosomakho-oauth-txn-challenge}} Section 4.2.2 defines
+them. `authorization_details` carries exactly one operation-scoped
+`mission_resource_access` entry ({{I-D.draft-mcguinness-oauth-mission}})
+or one compound-action detail whose registered semantics make the
+operation atomic. The Operation Profile a TAS and the resource apply
+resolves deterministically from the challenge's `iss` and that entry's
+`type` member ({{RFC9396}}): a resource versions its Operation Profile
+by versioning `type`, and a TAS MUST retain and recognize a superseded
+Operation Profile version for as long as a pending workflow still
+references it.
 
-The challenge is the upstream challenge JWT with `typ`
-`txn-authz-challenge+jwt` and the mandatory upstream `reason`.  A
-Mission deployment additionally binds:
+This profile adds the following REQUIRED challenge claims:
 
-- `txn`, the resource-scoped transaction identifier (upstream);
-- exactly one operation-scoped `authorization_details` entry
-  ({{RFC9396}}), or one compound-action detail whose registered
-  semantics make it atomic;
-- `parameter_digest`, computed exactly as Mission Runtime specifies
-  ({{I-D.draft-mcguinness-mission-runtime}});
-- `operation_profile`, an object with `id` and `version` pinning the
-  Operation Profile under which `parameter_digest` was computed, so a
-  profile update while approval is pending cannot silently change
-  normalization ({{parameters}});
-- `mission`, copied by value from the verified local Mission-bound
-  token, including the origin principal `subject` where the
-  cross-organizational principal profile applies
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}); and
-- `cnf`, the presenter key the resulting token binds to ({{RFC7800}}).
+`mission`:
+: REQUIRED. Copied from the verified Mission-bound access token,
+  unchanged, including the invariant origin principal
+  (`mission.subject`) where the Origin Principal profile applies
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
-The resource MUST derive these from the request and the verified
-local token and MUST NOT accept client-supplied replacements.  The
-challenge `exp` is short: it bounds initial admission and challenge
-replay, not the approval workflow ({{lifetimes}}).
+`parameter_digest`:
+: REQUIRED. Computed exactly as the runtime profile specifies
+  ({{I-D.draft-mcguinness-mission-runtime}}); this document defines no
+  second canonicalization.
 
-## Parameter Transport {#parameters}
+`cnf`:
+: REQUIRED. The presenter key {{RFC7800}} to which the resulting
+  transaction token must be bound.
 
-The TAS recomputes `parameter_digest` and decides over concrete
-inputs.  Raw values are conveyed by one composed mechanism, not an ad
-hoc side channel: either every approval-relevant value is expressed
-in the registered `authorization_details` entry, or the resource
-profiles the upstream `reason_uri` as a resource-controlled retrieval
-reference whose authenticated response is bound to the challenge
-`iss`, `txn`, the challenge `jti`, and `parameter_digest`.  Operation
-Profile resolution is deterministic and versioned: the TAS resolves
-the exact `operation_profile.id` and `version` from the challenge and
-recomputes the digest under that version.  No generic attributes bag
-is defined.
+The resource MUST derive `mission`, `parameter_digest`, and `cnf` from
+the request and the verified Mission-bound access token, and MUST NOT
+accept a client-supplied replacement for any of them.
 
-# Redemption and Approval {#redemption}
+Raw action parameters SHOULD remain outside the challenge when the TAS
+can decide from `parameter_digest` plus privacy-preserving attributes.
+Where a decision needs the normalized operation itself, this profile's
+one resource-controlled retrieval mechanism is the upstream
+`reason_uri` claim: dereferencing it, over a channel authenticated to
+the Challenge-Issuing Resource, returns the normalized operation bound
+to `txn`, the challenge `jti`, and `parameter_digest`; the party
+relying on the retrieved operation MUST recompute `parameter_digest`
+against it before relying on it. This document defines no second,
+unspecified attribute channel.
 
-The client presents the challenge, the local Mission-bound token, and
-proof of possession of the challenge `cnf` key to the transaction
-authorization endpoint.  The TAS MUST, in order:
+# Challenge Redemption and Approval {#challenge-redemption}
 
-1. authenticate the client and verify possession of the challenge
-   `cnf` key;
-2. resolve the challenge issuer to a registered resource and validate
-   its `typ`, signature, audience, time, and `jti` replay state
-   (upstream);
-3. validate the local Mission-bound token: Mission state, authority,
-   audience, expiry, and proof of possession;
-4. require value equality between the challenge `mission` and the
-   token's Mission invariants, by value of the profiled members, not
-   byte comparison of a serialization;
-5. establish that the requested `authorization_details` is within the
-   token's authority and applies to the challenge issuer and
-   resource;
-6. enforce `requires_action_approval` and destination policy;
-7. obtain or resolve a governed approval from an acceptable
-   independent Approver or policy authority, through ARAP and the
-   Approval Governance record
-   ({{I-D.draft-mcguinness-mission-authzen}},
-   {{I-D.draft-mcguinness-mission-approval-governance}}), bound to
-   `txn`, the operation identity, `parameter_digest`, the resource,
-   the Mission, the origin principal, and the presenter key;
-8. verify approval status, scope, grant time, maximum age, and
-   `approved_until`; and
-9. run a fresh authorization decision
-   ({{I-D.draft-mcguinness-mission-runtime}}) using the verified
-   approval as context together with current Mission state, principal
-   entitlement, resource policy, and the concrete parameter inputs.
+The Presenting Client submits the challenge to the
+`transaction_authorization_endpoint` exactly as
+{{I-D.draft-rosomakho-oauth-txn-challenge}} Section 5.1 defines:
+`client_id` where required, and the signed `transaction_challenge`.
+This profile adds two REQUIRED parameters that carry the Mission-bound
+access token as an assertion, under {{RFC8693}} Sections 2.1 and 3:
 
-Any denial ends the flow.  Approval completion alone MUST NOT trigger
-token issuance and MUST NOT bypass step 9.  The set of acceptable
-Transaction Authorization Servers, challenge issuers, and approval
-authorities is deployment or federation policy, never taken from an
-untrusted request claim.
+`subject_token`:
+: REQUIRED. The Mission-bound access token.
 
-## Lifetimes and the Pending Workflow {#lifetimes}
+`subject_token_type`:
+: REQUIRED. `urn:ietf:params:oauth:token-type:access_token`.
 
-Three lifetimes are distinct:
+The request also carries proof of possession of the challenge's `cnf`
+key, using DPoP {{RFC9449}} or mTLS {{RFC8705}}, the same mechanism
+{{transaction-token}} binds the resulting token to. A holder-mediated
+cross-organizational delegation Chain is not an acceptable
+`subject_token` for this version of the profile; presenting one at the
+transaction endpoint returns once this profile defines its own
+`subject_token_type` and presentation binding for the Chain
+Presentation the cross-organizational delegation profile serializes
+({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}).
 
-- the challenge `exp` bounds initial admission and replay of the
-  challenge;
-- the `transaction_authorization_id` pending handle expiry bounds the
-  asynchronous approval workflow, and MAY be longer than the
-  challenge `exp`; and
-- the transaction token `exp` is bounded by the fresh revalidation
-  inputs of step 9 and the pending-handle expiry, NOT by the
-  already-consumed challenge `exp`.
+The TAS authenticates the Presenting Client and validates the
+challenge exactly as
+{{I-D.draft-rosomakho-oauth-txn-challenge}} Sections 5.1 and 4.6
+require. This profile adds, in order:
 
-One accepted challenge maps to exactly one pending workflow: a retry
-of the same accepted challenge returns the existing
-`transaction_authorization_id`, never a second approval task.  On
-completion, the TAS performs a fresh revalidation of Mission state,
-credential validity, authority, approval freshness, principal
-entitlement, resource policy, and presenter binding before issuing;
-a poll before completion returns the upstream pending status.
+1. validating `subject_token`'s audience against the challenge's `iss`
+   and its `cnf` against the proof of possession presented on this
+   request, establishing that the presented Mission-bound access token
+   was issued for the challenged resource and is held by the party
+   presenting the challenge;
+2. requiring exact equality between the challenge's `mission` and
+   `subject_token`'s `mission` invariants;
+3. establishing that the challenge's `authorization_details` is within
+   `subject_token`'s Authority Set under the subset rule
+   ({{I-D.draft-mcguinness-oauth-mission}}) and applies to the
+   challenge's `iss` and resource;
+4. enforcing `requires_action_approval` and destination resource
+   policy;
+5. obtaining or resolving a governed approval from an acceptable
+   independent Approver or policy authority, bound to `txn`, the
+   operation identity, `parameter_digest`, the resource, the Mission,
+   the origin principal, and the presenter key;
+6. verifying the approval's status, scope, grant time, maximum age,
+   and `approved_until`; and
+7. running a fresh authorization decision using the verified approval
+   as context together with current Mission state, `subject_token`
+   validity, client and key binding, principal entitlement, resource
+   policy, and the concrete parameter inputs or attributes.
 
-# Transaction Token {#token}
+Any denial ends the flow. Completion of step 6 alone MUST NOT trigger
+token issuance and MUST NOT bypass step 7.
 
-On a permit, the TAS issues a JWT access token whose `typ` is
-`mission-txn-token+jwt` (REQUIRED), an explicit type whose registered
-semantics are "Mission transaction authorization, sender-constrained,
-single audience, single use".  The token response carries
-`token_type` `DPoP` (or the deployment's sender-constraining
-mechanism); a refresh token MUST NOT be issued.  The token contains
-only:
+An approval obtained under step 5 SHOULD carry the shape of an
+AuthZEN Access Request and Approval Profile approval object
+({{ARAP}}); steps 6 and 7 mirror the checks the AuthZEN binding
+applies to that object when it is presented as decision input, never
+as a bearer bypass ({{I-D.draft-mcguinness-mission-authzen}}). Where
+an Approval Governance Record backs the decision, that record is the
+authoritative provenance of who approved and under what authority
+({{I-D.draft-mcguinness-mission-approval-governance}}); this document
+neither restates nor requires it.
 
-- standard `iss`, `iat`, `exp`, and `jti`;
-- `sub`: the destination-local principal established by the projected
-  local Mission-bound token, never the approver or the approval
-  workflow;
-- `client_id`: the client authenticated at the transaction endpoint;
-- `act`: REQUIRED whenever actor context was present on the local
-  token, carried per the local projection rule
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}); the approver
-  and approval workflow are never `sub`, `client_id`, or `act`;
-- `aud`: a single string, exactly the verified challenge issuer;
-- `txn`, copied from the verified challenge;
-- the exact permitted `authorization_details`, never wider than the
-  challenge or the current decision;
-- `parameter_digest`, copied only after recomputation and
-  verification;
-- `mission`, value-invariant from the verified local token including
-  `subject` where the principal profile applies; and
-- `cnf`, exactly the challenge-bound presenter key ({{RFC7800}}).
+## Two-Phase Expiry {#two-phase-expiry}
+
+The challenge's `exp` bounds initial admission only: the Presenting
+Client MUST submit before it expires, and a late challenge is refused
+into a new workflow, never revived into an existing one. On
+acceptance, the pending workflow, identified by the upstream
+`transaction_authorization_id` (correlated to the ARAP task handle
+where ARAP backs the approval,
+{{I-D.draft-mcguinness-mission-authzen}}), carries its own
+deployment-declared lifetime: the upstream `expires_in` of
+{{I-D.draft-rosomakho-oauth-txn-challenge}} Section 5.2. Steps 6 and 7
+of {{challenge-redemption}} revalidate current Mission state,
+`subject_token` validity, approval freshness, client and key binding,
+entitlement, and policy, fresh at the moment they run; the
+transaction token's `exp` is bounded by those inputs and the pending
+workflow's remaining lifetime, never by the already-consumed
+challenge `exp` ({{transaction-token}}).
+
+Repeated initial submission of the same `(challenge issuer, challenge
+jti, client, cnf)` MUST return the existing pending workflow or fail
+deterministically; it MUST NOT create a second workflow for the same
+admitted challenge.
+
+The set of acceptable Transaction Authorization Servers,
+Challenge-Issuing Resources, and approval authorities is deployment
+and federation policy, never taken from an untrusted request claim.
+Key discovery rides the upstream metadata
+({{I-D.draft-rosomakho-oauth-txn-challenge}}): a Challenge-Issuing
+Resource publishes its challenge-signing keys at
+`txn_challenge_jwks_uri` with
+`txn_challenge_signing_alg_values_supported`, and the TAS resolves a
+challenge issuer's keys there and nowhere else; a client discovers
+the TAS through `transaction_authorization_endpoint` in Authorization
+Server metadata. A TAS MAY
+be the Mission Issuer itself or an Authorization Server deployed
+separately from it; a resource trusts a TAS's token-signing key and
+policy role through pre-established federation metadata, not through
+anything the request asserts about itself.
+
+# Transaction Token {#transaction-token}
+
+On permit, the Transaction Authorization Server issues a JWT with
+protected header `typ` `mission-txn-token+jwt` ({{iana}}). This is its own
+JWT access-token profile with the complete validation semantics below;
+it does not conform to {{RFC9068}}, and a Resource Server that
+recognizes only `at+jwt` correctly rejects it as unknown. A deployment
+wanting RFC 9068 interoperability instead relies on the upstream `txn`
+claim carried by an ordinary JWT access token
+({{I-D.draft-rosomakho-oauth-txn-challenge}} Section 6); that is not
+this profile's shape. Its claims:
+
+`iss`, `iat`, `exp`, `jti`:
+: REQUIRED, standard JWT claims {{RFC7519}}.
+
+`aud`:
+: REQUIRED. A singleton, exactly the verified challenge's `iss`.
+  Never a list and never any other value.
+
+`sub`:
+: REQUIRED. The verified effective subject: the Mission's subject or,
+  where the Origin Principal profile applies, the origin principal.
+  Never the Approver.
+
+`client_id`:
+: REQUIRED. The client authenticated at the transaction endpoint
+  ({{RFC8693}} Section 4.3). The upstream client and the executing
+  agent MAY be different parties; this claim identifies the former.
+
+`act`:
+: REQUIRED whenever requester or actor context existed on
+  `subject_token` or the challenge; otherwise absent. Present under
+  the same conditions and structure as the issuance profile's `act`
+  chain ({{I-D.draft-mcguinness-oauth-mission}}, Section "Delegation
+  Within a Mission"; the OAuth Actor Profile
+  {{I-D.draft-mcguinness-oauth-actor-profile}} remains the structural
+  reference). The chain is attribution, never authority: it names
+  who acted, for audit and as policy input, and grants nothing by
+  itself. Actor proofs and receipts, where a deployment carries them,
+  stay off this token; they ride `subject_token` or the delegation
+  context the TAS verified at redemption ({{challenge-redemption}}),
+  never the transaction token itself.
+
+`txn`:
+: REQUIRED. Copied unchanged from the verified challenge.
+
+`authorization_details`:
+: REQUIRED. The exact permitted entry, never wider than the
+  challenge, `subject_token`'s Authority Set, or the fresh decision of
+  {{challenge-redemption}}.
+
+`parameter_digest`:
+: REQUIRED. Copied only after recomputation and verification against
+  the challenge's value.
+
+`mission`:
+: REQUIRED. The Mission claim's profiled members, value-equal to the
+  verified challenge's `mission`. The transaction token is a freshly
+  signed JWT; this is value equality of the profiled members, not
+  byte preservation of a carried artifact.
+
+`cnf`:
+: REQUIRED. Bound to the verified presenter key, DPoP {{RFC9449}}
+  (`cnf.jkt`) or mTLS {{RFC8705}} (`cnf.x5t#S256`), equal to the
+  challenge's `cnf` and the proof verified at redemption.
 
 The token MUST NOT carry a generic `approval` object, a `single_use`
 boolean, raw rendered approval text or action parameters, roles or
-relationships conferred by an approval workflow, or embedded evidence
-objects; single use is semantic to the token `typ`.  The token
-additionally MUST NOT be refreshed, exchanged or delegated
-({{RFC8693}} inputs refuse it), used as a cross-organizational
-delegation root, or accepted as an ordinary Mission-bound token, and
-it is usable only for its recorded `txn`.  A conforming resource
-rejects a `mission-txn-token+jwt` presented on any path other than
-the one recorded transaction, and rejects an ordinary Mission-bound
-token presented as a transaction token.
+relationships conferred by an approval workflow, or evidence objects
+whose lifecycle and disclosure rules belong to the evidence and audit
+profiles. It MUST NOT carry a refresh token, a delegation grant, or
+token-exchange input, and MUST NOT be accepted as a general
+Mission-bound access token for any purpose beyond the challenged
+operation.
 
-The token `exp` is no later than the earliest of the approval
-freshness or `approved_until`, the local credential expiry, the
-Mission expiry, the pending-handle expiry, and the deployment
-maximum.
+The token's `exp` MUST be no later than the earliest of: approval
+freshness or `approved_until`; `subject_token`'s own validity; Mission
+expiry; the pending workflow's remaining lifetime
+({{two-phase-expiry}}); and deployment maximum. It is never bounded by
+the already-consumed challenge `exp`. A short token lifetime limits
+stale-policy and revocation exposure but does not replace the
+point-of-use state checks {{offline-verification}} requires.
 
-# Offline Verification and Execution {#verification}
+# Offline Verification and Execution {#offline-verification}
 
-The protected resource verifies locally, without calling the TAS on
-the request path:
+The Challenge-Issuing Resource verifies the transaction token locally,
+without calling the Transaction Authorization Server on the request
+path:
 
-1. the exact token `typ` `mission-txn-token+jwt`, a trusted issuer
-   and signature, the intended single-string `aud`, `iat` and `exp`,
-   and the token class;
-2. proof of possession of the `cnf` key by the current presenter
-   ({{RFC9449}});
-3. equality of `txn`, the Mission invariants (by value), the
-   operation `authorization_details`, and the recomputed
-   `parameter_digest` with the pending operation;
-4. origin-principal, local-subject, and actor consistency under the
-   principal profile
+1. exact token `typ`, trusted issuer and signature, intended `aud`,
+   `iat` and `exp`, and token class;
+2. `cnf` proof by the current presenter;
+3. equality of `txn`, the `mission` invariants, the operation
+   `authorization_details`, and the recomputed `parameter_digest`
+   with the pending operation;
+4. origin principal, local subject, and actor consistency under the
+   principal profile in effect
    ({{I-D.draft-mcguinness-oauth-mission-cross-domain}});
 5. current local policy, principal entitlement, and any required
-   Mission-state observation, each within its declared freshness
-   bound; the Mission-state source is the Status surface
-   ({{I-D.draft-mcguinness-oauth-mission-status}}), keeping runtime
-   state observation the targeted overlay it is elsewhere in the
-   family; and
-6. atomic first use for the resource transaction ({{atomicity}}).
+   Mission state, observed through the Mission Status surface, the
+   Status List, or issuer token introspection within their declared
+   freshness bounds ({{I-D.draft-mcguinness-oauth-mission-status}},
+   {{I-D.draft-mcguinness-mission-runtime}}); and
+6. atomic first use of the resource-scoped `txn` in the consumption
+   domain; a second, distinct token `jti` presented for an
+   already-consumed `txn` is the same replay and MUST be refused,
+   never executed as a new attempt.
 
-## At-Most-Once and Identifier Roles {#atomicity}
-
-Four identifiers play distinct roles:
-
-- the challenge `jti` detects replay of the challenge (upstream, at
-  the TAS);
-- the `transaction_authorization_id` is the pending-workflow and
-  issuance idempotency key: TAS issuance is idempotent per accepted
-  challenge and workflow, so repeated polls return the same
-  authorization result rather than minting a second token;
-- `txn` is the resource-scoped transaction and the resource's
-  **consumption key**: the resource consumes at most once per `txn`,
-  so two validly signed tokens carrying different `jti` for the same
-  `txn` still execute at most once; and
-- the token `jti` additionally detects exact replay of one issued
-  token; the runtime idempotency identity
-  ({{I-D.draft-mcguinness-mission-runtime}}) links a retried attempt
-  to the same effect.
-
-The resource's consumption record for `txn` is the metering profile's
+Consumption of `txn` MUST be linearizable across every replica capable
+of executing the same operation, meeting the metering companion's
 Exact enforcement profile
-({{I-D.draft-mcguinness-mission-metering}}, Section "Exactness and
-Topology"): the first-use check and record are linearizable across
-every replica capable of executing the same operation, committed
-before the irreversible effect or atomically with it where the
-operation store supports that transaction.  If the consumption store
-is unavailable, enforcement fails closed.  A retry after an ambiguous
-response uses the Operation Profile's idempotency key to retrieve or
-complete the same result; it never consumes a second time.  A
-genuinely new attempt requires a new challenge, approval decision,
-token, and idempotency key.
+({{I-D.draft-mcguinness-mission-metering}}): the record commits before
+the irreversible effect, or atomically with it where the operation
+store supports that transaction. If the consumption store is
+unavailable, the resource MUST fail closed for this profile.
 
-# Evidence and Audit {#evidence}
+`txn` identifies the resource transaction and is the atomic
+consumption key; challenge `jti` identifies one admission into a
+workflow; `transaction_authorization_id` (or the ARAP task handle
+backing it) identifies one pending workflow; token `jti` identifies
+one issuance from that workflow, not the one execution; and the
+Operation Profile's idempotency key identifies one effect. At most one
+authorization result exists per accepted workflow: repeated polling
+after a decision returns the same token or result stably, and a TAS
+MUST NOT mint a second token, under a different `jti`, for a `txn`
+whose workflow already produced one. An ambiguous retry looks up the
+prior result along this chain, from `txn` and token `jti` to the
+workflow to the idempotency key, and the resource returns
+`duplicate_suppressed` as the runtime profile defines it
+({{I-D.draft-mcguinness-mission-runtime}}) rather than executing
+again. A genuinely new attempt requires a new challenge, a new
+workflow, a new token, and a new idempotency key.
 
-Each lifecycle event is recorded by its own profile, correlated by
-identifiers rather than embedded in the token:
+# Evidence and Audit {#evidence-audit}
 
-- the action-approval workflow and its provenance are ARAP and the
-  Approval Governance record
-  ({{I-D.draft-mcguinness-mission-authzen}},
-  {{I-D.draft-mcguinness-mission-approval-governance}});
-- the fresh PDP decision and its reference to the approval is
-  Decision Evidence
-  ({{I-D.draft-mcguinness-mission-runtime-evidence}});
-- the single execution or refusal is Execution Evidence; and
-- Mission Consent Evidence
-  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) is
-  evidence of the original Mission approval event only, not of the
-  transaction approval, whose lifecycle is the runtime action-approval
-  mechanism above.
+This document defines no evidence object of its own. The approval
+service or TAS records Approval Governance and, where configured,
+Consent Evidence state
+({{I-D.draft-mcguinness-mission-approval-governance}},
+{{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); the fresh
+decision and the executing resource emit Decision Evidence and
+Execution Evidence under the runtime evidence profile
+({{I-D.draft-mcguinness-mission-runtime-evidence}}), which a Mission
+Receipt may summarize ({{I-D.draft-mcguinness-mission-runtime}}); and
+where durable independent proof is required, the audit profile
+registers the relevant evidence
+({{I-D.draft-mcguinness-mission-audit}}). These records correlate by
+the Mission reference, `txn`, the transaction token's `jti`,
+`parameter_digest`, and idempotency identity. None of them ride in the
+transaction token.
 
-Correlation uses the Mission reference, `txn`, the challenge `jti`,
-the `transaction_authorization_id`, the transaction-token `jti`,
-`parameter_digest`, and the runtime idempotency identity.  Records do
-not ride in the token; where durable independent proof is required
-the audit profile registers or receipts them
-({{I-D.draft-mcguinness-mission-audit}}).  The TAS MUST be able to
-show that its fresh decision relied on a valid approval, but a
-relying party's authorization decision rests on the trusted typed
-token plus its own current checks.
+The Transaction Authorization Server MUST be able to show that its
+fresh decision relied on a valid approval. A resource's own
+authorization decision rests on the trusted, typed transaction token
+plus the current local checks of {{offline-verification}}, never on
+parsing an arbitrary evidence blob presented at the request.
 
-# Failure Semantics {#failures}
+# Failure Semantics {#failure-semantics}
 
-- No or expired action approval: deny; the workflow MAY return or
-  request another approval.
-- Approval granted but current policy or entitlement denies: deny;
-  approval is not a bypass.
-- Parameter, resource, Mission, principal, presenter, or audience
-  mismatch: terminal refusal for that token or challenge.
-- Stale or unavailable required state: fail closed; retry only per
-  the declared state-recovery policy.
-- Consumed `txn`: return the prior idempotent result where the
-  Operation Profile allows it, otherwise `duplicate_suppressed`;
-  never execute again, including for a second token bearing the same
-  `txn`.
-- Challenge or token with an unknown `typ` or authorization-details
-  semantics: reject, never best-effort parse.
+The pending and polling states and errors of
+{{I-D.draft-rosomakho-oauth-txn-challenge}} Section 5.3
+(`authorization_pending`, `slow_down`, `access_denied`,
+`expired_token`) apply unchanged; this document defines no second
+error vocabulary for that surface. Initial validation only admits a
+workflow: only the fresh decision at {{challenge-redemption}}
+completion is final, and an admitted workflow MUST still refuse there
+when a fresh input no longer holds.
 
-# Conformance {#conformance}
+No or expired action approval:
+: Deny. The workflow MAY return or request another approval.
 
-An implementation conforms as a **protected resource** (challenge
-issuer and offline verifier, {{challenge}}, {{verification}}), as a
-**Transaction Authorization Server** ({{redemption}}, {{token}}), or
-both.  Positive and negative vectors cover, at minimum:
+Approval granted but current policy or entitlement denies:
+: Deny. The approval is not a bypass of step 7 of
+  {{challenge-redemption}}.
 
-- the upstream endpoint, capability header, challenge, pending
-  handle, and polling run unchanged;
-- a valid challenge, asynchronous approval that completes after the
-  challenge `exp`, fresh revalidation, and one execution;
-- delegated `requires_action_approval` preservation and an attempted
-  removal;
-- step-up presented without transaction approval;
-- a valid approval for a changed amount, recipient, resource, action,
-  Mission, origin principal, actor, audience, or presenter key;
-- approval complete but the Authority Set, local entitlement, or
-  resource policy denies;
-- a missing or changed `parameter_digest`, a different
-  canonicalization, and an Operation Profile version change while
-  approval is pending;
-- challenge replay, token replay on one replica, simultaneous replay
-  across replicas, and **two validly signed tokens with different
-  `jti` for the same `txn` executing at most once**;
-- duplicate TAS issuance suppressed per accepted challenge and
-  workflow (repeated polls return the same result);
-- identity projection: `sub` is the mapped local principal, the
-  approver never becomes `sub`/`client_id`/`act`, `aud` is the single
-  challenge issuer, `cnf` is the challenge key;
-- the token refused when refreshed, exchanged, offered as a
-  cross-organizational root, or presented as an ordinary Mission
-  token;
-- an ambiguous first execution followed by an idempotent retry;
-- an untrusted challenge issuer, TAS, or approval authority; and
-- evidence correlation from challenge and decision through exactly one
-  execution or a terminal refusal.
+Parameter, resource, Mission, principal, presenter, or audience
+mismatch:
+: Terminal refusal for that token or challenge.
 
-# Security Considerations
+Stale or unavailable required state:
+: Fail closed. Retry only according to the declared state-recovery
+  policy.
 
-The runtime profile's security considerations apply in full.  This
-profile adds the transaction surface.
+Consumed token:
+: Return the prior idempotent result via the relationship map of
+  {{offline-verification}} when the Operation Profile allows it;
+  otherwise `duplicate_suppressed`
+  ({{I-D.draft-mcguinness-mission-runtime}}). Never execute again.
 
-- **Approval is not authority.**  A permit is issued only after the
-  fresh decision of {{redemption}} step 9; a completed approval alone
-  never yields a token.  A relying party trusts the typed token and
-  its own current checks, not a reconstructed approval workflow.
-- **At most once versus availability.**  The consumption record is
-  keyed by the resource-scoped `txn` under the Exact enforcement
-  profile, so two tokens for one `txn` cannot both execute.  Under
-  partition, fail-closed sacrifices availability; a local cache
-  cannot support the at-most-once property, and this profile makes no
-  such claim without a shared atomic consumption domain.
-- **Trust anchors are pre-established.**  The accepted challenge
-  issuers, Transaction Authorization Servers, and approval
-  authorities come from federation metadata; a token or challenge
-  never selects its own trust authority.
-- **Token containment.**  The transaction token cannot be refreshed,
-  exchanged, delegated, made a cross-organizational root, or accepted
-  as an ordinary Mission token, and is usable only for its recorded
-  `txn`; these restrictions keep a single-action authority from
-  becoming standing authority.
-- **JWT best practices.**  Every JWT this profile handles follows
-  {{RFC8725}}: explicit typing, algorithm allow-lists, and no
-  unverified pass-through.
+A challenge or token with an unknown `typ` or unrecognized
+`authorization_details` semantics:
+: MUST be rejected outright, never parsed on a best-effort basis.
 
-# Privacy Considerations
+# Security Considerations {#security-considerations}
 
-`parameter_digest` keeps sensitive action inputs out of the token and
-challenge; raw values travel only through the composed transport of
-{{parameters}} when a decision genuinely needs them.  The transaction
-token carries no approver identity or rendered approval text;
-approver detail lives on the evidence plane under its disclosure
-rules ({{I-D.draft-mcguinness-mission-runtime-evidence}}).  Where the
-origin-principal profile applies, its correlation and minimization
-rules govern the `mission.subject` the challenge and token carry
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+The security considerations of the issuance profile
+{{I-D.draft-mcguinness-oauth-mission}} and the runtime profile
+{{I-D.draft-mcguinness-mission-runtime}} apply.
+
+Challenge and credential substitution:
+: A challenge is scoped to one resource, one operation, and one
+  presenter key. {{challenge-redemption}}'s step 1 (`subject_token`
+  audience and `cnf`), step 2 (exact `mission` equality), and step 3
+  (authority subset) together close the case of a challenge issued
+  for one resource being redeemed for another's benefit, or a
+  Mission-bound access token issued for a different resource or held
+  by a different party being accepted as this profile's credential; a
+  TAS that skips any of the three can be induced to authorize an
+  operation the verified authority never covered.
+
+Approval replay across operations:
+: An approval is bound to `txn`, the operation identity, and
+  `parameter_digest`. A TAS that treats a completed approval as
+  standing authority for a different transaction, rather than
+  re-running step 7 fresh for each redemption, reintroduces the
+  bearer-grant failure mode this profile exists to close.
+
+Transaction Authorization Server compromise, and pending-workflow exposure:
+: The TAS is the component every resource on the deployment trusts to
+  have run a genuine fresh decision. Its compromise mints tokens for
+  operations no human or policy authority approved, and a long-lived
+  pending workflow widens the window in which `subject_token`, its
+  key, or the approval authority can be compromised before that
+  decision runs. Deployments SHOULD isolate the TAS's signing key and
+  decision logic from the agent's own execution environment, matching
+  the runtime profile's mediated-custody posture, SHOULD bound the
+  pending workflow's declared lifetime ({{two-phase-expiry}}) to what
+  genuine approval latency requires, and SHOULD bound token lifetime
+  tightly enough that a detected compromise's blast radius is the
+  outstanding token population, not the Mission's full remaining
+  lifetime.
+
+Consumption-store availability, and the fail-closed posture generally:
+: The at-most-once property this profile claims exists only while the
+  consumption store meets the Exact enforcement profile of
+  {{I-D.draft-mcguinness-mission-metering}}; a deployment that
+  degrades to a merely local cache during partition no longer has
+  that property and MUST NOT claim it. Every failure path of
+  {{failure-semantics}} resolves to denial, refusal, or a fail-closed
+  state, never silent pass-through; an implementation that treats an
+  unrecognized `typ`, an unverifiable approval, or an unreachable
+  consumption store as permission is nonconformant.
+
+# Privacy Considerations {#privacy-considerations}
+
+Raw action parameters and approval detail stay off the transaction
+token by design: the token carries `parameter_digest`, not the
+parameters, and no `approval` object. A Transaction Authorization
+Server that needs more than the digest to decide or render obtains
+raw values through the `reason_uri` retrieval of
+{{resource-challenge}}, never by widening the token.
+
+Digest-plus-attributes authorization lets a TAS decide without
+learning more than the deployment chooses to disclose over that
+channel; a deployment SHOULD weigh what attributes it discloses to
+the TAS against what the decision genuinely requires. Presenting
+`subject_token` discloses to the TAS that the Presenting Client holds
+Mission-bound authority at the challenged resource; the TAS already
+is a party the deployment trusts with the fresh decision, so this is
+not a disclosure beyond what {{challenge-redemption}} already requires
+it to evaluate.
+
+`txn` and the transaction token's `jti` are a correlation surface: any
+party observing both a challenge and its redeemed token can link one
+resource transaction to one TAS decision. This is the profile's
+intended accountability property, not an incidental leak, but a
+deployment SHOULD scope `txn` values to the minimum lifetime and
+audience that {{resource-challenge}} and {{offline-verification}}
+require.
 
 # IANA Considerations {#iana}
 
 ## Media Type Registration
 
-This document requests registration of the following media type in
-the "Media Types" registry, per {{RFC6838}}.  The transaction
-challenge type (`txn-authz-challenge+jwt`) is registered by the
-upstream draft ({{I-D.draft-rosomakho-oauth-txn-challenge}}) and is
-not re-registered here.
+IANA is requested to register one media type per {{RFC6838}}. Its
+JOSE protected `typ` is the registered media type with the
+`application/` prefix omitted where JWS permits the shortened form; an
+HTTP `Content-Type` carries the full media type. This document
+registers no new claim, parameter, or metadata member: `txn`,
+`mission`, `cnf`, `parameter_digest`, `subject_token`, and
+`authorization_details` are each defined by the document that owns
+them and are reused here unchanged. This document does not register a
+second challenge media type; the challenge keeps the upstream `typ`
+`txn-authz-challenge+jwt` unchanged.
+
+### application/mission-txn-token+jwt
 
 - Type name: application
 - Subtype name: mission-txn-token+jwt
-- Required parameters: N/A
-- Optional parameters: N/A
-- Encoding considerations: 8bit; the token is a JWT
-  ({{RFC7519}}), a series of base64url-encoded values separated by
-  period characters
-- Security considerations: see {{iana}} and the Security
-  Considerations of this document
-- Interoperability considerations: N/A
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: 8bit; JWS Compact Serialization
+  {{RFC7515}}
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
 - Published specification: this document
-- Applications that use this media type: Mission-aware protected
-  resources and Transaction Authorization Servers
-- Fragment identifier considerations: N/A
-- Additional information: N/A
-- Person and email address to contact for further information:
-  Karl McGuinness (public@karlmcguinness.com)
+- Applications that use this media type: Mission-Bound Authorization
+  Challenge-Issuing Resources, Transaction Authorization Servers, and
+  Presenting Clients
+- Fragment identifier considerations: not applicable
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): none
+  - Macintosh file type code(s): none
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
 - Intended usage: COMMON
 - Restrictions on usage: none
-- Author: Karl McGuinness
-- Change controller: IESG
+- Author: IETF
+- Change controller: IETF
 
---- back
+The transaction token's registered semantics are sender-constrained,
+single-audience, and single-use. A Resource Server that recognizes
+`typ` `mission-txn-token+jwt` enforces exactly those properties regardless
+of any member on the token; this document defines no `single_use`
+member anywhere, because single use is semantic to the type itself.
+
+# Mission Substrate {#mission-substrate}
+
+This document is defined against the Mission model rather than
+against OAuth 2.0 mechanics: it is a substrate-neutral consumer, and
+this section is its consumption declaration under the rule of Mission
+Substrate Requirements ({{I-D.draft-mcguinness-mission-substrate}})
+that a substrate-neutral profile declare the kernel functions and
+optional capabilities it consumes.
+
+From the contextual-governance kernel it consumes the Mission
+identifier and issuer, the kernel's Mission Reference and Controller
+carried in the `mission` claim, and the active and non-active gate the
+fresh decision of {{challenge-redemption}} observes.
+
+Its declaration against the optional capabilities:
+
+| Capability | Consumption | Scope of consumption |
+| --- | --- | --- |
+| Lifecycle-Gated Authorization | required | A transaction token is minted only from a Mission the TAS observed `active`; this document adds no second gate to the issuance profile's ({{I-D.draft-mcguinness-oauth-mission}}) |
+| Structured Authority | consumed | The challenge and token's `authorization_details` entry is evaluated against the verified Authority Set under the subset rule ({{challenge-redemption}} step 3) |
+| State-Observable | consumed | Offline verification observes current Mission state within its declared freshness bound ({{offline-verification}}); establishing that state is the runtime and Status profiles' concern |
+| Monotonic Derivation | not consumed | A transaction token narrows nothing durable: it is a bounded, single-use permit, not a Mission, Child Mission, or successor |
+| Credential-Bound | required and produced | `subject_token` MUST already be sender-constrained by `cnf`, and the minted transaction token is itself a `cnf`-bound artifact ({{transaction-token}}); this profile both requires and produces the capability |
+| Authorized Context Correlation | not consumed | The Presenting Client authenticates directly with its own `cnf` proof; no issuer-established correlation joins a separate credential to the Mission here |
+| Independently Verifiable | produced | Offline verification of {{offline-verification}} independently verifies the transaction permit, the transaction binding, the carried authority, and the presenter binding, all as of issuance; it is explicitly not independent verification of Mission approval history or current Mission state |
+| Portable Evidence | not consumed | This document defines no evidence artifact of its own; the evidence plane of {{evidence-audit}} carries the durable account |
+{: title="Transaction authorization capability consumption"}
+
+Beyond the kernel, this profile also consumes companion capabilities
+outside the substrate contract: the metering companion's Exact
+enforcement profile for atomic `txn` consumption and the Mission
+Status surface for freshness-bounded state observation (both
+{{offline-verification}}), and, conditionally, the cross-domain Origin
+Principal profile for the invariant origin principal
+({{resource-challenge}}). All three are consumed, none produced.
+
+# Conformance {#conformance}
+
+A **Transaction Authorization Server**:
+
+- authenticates the Presenting Client and validates the challenge as
+  {{I-D.draft-rosomakho-oauth-txn-challenge}} requires, then completes
+  every added step of {{challenge-redemption}} in order and refuses on
+  any failure;
+- MUST NOT let completion of the approval step alone trigger token
+  issuance or bypass the fresh decision;
+- mints the transaction token only with the claims and MUST NOT list
+  of {{transaction-token}}; and
+- publishes its signing keys and accepted challenge issuers as
+  deployment and federation metadata, resolving each challenge
+  issuer's keys through its published `txn_challenge_jwks_uri` and
+  never accepting either from the request.
+
+A **Challenge-Issuing Resource**:
+
+- derives the Mission-profiled challenge claims from the request and
+  the verified credential, never from a client-supplied value
+  ({{resource-challenge}});
+- verifies the transaction token locally under
+  {{offline-verification}} without a request-path call to the TAS;
+  and
+- consumes `txn` atomically and linearizably across every replica,
+  failing closed when the consumption store is unavailable.
+
+A **Presenting Client**:
+
+- proves possession of the challenge's and token's confirmation key
+  at redemption and at execution; and
+- treats the transaction token, not the approval, as authority: it
+  does not construct or assert an approval object of its own.
+
+Positive and negative conformance vectors exist for: a valid
+challenge, `subject_token` presentation, approval, fresh decision, and
+one execution; delegated constraint preservation and an attempted
+removal of `requires_action_approval`; step-up presented without
+transaction approval; an approval valid for a changed amount,
+recipient, resource, action, Mission, origin principal, actor,
+audience, or presenter key; an approval complete but Authority Set,
+entitlement, or resource policy denying; a missing or changed
+`parameter_digest` and a different canonicalization; a pending
+workflow that outlives its challenge and is later approved; repeated
+initial submission of the same challenge returning one workflow;
+challenge replay, single-replica token replay, and two distinct token
+`jti` values presented for one `txn`; an ambiguous first execution
+followed by an idempotent retry; an expired challenge, pending
+workflow, `subject_token`, or transaction token; a `subject_token`
+valid for a different resource audience or an unmatched `cnf`; an
+untrusted resource, TAS, or approval authority; an arbitrary signed
+JWT or an ordinary Mission token presented as a transaction token; a
+privacy projection showing raw parameters and approval detail absent
+from the token; and evidence correlation from challenge and decision
+through exactly one execution or terminal refusal.
 
 # Acknowledgments
 {:numbered="false"}
 
-This profile builds on the transaction authorization challenge and on
-the action-bound approval model of Mission Runtime.
+This document is part of the Mission-Bound Authorization work and
+profiles the OAuth transaction authorization challenge for
+cross-organizational, execution-time approval.
