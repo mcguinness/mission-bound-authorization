@@ -303,3 +303,127 @@ export async function mintChildOffline(
     .setJti(`aat_child_${randomBytes(9).toString("base64url")}`)
     .sign(parentKey);
 }
+
+/**
+ * @spec cross-org-delegation#root-issuance — mint a cross-organizational
+ * attenuation root. Differences from {@link deriveAttenuationRoot}: the
+ * presenter key travels as the full public `cnf.jwk` (a disconnected verifier
+ * verifies the first child under it); the root carries the issuer-asserted
+ * `act` naming the approved agent under the caller-resolved canonical actor
+ * mapping (@spec cross-org-delegation#actor-identity: the Mission Record's
+ * client_id is not itself an actor identity); and the `mission` claim carries
+ * the origin principal `subject`. The mapping and its version are returned
+ * for the caller to record in the issuance derivation record.
+ */
+export interface CrossOrgRootInput {
+  missionId: string;
+  aud: string | string[];
+  clientId: string;
+  /** The presenter's PUBLIC key, carried as cnf.jwk. */
+  cnfJwk: JWK;
+  /** The caller-resolved canonical actor for the approved client. */
+  actor: { iss: string; sub: string; sub_profile?: string };
+  /** The actor-mapping registry version, recorded in issuance evidence. */
+  mappingVersion: string;
+  requestedTools?: AATTools;
+  lifetimeSeconds?: number;
+  delMaxDepth?: number;
+}
+
+export async function deriveCrossOrgRoot(
+  kernel: MissionKernel,
+  signKey: CryptoKey,
+  kid: string,
+  input: CrossOrgRootInput,
+): Promise<{ root: string; jti: string; tools: AATTools; actorMapping: { client_id: string; actor: CrossOrgRootInput["actor"]; version: string } }> {
+  const record: MissionRecord = kernel.gateDerivation(input.missionId);
+  const effective = kernel.effectiveAuthoritySet(record);
+  const delMaxDepth =
+    input.delMaxDepth ?? (input.requestedTools ? 0 : deriveDelMaxDepth(effective));
+  let tools: AATTools;
+  if (input.requestedTools) {
+    const requestedEntries = mapToolsToAuthority(input.requestedTools);
+    if (!isSubsetSet(requestedEntries, effective)) {
+      throw new Error("attenuation: requested root exceeds the Mission Authority Set");
+    }
+    tools = input.requestedTools;
+  } else {
+    const mappable = delMaxDepth > 0 ? effective.filter((e) => e.delegation) : effective;
+    tools = mapAuthorityToTools(mappable);
+  }
+  const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
+  const missionExp = Math.floor(Date.parse(record.expires_at) / 1000);
+  const exp = Math.min(nowS + (input.lifetimeSeconds ?? MAX_ROOT_LIFETIME_S), missionExp);
+  const jti = `aat_root_${randomBytes(12).toString("base64url")}`;
+  const root = await new SignJWT({
+    mission: {
+      id: record.id,
+      issuer: record.issuer,
+      authority_hash: record.authority_hash,
+      subject: { iss: record.subject.iss, sub: record.subject.sub },
+    },
+    cnf: { jwk: input.cnfJwk },
+    act: { iss: input.actor.iss, sub: input.actor.sub, ...(input.actor.sub_profile ? { sub_profile: input.actor.sub_profile } : {}) },
+    sub: record.subject.sub,
+    client_id: input.clientId,
+    del_depth: 0,
+    del_max_depth: delMaxDepth,
+    authorization_details: [{ type: AAT_DETAIL_TYPE, tools }],
+  })
+    .setProtectedHeader({ alg: "ES256", kid, typ: AAT_TYP })
+    .setIssuer(record.issuer)
+    .setAudience(input.aud)
+    .setIssuedAt(nowS)
+    .setExpirationTime(exp)
+    .setJti(jti)
+    .sign(signKey);
+  return {
+    root,
+    jti,
+    tools,
+    actorMapping: { client_id: input.clientId, actor: input.actor, version: input.mappingVersion },
+  };
+}
+
+/**
+ * @spec cross-org-delegation#derivation — holder-side cross-organizational
+ * child mint: signs under the PARENT cnf key, binds via par_hash, carries the
+ * recipient's PUBLIC key as cnf.jwk, keeps the mission claim (including
+ * subject) value-invariant, and names this hop's actor only when `actor` is
+ * supplied (a named hop needs an aligned actor-binding credential in the
+ * Presentation; a key-only hop omits act entirely).
+ */
+export async function mintCrossOrgChild(
+  parentToken: string,
+  parentKey: CryptoKey,
+  narrowedTools: AATTools,
+  opts: {
+    cnfJwk: JWK;
+    actor?: { iss: string; sub: string; sub_profile?: string };
+    aud?: string | string[];
+    exp?: number;
+  },
+): Promise<string> {
+  const parent = decodeJwt(parentToken) as Record<string, unknown>;
+  const { d: _d, ...parentPub } = await exportJWK(parentKey);
+  const parentJkt = await calculateJwkThumbprint(parentPub as JWK);
+  const nowS = Math.floor(Date.now() / 1000);
+  const exp = opts.exp ?? Number(parent.exp);
+  return new SignJWT({
+    mission: parent.mission as Record<string, unknown>,
+    cnf: { jwk: opts.cnfJwk },
+    del_depth: Number(parent.del_depth) + 1,
+    del_max_depth: Number(parent.del_max_depth),
+    par_hash: parHash(parentToken),
+    authorization_details: [{ type: AAT_DETAIL_TYPE, tools: narrowedTools }],
+    ...(opts.actor ? { act: { iss: opts.actor.iss, sub: opts.actor.sub, ...(opts.actor.sub_profile ? { sub_profile: opts.actor.sub_profile } : {}) } } : {}),
+    ...(typeof parent.sub === "string" ? { sub: parent.sub } : {}),
+  })
+    .setProtectedHeader({ alg: "ES256", typ: AAT_TYP })
+    .setIssuer(`urn:ietf:params:oauth:jwk-thumbprint:sha-256:${parentJkt}`)
+    .setAudience(opts.aud ?? (parent.aud as string | string[]))
+    .setIssuedAt(nowS)
+    .setExpirationTime(exp)
+    .setJti(`aat_child_${randomBytes(9).toString("base64url")}`)
+    .sign(parentKey);
+}

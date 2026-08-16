@@ -1,0 +1,253 @@
+/**
+ * @spec cross-org-delegation#projection-exchange — the RFC 8693 seam where a
+ * destination Resource AS accepts a Chain Presentation and mints an
+ * audience-local Mission-bound token. Verification is
+ * kernel/cross-org-chain.ts's; this adapter owns the wire shape, the leaf
+ * proof of possession, the origin-principal mapping, the local-policy
+ * intersection, the mint, and the derivation evidence.
+ */
+import {
+  chainDigest,
+  ChainPresentationError,
+  parseChainPresentation,
+} from "@mission/core";
+import type { AuthorityEntry } from "../kernel/types.js";
+import {
+  calculateJwkThumbprint,
+  decodeProtectedHeader,
+  jwtVerify,
+  SignJWT,
+  type CryptoKey,
+  type JWK,
+} from "jose";
+import { randomBytes } from "node:crypto";
+import { mapToolsToAuthority } from "../kernel/attenuation.js";
+import { isSubsetSet } from "../kernel/derive.js";
+import {
+  verifyCrossOrgChain,
+  ChainVerificationError,
+  type FederationConfig,
+} from "../kernel/cross-org-chain.js";
+import type { KoaContextWithOIDC } from "oidc-provider";
+
+/** A recorded origin-to-local principal mapping row (config-registered). */
+export interface PrincipalMappingEntry {
+  origin_iss: string;
+  origin_sub: string;
+  local_sub: string;
+}
+
+export interface CrossOrgOptions {
+  federation: FederationConfig;
+  stateSource: (missionId: string, issuer: string) => { state: string; observedAtS: number } | undefined;
+  mappingPolicy: { id: string; version: string; entries: PrincipalMappingEntry[] };
+  /** The destination's local authority ceiling; output never exceeds it. */
+  localCeiling: readonly AuthorityEntry[];
+  /** Retained derivation records (@spec cross-org-delegation#projection). */
+  evidence: CrossOrgDerivationRecord[];
+  /** Local access-token lifetime ceiling (seconds). */
+  accessTokenTTL: number;
+}
+
+export interface CrossOrgDerivationRecord {
+  chain_digest: string;
+  leaf_jti: string;
+  input_authority: AuthorityEntry[];
+  output_authority: AuthorityEntry[];
+  lineage: Array<{ named: boolean; iss?: string; sub?: string }>;
+  policy: { id: string; version: string };
+  principal_mapping: {
+    origin: { iss: string; sub: string };
+    local: string;
+    policy: { id: string; version: string };
+    observed_at: string;
+    valid_until: string;
+  };
+}
+
+interface HandlerOpts {
+  issuer: string;
+  crossOrg?: CrossOrgOptions;
+  tokenKey: CryptoKey;
+  tokenKid: string;
+  proofJtiFresh: (jti: unknown) => boolean;
+  now: () => Date;
+}
+
+function fail(ctx: KoaContextWithOIDC, code: string, description: string): void {
+  ctx.status = 400;
+  ctx.body = { error: code, error_description: description };
+  ctx.set("cache-control", "no-store");
+}
+
+/**
+ * @spec cross-org-delegation#projection-exchange — parameters, leaf PoP,
+ * error mapping (invalid_request for structure/bounds; invalid_grant for any
+ * verification failure with no partial detail; invalid_target for an audience
+ * outside the leaf), and the local mint with a restarted `act`.
+ */
+export async function handleCrossOrgChainExchange(
+  opts: HandlerOpts,
+  ctx: KoaContextWithOIDC,
+): Promise<void> {
+  const crossOrg = opts.crossOrg;
+  if (!crossOrg) {
+    fail(ctx, "invalid_request", "unsupported subject_token_type");
+    return;
+  }
+  const params = ctx.oidc.params as Record<string, unknown>;
+  const subjectToken = params.subject_token;
+  if (typeof subjectToken !== "string" || !subjectToken) {
+    fail(ctx, "invalid_request", "subject_token is required");
+    return;
+  }
+  const requestedAud =
+    typeof params.audience === "string" && params.audience
+      ? params.audience
+      : typeof params.resource === "string"
+        ? params.resource
+        : undefined;
+  if (!requestedAud) {
+    fail(ctx, "invalid_target", "audience or resource is required");
+    return;
+  }
+
+  // Structure and bounds BEFORE any signature verification.
+  let presentation;
+  try {
+    presentation = parseChainPresentation(subjectToken, crossOrg.federation.bounds);
+  } catch (e) {
+    if (e instanceof ChainPresentationError) {
+      fail(ctx, "invalid_request", (e as Error).message);
+      return;
+    }
+    throw e;
+  }
+
+  // Leaf proof of possession: the request's DPoP key must be the leaf cnf.jwk.
+  const proofJws = ctx.get("dpop");
+  if (!proofJws) {
+    fail(ctx, "invalid_request", "DPoP proof of the leaf key is required");
+    return;
+  }
+  let dpopJkt: string;
+  try {
+    const header = decodeProtectedHeader(proofJws);
+    const dpopJwk = header.jwk as JWK;
+    dpopJkt = await calculateJwkThumbprint(dpopJwk);
+    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
+    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
+      throw new Error("DPoP htu/htm mismatch");
+    }
+    if (!opts.proofJtiFresh(proof.jti)) throw new Error("DPoP proof jti missing or replayed");
+  } catch {
+    fail(ctx, "invalid_dpop_proof", "invalid DPoP proof");
+    return;
+  }
+
+  const nowS = Math.floor(opts.now().getTime() / 1000);
+  let verified;
+  try {
+    verified = await verifyCrossOrgChain({
+      federation: crossOrg.federation,
+      presentation,
+      nowS,
+      stateSource: crossOrg.stateSource,
+    });
+  } catch (e) {
+    if (e instanceof ChainVerificationError) {
+      // @spec cross-org-delegation#projection-exchange — no partial
+      // verification detail crosses the boundary.
+      fail(ctx, "invalid_grant", "chain verification failed");
+      return;
+    }
+    throw e;
+  }
+
+  if (dpopJkt !== (await calculateJwkThumbprint(verified.leaf.cnfJwk))) {
+    fail(ctx, "invalid_grant", "chain verification failed");
+    return;
+  }
+  if (!verified.leaf.aud.includes(requestedAud)) {
+    fail(ctx, "invalid_target", "requested audience is outside the leaf audience");
+    return;
+  }
+
+  // Origin-principal mapping (@spec cross-domain#origin-principal-mapping):
+  // authenticated issuer-qualified input, registered policy, refusal on a
+  // missing mapping; the local account is a local fact, never agent-selected.
+  const mapping = crossOrg.mappingPolicy.entries.find(
+    (m) => m.origin_iss === verified.subject.iss && m.origin_sub === verified.subject.sub,
+  );
+  if (!mapping) {
+    fail(ctx, "invalid_grant", "chain verification failed");
+    return;
+  }
+
+  // Dual-axis: the verified delegated authority intersected with the local
+  // ceiling; entries the destination does not permit are narrowed out.
+  const inputAuthority = mapToolsToAuthority(verified.leaf.tools);
+  const outputAuthority = inputAuthority.filter((e) =>
+    isSubsetSet([e], crossOrg.localCeiling as AuthorityEntry[]),
+  );
+  if (outputAuthority.length === 0) {
+    fail(ctx, "invalid_grant", "chain verification failed");
+    return;
+  }
+
+  const clientId = ctx.oidc.client?.clientId ?? "";
+  const leafExp = Number(verified.leaf.payload.exp);
+  const exp = Math.min(nowS + crossOrg.accessTokenTTL, leafExp);
+  const jti = `xorg_${randomBytes(9).toString("base64url")}`;
+  // The audience-local token: local iss/sub, restarted local act, invariant
+  // mission claim including subject, bound to the presenting (leaf) key.
+  const accessToken = await new SignJWT({
+    sub: mapping.local_sub,
+    client_id: clientId,
+    act: { iss: opts.issuer, sub: clientId },
+    cnf: { jkt: dpopJkt },
+    mission: {
+      id: verified.missionId,
+      issuer: verified.missionIssuer,
+      authority_hash: verified.authorityHash,
+      subject: { iss: verified.subject.iss, sub: verified.subject.sub },
+    },
+    authorization_details: outputAuthority,
+  })
+    .setProtectedHeader({ alg: "RS256", kid: opts.tokenKid, typ: "at+jwt" })
+    .setIssuer(opts.issuer)
+    .setAudience(requestedAud)
+    .setIssuedAt(nowS)
+    .setExpirationTime(exp)
+    .setJti(jti)
+    .sign(opts.tokenKey);
+
+  crossOrg.evidence.push({
+    chain_digest: chainDigest(presentation.chain),
+    leaf_jti: verified.lineage[verified.lineage.length - 1]?.jti ?? "",
+    input_authority: inputAuthority,
+    output_authority: outputAuthority,
+    lineage: verified.lineage.map((h) => ({
+      named: !!h.actor,
+      ...(h.actor ? { iss: h.actor.iss, sub: h.actor.sub } : {}),
+    })),
+    policy: { id: crossOrg.mappingPolicy.id, version: crossOrg.mappingPolicy.version },
+    principal_mapping: {
+      origin: verified.subject,
+      local: mapping.local_sub,
+      policy: { id: crossOrg.mappingPolicy.id, version: crossOrg.mappingPolicy.version },
+      observed_at: new Date(nowS * 1000).toISOString(),
+      valid_until: new Date(exp * 1000).toISOString(),
+    },
+  });
+
+  ctx.status = 200;
+  ctx.body = {
+    access_token: accessToken,
+    issued_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    token_type: "DPoP",
+    expires_in: exp - nowS,
+    authorization_details: outputAuthority,
+  };
+  ctx.set("cache-control", "no-store");
+}

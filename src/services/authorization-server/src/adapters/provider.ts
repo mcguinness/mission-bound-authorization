@@ -104,6 +104,7 @@ import {
 import { issueTxnToken, validateChallenge } from "../kernel/txn-challenge.js";
 import type { AuthorityEntry, LifecycleOperation, MissionIntent, MissionRecord } from "../kernel/types.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
+import type { CrossOrgOptions } from "./cross-org-grant.js";
 import {
   type ContinuationReplay,
   freshProofJti,
@@ -161,6 +162,12 @@ export interface AdapterOptions {
    * audiences and disclosure privileges. Empty means no caller can introspect.
    */
   introspectionPrincipals?: IntrospectionPrincipal[];
+  /**
+   * @spec cross-org-delegation#projection-exchange — the destination Resource
+   * AS configuration for accepting Cross-Organizational Delegation Chains.
+   * Absent (the default) the chain subject_token_type is refused.
+   */
+  crossOrg?: CrossOrgOptions;
   /** AS-txn signing key + kid: signs txn-bound, single-use approval tokens. */
   txnKey?: CryptoKey;
   txnKid?: string;
