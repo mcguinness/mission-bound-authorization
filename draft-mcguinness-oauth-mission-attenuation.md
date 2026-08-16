@@ -50,6 +50,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-cross-org-delegation:
+    title: "Mission Cross-Organizational Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
@@ -522,8 +530,10 @@ own durable, separately revocable Mission.
 The chain identifies holders by key possession: each token binds its
 holder through `cnf`, and possession is proven at use. This document
 defines no actor-identity member on chain tokens. A profile that adds
-named-actor attribution to chain artifacts, as cross-organizational
-delegation requires, is bound by the following model.
+named-actor attribution to chain artifacts is bound by the following
+model; the cross-organizational delegation companion
+({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}) defines
+the member and its verification semantics.
 
 Each artifact names only its own hop's actor. The complete actor
 history is reconstructed from the validated root-to-leaf chain; it is

@@ -372,7 +372,9 @@ facts are the next subsection.
 6. **Experimental, adopt for evaluation only**:
    **approval-revision**, **progressive**, **template** (consent once
    to a ceiling, then dispatch Missions from it at machine speed),
-   **metering**, **attenuation**, **orchestration**, **discovery**
+   **metering**, **attenuation**, **cross-org-delegation** (recursive
+   cross-organizational delegation over the attenuation chain),
+   **orchestration**, **discovery**
    (open-world encounters adjudicated against a pre-consented ceiling
    or by the binding's Controller in context, with the lying-resource
    and tainted-session floors),
@@ -404,7 +406,7 @@ capability; **status** depends on the OAuth Status List (a
 working-group document); **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
 working-group document); **audit**'s COSE hash envelope is approved
-and in the RFC Editor queue; **approval**, **attenuation**, **aauth**,
+and in the RFC Editor queue; **approval**, **attenuation**, **cross-org-delegation**, **aauth**,
 **aauth-expiry**, and **aauth-management** track unratified individual
 drafts (OAuth
 Deferred Token Response, Attenuating Agent Tokens, and the AAuth
@@ -947,6 +949,20 @@ One hop; the single-domain core is complete without it. Extracted from
 the core so the mandatory profile carries no cross-domain dependencies.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-domain.html)
+
+#### Mission Cross-Organizational Delegation for OAuth 2.0
+
+Profiles Mission Offline Attenuation across organizational trust
+domains: an agent in one organization delegates a narrowed slice to an
+agent in another, which can delegate again, and the relying party
+verifies the complete narrowing chain without calling the origin on
+the request path. Each hop names its own actor under an explicit
+identity-binding rule, the approved agent and origin principal travel
+with the chain, and Cross-Domain Projection remains the adapter that
+turns a verified chain into a local token. Experimental, like the
+attenuation substrate it profiles.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-org-delegation.html)
 
 #### Mission Continuation: Authorization Continuity for Mission-Bound Authorization
 
