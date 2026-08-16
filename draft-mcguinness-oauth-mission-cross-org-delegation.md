@@ -1,0 +1,710 @@
+---
+title: "Mission Cross-Organizational Delegation for OAuth 2.0"
+abbrev: "OAuth Mission Cross-Org Delegation"
+category: exp
+
+docname: draft-mcguinness-oauth-mission-cross-org-delegation-latest
+submissiontype: IETF
+workgroup: Web Authorization Protocol
+number:
+date:
+consensus: true
+v: 3
+keyword:
+ - oauth
+ - mission
+ - agent
+ - authorization
+ - delegation
+ - cross-domain
+ - attenuation
+venue:
+  github: "mcguinness/mission-bound-authorization"
+  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html"
+
+author:
+ -
+    fullname: Karl McGuinness
+    organization: Independent
+    email: public@karlmcguinness.com
+
+normative:
+  RFC8693:
+  RFC9396:
+  I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
+  I-D.draft-mcguinness-oauth-actor-profile:
+  I-D.draft-mcguinness-oauth-mission:
+    title: "Mission-Bound Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-attenuation:
+    title: "Mission Offline Attenuation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-status:
+    title: "Mission Status for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  RFC7515:
+  RFC7519:
+  RFC8725:
+
+informative:
+  I-D.ietf-wimse-arch:
+  I-D.draft-mcguinness-mission-audit:
+    title: "Mission Audit"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Mission Child Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+
+--- abstract
+
+An agent in one organization sometimes delegates a narrower part of
+its approved authority to an agent in another organization, which can
+delegate again, while the relying party verifies the complete
+narrowing chain without calling the originating issuer on the request
+path.  This document profiles Mission Offline Attenuation across
+organizational trust domains: the attenuation chain is the portable
+authority proof, each hop carries its own actor under an explicit
+identity-binding rule, the originally approved agent and the
+on-behalf-of principal travel with the chain, and Cross-Domain
+Projection remains the adapter by which a destination Authorization
+Server validates the chain, applies local policy, and issues a local
+token.  Projection and delegation stay distinct verbs; the profile
+composes them and never merges them.
+
+--- middle
+
+# Introduction
+
+The Mission family separates two verbs that cross-organizational
+deployments need together.  **Project** makes Mission authority
+consumable in a resource domain: single-hop, issuer-mediated,
+audience-scoped ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+**Delegate** gives a different actor a narrowed slice it may exercise
+or further narrow.  Within one domain, delegation is
+Authorization-Server-mediated Token Exchange or holder-mediated
+offline attenuation
+({{I-D.draft-mcguinness-oauth-mission-attenuation}}).  What no family
+document previously covered is the recursive cross-organizational
+case identified by workload-identity delegation work
+({{I-D.ietf-wimse-arch}}): agent A in organization 1 delegates a
+narrowed slice to agent B in organization 2, B delegates further, and
+the final relying party verifies every narrowing without a callback.
+
+This document defines that case as a profile of Mission Offline
+Attenuation.  The attenuation chain already carries the complete
+parent chain and verifies signature, capability monotonicity,
+audience, expiry, depth, proof of possession, and an unchanged
+Mission binding; this profile carries it across organizational trust
+boundaries, adds the actor-identity and origin-principal rules those
+boundaries require, and defines how a destination consumes the
+verified chain.
+
+# Status: An Experimental Extension {#status}
+
+This profile is experimental, and it profiles an experimental
+substrate: it inherits the maturity of Mission Offline Attenuation
+and the attenuating-agent-token substrate that document profiles
+({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).  The
+issuer-mediated alternative, a chain of Token Exchange re-issuances
+whose evidence layer is the actor-suite companions (issuer-signed hop
+receipts, actor-signed hop proofs, and recorded authority bounds), is
+documented as related work and is not defined here; maintaining two
+wire formats in a first revision would make interoperability worse.
+A family profiling of Actor Chain Authority Bounds is constrained
+ahead of time: every in-Mission basis-reset or widening mechanism,
+including a domain-transition reset, is prohibited; a new authority
+basis is an Expansion successor or another fresh approval
+({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+
+# Conventions and Terminology
+
+{::boilerplate bcp14-tagged}
+
+This document uses the Mission family's terms from the issuance
+profile ({{I-D.draft-mcguinness-oauth-mission}}) and the chain terms
+of Mission Offline Attenuation
+({{I-D.draft-mcguinness-oauth-mission-attenuation}}).
+
+Cross-Organizational Mission Delegation Chain (the Chain):
+: a Mission-bound attenuation root plus zero or more attenuation
+  children, presented in root-to-leaf order using the attenuation
+  substrate's chain serialization and token-type identifier.
+
+Chain-verifying consumer:
+: a relying party that receives and verifies the complete Chain.
+
+AS-mediated consumer:
+: a Resource Server that trusts a local token its Resource
+  Authorization Server minted after verifying a Chain, and does not
+  claim to have independently verified the Chain.
+
+# The Delegation Chain {#chain}
+
+A Chain's signed hops carry the semantics; no addition to
+`mission_intent` and no new PAR parameter collection is introduced.
+`authority_hash` remains a commitment to the complete approved
+Authority Set and an audit correlator: it does not prove that a
+narrowed entry was a member of that set.  The signed root and the
+verified per-hop subset relations provide that proof.
+
+## The Chain Presentation {#chain-presentation}
+
+A Chain travels as one closed JSON envelope, the **Chain
+Presentation**:
+
+`chain`:
+: REQUIRED. An array of compact-serialization JWS strings
+  ({{RFC7515}}), the root first and the leaf last; each element is
+  one hop token.
+
+`actor_credentials`:
+: OPTIONAL. An array of objects aligning actor-binding credentials to
+  named hops ({{actor-evidence}}), each with `hop` (REQUIRED, the
+  0-based index into `chain`), `type` (REQUIRED, a registered
+  actor-credential type identifier), and `credential` (REQUIRED, the
+  credential in the serialization its type defines).
+
+The Presentation's top level is closed: a Presentation carrying an
+unknown top-level member MUST be refused.  On the OAuth wire the
+Presentation is the UTF-8 JSON serialization, base64url-encoded
+without padding, carried as the `subject_token` of the projection
+exchange ({{projection-exchange}}) with `subject_token_type`
+`urn:ietf:params:oauth:token-type:mission-delegation-chain`; for
+retention and evidence its media type is
+`application/mission-delegation-chain+json` ({{iana}}).  Direct
+presentation of a Chain to a Resource Server is not defined in this
+version: a chain-verifying Resource Server obtains the Presentation
+through a deployment-defined channel and applies {{verification}}
+unchanged.
+
+A verifier MUST declare maximum hop count, maximum Presentation size,
+and a verification-cost ceiling, and MUST refuse a Presentation
+exceeding any of them before verifying any signature.
+
+The **chain digest** is the family anchor idiom
+({{I-D.draft-mcguinness-oauth-mission}}) with typ
+`mission-delegation-chain` computed over the JCS canonical bytes of
+the `chain` array exactly as presented, an ordered JSON array of
+compact-JWS strings.  It commits to the complete ordered chain and to
+nothing else.
+
+## Hop Members {#hop-members}
+
+Each hop carries the substrate's members and this profile's:
+
+* the signed hop envelope: `iss`, `iat`, `exp`, `jti`, and the
+  substrate's explicit `typ`;
+* `authorization_details` ({{RFC9396}}): the authority at that hop;
+* `aud`;
+* `cnf`: the next presenter's PUBLIC key, carried as a full `jwk`.
+  On a cross-organizational Chain a thumbprint-only confirmation
+  (`jkt`) is not conforming: a disconnected verifier verifies each
+  child signature with the public key carried in its parent's
+  `cnf.jwk`, and a thumbprint cannot verify a JWS;
+* the substrate's parent commitment and depth members (`par_hash`,
+  `del_depth`, `del_max_depth`);
+* `act`: at most ONE profile-conformant actor object
+  ({{I-D.draft-mcguinness-oauth-actor-profile}}) naming this hop's
+  actor only, with BOTH `act.iss` and `act.sub` REQUIRED when
+  present (`sub_profile` as profiled). `act` is present exactly when
+  the hop is NAMED ({{actor-identity}}); a key-only hop omits `act`
+  entirely. The root MUST carry `act`; and
+* the `mission` claim, value-invariant across every hop: `id`,
+  `issuer`, `authority_hash`, and `subject`, the origin principal of
+  the Origin Principal profile
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), REQUIRED on
+  a conforming Chain.
+
+A hop never carries a nested actor history: the complete actor
+history is the validated root-to-leaf Chain itself, reconstructed at
+verification ({{verification}}), and a consumer MUST reject a Chain
+presenting conflicting or duplicated actor representations.  A
+materialized nested `act` projection ({{RFC8693}}) is constructed
+from the validated Chain at a consuming boundary, a PDP, an
+introspection responder, or a destination Authorization Server; it is
+not carried on the artifacts
+({{I-D.draft-mcguinness-oauth-mission-attenuation}}, Section "Actor
+Attribution on the Chain").
+
+## Actor Identity {#actor-identity}
+
+Each surface has one attestation authority.  The root's `act` is
+asserted by the Mission Issuer and bound to the root presenter key by
+the root signature: the root names the originally approved agent, so
+the approved-agent identity travels with the Chain instead of resting
+on a Mission Record the verifier may not hold.  The Mission Record's
+`client_id` is not itself a canonical actor identity: before issuing
+a root, the Mission Issuer MUST resolve the approved client to a
+canonical issuer-qualified actor identity under an issuer-controlled
+registration or workload-identity binding, and MUST record that
+mapping and its version in the issuance derivation record.
+
+A parent signature on a later hop proves only that the parent
+delegated to the child key; it does not authenticate the identity
+values the parent asserts.  A hop carrying `act` MUST have exactly
+one aligned entry in the Presentation's `actor_credentials`, and its
+credential MUST validate under {{actor-evidence}}; a Chain naming an
+actor on a hop with a missing, misaligned, or invalid credential MUST
+be refused.  A hop without `act` is key-only: its holder is
+identified by key possession alone, it satisfies no eligibility
+matcher (the issuance profile's `allowed_delegates` or a
+`sub_profile` selector), and where policy requires a named actor a
+key-only hop fails closed.  `act` is an identity statement, never an
+evidence container.
+
+The `act` member never carries authority.  Delegation history follows
+authorization continuity, not organizational topology
+({{I-D.draft-mcguinness-oauth-mission}}): an attenuation hop is
+in-Mission delegation, so an organizational boundary neither starts a
+new root nor resets depth.
+
+## Actor-Binding Credentials {#actor-evidence}
+
+An actor-binding credential binds an issuer-qualified actor identity
+to a hop key; it conveys no authority.  For each `actor_credentials`
+entry the verifier MUST establish all of the following, refusing the
+Presentation otherwise:
+
+1. the `type` is a registered actor-credential type the verifier
+   supports; an unknown type is refused, never ignored;
+2. the credential's issuer is an accepted actor-identity attestation
+   source for the named trust domain under the trust model
+   ({{trust-model}});
+3. the credential is valid: its signature, audience, lifetime, and
+   status checks pass as its type defines;
+4. the credential's subject equals the hop's (`act.iss`, `act.sub`);
+   and
+5. the credential's bound key equals the hop's `cnf.jwk`, compared by
+   JWK thumbprint.
+
+# Root Issuance {#root-issuance}
+
+The originating Mission Issuer MAY issue a cross-organizational
+attenuation root only when all of the following hold:
+
+1. the Mission is `active`;
+2. the root's `authorization_details` is exactly the mapped
+   attenuating-agent-token capability entry produced by the
+   attenuation profile's root mapping
+   ({{I-D.draft-mcguinness-oauth-mission-attenuation}}) from
+   Authority Set entries within the Mission Authority Set; a generic
+   authorization-details entry does not transfer, and support for
+   another type requires a registered, deterministic per-type mapping
+   and subset algorithm;
+3. the mapping profile and its version are recorded in the issuance
+   derivation record;
+4. every mapped entry is delegable and the root depth does not exceed
+   its approved `delegation.max_depth`;
+5. the root `aud` is an approved destination or audience set;
+6. the root is sender-constrained to the approved agent's workload
+   key;
+7. deployment policy permits the named authority and subject class to
+   cross the named trust boundary; and
+8. the root carries the issuer-asserted `act` naming the approved
+   agent under the resolution procedure of {{actor-identity}}, the
+   root presenter's public key as `cnf.jwk`, and the `mission` claim
+   including `subject`.
+
+An entry with a deployment-private action, constraint, matcher, or
+resource identifier whose meaning the destination cannot resolve MUST
+be omitted.  It MUST NOT cross under a promise that the destination
+will interpret prose or issuer-local policy.
+
+# Per-Hop Derivation {#derivation}
+
+A holder creates a child exactly as Mission Offline Attenuation
+specifies, with these profile rules:
+
+1. sign the child with the key bound by the parent's `cnf`;
+2. bind the child to the exact parent through `par_hash`;
+3. narrow or preserve the mapped capability entry under the
+   attenuation substrate's tool and constraint subset model; no other
+   authorization-details entry is added;
+4. keep `aud` equal to or narrower than the parent's;
+5. set `exp` no later than the parent's and no later than the
+   destination trust policy permits;
+6. increment `del_depth` without resetting it at any organizational
+   boundary, and preserve `del_max_depth`;
+7. keep the `mission` claim value-invariant, including `subject`;
+8. set this hop's `act` to the actor receiving the delegation; and
+9. bind the child to the recipient workload's own
+   proof-of-possession key, carried as the child's public `cnf.jwk`.
+
+The recipient proves possession of the leaf key at redemption or
+direct resource access.
+
+# Trust Model {#trust-model}
+
+"No interaction-specific bilateral agreement" does not mean "trust
+any issuer."  A conforming deployment MUST hold a federation or
+administrative policy that maps:
+
+* trust-domain identifiers to accepted workload-identity trust
+  anchors;
+* Mission Issuers to accepted signing keys and key-status sources;
+* actor-identity attestation sources: the anchors that bind an
+  issuer-qualified (`act.iss`, `act.sub`) to a workload key
+  ({{actor-identity}});
+* resource identifiers to the Resource AS or RS authorized to consume
+  them;
+* authorization-details types and constraint registries to supported
+  versions; and
+* freshness ceilings for issuer metadata, key status, and Mission
+  state.
+
+The secure mapping from a trust-domain name to anchors is an explicit
+deployment dependency the workload-identity architecture leaves out
+of scope ({{I-D.ietf-wimse-arch}}).  Cached issuer metadata, key
+status, and Mission state follow the substrate's Bounded Reliance
+floor ({{I-D.draft-mcguinness-mission-substrate}}): maximum age
+declared, missing or stale required state failing closed.  This meets
+"no callback to the origin on the request path"; it does not claim
+instantaneous revocation.
+
+# Destination Verification {#verification}
+
+A Resource AS or chain-verifying Resource Server MUST perform the
+following, in order:
+
+1. resolve the origin Mission Issuer to an accepted trust domain and
+   verification keys through the trust model, never because the
+   Chain names it;
+2. validate the root: substrate type, signature, time bounds,
+   Mission-Issuer equality, the issuer-asserted root `act`, and the
+   `mission` claim including `subject`;
+3. validate every `par_hash` link and every child signature through
+   the leaf, verifying each child with the public key carried in its
+   parent's `cnf.jwk`;
+4. verify the `mission` invariants unchanged across all hops: value
+   equality of `id`, `issuer`, `authority_hash`, and `subject`;
+5. verify monotonic `del_depth`, the preserved `del_max_depth`,
+   nested `aud` and `exp`, and the mapped capability entry's subset
+   relation at every hop under the attenuation substrate's tool and
+   constraint model; an authorization-details entry of an unknown or
+   unmapped type MUST NOT be treated as conferred authority, and its
+   presence beyond the mapped entry refuses the Chain;
+6. classify each hop as named (`act` present with its aligned
+   credential validated per {{actor-evidence}}) or key-only (`act`
+   absent), refusing a named hop whose credential is missing,
+   misaligned, or invalid, and failing closed where policy requires a
+   named actor and the hop is key-only;
+7. reconstruct the ordered actor history from the validated
+   artifacts, rejecting conflicting or duplicated representations;
+8. verify the leaf presenter's proof of possession; identity
+   verification never substitutes for the authority-chain checks;
+9. establish that the Mission is `active` from a locally available
+   state source within the deployment's declared freshness bound
+   ({{I-D.draft-mcguinness-oauth-mission-status}}; Bounded Reliance,
+   {{trust-model}}); and
+10. authorize dual-axis under the Origin Principal profile
+    ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}): the
+    verified delegated authority, the current entitlement of the
+    mapped origin principal, and local resource policy are
+    independent requirements, each within its declared freshness.
+
+In the substrate's transition classification
+({{I-D.draft-mcguinness-mission-substrate}}), every verified hop is
+`attenuate`; the destination's own decisions under local policy are
+`decide_anew`.
+
+# Local Projection {#projection}
+
+When a Resource AS mints a conventional local token from a verified
+Chain, it MUST:
+
+* carry only the locally permitted subset;
+* preserve the `mission` claim invariants, including `subject`;
+* restart the local `act` chain at the local delegate (the
+  cross-domain rule;
+  {{I-D.draft-mcguinness-oauth-mission-cross-domain}});
+* bind the token to the local presenter;
+* cap its expiry by the leaf and local policy; and
+* record in derivation evidence: the Chain digest, the leaf `jti`,
+  the input and output authority, the reconstructed actor lineage,
+  the policy version, and the `principal_mapping` object
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+
+A local access token is not a new portable delegation root.
+Recursive cross-organizational delegation continues from the verified
+attenuation Chain, never from a locally projected token that has lost
+the parent proof.
+
+## The Projection Exchange {#projection-exchange}
+
+A Resource AS accepting Chains offers the exchange on its token
+endpoint as an {{RFC8693}} token exchange:
+
+* `grant_type`: `urn:ietf:params:oauth:grant-type:token-exchange`;
+* `subject_token`: the base64url-encoded Chain Presentation
+  ({{chain-presentation}});
+* `subject_token_type`:
+  `urn:ietf:params:oauth:token-type:mission-delegation-chain`;
+* `requested_token_type`:
+  `urn:ietf:params:oauth:token-type:access_token`;
+* `resource` or `audience`: the requested local audience, within the
+  leaf's `aud`;
+* client authentication as the Resource AS's policy requires; and
+* proof of possession of the leaf `cnf.jwk` key on the request (DPoP
+  or mTLS), the same mechanism the issued local token is bound to.
+
+A Presentation that is malformed, carries an unknown top-level
+member, or exceeds a declared bound refuses with `invalid_request`; a
+Chain failing any step of {{verification}} refuses with
+`invalid_grant`, disclosing no partial verification detail; a
+requested audience outside the leaf's `aud` refuses with
+`invalid_target`.  On success the Resource AS mints the
+audience-local token per the rules above.
+
+# Provenance for AS-Mediated Consumption {#provenance-bridge}
+
+An AS-mediated consumer needing provenance of the upstream hops uses
+one of:
+
+* the validated Chain carried alongside the local token; or
+* the destination AS's introspection or evidence resolution over its
+  recorded derivation evidence (the chain digest, reconstructed actor
+  lineage, and `principal_mapping` of {{projection}}).
+
+Issuer-signed hop receipts belong to the issuer-mediated lane: a
+destination AS MUST NOT manufacture receipts for holder-created hops.
+A signed chain-verification attestation, an AS statement that it
+verified a Chain and survives the local token's expiry, is deferred
+to a companion until a consumer demonstrates that these two modes are
+insufficient.
+
+# Capability and Discovery {#capability}
+
+This profile defines no runtime discovery.  The attenuation
+substrate's issuer discovery advertises root issuance only; it does
+not advertise Chain acceptance, projection support, or consumption
+class.  A deployment declares the `cross_org_delegation` capability,
+its consumption class ({{conformance}}), and its accepted trust
+domains explicitly in its deployment profile and federation
+agreements, and consumes the capability under the family's
+declared-consumption rule.
+
+# Conformance {#conformance}
+
+A deployment claims one or both consumption classes:
+
+* **Chain-verifying**: the relying party receives and verifies the
+  complete Chain per {{verification}}.
+* **AS-mediated**: an RS trusts its Resource AS's locally issued
+  token and does not claim independent verification of the Chain;
+  provenance uses {{provenance-bridge}}.
+
+Positive and negative vectors cover, at minimum: a valid three-domain
+A to B to C chain; action, resource, amount, audience, or expiry
+widening at either hop; constraint removal, including
+`requires_action_approval: true`; parent-hash substitution, a
+reordered or missing hop, a changed Mission binding including
+`subject`, and an untrusted root; a root missing the issuer-asserted
+actor; a named-actor hop without a validated binding influencing
+authorization (it must not); a duplicated or conflicting actor
+representation (a nested history smuggled onto a hop); depth reset at
+an organizational boundary and depth overflow; a wrong leaf
+proof-of-possession key; an unknown authorization-details type,
+action, constraint, or subset algorithm; a revoked or expired
+Mission, a compromised signing key, and stale or unavailable state; a
+locally projected token offered as the parent of a new hop; a
+Presentation with an unknown top-level member, an unknown
+actor-credential type, a misaligned `hop` index, or an over-bound
+size; a chain whose hops carry thumbprint-only confirmations; a named
+hop whose credential subject differs from its `act`, whose bound key
+differs from the hop `cnf.jwk`, or whose credential issuer is
+untrusted, expired, or revoked; an unmapped authorization-details
+entry beyond the mapped capability entry; and valid delegated
+authority denied by local entitlement or local policy.
+
+# End-to-End Example (Non-Normative) {#example}
+
+Organization 1's Mission Issuer resolves approved client `agent-a` to
+the canonical actor `{"iss": "https://id.org1.example", "sub":
+"wl-agent-a"}`, records the mapping and version, and mints the root:
+`typ` per the substrate, `iss` the Mission Issuer, `aud`
+`["https://api.org3.example"]`, `cnf.jwk` agent A's public key, the
+mapped capability entry, `del_depth` 0, `del_max_depth` 2, `act`
+naming agent A, and the `mission` claim with `id`, `issuer`,
+`authority_hash`, and `subject`.
+
+Agent A delegates to organization 2's agent B: it signs a child with
+its own key (the pair of the root's `cnf.jwk`), `par_hash` over the
+root, the capability entry narrowed, `aud` unchanged, `exp`
+shortened, `del_depth` 1, `cnf.jwk` agent B's public key, and `act`
+naming B.  Agent B delegates once more to its worker C the same way,
+key-only: the second child carries no `act`.
+
+The worker presents the Chain at organization 3's Resource AS:
+
+~~~
+POST /token
+grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+&subject_token=<base64url({"chain":[root,hop1,hop2],
+  "actor_credentials":[{"hop":1,"type":"wimse-wit",
+  "credential":"..."}]})>
+&subject_token_type=
+  urn:ietf:params:oauth:token-type:mission-delegation-chain
+&requested_token_type=urn:ietf:params:oauth:token-type:access_token
+&audience=https://api.org3.example
+~~~
+
+with DPoP proving possession of C's key, the leaf `cnf.jwk`.  The
+Resource AS runs {{verification}}: trust resolution; root validation
+including the issuer-asserted `act` and `mission.subject`; both
+`par_hash` links and child signatures under the carried public keys;
+invariants, depth, audience, expiry, and the mapped-capability subset
+at each hop; hop classification (hop 1 named and
+credential-validated, hop 2 key-only); leaf proof of possession;
+Mission state within its declared freshness; and the dual-axis rule
+over the mapped origin principal.  It then mints a local token:
+`iss` the Resource AS, `sub` the mapped local principal, `client_id`
+the presenting client, a local `act` naming the worker's local
+registration, the `mission` claim unchanged including `subject`,
+authority the locally permitted subset, and expiry capped by the
+leaf.  Its derivation evidence records the chain digest, the leaf
+`jti`, the input and output authority, the reconstructed lineage A to
+B to C, the policy version, and the `principal_mapping` object.
+
+# Security Considerations
+
+The attenuation profile's security considerations apply in full.
+Its kill-switch conditions apply as that document specifies them;
+this document's own mandatory state check is step 9 of
+{{verification}}, whose state source
+({{I-D.draft-mcguinness-oauth-mission-status}}) is a normative
+dependency.  Every JWT this profile handles follows the JWT best
+current practices ({{RFC8725}}): explicit typing, algorithm
+allow-lists, and no unverified pass-through.  This profile adds the
+cross-organizational surface.
+
+- **Compromised delegation keys.**  A compromised hop key mints
+  narrower children offline.  Depth and lifetime ceilings, the
+  audience funnel, conservative `del_max_depth`, and leaf or key deny
+  lists bound the blast radius; whole-Mission revocation stops the
+  Chain at every state-checking consumer but does not selectively
+  revoke a branch.  No instantaneous branch revocation exists in this
+  revision.
+- **Holder-asserted identity.**  Without the binding rule of
+  {{actor-identity}}, a holder could name any actor and have policy
+  trust it.  The rule makes unverified names inert; the failure mode
+  is attribution loss, never authority gain.
+- **Origin non-observability.**  The origin cannot observe offline
+  fan-out.  Deployments requiring fan-out observability use
+  issuer-mediated delegation or the runtime profile's enforcement
+  surfaces ({{I-D.draft-mcguinness-mission-runtime}}).
+- **Chain-size exhaustion.**  Chains grow linearly with depth and
+  verification cost is linear in hops.  A verifier declares and
+  enforces maximum hops, maximum artifact size, and a
+  verification-cost ceiling, refusing above them.
+- **State staleness.**  Cached state substitutes bounded staleness
+  for a synchronous origin dependency; the bound is declared and
+  exceeded state fails closed ({{trust-model}}).
+
+# Privacy Considerations
+
+The Chain discloses issuer-qualified actor identifiers and the origin
+principal along its path.  Actor identifiers are correlation handles:
+the pairwise and pseudonym guidance the Origin Principal profile
+states for `mission.subject` applies to actor identifiers alike, and
+the origin principal's own disclosure, minimization, and evidence
+rules apply unchanged
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).  A Chain is
+audience-narrowed by construction; a hop's `aud` never widens, so
+disclosure is bounded by the root's audience set.
+
+# IANA Considerations {#iana}
+
+## OAuth URI Registration
+
+This document registers
+`urn:ietf:params:oauth:token-type:mission-delegation-chain` in the
+"OAuth URI" registry: the token type of the Chain Presentation
+({{chain-presentation}}). Change controller: IESG; Specification
+document: this document.
+
+## Media Type Registration
+
+This document registers `application/mission-delegation-chain+json`
+in the "Media Types" registry, per {{chain-presentation}}: Type name:
+application; Subtype name: mission-delegation-chain+json; Required
+parameters: N/A; Optional parameters: N/A; Encoding considerations:
+binary (UTF-8 JSON); Security considerations: see this document;
+Interoperability considerations: N/A; Published specification: this
+document; Applications that use this media type: Mission-aware
+Authorization Servers, Resource Servers, and audit systems; Change
+controller: IESG.
+
+--- back
+
+# Acknowledgments
+{:numbered="false"}
+
+The cross-organizational deployment class and its verification
+requirements were articulated by the WIMSE cross-organization
+delegation work, whose problem statement this profile answers with
+the Mission family's existing attenuation substrate.

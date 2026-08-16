@@ -48,6 +48,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-cross-org-delegation:
+    title: "Mission Cross-Organizational Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -571,15 +579,14 @@ profile) and `token_type` of `N_A`, per {{RFC8693}} Section 2.2.1.
 
 A delegate, rather than the agent, crossing a trust domain directly
 and carrying its own narrowed authority into another domain is out of
-scope for this document and deferred to future work. Cross-domain
-issuance here always projects the agent's Mission authority; delegation
-within the target domain is performed by the Resource AS
-({{validation-at-resource-as}}). A sub-agent that must act in a
-different trust domain under its own narrowed authority is therefore not
-covered by a single hop; distributed multi-agent work across domains
-composes only through the agent's projected authority or through
-separate Missions per domain. A delegate-carries-its-own-authority mode
-is future work.
+scope for this document, except through the cross-organizational
+delegation companion's verified attenuation chain
+({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}).
+Cross-domain issuance here always projects the agent's Mission
+authority; delegation within the target domain is performed by the
+Resource AS ({{validation-at-resource-as}}). A sub-agent acting in a
+different trust domain under its own narrowed authority uses that
+companion's chain; this document's single hop does not cover it.
 
 Two roles are distinct and easily conflated. The grant the client
 presents to *obtain* the cross-domain grant (the Mission's refresh
@@ -1172,7 +1179,13 @@ of them, MAY require issuer-signed hop receipts
 
 Because the cross-domain grant carries no `act` chain
 ({{cross-domain-grant}}), a Resource AS that issues delegated tokens of
-its own begins its delegation depth at 0
+its own begins its delegation depth at 0. This local depth is distinct
+from an attenuation chain's global `del_depth`, which is monotonic
+across every hop and organizational boundary
+({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}):
+projection-local depth starts after chain verification, and a
+projected token cannot re-enter a chain. A Resource AS of this
+document begins its delegation depth at 0
 ({{validation-at-resource-as}}). An entry's `max_depth` ceiling is
 therefore enforced per domain, not globally across the projection: a
 Mission delegable to depth N at the originating AS may be delegated a

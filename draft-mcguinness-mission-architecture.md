@@ -2873,6 +2873,12 @@ bound is AAuth's own `expires_at`, profiled by the expiry document
 : Single-hop projection of a Mission to another trust domain via the
   cross-domain grant.
 
+`oauth-mission-cross-org-delegation`:
+: Recursive cross-organizational delegation as a profile of offline
+  attenuation: the chain is the portable authority proof, each hop
+  names its own actor under the identity-binding rule, and projection
+  turns a verified chain into a local token.
+
 `oauth-mission-continuation`:
 : The authorization-continuity profile: a Mission continues its
   authorization over identity-continuity transports (Identity
