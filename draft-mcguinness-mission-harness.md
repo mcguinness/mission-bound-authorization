@@ -63,6 +63,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-authority-server:
+    title: "Mission Authority Server"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
@@ -473,6 +481,15 @@ task graph node to a Mission reference:
 
 The Mission binding grants no authority. It is the pointer that tells
 the harness which Mission state it must check before continuing work.
+
+Where governed requests pass through a gateway PEP that is not the
+harness process, the harness SHOULD attach the Mission reference to
+each governed request it originates, from this recorded binding,
+using the Mission Authority Server profile's Mission Reference
+Propagation channel
+({{I-D.draft-mcguinness-mission-authority-server}}): harness
+attachment is the stronger attribution provenance that channel names,
+against agent self-selection among concurrent same-party Missions.
 
 ## Binding Inheritance {#binding-inheritance}
 

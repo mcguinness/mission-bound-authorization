@@ -34,6 +34,8 @@ normative:
   RFC7662:
   RFC8259:
   RFC8615:
+  RFC9110:
+  RFC9651:
   RFC9068:
   RFC9325:
   I-D.draft-mcguinness-oauth-mission:
@@ -1327,6 +1329,173 @@ restores per-instance granularity behind a shared gateway `client_id`:
 the validated instance joins, not every workload in the `client_id`
 equivalence class.
 
+# Mission Reference Propagation {#reference-propagation}
+
+The Mission Join consumes a Mission reference the PEP supplies, and
+join rule 1 names two sources: the PEP's own recorded Mission binding
+and deployment configuration ({{mission-join}}). When the gateway PEP
+is not the process that holds the binding (an MCP gateway, an egress
+proxy), neither source exists at the enforcement boundary, and
+nothing has said how the requesting side names the Mission a given
+request runs under. This section defines that channel.
+
+The carried value is an untrusted **Mission-selection assertion**: it
+routes the request to a Mission for the join to verify. The Mission
+Join verifies the referenced Mission and its subject and client
+relationship and supplies the authoritative state and anchors; in the
+baseline same-party case neither the carriage nor the join proves
+that this particular request was created under that Mission. Who
+attached the value is what strengthens attribution: a trusted harness
+attaching it from its recorded Mission binding
+({{I-D.draft-mcguinness-mission-harness}}) attests more than the
+agent naming its own Mission, the deployment's Enforcement Scope
+Statement records which party attaches it, and grading what an
+established join proves is the join-assurance concern, not this
+channel's.
+
+## The Reference Tuple {#reference-tuple}
+
+The propagated value is exactly the Mission reference tuple:
+`mission_id` and `issuer`, compared as the canonical (`issuer`,
+`mission_id`) pair under the issuance profile's comparison rules
+({{I-D.draft-mcguinness-oauth-mission}}). The channel carries nothing
+else: state, integrity anchors, authority, and policy data always
+come from the MAS's signed Mission Status response
+({{submission-status}}), and a request carrying any of them in this
+channel MUST be refused, never silently ignored, so ambiguity is
+detectable rather than absorbed. The tuple is single-homed: each
+carriage below maps this one tuple, and a new carrier profiles it
+rather than defining a second.
+
+## HTTP Carriage: Mission-Reference {#mission-reference-field}
+
+`Mission-Reference` is an HTTP request field {{RFC9110}} whose value
+is a Structured Fields Dictionary {{RFC9651}} (shown wrapped for
+layout; the field is one line):
+
+~~~ http-message
+POST /call HTTP/1.1
+Host: gateway.example.com
+Authorization: Bearer 2YotnFZFEjr1zCsicMWpAA
+Mission-Reference: id="msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  issuer="https://mas.example.com"
+~~~
+
+- The field is a request header field and MUST NOT be sent as a
+  trailer field.
+- The value is a Dictionary carrying exactly two members, both
+  REQUIRED: `id`, a String carrying the Mission identifier, and
+  `issuer`, a String carrying the MAS issuer identifier in its
+  canonical URI form. Structured Field Strings are ASCII: an issuer
+  whose canonical form is not ASCII is represented in its URI-encoded
+  ASCII form, and comparison is byte-wise over the canonical form.
+- A receiver MUST accept `id` values up to 256 characters and
+  `issuer` values up to 512 characters, and MAY treat longer values
+  as malformed.
+- The Dictionary is closed: a member this document does not define
+  makes the reference malformed unless a profile the deployment
+  adopts defines it by specification; a receiver MUST NOT act on a
+  member it does not implement.
+- A sender MUST send at most one field line. A receiver parses under
+  {{RFC9651}}; field lines that do not combine into exactly one valid
+  Dictionary, or any parse failure, make the reference malformed.
+- A malformed, missing, or stripped reference fails closed wherever
+  Mission governance is required: governed work with no establishable
+  Mission reference is refused before evaluation, per the runtime
+  profile's preconditions
+  ({{I-D.draft-mcguinness-mission-runtime}}).
+
+## MCP Carriage {#mcp-reference}
+
+For a tool call governed through MCP, the reference rides the
+request's `params._meta` object on each `tools/call`, never tool
+arguments and never session state, under the key
+`com.karlmcguinness.mission/reference`, a reverse-DNS-prefixed key in
+a namespace this family's author controls (MCP reserves its own
+`_meta` prefixes):
+
+~~~ json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "post_journal_entry",
+    "arguments": { "amount": "500.00", "currency": "USD" },
+    "_meta": {
+      "com.karlmcguinness.mission/reference": {
+        "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+        "issuer": "https://mas.example.com"
+      }
+    }
+  }
+}
+~~~
+
+The value carries exactly `mission_id` and `issuer`, with the tuple
+semantics of {{reference-tuple}} unchanged. Unknown `_meta` keys are
+extensible metadata an ordinary MCP server may ignore; a server that
+silently ignores this key is not a conforming Mission PEP. Where a
+tool is governed as Mission-required, absent negotiated or configured
+propagation support the call MUST be refused, never run as ordinary
+ungoverned execution. A future MCP extension or capability mechanism
+may supersede this carriage; the tuple's semantics stay this
+section's.
+
+## Verification and Conflict {#reference-verification}
+
+- The value is a selection assertion, never authority: its presence
+  or content grants nothing, the Mission is established only through
+  the Mission Join ({{mission-join}}), and an unverified reference
+  MUST NOT establish the Mission, the runtime profile's
+  externally-established rule
+  ({{I-D.draft-mcguinness-mission-runtime}}).
+- Where the acting credential carries a `mission` claim, the
+  credential-carried reference governs, and a propagated reference
+  naming a different Mission is a deny.
+- Where the PEP's own binding source (a harness-recorded binding,
+  deployment configuration) names a different Mission than the
+  propagated reference, the conflict is a deny, never a silent
+  pick-one.
+- An attribution conflict, or a malformed reference where governance
+  requires one, is denied with the `mission_reference_conflict`
+  denial reason, a member this profile adds to the AuthZEN
+  denial-reason set under its extensibility rule beside
+  `mission_mismatch` ({{mission-join}}): `mission_mismatch` stays the
+  subject-or-client join failure, and `mission_reference_conflict` is
+  reference sources naming different Missions or an unusable
+  reference.
+- The reference attributes the request it accompanies. Session-scoped
+  stickiness is a deployment choice recorded in the Enforcement Scope
+  Statement, and per-request carriage is required wherever the
+  runtime profile requires per-action evaluation.
+- The field rides the deployment's TLS, which authenticates the
+  channel endpoint, never which component attached the value:
+  transport protection does not upgrade self-asserted attribution.
+  Where HTTP Message Signatures are deployed on the request, the
+  signature MUST cover `Mission-Reference`.
+
+Example denial for a propagated reference conflicting with the PEP's
+recorded binding:
+
+~~~ json
+{
+  "decision": false,
+  "context": {
+    "decision_id": "dec_2nP4qV9rL3tY6sB1zN0eF7jB8K",
+    "denial_reason": "mission_reference_conflict"
+  }
+}
+~~~
+
+## Forwarding and Privacy {#reference-forwarding}
+
+The tuple is a stable correlator and lands in gateway logs. An
+intermediary MUST NOT copy the field or the `_meta` key onto a
+request to an unrelated authority domain, and a terminating PEP
+SHOULD remove it before forwarding unless the downstream recipient
+participates in the same verified binding. The issuance profile's
+Mission Identifier correlation considerations apply to logged
+values.
+
 # Mission Join Assertion {#join-assertion}
 
 The Mission Join of {{mission-join}} rests on subject and client
@@ -1949,6 +2118,17 @@ else's Mission fails with `mission_mismatch`. Three residuals remain:
   presents the credential, so any holder inside the (subject, client)
   equivalence class joins, which is why {{mission-join}} requires
   sender-constraint for the high-consequence classes.
+- **Same-party self-selection.** The propagation channel
+  ({{reference-propagation}}) lets the requesting side name the
+  Mission, so an agent whose subject and client join more than one
+  active Mission chooses which one a request runs under: a
+  confused-deputy shape (least-restrictive-Mission selection), not
+  merely spoofing. The join bounds the choice to Missions whose
+  parties match, each chosen Mission's own authority bounds what the
+  choice yields, and who attaches the reference bounds it further: a
+  trusted harness attaching from its recorded binding, or a Mission
+  Join Assertion presented alongside, is the strong form, and the
+  Enforcement Scope Statement records the attachment provenance.
 
 The Mission Join Assertion ({{join-assertion}}) is the mitigation for
 the coarse-mapping and shared-client residuals: the MAS evaluates the
@@ -2070,6 +2250,16 @@ horizon: records are retained at least that long, and SHOULD NOT be
 retained materially longer without a documented basis.
 
 # IANA Considerations {#iana}
+
+## HTTP Field Name Registration
+
+This document registers the following in the "Hypertext Transfer
+Protocol (HTTP) Field Name" registry ({{RFC9110}}):
+
+- Field Name: Mission-Reference
+- Status: permanent
+- Reference: this document, {{mission-reference-field}}
+- Comments: none
 
 ## Well-Known URI Registration
 
