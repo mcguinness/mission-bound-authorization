@@ -1588,7 +1588,8 @@ deployment establishes it in one of two modes:
   ({{I-D.draft-mcguinness-mission-authority-server}}), and the AAuth
   binding's reference propagation supplies the externally carried
   reference for such a join
-  ({{I-D.draft-mcguinness-mission-aauth}}).
+  ({{I-D.draft-mcguinness-mission-aauth}}), as the MAS profile's
+  Mission Reference Propagation channel does in token-less MAS mode.
 
 The mode each enforcement scope uses is part of its Enforcement
 Scope Statement ({{runtime-conformance}}). In either mode, the

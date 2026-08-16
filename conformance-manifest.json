@@ -196,7 +196,7 @@
     },
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
+     "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
      "level": "unit",
      "surface": "verification"
     }
@@ -222,7 +222,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+     "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
      "level": "unit",
      "surface": "verification"
     }
@@ -1559,6 +1559,146 @@
    "coverage": "blocked",
    "blocked_by": "#538",
    "tests": []
+  },
+  {
+   "id": "mas.reference.strict-dictionary",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-reference-field",
+   "text": "A receiver MUST reject as malformed, before map collapse: a duplicate `id` or `issuer` occurrence, a parameter on either member, an Inner List or any non-String value, and any member other than the two defined here",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "duplicate keys, member parameters, non-String values, and extra members are rejected before RFC 9651 map collapse, so last-duplicate-wins smuggling is foreclosed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+  },
+  {
+   "id": "mas.reference.length-bounds",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-reference-field",
+   "text": "A sender MUST NOT emit an `id` longer than 256 characters or an `issuer` longer than 512 characters; a receiver MUST treat a longer value as malformed",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "over-limit id or issuer values are malformed at the receiver; sender and receiver bounds are the same numbers"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+  },
+  {
+   "id": "mas.reference.fail-closed-carriage",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-reference-field",
+   "text": "A malformed, missing, or stripped reference fails closed wherever Mission governance is required",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "governed work with no establishable Mission reference is refused before evaluation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+  },
+  {
+   "id": "mas.reference.reject-extra-data",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "reference-tuple",
+   "text": "a request carrying any of them in this channel MUST be refused, never silently ignored",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "state, anchors, authority, or policy data carried in the propagation channel refuses the request rather than being dropped"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+  },
+  {
+   "id": "mas.reference.conflict-deny",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "reference-verification",
+   "text": "the conflict is a deny, never a silent pick-one",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "credential-carried claim, PEP-recorded binding, and propagated reference naming different Missions denies with mission_reference_conflict; no source is silently preferred except the credential-carried claim governing"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+  },
+  {
+   "id": "mas.reference.mcp-unsupported-refusal",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mcp-reference",
+   "text": "absent negotiated or configured propagation support the call MUST be refused, never run as ordinary ungoverned execution",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission-required tool without propagation support refuses the call instead of downgrading to ungoverned execution"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
+  },
+  {
+   "id": "mas.reference.no-cross-domain-forwarding",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "reference-forwarding",
+   "text": "An intermediary MUST NOT copy the field or the `_meta` key onto a request to an unrelated authority domain",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "surface": "verification",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the propagated tuple never crosses to an unrelated authority domain, and a terminating PEP strips it before forwarding outside the verified binding"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Executable tests ride #557 (gateway PEP wiring) under the #245 suite."
   }
  ]
 }
