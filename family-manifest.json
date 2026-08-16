@@ -411,8 +411,8 @@
    ]
   },
   {
-   "file": "draft-mcguinness-mission-transaction-authorization.md",
-   "slug": "draft-mcguinness-mission-transaction-authorization",
+   "file": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "slug": "draft-mcguinness-oauth-mission-transaction-authorization",
    "title": "Mission Transaction Authorization Profile for OAuth 2.0",
    "category": "exp",
    "maturity": "experimental",

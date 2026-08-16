@@ -55,9 +55,9 @@ normative:
     date: 2026
 
 informative:
-  I-D.draft-mcguinness-mission-transaction-authorization:
+  I-D.draft-mcguinness-oauth-mission-transaction-authorization:
     title: "Mission Transaction Authorization Profile for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-transaction-authorization.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html
     author:
       -
         ins: K. McGuinness
@@ -908,9 +908,11 @@ AS, which obtains approval and issues a token whose
 `authorization_details` describe the approved operation; under a
 Mission, the approval event is the policy behind that challenge, the
 Authority Set bounds what any challenge can be approved into, and
-Consent Evidence is its record, profiled for the cross-domain
-case by the Mission Transaction Authorization profile
-({{I-D.draft-mcguinness-mission-transaction-authorization}}). The intent admission assertion
+Consent Evidence is its record. The Mission Transaction Authorization
+profile ({{I-D.draft-mcguinness-oauth-mission-transaction-authorization}})
+defines that cross-domain wire workflow, with the approval as
+decision input and the issued transaction token restricted to its one
+recorded transaction. The intent admission assertion
 ({{I-D.draft-jiang-oauth-intent-admission}}) has an admission point
 sign a short-lived assertion binding an intent digest, its
 originator, an authorized presenter key, and consent evidence, which

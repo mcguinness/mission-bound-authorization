@@ -767,7 +767,7 @@ transaction token the resource verifies offline. The approval is
 input, never a bearer bypass; the token carries no approval or
 evidence bag. Experimental; profiles an unratified individual draft.
 
-[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-transaction-authorization.html)
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-transaction-authorization.html)
 
 ### Alternate bindings and the substrate
 
