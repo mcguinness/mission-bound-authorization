@@ -2124,12 +2124,31 @@ Four components publish provider claims:
 Action-time enforcement and decision evidence are supplied by the
 runtime profile and its evidence companion at the gateway
 ({{I-D.draft-mcguinness-mission-runtime}}); they consume the
-capability claims above as decision inputs. The deployment
+capability claims above as decision inputs. The provider claims are
+the deployment's own: the example assumes a deployment-local Mission
+Substrate Statement extension restating the AAuth binding's claims in
+the current Statement format (supplied, with Mission Management
+deployment as the State-Observable activation condition and the
+binding's temporal and failure elements), not that the published
+binding text already supplies them in that form. The deployment
 declaration names the four providers, the two routes, and the
 consequence class; no machine-readable declaration format is defined
 (the Mission Deployment Profile's schema remains reserved future
 work, {{deployment-profile}}), and the declaration is ordinary
 deployment documentation.
+
+The deployment runs PS-asserted access. Every resource token the
+gateway accepts is PS-issued or PS-brokered and carries the signed
+`mission_s256` reference, the protected propagation path;
+identity-based and resource-managed access are out of scope here,
+because those paths are not PS-gated and may ignore the reference.
+The gateway's join validates the carrying artifact's issuer (the
+Person Server), its audience (the payment API), the actor binding
+(the agent's key, proven on the request), and the request binding,
+before joining the PS evidence, the Actor proof, the request, and
+the adapter's output; the join is scoped to the two named routes
+with a lifetime no longer than the state observation's declared
+freshness, and a missing or conflicting input fails closed.
 
 The composition succeeds with these results and limits:
 
@@ -2157,8 +2176,9 @@ adapter publishes descriptive strings rather than machine-evaluable
 semantics; the gateway accepts a Mission reference from the agent
 without validated provenance (context splicing); the state source's
 staleness exceeds the declared maximum; a direct route bypasses the
-gateway; or the payment-vocabulary claim is generalized to another
-resource's vocabulary.
+gateway; the gateway accepts the reference on an identity-based or
+resource-managed request; or the payment-vocabulary claim is
+generalized to another resource's vocabulary.
 
 # Mission Assurance Levels {#assurance-levels}
 
@@ -2262,25 +2282,44 @@ The levels, cumulative:
   per-action enforcement: a half-step into the next level, not a
   level of its own.
 
-  A deployment demonstrates Baseline Issuance with at least the
-  following, the level's minimum test set; the executable rows live
-  in the family's conformance vectors:
+  A deployment demonstrates Baseline Issuance with the following
+  minimum test set, scoped by the capabilities its Mission Substrate
+  Statement claims, so a standalone MAS is never asked to prove a
+  credential behavior it does not claim. The executable realization
+  is planned in the family's conformance suite; no executable rows
+  exist yet.
 
-  1. approval creates an active Mission and, where the binding
-     issues credentials, a Mission-bound credential;
-  2. no credential outlives the Mission's effective expiry;
-  3. refresh while the Mission is active succeeds within policy;
-  4. a terminal transition prevents new issuance and refresh;
-  5. an unknown lifecycle state prevents issuance (the
-     forward-compatibility rule: only `active` permits reliance);
-  6. a credential from another Mission cannot be substituted (the
-     reference and its Controller namespace bind together);
-  7. a bare client-supplied Mission identifier creates no binding
-     (the grant, never the identifier, determines the Mission);
-  8. a lost state dependency follows the deployment's declared
-     failure behavior; and
-  9. the observed residual after a transition does not exceed the
+  Kernel, every Baseline deployment:
+
+  1. approval creates an active Mission;
+  2. an authenticated terminal transition takes effect in the
+     Controller's own subsequent decisions; and
+  3. the observed residual after a transition does not exceed the
      published reliance bound.
+
+  Credential-Bound, where claimed:
+
+  1. no credential outlives the Mission's effective expiry; and
+  2. a credential from another Mission cannot be substituted (the
+     reference and its Controller namespace bind together).
+
+  Lifecycle-Gated Authorization, where claimed and limited to the
+  operations named in the claim:
+
+  1. an active Mission yields a positive result for a claimed
+     operation within policy;
+  2. a terminal transition prevents every claimed operation; and
+  3. for every lifecycle-gated operation in the claimed scope,
+     unavailable, invalid, stale, or unknown state prevents a
+     positive result (the forward-compatibility rule: only `active`
+     permits reliance, and lost state never fails open).
+
+  The OAuth binding additionally demonstrates:
+
+  1. refresh while the Mission is active succeeds within policy and
+     is refused after a terminal transition; and
+  2. a bare client-supplied Mission identifier creates no binding:
+     the grant, never the identifier, determines the Mission.
 
 **Runtime-Enforced**:
 : adds a PEP/PDP decision on every consequential action, a trusted
