@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch)",
+      "Bash(git fetch *)",
+      "Bash(pnpm -C src typecheck)",
+      "Bash(pnpm -C src lint)",
+      "mcp__claude_ai_C1_Docs__query_docs_filesystem_c1_documentation"
+    ]
+  }
+}

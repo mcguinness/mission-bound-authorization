@@ -18,6 +18,7 @@ import {
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import type Provider from "oidc-provider";
 import { buildProvider, type ProtectedEventSource, type TxnArs } from "./adapters/provider.js";
+import type { CrossOrgOptions } from "./adapters/cross-org-grant.js";
 import { IssuerEvidenceStore } from "./kernel/issuer-evidence.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
@@ -86,13 +87,30 @@ export {
 export {
   deriveAttenuationRoot,
   mintChildOffline,
+  deriveCrossOrgRoot,
+  mintCrossOrgChild,
   mapAuthorityToTools,
   mapToolsToAuthority,
   AAT_TYP,
   MAX_ROOT_LIFETIME_S,
   type DeriveRootInput,
   type MintChildOptions,
+  type CrossOrgRootInput,
 } from "./kernel/attenuation.js";
+export {
+  verifyCrossOrgChain,
+  ChainVerificationError,
+  WORKLOAD_ATTESTATION_TYPE,
+  type FederationConfig,
+  type VerifiedChain,
+  type VerifiedHop,
+} from "./kernel/cross-org-chain.js";
+export {
+  handleCrossOrgChainExchange,
+  type CrossOrgOptions,
+  type CrossOrgDerivationRecord,
+  type PrincipalMappingEntry,
+} from "./adapters/cross-org-grant.js";
 export {
   CatalogProvider,
   type ServiceSeed,
@@ -420,6 +438,12 @@ export async function buildAuthorizationServer(opts: {
    * MUST omit this.
    */
   testTokenSigningJwk?: JWK;
+  /**
+   * @spec cross-org-delegation#projection-exchange — destination Resource AS
+   * configuration for Chain acceptance (federation trust, principal mapping,
+   * local ceiling, evidence sink). Absent = the exchange is refused.
+   */
+  crossOrg?: CrossOrgOptions;
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
@@ -608,6 +632,7 @@ export async function buildAuthorizationServer(opts: {
     // @spec mission#caller-authorization-and-minimization — the registered
     // RFC 7662 introspection principals (config/introspection.json).
     introspectionPrincipals: INTROSPECTION_PRINCIPALS,
+    ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),
     txnKey: txnKeys.privateKey,
     txnKid: asTxn.kid,
     // @spec child-delegation#child-client-identity — sign the child-bound RFC 7523

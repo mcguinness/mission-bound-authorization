@@ -1388,9 +1388,15 @@
     "normative": "a Chain Presentation with an unknown top-level member is refused"
    },
    "level": "endpoint",
-   "coverage": "blocked",
-   "blocked_by": "#538",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses an unknown top-level member (closed envelope)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ]
   },
   {
    "id": "cross-org.chain.digest-canonical-bytes",
@@ -1409,9 +1415,15 @@
     "normative": "two implementations compute byte-identical chain digests for the same presented chain array"
    },
    "level": "endpoint",
-   "coverage": "blocked",
-   "blocked_by": "#538",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "chain digest (@spec cross-org-delegation#chain-presentation) > is deterministic and order-sensitive",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ]
   },
   {
    "id": "cross-org.chain.bounds-before-crypto",
@@ -1430,9 +1442,15 @@
     "normative": "an over-bound presentation is refused with no signature verification performed"
    },
    "level": "endpoint",
-   "coverage": "blocked",
-   "blocked_by": "#538",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses a chain over the hop bound before parsing further",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ]
   },
   {
    "id": "cross-org.chain.child-key-resolution",
@@ -1451,9 +1469,15 @@
     "normative": "a chain whose hop carries a thumbprint-only confirmation, or whose child signature fails under the parent's carried public key, is refused"
    },
    "level": "endpoint",
-   "coverage": "blocked",
-   "blocked_by": "#538",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a reordered / substituted parent (par_hash break)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ]
   },
   {
    "id": "cross-org.actor.credential-validation",
@@ -1472,9 +1496,15 @@
     "normative": "a named hop whose credential subject, bound key, issuer trust, validity, or type check fails refuses the presentation"
    },
    "level": "endpoint",
-   "coverage": "blocked",
-   "blocked_by": "#538",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose credential binds the wrong key",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ]
   },
   {
    "id": "cross-org.actor.root-resolution",
@@ -1493,9 +1523,15 @@
     "normative": "a root's act is the recorded canonical actor mapping, and the mapping and version appear in issuance evidence"
    },
    "level": "endpoint",
-   "coverage": "blocked",
-   "blocked_by": "#538",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "valid three-domain chain (@spec cross-org-delegation#verification) > verifies A -> B -> C and reconstructs the lineage",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ]
   },
   {
    "id": "cross-org.authority.mapped-subset-only",
@@ -1514,9 +1550,15 @@
     "normative": "a chain carrying an entry beyond the mapped capability entry is refused, and unknown types confer nothing"
    },
    "level": "endpoint",
-   "coverage": "blocked",
-   "blocked_by": "#538",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an unmapped authorization-details entry",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ]
   },
   {
    "id": "cross-org.state.freshness-bound",
@@ -1535,9 +1577,15 @@
     "normative": "a revoked, expired, or staleness-exceeded Mission state prevents chain acceptance"
    },
    "level": "endpoint",
-   "coverage": "blocked",
-   "blocked_by": "#538",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > fails closed on stale Mission state",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ]
   },
   {
    "id": "cross-org.projection.provenance-recorded",
@@ -1556,9 +1604,15 @@
     "normative": "a projected local token's derivation record carries the chain digest, leaf jti, authority in and out, lineage, policy version, and principal_mapping"
    },
    "level": "endpoint",
-   "coverage": "blocked",
-   "blocked_by": "#538",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "valid three-domain chain (@spec cross-org-delegation#verification) > verifies A -> B -> C and reconstructs the lineage",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
   }
  ]
 }

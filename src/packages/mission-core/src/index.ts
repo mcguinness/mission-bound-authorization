@@ -51,5 +51,16 @@ export {
   type RecoveryProof,
   type SigningKeyStatus,
 } from "./compromise-boundary.js";
+export {
+  type ActorCredentialEntry,
+  CHAIN_DIGEST_TYP,
+  CHAIN_MEDIA_TYPE,
+  CHAIN_TOKEN_TYPE,
+  type ChainPresentation,
+  ChainPresentationError,
+  chainDigest,
+  type PresentationBounds,
+  parseChainPresentation,
+} from "./cross-org-presentation.js";
 export { compareAmounts, InvalidAmountError, isValidAmount } from "./decimal-amount.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";

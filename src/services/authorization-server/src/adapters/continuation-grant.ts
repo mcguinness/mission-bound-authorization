@@ -17,6 +17,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { handleCrossOrgChainExchange } from "./cross-org-grant.js";
 import { type ActObject, extendChainCollapsing } from "@mission/actor-chain";
 import {
   calculateJwkThumbprint,
@@ -153,6 +154,24 @@ export async function handleTokenExchangeGrant(
   //   - expansion defers a Mission access token (or refuses a non-widening request).
   // The subject_token possession rule (control the subject_token's OWN cnf) is the
   // inverse of the async transport's deliberate re-binding; see verifySubjectPossession.
+  // @spec cross-org-delegation#projection-exchange — a Chain Presentation
+  // subject_token forks BEFORE the requested_token_type forks: the chain
+  // exchange also requests an access token, and the subject_token_type is the
+  // discriminator RFC 8693 provides for exactly this.
+  if (params.subject_token_type === "urn:ietf:params:oauth:token-type:mission-delegation-chain") {
+    await handleCrossOrgChainExchange(
+      {
+        issuer: opts.issuer,
+        ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),
+        tokenKey: opts.childGrantKey as CryptoKey,
+        tokenKid: opts.childGrantKid as string,
+        proofJtiFresh: (jti) => freshProofJti(opts, jti),
+        now: () => opts.kernel.nowDate(),
+      },
+      ctx,
+    );
+    return;
+  }
   if (params.requested_token_type === JWT_TOKEN_TYPE) {
     await handleChildCreationExchange(opts, provider, ctx);
     return;
