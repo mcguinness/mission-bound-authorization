@@ -616,7 +616,7 @@ order, refusing on the first failure:
 7. Derive the successor's Authority Set under policy from the
    submitted Mission Intent ({{adjudication}}) and verify that it
    widens the predecessor: when the derived requested authority is a
-   subset of the predecessor's own effective Authority Set, refuse the
+   subset of the predecessor's own Effective Authority Set, refuse the
    exchange with the `nothing_to_expand` denial reason, as there is
    nothing to expand ({{denial-reasons}}).
 8. Complete per {{completion-modes}}; at a deferred or interactive
@@ -627,14 +627,12 @@ On any failure the Mission Issuer MUST refuse with `invalid_request`,
 `invalid_grant`, or `invalid_token` as appropriate, and MUST NOT create
 a successor.
 
-The predecessor's **effective Authority Set**, the right-hand side of
-step 7's subset test, is its approved Authority Set as reduced by the
-overlays the deployment runs: authority removed by the containment
-profile's issuer-held overlay
-({{I-D.draft-mcguinness-oauth-mission-containment}}) and entries
-discharged under the Mission Status profile's completion machinery
-({{I-D.draft-mcguinness-oauth-mission-status}}) are not in it. Where
-neither profile is deployed, the effective set is the approved set.
+The predecessor's Effective Authority Set, the right-hand side of step
+7's subset test, is the term {{I-D.draft-mcguinness-oauth-mission-status}}
+defines: the approved Authority Set after applying every issuer-held
+narrowing mechanism the deployment runs, including the containment
+profile's overlay where deployed
+({{I-D.draft-mcguinness-oauth-mission-containment}}).
 
 Authority the predecessor once held but containment or discharge has
 removed is therefore never `nothing_to_expand`: a request for it
@@ -676,7 +674,7 @@ Interactive:
 This document defines no synchronous exchange completion. An expansion
 response is a successor or a refusal, never a token derived under the
 predecessor: a request whose derived authority is a subset of the
-predecessor's own effective Authority Set is refused with
+predecessor's own Effective Authority Set is refused with
 `nothing_to_expand` ({{verification-order}}, {{denial-reasons}}).
 Policy-adjudicated expansion within a pre-consented authority ceiling
 is the experimental progressive authorization companion's concern
@@ -1342,7 +1340,7 @@ machine-readable reason code from the Mission Denial Reasons registry
 
 `nothing_to_expand`:
 : The derived requested authority is a subset of the predecessor's own
-  effective Authority Set, so there is nothing to expand: ordinary
+  Effective Authority Set, so there is nothing to expand: ordinary
   token derivation under the predecessor already serves the request
   ({{verification-order}}). This refusal surfaces on the token exchange
   response itself, as `invalid_request`, and MUST carry this reason
@@ -1486,7 +1484,7 @@ A conforming **expansion-capable Mission Issuer** MUST:
   repeated one under the reservation, recovery, revalidation, and
   retention rules of {{creation-idempotency}};
 - refuse an exchange whose derived requested authority is a subset of
-  the predecessor's own effective Authority Set, carrying the
+  the predecessor's own Effective Authority Set, carrying the
   `nothing_to_expand` denial reason ({{verification-order}},
   {{denial-reasons}});
 - complete the expansion in one of the modes of {{completion-modes}},
@@ -1802,7 +1800,7 @@ This document seeds the registry with the values it defines
 | `out_of_policy` | The Mission Issuer's governance policy refuses the requested authority class for this Mission, independent of who approves. | IETF | this document, {{denial-reasons}} |
 | `approver_rejected` | The Approver declined the expansion at the consent step. | IETF | this document, {{denial-reasons}} |
 | `out_of_scope_for_purpose` | The requested authority is incompatible with the Mission's recorded `purpose`. | IETF | this document, {{denial-reasons}} |
-| `nothing_to_expand` | The derived requested authority is a subset of the predecessor's own effective Authority Set, so there is nothing to expand. | IETF | this document, {{denial-reasons}} |
+| `nothing_to_expand` | The derived requested authority is a subset of the predecessor's own Effective Authority Set, so there is nothing to expand. | IETF | this document, {{denial-reasons}} |
 
 Each further document that defines a value on this carrier requests
 that value's registration in its own IANA considerations, carrying its

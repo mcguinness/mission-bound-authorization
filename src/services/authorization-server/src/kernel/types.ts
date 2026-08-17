@@ -478,6 +478,23 @@ export interface LifecycleCommit {
   expires_at: string;
   successor?: string;
   /**
+   * @spec signals#lifecycle-event — the generic effective-authority-narrowing
+   * discriminator: true when this commit narrowed effective authority; absent
+   * (never `false`) otherwise, mirroring `containment_version`'s
+   * absent-means-none convention. {@link MissionKernel}'s private
+   * `emitCommit` takes this as an EXPLICIT argument (default `false`) rather
+   * than inferring it from `prior_state === state`: that equality marks a
+   * commit metadata-only, but a metadata-only commit does not always narrow
+   * (`contain()`'s fresh-`event_id`/already-represented-removal case is
+   * metadata-only yet narrows nothing). `contain` is today the only funnel
+   * that ever passes `true`, and only after comparing the effective set
+   * before/after and proving a strict narrowing. CONSTRAINT for a future
+   * metadata-only funnel (entry discharge is the named case,
+   * {{I-D.draft-mcguinness-oauth-mission-status}}): it too MUST compute and
+   * pass its own value; there is no inference to rely on.
+   */
+  authority_changed?: boolean;
+  /**
    * @spec containment#propagation — the Mission's current
    * {@link MissionContainment.containment_version}, present whenever
    * containment has ever been applied (absent-means-none, mirroring

@@ -1027,7 +1027,7 @@ successor `active` and supersedes the predecessor. The client's next
 poll returns `approved` with the successor's `mission_id`
 ({{mission-reference}}).
 
-# Mission Discovery {#discovery}
+# Mission Authority Server Metadata {#discovery}
 
 A MAS publishes a metadata document at the well-known URI {{RFC8615}}
 path `/.well-known/mission-authority-server`, registered in {{iana}}:

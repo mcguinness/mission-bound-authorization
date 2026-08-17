@@ -14,11 +14,14 @@
  * endpoints and `mission_event_stream_endpoint` metadata; the RFC 8935 push and
  * RFC 8936 poll HTTP transports (this module hands SETs to registered receivers
  * in-process); stream verification / heartbeat liveness and its staleness
- * fallback; automatic Mission Status refetch on a detected version gap (this PR
- * detects the gap only); and the `suspend_until` / `on_expiry` / `tenant`
- * members (no model exists in the kernel). The demo stack signal wiring is also
- * deferred; the emitter is injectable at the authorization-server construction
- * site (its `onLifecycleCommit` option).
+ * fallback; automatic Mission Status refetch on a detected version gap or a
+ * detected rematerialization need (this module detects each condition only;
+ * the refetch itself, and the `mission_capabilities_supported` delivery gate
+ * for an undeclared stream, are the consumer's/issuer's job); and the
+ * `suspend_until` / `on_expiry` / `tenant` members (no model exists in the
+ * kernel). The demo stack signal wiring is also deferred; the emitter is
+ * injectable at the authorization-server construction site (its
+ * `onLifecycleCommit` option).
  */
 
 import { randomBytes } from "node:crypto";
@@ -63,7 +66,7 @@ export interface SignLifecycleOptions {
  * whose `id` is the Mission Identifier; body carries the event under the
  * event-type URI with the Mission identity, `state`, optional `prior_state`,
  * `version`, `committed_at`, `expires_at`, optional `successor`, and optional
- * `containment_version`.
+ * `containment_version` and `authority_changed`.
  *
  * @spec containment#propagation — `containment_version` rides the same
  * event (no dedicated containment event type): when the kernel commit carries
@@ -71,6 +74,14 @@ export interface SignLifecycleOptions {
  * through unchanged, so an active-to-active commit whose `state` equals
  * `prior_state` is still legible as an authorization change to a consumer
  * that inspects this field.
+ *
+ * @spec signals#lifecycle-event — `authority_changed` is copied through the
+ * same way, from the kernel commit's own computed value ({@link
+ * LifecycleCommit.authority_changed}): true only on a metadata-only commit
+ * that narrowed effective authority (containment today; entry discharge is
+ * the other named case, {{I-D.draft-mcguinness-oauth-mission-status}}),
+ * absent on every other transition. The builder relays the kernel's
+ * determination unchanged; it does not itself decide what narrows.
  */
 export async function signLifecycleEvent(
   commit: LifecycleCommit,
@@ -87,6 +98,7 @@ export async function signLifecycleEvent(
     ...(commit.containment_version !== undefined
       ? { containment_version: commit.containment_version }
       : {}),
+    ...(commit.authority_changed ? { authority_changed: true } : {}),
   };
   return new SignJWT({
     sub_id: { format: "opaque", id: commit.id },
@@ -107,14 +119,45 @@ export interface CachedState {
   state: string;
   version: number;
   expires_at: string;
+  /** @spec containment#propagation — the last `containment_version` this
+   *  receiver has observed for the Mission (absent means containment has
+   *  never been observed on the stream). The cursor the containment-aware
+   *  rematerialization rule (@spec signals#consumer-behavior) advances
+   *  against: a newly received `containment_version` greater than this value
+   *  triggers rematerialization independently of `authority_changed`. */
+  containment_version?: number;
+}
+
+/**
+ * @spec signals#consumer-behavior — the version state a consumer's Mission
+ * Status refresh returned for a Mission, as {@link
+ * MissionSignalReceiver.markRematerialized}'s `observedBaseline` argument.
+ * Mirrors the two fields {@link CachedState} tracks for the rematerialization
+ * rule: `containment_version` is absent when the Mission has never been
+ * contained, the same absent-means-none convention as the wire event and
+ * `CachedState` itself.
+ */
+export interface RematerializationBaseline {
+  /** The Mission `version` this Status refresh observed. */
+  version: number;
+  /** The Mission `containment_version` this Status refresh observed, when
+   *  the Mission has ever been contained (absent otherwise). */
+  containment_version?: number;
 }
 
 /** The outcome of applying a received SET (asserted on, so each rule is proven). */
 export type ApplyResult =
-  | { status: "applied"; state: string; version: number }
+  | { status: "applied"; state: string; version: number; rematerialize: boolean }
   | { status: "duplicate" }
   | { status: "stale"; version: number }
-  | { status: "gap"; expected: number; received: number; state: string; version: number }
+  | {
+      status: "gap";
+      expected: number;
+      received: number;
+      state: string;
+      version: number;
+      rematerialize: boolean;
+    }
   | { status: "refused"; reason: "signature" | "issuer" | "audience" | "malformed" };
 
 export interface ReceiverOptions {
@@ -134,7 +177,15 @@ export interface ReceiverOptions {
  * The apply is anti-revive: a lower-or-equal `version` NEVER regresses the
  * recorded state (an old `active` can never override a newer `revoked`, whether
  * a forgery, a replay, or an at-least-once duplicate). `viewState` reads the
- * cache for a consumer's `loadView`.
+ * cache for a consumer's `loadView`. It also detects, per applied event,
+ * whether the Mission's effective authority view needs rematerializing
+ * through Mission Status before further consequential reliance: on
+ * `authority_changed` true, or on a `containment_version` advance past the
+ * value this receiver last observed for the Mission
+ * (@spec signals#consumer-behavior). Detection only, mirroring the gap
+ * rule: the refetch itself is the consumer's job; {@link
+ * MissionSignalReceiver.markRematerialized} is how the consumer, having
+ * performed it, clears the latch.
  */
 export class MissionSignalReceiver {
   /** @spec status/harness — the ONE status shape a consumer relies on, keyed by Mission. */
@@ -145,6 +196,26 @@ export class MissionSignalReceiver {
   /** Missions with a detected `version` gap: not safe to honor until refetched
    *  (detect only this increment; automatic Status refetch is deferred). */
   private readonly gapped = new Set<string>();
+  /**
+   * @spec signals#consumer-behavior — Missions whose effective authority view
+   * needs rematerializing through Mission Status before further consequential
+   * reliance (detect only; the refetch itself is the consumer's job): set by
+   * an applied or gapped event carrying `authority_changed` true, or by a
+   * containment-aware `containment_version` advance past the value this
+   * receiver last observed for the Mission (@spec containment#propagation).
+   * The map value is the {@link RematerializationBaseline} of the LATEST
+   * event that (re-)raised the need: the version state a consumer's Status
+   * refresh must reach or exceed before {@link markRematerialized} will
+   * clear it. UNLIKE `gapped`, this does not auto-clear on a later event
+   * that does not itself require rematerialization, because such an event
+   * proves nothing about whether the consumer actually rematerialized after
+   * the EARLIER narrowing (a gap's continuity is re-established by the next
+   * in-order event; a stale authority view is not). It clears only through
+   * {@link markRematerialized}, and only when the acknowledged baseline
+   * covers the tracked marker; a narrowing that arrives after a successful
+   * acknowledgement moves the marker forward and re-raises the latch.
+   */
+  private readonly rematerializeNeeded = new Map<string, RematerializationBaseline>();
   private readonly jwkSet: ReturnType<typeof createLocalJWKSet>;
   /** This receiver's registered audience (the emitter delivers by audience). */
   readonly audience: string;
@@ -163,7 +234,12 @@ export class MissionSignalReceiver {
    * `jti` duplicate suppression. Then version-idempotent apply: a `version` not
    * greater than the last applied never regresses state (anti-revive); a
    * first-seen `version` > 1 or a `version` more than one past the last is a
-   * gap (marked not-honored for a later refetch).
+   * gap (marked not-honored for a later refetch). An applied or gapped event
+   * additionally carries `rematerialize`: true when `authority_changed` is
+   * true, or when `containment_version` advanced past the value last observed
+   * for the Mission, either of which requires rematerializing the effective
+   * authority view through Mission Status before further consequential
+   * reliance, even though `state` did not change.
    */
   async verifyAndApply(setJwt: string): Promise<ApplyResult> {
     // 1. Signature (draft §set-protection step 1).
@@ -187,7 +263,8 @@ export class MissionSignalReceiver {
     if (!parsed) return { status: "refused", reason: "malformed" };
     this.seen.add(jti);
 
-    const { missionId, state, version, expires_at } = parsed;
+    const { missionId, state, version, expires_at, authority_changed, containment_version } =
+      parsed;
     const current = this.cache.get(missionId);
     // Anti-revive: a version at or below the last applied never regresses state.
     if (current !== undefined && version <= current.version) {
@@ -197,13 +274,72 @@ export class MissionSignalReceiver {
     // sequence), or a jump of more than one past the last applied.
     const expected = (current?.version ?? 0) + 1;
     const isGap = version > expected;
-    this.cache.set(missionId, { state, version, expires_at });
+
+    // @spec signals#consumer-behavior — rematerialize the effective authority
+    // view when the generic `authority_changed` discriminator is true, or,
+    // independently, when a containment-aware consumer observes
+    // `containment_version` advance past a value it PREVIOUSLY OBSERVED for
+    // this Mission (@spec containment#propagation). Either signal alone
+    // suffices; a consumer reading only `authority_changed` and one tracking
+    // `containment_version` directly reach the same result. Requiring a
+    // DEFINED prior value is deliberate: with no earlier observation to
+    // compare against, this receiver cannot assert an advance (a first-ever
+    // event carrying a `containment_version` is not necessarily a narrowing
+    // relative to whatever baseline the consumer holds from elsewhere, e.g.
+    // a Mission Status bootstrap this pure event-core module does not model).
+    // This independent path is NOT redundant with `authority_changed`: this
+    // KERNEL's contain() only sets `authority_changed` true when the
+    // EFFECTIVE set actually narrowed (@spec MissionKernel#emitCommit), but
+    // `containment_version` still advances on a contain commit that narrows
+    // nothing (a fresh event whose removal the contained set already
+    // represents), so `containmentAdvanced` below deliberately fires on that
+    // case too (any new containment activity, not only a real narrowing,
+    // is conservative grounds for a refresh). A containment-aware consumer
+    // that wants that broader coverage MUST track `containment_version`
+    // itself rather than assume the discriminator always accompanies it. A
+    // stale/duplicate event never reaches here, so "ignore stale/equal
+    // `containment_version`" also falls out of the anti-revive check above
+    // and the strict `>` comparison below.
+    const priorContainmentVersion = current?.containment_version;
+    const containmentAdvanced =
+      priorContainmentVersion !== undefined &&
+      containment_version !== undefined &&
+      containment_version > priorContainmentVersion;
+    const rematerialize = authority_changed === true || containmentAdvanced;
+
+    // Carry the last-observed `containment_version` forward when this event
+    // does not itself repeat it (defensive: the wire invariant is that it
+    // rides every commit once ever present, but the cache must not forget it
+    // on an event that happens not to carry it).
+    const nextContainmentVersion = containment_version ?? priorContainmentVersion;
+    this.cache.set(missionId, {
+      state,
+      version,
+      expires_at,
+      ...(nextContainmentVersion !== undefined
+        ? { containment_version: nextContainmentVersion }
+        : {}),
+    });
+    // Latch: an event that does not itself require rematerialization says
+    // nothing about whether the consumer already rematerialized after an
+    // EARLIER narrowing (see the field doc comment), so it never clears the
+    // marker on its own. An event that DOES require it (re-)raises the
+    // marker to THIS event's own version/containment_version: the new
+    // high-water mark a markRematerialized baseline must cover to clear it.
+    if (rematerialize) {
+      this.rematerializeNeeded.set(missionId, {
+        version,
+        ...(nextContainmentVersion !== undefined
+          ? { containment_version: nextContainmentVersion }
+          : {}),
+      });
+    }
     if (isGap) {
       this.gapped.add(missionId);
-      return { status: "gap", expected, received: version, state, version };
+      return { status: "gap", expected, received: version, state, version, rematerialize };
     }
     this.gapped.delete(missionId);
-    return { status: "applied", state, version };
+    return { status: "applied", state, version, rematerialize };
   }
 
   /** The last state established for a Mission, for a consumer's `loadView`. */
@@ -233,6 +369,55 @@ export class MissionSignalReceiver {
   hasGap(missionId: string): boolean {
     return this.gapped.has(missionId);
   }
+
+  /**
+   * @spec signals#consumer-behavior — whether the Mission's effective
+   * authority view needs rematerializing through Mission Status before
+   * further consequential reliance (set on `authority_changed` true, or a
+   * `containment_version` advance). LATCHED: once true, stays true across
+   * later events that do not themselves require it (no auto-clear, unlike
+   * `hasGap`); clears only via {@link markRematerialized}.
+   */
+  needsRematerialization(missionId: string): boolean {
+    return this.rematerializeNeeded.has(missionId);
+  }
+
+  /**
+   * @spec signals#consumer-behavior — acknowledge that the consumer has
+   * rematerialized a Mission's effective authority view through Mission
+   * Status, clearing {@link needsRematerialization}'s latch.
+   * `observedBaseline` is the version state (this receiver's own {@link
+   * RematerializationBaseline} shape) the consumer's Status refresh just
+   * returned for the Mission.
+   *
+   * The latch clears ONLY when `observedBaseline` covers the marker of the
+   * latest narrowing this receiver has observed for the Mission (the
+   * `version` that narrowing advanced to, and its `containment_version` when
+   * it carried one): a baseline whose `version` falls short of that marker,
+   * or whose `containment_version` is absent or short of the marker's when
+   * the marker has one, is STALE relative to the outstanding narrowing and
+   * does NOT clear it. A narrowing event that arrives after a successful
+   * acknowledgement moves the marker forward again and re-raises the latch,
+   * exactly like any other first-time narrowing.
+   *
+   * Returns whether the latch is clear immediately after this call: `true`
+   * when nothing was outstanding or the baseline covered it, `false` when a
+   * stale baseline left it latched.
+   */
+  markRematerialized(missionId: string, observedBaseline: RematerializationBaseline): boolean {
+    const marker = this.rematerializeNeeded.get(missionId);
+    if (!marker) return true; // nothing outstanding
+    const coversVersion = observedBaseline.version >= marker.version;
+    const coversContainment =
+      marker.containment_version === undefined ||
+      (observedBaseline.containment_version !== undefined &&
+        observedBaseline.containment_version >= marker.containment_version);
+    if (coversVersion && coversContainment) {
+      this.rematerializeNeeded.delete(missionId);
+      return true;
+    }
+    return false;
+  }
 }
 
 /** True if `aud` (string or array) contains the receiver's own audience. */
@@ -247,6 +432,12 @@ interface ParsedEvent {
   state: string;
   version: number;
   expires_at: string;
+  /** @spec signals#lifecycle-event — the generic narrowing discriminator,
+   *  when the event carries it. */
+  authority_changed?: boolean;
+  /** @spec containment#propagation — the containment generation counter,
+   *  when the event carries it. */
+  containment_version?: number;
 }
 
 /** Pull and shape-check the required members of the lifecycle-change event. */
@@ -268,7 +459,21 @@ function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
   ) {
     return undefined;
   }
-  return { missionId, state, version, expires_at };
+  return {
+    missionId,
+    state,
+    version,
+    expires_at,
+    // `authority_changed` is a MUST-ignore-if-unrecognized member; a consumer
+    // that does not understand it simply never sets these, so it is optional
+    // here too (draft §consumer-behavior forward-compatibility).
+    ...(typeof ev.authority_changed === "boolean"
+      ? { authority_changed: ev.authority_changed }
+      : {}),
+    ...(typeof ev.containment_version === "number"
+      ? { containment_version: ev.containment_version }
+      : {}),
+  };
 }
 
 /** A consumer this issuer emits to, identified by its registered audience. */

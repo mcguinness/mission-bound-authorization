@@ -145,6 +145,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-continuation:
+    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -632,6 +640,16 @@ fresh decision relied on a valid approval. A resource's own
 authorization decision rests on the trusted, typed transaction token
 plus the current local checks of {{offline-verification}}, never on
 parsing an arbitrary evidence blob presented at the request.
+
+This profile defines no Continuation Transport and no continuity
+guarantee of its own
+({{I-D.draft-mcguinness-oauth-mission-continuation}}). Its token is a
+bounded, single-use authorization artifact. The token carries `txn`,
+its own `jti`, and `parameter_digest`; those correlate the runtime
+evidence profile's execution-time evidence to this hop
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). The Operation
+Profile's idempotency identity correlates the effect and is not
+carried by the token.
 
 # Failure Semantics {#failure-semantics}
 

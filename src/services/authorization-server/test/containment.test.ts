@@ -17,7 +17,11 @@
  *     attenuation root mapping all exclude contained capability;
  *   - terminal-state contain refused (409 on the wire); suspended permitted;
  *   - the lifecycle endpoint's operation: "contain" end-to-end via the dev
- *     service token.
+ *     service token;
+ *   - (#572) `authority_changed` on the emitted commit reflects an actual
+ *     narrowing of the EFFECTIVE set, not merely a fresh event_id reaching
+ *     the metadata-only commit path: both a repeat-narrowing event and a
+ *     rule naming a never-held capability leave it absent.
  */
 
 import { type Server } from "node:http";
@@ -203,6 +207,33 @@ describe("contain(): monotonic union + event_id idempotency", () => {
     expect(r3.record.containment?.events).toHaveLength(2);
     expect(r3.evidence.prior_version).toBe(r3.evidence.new_version);
     expect(r3.evidence.prior_containment_version).toBe(r3.evidence.new_containment_version);
+  });
+});
+
+describe("contain(): authority_changed reflects actual narrowing, not merely a fresh event (#572)", () => {
+  it("a FRESH event_id whose removal is already fully represented in the contained set still commits (version/containment_version bump) but omits authority_changed", () => {
+    // Distinct from event_id idempotency above: evt-dup-b is a NEW event_id
+    // (not a repeat of evt-dup-a), so contain()'s idempotency check does not
+    // short-circuit it. It still reaches the metadata-only commit, but the
+    // EFFECTIVE set is unchanged, so the emitted signal must not claim a
+    // narrowing that did not happen.
+    const { kernel, commits } = makeHarness();
+    const m = approve(kernel);
+
+    kernel.contain(m.id, {
+      event: ev("evt-dup-a"),
+      remove: [{ resource: RES_PAY, actions: ["payments:payment.execute"] }],
+    });
+    expect(commits.at(-1)?.authority_changed).toBe(true); // the genuine narrowing
+
+    const r2 = kernel.contain(m.id, {
+      event: ev("evt-dup-b"),
+      remove: [{ resource: RES_PAY, actions: ["payments:payment.execute"] }],
+    });
+    expect(r2.record.version).toBe(3); // NOT a no-op: a real version bump
+    expect(r2.record.containment?.containment_version).toBe(2);
+    expect(r2.record.containment?.events).toHaveLength(2); // a new event row
+    expect(commits.at(-1)?.authority_changed).toBeUndefined();
   });
 });
 
@@ -779,7 +810,7 @@ describe("containOnEvent(): issuer-held ContainmentPolicy drives a deterministic
   });
 
   it("a rule naming a capability the Mission never held still commits; the effective set is unchanged for un-held entries", () => {
-    const { kernel } = makeHarness(TEST_CONTAINMENT);
+    const { kernel, commits } = makeHarness(TEST_CONTAINMENT);
     const m = approve(kernel);
     const before = kernel.effectiveAuthoritySet(m);
     const { record } = kernel.containOnEvent(m.id, pev("content.phantom_capability", "pe-2"));
@@ -787,6 +818,9 @@ describe("containOnEvent(): issuer-held ContainmentPolicy drives a deterministic
     expect(record.containment?.containment_version).toBe(1);
     // Subtraction ignores non-matching entries: the effective set is unchanged.
     expect(kernel.effectiveAuthoritySet(record)).toEqual(before);
+    // #572: removing a never-held capability does not narrow the EFFECTIVE
+    // set, so the emitted commit must not claim authority_changed.
+    expect(commits.at(-1)?.authority_changed).toBeUndefined();
   });
 
   it("is idempotent by event.event_id through the policy path (single version bump)", () => {
