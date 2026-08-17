@@ -38,6 +38,8 @@ const RESOURCE = CANONICAL_RESOURCE;
 const WORKFLOW_LIFETIME_S = 600;
 /** The deployment maximum for an issued transaction token. */
 const MAX_TOKEN_LIFETIME_S = 300;
+/** A second accepted Challenge-Issuing Resource the subject_token is NOT for. */
+const OTHER_RESOURCE = "http://localhost:4499/mcp";
 
 type DpopKeys = { privateKey: CryptoKey; publicKey: CryptoKey };
 
@@ -303,6 +305,9 @@ beforeAll(async () => {
 
   const challengeIssuers: ChallengeIssuers = new Map([
     [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsTxnPub as JWK] }), algs: ["ES256"] }],
+    // A SECOND accepted resource, so an audience mismatch can be exercised
+    // against a challenge whose issuer the TAS does accept.
+    [OTHER_RESOURCE, { jwks: createLocalJWKSet({ keys: [rsTxnPub as JWK] }), algs: ["ES256"] }],
   ]);
   as = await buildAuthorizationServer({
     issuer: ISSUER,
@@ -810,5 +815,59 @@ describe("fresh decision at completion (@spec txn-authorization#challenge-redemp
     expect(res.status).toBe(400);
     expect(body.error).toBe("access_denied");
     expect(body.error_description).toContain("effective Authority Set");
+  });
+});
+
+describe("subject_token binding (@spec txn-authorization#challenge-redemption)", () => {
+  const entry = (resource: string): AuthorityEntry[] => [
+    {
+      type: "mission_resource_access",
+      resource,
+      actions: ["payments:remittance.send"],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ];
+
+  it("refuses a subject_token that was not issued for the challenged resource", async () => {
+    // The challenge names a resource this TAS accepts, but the presented
+    // Mission-bound token's audience is a different one.
+    const challenge = await signChallenge(
+      {
+        txn: "txn_wrong_audience",
+        authorization_details: entry(OTHER_RESOURCE),
+        iss: OTHER_RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: "sha-256:wrong-audience",
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const res = await submit(challenge);
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("not issued for the challenged resource");
+  });
+
+  it("refuses a challenge whose mission invariants differ from the subject_token's", async () => {
+    const challenge = await signChallenge(
+      {
+        txn: "txn_mission_mismatch",
+        authorization_details: entry(RESOURCE),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: "sha-256:mission-mismatch",
+        mission: { ...missionClaim, id: "msn_not_this_one" },
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const res = await submit(challenge);
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("mission does not match");
   });
 });
