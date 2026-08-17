@@ -109,6 +109,7 @@
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
+    "draft-mcguinness-oauth-mission-approval-revision",
     "draft-mcguinness-oauth-mission-consent-evidence"
    ]
   },
@@ -315,6 +316,8 @@
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-mission-uma",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-issuance-grant",
@@ -425,8 +428,10 @@
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-runtime-evidence",
+    "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-cross-org-delegation",
     "draft-mcguinness-oauth-mission-status"
@@ -564,6 +569,7 @@
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-shaping",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",

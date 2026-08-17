@@ -74,6 +74,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -436,6 +444,13 @@ Consent evidence:
   approval MAY carry `predecessor_intent_hashes` committing the revision
   chain. The `approver` recorded on that final evidence is the
   principal who approved the final, narrowed set.
+
+Approval governance:
+: Each `revision_required` outcome is interim: no Mission is created,
+  so no Approval Governance Record commits for it, under the atomic
+  commitment rule of Mission Approval Governance
+  ({{I-D.draft-mcguinness-mission-approval-governance}}). The final
+  Approval Governance Record governs the approved, narrowed Mission.
 
 Shaping:
 : The `rejected_scope` and `rejected_authorization_details` parameters
