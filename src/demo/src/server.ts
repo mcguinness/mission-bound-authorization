@@ -558,8 +558,8 @@ async function main() {
     return c.json({ state: rec.state, ...(rec.missionId ? { missionId: rec.missionId } : {}) });
   });
   // Agent action: attempt a tool call and report the enforcement outcome. When
-  // a gated action yields an access_challenge (AROP), the server presents it to
-  // the AS transaction endpoint on the agent's behalf, opening an AROP task on
+  // a gated action yields a transaction_challenge, the server redeems it at the
+  // AS transaction endpoint on the agent's behalf, opening an approval task on
   // the shared ARS, and hands the pending txn back to the agent.
   app.post("/agent/act", async (c) => {
     const body = await readJson(c);

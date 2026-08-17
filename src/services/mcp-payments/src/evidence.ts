@@ -219,7 +219,7 @@ export function buildArtifactEvidence(input: ArtifactEvidenceInput): ArtifactEvi
  * @spec work-products#binding — the JOSE `typ` header for a Work Product
  * Provenance binding, the short media-type form the family uses for its own
  * invented token types (compare `oauth-mission-child-grant+jwt`,
- * `txn-token+jwt`). The IANA-registered media type is
+ * `mission-txn-token+jwt`). The IANA-registered media type is
  * `application/mission-work-product-binding+jwt`; the `typ` header carries the
  * short form. Domain separation means a binding digest can NEVER be mistaken for
  * an authority artifact.

@@ -1314,8 +1314,9 @@ async function main() {
   );
   note("send_remittance_email is WITHIN the mission's authority, but deployment policy requires an action-bound approval, resolved just-in-time over real HTTP.");
 
-  // 7.1 Base token, no txn-token: the RS gates the action and returns an
-  // access_challenge (an rs-txn-signed txn-challenge + the AS endpoint for it).
+  // 7.1 Base token, no transaction token: the RS gates the action and returns
+  // the upstream transaction_authorization_required error plus a signed
+  // transaction_challenge; the endpoint to redeem it at comes from AS metadata.
   hop("Agent", "Payments RS", "tools/call send_remittance_email (base token, no txn-token)", "in-process MCP · O-33");
   block("MCP tools/call — send_remittance_email (base token, no txn-token)", {
     tool: "send_remittance_email",

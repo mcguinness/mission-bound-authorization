@@ -181,7 +181,7 @@ export interface EnforceResult {
    * out_of_authority denial: the requested (resource, action) is absent from
    * the Mission's Authority Set entirely. One GRAIN of the family's
    * graduated-challenge remediation (composes with, does not replace,
-   * access_request/access_challenge above and the AuthZEN ARAP requestable
+   * access_request/`challenge` above and the AuthZEN ARAP requestable
    * denial): the actionable authorization_details the client could propose
    * next on the standard authorization_details request parameter
    * (@spec mission#authority-proposal).
