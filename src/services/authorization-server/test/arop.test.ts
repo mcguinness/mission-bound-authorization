@@ -267,6 +267,7 @@ describe("M7 scenario 7: AROP over Transaction Challenge (D42 -- carries the act
     // ACTIVE Mission unchanged (D42 -- no Expansion) plus the verified approval.
     const approvedUntil = "2026-12-31T00:00:00Z";
     const token = await issueTxnToken({
+      jti: "mtt_test_1",
       txn,
       audience: RESOURCE,
       mission: kernel.missionClaim(mission),

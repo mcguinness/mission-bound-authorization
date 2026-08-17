@@ -540,3 +540,179 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
     expect(body.access_token).toBeUndefined();
   });
 });
+
+describe("two-phase expiry and idempotency (@spec txn-authorization#two-phase-expiry)", () => {
+  const requestedEntry = (): AuthorityEntry[] => {
+    const record = as.kernel.get(missionId) as { authority_set: AuthorityEntry[] };
+    return record.authority_set
+      .filter((e) => e.actions.includes("payments:remittance.send"))
+      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+  };
+
+  const challengeFor = async (txn: string, over: Record<string, unknown> = {}) =>
+    signChallenge(
+      {
+        txn,
+        authorization_details: requestedEntry(),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: `sha-256:${txn}`,
+        ...over,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+
+  it("returns the existing workflow when the same challenge is submitted again", async () => {
+    const challenge = await challengeFor("txn_repeat_submit");
+    const first = (await (await submit(challenge)).json()) as { transaction_authorization_id: string };
+    const second = (await (await submit(challenge)).json()) as { transaction_authorization_id: string };
+    expect(first.transaction_authorization_id).toMatch(/^txa_/);
+    expect(second.transaction_authorization_id).toBe(first.transaction_authorization_id);
+    // Exactly one approval task was opened for the one admitted challenge.
+    expect(ars.pending().filter((t) => t.id === "arq_txn_txn_repeat_submit")).toHaveLength(1);
+  });
+
+  it("refuses a challenge that expired before it was submitted, rather than reviving one", async () => {
+    const challenge = await challengeFor("txn_late", { lifetimeSeconds: -60 });
+    const res = await submit(challenge);
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("expired_challenge");
+  });
+
+  it("still issues when the approval lands after the challenge expired but inside the workflow lifetime", async () => {
+    // A challenge whose admission window is seconds wide: it admits now, and is
+    // long expired by the time the approver acts.
+    const challenge = await challengeFor("txn_slow_approval", { lifetimeSeconds: 2 });
+    const init = (await (await submit(challenge)).json()) as { transaction_authorization_id: string };
+    await new Promise((r) => setTimeout(r, 2500));
+
+    // The challenge would no longer admit anything now...
+    const late = await submit(challenge);
+    expect((await late.json()).error).toBe("invalid_grant");
+
+    // ...but the workflow it already admitted still completes.
+    const approval = await ars.adjudicate("arq_txn_txn_slow_approval", "approve", "bob");
+    expect(approval).not.toBeNull();
+    const res = await postTransaction({
+      transaction_authorization_id: init.transaction_authorization_id,
+    });
+    const body = (await res.json()) as { access_token?: string; expires_in?: number };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.access_token).toBeTruthy();
+    // The token's lifetime comes from the workflow and the approval, never from
+    // the already-consumed challenge exp.
+    expect(body.expires_in as number).toBeGreaterThan(2);
+  });
+
+  it("returns the same token, under the same jti, on every poll after the decision", async () => {
+    const challenge = await challengeFor("txn_stable_result");
+    const init = (await (await submit(challenge)).json()) as { transaction_authorization_id: string };
+    await ars.adjudicate("arq_txn_txn_stable_result", "approve", "bob");
+    const first = (await (
+      await postTransaction({ transaction_authorization_id: init.transaction_authorization_id })
+    ).json()) as { access_token: string };
+    const second = (await (
+      await postTransaction({ transaction_authorization_id: init.transaction_authorization_id })
+    ).json()) as { access_token: string };
+    expect(second.access_token).toBe(first.access_token);
+    expect(decodeJwt(second.access_token).jti).toBe(decodeJwt(first.access_token).jti);
+  });
+
+  it("bounds the token by the deployment maximum, never by the challenge exp", async () => {
+    const challenge = await challengeFor("txn_exp_bound");
+    const init = (await (await submit(challenge)).json()) as { transaction_authorization_id: string };
+    await ars.adjudicate("arq_txn_txn_exp_bound", "approve", "bob");
+    const body = (await (
+      await postTransaction({ transaction_authorization_id: init.transaction_authorization_id })
+    ).json()) as { access_token: string };
+    const claims = decodeJwt(body.access_token);
+    const challengeExp = decodeJwt(challenge).exp as number;
+    expect(claims.exp as number).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + MAX_TOKEN_LIFETIME_S);
+    // Not clamped to the challenge: the approval TTL is what binds here.
+    expect(claims.exp).not.toBe(challengeExp);
+  });
+});
+
+describe("challenge trust boundaries (@spec txn-authorization#two-phase-expiry)", () => {
+  it("refuses a challenge signed by another issuer's key under this resource's iss", async () => {
+    const foreign = await generateKeyPair("ES256", { extractable: true });
+    const record = as.kernel.get(missionId) as { authority_set: AuthorityEntry[] };
+    const challenge = await signChallenge(
+      {
+        txn: "txn_cross_issuer",
+        authorization_details: record.authority_set
+          .filter((e) => e.actions.includes("payments:remittance.send"))
+          .map((e) => ({ ...e, actions: ["payments:remittance.send"] })),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: "sha-256:cross-issuer",
+      },
+      foreign.privateKey,
+      "rs-txn",
+    );
+    const res = await submit(challenge);
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status).toBe(400);
+    expect(body.error_description).toContain("invalid_signature");
+  });
+
+  it("refuses a challenge from an issuer this TAS does not accept", async () => {
+    const challenge = await signChallenge(
+      {
+        txn: "txn_unknown_issuer",
+        authorization_details: [
+          { type: "mission_resource_access", resource: "https://elsewhere.test/mcp", actions: ["x"] },
+        ],
+        iss: "https://elsewhere.test/mcp",
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: "sha-256:elsewhere",
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const res = await submit(challenge);
+    const body = (await res.json()) as { error_description?: string };
+    expect(body.error_description).toContain("unknown_issuer");
+  });
+
+  it("refuses an unauthenticated client and a proof of the wrong key", async () => {
+    const challenge = await signChallenge(
+      {
+        txn: "txn_auth_guards",
+        authorization_details: (as.kernel.get(missionId) as { authority_set: AuthorityEntry[] }).authority_set
+          .filter((e) => e.actions.includes("payments:remittance.send"))
+          .map((e) => ({ ...e, actions: ["payments:remittance.send"] })),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: "sha-256:auth-guards",
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const unauth = await postTransaction(
+      {
+        transaction_challenge: challenge,
+        subject_token: baseToken,
+        subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+      },
+      { omitClientAuth: true },
+    );
+    expect(unauth.status).toBe(401);
+    expect((await unauth.json()).error).toBe("invalid_client");
+
+    // A proof of a key the challenge never committed to.
+    const otherKeys = await generateKeyPair("ES256", { extractable: true });
+    const wrongKey = await submit(challenge, { keys: otherKeys });
+    const body = (await wrongKey.json()) as { error?: string; error_description?: string };
+    expect(wrongKey.status).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("same key");
+  });
+});

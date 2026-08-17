@@ -35,6 +35,7 @@ import {
   validateChallenge,
 } from "../kernel/txn-challenge.js";
 import type { AuthorityEntry } from "../kernel/types.js";
+import { TxnWorkflowStore, type TxnWorkflowRecord } from "../kernel/txn-workflow-store.js";
 import type { DpopProofReplay } from "./dpop-replay.js";
 
 /**
@@ -100,6 +101,8 @@ export interface TxnAuthorizationOptions {
   /** Poll cadence advertised to the client (seconds). */
   pollIntervalSeconds?: number;
   destinationPolicy?: DestinationPolicy;
+  /** The pending-workflow table; defaulted per provider instance when unset. */
+  store?: TxnWorkflowStore;
 }
 
 export interface TxnAuthorizationDeps {
@@ -112,24 +115,6 @@ export interface TxnAuthorizationDeps {
   dpopProofReplay: DpopProofReplay;
   now: () => Date;
   txn?: TxnAuthorizationOptions;
-}
-
-/** The admitted workflow's pinned state. */
-interface TxnWorkflow {
-  id: string;
-  taskId: string;
-  challenge: TxnChallengeClaims;
-  clientId: string;
-  subject: string;
-  missionId: string;
-  action: string;
-  /** Epoch seconds the WORKFLOW expires (not the challenge). */
-  expiresAtS: number;
-  /** `subject_token`'s own expiry, pinned at admission. */
-  subjectTokenExpS: number;
-  state: "pending" | "issued" | "denied";
-  issuedToken?: string;
-  issuedExpS?: number;
 }
 
 const DEFAULT_POLL_INTERVAL_S = 5;
@@ -147,13 +132,14 @@ function fail(ctx: TxnCtx, status: number, error: string, description?: string):
 export async function handleTransactionAuthorization(
   deps: TxnAuthorizationDeps,
   ctx: TxnCtx,
-  workflows: Map<string, TxnWorkflow>,
+  workflows: TxnWorkflowStore,
 ): Promise<void> {
   const txn = deps.txn;
   if (!txn) {
     fail(ctx, 501, "temporarily_unavailable", "transaction authorization is not configured");
     return;
   }
+  const store = txn.store ?? workflows;
   const params = await readParams(ctx.req);
 
   // The TAS authenticates the Presenting Client. `client_id` on the issued
@@ -173,10 +159,10 @@ export async function handleTransactionAuthorization(
 
   const pollId = params.transaction_authorization_id;
   if (typeof pollId === "string" && pollId) {
-    await poll(deps, txn, ctx, workflows, pollId, clientId, proven);
+    await poll(deps, txn, ctx, store, pollId, clientId, proven);
     return;
   }
-  await admit(deps, txn, ctx, workflows, params, clientId, proven);
+  await admit(deps, txn, ctx, store, params, clientId, proven);
 }
 
 /**
@@ -187,7 +173,7 @@ async function admit(
   deps: TxnAuthorizationDeps,
   txn: TxnAuthorizationOptions,
   ctx: TxnCtx,
-  workflows: Map<string, TxnWorkflow>,
+  workflows: TxnWorkflowStore,
   params: Record<string, unknown>,
   clientId: string,
   provenJkt: string,
@@ -293,6 +279,22 @@ async function admit(
     return;
   }
 
+  const nowS = Math.floor(deps.now().getTime() / 1000);
+
+  // @spec txn-authorization#two-phase-expiry — a repeated initial submission of
+  // the SAME admitted challenge returns the existing pending workflow; it never
+  // creates a second one (and never opens a second approval).
+  const admitted = workflows.findAdmission({
+    challengeIss: challenge.iss,
+    challengeJti: challenge.jti,
+    clientId,
+    cnfJkt: challenge.cnf.jkt,
+  });
+  if (admitted) {
+    respondAdmitted(ctx, txn, admitted, nowS);
+    return;
+  }
+
   // 5. Obtain or resolve a governed approval, bound to `txn`, the operation,
   //    `parameter_digest`, the resource, the Mission, the origin principal and
   //    the presenter key.
@@ -304,24 +306,37 @@ async function admit(
     subject: subjectId,
   });
 
-  const nowS = Math.floor(deps.now().getTime() / 1000);
-  const id = `txa_${randomBytes(12).toString("base64url")}`;
-  workflows.set(id, {
-    id,
+  const workflow = workflows.admit({
+    id: `txa_${randomBytes(12).toString("base64url")}`,
     taskId,
     challenge,
     clientId,
     subject: subjectId,
     missionId,
     action,
+    // Pinned: a superseded Operation Profile version stays recognized for as
+    // long as this workflow references it.
+    operationType: String(requested[0]?.type ?? ""),
+    // @spec txn-authorization#two-phase-expiry — the workflow's own
+    // deployment-declared lifetime, NOT the challenge's remaining window.
     expiresAtS: nowS + txn.workflowLifetimeSeconds,
     subjectTokenExpS: typeof subject.exp === "number" ? subject.exp : nowS,
+    missionExpS: Math.floor(Date.parse(active.expires_at) / 1000),
     state: "pending",
   });
+  respondAdmitted(ctx, txn, workflow, nowS);
+}
+
+function respondAdmitted(
+  ctx: TxnCtx,
+  txn: TxnAuthorizationOptions,
+  workflow: TxnWorkflowRecord,
+  nowS: number,
+): void {
   ctx.status = 200;
   ctx.body = {
-    transaction_authorization_id: id,
-    expires_in: txn.workflowLifetimeSeconds,
+    transaction_authorization_id: workflow.id,
+    expires_in: Math.max(1, workflow.expiresAtS - nowS),
     interval: txn.pollIntervalSeconds ?? DEFAULT_POLL_INTERVAL_S,
   };
   ctx.set("cache-control", "no-store");
@@ -336,7 +351,7 @@ async function poll(
   deps: TxnAuthorizationDeps,
   txn: TxnAuthorizationOptions,
   ctx: TxnCtx,
-  workflows: Map<string, TxnWorkflow>,
+  workflows: TxnWorkflowStore,
   id: string,
   clientId: string,
   provenJkt: string,
@@ -355,17 +370,20 @@ async function poll(
   const nowS = Math.floor(deps.now().getTime() / 1000);
   if (wf.state === "issued" && wf.issuedToken) {
     // At most one authorization result per workflow: repeated polling after a
-    // decision returns the SAME token, never a second issuance.
+    // decision returns the SAME token (same jti), never a second issuance.
     respondWithToken(ctx, wf.issuedToken, (wf.issuedExpS ?? nowS) - nowS);
     return;
   }
+  // @spec txn-authorization#two-phase-expiry — the workflow's OWN lifetime is
+  // what expires here. An async approval completing after the challenge's exp
+  // but within this window still issues; the challenge exp is already consumed.
   if (nowS >= wf.expiresAtS) {
     fail(ctx, 400, "expired_token");
     return;
   }
   const task = txn.ars.getTask(wf.taskId);
   if (task?.state === "denied") {
-    wf.state = "denied";
+    workflows.setState(wf.id, "denied");
     fail(ctx, 400, "access_denied");
     return;
   }
@@ -399,9 +417,14 @@ async function poll(
     throw e;
   }
 
+  // @spec txn-authorization#transaction-token — the earliest of approval
+  // freshness, subject_token validity, Mission expiry (pinned AND current, so a
+  // Mission extended mid-workflow cannot widen it), the workflow's remaining
+  // lifetime, and the deployment maximum. Never the challenge's exp.
   const exp = Math.min(
     approvedUntilS,
     wf.subjectTokenExpS,
+    wf.missionExpS,
     Math.floor(Date.parse(gated.expires_at) / 1000),
     wf.expiresAtS,
     nowS + txn.maxTokenLifetimeSeconds,
@@ -410,7 +433,16 @@ async function poll(
     fail(ctx, 400, "access_denied", "no lifetime remains for a transaction token");
     return;
   }
+
+  // At most one authorization result per `txn`: the slot is taken exactly once,
+  // so a second token under a different jti is structurally impossible.
+  if (!workflows.reserveIssuance(wf.challenge.txn, wf.id)) {
+    fail(ctx, 400, "access_denied", "this transaction already produced an authorization result");
+    return;
+  }
+  const tokenJti = `mtt_${randomBytes(12).toString("base64url")}`;
   const token = await issueTxnToken({
+    jti: tokenJti,
     txn: wf.challenge.txn,
     audience: wf.challenge.iss,
     mission: wf.challenge.mission as unknown as Record<string, unknown>,
@@ -422,9 +454,7 @@ async function poll(
     kid: txn.tokenKid,
     issuer: deps.issuer,
   });
-  wf.state = "issued";
-  wf.issuedToken = token;
-  wf.issuedExpS = exp;
+  workflows.recordIssued(wf.id, token, tokenJti, exp);
   respondWithToken(ctx, token, exp - nowS);
 }
 
@@ -520,9 +550,7 @@ async function readParams(req: IncomingMessage): Promise<Record<string, unknown>
   return Object.fromEntries(new URLSearchParams(text));
 }
 
-/** A fresh, empty workflow table (one per provider instance). */
-export function newTxnWorkflows(): Map<string, TxnWorkflow> {
-  return new Map();
+/** A fresh workflow table (one per provider instance). */
+export function newTxnWorkflows(): TxnWorkflowStore {
+  return new TxnWorkflowStore();
 }
-
-export type { TxnWorkflow };

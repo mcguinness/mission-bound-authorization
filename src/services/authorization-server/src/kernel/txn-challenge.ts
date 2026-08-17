@@ -144,6 +144,7 @@ export async function issueTxnToken(input: {
   key: CryptoKey;
   kid: string;
   issuer: string;
+  jti: string;
 }): Promise<string> {
   const exp = Math.floor(Date.parse(input.approvedUntil) / 1000);
   return new SignJWT({
@@ -159,6 +160,7 @@ export async function issueTxnToken(input: {
     .setAudience(input.audience)
     .setIssuedAt()
     .setExpirationTime(exp)
+    .setJti(input.jti)
     .sign(input.key);
 }
 
