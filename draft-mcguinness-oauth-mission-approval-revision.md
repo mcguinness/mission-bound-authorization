@@ -449,8 +449,9 @@ Approval governance:
 : Each `revision_required` outcome is interim: no Mission is created,
   so no Approval Governance Record commits for it, under the atomic
   commitment rule of Mission Approval Governance
-  ({{I-D.draft-mcguinness-mission-approval-governance}}). The final
-  Approval Governance Record governs the approved, narrowed Mission.
+  ({{I-D.draft-mcguinness-mission-approval-governance}}). Where an
+  Approval Governance Record is recorded for the final approval, it
+  governs the final approval-governance facts.
 
 Shaping:
 : The `rejected_scope` and `rejected_authorization_details` parameters

@@ -251,6 +251,12 @@ of them is verified identically:
   hosts the same primitives at the AAuth Person Server, whose existing
   `jwks_uri` is the published key material for its signed artifacts.
 
+UMA 2.0's authorization server ({{I-D.draft-mcguinness-mission-uma}})
+realizes the issuance profile's Authorization Server for Mandate
+purposes: it publishes the same key material through the same
+Authorization Server metadata `jwks_uri`. A Mandate minted there
+verifies as the issuance profile's; UMA adds no fourth Mandate host.
+
 Its declaration against the optional capabilities, under the rule of
 Mission Substrate Requirements
 ({{I-D.draft-mcguinness-mission-substrate}}) that a substrate-neutral
@@ -266,7 +272,7 @@ consumes:
 | Credential-Bound | not consumed | A Mandate binds no holder and is freely copyable ({{non-goals}}); a deriving rail MUST independently authenticate the presenter through its own channel ({{vertical-derivation}}) |
 | Authorized Context Correlation | not consumed | Presenter correlation is the deriving rail's own independent authentication, never a joining association this document establishes ({{vertical-derivation}}) |
 | Independently Verifiable | not consumed | The Mandate is itself the verification artifact: {{verification}} defines its canonical input, `kid` key discovery ({{mission-substrate}}), algorithm agility, and validity interval (`mandate_exp`, {{claims}}); the standalone and UMA bindings already supply this capability through their own mechanisms, independent of the Mandate |
-| Portable Evidence | not consumed | The Mandate is registrable Mission evidence ({{audit-evidence}}) that a binding's Mission Substrate Statement can name as its supply mechanism; the standalone and UMA binding Statements already do ({{I-D.draft-mcguinness-mission-authority-server}}, {{I-D.draft-mcguinness-mission-uma}}); the AAuth binding's Statement does not yet |
+| Portable Evidence | not consumed | The Mandate is registrable Mission evidence ({{audit-evidence}}) that a binding's Mission Substrate Statement can name as its supply mechanism; the OAuth Mission Binding Statement, the standalone binding's Statement, and the UMA binding's Statement already do ({{I-D.draft-mcguinness-mission-substrate}}, {{I-D.draft-mcguinness-mission-authority-server}}, {{I-D.draft-mcguinness-mission-uma}}); the AAuth binding's Statement does not yet |
 {: title="Mandate capability consumption"}
 
 # Mission Mandate {#mandate}
