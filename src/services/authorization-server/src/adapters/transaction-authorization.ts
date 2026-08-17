@@ -19,6 +19,7 @@ import {
 import {
   calculateJwkThumbprint,
   createLocalJWKSet,
+  decodeJwt,
   decodeProtectedHeader,
   jwtVerify,
   type CryptoKey,
@@ -609,6 +610,12 @@ function principalOf(subjectToken: Record<string, unknown>, challenge: TxnChalle
  * Client authentication (private_key_jwt), the same idiom the token endpoint's
  * confidential clients use. The assertion's `jti` is single-use within the
  * proof window, in its own namespace so it cannot collide with a DPoP `jti`.
+ *
+ * The ASSERTION names the client: RFC 7523 fixes `iss` and `sub` to the client
+ * identifier, so the registered record is selected from that identity and
+ * verified under THAT client's keys alone. A `client_id` parameter is only ever
+ * corroboration and MUST agree; an assertion no registered client claims is
+ * refused rather than checked against some other client's record.
  */
 async function authenticateClient(
   deps: TxnAuthorizationDeps,
@@ -621,22 +628,29 @@ async function authenticateClient(
   ) {
     return undefined;
   }
-  const clientId = typeof params.client_id === "string" ? params.client_id : undefined;
-  const client = deps.clients.find(
-    (c) => typeof c.client_id === "string" && (clientId === undefined || c.client_id === clientId),
-  );
+  let asserted: string | undefined;
+  try {
+    const claims = decodeJwt(assertion);
+    asserted = typeof claims.iss === "string" && claims.iss === claims.sub ? claims.iss : undefined;
+  } catch {
+    return undefined;
+  }
+  if (!asserted) return undefined;
+  const presented = typeof params.client_id === "string" ? params.client_id : undefined;
+  if (presented !== undefined && presented !== asserted) return undefined;
+  const client = deps.clients.find((c) => c.client_id === asserted);
   const jwks = client?.jwks as { keys: JWK[] } | undefined;
   if (!client || !jwks?.keys?.length) return undefined;
   try {
     const { payload } = await jwtVerify(assertion, createLocalJWKSet(jwks as never), {
-      issuer: client.client_id as string,
-      subject: client.client_id as string,
+      issuer: asserted,
+      subject: asserted,
       audience: [deps.issuer, `${deps.issuer}/transaction`],
     });
     if (typeof payload.jti !== "string" || !deps.dpopProofReplay.check(`ca:${payload.jti}`)) {
       return undefined;
     }
-    return client.client_id as string;
+    return asserted;
   } catch {
     return undefined;
   }
