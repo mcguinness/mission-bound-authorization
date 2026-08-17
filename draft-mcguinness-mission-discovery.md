@@ -706,7 +706,7 @@ walkthrough's):
 ~~~
 
 A deployment adopting Mission Containment
-({{I-D.draft-mcguinness-oauth-mission-containment}}) MAY configure its
+({{I-D.draft-mcguinness-oauth-mission-containment}}) may configure its
 containment policy to treat a `routed_to_approval` outcome of this
 section, or a Discovery Evidence record carrying `tainted` true, as a
 protected event. Neither field alone determines the event: this

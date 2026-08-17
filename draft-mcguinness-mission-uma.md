@@ -397,10 +397,11 @@ Authority Set, Approver, Subject, `mission_id`, the integrity
 anchors (`intent_hash`, `authority_hash`, and, where the Mission
 records an authority proposal, `proposal_hash`), the subset rule, the
 only-`active` rule, and the audit horizon as defined by
-{{I-D.draft-mcguinness-oauth-mission}}. It uses resource owner,
-requesting party, client, permission ticket, claims pushing, claim
-token, claims interaction endpoint, requesting party token (RPT),
-persisted claims token (PCT), and the `need_info`,
+{{I-D.draft-mcguinness-oauth-mission}}, and Effective Authority Set as
+defined by {{I-D.draft-mcguinness-oauth-mission-status}}. It uses
+resource owner, requesting party, client, permission ticket, claims
+pushing, claim token, claims interaction endpoint, requesting party
+token (RPT), persisted claims token (PCT), and the `need_info`,
 `request_submitted`, and `request_denied` outcomes as defined by
 {{UMA-GRANT}}, and resource server, protection API, protection API
 access token (PAT), resource registration, permission endpoint, and
@@ -688,12 +689,19 @@ Where the deployment adopts Mission Containment
 ({{I-D.draft-mcguinness-oauth-mission-containment}}), the
 authorization server MUST intersect the entire resulting RPT,
 including any permission carried forward from before a contain
-transition, with the Mission's current Effective Authority Set at
-every ticket exchange and every upgrade. A mixed result omits the
-contained permissions and issues the narrower RPT; an all-contained
-result MUST NOT be issued: the authorization server refuses the
-request with `request_denied`, carrying `authority_contained` as the
-containment profile's denial reason.
+transition, with the Mission's current Effective Authority Set
+({{I-D.draft-mcguinness-oauth-mission-status}}) at every ticket
+exchange and every upgrade. A UMA permission is a resource and its
+scopes, so the intersection runs at scope grain: the authorization
+server removes from each permission every scope the Effective
+Authority Set no longer grants at that resource, and omits the
+permission only when no scope survives. A result with a surviving
+scope on any permission issues the RPT with any contained scope
+removed; a result with no surviving scope on any permission MUST NOT
+be issued: the authorization server refuses the request, the OAuth
+`error` member carrying `request_denied` accompanied by
+`authority_contained` in the `mission_denial_reason` member, the
+containment profile's registered denial carrier.
 
 ## Mission State Surfaces {#state-surfaces}
 
@@ -707,12 +715,19 @@ disabled the bound is effectively zero.
 
 Where the deployment adopts Mission Containment, introspection of an
 RPT issued or upgraded before a contain transition applies the same
-intersection: the authorization server omits from the introspection
-response's `permissions` any entry that now names contained
-capability. An omitted permission is one the resource server cannot
-rely on, the same result as an RPT that never carried it.
-`mission.state` continues to report `active`: containment narrows
-authority without changing Mission state. Introspection is this
+scope-grain intersection: for each entry of the introspection
+response's `permissions`, the authorization server removes every
+scope the Effective Authority Set no longer grants at that resource,
+and omits the entry only when no scope survives. An omitted
+permission, or a scope removed from a surviving one, is authority the
+resource server cannot rely on, the same result as an RPT that never
+carried it. `mission.state` continues to report `active`: containment
+narrows authority without changing Mission state, and per
+{{lifecycle}}'s active-Mission projection the response's top-level
+`active` member ({{RFC7662}}) MUST remain `true` while the RPT is
+otherwise active, whether or not any permission survives
+intersection: an empty `permissions` array reports narrowed authority,
+not a token that has ceased to be valid. Introspection is this
 binding's continued-reliance surface for containment, and closes the
 residual a self-contained RPT without a state check cannot
 ({{I-D.draft-mcguinness-oauth-mission-containment}}).
@@ -1049,12 +1064,18 @@ A **Mission-Bound UMA Authorization Server**:
 - where it adopts Mission Containment, intersects the entire
   resulting RPT, including permissions carried forward from before a
   contain transition, with the Effective Authority Set at every
-  issuance and upgrade, omits contained permissions from a mixed
-  result, and refuses an all-contained result with `request_denied`
-  carrying `authority_contained`
+  issuance and upgrade, at scope grain: removes from each permission
+  every scope the set no longer grants and omits the permission only
+  when no scope survives; and refuses a result with no surviving
+  scope on any permission, the OAuth `error` member carrying
+  `request_denied` accompanied by `authority_contained` in the
+  `mission_denial_reason` member
   ({{I-D.draft-mcguinness-oauth-mission-containment}}, {{gating}});
-- applies the same filtering to per-use introspection of an RPT
-  issued or upgraded before a contain transition ({{state-surfaces}});
+- applies the same scope-grain filtering to per-use introspection of
+  an RPT issued or upgraded before a contain transition, and reports
+  the introspection response's top-level `active` member `true`
+  while the RPT is otherwise active regardless of whether any
+  permission survives ({{state-surfaces}});
 - associates PCTs with Missions as continuity, never authority
   ({{pct}});
 - serves Mission state with a declared staleness bound per
