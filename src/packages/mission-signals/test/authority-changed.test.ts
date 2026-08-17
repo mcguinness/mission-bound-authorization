@@ -24,6 +24,18 @@
  * - the receiver independently rematerializes on a `containment_version`
  *   advance past the value it last observed, and does NOT on a stale/equal
  *   `containment_version`.
+ *
+ * #572 (review of #562) added two corrections, also proven here:
+ * - `authority_changed` is true only when a contain commit's EFFECTIVE set
+ *   actually narrowed, never merely because a fresh `event_id` reached the
+ *   metadata-only commit path (a removal already fully represented in the
+ *   contained set still bumps `version`/`containment_version` but must leave
+ *   `authority_changed` absent);
+ * - the receiver's `needsRematerialization` latch is no longer permanent:
+ *   `markRematerialized(missionId, observedBaseline)` clears it when the
+ *   baseline covers the tracked narrowing, leaves it latched on a stale
+ *   baseline, and a later narrowing re-raises it even after a successful
+ *   acknowledgement.
  */
 
 import {
@@ -175,6 +187,68 @@ describe("authority_changed — builder emission (@spec signals#lifecycle-event)
       authority_changed: true,
       containment_version: 1,
     });
+  });
+
+  it("omits authority_changed on a FRESH contain event whose removal is already fully represented (no real narrowing), even though version/containment_version still advance", async () => {
+    // #572 regression: contain()'s idempotency is keyed by event_id, not by
+    // effect. A DIFFERENT event whose remove[] the contained set already
+    // fully covers still reaches the metadata-only commit (a real version
+    // and containment_version bump), but the EFFECTIVE set is unchanged, so
+    // the emitted signal must not claim a narrowing that did not happen.
+    const statusKeys = await generateKeyPair("ES256", { extractable: true });
+    const commits: LifecycleCommit[] = [];
+    const kernel = new MissionKernel({
+      issuer: ISS,
+      policy: POLICY as never,
+      statusKey: statusKeys.privateKey,
+      statusKid: "as-status",
+      now: () => NOW,
+      onLifecycleCommit: (c) => commits.push(c),
+    });
+
+    const mission = kernel.approve({
+      intent: intent(),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-ac-4",
+    });
+    kernel.contain(mission.id, {
+      event: {
+        type: "anomaly.detected",
+        source: "svc:soc",
+        observed_at: NOW.toISOString(),
+        event_id: "evt-ac-4a",
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:payment.execute"] }],
+    });
+    expect(commits[1]?.authority_changed).toBe(true); // the genuine narrowing
+
+    // A fresh event_id (NOT a repeat of evt-ac-4a) whose removal the
+    // contained set already fully represents.
+    kernel.contain(mission.id, {
+      event: {
+        type: "anomaly.detected",
+        source: "svc:soc",
+        observed_at: NOW.toISOString(),
+        event_id: "evt-ac-4b",
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:payment.execute"] }],
+    });
+    const dupCommit = commits[2] as LifecycleCommit;
+    // The commit is real, not a no-op: idempotency is by event_id, and
+    // evt-ac-4b is a fresh id.
+    expect(dupCommit.version).toBe(3);
+    expect(dupCommit.containment_version).toBe(2);
+    expect(dupCommit.authority_changed).toBeUndefined();
+
+    const set = await signLifecycleEvent(dupCommit, {
+      audience: CONSUMER_AUD,
+      key: statusKeys.privateKey,
+      kid: "as-status",
+    });
+    expect(eventOf(set)).toMatchObject({ containment_version: 2 });
+    expect(eventOf(set).authority_changed).toBeUndefined();
   });
 
   it("relays (never recomputes) a hand-built commit shaped like a future entry-discharge commit", async () => {
@@ -578,6 +652,217 @@ describe("authority_changed / containment_version — receiver rematerialization
 
     expect(receiver.viewState(mission.id)).toMatchObject({ state: "active", version: 2 });
     expect(receiver.needsRematerialization(mission.id)).toBe(true);
+  });
+
+  describe("markRematerialized(): version-bound acknowledgement (#572)", () => {
+    it("clears the latch when the acknowledged baseline covers the narrowing", async () => {
+      const { statusKeys, receiver } = await wired();
+      const activating: LifecycleCommit = {
+        id: "msn_ack_clear",
+        issuer: ISS,
+        state: "active",
+        version: 1,
+        committed_at: NOW.toISOString(),
+        expires_at: EXPIRES_AT,
+      };
+      await receiver.verifyAndApply(
+        await signLifecycleEvent(activating, {
+          audience: CONSUMER_AUD,
+          key: statusKeys.privateKey,
+          kid: "as-status",
+        }),
+      );
+      const narrowing: LifecycleCommit = {
+        id: "msn_ack_clear",
+        issuer: ISS,
+        state: "active",
+        prior_state: "active",
+        version: 2,
+        committed_at: NOW.toISOString(),
+        expires_at: EXPIRES_AT,
+        authority_changed: true,
+      };
+      await receiver.verifyAndApply(
+        await signLifecycleEvent(narrowing, {
+          audience: CONSUMER_AUD,
+          key: statusKeys.privateKey,
+          kid: "as-status",
+        }),
+      );
+      expect(receiver.needsRematerialization("msn_ack_clear")).toBe(true);
+
+      // The consumer's Status refresh returned version 2 (at or past the
+      // narrowing): the acknowledgement clears the latch.
+      expect(receiver.markRematerialized("msn_ack_clear", { version: 2 })).toBe(true);
+      expect(receiver.needsRematerialization("msn_ack_clear")).toBe(false);
+
+      // Acknowledging again with nothing outstanding is a no-op success.
+      expect(receiver.markRematerialized("msn_ack_clear", { version: 2 })).toBe(true);
+    });
+
+    it("does not clear the latch when the acknowledged baseline is stale (older than the narrowing)", async () => {
+      const { statusKeys, receiver } = await wired();
+      const activating: LifecycleCommit = {
+        id: "msn_ack_stale",
+        issuer: ISS,
+        state: "active",
+        version: 1,
+        committed_at: NOW.toISOString(),
+        expires_at: EXPIRES_AT,
+      };
+      await receiver.verifyAndApply(
+        await signLifecycleEvent(activating, {
+          audience: CONSUMER_AUD,
+          key: statusKeys.privateKey,
+          kid: "as-status",
+        }),
+      );
+      const narrowing: LifecycleCommit = {
+        id: "msn_ack_stale",
+        issuer: ISS,
+        state: "active",
+        prior_state: "active",
+        version: 2,
+        committed_at: NOW.toISOString(),
+        expires_at: EXPIRES_AT,
+        authority_changed: true,
+      };
+      await receiver.verifyAndApply(
+        await signLifecycleEvent(narrowing, {
+          audience: CONSUMER_AUD,
+          key: statusKeys.privateKey,
+          kid: "as-status",
+        }),
+      );
+      expect(receiver.needsRematerialization("msn_ack_stale")).toBe(true);
+
+      // A baseline from BEFORE the narrowing (version 1): stale, must not clear.
+      expect(receiver.markRematerialized("msn_ack_stale", { version: 1 })).toBe(false);
+      expect(receiver.needsRematerialization("msn_ack_stale")).toBe(true);
+    });
+
+    it("a narrowing that arrives after a successful acknowledgement re-raises the latch", async () => {
+      const { statusKeys, receiver } = await wired();
+      const activating: LifecycleCommit = {
+        id: "msn_ack_reraise",
+        issuer: ISS,
+        state: "active",
+        version: 1,
+        committed_at: NOW.toISOString(),
+        expires_at: EXPIRES_AT,
+      };
+      await receiver.verifyAndApply(
+        await signLifecycleEvent(activating, {
+          audience: CONSUMER_AUD,
+          key: statusKeys.privateKey,
+          kid: "as-status",
+        }),
+      );
+      const narrowing1: LifecycleCommit = {
+        id: "msn_ack_reraise",
+        issuer: ISS,
+        state: "active",
+        prior_state: "active",
+        version: 2,
+        committed_at: NOW.toISOString(),
+        expires_at: EXPIRES_AT,
+        authority_changed: true,
+      };
+      await receiver.verifyAndApply(
+        await signLifecycleEvent(narrowing1, {
+          audience: CONSUMER_AUD,
+          key: statusKeys.privateKey,
+          kid: "as-status",
+        }),
+      );
+      expect(receiver.markRematerialized("msn_ack_reraise", { version: 2 })).toBe(true);
+      expect(receiver.needsRematerialization("msn_ack_reraise")).toBe(false);
+
+      // A LATER narrowing (version 3) after the acknowledged baseline.
+      const narrowing2: LifecycleCommit = {
+        id: "msn_ack_reraise",
+        issuer: ISS,
+        state: "active",
+        prior_state: "active",
+        version: 3,
+        committed_at: NOW.toISOString(),
+        expires_at: EXPIRES_AT,
+        authority_changed: true,
+      };
+      await receiver.verifyAndApply(
+        await signLifecycleEvent(narrowing2, {
+          audience: CONSUMER_AUD,
+          key: statusKeys.privateKey,
+          kid: "as-status",
+        }),
+      );
+      expect(receiver.needsRematerialization("msn_ack_reraise")).toBe(true);
+
+      // The OLD acknowledged baseline (version 2) no longer covers the new marker.
+      expect(receiver.markRematerialized("msn_ack_reraise", { version: 2 })).toBe(false);
+      expect(receiver.needsRematerialization("msn_ack_reraise")).toBe(true);
+      // Only a baseline covering the NEW narrowing clears it.
+      expect(receiver.markRematerialized("msn_ack_reraise", { version: 3 })).toBe(true);
+      expect(receiver.needsRematerialization("msn_ack_reraise")).toBe(false);
+    });
+
+    it("a baseline omitting containment_version does not clear a containment-driven latch (fail-closed)", async () => {
+      const { statusKeys, receiver } = await wired();
+      const activating: LifecycleCommit = {
+        id: "msn_ack_cv",
+        issuer: ISS,
+        state: "active",
+        version: 1,
+        committed_at: NOW.toISOString(),
+        expires_at: EXPIRES_AT,
+        containment_version: 1,
+      };
+      await receiver.verifyAndApply(
+        await signLifecycleEvent(activating, {
+          audience: CONSUMER_AUD,
+          key: statusKeys.privateKey,
+          kid: "as-status",
+        }),
+      );
+      // A pure containment_version advance (authority_changed absent from
+      // this event): the OTHER independent rematerialize trigger.
+      const advanced: LifecycleCommit = {
+        id: "msn_ack_cv",
+        issuer: ISS,
+        state: "active",
+        prior_state: "active",
+        version: 2,
+        committed_at: NOW.toISOString(),
+        expires_at: EXPIRES_AT,
+        containment_version: 2,
+      };
+      await receiver.verifyAndApply(
+        await signLifecycleEvent(advanced, {
+          audience: CONSUMER_AUD,
+          key: statusKeys.privateKey,
+          kid: "as-status",
+        }),
+      );
+      expect(receiver.needsRematerialization("msn_ack_cv")).toBe(true);
+
+      // version covers it, but containment_version is MISSING from the
+      // baseline: fails closed, does not clear.
+      expect(receiver.markRematerialized("msn_ack_cv", { version: 2 })).toBe(false);
+      expect(receiver.needsRematerialization("msn_ack_cv")).toBe(true);
+
+      // version covers it, but containment_version is BEHIND the marker: also
+      // does not clear.
+      expect(
+        receiver.markRematerialized("msn_ack_cv", { version: 2, containment_version: 1 }),
+      ).toBe(false);
+      expect(receiver.needsRematerialization("msn_ack_cv")).toBe(true);
+
+      // Both fields cover the marker: clears.
+      expect(
+        receiver.markRematerialized("msn_ack_cv", { version: 2, containment_version: 2 }),
+      ).toBe(true);
+      expect(receiver.needsRematerialization("msn_ack_cv")).toBe(false);
+    });
   });
 });
 

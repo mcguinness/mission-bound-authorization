@@ -684,6 +684,15 @@ export class MissionKernel {
    * persisted row with `prior_state` EQUAL to `state` (the fourth commit
    * funnel), so the Status List and Mission Signals propagate the narrowing
    * with no new channels.
+   *
+   * @spec signals#lifecycle-event — the commit's `authority_changed` is NOT
+   * implied by reaching this metadata-only path: idempotency above is keyed
+   * by `event.event_id`, not by effect, so a FRESH event whose `remove` is
+   * already fully represented in the contained set still commits here
+   * (`version`/`containment_version` still advance) with the effective set
+   * UNCHANGED. `authority_changed` is computed from the effective set itself
+   * (strict narrowing, not merely a new event row) and passed explicitly to
+   * `emitCommit`.
    */
   contain(
     id: string,
@@ -783,6 +792,13 @@ export class MissionKernel {
     if (!isSubsetSet(newEffective, priorEffective)) {
       throw new Error(`containment for ${id} would widen the effective set (monotonicity violated)`);
     }
+    // @spec signals#lifecycle-event — authority_changed is true only when the
+    // EFFECTIVE set actually narrowed on THIS commit. The assertion above
+    // already proves newEffective <= priorEffective (monotonic); it equals
+    // priorEffective (no real narrowing, e.g. a fresh event_id re-removing an
+    // action another event already removed) exactly when priorEffective is
+    // ALSO <= newEffective, i.e. the mutual-subset (equality) case.
+    const authorityChanged = !isSubsetSet(priorEffective, newEffective);
 
     withTransaction(this.db, () => {
       this.db
@@ -790,10 +806,11 @@ export class MissionKernel {
         .run(JSON.stringify(next), record.id);
     });
     // Commit from the persisted row; prior == current state marks the commit
-    // metadata-only (state unchanged, version incremented).
+    // metadata-only (state unchanged, version incremented). authorityChanged
+    // is passed explicitly (never inferred from prior === state).
     const fresh = this.get(record.id);
     if (!fresh) throw new Error(`unknown mission: ${id}`);
-    this.emitCommit(fresh, fresh.state);
+    this.emitCommit(fresh, fresh.state, undefined, authorityChanged);
     // @spec child-delegation#child-state — containment propagates entry-wise to
     // existing children justified by the now-contained parent entry, so a child
     // cannot keep deriving contained authority while the parent stays `active`.
@@ -1143,28 +1160,27 @@ export class MissionKernel {
    * (metadata-only: `prior_state` equals `state`) still surfaces the
    * narrowing to a subscriber comparing only `state`.
    *
-   * @spec signals#lifecycle-event — also computes `authority_changed`: true
-   * exactly when `prior` is a metadata-only marker (`prior` supplied AND
-   * equal to the persisted `state`), absent otherwise. `insertRecord`'s
-   * activating commit calls this with no `prior` at all (not metadata-only:
-   * there is no prior state), and every state-changing funnel (`setState`,
-   * `supersedeOnRedemption`) passes the OLD state as `prior`, which by
-   * construction differs from the persisted (new) `state`; only `contain`
-   * passes the SAME (new) state as `prior`, and only after a genuine
-   * narrowing (its idempotent replay never reaches here). CONSTRAINT for any
-   * future metadata-only funnel (entry discharge is the named case,
-   * {{I-D.draft-mcguinness-oauth-mission-status}}): calling `emitCommit` with
-   * `prior === record.state` asserts a genuine narrowing occurred on THIS
-   * commit. This function does not and cannot verify that on the caller's
-   * behalf; a funnel that reaches this metadata-only path without narrowing
-   * would incorrectly set `authority_changed` true. A funnel that cannot make
-   * that guarantee MUST compute and pass its own value instead of relying on
-   * this inference.
+   * @spec signals#lifecycle-event — `authorityChanged` is an EXPLICIT
+   * argument, never inferred: the caller alone knows whether THIS commit
+   * actually narrowed effective authority, and must compute that (typically
+   * by comparing the effective set before/after) before calling. A
+   * metadata-only commit (`prior === record.state`) does NOT by itself imply
+   * a narrowing (`contain()`'s fresh-event_id/already-represented-removal
+   * case is metadata-only yet narrows nothing). Defaults to `false`, so every
+   * funnel that never narrows (`insertRecord`'s activating commit, `setState`,
+   * `supersedeOnRedemption`) simply omits the argument. `contain` is today
+   * the only caller that ever passes `true`, and only after proving the
+   * effective set strictly narrowed. Rides the wire absent-means-false,
+   * mirroring `containment_version`'s absent-means-none convention.
    */
-  private emitCommit(record: MissionRecord, prior?: MissionState, successor?: string): void {
+  private emitCommit(
+    record: MissionRecord,
+    prior?: MissionState,
+    successor?: string,
+    authorityChanged = false,
+  ): void {
     const onCommit = this.opts.onLifecycleCommit;
     if (!onCommit) return;
-    const authorityChanged = prior !== undefined && prior === record.state;
     onCommit({
       id: record.id,
       issuer: record.issuer,

@@ -1325,7 +1325,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a consumer that receives an in-order mission.lifecycle-change event with authority_changed true rematerializes its effective authority view via Mission Status before further consequential reliance, even with state unchanged and no version gap",
-    "local": "MissionSignalReceiver.verifyAndApply detects the rematerialization need (authority_changed true, or a containment_version advance past a previously observed value, {{I-D.draft-mcguinness-oauth-mission-containment}}) and latches it via ApplyResult.rematerialize / needsRematerialization(); it does not itself call the Mission Status operation, mirroring the same detect-only scope already established in this module for the version-gap rule (no consumer in this repo wires either detected condition to an actual refetch)"
+    "local": "MissionSignalReceiver.verifyAndApply detects the rematerialization need (authority_changed true, or a containment_version advance past a previously observed value, {{I-D.draft-mcguinness-oauth-mission-containment}}) and latches it via ApplyResult.rematerialize / needsRematerialization(); it does not itself call the Mission Status operation, mirroring the same detect-only scope already established in this module for the version-gap rule (no consumer in this repo wires either detected condition to an actual refetch). markRematerialized(missionId, observedBaseline) (#572) lets a consumer that HAS performed the refetch clear the latch, version-gated against the tracked narrowing's own version/containment_version so a stale acknowledgement cannot clear it and a later narrowing re-raises it; this is bookkeeping for the detect-only latch, not the refetch itself"
    },
    "level": "cross-component",
    "coverage": "partial",
@@ -1347,9 +1347,21 @@
      "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > latches: needsRematerialization stays true across a later event that does not itself require it",
      "level": "unit",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/authority-changed.test.ts",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > clears the latch when the acknowledged baseline covers the narrowing",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/authority-changed.test.ts",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > a narrowing that arrives after a successful acknowledgement re-raises the latch",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "#562: implemented and tested is the DETECTION half only (the receiver flags the need). Not covered: the actual Mission Status refetch (no consumer in this repo calls it off this signal). See signals.discharge.producer-authority-changed-emit and signals.discharge.producer-gating-undeclared-stream for the producer-side rows this issue left todo (no discharge funnel or mission_capabilities_supported gate exists in src/)."
+   "notes": "#562: implemented and tested is the DETECTION half only (the receiver flags the need). Not covered: the actual Mission Status refetch (no consumer in this repo calls it off this signal). See signals.discharge.producer-authority-changed-emit and signals.discharge.producer-gating-undeclared-stream for the producer-side rows this issue left todo (no discharge funnel or mission_capabilities_supported gate exists in src/). #572 (review of #562) fixed two defects and added markRematerialized(missionId, observedBaseline) so the latch this row's tests exercise is no longer permanent; also fixed contain()'s authority_changed to key on an actual EFFECTIVE-set narrowing rather than merely reaching the metadata-only commit path (see containment.test.ts and this file's builder-emission describe block). Coverage stays 'partial': the acknowledgement is still consumer-invoked bookkeeping over the detect-only latch, and the actual Mission Status refetch this row's normative text requires 'before further consequential reliance' remains unwired in this repo."
   },
   {
    "id": "signals.discharge.producer-authority-changed-emit",

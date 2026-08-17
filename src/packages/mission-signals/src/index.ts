@@ -128,6 +128,23 @@ export interface CachedState {
   containment_version?: number;
 }
 
+/**
+ * @spec signals#consumer-behavior — the version state a consumer's Mission
+ * Status refresh returned for a Mission, as {@link
+ * MissionSignalReceiver.markRematerialized}'s `observedBaseline` argument.
+ * Mirrors the two fields {@link CachedState} tracks for the rematerialization
+ * rule: `containment_version` is absent when the Mission has never been
+ * contained, the same absent-means-none convention as the wire event and
+ * `CachedState` itself.
+ */
+export interface RematerializationBaseline {
+  /** The Mission `version` this Status refresh observed. */
+  version: number;
+  /** The Mission `containment_version` this Status refresh observed, when
+   *  the Mission has ever been contained (absent otherwise). */
+  containment_version?: number;
+}
+
 /** The outcome of applying a received SET (asserted on, so each rule is proven). */
 export type ApplyResult =
   | { status: "applied"; state: string; version: number; rematerialize: boolean }
@@ -166,7 +183,9 @@ export interface ReceiverOptions {
  * `authority_changed` true, or on a `containment_version` advance past the
  * value this receiver last observed for the Mission
  * (@spec signals#consumer-behavior). Detection only, mirroring the gap
- * rule: the refetch itself is the consumer's job.
+ * rule: the refetch itself is the consumer's job; {@link
+ * MissionSignalReceiver.markRematerialized} is how the consumer, having
+ * performed it, clears the latch.
  */
 export class MissionSignalReceiver {
   /** @spec status/harness — the ONE status shape a consumer relies on, keyed by Mission. */
@@ -184,15 +203,19 @@ export class MissionSignalReceiver {
    * an applied or gapped event carrying `authority_changed` true, or by a
    * containment-aware `containment_version` advance past the value this
    * receiver last observed for the Mission (@spec containment#propagation).
-   * UNLIKE `gapped`, this LATCHES: it is never cleared by a later event that
-   * does not itself require rematerialization, because such an event proves
-   * nothing about whether the consumer actually rematerialized after the
-   * EARLIER narrowing (a gap's continuity is re-established by the next
-   * in-order event; a stale authority view is not). There is no public
-   * "acknowledge" method; a consumer that has rematerialized is expected to
-   * track that on its own side, outside this receiver.
+   * The map value is the {@link RematerializationBaseline} of the LATEST
+   * event that (re-)raised the need: the version state a consumer's Status
+   * refresh must reach or exceed before {@link markRematerialized} will
+   * clear it. UNLIKE `gapped`, this does not auto-clear on a later event
+   * that does not itself require rematerialization, because such an event
+   * proves nothing about whether the consumer actually rematerialized after
+   * the EARLIER narrowing (a gap's continuity is re-established by the next
+   * in-order event; a stale authority view is not). It clears only through
+   * {@link markRematerialized}, and only when the acknowledged baseline
+   * covers the tracked marker; a narrowing that arrives after a successful
+   * acknowledgement moves the marker forward and re-raises the latch.
    */
-  private readonly rematerializeNeeded = new Set<string>();
+  private readonly rematerializeNeeded = new Map<string, RematerializationBaseline>();
   private readonly jwkSet: ReturnType<typeof createLocalJWKSet>;
   /** This receiver's registered audience (the emitter delivers by audience). */
   readonly audience: string;
@@ -263,14 +286,17 @@ export class MissionSignalReceiver {
     // compare against, this receiver cannot assert an advance (a first-ever
     // event carrying a `containment_version` is not necessarily a narrowing
     // relative to whatever baseline the consumer holds from elsewhere, e.g.
-    // a Mission Status bootstrap this pure event-core module does not model)
-    // — this KERNEL's every contain commit also sets `authority_changed` true
-    // on that same event regardless (@spec MissionKernel#emitCommit), so this
-    // omits no case THIS issuer implementation produces; that co-emission is
-    // a local invariant of this kernel, not a wire guarantee this profile
-    // makes about every issuer, so a containment-aware consumer that wants
-    // the independent signal still MUST track `containment_version` itself
-    // rather than assume the discriminator always accompanies it. A
+    // a Mission Status bootstrap this pure event-core module does not model).
+    // This independent path is NOT redundant with `authority_changed`: this
+    // KERNEL's contain() only sets `authority_changed` true when the
+    // EFFECTIVE set actually narrowed (@spec MissionKernel#emitCommit), but
+    // `containment_version` still advances on a contain commit that narrows
+    // nothing (a fresh event whose removal the contained set already
+    // represents), so `containmentAdvanced` below deliberately fires on that
+    // case too (any new containment activity, not only a real narrowing,
+    // is conservative grounds for a refresh). A containment-aware consumer
+    // that wants that broader coverage MUST track `containment_version`
+    // itself rather than assume the discriminator always accompanies it. A
     // stale/duplicate event never reaches here, so "ignore stale/equal
     // `containment_version`" also falls out of the anti-revive check above
     // and the strict `>` comparison below.
@@ -294,11 +320,19 @@ export class MissionSignalReceiver {
         ? { containment_version: nextContainmentVersion }
         : {}),
     });
-    // Latch, never auto-clear: an event that does not itself require
-    // rematerialization says nothing about whether the consumer already
-    // rematerialized after an EARLIER narrowing (see the field doc comment).
+    // Latch: an event that does not itself require rematerialization says
+    // nothing about whether the consumer already rematerialized after an
+    // EARLIER narrowing (see the field doc comment), so it never clears the
+    // marker on its own. An event that DOES require it (re-)raises the
+    // marker to THIS event's own version/containment_version: the new
+    // high-water mark a markRematerialized baseline must cover to clear it.
     if (rematerialize) {
-      this.rematerializeNeeded.add(missionId);
+      this.rematerializeNeeded.set(missionId, {
+        version,
+        ...(nextContainmentVersion !== undefined
+          ? { containment_version: nextContainmentVersion }
+          : {}),
+      });
     }
     if (isGap) {
       this.gapped.add(missionId);
@@ -342,10 +376,47 @@ export class MissionSignalReceiver {
    * further consequential reliance (set on `authority_changed` true, or a
    * `containment_version` advance). LATCHED: once true, stays true across
    * later events that do not themselves require it (no auto-clear, unlike
-   * `hasGap`); this receiver exposes no "acknowledge" call.
+   * `hasGap`); clears only via {@link markRematerialized}.
    */
   needsRematerialization(missionId: string): boolean {
     return this.rematerializeNeeded.has(missionId);
+  }
+
+  /**
+   * @spec signals#consumer-behavior — acknowledge that the consumer has
+   * rematerialized a Mission's effective authority view through Mission
+   * Status, clearing {@link needsRematerialization}'s latch.
+   * `observedBaseline` is the version state (this receiver's own {@link
+   * RematerializationBaseline} shape) the consumer's Status refresh just
+   * returned for the Mission.
+   *
+   * The latch clears ONLY when `observedBaseline` covers the marker of the
+   * latest narrowing this receiver has observed for the Mission (the
+   * `version` that narrowing advanced to, and its `containment_version` when
+   * it carried one): a baseline whose `version` falls short of that marker,
+   * or whose `containment_version` is absent or short of the marker's when
+   * the marker has one, is STALE relative to the outstanding narrowing and
+   * does NOT clear it. A narrowing event that arrives after a successful
+   * acknowledgement moves the marker forward again and re-raises the latch,
+   * exactly like any other first-time narrowing.
+   *
+   * Returns whether the latch is clear immediately after this call: `true`
+   * when nothing was outstanding or the baseline covered it, `false` when a
+   * stale baseline left it latched.
+   */
+  markRematerialized(missionId: string, observedBaseline: RematerializationBaseline): boolean {
+    const marker = this.rematerializeNeeded.get(missionId);
+    if (!marker) return true; // nothing outstanding
+    const coversVersion = observedBaseline.version >= marker.version;
+    const coversContainment =
+      marker.containment_version === undefined ||
+      (observedBaseline.containment_version !== undefined &&
+        observedBaseline.containment_version >= marker.containment_version);
+    if (coversVersion && coversContainment) {
+      this.rematerializeNeeded.delete(missionId);
+      return true;
+    }
+    return false;
   }
 }
 
