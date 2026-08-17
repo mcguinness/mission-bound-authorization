@@ -18,7 +18,7 @@ import {
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, type SeededTrustedSource, TOPOLOGY } from "@mission/demo-data";
-import { Fga, type MissionView } from "@mission/pdp";
+import { deriveContextualTuples, Fga, type MissionView, relationForAction } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
   Connectors,
@@ -209,6 +209,45 @@ export async function composeStack(opts: {
         // are INDEPENDENT of the challenge's admission window.
         workflowLifetimeSeconds: txnTopo.workflowLifetimeSeconds,
         maxTokenLifetimeSeconds: txnTopo.maxTokenLifetimeSeconds,
+        maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
+        // @spec txn-authorization#challenge-redemption step 7 — the deployment's
+        // entitlement/policy decision, run FRESH at completion against the SAME
+        // live Mission state and the SAME OpenFGA store the resource's PEP
+        // decides on. A completed approval is context here, never a bypass: this
+        // denies on its own when the Mission is no longer active, when
+        // containment has narrowed the entry away, or when the authority join no
+        // longer holds.
+        freshDecision: async (input) => {
+          const view = viewFor(input.missionId);
+          if (!view || view.state !== "active") return { decision: "deny", reason: "mission_inactive" };
+          const entry = view.authority_set.find(
+            (e) => e.resource === input.resource && e.actions.includes(input.action),
+          );
+          if (!entry) return { decision: "deny", reason: "out_of_authority" };
+          const contained = view.containment?.contained.some(
+            (c) => c.resource === input.resource && (c.actions === undefined || c.actions.includes(input.action)),
+          );
+          if (contained) return { decision: "deny", reason: "authority_contained" };
+          const mapping = relationForAction(input.action);
+          if (!mapping) return { decision: "deny", reason: "unknown_action" };
+          // The authority join the PDP runs, over the vendor scope this entry
+          // still carries: mission-scoped tuples are supplied per check, never
+          // stored (D26).
+          const vendor = entry.constraints?.vendors?.[0];
+          if (!vendor) return { decision: "deny", reason: "no_vendor_scope" };
+          const tuples = deriveContextualTuples({
+            view,
+            entry,
+            target: { objectType: "vendor", objectId: vendor, vendorId: vendor },
+            relation: mapping.relation,
+          });
+          if (tuples.length === 0) return { decision: "deny", reason: "constraint_excluded" };
+          const allowed = await fga.checkWithContext(
+            { user: `mission:${view.id}`, relation: mapping.relation, object: `vendor:${vendor}` },
+            tuples,
+          );
+          return allowed ? { decision: "permit" } : { decision: "deny", reason: "entitlement_denied" };
+        },
       },
     });
     const asServer = as.provider.listen(asPort);

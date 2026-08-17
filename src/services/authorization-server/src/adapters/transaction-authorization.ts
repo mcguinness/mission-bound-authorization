@@ -84,6 +84,36 @@ export type DestinationPolicy = (input: {
   authorizationDetails: AuthorityEntry[];
 }) => { decision: "permit" | "deny"; reason?: string };
 
+/**
+ * @spec txn-authorization#challenge-redemption step 7 — the inputs the fresh
+ * authorization decision runs on. The verified approval is CONTEXT here, never
+ * a bearer bypass.
+ */
+export interface FreshDecisionInput {
+  txn: string;
+  missionId: string;
+  /** The Challenge-Issuing Resource (the challenge `iss`). */
+  resource: string;
+  action: string;
+  /** The operation's `authorization_details` `type` as pinned at admission. */
+  operationType: string;
+  clientId: string;
+  subject: string;
+  parameterDigest: string;
+  authorizationDetails: AuthorityEntry[];
+  cnfJkt: string;
+  approval: { id: string; approved_at: string; approved_until: string; parameter_digest: string };
+}
+
+/**
+ * The deployment's entitlement and resource-policy decision, run FRESH at
+ * redemption completion. Required: without it there is no step 7, and
+ * completing step 6 alone must never issue.
+ */
+export type FreshDecision = (
+  input: FreshDecisionInput,
+) => Promise<{ decision: "permit" | "deny"; reason?: string }>;
+
 export interface TxnAuthorizationOptions {
   /** The accepted Challenge-Issuing Resources and their published keys. */
   challengeIssuers: ChallengeIssuers;
@@ -98,6 +128,13 @@ export interface TxnAuthorizationOptions {
   workflowLifetimeSeconds: number;
   /** Deployment maximum for an issued transaction token (seconds). */
   maxTokenLifetimeSeconds: number;
+  /**
+   * @spec txn-authorization#challenge-redemption step 7 — the fresh
+   * entitlement/policy decision at completion.
+   */
+  freshDecision: FreshDecision;
+  /** Maximum age of an approval at the moment it is relied on (seconds). */
+  maxApprovalAgeSeconds?: number;
   /** Poll cadence advertised to the client (seconds). */
   pollIntervalSeconds?: number;
   destinationPolicy?: DestinationPolicy;
@@ -393,21 +430,37 @@ async function poll(
     fail(ctx, 400, "authorization_pending");
     return;
   }
+  // The approval is only ever SATISFIED by approval state. A stronger
+  // authentication context on `subject_token` (RFC 9470 step-up) proves who is
+  // present; it never stands in for this, and nothing below reads it.
   const approval = task.approval;
   if (approval.parameter_digest !== wf.challenge.parameter_digest) {
     fail(ctx, 400, "access_denied", "approval is not bound to the challenged operation");
     return;
   }
   const approvedUntilS = Math.floor(Date.parse(approval.approved_until) / 1000);
+  const approvedAtS = Math.floor(Date.parse(approval.approved_at) / 1000);
+  const maxAgeS = txn.maxApprovalAgeSeconds ?? 300;
   if (!Number.isFinite(approvedUntilS) || approvedUntilS <= nowS) {
     fail(ctx, 400, "access_denied", "approval is no longer current");
     return;
   }
+  if (!Number.isFinite(approvedAtS) || nowS - approvedAtS > maxAgeS) {
+    fail(ctx, 400, "access_denied", "approval is older than the maximum age");
+    return;
+  }
 
-  // Completion of step 6 alone MUST NOT issue: the Mission's current state is
-  // re-gated here, at the moment of issuance.
+  // 7. The FRESH authorization decision. Completion of step 6 alone MUST NOT
+  //    issue and MUST NOT bypass this: every input below is re-read NOW, not
+  //    replayed from admission.
+  if (wf.subjectTokenExpS <= nowS) {
+    fail(ctx, 400, "access_denied", "subject_token is no longer valid");
+    return;
+  }
   let gated;
   try {
+    // The lineage-grade active gate, not a bare derivation gate: a non-active
+    // ancestor refuses here too.
     gated = deps.kernel.gateActive(wf.missionId);
   } catch (e) {
     if (e instanceof GateError) {
@@ -415,6 +468,30 @@ async function poll(
       return;
     }
     throw e;
+  }
+  // Containment may have narrowed the Mission since admission, so the subset
+  // rule is recomputed against the CURRENT effective set, never the pinned one.
+  const permitted = wf.challenge.authorization_details as unknown as AuthorityEntry[];
+  if (!isSubsetSet(permitted, deps.kernel.effectiveAuthoritySet(gated))) {
+    fail(ctx, 400, "access_denied", "challenge authority is no longer within the effective Authority Set");
+    return;
+  }
+  const fresh = await txn.freshDecision({
+    txn: wf.challenge.txn,
+    missionId: wf.missionId,
+    resource: wf.challenge.iss,
+    action: wf.action,
+    operationType: wf.operationType,
+    clientId: wf.clientId,
+    subject: wf.subject,
+    parameterDigest: wf.challenge.parameter_digest,
+    authorizationDetails: permitted,
+    cnfJkt: wf.challenge.cnf.jkt,
+    approval,
+  });
+  if (fresh.decision !== "permit") {
+    fail(ctx, 400, "access_denied", fresh.reason ?? "the fresh authorization decision denied the operation");
+    return;
   }
 
   // @spec txn-authorization#transaction-token — the earliest of approval

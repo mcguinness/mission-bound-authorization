@@ -54,6 +54,10 @@ let rsTxnKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
 let baseToken = "";
 let missionId = "";
 let missionClaim: Record<string, unknown> = {};
+/** `txn` values the deployment's fresh decision refuses. */
+const policyDeniesTxns = new Set<string>();
+/** Every `txn` the fresh decision was asked about (it must run before issuance). */
+const freshDecisionCalls: string[] = [];
 
 /**
  * Stand in for the Challenge-Issuing Resource: sign a challenge carrying every
@@ -311,6 +315,16 @@ beforeAll(async () => {
       ars,
       workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
       maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
+      // @spec txn-authorization#challenge-redemption step 7 — a deployment
+      // entitlement/policy decision, run fresh at completion. The suite drives
+      // it through `policyDeniesTxns` to prove an approved workflow still
+      // refuses when a current input no longer holds.
+      freshDecision: async (input) => {
+        freshDecisionCalls.push(input.txn);
+        return policyDeniesTxns.has(input.txn)
+          ? { decision: "deny", reason: "entitlement_denied" }
+          : { decision: "permit" };
+      },
     },
   });
   asServer = as.provider.listen(PORT);
@@ -714,5 +728,80 @@ describe("challenge trust boundaries (@spec txn-authorization#two-phase-expiry)"
     expect(wrongKey.status).toBe(400);
     expect(body.error).toBe("invalid_grant");
     expect(body.error_description).toContain("same key");
+  });
+});
+
+describe("fresh decision at completion (@spec txn-authorization#challenge-redemption)", () => {
+  const requested = (): AuthorityEntry[] =>
+    (as.kernel.get(missionId) as { authority_set: AuthorityEntry[] }).authority_set
+      .filter((e) => e.actions.includes("payments:remittance.send"))
+      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+
+  const admit = async (txn: string, over: Record<string, unknown> = {}) => {
+    const challenge = await signChallenge(
+      {
+        txn,
+        authorization_details: requested(),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: `sha-256:${txn}`,
+        ...over,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const body = (await (await submit(challenge)).json()) as { transaction_authorization_id: string };
+    return body.transaction_authorization_id;
+  };
+
+  it("refuses an approved workflow when current entitlement or policy denies", async () => {
+    policyDeniesTxns.add("txn_policy_denies");
+    const id = await admit("txn_policy_denies");
+    const approval = await ars.adjudicate("arq_txn_txn_policy_denies", "approve", "bob");
+    expect(approval).not.toBeNull();
+
+    const res = await postTransaction({ transaction_authorization_id: id });
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("access_denied");
+    expect(body.error_description).toBe("entitlement_denied");
+    expect(body.access_token).toBeUndefined();
+    // The decision ran: completing the approval did not bypass it.
+    expect(freshDecisionCalls).toContain("txn_policy_denies");
+  });
+
+  it("never issues on a step-up context alone: only approval state satisfies the requirement", async () => {
+    // The subject_token carries a stronger authentication context; the workflow
+    // is admitted and never approved. No amount of polling issues a token.
+    const id = await admit("txn_stepup_only");
+    for (let i = 0; i < 3; i++) {
+      const res = await postTransaction({ transaction_authorization_id: id });
+      const body = (await res.json()) as { error?: string; access_token?: string };
+      expect(res.status).toBe(400);
+      expect(body.error).toBe("authorization_pending");
+      expect(body.access_token).toBeUndefined();
+    }
+    // And the fresh decision was never even reached without an approval.
+    expect(freshDecisionCalls).not.toContain("txn_stepup_only");
+  });
+
+  it("refuses after containment narrows the entry away between admission and approval", async () => {
+    const id = await admit("txn_contained_after_admission");
+    as.kernel.contain(missionId, {
+      event: {
+        type: "vendor.compromise",
+        source: "svc:test",
+        observed_at: new Date().toISOString(),
+        event_id: "ev_txn_contained",
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:remittance.send"] }],
+    });
+    await ars.adjudicate("arq_txn_txn_contained_after_admission", "approve", "bob");
+    const res = await postTransaction({ transaction_authorization_id: id });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("access_denied");
+    expect(body.error_description).toContain("effective Authority Set");
   });
 });
