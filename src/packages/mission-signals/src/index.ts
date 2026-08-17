@@ -264,8 +264,13 @@ export class MissionSignalReceiver {
     // event carrying a `containment_version` is not necessarily a narrowing
     // relative to whatever baseline the consumer holds from elsewhere, e.g.
     // a Mission Status bootstrap this pure event-core module does not model)
-    // — every REAL kernel-driven contain commit also sets `authority_changed`
-    // true on that same event regardless, so this omits no real case. A
+    // — this KERNEL's every contain commit also sets `authority_changed` true
+    // on that same event regardless (@spec MissionKernel#emitCommit), so this
+    // omits no case THIS issuer implementation produces; that co-emission is
+    // a local invariant of this kernel, not a wire guarantee this profile
+    // makes about every issuer, so a containment-aware consumer that wants
+    // the independent signal still MUST track `containment_version` itself
+    // rather than assume the discriminator always accompanies it. A
     // stale/duplicate event never reaches here, so "ignore stale/equal
     // `containment_version`" also falls out of the anti-revive check above
     // and the strict `>` comparison below.
