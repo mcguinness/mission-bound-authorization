@@ -35,6 +35,20 @@ import { operationKey, type TransactionEngine } from "./transaction.js";
 import { buildEffectiveParams, parameterDigest } from "./effective-params.js";
 
 
+/**
+ * @spec txn-authorization#transaction-token — a transaction token authorizes
+ * exactly the challenged operation and MUST NOT be accepted as a general
+ * Mission-bound access token for any other purpose. Its `typ` is read before
+ * anything else, so it is refused outright rather than parsed on a best-effort
+ * basis: every other claim on it (issuer, audience, `cnf`, the `mission`
+ * claim) would otherwise satisfy ordinary token validation.
+ */
+function refuseTransactionToken(accessToken: string): void {
+  if (decodeProtectedHeader(accessToken).typ === MISSION_TXN_TOKEN_TYP) {
+    throw new Error("a transaction token is not a Mission-bound access token");
+  }
+}
+
 export interface ToolDef {
   name: string;
   description: string;
@@ -162,6 +176,7 @@ export class McpPaymentsServer {
    * @spec mission#rs-enforcement: enforce from the token (cnf, mission claim).
    */
   async validateToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<TokenFacts> {
+    refuseTransactionToken(accessToken);
     const { payload } = await jwtVerify(accessToken, this.resolveKey, {
       issuer: this.deps.issuer,
       audience: CANONICAL_RESOURCE,
@@ -203,6 +218,7 @@ export class McpPaymentsServer {
    * @spec draft-mcguinness-mission-harness (mediated execution environment)
    */
   async validateMissionToken(accessToken: string): Promise<TokenFacts> {
+    refuseTransactionToken(accessToken);
     const { payload } = await jwtVerify(accessToken, this.resolveKey, {
       issuer: this.deps.issuer,
       audience: CANONICAL_RESOURCE,
