@@ -624,7 +624,7 @@ the instance, sender-constrained to the Dispatcher's key:
   describes only the access token.
 
 `authorization_details`:
-: REQUIRED. The instance's effective Authority Set.
+: REQUIRED. The instance's committed Authority Set.
 
 A Dispatch refused under {{dispatch}} or {{prohibited-classes}} carries
 the OAuth `error` member together with `mission_denial_reason`

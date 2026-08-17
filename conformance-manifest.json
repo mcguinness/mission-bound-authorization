@@ -1311,6 +1311,26 @@
    "notes": "Planned test surface: authorization-server discharge test against a terminal Mission with an unknown entry_digest or condition_digest, asserting the not_found collapse rather than terminal_noop."
   },
   {
+   "id": "status.effective-set.single-computation",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "conformance",
+   "text": "Every issuer-held narrowing mechanism a deployment runs, this profile's discharge or a companion profile's own overlay alike, MUST feed the single Effective Authority Set computation. Every derivation and every authority-reporting surface MUST use that same computation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every issuer-held narrowing mechanism a deployment runs (this profile's discharge and any companion profile's own overlay, such as Mission Containment) feeds one shared Effective Authority Set computation, and every derivation and every authority-reporting surface (Mission Status, the introspection projection, and any other surface reporting a Mission's authority) uses that same computation rather than an independently computed view"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example this profile's discharge and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation."
+  },
+  {
    "id": "signals.discharge.authority-changed-rematerialize",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "consumer-behavior",

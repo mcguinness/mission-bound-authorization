@@ -245,6 +245,13 @@ Discharge:
   completion condition has been met ({{completion}}). A discharged
   entry's authority is spent: it is no longer derivable.
 
+Effective Authority Set:
+: The approved Authority Set after applying every issuer-held,
+  monotonic narrowing mechanism the deployment runs. This profile
+  contributes discharged entries ({{discharge}}). Each other narrowing
+  profile defines its own subtraction. No narrowing mechanism adds or
+  restores authority.
+
 All JSON shown in this document is non-normative and illustrative; the
 member definitions in the surrounding text are authoritative. HTTP
 message examples follow the conventions of {{RFC9110}}; long URLs and
@@ -2092,6 +2099,15 @@ An implementation claiming an extension MUST meet its requirements:
 - **Revocation propagation**: advertise `mission_max_stale_seconds`
   and size Mission-bound access-token TTLs to it
   ({{revocation-enforcement-classes}}).
+
+An implementation meets the following requirement independent of
+which extensions above it claims. Every issuer-held narrowing
+mechanism a deployment runs, this profile's discharge or a companion
+profile's own overlay alike, MUST feed the single Effective Authority
+Set computation. Every derivation and every authority-reporting
+surface MUST use that same computation; no mechanism computes a
+parallel view, and no surface reports authority the computation has
+not reduced.
 
 # Security Considerations {#security-considerations}
 
