@@ -97,6 +97,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
@@ -604,6 +612,43 @@ holding even when the Mission is active.
 The harness records its decision in Harness Evidence and the
 orchestrator records its decision in Orchestration Evidence, and the
 two records cross-link through their evidence identifiers.
+
+## Interaction with Mission Containment {#containment-interaction}
+
+Mission Containment ({{I-D.draft-mcguinness-oauth-mission-containment}})
+narrows a Mission's effective authority while the Mission stays
+`active`, so the resume check of {{resume-checks}} does not observe
+it on its own: an `active` check is a lifecycle-state check, and a
+contain transition changes no lifecycle state. This document adds no
+general resume duty for a contain transition; which residual applies
+follows from the containment property the deployment's other
+profiles already establish:
+
+- A Runtime-Enforced deployment closes the path at the PDP: the
+  cached-access rule already requires a fresh runtime decision for a
+  consequential action ({{cached-access}}), and that decision denies
+  contained capability whether or not the harness itself checked for
+  containment.
+- A harness that is also a Signals consumer materializing effective
+  authority already rematerializes on containment through Signals'
+  own rule: an in-order `mission.lifecycle-change` event carrying
+  `authority_changed` true triggers rematerialization before further
+  consequential reliance, containment included, without this
+  document adding a duty of its own
+  ({{I-D.draft-mcguinness-oauth-mission-signals}}, Section "Consumer
+  Behavior on Receipt").
+- A Baseline-only deployment retains the documented pre-transition
+  residual: a credential derived before the contain transition
+  remains usable to its own bound, because Containment defines
+  Baseline as a new-derivation kill, not a revocation
+  ({{I-D.draft-mcguinness-oauth-mission-containment}}).
+
+`containment_version` can appear on both the Mission Status response
+and a Signals event; `authority_changed` is a Signals event
+discriminator only, not a Status response member. A harness that
+reads Mission Status directly and is not a Signals consumer reads
+`containment_version` there to notice a narrowing: it has no
+`authority_changed` member to read.
 
 # Event-Driven State Cache {#event-cache}
 

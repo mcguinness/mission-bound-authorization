@@ -129,6 +129,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
@@ -696,6 +704,14 @@ walkthrough's):
   "adjudicated_at": "2026-07-08T15:04:05Z"
 }
 ~~~
+
+A deployment adopting Mission Containment
+({{I-D.draft-mcguinness-oauth-mission-containment}}) MAY configure its
+containment policy to treat a `routed_to_approval` outcome of this
+section, or a Discovery Evidence record carrying `tainted` true, as a
+protected event. Neither field alone determines the event: this
+document defines the outcome and the evidence it produces, not the
+policy that consumes them into a containment trigger.
 
 # Conformance {#conformance}
 

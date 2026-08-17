@@ -199,6 +199,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-metering:
     title: "Mission Consumption Metering"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
@@ -676,6 +684,17 @@ NOT expire later than the Mission's `expires_at`, and the `exp` of
 each permission within it is likewise capped, so no credential
 outlives the Mission.
 
+Where the deployment adopts Mission Containment
+({{I-D.draft-mcguinness-oauth-mission-containment}}), the
+authorization server MUST intersect the entire resulting RPT,
+including any permission carried forward from before a contain
+transition, with the Mission's current Effective Authority Set at
+every ticket exchange and every upgrade. A mixed result omits the
+contained permissions and issues the narrower RPT; an all-contained
+result MUST NOT be issued: the authorization server refuses the
+request with `request_denied`, carrying `authority_contained` as the
+containment profile's denial reason.
+
 ## Mission State Surfaces {#state-surfaces}
 
 Per-use introspection is this binding's native state source: a
@@ -685,6 +704,18 @@ introspects per {{UMA-FEDAUTHZ}} learns of revocation at the next
 access. Its staleness bound is the introspection caching the
 deployment permits, which the deployment MUST state; with caching
 disabled the bound is effectively zero.
+
+Where the deployment adopts Mission Containment, introspection of an
+RPT issued or upgraded before a contain transition applies the same
+intersection: the authorization server omits from the introspection
+response's `permissions` any entry that now names contained
+capability. An omitted permission is one the resource server cannot
+rely on, the same result as an RPT that never carried it.
+`mission.state` continues to report `active`: containment narrows
+authority without changing Mission state. Introspection is this
+binding's continued-reliance surface for containment, and closes the
+residual a self-contained RPT without a state check cannot
+({{I-D.draft-mcguinness-oauth-mission-containment}}).
 
 A deployment whose RPTs are self-contained and validated without
 introspection loses that source, and MUST either cap RPT lifetime at
@@ -750,7 +781,10 @@ Authority Set under the issuance profile's subset rule, projected
 onto UMA's grain: a permission is a resource and its scopes, so
 every scope a permission grants MUST correspond to authority the set
 grants at that resource, and no permission may convey authority, or
-relaxation of a constraint, that the set does not.
+relaxation of a constraint, that the set does not. Where the
+deployment adopts Mission Containment, {{gating}} states the set an
+RPT is gated against at issuance and upgrade
+({{I-D.draft-mcguinness-oauth-mission-containment}}).
 
 The projection is coarse, and this binding does not pretend
 otherwise. A UMA permission carries no parameter bounds and no
@@ -952,6 +986,12 @@ The composition consequences:
   federation does mean one Mission natively governs many resource
   servers within the authorization server's own trust domain, the
   multi-resource-server case the flow shows ({{flow}}).
+- Mission Containment composes at the token endpoint: RPT issuance
+  and upgrade gate on the Effective Authority Set, and per-use
+  introspection applies the same filtering to an RPT issued or
+  upgraded before a contain transition
+  ({{I-D.draft-mcguinness-oauth-mission-containment}}, {{gating}},
+  {{subset}}).
 - The family's Mission Assurance Levels layer on top unchanged
   ({{I-D.draft-mcguinness-mission-architecture}}); a deployment
   states its level, binding, state sources, and staleness bounds in
@@ -1006,6 +1046,15 @@ A **Mission-Bound UMA Authorization Server**:
 - issues RPTs as Mission-bound credentials on a declared carriage
   surface, applies the subset rule at every issuance and upgrade,
   and routes out-of-set requests to the Approver ({{credential}});
+- where it adopts Mission Containment, intersects the entire
+  resulting RPT, including permissions carried forward from before a
+  contain transition, with the Effective Authority Set at every
+  issuance and upgrade, omits contained permissions from a mixed
+  result, and refuses an all-contained result with `request_denied`
+  carrying `authority_contained`
+  ({{I-D.draft-mcguinness-oauth-mission-containment}}, {{gating}});
+- applies the same filtering to per-use introspection of an RPT
+  issued or upgraded before a contain transition ({{state-surfaces}});
 - associates PCTs with Missions as continuity, never authority
   ({{pct}});
 - serves Mission state with a declared staleness bound per

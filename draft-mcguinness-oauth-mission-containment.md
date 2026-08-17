@@ -170,8 +170,8 @@ authority at a single approval event: the approved Authority Set and
 its integrity anchors never change. This document defines Mission
 Containment, an optional layered extension for narrowing a live
 Mission without ending it. When a declared protected event fires (a
-tainted read, an anomaly signal, an open-world discovery
-tainted-session event), the Mission Issuer commits a contain
+tainted read, an anomaly signal, a routed-to-approval open-world
+discovery encounter), the Mission Issuer commits a contain
 transition: an issuer-held, versioned overlay removes capability from
 the Mission's effective authority while the Mission stays `active`
 and the approved anchors stay immutable. Containment is monotonic and
@@ -474,8 +474,12 @@ The containment policy ({{containment-policy}}) declares the event
 classes that trigger containment. Representative classes, defined by
 their own layers, not here: a tainted read under the harness taint
 policy ({{I-D.draft-mcguinness-mission-harness}}), an anomaly signal
-from the deployment's monitoring, and the tainted-session event of
-open-world discovery ({{I-D.draft-mcguinness-mission-discovery}}).
+from the deployment's monitoring, and a `routed_to_approval` outcome
+or a `tainted` Discovery Evidence record from open-world discovery
+({{I-D.draft-mcguinness-mission-discovery}}, Section "Discovery
+Evidence"). Event-to-policy mapping stays deployment-defined: neither
+the outcome nor the evidence field is, by itself, this document's
+protected event.
 
 A protected event is a trusted input to authority: the Mission Issuer
 MUST authenticate and integrity-verify an event source outside its
