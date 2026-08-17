@@ -832,9 +832,10 @@ riding a work product an agent produces: no authority is acquired by
 information propagation alone, and a work product crossing into a
 Mission is input that the receiving Mission re-evaluates under its own
 Authority Set. This is a reading of the invariants above, not an eighth
-invariant; its normative home is the Mission Work Products companion
-({{I-D.draft-mcguinness-oauth-mission-work-products}}). The core
-states the same rule in its "Authority Does Not Propagate With
+invariant; carrying that boundary through non-transitive
+Mission-to-Mission handoff is the Mission Work Products companion's
+role ({{I-D.draft-mcguinness-oauth-mission-work-products}}). The core
+states that rule in its "Authority Does Not Propagate With
 Information" section ({{I-D.draft-mcguinness-oauth-mission}}); that
 section, not this summary, is the normative text this passage tracks.
 
