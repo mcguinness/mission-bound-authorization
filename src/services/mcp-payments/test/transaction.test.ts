@@ -609,3 +609,26 @@ d("M5 transaction-assurance tier", () => {
     expect(connectors.ledgerEntries("msn_m5")).toHaveLength(0);
   });
 });
+
+describe("txn consumption domain (@spec txn-authorization#offline-verification)", () => {
+  it("admits the first use of a resource-scoped txn exactly once across replicas sharing the domain", async () => {
+    const { openStore } = await import("@mission/store");
+    const { openTxnStores } = await import("../src/index.js");
+    // Two replicas' handles over ONE database: consumption must be
+    // linearizable across every replica that can execute the same operation.
+    const shared = openStore("");
+    const a = openTxnStores({ db: shared, instanceEpoch: "replica-a" });
+    const b = openTxnStores({ db: shared, instanceEpoch: "replica-b" });
+
+    expect(a.consumption.consume(CANONICAL_RESOURCE, "txn_shared")).toBe(true);
+    expect(b.consumption.consume(CANONICAL_RESOURCE, "txn_shared")).toBe(false);
+    expect(a.consumption.consume(CANONICAL_RESOURCE, "txn_shared")).toBe(false);
+    expect(b.consumption.consumed(CANONICAL_RESOURCE, "txn_shared")).toBe(true);
+
+    // `txn` is scoped to the resource that challenged for it: the same value at
+    // a different resource is a different transaction.
+    expect(b.consumption.consume("https://other.test/mcp", "txn_shared")).toBe(true);
+    expect(a.consumption.consumed("https://other.test/mcp", "txn_shared")).toBe(true);
+    expect(a.consumption.consumed(CANONICAL_RESOURCE, "txn_never_seen")).toBe(false);
+  });
+});

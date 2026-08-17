@@ -17,8 +17,8 @@ import {
   MissionKernel,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, type SeededTrustedSource, TOPOLOGY } from "@mission/demo-data";
-import { deriveContextualTuples, Fga, type MissionView, relationForAction } from "@mission/pdp";
+import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
+import { Fga, type MissionView, relationForAction } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
   Connectors,
@@ -211,12 +211,13 @@ export async function composeStack(opts: {
         maxTokenLifetimeSeconds: txnTopo.maxTokenLifetimeSeconds,
         maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
         // @spec txn-authorization#challenge-redemption step 7 — the deployment's
-        // entitlement/policy decision, run FRESH at completion against the SAME
-        // live Mission state and the SAME OpenFGA store the resource's PEP
-        // decides on. A completed approval is context here, never a bypass: this
-        // denies on its own when the Mission is no longer active, when
-        // containment has narrowed the entry away, or when the authority join no
-        // longer holds.
+        // entitlement and resource-policy decision, run FRESH at completion
+        // against LIVE state. A completed approval is context here, never a
+        // bypass: each of these denies on its own, after an approval, whenever
+        // the input no longer holds -- the Mission is no longer active, the
+        // containment overlay has narrowed the entry away, the deployment does
+        // not recognize the action, the entry has no vendor scope left, or the
+        // origin principal is no longer an entitled account.
         freshDecision: async (input) => {
           const view = viewFor(input.missionId);
           if (!view || view.state !== "active") return { decision: "deny", reason: "mission_inactive" };
@@ -229,25 +230,13 @@ export async function composeStack(opts: {
           );
           if (contained) return { decision: "deny", reason: "authority_contained" };
           if (!relationForAction(input.action)) return { decision: "deny", reason: "unknown_action" };
-          // The authority join, run against the SAME OpenFGA store the PEP
-          // decides on: does this Mission still reach the vendor scope its entry
-          // carries? Mission-scoped tuples are supplied per check, never stored
-          // (D26), and a vendor the entry's constraint no longer covers yields
-          // no tuple at all, so the join denies on its own.
-          const vendor = entry.constraints?.vendors?.[0];
-          if (!vendor) return { decision: "deny", reason: "no_vendor_scope" };
-          const tuples = deriveContextualTuples({
-            view,
-            entry,
-            target: { objectType: "vendor", objectId: vendor, vendorId: vendor },
-            relation: "reader",
-          });
-          if (tuples.length === 0) return { decision: "deny", reason: "constraint_excluded" };
-          const allowed = await fga.checkWithContext(
-            { user: `mission:${view.id}`, relation: "reader", object: `vendor:${vendor}` },
-            tuples,
-          );
-          return allowed ? { decision: "permit" } : { decision: "deny", reason: "entitlement_denied" };
+          if (!entry.constraints?.vendors?.length) return { decision: "deny", reason: "no_vendor_scope" };
+          // Principal entitlement, from the deployment's own identity config:
+          // the effective subject must still be an account the estate carries.
+          if (!USERS.some((u) => u.sub === input.subject)) {
+            return { decision: "deny", reason: "entitlement_denied" };
+          }
+          return { decision: "permit" };
         },
       },
     });
