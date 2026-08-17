@@ -1324,12 +1324,32 @@
    "surface": "signals",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a consumer that receives an in-order mission.lifecycle-change event with authority_changed true rematerializes its effective authority view via Mission Status before further consequential reliance, even with state unchanged and no version gap"
+    "normative": "a consumer that receives an in-order mission.lifecycle-change event with authority_changed true rematerializes its effective authority view via Mission Status before further consequential reliance, even with state unchanged and no version gap",
+    "local": "MissionSignalReceiver.verifyAndApply detects the rematerialization need (authority_changed true, or a containment_version advance past a previously observed value, {{I-D.draft-mcguinness-oauth-mission-containment}}) and latches it via ApplyResult.rematerialize / needsRematerialization(); it does not itself call the Mission Status operation, mirroring the same detect-only scope already established in this module for the version-gap rule (no consumer in this repo wires either detected condition to an actual refetch)"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Planned test surface: signals consumer-behavior test, in-order active-to-active event carrying authority_changed true."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/authority-changed.test.ts",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > wired end-to-end: a real kernel contain() commit drives the receiver to rematerialize",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/authority-changed.test.ts",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > rematerializes on an in-order event with authority_changed true, state unchanged",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/authority-changed.test.ts",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > latches: needsRematerialization stays true across a later event that does not itself require it",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#562: implemented and tested is the DETECTION half only (the receiver flags the need). Not covered: the actual Mission Status refetch (no consumer in this repo calls it off this signal). See signals.discharge.producer-authority-changed-emit and signals.discharge.producer-gating-undeclared-stream for the producer-side rows this issue left todo (no discharge funnel or mission_capabilities_supported gate exists in src/)."
   },
   {
    "id": "signals.discharge.producer-authority-changed-emit",

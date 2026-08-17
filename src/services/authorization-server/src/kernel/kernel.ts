@@ -1142,10 +1142,29 @@ export class MissionKernel {
    * current `containment_version` (absent-means-none), so a `contain` commit
    * (metadata-only: `prior_state` equals `state`) still surfaces the
    * narrowing to a subscriber comparing only `state`.
+   *
+   * @spec signals#lifecycle-event — also computes `authority_changed`: true
+   * exactly when `prior` is a metadata-only marker (`prior` supplied AND
+   * equal to the persisted `state`), absent otherwise. `insertRecord`'s
+   * activating commit calls this with no `prior` at all (not metadata-only:
+   * there is no prior state), and every state-changing funnel (`setState`,
+   * `supersedeOnRedemption`) passes the OLD state as `prior`, which by
+   * construction differs from the persisted (new) `state`; only `contain`
+   * passes the SAME (new) state as `prior`, and only after a genuine
+   * narrowing (its idempotent replay never reaches here). CONSTRAINT for any
+   * future metadata-only funnel (entry discharge is the named case,
+   * {{I-D.draft-mcguinness-oauth-mission-status}}): calling `emitCommit` with
+   * `prior === record.state` asserts a genuine narrowing occurred on THIS
+   * commit. This function does not and cannot verify that on the caller's
+   * behalf; a funnel that reaches this metadata-only path without narrowing
+   * would incorrectly set `authority_changed` true. A funnel that cannot make
+   * that guarantee MUST compute and pass its own value instead of relying on
+   * this inference.
    */
   private emitCommit(record: MissionRecord, prior?: MissionState, successor?: string): void {
     const onCommit = this.opts.onLifecycleCommit;
     if (!onCommit) return;
+    const authorityChanged = prior !== undefined && prior === record.state;
     onCommit({
       id: record.id,
       issuer: record.issuer,
@@ -1155,6 +1174,7 @@ export class MissionKernel {
       expires_at: record.expires_at,
       ...(prior ? { prior_state: prior } : {}),
       ...(successor ? { successor } : {}),
+      ...(authorityChanged ? { authority_changed: true } : {}),
       ...(record.containment
         ? { containment_version: record.containment.containment_version }
         : {}),
