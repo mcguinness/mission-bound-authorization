@@ -1,5 +1,5 @@
 {
- "$comment": "Machine-readable inventory of the Mission-Bound Authorization family (37 draft-*.md files at repo root). Single source of truth for README's document catalog, adoption order, and the architecture document map. Validate with scripts/check-family-manifest.mjs.",
+ "$comment": "Machine-readable inventory of the Mission-Bound Authorization family's draft-*.md files at repo root (see the `count` field below for the current total). Single source of truth for README's document catalog, adoption order, and the architecture document map. Validate with scripts/check-family-manifest.mjs.",
  "generated_note": "Hand-curated; regenerate by re-deriving group/maturity/adoption_rung from README.md and each draft's front matter/Status section when drafts are added, renamed, or reclassified.",
  "known_non_family_refs": "draft-mcguinness-mission-architecture.md's Mission Document Map also names oauth-id-continuation-assertion. That is an adjacent, non-family draft (no draft-*.md file in this repo) and is intentionally absent from drafts[] below; do not add a phantom manifest entry for it.",
  "groups": [

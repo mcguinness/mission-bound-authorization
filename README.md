@@ -25,7 +25,7 @@ with the PEP/PDP boundary are its data plane.
 
 At a glance:
 
-- **37 drafts, deliberately decomposed.** One mandatory core (the
+- **Deliberately decomposed.** One mandatory core (the
   OAuth 2.0 issuance profile, [on the
   datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)),
   three further bindings (one an experimental sketch) and normative
@@ -127,6 +127,8 @@ it.
                         v            v             v            v
               THE MISSION: durable approved context and lifecycle;
               portable authority commitments are binding-dependent
+              Approval Governance Record (issuer-retained provenance
+              behind the approval event, never a wire artifact)
                          |
  govern       Status (pull)    Signals (push)
               Expansion (widen via a successor)
@@ -138,6 +140,14 @@ it.
                          |
  enforce      Runtime contract -> AuthZEN binding: a PEP obtains a
  each action  PDP permit before every consequential action
+              Transaction Authorization (fresh, cross-org, no-callback
+              decision profiling the OAuth transaction-authorization
+              challenge)
+              Capability Binding (capability_drift denial when a
+              capability's source or digest drifts from what was
+              approved)
+              Runtime Evidence (Decision/Execution Evidence, Refusal
+              Record, and the portable Mission Receipt) -> prove
                          |
  run and      Harness (session continuity is not authority)
  wind down    Orchestration (unwind in-flight work safely)
@@ -151,6 +161,8 @@ it.
 
  project      Cross-Domain Projection (one Mission honored in
               another trust domain via the cross-domain grant)
+              Cross-Organizational Delegation (attenuation chain
+              crosses org trust domains; Projection stays the adapter)
 
  continue     Mission Continuation (authorization continuity over
               ICA, async delegation, and cross-domain transports)
@@ -161,6 +173,10 @@ it.
 
  analyze      Security Model (the trusted base, in one view)
 ```
+
+This is a conceptual view of the mission lifecycle, not an exhaustive
+projection of the manifest; the document catalog below lists every
+draft.
 
 One rule keeps this extensible without a central registry: only the
 state `active` permits issuance or continued reliance, and a consumer
@@ -451,20 +467,29 @@ The suite takes its name from the model; the core's title,
 core defines. The companions refer to the core as the **"issuance profile"**
 (it governs issuance and derivation).
 
-The naming encodes a boundary. Profiles that extend the Authorization
-Server's own surfaces (issuance, approval, lifecycle, evidence of
-consent) keep "oauth" in their draft names. Profiles that specify
-components outside the Authorization Server (runtime enforcement and
-its AuthZEN binding, the agent harness, orchestration, intent shaping,
-audit transparency, the security model, the architecture, the
-standalone authority server, the AAuth binding, the substrate
-requirements, consumption metering, open-world discovery, and the
-mandate) are named without it:
-they are defined against
-the Mission model's substrate primitives, each names those primitives
-in a Mission Substrate section, and the core is that model's OAuth 2.0
-binding. Another mission-based protocol that supplies the same
-primitives can host them unchanged.
+The naming encodes a boundary, by category rather than an exhaustive
+list. `oauth-mission-*` extends the Authorization Server's own
+surfaces: issuance, approval, lifecycle, evidence of consent.
+`mission-*` (no leading `oauth-` or `aauth-`) specifies a component
+outside the Authorization Server. Where that component is defined
+against the Mission model's substrate primitives rather than one
+binding, it names those primitives in a Mission Substrate section, and
+the core is that model's OAuth 2.0 binding, so another mission-based
+protocol that supplies the same primitives can host the component
+unchanged. Runtime enforcement and its AuthZEN binding, the agent
+harness, orchestration, and the security model are examples, not the
+complete set.
+
+A third pattern distinguishes direction at the AAuth binding.
+`aauth-mission-*` names an AAuth-native extension, a profile of a
+member already inside AAuth's own approved mission blob (as
+`draft-mcguinness-aauth-mission-expiry` profiles `expires_at`),
+consistent with the sibling `draft-mcguinness-aauth-budget`
+repository's own AAuth-native extensions. `mission-aauth-*` names the
+Mission family's binding to AAuth and its companions
+(`draft-mcguinness-mission-aauth`,
+`draft-mcguinness-mission-aauth-management`), specified the same way
+as the family's other non-OAuth components.
 
 ### Architecture
 
