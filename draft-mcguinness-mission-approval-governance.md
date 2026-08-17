@@ -67,6 +67,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-approval-revision:
+    title: "Mission Approval Revision for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -471,6 +479,17 @@ is testable, member by member:
   digest ({{envelope}}).
 
 The AGR governs on any disagreement.
+
+Where a deferred approval revises under Mission Approval Revision
+({{I-D.draft-mcguinness-oauth-mission-approval-revision}}) and the
+deployment records consent evidence, each `revision_required` outcome
+produces a `narrowed` consent-evidence decision with no corresponding
+record: no Mission yet exists for the atomic commitment rule
+({{atomic-commitment}}) to attach to. Where consent evidence is
+recorded, it owns the narrowing history, through its `narrowed`
+entries and `predecessor_intent_hashes`. Where an AGR is recorded for
+the final approval, it owns the final approval-governance facts. This
+is a deliberate artifact separation, not an authority conflict.
 
 # Boundaries {#boundaries}
 

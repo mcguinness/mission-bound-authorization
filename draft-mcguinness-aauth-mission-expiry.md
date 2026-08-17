@@ -146,6 +146,21 @@ AAuth's `mission_terminated` error and the status operation, and
 serializes automatic expiry with explicit termination as that document
 specifies.
 
+# Conformance {#conformance}
+
+An **AAuth Person Server** conforms to this profile when it:
+
+1. requires `expires_at`, once present in the approved mission blob,
+   to be an RFC 3339 `date-time` naming an instant later than
+   `approved_at` ({{member}}); and
+2. documents its clock synchronization, comparison precision, and
+   tolerated clock skew ({{security-considerations}}).
+
+Prompt termination at the deadline itself, rather than at the next
+request under the reference, remains a SHOULD ({{enforcement}}).
+Support for `expires_at` remains OPTIONAL, following the approved
+blob member it profiles.
+
 # Security Considerations
 
 Clock synchronization, comparison precision, and tolerated clock skew
