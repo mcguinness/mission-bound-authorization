@@ -291,7 +291,8 @@ This document does NOT define:
 
 This document uses the terms Mission, Mission Intent, Authority Set,
 Mission Issuer, Mission-bound token, and delegation from
-{{I-D.draft-mcguinness-oauth-mission}}, and state version from
+{{I-D.draft-mcguinness-oauth-mission}}, and state version and
+Effective Authority Set from
 {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 Containment overlay:
@@ -301,14 +302,10 @@ Containment overlay:
 Contained capability:
 : A `{resource, actions}` pair in the overlay's contained set. An
   entry with no `actions` member contains the whole Authority Set
-  entry for that resource.
-
-Effective Authority Set:
-: The approved Authority Set minus contained capability and, where
-  the Status profile's completion capability runs, minus discharged
-  entries. Every derivation gated after a contain transition is
-  bounded by it; authority that left the Mission before the
-  transition keeps its own bound, not this one
+  entry for that resource. It is this profile's own contribution to
+  the Effective Authority Set's reduction: every derivation gated
+  after a contain transition excludes it; authority that left the
+  Mission before the transition keeps its own bound, not this one
   ({{derivation-gating}}).
 
 Protected event:

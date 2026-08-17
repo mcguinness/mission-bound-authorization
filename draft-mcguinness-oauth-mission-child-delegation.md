@@ -316,7 +316,8 @@ sub-agent work that needs its own lifecycle handle.
 
 This document uses the terms Mission, Mission Intent, Authority Set,
 Mission Issuer, Mission-bound token, and delegation from
-{{I-D.draft-mcguinness-oauth-mission}}.
+{{I-D.draft-mcguinness-oauth-mission}}, and Effective Authority Set
+from {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 Parent Mission:
 : The active Mission from which a Child Mission derives its upper bound
@@ -1354,8 +1355,8 @@ contained, the Mission Issuer MUST propagate the containment to every
 child entry justified by it, so a Child Mission does not keep deriving
 contained authority while the parent stays `active`. A containment
 transition on the parent does not itself change any child's lifecycle
-state; it narrows the child's effective authority exactly as it
-narrows the parent's.
+state; it narrows the child's own Effective Authority Set exactly as
+it narrows the parent's.
 
 The issuer holds both records in either case, so the propagation needs
 no consumer coordination.
