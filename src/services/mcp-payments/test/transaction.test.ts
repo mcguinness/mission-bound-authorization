@@ -85,6 +85,8 @@ function build(
     /** AROP: AS txn public JWKS + issuer for validating a presented txn-token. */
     txnTokenJwks?: { keys: Record<string, unknown>[] };
     asIssuer?: string;
+    /** The ORDINARY access-token JWKS this resource verifies credentials under. */
+    jwks?: { keys: Record<string, unknown>[] };
     /** Gate remittance on a per-action approval without wiring the ARAP signer. */
     gateRemittance?: boolean;
     /** @spec txn-authorization#offline-verification — share a consumption domain. */
@@ -122,7 +124,7 @@ function build(
     pep,
     payments,
     loadView: (id) => (id === VIEW.id ? VIEW : undefined),
-    jwks: { keys: [] },
+    jwks: opts.jwks ?? { keys: [] },
     issuer: "https://as.test",
     serverCard: card,
     transaction: { engine, connectors, evidence },
@@ -347,6 +349,42 @@ d("M5 transaction-assurance tier", () => {
     expect(details[0]?.actions).toEqual(["payments:remittance.send"]);
   });
 
+  it("derives the challenge's mission, parameter_digest and cnf itself, never from the client's arguments (@spec txn-authorization#resource-challenge)", async () => {
+    const { generateKeyPair } = await import("jose");
+    const rsTxn = await generateKeyPair("ES256", { extractable: true });
+    const { server, payments } = build({
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
+    });
+
+    // The client supplies its own `mission`, `parameter_digest` and `cnf`
+    // alongside the operation's real argument. All three are the resource's to
+    // derive from the request and the VERIFIED token, so none is reflected.
+    const res = await server.callTransactionTool(
+      "send_remittance_email",
+      {
+        invoice_id: "inv-1",
+        mission: {
+          id: "msn_supplied",
+          issuer: "https://elsewhere.test",
+          authority_hash: "sha-256:supplied",
+          expires_at: 4102444800,
+          approval_basis: { type: "direct" },
+        },
+        parameter_digest: "sha-256:client-supplied",
+        cnf: { jkt: "jkt-client-supplied" },
+      },
+      TOKEN,
+      undefined,
+      undefined,
+      ACCEPT_CHALLENGE,
+    );
+    const claims = decodeJwt(res.transaction_challenge as string);
+    expect((claims.mission as { id: string }).id).toBe("msn_m5");
+    expect((claims.mission as { issuer: string }).issuer).toBe("https://as.test");
+    expect(claims.parameter_digest).toBe(digestFor(payments));
+    expect((claims.cnf as { jkt: string }).jkt).toBe(TOKEN.cnfJkt);
+  });
+
   it("executes exactly once for a verified transaction token that matches the retained operation (@spec txn-authorization#offline-verification)", async () => {
     const { generateKeyPair, exportJWK } = await import("jose");
     const rsTxn = await generateKeyPair("ES256", { extractable: true });
@@ -440,6 +478,67 @@ d("M5 transaction-assurance tier", () => {
     expect(res.refusal_reason).toBe("txn_cnf_mismatch");
   });
 
+  it("refuses a transaction token whose mission, authority or recomputed parameter_digest differs from the retained operation (@spec txn-authorization#offline-verification)", async () => {
+    const { generateKeyPair, exportJWK } = await import("jose");
+    const rsTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    const { server, payments, evidence } = build({
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+    });
+    const challengeRes = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      undefined,
+      ACCEPT_CHALLENGE,
+    );
+    const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
+    const digest = digestFor(payments);
+    const present = (txnToken: string) =>
+      server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, txnToken);
+
+    // The Mission invariants must be value-equal to the retained operation's.
+    const otherMission = await signTxnToken({
+      key: asTxn.privateKey,
+      txn,
+      cnfJkt: TOKEN.cnfJkt,
+      parameterDigest: digest,
+      authorizationDetails: remittanceEntry(),
+      mission: { ...(TOKEN.missionClaim as unknown as Record<string, unknown>), id: "msn_other" },
+    });
+    expect((await present(otherMission)).refusal_reason).toBe("txn_mission_mismatch");
+
+    // As must the operation's `authorization_details` entry.
+    const otherAuthority = await signTxnToken({
+      key: asTxn.privateKey,
+      txn,
+      cnfJkt: TOKEN.cnfJkt,
+      parameterDigest: digest,
+      authorizationDetails: (remittanceEntry() as { actions: string[] }[]).map((e) => ({
+        ...e,
+        actions: ["payments:payment.execute"],
+      })),
+    });
+    expect((await present(otherAuthority)).refusal_reason).toBe("txn_authority_mismatch");
+
+    // And `parameter_digest` is RECOMPUTED from authoritative store state: a
+    // record that moved under the operation refuses, whatever the token says.
+    const matching = await signTxnToken({
+      key: asTxn.privateKey,
+      txn,
+      cnfJkt: TOKEN.cnfJkt,
+      parameterDigest: digest,
+      authorizationDetails: remittanceEntry(),
+    });
+    payments.bumpInvoiceAmount("inv-1", "480.00");
+    expect((await present(matching)).refusal_reason).toBe("txn_parameter_mismatch");
+    expect(evidence.forMission("msn_m5").filter((e) => e.kind === "execution")).toHaveLength(0);
+  });
+
   it("rejects an ordinary Mission-bound token, and any other typ, outright", async () => {
     const { generateKeyPair, exportJWK, SignJWT } = await import("jose");
     const asTxn = await generateKeyPair("ES256", { extractable: true });
@@ -486,6 +585,49 @@ d("M5 transaction-assurance tier", () => {
     );
     expect(res.ok).toBe(false);
     expect(res.refusal_reason).toBe("txn_invalid");
+  });
+
+  it("refuses a transaction token presented as an ordinary Mission-bound access token (@spec txn-authorization#transaction-token)", async () => {
+    const { generateKeyPair, exportJWK, SignJWT } = await import("jose");
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    // The resource's ORDINARY credential JWKS is this AS's: a transaction
+    // token's issuer, audience, `cnf` and `mission` claim would all satisfy
+    // ordinary token validation, so its `typ` is the only thing keeping it out.
+    const { server, payments } = build({
+      jwks: { keys: [asTxnPub] },
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+      gateRemittance: true,
+    });
+    const txnToken = await signTxnToken({
+      key: asTxn.privateKey,
+      txn: "txn_as_credential",
+      cnfJkt: TOKEN.cnfJkt,
+      parameterDigest: digestFor(payments),
+      authorizationDetails: remittanceEntry(),
+    });
+
+    // It authorizes the challenged operation and nothing else: it never
+    // becomes the credential a tool call runs under, so no TokenFacts and no
+    // general tool call can be derived from it at all.
+    await expect(server.validateMissionToken(txnToken)).rejects.toThrow(/not a Mission-bound access token/);
+
+    // The same claims under an ordinary access token's typ do validate, so the
+    // refusal above is the token's class and nothing incidental.
+    const ordinary = await new SignJWT({
+      sub: "alice",
+      client_id: "ap-agent",
+      cnf: { jkt: TOKEN.cnfJkt },
+      mission: TOKEN.missionClaim,
+    })
+      .setProtectedHeader({ alg: "ES256", kid: "as-txn", typ: "at+jwt" })
+      .setIssuer(AS_ISSUER)
+      .setAudience(CANONICAL_RESOURCE)
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(asTxn.privateKey);
+    expect((await server.validateMissionToken(ordinary)).mission.id).toBe("msn_m5");
   });
 
   it("executes once across two replicas sharing a consumption domain, whatever token jti carries the txn", async () => {
@@ -554,6 +696,77 @@ d("M5 transaction-assurance tier", () => {
     expect(second.refusal_reason).toBe("duplicate_suppressed");
     expect(a.evidence.forMission("msn_m5").filter((e) => e.kind === "execution")).toHaveLength(1);
     expect(b.evidence.forMission("msn_m5").filter((e) => e.kind === "execution")).toHaveLength(0);
+  });
+
+  it("consumes a txn exactly once when two replicas are presented distinct token jtis simultaneously", async () => {
+    const { generateKeyPair, exportJWK } = await import("jose");
+    const { openStore } = await import("@mission/store");
+    const { openTxnStores } = await import("../src/index.js");
+    const rsTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+
+    // Both replicas can execute this operation, so they share ONE consumption
+    // domain; the two presentations are in flight at the same time.
+    const stores = openTxnStores({ db: openStore("") });
+    const a = build({
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+      txnStores: stores,
+    });
+    const b = build({
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+      gateRemittance: true,
+      txnStores: stores,
+    });
+
+    const challengeRes = await a.server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      undefined,
+      ACCEPT_CHALLENGE,
+    );
+    const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
+    const mint = (jti: string) =>
+      signTxnToken({
+        key: asTxn.privateKey,
+        txn,
+        jti,
+        cnfJkt: TOKEN.cnfJkt,
+        parameterDigest: digestFor(a.payments),
+        authorizationDetails: remittanceEntry(),
+      });
+
+    const [first, second] = await Promise.all([
+      a.server.callTransactionTool(
+        "send_remittance_email",
+        { invoice_id: "inv-1" },
+        TOKEN,
+        undefined,
+        await mint("mtt_race_a"),
+      ),
+      b.server.callTransactionTool(
+        "send_remittance_email",
+        { invoice_id: "inv-1" },
+        TOKEN,
+        undefined,
+        await mint("mtt_race_b"),
+      ),
+    ]);
+
+    // Exactly one execution, whichever replica won; the loser is the same
+    // replay, never a second attempt under its own jti.
+    expect([first?.ok, second?.ok].filter(Boolean)).toHaveLength(1);
+    const refused = first?.ok ? second : first;
+    expect(refused?.refusal_reason).toBe("duplicate_suppressed");
+    const executions = [...a.evidence.forMission("msn_m5"), ...b.evidence.forMission("msn_m5")].filter(
+      (e) => e.kind === "execution",
+    );
+    expect(executions).toHaveLength(1);
   });
 
   it("fails closed when the consumption store is unavailable", async () => {

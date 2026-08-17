@@ -57,6 +57,21 @@ let missionClaim: Record<string, unknown> = {};
 const policyDeniesTxns = new Set<string>();
 /** Every `txn` the fresh decision was asked about (it must run before issuance). */
 const freshDecisionCalls: string[] = [];
+/** What the fresh decision was handed, so a test can read the pinned snapshot. */
+const freshDecisionInputs: { txn: string; operationType: string; parameterDigest: string }[] = [];
+/**
+ * @spec txn-authorization#applicability — the approval basis the TAS computed
+ * at step 4 for every approval it opened.
+ */
+const openedApprovals: { txn: string; requires_action_approval: boolean }[] = [];
+/** The basis recorded for one `txn` (undefined when no approval was opened). */
+const approvalBasisFor = (txn: string): boolean | undefined =>
+  openedApprovals.find((o) => o.txn === txn)?.requires_action_approval;
+/**
+ * Per-task `approved_until` the ARS reports, so a run can make the approval's
+ * own validity, or something else, the minimum term of the token's exp bound.
+ */
+const approvalOverrides = new Map<string, string>();
 
 /**
  * Stand in for the Challenge-Issuing Resource: sign a challenge carrying every
@@ -75,6 +90,7 @@ async function signChallenge(
     mission?: Record<string, unknown>;
     cnf?: { jkt: string };
     lifetimeSeconds?: number;
+    act?: unknown;
   },
   key: CryptoKey,
   kid: string,
@@ -86,6 +102,7 @@ async function signChallenge(
     parameter_digest: claims.parameter_digest,
     mission: claims.mission ?? missionClaim,
     cnf: claims.cnf ?? { jkt: dpopJkt },
+    ...(claims.act !== undefined ? { act: claims.act } : {}),
   })
     .setProtectedHeader({ alg: "ES256", kid, typ: TXN_CHALLENGE_TYP })
     .setIssuer(claims.iss)
@@ -159,10 +176,18 @@ async function tokenRequest(params: Record<string, string>, keys: DpopKeys = dpo
   return res;
 }
 
-/** Full PAR -> approval -> token dance yielding a base DPoP-bound mission token. */
+/**
+ * Full PAR -> approval -> token dance yielding a base DPoP-bound mission token.
+ * `constraints` overrides the proposed entry's constraints, so a run can put the
+ * Mission's own authority under `requires_action_approval`.
+ */
 async function issueBaseMissionToken(
   keys: DpopKeys = dpopKeys,
   jar: Map<string, string> = cookies,
+  constraints: Record<string, unknown> = {
+    max_amount: { amount: "500.00", currency: "USD" },
+    vendors: ["acme"],
+  },
 ): Promise<{ token: string; missionId: string }> {
   const verifier = "txn-endpoint-verifier-0123456789-0123456789-01234";
   const challenge = Buffer.from(
@@ -181,7 +206,7 @@ async function issueBaseMissionToken(
       type: "mission_resource_access",
       resource: RESOURCE,
       actions: ["payments:invoice.read", "payments:remittance.send"],
-      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      constraints,
     },
   ]);
   const par = await fetch(`${ISSUER}/request`, {
@@ -250,13 +275,21 @@ async function issueBaseMissionToken(
  */
 async function postTransaction(
   payload: Record<string, string>,
-  opts: { keys?: DpopKeys; assertion?: string; omitClientAuth?: boolean } = {},
+  opts: {
+    keys?: DpopKeys;
+    assertion?: string;
+    /** The `client_id` parameter presented alongside the assertion. */
+    clientId?: string;
+    /** Present the assertion with no `client_id` parameter at all. */
+    omitClientId?: boolean;
+    omitClientAuth?: boolean;
+  } = {},
 ): Promise<Response> {
   const htu = `${ISSUER}/transaction`;
   const auth = opts.omitClientAuth
     ? {}
     : {
-        client_id: "ap-agent",
+        ...(opts.omitClientId ? {} : { client_id: opts.clientId ?? "ap-agent" }),
         client_assertion: opts.assertion ?? (await clientAssertion()),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       };
@@ -309,12 +342,37 @@ beforeAll(async () => {
     // against a challenge whose issuer the TAS does accept.
     [OTHER_RESOURCE, { jwks: createLocalJWKSet({ keys: [rsTxnPub as JWK] }), algs: ["ES256"] }],
   ]);
+  // The endpoint's view of the ARS. It records the approval BASIS the TAS
+  // computed at step 4, and lets a run pin an approval's `approved_until` so a
+  // chosen term of the token's exp bound is the minimum. Everything else is the
+  // real service: the suite adjudicates through `ars` directly.
+  const txnArs = {
+    openForTxn: (input: {
+      txn: string;
+      missionId: string;
+      action: string;
+      parameter_digest: string;
+      subject: string;
+      requires_action_approval: boolean;
+    }) => {
+      openedApprovals.push({ txn: input.txn, requires_action_approval: input.requires_action_approval });
+      return ars.openForTxn(input);
+    },
+    getTask: (taskId: string) => {
+      const task = ars.getTask(taskId);
+      const until = approvalOverrides.get(taskId);
+      return task?.approval && until
+        ? { ...task, approval: { ...task.approval, approved_until: until } }
+        : task;
+    },
+  };
+
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     transactionAuthorization: {
       challengeIssuers,
-      ars,
+      ars: txnArs,
       workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
       maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
       // @spec txn-authorization#challenge-redemption step 7 — a deployment
@@ -323,6 +381,11 @@ beforeAll(async () => {
       // refuses when a current input no longer holds.
       freshDecision: async (input) => {
         freshDecisionCalls.push(input.txn);
+        freshDecisionInputs.push({
+          txn: input.txn,
+          operationType: input.operationType,
+          parameterDigest: input.parameterDigest,
+        });
         return policyDeniesTxns.has(input.txn)
           ? { decision: "deny", reason: "entitlement_denied" }
           : { decision: "permit" };
@@ -648,7 +711,29 @@ describe("two-phase expiry and idempotency (@spec txn-authorization#two-phase-ex
     expect(decodeJwt(second.access_token).jti).toBe(decodeJwt(first.access_token).jti);
   });
 
-  it("bounds the token by the deployment maximum, never by the challenge exp", async () => {
+  it("bounds the token by the earliest live term, never by the challenge exp", async () => {
+    const subjectTokenExpS = decodeJwt(baseToken).exp as number;
+
+    // Run 1: an approval that outlives nothing. `approved_until` is the
+    // earliest of the four terms, so it is what the token's exp equals.
+    const approvedUntil = new Date(Date.now() + 20_000).toISOString();
+    approvalOverrides.set("arq_txn_txn_exp_approval", approvedUntil);
+    const short = await challengeFor("txn_exp_approval");
+    const shortInit = (await (await submit(short)).json()) as { transaction_authorization_id: string };
+    await ars.adjudicate("arq_txn_txn_exp_approval", "approve", "bob");
+    const shortBody = (await (
+      await postTransaction({ transaction_authorization_id: shortInit.transaction_authorization_id })
+    ).json()) as { access_token: string };
+    const shortClaims = decodeJwt(shortBody.access_token);
+    expect(shortClaims.exp).toBe(Math.floor(Date.parse(approvedUntil) / 1000));
+    expect(shortClaims.exp as number).toBeLessThan(subjectTokenExpS);
+
+    // Run 2: the same operation under an approval that outlives everything.
+    // A DIFFERENT term is now the earliest -- `subject_token`'s own validity --
+    // and the token follows it rather than the approval or the deployment
+    // maximum. Either way the already-consumed challenge exp never binds.
+    const longUntil = new Date(Date.now() + 5_000_000).toISOString();
+    approvalOverrides.set("arq_txn_txn_exp_bound", longUntil);
     const challenge = await challengeFor("txn_exp_bound");
     const init = (await (await submit(challenge)).json()) as { transaction_authorization_id: string };
     await ars.adjudicate("arq_txn_txn_exp_bound", "approve", "bob");
@@ -656,10 +741,10 @@ describe("two-phase expiry and idempotency (@spec txn-authorization#two-phase-ex
       await postTransaction({ transaction_authorization_id: init.transaction_authorization_id })
     ).json()) as { access_token: string };
     const claims = decodeJwt(body.access_token);
-    const challengeExp = decodeJwt(challenge).exp as number;
+    expect(claims.exp).toBe(subjectTokenExpS);
+    expect(claims.exp as number).toBeLessThan(Math.floor(Date.parse(longUntil) / 1000));
     expect(claims.exp as number).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + MAX_TOKEN_LIFETIME_S);
-    // Not clamped to the challenge: the approval TTL is what binds here.
-    expect(claims.exp).not.toBe(challengeExp);
+    expect(claims.exp).not.toBe(decodeJwt(challenge).exp as number);
   });
 });
 
@@ -869,5 +954,329 @@ describe("subject_token binding (@spec txn-authorization#challenge-redemption)",
     expect(res.status).toBe(400);
     expect(body.error).toBe("invalid_grant");
     expect(body.error_description).toContain("mission does not match");
+  });
+});
+
+/**
+ * The describes below each mint their OWN Mission, so nothing here depends on
+ * the state the containment run above left the base Mission in.
+ */
+async function freshMission(
+  constraints?: Record<string, unknown>,
+): Promise<{ token: string; missionId: string; mission: Record<string, unknown> }> {
+  const issued = constraints
+    ? await issueBaseMissionToken(dpopKeys, new Map(), constraints)
+    : await issueBaseMissionToken(dpopKeys, new Map());
+  return {
+    token: issued.token,
+    missionId: issued.missionId,
+    mission: decodeJwt(issued.token).mission as Record<string, unknown>,
+  };
+}
+
+/** The Mission's own entry for the gated action, narrowed to that one action. */
+function remittanceEntry(id: string): AuthorityEntry[] {
+  return (as.kernel.get(id) as { authority_set: AuthorityEntry[] }).authority_set
+    .filter((e) => e.actions.includes("payments:remittance.send"))
+    .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+}
+
+describe("the approval requirement under delegation (@spec txn-authorization#applicability)", () => {
+  /** A Mission whose own authority carries the Common Constraint. */
+  let gated: Awaited<ReturnType<typeof freshMission>>;
+  /** An otherwise identical Mission that does not. */
+  let ungated: Awaited<ReturnType<typeof freshMission>>;
+
+  beforeAll(async () => {
+    gated = await freshMission({
+      max_amount: { amount: "500.00", currency: "USD" },
+      vendors: ["acme"],
+      requires_action_approval: true,
+    });
+    ungated = await freshMission();
+  });
+
+  const challengeFor = async (
+    txn: string,
+    details: AuthorityEntry[],
+    mission: Record<string, unknown>,
+  ): Promise<string> =>
+    signChallenge(
+      {
+        txn,
+        authorization_details: details,
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: `sha-256:${txn}`,
+        mission,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+
+  it("carries the requirement onto the Mission's own effective entry", () => {
+    expect(remittanceEntry(gated.missionId)[0]?.constraints?.requires_action_approval).toBe(true);
+    expect(remittanceEntry(ungated.missionId)[0]?.constraints?.requires_action_approval).toBeUndefined();
+  });
+
+  it("refuses a leaf entry that drops the requirement its grant carries", async () => {
+    // The leaf restates the entry it was delegated but omits the designation.
+    // Under the subset rule that is a WIDENING, so it never admits a workflow.
+    const dropped = remittanceEntry(gated.missionId).map((e) => ({
+      ...e,
+      constraints: { max_amount: e.constraints?.max_amount, vendors: e.constraints?.vendors },
+    }));
+    const challenge = await challengeFor("txn_leaf_drops_approval", dropped, gated.mission);
+    const res = await submit(challenge, { token: gated.token });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("Authority Set");
+  });
+
+  it("gates a leaf that inherited the requirement, on the entry alone", async () => {
+    // This TAS is configured with no destination policy, so the requirement the
+    // endpoint recorded when it opened the approval can only have come from the
+    // matched entry's Common Constraint.
+    const txn = "txn_leaf_keeps_approval";
+    const challenge = await challengeFor(txn, remittanceEntry(gated.missionId), gated.mission);
+    const init = (await (await submit(challenge, { token: gated.token })).json()) as {
+      transaction_authorization_id: string;
+    };
+    expect(approvalBasisFor(txn)).toBe(true);
+
+    // The same operation on a Mission whose entry does not carry it records no
+    // such basis: the flag tracks the entry, not this endpoint's own profile
+    // requirement (which opens an approval either way).
+    const plain = await challengeFor("txn_ungated_entry", remittanceEntry(ungated.missionId), ungated.mission);
+    await submit(plain, { token: ungated.token });
+    expect(approvalBasisFor("txn_ungated_entry")).toBe(false);
+
+    // And the gated leaf is still bound: nothing issues until the approval lands.
+    const pending = await postTransaction({ transaction_authorization_id: init.transaction_authorization_id });
+    expect((await pending.json()).error).toBe("authorization_pending");
+    await ars.adjudicate(`arq_txn_${txn}`, "approve", "bob");
+    const issued = await postTransaction({ transaction_authorization_id: init.transaction_authorization_id });
+    const body = (await issued.json()) as { access_token?: string };
+    expect(issued.status, JSON.stringify(body)).toBe(200);
+    expect(decodeJwt(body.access_token as string).txn).toBe(txn);
+  });
+});
+
+describe("Operation Profile drift (@spec txn-authorization#resource-challenge)", () => {
+  it("completes a workflow admitted under a superseded Operation Profile version", async () => {
+    const mission = await freshMission();
+    const details = remittanceEntry(mission.missionId);
+    const sign = (txn: string, digest: string) =>
+      signChallenge(
+        {
+          txn,
+          authorization_details: details,
+          iss: RESOURCE,
+          aud: ISSUER,
+          reason: "action_approval_required",
+          parameter_digest: digest,
+          mission: mission.mission,
+        },
+        rsTxnKeys.privateKey,
+        "rs-txn",
+      );
+
+    // Version 1 of the resource's Operation Profile: the operation normalizes
+    // to this digest, and the workflow is admitted on that snapshot.
+    const supersededDigest = "sha-256:operation-profile-v1";
+    const admitted = (await (
+      await submit(await sign("txn_profile_v1", supersededDigest), { token: mission.token })
+    ).json()) as { transaction_authorization_id: string };
+
+    // The resource then bumps the profile: the same operation now normalizes
+    // differently, and new challenges carry the new version. That is a SEPARATE
+    // workflow; it never revises the basis of the one already pending.
+    const bumped = (await (
+      await submit(await sign("txn_profile_v2", "sha-256:operation-profile-v2"), { token: mission.token })
+    ).json()) as { transaction_authorization_id: string };
+    expect(bumped.transaction_authorization_id).not.toBe(admitted.transaction_authorization_id);
+
+    // The pending workflow still resolves, on the version it was admitted under.
+    await ars.adjudicate("arq_txn_txn_profile_v1", "approve", "bob");
+    const res = await postTransaction({ transaction_authorization_id: admitted.transaction_authorization_id });
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(decodeJwt(body.access_token as string).parameter_digest).toBe(supersededDigest);
+    // The fresh decision ran on the PINNED snapshot, not on the current profile.
+    expect(freshDecisionInputs.find((i) => i.txn === "txn_profile_v1")).toEqual({
+      txn: "txn_profile_v1",
+      operationType: "mission_resource_access",
+      parameterDigest: supersededDigest,
+    });
+  });
+});
+
+describe("at most one authorization result per txn (@spec txn-authorization#offline-verification)", () => {
+  it("mints no second jti when a decided workflow is polled concurrently", async () => {
+    const mission = await freshMission();
+    const txn = "txn_concurrent_poll";
+    const challenge = await signChallenge(
+      {
+        txn,
+        authorization_details: remittanceEntry(mission.missionId),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: `sha-256:${txn}`,
+        mission: mission.mission,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const init = (await (await submit(challenge, { token: mission.token })).json()) as {
+      transaction_authorization_id: string;
+    };
+    await ars.adjudicate(`arq_txn_${txn}`, "approve", "bob");
+
+    const poll = () => postTransaction({ transaction_authorization_id: init.transaction_authorization_id });
+    const bodies = (await Promise.all(
+      (await Promise.all([poll(), poll(), poll(), poll()])).map((r) => r.json()),
+    )) as { access_token?: string }[];
+    const jtis = new Set(
+      bodies.filter((b) => b.access_token).map((b) => decodeJwt(b.access_token as string).jti as string),
+    );
+    expect(jtis.size).toBe(1);
+
+    // And the single result is stable: a later poll returns that same token.
+    const later = (await (await poll()).json()) as { access_token: string };
+    expect(decodeJwt(later.access_token).jti).toBe([...jtis][0]);
+  });
+});
+
+describe("transaction token identity projection (@spec txn-authorization#transaction-token)", () => {
+  it("projects the effective subject and authenticated client, and carries act only where actor context existed", async () => {
+    const mission = await freshMission();
+    const details = remittanceEntry(mission.missionId);
+    const act = { sub: "subagent-invoice-extractor", iss: ISSUER };
+    const redeem = async (txn: string, actor?: unknown): Promise<Record<string, unknown>> => {
+      const challenge = await signChallenge(
+        {
+          txn,
+          authorization_details: details,
+          iss: RESOURCE,
+          aud: ISSUER,
+          reason: "action_approval_required",
+          parameter_digest: `sha-256:${txn}`,
+          mission: mission.mission,
+          ...(actor !== undefined ? { act: actor } : {}),
+        },
+        rsTxnKeys.privateKey,
+        "rs-txn",
+      );
+      const init = (await (await submit(challenge, { token: mission.token })).json()) as {
+        transaction_authorization_id: string;
+      };
+      await ars.adjudicate(`arq_txn_${txn}`, "approve", "bob");
+      const body = (await (
+        await postTransaction({ transaction_authorization_id: init.transaction_authorization_id })
+      ).json()) as { access_token?: string };
+      expect(body.access_token, JSON.stringify(body)).toBeTruthy();
+      return decodeJwt(body.access_token as string) as Record<string, unknown>;
+    };
+
+    // Actor context on the challenge makes `act` REQUIRED on the token.
+    const withActor = await redeem("txn_identity_actor", act);
+    expect(withActor.act).toEqual(act);
+    // Alice is the Mission's subject; bob adjudicated. The Approver is never it.
+    expect(withActor.sub).toBe("alice");
+    expect(withActor.client_id).toBe("ap-agent");
+
+    // No actor context anywhere upstream: the member is absent, not empty.
+    const withoutActor = await redeem("txn_identity_plain");
+    expect(withoutActor.act).toBeUndefined();
+    expect(withoutActor.sub).toBe("alice");
+    expect(withoutActor.client_id).toBe("ap-agent");
+  });
+});
+
+describe("client identification (@spec txn-authorization#challenge-redemption)", () => {
+  const assertionFor = (iss: string, sub: string, key: CryptoKey, kid: string): Promise<string> =>
+    new SignJWT({})
+      .setProtectedHeader({ alg: "ES256", kid })
+      .setIssuer(iss)
+      .setSubject(sub)
+      .setAudience(ISSUER)
+      .setIssuedAt()
+      .setExpirationTime("2m")
+      .setJti(crypto.randomUUID())
+      .sign(key);
+
+  it("resolves the authenticated client from its own assertion, never from another client's record", async () => {
+    const childKey = (await importJWK(as.childClientJwk as never, "ES256")) as CryptoKey;
+    const CHILD = "subagent-invoice-extractor";
+    const CHILD_KID = "subagent-invoice-extractor-auth";
+    const mission = await freshMission();
+    const challenge = await signChallenge(
+      {
+        txn: "txn_client_identity",
+        authorization_details: remittanceEntry(mission.missionId),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: "sha-256:client-identity",
+        mission: mission.mission,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const payload = {
+      transaction_challenge: challenge,
+      subject_token: mission.token,
+      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    };
+
+    // One client's assertion presented under ANOTHER's client_id: the parameter
+    // is corroboration, never the selector.
+    const mismatched = await postTransaction(payload, {
+      assertion: await assertionFor(CHILD, CHILD, childKey, CHILD_KID),
+      clientId: "ap-agent",
+    });
+    expect(mismatched.status).toBe(401);
+    expect((await mismatched.json()).error).toBe("invalid_client");
+
+    // The child's identity signed with the AP agent's key, and no client_id at
+    // all: the record comes from the assertion, so it is verified under the
+    // child's registered keys and fails there.
+    const wrongKey = await postTransaction(payload, {
+      assertion: await assertionFor(CHILD, CHILD, clientKey, "ap-agent-auth"),
+      omitClientId: true,
+    });
+    expect(wrongKey.status).toBe(401);
+    expect((await wrongKey.json()).error).toBe("invalid_client");
+
+    // `iss` and `sub` disagreeing is not a client identity at all.
+    const split = await postTransaction(payload, {
+      assertion: await assertionFor("ap-agent", CHILD, clientKey, "ap-agent-auth"),
+      omitClientId: true,
+    });
+    expect(split.status).toBe(401);
+
+    // Nor is an identity no registered client claims.
+    const unregistered = await postTransaction(payload, {
+      assertion: await assertionFor("rogue-agent", "rogue-agent", clientKey, "ap-agent-auth"),
+      omitClientId: true,
+    });
+    expect(unregistered.status).toBe(401);
+
+    // Presenting only its own assertion, the child authenticates AS the child:
+    // the workflow it admits belongs to it, and the AP agent cannot poll it.
+    const admitted = await postTransaction(payload, {
+      assertion: await assertionFor(CHILD, CHILD, childKey, CHILD_KID),
+      omitClientId: true,
+    });
+    const admittedBody = (await admitted.json()) as { transaction_authorization_id?: string };
+    expect(admitted.status, JSON.stringify(admittedBody)).toBe(200);
+    const asAgent = await postTransaction({
+      transaction_authorization_id: admittedBody.transaction_authorization_id as string,
+    });
+    expect(asAgent.status).toBe(400);
+    expect((await asAgent.json()).error).toBe("invalid_grant");
   });
 });
