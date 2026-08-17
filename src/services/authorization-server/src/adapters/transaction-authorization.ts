@@ -541,6 +541,18 @@ async function poll(
   // At most one authorization result per `txn`: the slot is taken exactly once,
   // so a second token under a different jti is structurally impossible.
   if (!workflows.reserveIssuance(wf.challenge.txn, wf.id)) {
+    if (workflows.issuanceHolder(wf.challenge.txn) === wf.id) {
+      // THIS workflow holds the slot. Serve its stored token; a poll that
+      // catches the mint mid-flight stays pending rather than reading a
+      // terminal denial off a workflow that is about to issue.
+      const current = workflows.get(wf.id);
+      if (current?.issuedToken) {
+        respondWithToken(ctx, current.issuedToken, (current.issuedExpS ?? nowS) - nowS);
+        return;
+      }
+      fail(ctx, 400, "authorization_pending");
+      return;
+    }
     fail(ctx, 400, "access_denied", "this transaction already produced an authorization result");
     return;
   }
