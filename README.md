@@ -471,13 +471,14 @@ The naming encodes a boundary, by category rather than an exhaustive
 list. `oauth-mission-*` extends the Authorization Server's own
 surfaces: issuance, approval, lifecycle, evidence of consent.
 `mission-*` (no leading `oauth-` or `aauth-`) specifies a component
-outside the Authorization Server, defined against the Mission model's
-substrate primitives; each such draft names those primitives in a
-Mission Substrate section, and the core is that model's OAuth 2.0
-binding, so another mission-based protocol that supplies the same
-primitives can host the component unchanged. Runtime enforcement and
-its AuthZEN binding, the agent harness, orchestration, and the
-security model are examples, not the complete set.
+outside the Authorization Server. Where that component is defined
+against the Mission model's substrate primitives rather than one
+binding, it names those primitives in a Mission Substrate section, and
+the core is that model's OAuth 2.0 binding, so another mission-based
+protocol that supplies the same primitives can host the component
+unchanged. Runtime enforcement and its AuthZEN binding, the agent
+harness, orchestration, and the security model are examples, not the
+complete set.
 
 A third pattern distinguishes direction at the AAuth binding.
 `aauth-mission-*` names an AAuth-native extension, a profile of a
