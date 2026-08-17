@@ -2104,20 +2104,21 @@ The consent rendering is hardened against client text:
   Set from client-supplied text, so crafted client text cannot pass
   as derived authority.
 
-A deployment MUST declare a minimum approval-authentication strength
-for Missions whose derived Authority Set carries high-risk authority:
-irreversible, external-commitment, or privileged-administration
-actions under the deployment's classification, or a consumption bound
-({{I-D.draft-mcguinness-mission-metering}}). The declaration's home
-is the deployment's published statement of what it enforces (the
-Mission Deployment Profile of
-{{I-D.draft-mcguinness-mission-architecture}}), so the floor is a
-checkable published fact rather than a floating duty. The approval
-authentication for such a Mission MUST meet that minimum, and
-`controls.acr` can raise the required strength but never lower it below
-the floor. The material notices of the consent-evidence profile
-identify these same high-risk classes
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+A deployment MUST publish a statement declaring the minimum
+approval-authentication strength it enforces for Missions whose
+derived Authority Set carries high-risk authority: irreversible,
+external-commitment, or privileged-administration actions under the
+deployment's classification, or a consumption bound
+({{I-D.draft-mcguinness-mission-metering}}), and the deployment scope
+to which that declaration applies. Approval authentication for such a
+Mission MUST satisfy both the published floor and, when present,
+`controls.acr`, under the deployment's policy mapping; this document
+defines no global ordering of `acr` values. The Mission Deployment
+Profile of {{I-D.draft-mcguinness-mission-architecture}} names the
+system-level composition of such statements informatively; this
+specification requires no particular serialization. The material
+notices of the consent-evidence profile identify these same high-risk
+classes ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 An Approver who declines, and an Approver whose authentication cannot
 satisfy `controls.acr` or the declared approval-strength floor, yield
