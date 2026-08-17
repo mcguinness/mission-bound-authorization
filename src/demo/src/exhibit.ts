@@ -18,7 +18,7 @@ import type { Decision, EvaluationRequest } from "@mission/pdp";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { composeStack, type AuthServerExtras, type DemoStack } from "./stack.js";
 import { label as humanName } from "./labels.js";
-import { dpopProofFor, issueMissionToken, tokenGrantRequest } from "./oauth-client.js";
+import { clientAssertionSigner, dpopProofFor, issueMissionToken, tokenGrantRequest } from "./oauth-client.js";
 
 /**
  * The AAM grant-type URNs are NOT re-exported from @mission/authorization-server
@@ -1356,26 +1356,43 @@ async function main() {
   // the validated challenge; the client polls WITH that handle from here on.
   // A fresh DPoP proof per call binds htu=/transaction, htm=POST to the base
   // token's cnf.jkt.
-  const postTxn = async (payload: Record<string, unknown>) =>
+  // @spec txn-authorization#challenge-redemption — the client authenticates as
+  // itself (private_key_jwt), presents the Mission-bound access token as an RFC
+  // 8693 `subject_token`, and proves possession of the challenge's `cnf` key.
+  const txnClientAssertion = await clientAssertionSigner(asUrl, as.agentClientJwk);
+  const postTxn = async (payload: Record<string, string>) =>
     fetch(txnEndpoint, {
       method: "POST",
       headers: {
-        authorization: `DPoP ${issued.accessToken}`,
         dpop: await dpopProofFor(issued.dpopKeys, txnEndpoint, "POST"),
-        "content-type": "application/json",
+        "content-type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify(payload),
+      body: new URLSearchParams({
+        client_id: "ap-agent",
+        client_assertion: await txnClientAssertion(),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        ...payload,
+      }).toString(),
     });
   hop("Agent", "AS", "POST /transaction (initiation — challenge presented once)", "HTTP");
   httpReq("POST", txnEndpoint, {
     headers: {
-      authorization: "DPoP <base token>",
-      dpop: "<DPoP proof: htu=/transaction, htm=POST>",
-      "content-type": "application/json",
+      dpop: "<DPoP proof of the challenge cnf key: htu=/transaction, htm=POST>",
+      "content-type": "application/x-www-form-urlencoded",
     },
-    body: { challenge: `${transactionChallenge.slice(0, 40)}... (the txn-challenge above)` },
+    body: {
+      client_id: "ap-agent",
+      client_assertion: "<private_key_jwt>",
+      transaction_challenge: `${transactionChallenge.slice(0, 40)}... (the challenge above)`,
+      subject_token: "<the Mission-bound access token>",
+      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    },
   });
-  const pendingRes = await postTxn({ challenge: transactionChallenge });
+  const pendingRes = await postTxn({
+    transaction_challenge: transactionChallenge,
+    subject_token: issued.accessToken,
+    subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+  });
   const pendingBody = (await pendingRes.json()) as {
     transaction_authorization_id?: string;
     expires_in?: number;
@@ -1408,11 +1425,10 @@ async function main() {
   hop("Agent", "AS", "POST /transaction (poll — with transaction_authorization_id)", "HTTP");
   httpReq("POST", txnEndpoint, {
     headers: {
-      authorization: "DPoP <base token>",
-      dpop: "<DPoP proof: htu=/transaction, htm=POST>",
-      "content-type": "application/json",
+      dpop: "<DPoP proof of the challenge cnf key: htu=/transaction, htm=POST>",
+      "content-type": "application/x-www-form-urlencoded",
     },
-    body: { transaction_authorization_id: txaId },
+    body: { client_id: "ap-agent", client_assertion: "<private_key_jwt>", transaction_authorization_id: txaId },
   });
   const tokenRes = await postTxn({ transaction_authorization_id: txaId });
   // §5.3 poll shape: 200 carries the txn-token; a 400 carries authorization_pending

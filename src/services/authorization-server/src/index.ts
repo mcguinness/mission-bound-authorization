@@ -28,7 +28,7 @@ import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
 import { CreationIdempotencyStore } from "./kernel/creation-idempotency.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
-import type { ChallengeIssuers } from "./kernel/txn-challenge.js";
+import type { TxnAuthorizationOptions } from "./adapters/transaction-authorization.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
 import { createTemplate } from "./kernel/template.js";
 import { TemplateStore } from "./kernel/template-store.js";
@@ -401,12 +401,12 @@ export async function buildAuthorizationServer(opts: {
    */
   requiredIntentEvidenceTypes?: string[];
   /**
-   * @spec txn-authorization#two-phase-expiry — the accepted Challenge-Issuing
-   * Resources and their published challenge-signing keys.
+   * @spec txn-authorization#challenge-redemption — the
+   * transaction_authorization_endpoint's deployment configuration. The
+   * transaction-token signing key is this AS's own per-purpose as-txn key and
+   * is filled in here, so callers supply only policy and collaborators.
    */
-  challengeIssuers?: ChallengeIssuers;
-  /** AROP transaction task store (AS vouches; owns the txn pending id, D37). */
-  ars?: TxnArs;
+  transactionAuthorization?: Omit<TxnAuthorizationOptions, "tokenKey" | "tokenKid">;
   /**
    * @spec signals#lifecycle-event — an additional lifecycle-commit subscriber,
    * composed with the Status List republisher so BOTH run on every committed
@@ -640,8 +640,18 @@ export async function buildAuthorizationServer(opts: {
     // RFC 7662 introspection principals (config/introspection.json).
     introspectionPrincipals: INTROSPECTION_PRINCIPALS,
     ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),
-    txnKey: txnKeys.privateKey,
-    txnKid: asTxn.kid,
+    // @spec txn-authorization#challenge-redemption — the endpoint's
+    // configuration, assembled from the caller's deployment inputs plus this
+    // AS's own per-purpose transaction-token signing key (D39).
+    ...(opts.transactionAuthorization
+      ? {
+          txnAuthorization: {
+            ...opts.transactionAuthorization,
+            tokenKey: txnKeys.privateKey,
+            tokenKid: asTxn.kid,
+          },
+        }
+      : {}),
     // @spec child-delegation#child-client-identity — sign the child-bound RFC 7523
     // authorization grant with the AS token key (verifies on the jwks_uri).
     childGrantKey: tokenPrivateKey,
@@ -667,8 +677,6 @@ export async function buildAuthorizationServer(opts: {
     templateStore,
     protectedEventSources,
     issuerEvidence,
-    ...(opts.challengeIssuers ? { challengeIssuers: opts.challengeIssuers } : {}),
-    ...(opts.ars ? { ars: opts.ars } : {}),
   });
   // @spec async-delegation — publish the provider to the terminal subscriber now
   // that construction is complete (no lifecycle commit could have fired earlier).

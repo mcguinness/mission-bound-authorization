@@ -201,8 +201,15 @@ export async function composeStack(opts: {
     const as = await buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
-      challengeIssuers,
-      ars,
+      transactionAuthorization: {
+        challengeIssuers,
+        ars,
+        // @spec txn-authorization#two-phase-expiry — the pending workflow's own
+        // lifetime and the deployment maximum for an issued transaction token
+        // are INDEPENDENT of the challenge's admission window.
+        workflowLifetimeSeconds: txnTopo.workflowLifetimeSeconds,
+        maxTokenLifetimeSeconds: txnTopo.maxTokenLifetimeSeconds,
+      },
     });
     const asServer = as.provider.listen(asPort);
     kernel = as.kernel;

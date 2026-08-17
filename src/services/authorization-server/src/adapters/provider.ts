@@ -86,6 +86,12 @@ import {
 } from "../kernel/child-delegation.js";
 import { CreationIdempotencyStore } from "../kernel/creation-idempotency.js";
 import { type DpopProofReplay, newDpopProofReplay } from "./dpop-replay.js";
+import {
+  handleTransactionAuthorization,
+  newTxnWorkflows,
+  type TxnAuthorizationOptions,
+} from "./transaction-authorization.js";
+export type { TxnArs } from "./transaction-authorization.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
 import {
   authorizationDetailsTypesMetadata,
@@ -101,12 +107,7 @@ import {
   STATUS_LIST_MEDIA_TYPE,
   type StatusListPublisher,
 } from "../kernel/status-list.js";
-import {
-  type ChallengeIssuers,
-  ChallengeError,
-  issueTxnToken,
-  validateChallenge,
-} from "../kernel/txn-challenge.js";
+
 import type { AuthorityEntry, LifecycleOperation, MissionIntent, MissionRecord } from "../kernel/types.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
 import type { CrossOrgOptions } from "./cross-org-grant.js";
@@ -173,24 +174,13 @@ export interface AdapterOptions {
    * Absent (the default) the chain subject_token_type is refused.
    */
   crossOrg?: CrossOrgOptions;
-  /** AS-txn signing key + kid: signs txn-bound, single-use approval tokens. */
-  txnKey?: CryptoKey;
-  txnKid?: string;
   /**
-   * @spec txn-authorization#two-phase-expiry — the accepted Challenge-Issuing
-   * Resources and, per issuer, the keys published at that resource's
-   * `txn_challenge_jwks_uri`. Deployment and federation policy: a challenge
-   * whose `iss` is absent here is refused, and one resource's key never
-   * verifies another resource's `iss`. Required for the
-   * transaction_authorization_endpoint.
+   * @spec txn-authorization#challenge-redemption — the
+   * transaction_authorization_endpoint's configuration (accepted challenge
+   * issuers and their published keys, the approval service, the token signing
+   * key, the two independent lifetimes). When unset the endpoint replies 501.
    */
-  challengeIssuers?: ChallengeIssuers;
-  /**
-   * AROP transaction task store. The AS vouches for the RS-validated challenge
-   * and opens/polls a task here (D37: AS owns the txn pending id, ARS owns the
-   * approval). Injected so the AS package takes no dependency on the ARS.
-   */
-  ars?: TxnArs;
+  txnAuthorization?: TxnAuthorizationOptions;
   /**
    * AROP Deferred Token Response store. When set, the deferred grant type is
    * wired onto the real /token endpoint (initiation + poll/redeem). Injected so
@@ -306,48 +296,6 @@ export interface ProtectedEventSource {
   advisory: boolean;
 }
 
-/**
- * The subset of the Access Request Service the transaction endpoint uses.
- * Structural so the AS package needs no compile-time dependency on the ARS.
- */
-export interface TxnArs {
-  openForTxn(input: {
-    txn: string;
-    missionId: string;
-    action: string;
-    parameter_digest: string;
-    subject: string;
-  }): { taskId: string; state: string };
-  getTask(taskId: string):
-    | {
-        state: string;
-        approval?: { id: string; approved_at: string; approved_until: string; parameter_digest: string };
-      }
-    | undefined;
-}
-
-/**
- * The AS-side state a `transaction_authorization_id` resolves to. Minted at
- * initiation (the client presents the challenge ONCE), it captures everything
- * the poll needs to issue the txn-token without re-presenting the challenge
- * (openid/authzen#531). Bound to the initiating client via `cnfJkt`.
- */
-interface TxnHandle {
-  taskId: string;
-  txn: string;
-  missionId: string;
-  cnfJkt: string;
-  parameter_digest: string;
-  authorizationDetails: AuthorityEntry[];
-  subject: string;
-  /** The resource the token is audienced to (the challenge's iss). */
-  audience: string;
-  /** Epoch seconds the challenge expires; drives expires_in on poll responses. */
-  expiresAt: number;
-}
-
-/** Poll cadence advertised to the client (seconds). */
-const TXN_POLL_INTERVAL = 5;
 
 interface KoaCtx {
   method: string;
@@ -1211,10 +1159,8 @@ export function resourcesForAudiences(
 function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const { kernel } = opts;
   const jwksResolver = createLocalJWKSet(opts.publicJwks as never);
-  // transaction_authorization_id -> handle state. The client presents the
-  // challenge ONCE (initiation) and thereafter polls this endpoint WITH the
-  // opaque handle the AS minted against the validated challenge (AROP; D42).
-  const txnTasks = new Map<string, TxnHandle>();
+  // @spec txn-authorization#two-phase-expiry — the admitted pending workflows.
+  const txnWorkflows = newTxnWorkflows();
 
   /**
    * @spec RFC 6749 Appendix B — decode HTTP Basic client credentials: the
@@ -1878,12 +1824,21 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       return;
     }
 
-    // --- AROP Transaction Challenge (@spec txn-challenge; openid/authzen#531) ---
-    // The client presents its base mission token (DPoP) + the RS-signed
-    // txn-challenge; the AS validates + subset-gates against the ACTIVE Mission
-    // (D42), obtains approval, and issues a txn-bound single-use token.
+    // --- @spec txn-authorization#challenge-redemption ---
     if (ctx.path === "/transaction" && ctx.method === "POST") {
-      await handleTransaction(opts, ctx, txnTasks);
+      await handleTransactionAuthorization(
+        {
+          issuer: opts.issuer,
+          kernel,
+          clients: opts.clients,
+          publicJwks: opts.publicJwks as { keys: JWK[] },
+          dpopProofReplay: opts.dpopProofReplay as DpopProofReplay,
+          now: () => new Date(),
+          ...(opts.txnAuthorization ? { txn: opts.txnAuthorization } : {}),
+        },
+        ctx,
+        txnWorkflows,
+      );
       return;
     }
 
@@ -1988,264 +1943,6 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       meta.authorization_details_types_metadata_endpoint = `${opts.issuer}/authorization-details-types`;
     }
   };
-}
-
-/**
- * transaction_authorization_endpoint handler. Client-authenticated by its base
- * mission token (DPoP). The body is EITHER `{ challenge }` (initiation: the
- * client presents the RS-signed txn-challenge ONCE) OR
- * `{ transaction_authorization_id }` (poll: the client presents the
- * continuation handle the AS minted at initiation). Initiation validates the
- * challenge, subset-gates against the ACTIVE Mission (D42), opens the ARS task,
- * and returns a pending response carrying the handle; the poll returns the same
- * pending response until approval, then a txn-bound, audience-restricted,
- * single-use token carrying the ACTIVE Mission unchanged plus the verified
- * approval (openid/authzen#531).
- */
-async function handleTransaction(
-  opts: AdapterOptions,
-  ctx: KoaCtx,
-  txnTasks: Map<string, TxnHandle>,
-) {
-  const { kernel } = opts;
-
-  // 1. Base mission token + DPoP proof (the client authenticates with these,
-  //    identically for initiation and poll).
-  const auth = ctx.get("authorization");
-  if (!auth || !auth.startsWith("DPoP ")) {
-    ctx.status = 401;
-    ctx.body = { error: "invalid_token", error_description: "DPoP-bound base mission token required" };
-    return;
-  }
-  const baseToken = auth.slice("DPoP ".length);
-  const proofJws = ctx.get("dpop");
-  if (!proofJws) {
-    ctx.status = 401;
-    ctx.body = { error: "invalid_dpop_proof", error_description: "missing DPoP proof" };
-    return;
-  }
-  let baseClaims: Record<string, unknown>;
-  try {
-    const { payload } = await jwtVerify(baseToken, createLocalJWKSet(opts.publicJwks as never), {
-      issuer: opts.issuer,
-    });
-    baseClaims = payload as Record<string, unknown>;
-  } catch {
-    ctx.status = 401;
-    ctx.body = { error: "invalid_token" };
-    return;
-  }
-  const cnf = baseClaims.cnf as { jkt?: string } | undefined;
-  if (!cnf?.jkt) {
-    ctx.status = 401;
-    ctx.body = { error: "invalid_token", error_description: "base token missing cnf.jkt" };
-    return;
-  }
-  // Bind the DPoP proof to this endpoint (htu/htm) and to the token's cnf.jkt.
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    const proofJkt = await calculateJwkThumbprint(header.jwk as never);
-    if (proofJkt !== cnf.jkt) throw new Error("DPoP key does not match token cnf.jkt");
-    const { payload: proof } = await jwtVerify(proofJws, header.jwk as never, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/transaction` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-  } catch {
-    ctx.status = 401;
-    ctx.body = { error: "invalid_dpop_proof" };
-    return;
-  }
-  const missionRef = baseClaims.mission as { id?: string } | undefined;
-  const missionId = missionRef?.id;
-  const subject = baseClaims.sub as string;
-  if (!missionId) {
-    ctx.status = 401;
-    ctx.body = { error: "invalid_token", error_description: "base token missing mission claim" };
-    return;
-  }
-
-  if (!opts.challengeIssuers || !opts.txnKey || !opts.txnKid || !opts.ars) {
-    ctx.status = 501;
-    ctx.body = { error: "transaction_authorization_unsupported" };
-    return;
-  }
-
-  // 2. Body: EITHER { challenge } (initiation) OR { transaction_authorization_id } (poll).
-  const body = await readJsonBody(ctx.req);
-
-  // --- Poll: resolve the continuation handle minted at initiation. ---
-  if (typeof body.transaction_authorization_id === "string") {
-    await pollTransaction(opts, ctx, txnTasks, body.transaction_authorization_id, cnf.jkt);
-    return;
-  }
-
-  // --- Initiation: the client presents the RS-signed txn-challenge ONCE. ---
-  const challenge = body.challenge;
-  if (typeof challenge !== "string") {
-    ctx.status = 400;
-    ctx.body = {
-      error: "invalid_request",
-      error_description: "challenge (initiation) or transaction_authorization_id (poll) required",
-    };
-    return;
-  }
-
-  // @spec txn-authorization#two-phase-expiry — resolve the challenge issuer's
-  // keys from THAT issuer's published set, and nowhere else.
-  let claims;
-  try {
-    claims = await validateChallenge(challenge, opts.challengeIssuers, opts.issuer);
-  } catch (e) {
-    ctx.status = 400;
-    ctx.body = {
-      error: "invalid_challenge",
-      ...(e instanceof ChallengeError ? { error_description: e.message } : {}),
-    };
-    return;
-  }
-  const requested = claims.authorization_details as unknown as AuthorityEntry[];
-
-  // D42 subset gate: the requested authority MUST be within the ACTIVE Mission.
-  // Widening is not an AROP case (that is the separate Expansion flow).
-  const record = kernel.get(missionId);
-  if (!record) {
-    ctx.status = 404;
-    ctx.body = { error: "unknown_mission" };
-    return;
-  }
-  const active = kernel.applyExpiry(record);
-  if (active.state !== "active") {
-    ctx.status = 403;
-    ctx.body = { error: "mission_not_active" };
-    return;
-  }
-  // Containment: the txn subset gate measures against the EFFECTIVE set, so a
-  // contained capability cannot be laundered through a transaction approval.
-  if (!isSubsetSet(requested, kernel.effectiveAuthoritySet(active))) {
-    ctx.status = 403;
-    ctx.body = { error: "out_of_authority" };
-    return;
-  }
-
-  // Open the AS-vouched ARS task and mint an opaque continuation handle bound to
-  // the validated challenge and to the requesting client (cnf.jkt). The client
-  // never re-presents the challenge; it polls with this handle.
-  const action = requested[0]?.actions?.[0] ?? claims.reason;
-  const { taskId } = opts.ars.openForTxn({
-    txn: claims.txn,
-    missionId,
-    action,
-    parameter_digest: claims.parameter_digest,
-    subject,
-  });
-  const transactionAuthorizationId = `txa_${crypto.randomUUID()}`;
-  const nowSec = Math.floor(Date.now() / 1000);
-  const decoded = decodeJwt(challenge);
-  const expiresAt = typeof decoded.exp === "number" ? decoded.exp : nowSec + 300;
-  txnTasks.set(transactionAuthorizationId, {
-    taskId,
-    txn: claims.txn,
-    missionId,
-    cnfJkt: cnf.jkt,
-    parameter_digest: claims.parameter_digest,
-    authorizationDetails: requested,
-    subject,
-    audience: claims.iss, // the resource
-    expiresAt,
-  });
-  ctx.status = 200;
-  ctx.body = {
-    transaction_authorization_id: transactionAuthorizationId,
-    expires_in: Math.max(1, expiresAt - nowSec),
-    interval: TXN_POLL_INTERVAL,
-  };
-}
-
-/**
- * Poll the transaction endpoint with a continuation handle. Unknown handle ->
- * 404; a handle bound to a different client (cnf.jkt mismatch) -> 403. Then, per
- * §5.3 (RFC 8628-shaped): an expired handle -> 400 expired_token (and the handle
- * is reaped); a denied task -> 400 access_denied; still pending -> 400
- * authorization_pending; approved -> 200 with the txn-bound single-use token
- * issued from the STORED challenge state (D42: ACTIVE Mission unchanged) plus
- * the verified approval.
- */
-async function pollTransaction(
-  opts: AdapterOptions,
-  ctx: KoaCtx,
-  txnTasks: Map<string, TxnHandle>,
-  transactionAuthorizationId: string,
-  requesterJkt: string,
-) {
-  const { kernel } = opts;
-  const handle = txnTasks.get(transactionAuthorizationId);
-  if (!handle) {
-    ctx.status = 404;
-    ctx.body = { error: "invalid_request", error_description: "unknown transaction_authorization_id" };
-    return;
-  }
-  // The handle is bound to the client that initiated it.
-  if (handle.cnfJkt !== requesterJkt) {
-    ctx.status = 403;
-    ctx.body = { error: "invalid_token" };
-    return;
-  }
-
-  // §5.3 (RFC 8628-shaped) poll semantics. The handle expiring is terminal:
-  // reap it and report expired_token. Otherwise map the ARS task state -- a
-  // denied task is terminal (access_denied, handle kept so the denial is
-  // idempotent); anything not yet approved is still authorization_pending.
-  if (Math.floor(Date.now() / 1000) >= handle.expiresAt) {
-    txnTasks.delete(transactionAuthorizationId);
-    ctx.status = 400;
-    ctx.body = { error: "expired_token" };
-    return;
-  }
-  const task = opts.ars?.getTask(handle.taskId);
-  if (task?.state === "denied") {
-    ctx.status = 400;
-    ctx.body = { error: "access_denied" };
-    return;
-  }
-  if (!task || task.state !== "approved" || !task.approval) {
-    ctx.status = 400;
-    ctx.body = { error: "authorization_pending" };
-    return;
-  }
-
-  // Approved: gate a derivation on the active Mission and issue the txn-bound
-  // single-use token carrying the ACTIVE Mission unchanged (D42).
-  let gated;
-  try {
-    gated = kernel.gateDerivation(handle.missionId);
-  } catch (e) {
-    if (e instanceof GateError) {
-      ctx.status = 403;
-      ctx.body = { error: "mission_not_active", error_description: e.message };
-      return;
-    }
-    throw e;
-  }
-  const approval = task.approval;
-  const token = await issueTxnToken({
-    txn: handle.txn,
-    audience: handle.audience, // the resource
-    mission: kernel.missionClaim(gated),
-    authorizationDetails: handle.authorizationDetails,
-    approval: {
-      id: approval.id,
-      approved_at: approval.approved_at,
-      approved_until: approval.approved_until,
-      parameter_digest: approval.parameter_digest,
-    },
-    approvedUntil: approval.approved_until,
-    cnfJkt: handle.cnfJkt,
-    key: opts.txnKey as CryptoKey,
-    kid: opts.txnKid as string,
-    issuer: opts.issuer,
-  });
-  ctx.status = 200;
-  ctx.body = { access_token: token, token_type: "DPoP", txn: handle.txn };
 }
 
 /**

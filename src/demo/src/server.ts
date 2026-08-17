@@ -22,6 +22,7 @@ import { shapeIntent } from "@mission/agent";
 import { composeStack } from "./stack.js";
 import { ACTION_LABELS, REASON_LABELS, TOOL_LABELS } from "./labels.js";
 import {
+  clientAssertionSigner,
   completeMissionApproval,
   denyMissionApproval,
   dpopProofFor,
@@ -179,19 +180,25 @@ async function main() {
     publishedCounts.set(mid, all.length);
   };
 
-  // POST to the AS transaction endpoint, presenting the base mission token
-  // (DPoP). Initiation carries { challenge } (presented once) and returns a
-  // continuation handle; the poll carries { transaction_authorization_id } and
-  // returns the txn-token once the AROP task is approved.
-  const postTransaction = async (payload: Record<string, unknown>) => {
+  // @spec txn-authorization#challenge-redemption — POST to the AS transaction
+  // endpoint. The client authenticates as itself (private_key_jwt), presents
+  // the challenge with the Mission-bound access token as `subject_token`, and
+  // proves possession of the challenge's cnf key with a DPoP proof bound to
+  // this endpoint. Polls carry `transaction_authorization_id` alone.
+  const clientAssertion = await clientAssertionSigner(asUrl, stack.authServer.agentClientJwk);
+  const postTransaction = async (payload: Record<string, string>) => {
     const res = await fetch(`${asUrl}/transaction`, {
       method: "POST",
       headers: {
-        authorization: `DPoP ${active.issued.accessToken}`,
         dpop: await dpopProofFor(active.issued.dpopKeys, `${asUrl}/transaction`, "POST"),
-        "content-type": "application/json",
+        "content-type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify(payload),
+      body: new URLSearchParams({
+        client_id: "ap-agent",
+        client_assertion: await clientAssertion(),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        ...payload,
+      }).toString(),
     });
     const body = (await res.json()) as {
       transaction_authorization_id?: string;
@@ -315,7 +322,11 @@ async function main() {
         ...(challengeClaims.parameter_digest ? { parameter_digest: challengeClaims.parameter_digest as string } : {}),
       });
     }
-    const pending = await postTransaction({ challenge });
+    const pending = await postTransaction({
+      transaction_challenge: challenge,
+      subject_token: active.issued.accessToken,
+      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    });
     if (taskId && pending.body.transaction_authorization_id) {
       txnHandles.set(taskId, pending.body.transaction_authorization_id);
     }

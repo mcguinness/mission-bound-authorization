@@ -91,7 +91,7 @@ function jarClosures(cookies: CookieJar): { cookieHeader: () => string; storeCoo
 }
 
 /** private_key_jwt client-assertion signer for the agent confidential client. */
-async function clientAssertionSigner(asUrl: string, agentClientJwk: Record<string, unknown>): Promise<() => Promise<string>> {
+export async function clientAssertionSigner(asUrl: string, agentClientJwk: Record<string, unknown>): Promise<() => Promise<string>> {
   const clientKey = (await importJWK(agentClientJwk as JWK, "ES256")) as CryptoKey;
   return () =>
     new SignJWT({})

@@ -37,6 +37,10 @@ const PORT = 14450;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
+/** The pending workflow's own lifetime, independent of any challenge exp. */
+const WORKFLOW_LIFETIME_S = 600;
+/** The deployment maximum for an issued transaction token. */
+const MAX_TOKEN_LIFETIME_S = 300;
 
 type DpopKeys = { privateKey: CryptoKey; publicKey: CryptoKey };
 
@@ -235,23 +239,47 @@ async function issueBaseMissionToken(
 }
 
 /**
- * POST /transaction with the base token (DPoP). The body is EITHER
- * `{ challenge }` (initiation) OR `{ transaction_authorization_id }` (poll).
+ * @spec txn-authorization#challenge-redemption — POST to the transaction
+ * endpoint: authenticated client, a DPoP proof of the challenge's `cnf` key
+ * bound to this endpoint, and either an initial submission
+ * (`transaction_challenge` + `subject_token`) or a poll
+ * (`transaction_authorization_id`).
  */
 async function postTransaction(
-  payload: Record<string, unknown>,
-  opts: { token?: string; keys?: DpopKeys } = {},
+  payload: Record<string, string>,
+  opts: { keys?: DpopKeys; assertion?: string; omitClientAuth?: boolean } = {},
 ): Promise<Response> {
   const htu = `${ISSUER}/transaction`;
+  const auth = opts.omitClientAuth
+    ? {}
+    : {
+        client_id: "ap-agent",
+        client_assertion: opts.assertion ?? (await clientAssertion()),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      };
   return fetch(htu, {
     method: "POST",
     headers: {
-      "content-type": "application/json",
-      authorization: `DPoP ${opts.token ?? baseToken}`,
+      "content-type": "application/x-www-form-urlencoded",
       dpop: await dpopProof(htu, "POST", opts.keys ?? dpopKeys),
     },
-    body: JSON.stringify(payload),
+    body: new URLSearchParams({ ...auth, ...payload }).toString(),
   });
+}
+
+/** An initial submission carrying the Mission-bound access token as subject_token. */
+async function submit(
+  challenge: string,
+  opts: { token?: string; keys?: DpopKeys } = {},
+): Promise<Response> {
+  return postTransaction(
+    {
+      transaction_challenge: challenge,
+      subject_token: opts.token ?? baseToken,
+      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    },
+    { ...(opts.keys ? { keys: opts.keys } : {}) },
+  );
 }
 
 beforeAll(async () => {
@@ -278,8 +306,12 @@ beforeAll(async () => {
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
-    challengeIssuers,
-    ars,
+    transactionAuthorization: {
+      challengeIssuers,
+      ars,
+      workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
+      maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
+    },
   });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
@@ -338,7 +370,7 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
 
     // Initiation: the client presents the challenge ONCE -> a continuation
     // handle, expires_in, interval; and NO access_token yet.
-    const initRes = await postTransaction({ challenge });
+    const initRes = await submit(challenge);
     const initBody = (await initRes.json()) as {
       transaction_authorization_id?: string;
       expires_in?: number;
@@ -347,8 +379,9 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
     };
     expect(initRes.status, JSON.stringify(initBody)).toBe(200);
     expect(initBody.transaction_authorization_id).toMatch(/^txa_/);
-    expect(typeof initBody.expires_in).toBe("number");
-    expect(initBody.expires_in as number).toBeGreaterThan(0);
+    // @spec txn-authorization#two-phase-expiry — the workflow's OWN lifetime,
+    // not the challenge's remaining admission window.
+    expect(initBody.expires_in).toBe(WORKFLOW_LIFETIME_S);
     expect(initBody.interval).toBe(5);
     expect(initBody.access_token).toBeUndefined();
     const txaId = initBody.transaction_authorization_id as string;
@@ -371,10 +404,17 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
 
     // Poll WITH the handle after approval -> 200 with the txn-token.
     const tokenRes = await postTransaction({ transaction_authorization_id: txaId });
-    const tokenBody = (await tokenRes.json()) as { access_token?: string; token_type?: string; txn?: string };
+    const tokenBody = (await tokenRes.json()) as {
+      access_token?: string;
+      token_type?: string;
+      expires_in?: number;
+      txn?: string;
+    };
     expect(tokenRes.status, JSON.stringify(tokenBody)).toBe(200);
     expect(tokenBody.token_type).toBe("DPoP");
-    expect(tokenBody.txn).toBe(txn);
+    // A standard OAuth token response: no bespoke members ride alongside it.
+    expect(tokenBody.txn).toBeUndefined();
+    expect(tokenBody.expires_in).toBeGreaterThan(0);
 
     // Verify the AS-signed txn-token against the AS /jwks (as-txn published).
     const jwks = createRemoteJWKSet(new URL(`${ISSUER}/jwks`));
@@ -392,8 +432,11 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
     expect((payload.mission as { successor?: string }).successor).toBeUndefined();
     // The verified approval (incl. parameter_digest) is carried.
     expect((payload.approval as { parameter_digest: string }).parameter_digest).toBe(parameter_digest);
-    // The credential never outlives the recorded approval expiry.
-    expect(payload.exp).toBe(Math.floor(Date.parse(approvedUntil) / 1000));
+    // @spec txn-authorization#transaction-token — never later than the earliest
+    // of the approval's validity and the deployment maximum, and NEVER bounded
+    // by the already-consumed challenge exp.
+    expect(payload.exp as number).toBeLessThanOrEqual(Math.floor(Date.parse(approvedUntil) / 1000));
+    expect(payload.exp as number).toBeGreaterThan(Math.floor(Date.now() / 1000));
   });
 
   it("rejects a challenge whose authority widens beyond the Mission with 403 out_of_authority", async () => {
@@ -418,17 +461,17 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
       rsTxnKeys.privateKey,
       "rs-txn",
     );
-    const res = await postTransaction({ challenge });
+    const res = await submit(challenge);
     const body = (await res.json()) as { error?: string };
-    expect(res.status, JSON.stringify(body)).toBe(403);
-    expect(body.error).toBe("out_of_authority");
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
   });
 
   it("returns 404 for a poll with an unknown transaction_authorization_id", async () => {
     const res = await postTransaction({ transaction_authorization_id: "txa_does-not-exist" });
     const body = (await res.json()) as { error?: string };
-    expect(res.status, JSON.stringify(body)).toBe(404);
-    expect(body.error).toBe("invalid_request");
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
   });
 
   it("rejects a poll from a different client (cnf.jkt mismatch) with 403 invalid_token", async () => {
@@ -449,7 +492,7 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
       rsTxnKeys.privateKey,
       "rs-txn",
     );
-    const initBody = (await (await postTransaction({ challenge })).json()) as { transaction_authorization_id: string };
+    const initBody = (await (await submit(challenge)).json()) as { transaction_authorization_id: string };
     const txaId = initBody.transaction_authorization_id;
 
     // A DIFFERENT client: a second base token minted under a different DPoP key.
@@ -458,13 +501,10 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
 
     // Polling the handle with that client's token + DPoP passes the base-token
     // DPoP check but fails the handle-to-client binding -> 403 invalid_token.
-    const res = await postTransaction(
-      { transaction_authorization_id: txaId },
-      { token: other.token, keys: otherKeys },
-    );
+    const res = await postTransaction({ transaction_authorization_id: txaId }, { keys: otherKeys });
     const body = (await res.json()) as { error?: string };
-    expect(res.status, JSON.stringify(body)).toBe(403);
-    expect(body.error).toBe("invalid_token");
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
   });
 
   it("polls a DENIED task -> 400 access_denied (§5.3), so the client stops rather than polling forever", async () => {
@@ -485,7 +525,7 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
       rsTxnKeys.privateKey,
       "rs-txn",
     );
-    const initBody = (await (await postTransaction({ challenge })).json()) as { transaction_authorization_id: string };
+    const initBody = (await (await submit(challenge)).json()) as { transaction_authorization_id: string };
     expect(initBody.transaction_authorization_id).toMatch(/^txa_/);
 
     // Bob denies the AS-vouched task (openForTxn keys it arq_txn_<txn>).
