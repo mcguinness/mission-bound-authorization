@@ -441,6 +441,15 @@ object, producer behavior during the transition, verifier selection
 and downgrade behavior when recognition sets differ, and the
 transition procedure itself.
 
+Core's Integrity Anchor Test Vectors
+({{I-D.draft-mcguinness-oauth-mission}}) give a byte-level worked
+example of the envelope-anchor species alone (`intent_hash`,
+`proposal_hash`, `authority_hash`); an implementation can check its
+own computation against them. The canonical-object and raw-octet
+species above, the parse-time duplicate-detection rule, the I-JSON
+numeric domain, and the reject-unknown-prefix and no-downgrade
+agility rules remain prose-only: no vector pins them.
+
 ## Approval Event {#approval}
 
 A binding MUST define a native approval ceremony that atomically
@@ -1209,6 +1218,23 @@ unresolvable reference, a failed anchor verification, and an unknown
 `authorization_details` type fail closed; where a row's activation
 condition does not hold, the property is not supplied and a consumer
 MUST NOT rely on it.
+
+Core's three OPTIONAL capabilities, named in its Conformance section
+({{I-D.draft-mcguinness-oauth-mission}}), are implementation roles:
+surfaces an implementation may or may not offer, each independent of
+the others. The capability table above states scoped guarantee
+claims: properties the OAuth binding supplies and the conditions
+under which each is supplied. The two vocabularies answer different
+questions and are not equivalent; the table below relates them
+without collapsing one into the other. Declaring an OPTIONAL role
+never creates a claim beyond the eight already stated above.
+
+| Core OPTIONAL capability | Substrate capability claim(s) exercised | Relationship |
+| --- | --- | --- |
+| Introspection | State-Observable | One of State-Observable's three named activation surfaces, alongside Status and Signals; declaring it activates that otherwise-conditional claim. |
+| Delegation | Lifecycle-Gated Authorization, Structured Authority, Monotonic Derivation, Credential-Bound | Core delegation subset-checks `authorization_details`, carries the `mission` claim unchanged, sender-constrains the delegated credential to the delegate's own key, and refuses issuance unless the Mission is active. All four claims are already supplied always; Delegation exercises them rather than creating them. The `act` chain itself supplies none of them: it is attribution, never authority. |
+| Cross-Domain | Lifecycle-Gated Authorization, Structured Authority, Monotonic Derivation, Credential-Bound | Carries the same four always-supplied guarantees across the domain hop: the Mission reference and `authority_hash` intact, authority that only narrows, and projection gated on active state, while adding an interoperable projection surface the guarantees alone do not provide. It does not become Portable Evidence by crossing a domain: that claim activates only when an Evidence, Mandate, or audit companion is active, and Cross-Domain is not among them. |
+{: title="Core optional roles related to substrate capability claims"}
 
 Ownership migrates by touch, not by relocation.  When a
 binding-neutral definition next changes substantively, the change

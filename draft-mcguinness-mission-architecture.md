@@ -530,7 +530,8 @@ actually take, and the second is the reference:
 **Protocol core**:
 : the issuance profile alone: the standardizable primitive
   (approved, anchored, state-gated Missions), Mission-substrate
-  conformance ({{requirements}}), no per-action control.
+  conformance ({{requirements}}), no per-action control (the OAuth
+  realization of Baseline Issuance, {{assurance-levels}}).
 
 **Reference security architecture**:
 : core plus runtime enforcement, its AuthZEN binding, and a
@@ -809,14 +810,17 @@ Access Server, with contextual PS governance when the PS is on path.
   the `s256` commitment over exact mission-blob bytes, not the OAuth
   integrity anchors.
 
-Read against "approved" in the first invariant, the core names three
-authorization bases, never an eighth invariant: `direct`, a human's
-own approval; `template`, a dispatch drawing on a ceiling the human
-consented to once; and `policy_drawdown`, a child instance a policy
-adjudicates within a bound the parent's human already consented to.
-All three fix the same accountable human as `consent_principal`; they
-differ only in what activated this instance and what root that
-activation traces to (the core).
+Read against "approved" in the first invariant, the core fully
+defines one authorization basis, `direct`, a human's own approval. It
+provides the extension point, an authorization-basis `type` string,
+that companion profiles use to define others: `template`, a dispatch
+drawing on a ceiling the human consented to once, and
+`policy_drawdown`, a child instance a policy adjudicates within a
+bound the parent's human already consented to. This is never an
+eighth invariant: every value of the basis, core-defined or
+companion-defined, fixes the same accountable human as
+`consent_principal`; they differ only in what activated this instance
+and what root that activation traces to (the core).
 
 Read as shared capabilities rather than universal wire semantics, the
 bindings carry durability, attribution, and termination. Narrowing and
@@ -829,7 +833,10 @@ information propagation alone, and a work product crossing into a
 Mission is input that the receiving Mission re-evaluates under its own
 Authority Set. This is a reading of the invariants above, not an eighth
 invariant; its normative home is the Mission Work Products companion
-({{I-D.draft-mcguinness-oauth-mission-work-products}}).
+({{I-D.draft-mcguinness-oauth-mission-work-products}}). The core
+states the same rule in its "Authority Does Not Propagate With
+Information" section ({{I-D.draft-mcguinness-oauth-mission}}); that
+section, not this summary, is the normative text this passage tracks.
 
 Read under composition, the invariants bound one Mission's own
 Authority Set; they do not by themselves bound the aggregate surface a
@@ -844,7 +851,10 @@ cross-domain and child-delegation profiles' role
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
 {{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and bounding
 aggregate consumption is the metering profile's
-({{I-D.draft-mcguinness-mission-metering}}).
+({{I-D.draft-mcguinness-mission-metering}}). The core states the same
+composition property in its "Composition and the Effective Ceiling"
+section ({{I-D.draft-mcguinness-oauth-mission}}); that section, not
+this summary, is the normative text this passage tracks.
 
 # Mission Roles and Components {#components}
 
@@ -1189,10 +1199,11 @@ The binding-neutral contract is Mission Substrate Requirements
 kernel every binding provides (native reference and controller, actor
 binding, approved context, approval event, governance gate, bounded
 reliance, context propagation, and an ordered governance record) and
-seven optional capabilities each binding claims through its Mission
+eight optional capabilities each binding claims through its Mission
 Substrate Statement (Lifecycle-Gated Authorization, State-Observable,
 Structured Authority, Monotonic Derivation, Credential-Bound,
-Independently Verifiable, and Portable Evidence).
+Authorized Context Correlation, Independently Verifiable, and Portable
+Evidence).
 
 The bindings declare what they provide, each in its Mission Substrate
 Statement. The companion profiles named without "oauth" are defined
