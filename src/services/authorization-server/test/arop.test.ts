@@ -6,7 +6,7 @@
  * never outlive approved_until.
  */
 
-import { calculateJwkThumbprint, createLocalJWKSet, exportJWK, generateKeyPair, jwtVerify } from "jose";
+import { calculateJwkThumbprint, createLocalJWKSet, exportJWK, generateKeyPair, jwtVerify, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import {
@@ -15,12 +15,44 @@ import {
   DeferralStore,
   issueTxnToken,
   MissionKernel,
-  signChallenge,
+  TXN_CHALLENGE_TYP,
   TxnReplayCache,
   TXN_TOKEN_TYP,
   validateChallenge,
   validateMissionIntent,
 } from "../src/index.js";
+
+/** Stand in for the Challenge-Issuing Resource (the resource owns the signing). */
+async function signChallenge(
+  claims: {
+    txn: string;
+    authorization_details: unknown[];
+    iss: string;
+    aud: string;
+    reason: string;
+    parameter_digest: string;
+    mission: Record<string, unknown>;
+    cnf: { jkt: string };
+  },
+  key: CryptoKey,
+  kid: string,
+): Promise<string> {
+  return new SignJWT({
+    txn: claims.txn,
+    authorization_details: claims.authorization_details,
+    reason: claims.reason,
+    parameter_digest: claims.parameter_digest,
+    mission: claims.mission,
+    cnf: claims.cnf,
+  })
+    .setProtectedHeader({ alg: "ES256", kid, typ: TXN_CHALLENGE_TYP })
+    .setIssuer(claims.iss)
+    .setAudience(claims.aud)
+    .setJti(crypto.randomUUID())
+    .setIssuedAt()
+    .setExpirationTime("5m")
+    .sign(key);
+}
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -213,13 +245,20 @@ describe("M7 scenario 7: AROP over Transaction Challenge (D42 -- carries the act
         aud: ISS,
         reason: "over-cap wire requires approval",
         parameter_digest,
+        mission: kernel.missionClaim(mission) as unknown as Record<string, unknown>,
+        cnf: { jkt: cnfJkt },
       },
       rsKeys.privateKey,
       "rs-txn",
     );
 
-    // AS validates the challenge against the RS keys; the digest round-trips.
-    const validated = await validateChallenge(challenge, { keys: [rsPubJwk as never] }, ISS);
+    // @spec txn-authorization#two-phase-expiry — the TAS resolves the challenge
+    // issuer's keys from that ISSUER's published set, keyed by the challenge iss.
+    const validated = await validateChallenge(
+      challenge,
+      new Map([[RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPubJwk as never] }) }]]),
+      ISS,
+    );
     expect(validated.txn).toBe(txn);
     expect(validated.iss).toBe(RESOURCE);
     expect(validated.parameter_digest).toBe(parameter_digest);

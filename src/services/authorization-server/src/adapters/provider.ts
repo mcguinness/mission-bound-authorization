@@ -101,7 +101,12 @@ import {
   STATUS_LIST_MEDIA_TYPE,
   type StatusListPublisher,
 } from "../kernel/status-list.js";
-import { issueTxnToken, validateChallenge } from "../kernel/txn-challenge.js";
+import {
+  type ChallengeIssuers,
+  ChallengeError,
+  issueTxnToken,
+  validateChallenge,
+} from "../kernel/txn-challenge.js";
 import type { AuthorityEntry, LifecycleOperation, MissionIntent, MissionRecord } from "../kernel/types.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
 import type { CrossOrgOptions } from "./cross-org-grant.js";
@@ -172,12 +177,14 @@ export interface AdapterOptions {
   txnKey?: CryptoKey;
   txnKid?: string;
   /**
-   * The resource's txn-challenge verification keys (its
-   * txn_challenge_jwks_uri). Required for the transaction_authorization_endpoint;
-   * phase 3 wires it from composeStack, the phase-1 test injects a generated
-   * rs-txn pub.
+   * @spec txn-authorization#two-phase-expiry — the accepted Challenge-Issuing
+   * Resources and, per issuer, the keys published at that resource's
+   * `txn_challenge_jwks_uri`. Deployment and federation policy: a challenge
+   * whose `iss` is absent here is refused, and one resource's key never
+   * verifies another resource's `iss`. Required for the
+   * transaction_authorization_endpoint.
    */
-  resourceTxnJwks?: { keys: JWK[] };
+  challengeIssuers?: ChallengeIssuers;
   /**
    * AROP transaction task store. The AS vouches for the RS-validated challenge
    * and opens/polls a task here (D37: AS owns the txn pending id, ARS owns the
@@ -2057,7 +2064,7 @@ async function handleTransaction(
     return;
   }
 
-  if (!opts.resourceTxnJwks || !opts.txnKey || !opts.txnKid || !opts.ars) {
+  if (!opts.challengeIssuers || !opts.txnKey || !opts.txnKid || !opts.ars) {
     ctx.status = 501;
     ctx.body = { error: "transaction_authorization_unsupported" };
     return;
@@ -2083,21 +2090,20 @@ async function handleTransaction(
     return;
   }
 
-  // Validate the challenge against the resource's txn-challenge keys.
+  // @spec txn-authorization#two-phase-expiry — resolve the challenge issuer's
+  // keys from THAT issuer's published set, and nowhere else.
   let claims;
   try {
-    claims = await validateChallenge(challenge, opts.resourceTxnJwks, opts.issuer);
-  } catch {
+    claims = await validateChallenge(challenge, opts.challengeIssuers, opts.issuer);
+  } catch (e) {
     ctx.status = 400;
-    ctx.body = { error: "invalid_challenge" };
+    ctx.body = {
+      error: "invalid_challenge",
+      ...(e instanceof ChallengeError ? { error_description: e.message } : {}),
+    };
     return;
   }
-  if (!claims.parameter_digest) {
-    ctx.status = 400;
-    ctx.body = { error: "invalid_challenge", error_description: "parameter_digest required" };
-    return;
-  }
-  const requested = claims.authorization_details as AuthorityEntry[];
+  const requested = claims.authorization_details as unknown as AuthorityEntry[];
 
   // D42 subset gate: the requested authority MUST be within the ACTIVE Mission.
   // Widening is not an AROP case (that is the separate Expansion flow).

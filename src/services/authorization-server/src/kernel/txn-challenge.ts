@@ -1,92 +1,141 @@
 /**
- * @spec AROP Transaction Challenge binding (I-D.rosomakho-oauth-txn-challenge),
- * openid/authzen#531.
+ * @spec txn-authorization#resource-challenge, #two-phase-expiry (key discovery)
+ * — the Transaction Authorization Server's challenge-verification side.
  *
- * The protected resource (PEP) signs a Transaction Authorization Challenge
- * (JWS: txn, authorization_details, iss=resource, aud=AS, reason). The client
- * presents it to the AS transaction_authorization_endpoint; the AS validates
- * it against the resource's txn_challenge_jwks_uri keys, obtains approval, and
- * issues a txn-bound, audience-restricted, single-use token the client
- * re-presents to the resource.
- *
- * NOTE: the RS-side leaf helpers (signChallenge/TxnReplayCache/typ constants)
- * are COPIED into `@mission/mcp-payments` (src/txn-challenge.ts) to avoid a
- * dependency cycle. The two are format-coupled: if the challenge/token wire
- * shape changes here, update that copy too.
+ * The wire vocabulary lives in `@mission/core`, shared with the
+ * Challenge-Issuing Resource (the two packages cannot import each other).
+ * What lives here is the TAS's own trust decision: the set of acceptable
+ * Challenge-Issuing Resources is deployment and federation policy, never taken
+ * from an untrusted request claim, and a challenge issuer's keys are resolved
+ * from THAT issuer's published `txn_challenge_jwks_uri` and nowhere else. One
+ * resource's key therefore cannot verify another resource's `iss`.
  */
 
-import { createLocalJWKSet, jwtVerify, SignJWT, type CryptoKey, type JWK } from "jose";
+import {
+  readTxnMissionClaim,
+  TXN_CHALLENGE_TYP,
+  type JsonValue,
+  type TxnChallengeClaims,
+} from "@mission/core";
+import { decodeJwt, jwtVerify, SignJWT, type CryptoKey, type JWTVerifyGetKey } from "jose";
 import type { MissionClaim } from "./types.js";
 
-export const TXN_CHALLENGE_TYP = "txn-authz-challenge+jwt";
-export const TXN_TOKEN_TYP = "txn-token+jwt";
+export { TXN_CHALLENGE_TYP, type TxnChallengeClaims };
 
-export interface TxnChallengeClaims {
-  txn: string;
-  authorization_details: unknown[];
-  iss: string; // the resource
-  aud: string; // the AS
-  reason: string;
-  /**
-   * Digest of the effective operation parameters the RS gated on. Optional on
-   * the shared type (the de-risk spike predates it); the shipped
-   * transaction_authorization_endpoint requires it and rejects a challenge
-   * without one.
-   */
-  parameter_digest?: string;
+/**
+ * One accepted Challenge-Issuing Resource: the resolver for the keys it
+ * publishes at its `txn_challenge_jwks_uri`, and the algorithms it declares in
+ * `txn_challenge_signing_alg_values_supported`. Any jose key resolver fits
+ * (createRemoteJWKSet over the published URI in a deployment; createLocalJWKSet
+ * in a test), so the AS package holds no fetching policy of its own.
+ */
+export interface ChallengeIssuerKeys {
+  jwks: JWTVerifyGetKey;
+  algs?: string[];
+}
+
+/** The accepted challenge issuers, keyed by the resource's `iss` value. */
+export type ChallengeIssuers = ReadonlyMap<string, ChallengeIssuerKeys>;
+
+export type ChallengeErrorCode =
+  | "unknown_issuer"
+  | "invalid_signature"
+  | "invalid_claims"
+  | "expired_challenge";
+
+export class ChallengeError extends Error {
+  constructor(
+    readonly code: ChallengeErrorCode,
+    message: string,
+  ) {
+    super(message);
+  }
 }
 
 /**
- * RS side: sign a challenge with the rs-txn key (txn_challenge_jwks_uri). The
- * transaction id travels as a `txn` claim in the signed body (draft §4.2.1);
- * a REQUIRED `jti` (§4.2.2) makes each challenge uniquely identifiable.
+ * Validate a challenge against the keys of the issuer it NAMES. The issuer is
+ * read from the unverified JWT only to select the key set; the signature is
+ * then verified under that set alone, so a valid signature by a DIFFERENT
+ * accepted resource's key fails. `expiredOk` lets a caller distinguish the
+ * admission check (a late challenge is refused into a new workflow) from a
+ * re-read of a challenge already admitted.
  */
-export async function signChallenge(claims: TxnChallengeClaims, key: CryptoKey, kid: string): Promise<string> {
-  const body: Record<string, unknown> = {
-    txn: claims.txn,
-    authorization_details: claims.authorization_details,
-    reason: claims.reason,
-  };
-  if (claims.parameter_digest !== undefined) body.parameter_digest = claims.parameter_digest;
-  return new SignJWT(body)
-    .setProtectedHeader({ alg: "ES256", kid, typ: TXN_CHALLENGE_TYP })
-    .setIssuer(claims.iss)
-    .setAudience(claims.aud)
-    .setJti(crypto.randomUUID())
-    .setIssuedAt()
-    .setExpirationTime("5m")
-    .sign(key);
-}
-
-/** AS side: validate a challenge against the resource's signing keys. */
 export async function validateChallenge(
   challenge: string,
-  resourceJwks: { keys: JWK[] },
+  issuers: ChallengeIssuers,
   expectedAud: string,
+  opts: { expiredOk?: boolean } = {},
 ): Promise<TxnChallengeClaims> {
-  const jwks = createLocalJWKSet({ keys: resourceJwks.keys } as never);
-  const { payload } = await jwtVerify(challenge, jwks, { audience: expectedAud, typ: TXN_CHALLENGE_TYP });
+  let iss: string | undefined;
+  try {
+    iss = decodeJwt(challenge).iss;
+  } catch {
+    throw new ChallengeError("invalid_claims", "challenge is not a JWT");
+  }
+  const issuer = iss ? issuers.get(iss) : undefined;
+  if (!iss || !issuer) {
+    throw new ChallengeError("unknown_issuer", "challenge issuer is not an accepted resource");
+  }
+  let payload: Record<string, unknown>;
+  try {
+    ({ payload } = (await jwtVerify(challenge, issuer.jwks, {
+      audience: expectedAud,
+      issuer: iss,
+      typ: TXN_CHALLENGE_TYP,
+      ...(issuer.algs ? { algorithms: issuer.algs } : {}),
+      ...(opts.expiredOk ? { clockTolerance: Number.MAX_SAFE_INTEGER } : {}),
+    })) as { payload: Record<string, unknown> });
+  } catch (e) {
+    const code = (e as { code?: string }).code;
+    if (code === "ERR_JWT_EXPIRED") {
+      throw new ChallengeError("expired_challenge", "challenge has expired");
+    }
+    throw new ChallengeError("invalid_signature", "challenge did not verify under its issuer's keys");
+  }
+
+  // Upstream REQUIRED claims plus this profile's three additions. A challenge
+  // missing any of them is rejected outright, never parsed best-effort.
+  const details = payload.authorization_details;
+  const cnf = payload.cnf as { jkt?: unknown } | undefined;
+  const mission = readTxnMissionClaim(payload.mission);
+  if (
+    typeof payload.jti !== "string" ||
+    typeof payload.iat !== "number" ||
+    typeof payload.exp !== "number" ||
+    typeof payload.txn !== "string" ||
+    typeof payload.reason !== "string" ||
+    !Array.isArray(details) ||
+    details.length !== 1 ||
+    typeof payload.parameter_digest !== "string" ||
+    typeof cnf?.jkt !== "string" ||
+    !mission
+  ) {
+    throw new ChallengeError("invalid_claims", "challenge is missing a REQUIRED claim");
+  }
   return {
-    txn: payload.txn as string,
-    authorization_details: (payload.authorization_details as unknown[]) ?? [],
-    iss: payload.iss as string,
-    aud: payload.aud as string,
-    reason: payload.reason as string,
-    ...(payload.parameter_digest !== undefined
-      ? { parameter_digest: payload.parameter_digest as string }
-      : {}),
+    iss,
+    aud: expectedAud,
+    iat: payload.iat,
+    exp: payload.exp,
+    jti: payload.jti,
+    txn: payload.txn,
+    authorization_details: details as JsonValue[],
+    reason: payload.reason,
+    mission,
+    parameter_digest: payload.parameter_digest,
+    cnf: { jkt: cnf.jkt },
+    ...(payload.act !== undefined ? { act: payload.act as JsonValue } : {}),
+    ...(typeof payload.reason_uri === "string" ? { reason_uri: payload.reason_uri } : {}),
   };
 }
 
-/**
- * AS side: issue a txn-bound, audience-restricted, single-use access token
- * after approval. Carries the challenge txn and the ACTIVE mission claim
- * unchanged (D42: AROP never widens; widening is the separate Expansion flow),
- * plus the verified approval (incl. its parameter_digest).
- */
+/** @deprecated superseded by the conforming mission-txn-token+jwt mint. */
+export const TXN_TOKEN_TYP = "txn-token+jwt";
+
+/** @deprecated superseded by the conforming mission-txn-token+jwt mint. */
 export async function issueTxnToken(input: {
   txn: string;
-  audience: string; // the resource
+  audience: string;
   mission: MissionClaim | Record<string, unknown>;
   authorizationDetails: unknown[];
   approval: { id: string; approved_at: string; approved_until: string; parameter_digest: string };
@@ -113,10 +162,7 @@ export async function issueTxnToken(input: {
     .sign(input.key);
 }
 
-/**
- * RS side: single-use re-presentation cache. Returns true the first time a
- * txn-bound token is presented for its txn, false on replay.
- */
+/** @deprecated superseded by the linearizable consumption store. */
 export class TxnReplayCache {
   private readonly used = new Set<string>();
   accept(txn: string): boolean {

@@ -25,11 +25,13 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   buildAuthorizationServer,
-  signChallenge,
+  TXN_CHALLENGE_TYP,
   TXN_TOKEN_TYP,
   type AuthorityEntry,
   type BuiltAs,
+  type ChallengeIssuers,
 } from "../src/index.js";
+import { createLocalJWKSet, decodeJwt, type JWK } from "jose";
 
 const PORT = 14450;
 const ISSUER = `http://localhost:${PORT}`;
@@ -47,6 +49,45 @@ let dpopJkt: string;
 let rsTxnKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
 let baseToken = "";
 let missionId = "";
+let missionClaim: Record<string, unknown> = {};
+
+/**
+ * Stand in for the Challenge-Issuing Resource: sign a challenge carrying every
+ * REQUIRED claim, including this profile's `mission`, `parameter_digest` and
+ * `cnf` (which a real resource derives from the request and the verified
+ * Mission-bound access token).
+ */
+async function signChallenge(
+  claims: {
+    txn: string;
+    authorization_details: unknown[];
+    iss: string;
+    aud: string;
+    reason: string;
+    parameter_digest: string;
+    mission?: Record<string, unknown>;
+    cnf?: { jkt: string };
+    lifetimeSeconds?: number;
+  },
+  key: CryptoKey,
+  kid: string,
+): Promise<string> {
+  return new SignJWT({
+    txn: claims.txn,
+    authorization_details: claims.authorization_details,
+    reason: claims.reason,
+    parameter_digest: claims.parameter_digest,
+    mission: claims.mission ?? missionClaim,
+    cnf: claims.cnf ?? { jkt: dpopJkt },
+  })
+    .setProtectedHeader({ alg: "ES256", kid, typ: TXN_CHALLENGE_TYP })
+    .setIssuer(claims.iss)
+    .setAudience(claims.aud)
+    .setJti(crypto.randomUUID())
+    .setIssuedAt()
+    .setExpirationTime(`${claims.lifetimeSeconds ?? 300}s`)
+    .sign(key);
+}
 
 const cookies = new Map<string, string>();
 function cookieHeader(jar: Map<string, string> = cookies): string {
@@ -231,10 +272,13 @@ beforeAll(async () => {
     approvalTtlSeconds: 300,
   });
 
+  const challengeIssuers: ChallengeIssuers = new Map([
+    [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsTxnPub as JWK] }), algs: ["ES256"] }],
+  ]);
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
-    resourceTxnJwks: { keys: [rsTxnPub as never] },
+    challengeIssuers,
     ars,
   });
   asServer = as.provider.listen(PORT);
@@ -245,6 +289,7 @@ beforeAll(async () => {
   const base = await issueBaseMissionToken();
   baseToken = base.token;
   missionId = base.missionId;
+  missionClaim = decodeJwt(baseToken).mission as Record<string, unknown>;
 });
 
 afterAll(() => {

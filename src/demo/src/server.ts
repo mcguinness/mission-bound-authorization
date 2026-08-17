@@ -40,6 +40,12 @@ const TX_TOOLS = new Set(["execute_wire_transfer", "send_remittance_email"]);
  */
 const RUN_INVOICES = ["inv-1", "inv-2", "inv-3"];
 
+/**
+ * @spec txn-authorization#resource-challenge — this console redeems challenges,
+ * so it signals `Accept-Txn-Challenge` on every transaction-tier call.
+ */
+const ACCEPT_CHALLENGE = { acceptTxnChallenge: true } as const;
+
 /** A tool-call result, loosely typed for the display-only step detail below. */
 interface ToolResult {
   ok: boolean;
@@ -47,7 +53,9 @@ interface ToolResult {
   denial_reason?: string | undefined;
   refusal_reason?: string | undefined;
   deduped?: boolean | undefined;
-  access_challenge?: { challenge: string; txn_endpoint: string; txn?: string } | undefined;
+  /** @spec txn-authorization#resource-challenge — the upstream wire members. */
+  error?: string | undefined;
+  transaction_challenge?: string | undefined;
 }
 
 /**
@@ -272,7 +280,7 @@ async function main() {
         ? { invoice_id: inv.id, vendor: inv.vendor_id, amount: inv.amount, currency: inv.currency }
         : { invoice_id: invoiceId, vendor: null, amount: null, currency: null };
     }
-    const paused = !r.ok && !!r.access_challenge;
+    const paused = !r.ok && !!r.transaction_challenge;
     const outcome: StepDetail["outcome"] = paused ? "paused" : !r.ok ? "denied" : TX_TOOLS.has(tool) ? "executed" : "read";
     const evidence: StepDetail["evidence"] =
       outcome === "executed" ? "execution committed" : outcome === "read" ? "read" : outcome === "paused" ? "awaiting approval" : "refused";
@@ -294,8 +302,8 @@ async function main() {
   // handle keyed by the ARS task id (arq_txn_<txn>), and return the pending
   // fields the UI/JIT retry wire on. Shared by /agent/act and /agent/run so both
   // open the AROP task through identical logic.
-  const initiateArop = async (ch: { challenge: string; txn_endpoint: string }, tool: string, invoiceId?: string) => {
-    const challengeClaims = decodeClaims(ch.challenge);
+  const initiateArop = async (challenge: string, tool: string, invoiceId?: string) => {
+    const challengeClaims = decodeClaims(challenge);
     const txn = challengeClaims.txn as string | undefined;
     const taskId = txn ? `arq_txn_${txn}` : undefined;
     if (taskId) {
@@ -307,7 +315,7 @@ async function main() {
         ...(challengeClaims.parameter_digest ? { parameter_digest: challengeClaims.parameter_digest as string } : {}),
       });
     }
-    const pending = await postTransaction({ challenge: ch.challenge });
+    const pending = await postTransaction({ challenge });
     if (taskId && pending.body.transaction_authorization_id) {
       txnHandles.set(taskId, pending.body.transaction_authorization_id);
     }
@@ -316,7 +324,7 @@ async function main() {
       taskId,
       transaction_authorization_id: pending.body.transaction_authorization_id,
       task_state: "authorization_pending" as const,
-      access_challenge: { txn_endpoint: ch.txn_endpoint, challenge: challengeClaims },
+      transaction_challenge: challengeClaims,
     };
   };
 
@@ -547,19 +555,19 @@ async function main() {
     const tool = String(body.tool);
     const args = (body.args as Record<string, unknown>) ?? {};
     const r = TX_TOOLS.has(tool)
-      ? await stack.server.callTransactionTool(tool, args, active.facts)
+      ? await stack.server.callTransactionTool(tool, args, active.facts, undefined, undefined, ACCEPT_CHALLENGE)
       : await stack.server.callReadTool(tool, args, active.facts);
     await publishNew();
     // Structured detail for the log renderer, ADDED alongside the existing
     // fields (ok/denial_reason/... stay for the JIT UI + /agent/retry contract).
     const detail = stepDetail(tool, args, r, active.missionId);
-    const ch = (r as ToolResult).access_challenge;
+    const ch = (r as ToolResult).transaction_challenge;
     if (!r.ok && ch) {
       // The ARS task id is derived from the challenge's txn (openForTxn keys the
       // task arq_txn_<txn>), so the approver queue + retry correlate on it while
       // the client polls the AS by the continuation handle. `arop` is spread
       // AFTER `r` so its decoded challenge overrides the raw one; `detail` carries
-      // no access_challenge/taskId, so it never clobbers those.
+      // no transaction_challenge/taskId, so it never clobbers those.
       const arop = await initiateArop(ch, tool, args.invoice_id as string | undefined);
       return c.json({ ...r, ...arop, ...detail });
     }
@@ -607,7 +615,7 @@ async function main() {
     const steps: Array<StepDetail & { taskId?: string | undefined; transaction_authorization_id?: string | undefined }> = [];
     for (const invoice_id of RUN_INVOICES) {
       const args = { invoice_id };
-      const r = await stack.server.callTransactionTool("execute_wire_transfer", args, active.facts);
+      const r = await stack.server.callTransactionTool("execute_wire_transfer", args, active.facts, undefined, undefined, ACCEPT_CHALLENGE);
       await publishNew();
       steps.push(stepDetail("execute_wire_transfer", args, r, active.missionId));
     }
@@ -615,11 +623,11 @@ async function main() {
     // STOP (no auto-approve). The paused step carries taskId + tool + args so the
     // UI can arm the existing retry button against the AROP task.
     const jitArgs = { invoice_id: "inv-1" };
-    const jr = await stack.server.callTransactionTool("send_remittance_email", jitArgs, active.facts);
+    const jr = await stack.server.callTransactionTool("send_remittance_email", jitArgs, active.facts, undefined, undefined, ACCEPT_CHALLENGE);
     await publishNew();
     const jitDetail = stepDetail("send_remittance_email", jitArgs, jr, active.missionId);
-    if (!jr.ok && jr.access_challenge) {
-      const arop = await initiateArop(jr.access_challenge, "send_remittance_email", jitArgs.invoice_id);
+    if (!jr.ok && jr.transaction_challenge) {
+      const arop = await initiateArop(jr.transaction_challenge, "send_remittance_email", jitArgs.invoice_id);
       steps.push({ ...jitDetail, taskId: arop.taskId, transaction_authorization_id: arop.transaction_authorization_id });
     } else {
       steps.push(jitDetail);

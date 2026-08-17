@@ -10,6 +10,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
+import { TXN_AUTHORIZATION_REQUIRED, type JsonValue, type TxnMissionClaim } from "@mission/core";
 import { getTracer } from "@mission/telemetry";
 import {
   type AuthorityEntry,
@@ -25,6 +26,7 @@ import { buildEffectiveParams, type EffectiveParams, parameterDigest } from "./e
 import type { EvidenceStore } from "./evidence.js";
 import type { PaymentsStore } from "./payments-store.js";
 import { signChallenge } from "./txn-challenge.js";
+import type { PendingOperation } from "./txn-store.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
 export const TOOL_BASE = "mcp://payments.demo/tools";
@@ -37,6 +39,15 @@ export interface TokenFacts {
   clientInstanceId?: string;
   act?: ActObject;
   mission: { id: string; authority_hash: string };
+  /**
+   * @spec txn-authorization#resource-challenge — the VERIFIED token's whole
+   * `mission` claim. A challenge copies it unchanged (including the invariant
+   * origin principal where the Origin Principal profile applies), so the
+   * resource must keep the claim it verified, not just the two members the
+   * PDP envelope needs. Absent for a credential whose claim is not the
+   * profiled shape; the resource then issues no challenge.
+   */
+  missionClaim?: TxnMissionClaim;
   cnfJkt: string;
   /**
    * @spec continuation: the access token's `jti`, carried so an action taken
@@ -90,12 +101,22 @@ export interface PepDeps {
   /** PDP signer + ARS endpoint for requestable denials (M6). */
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
   /**
-   * AROP Transaction Challenge signer (rs-txn key). When configured, an
-   * `action_approval_required` denial also yields an RS-signed txn-challenge the
-   * client presents to the AS transaction_authorization_endpoint. `txnEndpoint`
-   * is that endpoint URL; `asIssuer` is the AS issuer used as the challenge aud.
+   * @spec txn-authorization#resource-challenge — this resource's txn-challenge
+   * signing key (the key published at its `txn_challenge_jwks_uri`). When
+   * configured AND the client signalled `Accept-Txn-Challenge`, an
+   * `action_approval_required` denial returns a signed challenge. `asIssuer` is
+   * the Transaction Authorization Server, used as the challenge `aud`; the
+   * client discovers its endpoint from Authorization Server metadata
+   * (`transaction_authorization_endpoint`), never from the challenge.
    */
-  challengeSigner?: { sign: import("jose").CryptoKey; kid: string; txnEndpoint: string; asIssuer: string };
+  challengeSigner?: {
+    sign: import("jose").CryptoKey;
+    kid: string;
+    alg?: string;
+    asIssuer: string;
+    /** Admission window for the challenge (seconds). */
+    lifetimeSeconds?: number;
+  };
   /**
    * Per-instance revocation (M12 / D19): "iss sub" keys of agent instances the
    * PEP refuses. Revoking one sub-agent instance kills only that instance;
@@ -117,6 +138,15 @@ export interface PepDeps {
   }) => void;
 }
 
+/**
+ * @spec txn-authorization#resource-challenge — per-request client signals the
+ * enforcement path reads. `acceptTxnChallenge` is the `Accept-Txn-Challenge`
+ * header: a client that does not signal it never receives a challenge.
+ */
+export interface RequestSignals {
+  acceptTxnChallenge?: boolean;
+}
+
 export interface ActionApprovalInput {
   id: string;
   approved_at: string;
@@ -135,12 +165,17 @@ export interface EnforceResult {
   /** Present on a requestable denial: the ARAP access-request context. */
   access_request?: { endpoint: string; denial_binding: string; binding_token: string; expires_at: string };
   /**
-   * Present when `challengeSigner` is configured and the action needs a
-   * per-action approval: an RS-signed AROP txn-challenge plus the AS endpoint to
-   * present it to. `txn` is the transaction id the RS minted for this challenge;
-   * the RS records it so the later txn-token's `txn` can be checked (draft §6.2).
+   * @spec txn-authorization#resource-challenge — present when the action falls
+   * under the profile and the client signalled `Accept-Txn-Challenge`. `error`
+   * and `transaction_challenge` are the upstream wire members the caller
+   * surfaces verbatim; `pending` is the operation the resource RETAINS for the
+   * later offline verification and never puts on the wire.
    */
-  access_challenge?: { challenge: string; txn_endpoint: string; txn: string };
+  challenge?: {
+    error: typeof TXN_AUTHORIZATION_REQUIRED;
+    transaction_challenge: string;
+    pending: PendingOperation;
+  };
   /**
    * @spec I-D.draft-zehavi-oauth-rar-metadata §4 — present on a genuine
    * out_of_authority denial: the requested (resource, action) is absent from
@@ -205,12 +240,13 @@ export class Pep {
     args: Record<string, unknown>,
     token: TokenFacts,
     actionApproval?: ActionApprovalInput,
+    signals?: RequestSignals,
   ): Promise<EnforceResult> {
     return getTracer("pep").startActiveSpan(`pep.enforce ${tool}`, async (span) => {
       span.setAttribute("mission.tool", tool);
       span.setAttribute("mission.id", token.mission.id);
       try {
-        const res = await this.enforceInner(tool, args, token, actionApproval);
+        const res = await this.enforceInner(tool, args, token, actionApproval, signals);
         span.setAttribute("mission.permitted", res.permitted);
         if (res.denial_reason) span.setAttribute("mission.denial_reason", res.denial_reason);
         if (res.refusal_reason) span.setAttribute("mission.refusal_reason", res.refusal_reason);
@@ -226,6 +262,7 @@ export class Pep {
     args: Record<string, unknown>,
     token: TokenFacts,
     actionApproval?: ActionApprovalInput,
+    signals?: RequestSignals,
   ): Promise<EnforceResult> {
     const mapping = this.toolAction(tool);
     if (!mapping) return this.refuse(token, "unknown_tool", tool);
@@ -339,39 +376,62 @@ export class Pep {
         ...(effective ? { effective } : {}),
         ...(ar ? { access_request: ar } : {}),
       };
-      // AROP Transaction Challenge (additive to the access_request path above):
-      // on an action_approval_required denial, if the RS is configured to sign
-      // challenges, emit an rs-txn-signed txn-challenge scoped to the active
-      // Mission's entry for this resource+action and bound to the operation's
-      // parameter_digest. The client presents it to the AS transaction endpoint.
+      // @spec txn-authorization#resource-challenge — on an
+      // action_approval_required denial the resource normalizes the operation,
+      // computes the runtime parameter_digest, and returns a signed challenge.
+      // The client's Accept-Txn-Challenge signal GATES it: without the signal a
+      // client that cannot redeem a challenge just sees the denial. `mission`,
+      // `parameter_digest` and `cnf` are derived HERE, from the request and the
+      // verified token; nothing the client supplied can replace them.
       if (
         this.deps.challengeSigner &&
+        signals?.acceptTxnChallenge &&
         decision.context.denial_reason === "action_approval_required" &&
         effective &&
+        token.missionClaim &&
         view
       ) {
         const signer = this.deps.challengeSigner;
-        // Narrow to the specific gated action (keeping the entry's constraints):
-        // a proper subset of the active Mission entry, so the AROP grant and the
-        // approver task are scoped to the operation actually being approved, not
-        // the whole Mission entry. Still passes the AS subset-gate (D42).
+        // Exactly one operation-scoped entry: the active Mission's entry for
+        // this resource+action narrowed to the single gated action (keeping the
+        // entry's constraints), so the approval and the transaction token are
+        // scoped to the operation being approved, not the whole entry.
         const requested = view.authority_set
           .filter((e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action))
-          .map((e) => ({ ...e, actions: [mapping.action] }));
-        const txn = randomUUID();
-        const challenge = await signChallenge(
+          .map((e) => ({ ...e, actions: [mapping.action] })) as unknown as JsonValue[];
+        const digest = parameterDigest(effective);
+        const signed = await signChallenge(
           {
-            txn,
+            txn: randomUUID(),
             authorization_details: requested,
-            parameter_digest: parameterDigest(effective),
+            parameter_digest: digest,
+            mission: token.missionClaim,
+            cnf: { jkt: token.cnfJkt },
             iss: CANONICAL_RESOURCE,
             aud: signer.asIssuer,
             reason: "action_approval_required",
+            ...(signer.lifetimeSeconds !== undefined ? { lifetimeSeconds: signer.lifetimeSeconds } : {}),
+            ...(token.act !== undefined ? { act: token.act as unknown as JsonValue } : {}),
           },
           signer.sign,
           signer.kid,
+          signer.alg ?? "ES256",
         );
-        result.access_challenge = { challenge, txn_endpoint: signer.txnEndpoint, txn };
+        result.challenge = {
+          error: TXN_AUTHORIZATION_REQUIRED,
+          transaction_challenge: signed.challenge,
+          pending: {
+            txn: signed.txn,
+            resource: CANONICAL_RESOURCE,
+            challengeJti: signed.jti,
+            mission: token.missionClaim,
+            action: mapping.action,
+            parameterDigest: digest,
+            authorizationDetails: requested,
+            cnfJkt: token.cnfJkt,
+            subject: token.sub,
+          },
+        };
       }
       // @spec I-D.draft-zehavi-oauth-rar-metadata §4 (insufficient_authorization
       // grain, additive to the grains above): only on a GENUINE out_of_authority

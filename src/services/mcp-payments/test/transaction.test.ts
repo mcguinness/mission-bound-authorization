@@ -5,6 +5,7 @@
  * live OpenFGA, auto-skip when down.
  */
 
+import { decodeJwt } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
@@ -58,8 +59,20 @@ const TOKEN: TokenFacts = {
   clientId: "ap-agent",
   clientInstanceId: "inst-1",
   mission: { id: "msn_m5", authority_hash: "sha-256:m5hash" },
+  // @spec txn-authorization#resource-challenge — the VERIFIED token's whole
+  // mission claim, which a challenge copies unchanged.
+  missionClaim: {
+    id: "msn_m5",
+    issuer: "https://as.test",
+    authority_hash: "sha-256:m5hash",
+    expires_at: 4102444800,
+    approval_basis: { type: "direct" },
+  },
   cnfJkt: "jkt-1",
 };
+
+/** @spec txn-authorization#resource-challenge — the client signal that gates a challenge. */
+const ACCEPT_CHALLENGE = { acceptTxnChallenge: true } as const;
 
 let fga: Fga;
 let modelId: string;
@@ -68,7 +81,7 @@ function build(
   opts: {
     jit?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
     /** AROP: RS-side challenge signer (rs-txn key). */
-    challengeSigner?: { sign: import("jose").CryptoKey; kid: string; txnEndpoint: string; asIssuer: string };
+    challengeSigner?: { sign: import("jose").CryptoKey; kid: string; asIssuer: string };
     /** AROP: AS txn public JWKS + issuer for validating a presented txn-token. */
     txnTokenJwks?: { keys: Record<string, unknown>[] };
     asIssuer?: string;
@@ -258,17 +271,24 @@ d("M5 transaction-assurance tier", () => {
     const rsTxn = await generateKeyPair("ES256", { extractable: true });
     const rsTxnPub = { ...(await exportJWK(rsTxn.publicKey)), kid: "rs-txn", alg: "ES256" };
     const { server, payments } = build({
-      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", txnEndpoint: TXN_ENDPOINT, asIssuer: AS_ISSUER },
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
     });
 
-    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN);
+    const res = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      undefined,
+      ACCEPT_CHALLENGE,
+    );
     expect(res.ok).toBe(false);
     expect(res.denial_reason).toBe("action_approval_required");
-    expect(res.access_challenge?.txn_endpoint).toBe(TXN_ENDPOINT);
+    expect(res.error).toBe("transaction_authorization_required");
 
     // The challenge is a real rs-txn-signed txn-challenge, aud=AS, bound to the
     // exact operation parameter_digest the PEP gated on.
-    const challenge = res.access_challenge?.challenge as string;
+    const challenge = res.transaction_challenge as string;
     expect(challenge).toBeTruthy();
     const { payload, protectedHeader } = await jwtVerify(challenge, createLocalJWKSet({ keys: [rsTxnPub] } as never), {
       audience: AS_ISSUER,
@@ -277,7 +297,7 @@ d("M5 transaction-assurance tier", () => {
     expect(protectedHeader.typ).toBe("txn-authz-challenge+jwt");
     expect(payload.iss).toBe(CANONICAL_RESOURCE);
     // §4.2: the txn id travels as a body claim (not sub) and a jti is REQUIRED.
-    expect(payload.txn).toBe(res.access_challenge?.txn);
+    expect(typeof payload.txn).toBe("string");
     expect(typeof payload.jti).toBe("string");
     expect(payload.sub).toBeUndefined();
     expect(payload.parameter_digest).toBe(digestFor(payments));
@@ -297,15 +317,22 @@ d("M5 transaction-assurance tier", () => {
     // Wire both the challenge signer AND the txn-token validator so the §6.2
     // token-vs-challenge binding is exercised, not bypassed.
     const { server, payments } = build({
-      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", txnEndpoint: TXN_ENDPOINT, asIssuer: AS_ISSUER },
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
       txnTokenJwks: { keys: [asTxnPub] },
       asIssuer: AS_ISSUER,
     });
 
     // First call (no txn-token) -> the RS emits a challenge and records its txn.
-    const challengeRes = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN);
+    const challengeRes = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      undefined,
+      ACCEPT_CHALLENGE,
+    );
     expect(challengeRes.ok).toBe(false);
-    const txn = challengeRes.access_challenge?.txn as string;
+    const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
     expect(txn).toBeTruthy();
 
     const approvedUntil = new Date(Date.now() + 300_000).toISOString();
@@ -328,7 +355,7 @@ d("M5 transaction-assurance tier", () => {
     const asTxn = await generateKeyPair("ES256", { extractable: true });
     const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
     const { server, payments } = build({
-      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", txnEndpoint: TXN_ENDPOINT, asIssuer: AS_ISSUER },
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
       txnTokenJwks: { keys: [asTxnPub] },
       asIssuer: AS_ISSUER,
     });
@@ -373,14 +400,21 @@ d("M5 transaction-assurance tier", () => {
     const asTxn = await generateKeyPair("ES256", { extractable: true });
     const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
     const { server, evidence, payments } = build({
-      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", txnEndpoint: TXN_ENDPOINT, asIssuer: AS_ISSUER },
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
       txnTokenJwks: { keys: [asTxnPub] },
       asIssuer: AS_ISSUER,
     });
 
     // Register the txn via a real challenge, then sign a token that quotes it.
-    const challengeRes = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN);
-    const txn = challengeRes.access_challenge?.txn as string;
+    const challengeRes = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      undefined,
+      ACCEPT_CHALLENGE,
+    );
+    const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
     expect(txn).toBeTruthy();
 
     const approvedUntil = new Date(Date.now() + 300_000).toISOString();

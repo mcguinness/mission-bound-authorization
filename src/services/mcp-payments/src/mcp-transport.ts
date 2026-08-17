@@ -53,6 +53,13 @@ export interface MediatedToolResult {
   /** @spec I-D.draft-zehavi-oauth-rar-metadata §4 — present on a genuine
    * out_of_authority denial; see pep.ts's InsufficientAuthorization. */
   insufficient_authorization?: InsufficientAuthorization;
+  /**
+   * @spec txn-authorization#resource-challenge — the upstream members, carried
+   * verbatim onto the tool-result surface: `transaction_authorization_required`
+   * plus the signed challenge.
+   */
+  error?: string;
+  transaction_challenge?: string;
 }
 
 /** Map an internal ToolDef to an MCP `Tool` (least-exposure list entry). */

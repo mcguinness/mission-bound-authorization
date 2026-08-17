@@ -36,9 +36,11 @@ import {
   type ListToolsResult,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
+import { ACCEPT_TXN_CHALLENGE_HEADER } from "@mission/core";
 import { exportJWK, SignJWT } from "jose";
 import type { MediatedToolResult } from "./mcp-transport.js";
-import { TOOL_ACTIONS, type TokenFacts } from "./pep.js";
+import { TOOL_ACTIONS, type RequestSignals, type TokenFacts } from "./pep.js";
+import { serveResourceMetadata } from "./resource-metadata.js";
 import type { McpPaymentsServer, ToolDef } from "./server.js";
 
 /** The ES256 DPoP keypair the harness holds for the life of a mission credential. */
@@ -114,10 +116,11 @@ async function route(
   name: string,
   args: Record<string, unknown>,
   token: TokenFacts,
+  signals?: RequestSignals,
 ): Promise<MediatedToolResult> {
   const mapping = TOOL_ACTIONS[name];
   if (mapping?.actionClass && paymentsServer.hasTransactionTier()) {
-    return paymentsServer.callTransactionTool(name, args, token);
+    return paymentsServer.callTransactionTool(name, args, token, undefined, undefined, signals);
   }
   if (name === "schedule_payment" || (mapping?.actionClass && !paymentsServer.hasTransactionTier())) {
     return paymentsServer.callWriteTool(name, args, token);
@@ -146,9 +149,10 @@ function createHttpMcpServer(paymentsServer: McpPaymentsServer): Server {
 
   server.setRequestHandler(CallToolRequestSchema, async (request, extra): Promise<CallToolResult> => {
     const token = extra.authInfo?.extra?.tokenFacts as TokenFacts | undefined;
+    const signals = extra.authInfo?.extra?.signals as RequestSignals | undefined;
     const args = (request.params.arguments ?? {}) as Record<string, unknown>;
     if (!token) return toCallToolResult({ ok: false, denial_reason: "invalid_credential" });
-    const verdict = await route(paymentsServer, request.params.name, args, token);
+    const verdict = await route(paymentsServer, request.params.name, args, token, signals);
     return toCallToolResult(verdict);
   });
 
@@ -195,8 +199,17 @@ async function authenticate(
     return unauthorized(res, "DPoP proof-of-possession failed");
   }
 
+  // @spec txn-authorization#resource-challenge — the client's
+  // Accept-Txn-Challenge signal gates the challenge; it travels as an ordinary
+  // request header and is carried to the PEP alongside the validated facts.
+  const acceptTxnChallenge = String(req.headers[ACCEPT_TXN_CHALLENGE_HEADER] ?? "").trim().length > 0;
   // The SDK's AuthInfo shape; the MCP handlers read facts from extra.tokenFacts.
-  req.auth = { token: accessToken, clientId: facts.clientId, scopes: [], extra: { tokenFacts: facts } };
+  req.auth = {
+    token: accessToken,
+    clientId: facts.clientId,
+    scopes: [],
+    extra: { tokenFacts: facts, signals: { acceptTxnChallenge } },
+  };
   await transport.handleRequest(req, res);
 }
 
@@ -221,6 +234,10 @@ export async function createHttpMcpChannel(
   await mcpServer.connect(transport as unknown as Transport);
 
   const httpServer: HttpServer = createServer((req, res) => {
+    // @spec txn-authorization#two-phase-expiry — the unauthenticated discovery
+    // routes (RFC 9728 metadata + txn_challenge_jwks_uri) are served in front of
+    // the credential gate: they publish public keys and metadata.
+    if (serveResourceMetadata(paymentsServer, req, res)) return;
     authenticate(req as AuthedRequest, res, paymentsServer, transport).catch(() => {
       if (!res.headersSent) {
         res.writeHead(500, { "content-type": "application/json" });

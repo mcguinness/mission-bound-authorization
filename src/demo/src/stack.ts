@@ -5,10 +5,11 @@
  * surfaces exercise the identical enforcement path.
  */
 
-import { exportJWK, generateKeyPair } from "jose";
+import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
 import {
   type AuthorityEntry,
   buildAuthorizationServer,
+  type ChallengeIssuers,
   CatalogProvider,
   type DeferralStore,
   issueCrossDomainGrant,
@@ -19,13 +20,16 @@ import {
 import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, type SeededTrustedSource, TOPOLOGY } from "@mission/demo-data";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
+  CANONICAL_RESOURCE,
   Connectors,
   EvidenceStore,
   McpPaymentsServer,
   PaymentsStore,
   Pep,
   type PepDeps,
+  type ResourceMetadataServer,
   sourceDigestOf,
+  startResourceMetadataServer,
 } from "@mission/mcp-payments";
 import { ResourceAuthorizationServer } from "@mission/ras";
 import { SaasMcpServer } from "@mission/mcp-saas";
@@ -137,9 +141,17 @@ export async function composeStack(opts: {
   // real /transaction endpoint exists): the RS-side challenge signer (rs-txn),
   // and the AS txn public JWKS + issuer the RS validates a presented txn-token
   // against.
-  let challengeSigner: { sign: import("jose").CryptoKey; kid: string; txnEndpoint: string; asIssuer: string } | undefined;
+  let challengeSigner: PepDeps["challengeSigner"];
   let txnTokenJwks: { keys: Record<string, unknown>[] } | undefined;
   let rsAsIssuer: string | undefined;
+  // @spec txn-authorization#two-phase-expiry — the resource's PUBLISHED
+  // txn-challenge key material: served over real HTTP at the resource's
+  // `txn_challenge_jwks_uri`, which is where (and only where) the TAS resolves
+  // this issuer's keys from.
+  let txnChallengePublication: NonNullable<
+    ConstructorParameters<typeof McpPaymentsServer>[0]["txnChallenge"]
+  > | undefined;
+  let metadataServer: ResourceMetadataServer | undefined;
 
   // Kernel + token-issuer + the RS's token-verification JWKS differ by mode:
   // with the auth server, the real provider owns the kernel and signs tokens;
@@ -152,6 +164,9 @@ export async function composeStack(opts: {
   // provider retains ingestion + Containment Evidence there). Exposed so the
   // Activity Log join can read it (BuiltAs.issuerEvidence).
   let issuerEvidenceStore: IssuerEvidenceStore | undefined;
+  // Resolved after the RS is constructed; the discovery listener reads it
+  // lazily because the resource's own metadata names that listener's origin.
+  let paymentsServerRef: McpPaymentsServer | undefined;
 
   if (opts.withAuthServer) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
@@ -162,10 +177,31 @@ export async function composeStack(opts: {
     const rsTxnKey = TOPOLOGY.keys.rsTxn;
     const rsTxnKeys = await generateKeyPair(rsTxnKey.alg, { extractable: true });
     const rsTxnPub = { ...(await exportJWK(rsTxnKeys.publicKey)), kid: rsTxnKey.kid, alg: rsTxnKey.alg };
+    // @spec txn-authorization#two-phase-expiry — the resource publishes its
+    // challenge-signing keys at `txn_challenge_jwks_uri` and the TAS resolves
+    // them THERE over a real fetch. The listener comes up first so its origin
+    // can be baked into the URI the resource publishes and the AS resolves.
+    const txnTopo = TOPOLOGY.txnChallenge.payments;
+    metadataServer = await startResourceMetadataServer(() => paymentsServerRef);
+    txnChallengePublication = {
+      jwksUri: `${metadataServer.origin}${txnTopo.jwksPath}`,
+      jwksPath: txnTopo.jwksPath,
+      signingAlgValuesSupported: txnTopo.signingAlgValuesSupported,
+      jwks: { keys: [rsTxnPub as never] },
+    };
+    const challengeIssuers: ChallengeIssuers = new Map([
+      [
+        CANONICAL_RESOURCE,
+        {
+          jwks: createRemoteJWKSet(new URL(txnChallengePublication.jwksUri)),
+          algs: txnTopo.signingAlgValuesSupported,
+        },
+      ],
+    ]);
     const as = await buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
-      resourceTxnJwks: { keys: [rsTxnPub as never] },
+      challengeIssuers,
       ars,
     });
     const asServer = as.provider.listen(asPort);
@@ -175,7 +211,13 @@ export async function composeStack(opts: {
     // The RS verifies real tokens against the AS's published public JWKS (the
     // as-txn public key is published there too; createLocalJWKSet resolves by kid).
     serverJwks = (await (await fetch(`${asUrl}/jwks`)).json()) as { keys: Record<string, unknown>[] };
-    challengeSigner = { sign: rsTxnKeys.privateKey, kid: rsTxnKey.kid, txnEndpoint: `${asUrl}/transaction`, asIssuer: asUrl };
+    challengeSigner = {
+      sign: rsTxnKeys.privateKey,
+      kid: rsTxnKey.kid,
+      alg: rsTxnKey.alg,
+      asIssuer: asUrl,
+      lifetimeSeconds: txnTopo.challengeLifetimeSeconds,
+    };
     txnTokenJwks = serverJwks;
     rsAsIssuer = asUrl;
 
@@ -230,7 +272,10 @@ export async function composeStack(opts: {
           cnfJkt,
           resourceToAs,
         }),
-      closeAuthServer: () => asServer.close(),
+      closeAuthServer: () => {
+        asServer.close();
+        void metadataServer?.close();
+      },
     };
   } else {
     const asKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });
@@ -319,7 +364,9 @@ export async function composeStack(opts: {
     // JWKS (published on /jwks under the as-txn kid) and issuer.
     ...(txnTokenJwks ? { txnTokenJwks } : {}),
     ...(rsAsIssuer ? { asIssuer: rsAsIssuer } : {}),
+    ...(txnChallengePublication ? { txnChallenge: txnChallengePublication } : {}),
   });
+  paymentsServerRef = server;
 
   // Transparency + producers.
   const transparencyKey = TOPOLOGY.keys.transparency;

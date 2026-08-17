@@ -28,6 +28,7 @@ import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
 import { CreationIdempotencyStore } from "./kernel/creation-idempotency.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
+import type { ChallengeIssuers } from "./kernel/txn-challenge.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
 import { createTemplate } from "./kernel/template.js";
 import { TemplateStore } from "./kernel/template-store.js";
@@ -236,7 +237,10 @@ export {
   type DeferredToken,
 } from "./kernel/deferred.js";
 export {
-  signChallenge,
+  ChallengeError,
+  type ChallengeErrorCode,
+  type ChallengeIssuerKeys,
+  type ChallengeIssuers,
   validateChallenge,
   issueTxnToken,
   TxnReplayCache,
@@ -396,8 +400,11 @@ export async function buildAuthorizationServer(opts: {
    * `required_intent_evidence_types`. Empty as shipped.
    */
   requiredIntentEvidenceTypes?: string[];
-  /** The resource's txn-challenge keys, for the transaction endpoint. */
-  resourceTxnJwks?: { keys: JWK[] };
+  /**
+   * @spec txn-authorization#two-phase-expiry — the accepted Challenge-Issuing
+   * Resources and their published challenge-signing keys.
+   */
+  challengeIssuers?: ChallengeIssuers;
   /** AROP transaction task store (AS vouches; owns the txn pending id, D37). */
   ars?: TxnArs;
   /**
@@ -660,7 +667,7 @@ export async function buildAuthorizationServer(opts: {
     templateStore,
     protectedEventSources,
     issuerEvidence,
-    ...(opts.resourceTxnJwks ? { resourceTxnJwks: opts.resourceTxnJwks } : {}),
+    ...(opts.challengeIssuers ? { challengeIssuers: opts.challengeIssuers } : {}),
     ...(opts.ars ? { ars: opts.ars } : {}),
   });
   // @spec async-delegation — publish the provider to the terminal subscriber now

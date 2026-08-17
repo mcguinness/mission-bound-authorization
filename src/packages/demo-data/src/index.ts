@@ -153,9 +153,27 @@ export interface TopologyKey {
   alg: string;
 }
 
+/**
+ * @spec txn-authorization#two-phase-expiry — one Challenge-Issuing Resource's
+ * transaction-authorization deployment parameters: where its challenge-signing
+ * keys are published (the `txn_challenge_jwks_uri` path, resolved against the
+ * running resource's origin), which algorithms it signs with, and the three
+ * INDEPENDENT lifetimes the profile keeps apart -- the challenge's admission
+ * window, the pending workflow's own lifetime, and the deployment maximum for
+ * an issued transaction token.
+ */
+export interface TxnChallengeTopology {
+  jwksPath: string;
+  signingAlgValuesSupported: string[];
+  challengeLifetimeSeconds: number;
+  workflowLifetimeSeconds: number;
+  maxTokenLifetimeSeconds: number;
+}
+
 /** The full deployment topology (issuers, ports, ttls, keys, resources). */
 export interface Topology {
   resources: { payments: string; saas: string; hrFiles: string };
+  txnChallenge: { payments: TxnChallengeTopology };
   issuers: { as: string; ras: string; transparency: string; pdp: string };
   endpoints: { arsIntake: string };
   ports: { as: number; console: number };
@@ -181,6 +199,27 @@ export interface Topology {
   openfga: { url: string; presharedKey: string };
 }
 
+function reqTxnChallenge(
+  file: string,
+  obj: Record<string, unknown>,
+  key: string,
+  ctx: string,
+): TxnChallengeTopology {
+  const t = asObject(file, obj[key], `${ctx}.${key}`);
+  return {
+    jwksPath: reqString(file, t, "jwksPath", `${ctx}.${key}`),
+    signingAlgValuesSupported: reqStringArray(
+      file,
+      t,
+      "signingAlgValuesSupported",
+      `${ctx}.${key}`,
+    ),
+    challengeLifetimeSeconds: reqNumber(file, t, "challengeLifetimeSeconds", `${ctx}.${key}`),
+    workflowLifetimeSeconds: reqNumber(file, t, "workflowLifetimeSeconds", `${ctx}.${key}`),
+    maxTokenLifetimeSeconds: reqNumber(file, t, "maxTokenLifetimeSeconds", `${ctx}.${key}`),
+  };
+}
+
 function reqKey(file: string, obj: Record<string, unknown>, key: string, ctx: string): TopologyKey {
   const k = asObject(file, obj[key], `${ctx}.${key}`);
   return {
@@ -193,6 +232,7 @@ function loadTopology(): Topology {
   const file = "topology.json";
   const root = asObject(file, readJson(file), "topology");
   const resources = asObject(file, root.resources, "resources");
+  const txnChallenge = asObject(file, root.txnChallenge, "txnChallenge");
   const issuers = asObject(file, root.issuers, "issuers");
   const endpoints = asObject(file, root.endpoints, "endpoints");
   const ports = asObject(file, root.ports, "ports");
@@ -204,6 +244,9 @@ function loadTopology(): Topology {
       payments: reqString(file, resources, "payments", "resources"),
       saas: reqString(file, resources, "saas", "resources"),
       hrFiles: reqString(file, resources, "hrFiles", "resources"),
+    },
+    txnChallenge: {
+      payments: reqTxnChallenge(file, txnChallenge, "payments", "txnChallenge"),
     },
     issuers: {
       as: reqString(file, issuers, "as", "issuers"),

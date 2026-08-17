@@ -5,7 +5,7 @@
  * enforcement tier (M4) requires. RFC 9728 PRM is published.
  */
 
-import { parseAatToolId, toolsOf, verifyAttenuationChain } from "@mission/core";
+import { parseAatToolId, readTxnMissionClaim, toolsOf, verifyAttenuationChain } from "@mission/core";
 import { calculateJwkThumbprint, createLocalJWKSet, decodeProtectedHeader, type JWK, jwtVerify } from "jose";
 import type { ActObject } from "@mission/actor-chain";
 import type { MissionView } from "@mission/pdp";
@@ -15,9 +15,11 @@ import {
   type EnforceResult,
   type InsufficientAuthorization,
   type Pep,
+  type RequestSignals,
   type TokenFacts,
   TOOL_ACTIONS,
 } from "./pep.js";
+import { openTxnPendingStore, type TxnPendingStore } from "./txn-store.js";
 import type { PaymentsStore } from "./payments-store.js";
 import type { Connectors } from "./connectors.js";
 import type { EvidenceStore } from "./evidence.js";
@@ -55,32 +57,90 @@ export interface McpServerDeps {
    */
   txnTokenJwks?: { keys: Record<string, unknown>[] };
   asIssuer?: string;
+  /**
+   * @spec txn-authorization#two-phase-expiry (key discovery) — this resource's
+   * PUBLISHED txn-challenge key material and the metadata members that point at
+   * it. A Transaction Authorization Server resolves this resource's challenge
+   * keys from `jwksUri` and nowhere else.
+   */
+  txnChallenge?: {
+    /** Absolute URI published as `txn_challenge_jwks_uri`. */
+    jwksUri: string;
+    /** Path this server answers the JWKS on (the `jwksUri` path component). */
+    jwksPath: string;
+    /** Published as `txn_challenge_signing_alg_values_supported`. */
+    signingAlgValuesSupported: string[];
+    /** The PUBLIC half of the challenge-signing key(s). */
+    jwks: { keys: Record<string, unknown>[] };
+  };
+  /**
+   * @spec txn-authorization#offline-verification — the retained pending
+   * operations. Injectable so replicas that can execute the same operation
+   * share one database; defaulted to this replica's own in-memory store.
+   */
+  txnPending?: TxnPendingStore;
+}
+
+/**
+ * The transaction-tier verdict. @spec txn-authorization#resource-challenge —
+ * `error` and `transaction_challenge` are the upstream wire members, carried
+ * verbatim on the tool-result surface; there is no bespoke challenge envelope
+ * and no endpoint hint (the client discovers the Transaction Authorization
+ * Server through `transaction_authorization_endpoint` in AS metadata).
+ */
+export interface TransactionToolResult {
+  ok: boolean;
+  result?: unknown;
+  denial_reason?: string;
+  refusal_reason?: string;
+  deduped?: boolean;
+  access_request?: EnforceResult["access_request"];
+  error?: string;
+  transaction_challenge?: string;
+  insufficient_authorization?: InsufficientAuthorization;
 }
 
 export class McpPaymentsServer {
   private readonly resolveKey;
   private readonly resolveTxnKey?: ReturnType<typeof createLocalJWKSet>;
   private readonly txnReplay = new TxnReplayCache();
-  /**
-   * §6.2 token-vs-challenge binding: the set of `txn` values this RS has issued
-   * a txn-challenge for. Populated when a challenge is emitted (below); a
-   * presented txn-token whose `txn` is not in this set is refused (txn_unknown).
-   */
-  private readonly issuedChallengeTxns = new Set<string>();
+  /** @spec txn-authorization#offline-verification — the retained pending operations. */
+  private readonly txnPending: TxnPendingStore;
   constructor(private readonly deps: McpServerDeps) {
     this.resolveKey = createLocalJWKSet(deps.jwks as never);
     if (deps.txnTokenJwks) this.resolveTxnKey = createLocalJWKSet(deps.txnTokenJwks as never);
+    this.txnPending = deps.txnPending ?? openTxnPendingStore();
   }
 
   /** RFC 9728 Protected Resource Metadata. */
   protectedResourceMetadata(): Record<string, unknown> {
+    const txn = this.deps.txnChallenge;
     return {
       resource: CANONICAL_RESOURCE,
       authorization_servers: [this.deps.issuer],
       bearer_methods_supported: ["dpop"],
       mission_bound_authorization_required: true,
       mission_constraints_supported: ["max_amount", "vendors"],
+      // @spec txn-authorization#two-phase-expiry — key discovery rides the
+      // upstream metadata: this is where a TAS resolves this resource's
+      // challenge-signing keys, and nowhere else.
+      ...(txn
+        ? {
+            txn_challenge_jwks_uri: txn.jwksUri,
+            txn_challenge_signing_alg_values_supported: txn.signingAlgValuesSupported,
+          }
+        : {}),
     };
+  }
+
+  /** The published txn-challenge JWKS, or undefined when none is configured. */
+  txnChallengeJwks(): { keys: Record<string, unknown>[] } | undefined {
+    return this.deps.txnChallenge?.jwks;
+  }
+
+  /** The path {@link txnChallengeJwks} is served on. */
+  txnChallengeJwksPath(): string | undefined {
+    return this.deps.txnChallenge?.jwksPath;
   }
 
   /**
@@ -108,6 +168,7 @@ export class McpPaymentsServer {
       clientId: payload.client_id as string,
       ...(payload.act ? { act: payload.act as ActObject } : {}),
       mission: { id: mission.id, authority_hash: mission.authority_hash },
+      ...(readTxnMissionClaim(payload.mission) ? { missionClaim: readTxnMissionClaim(payload.mission) as never } : {}),
       cnfJkt: cnf.jkt,
       ...(payload.jti ? { jti: payload.jti as string } : {}),
       ...(payload.identity_continuation_handle
@@ -142,6 +203,7 @@ export class McpPaymentsServer {
       ...(payload.client_instance_id ? { clientInstanceId: payload.client_instance_id as string } : {}),
       ...(payload.act ? { act: payload.act as ActObject } : {}),
       mission: { id: mission.id, authority_hash: mission.authority_hash },
+      ...(readTxnMissionClaim(payload.mission) ? { missionClaim: readTxnMissionClaim(payload.mission) as never } : {}),
       cnfJkt: cnf.jkt,
       ...(payload.jti ? { jti: payload.jti as string } : {}),
       ...(payload.identity_continuation_handle
@@ -235,6 +297,7 @@ export class McpPaymentsServer {
       sub: (leafPayload.sub ?? rootPayload.sub) as string,
       clientId: rootPayload.client_id as string,
       mission: { id: rootMission.id, authority_hash: rootMission.authority_hash },
+      ...(readTxnMissionClaim(rootPayload.mission) ? { missionClaim: readTxnMissionClaim(rootPayload.mission) as never } : {}),
       cnfJkt: leafCnf,
       leafAuthority,
     };
@@ -327,16 +390,8 @@ export class McpPaymentsServer {
     token: TokenFacts,
     beforeCommit?: () => void,
     txnToken?: string,
-  ): Promise<{
-    ok: boolean;
-    result?: unknown;
-    denial_reason?: string;
-    refusal_reason?: string;
-    deduped?: boolean;
-    access_request?: EnforceResult["access_request"];
-    access_challenge?: EnforceResult["access_challenge"];
-    insufficient_authorization?: InsufficientAuthorization;
-  }> {
+    signals?: RequestSignals,
+  ): Promise<TransactionToolResult> {
     const tx = this.deps.transaction;
     if (!tx) throw new Error("transaction tier not configured");
 
@@ -353,17 +408,23 @@ export class McpPaymentsServer {
       derivedApproval = derived.approval;
     }
 
-    const res = await this.deps.pep.enforce(tool, args, token, derivedApproval);
-    // §6.2: remember the txn we just issued a challenge for, so the later
-    // txn-token that quotes it can be bound back to a real challenge.
-    if (res.access_challenge) this.issuedChallengeTxns.add(res.access_challenge.txn);
+    const res = await this.deps.pep.enforce(tool, args, token, derivedApproval, signals);
+    // @spec txn-authorization#offline-verification — the resource RETAINS the
+    // pending operation when it issues the challenge; the later transaction
+    // token is matched against THAT record, never against its own assertions.
+    if (res.challenge) this.txnPending.put(res.challenge.pending);
     if (!res.permitted || !res.effective || !res.decision) {
       return {
         ok: false,
         ...(res.denial_reason ? { denial_reason: res.denial_reason } : {}),
         ...(res.refusal_reason ? { refusal_reason: res.refusal_reason } : {}),
         ...(res.access_request ? { access_request: res.access_request } : {}),
-        ...(res.access_challenge ? { access_challenge: res.access_challenge } : {}),
+        ...(res.challenge
+          ? {
+              error: res.challenge.error,
+              transaction_challenge: res.challenge.transaction_challenge,
+            }
+          : {}),
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
       };
     }
@@ -477,7 +538,9 @@ export class McpPaymentsServer {
     // actually issued a challenge for (checked after cnf, before the replay
     // consume, so a foreign or bad-cnf token never burns a replay slot).
     const txn = payload.txn as string | undefined;
-    if (!txn || !this.issuedChallengeTxns.has(txn)) return { ok: false, refusal_reason: "txn_unknown" };
+    if (!txn || !this.txnPending.get(CANONICAL_RESOURCE, txn)) {
+      return { ok: false, refusal_reason: "txn_unknown" };
+    }
     // Single-use across presentations.
     if (!this.txnReplay.accept(txn)) return { ok: false, refusal_reason: "txn_replayed" };
     const approval = payload.approval as

@@ -1322,19 +1322,33 @@ async function main() {
     arguments: { invoice_id: "inv-1" },
     authorization: "DPoP <real mission-bound access token>",
   });
-  const challengeAttempt = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
+  const challengeAttempt = await stack.server.callTransactionTool(
+    "send_remittance_email",
+    { invoice_id: "inv-1" },
+    facts,
+    undefined,
+    undefined,
+    // @spec txn-authorization#resource-challenge — the client signals that it
+    // can redeem a challenge; without the signal the RS returns a plain denial.
+    { acceptTxnChallenge: true },
+  );
   outcome({
     decision: "DENY",
     reason: gloss("reason", challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason ?? ""),
-    observed: `${gloss("tool", "send_remittance_email")}(inv-1) denied ${challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason ?? ""}; the RS returns an access_challenge to present`,
+    observed: `${gloss("tool", "send_remittance_email")}(inv-1) denied ${challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason ?? ""}; the RS returns a transaction_challenge to present`,
     ok: !challengeAttempt.ok && (challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason) === "action_approval_required",
   });
-  const accessChallenge = challengeAttempt.access_challenge;
-  if (!accessChallenge) throw new Error("expected an access_challenge (RS challengeSigner wired)");
-  hop("Payments RS", "Agent", "401-style txn-challenge (RS-signed)", "in-process");
-  note(`RS emitted a txn-challenge to present to ${accessChallenge.txn_endpoint}`);
-  block("access_challenge — protected header", decodeHeader(accessChallenge.challenge));
-  block("access_challenge — decoded txn-challenge", decodeClaims(accessChallenge.challenge));
+  const transactionChallenge = challengeAttempt.transaction_challenge;
+  if (!transactionChallenge) throw new Error("expected a transaction_challenge (RS challengeSigner wired)");
+  // @spec txn-authorization#two-phase-expiry — the client discovers the TAS
+  // through `transaction_authorization_endpoint` in AS metadata, never from the
+  // challenge itself.
+  const asMetadata = (await (await fetch(`${asUrl}/.well-known/openid-configuration`)).json()) as Record<string, string>;
+  const txnEndpoint = asMetadata.transaction_authorization_endpoint as string;
+  hop("Payments RS", "Agent", "transaction_authorization_required + transaction_challenge (RS-signed)", "in-process");
+  note(`RS returned error=${challengeAttempt.error} with a challenge to present to ${txnEndpoint}`);
+  block("transaction_challenge — protected header", decodeHeader(transactionChallenge));
+  block("transaction_challenge — decoded challenge", decodeClaims(transactionChallenge));
 
   // 7.2 Agent POSTs the challenge to the AS transaction endpoint over HTTP ONCE
   // (initiation), authenticating with its base mission token (DPoP). The AS
@@ -1343,25 +1357,25 @@ async function main() {
   // A fresh DPoP proof per call binds htu=/transaction, htm=POST to the base
   // token's cnf.jkt.
   const postTxn = async (payload: Record<string, unknown>) =>
-    fetch(accessChallenge.txn_endpoint, {
+    fetch(txnEndpoint, {
       method: "POST",
       headers: {
         authorization: `DPoP ${issued.accessToken}`,
-        dpop: await dpopProofFor(issued.dpopKeys, accessChallenge.txn_endpoint, "POST"),
+        dpop: await dpopProofFor(issued.dpopKeys, txnEndpoint, "POST"),
         "content-type": "application/json",
       },
       body: JSON.stringify(payload),
     });
   hop("Agent", "AS", "POST /transaction (initiation — challenge presented once)", "HTTP");
-  httpReq("POST", accessChallenge.txn_endpoint, {
+  httpReq("POST", txnEndpoint, {
     headers: {
       authorization: "DPoP <base token>",
       dpop: "<DPoP proof: htu=/transaction, htm=POST>",
       "content-type": "application/json",
     },
-    body: { challenge: `${accessChallenge.challenge.slice(0, 40)}... (the txn-challenge above)` },
+    body: { challenge: `${transactionChallenge.slice(0, 40)}... (the txn-challenge above)` },
   });
-  const pendingRes = await postTxn({ challenge: accessChallenge.challenge });
+  const pendingRes = await postTxn({ challenge: transactionChallenge });
   const pendingBody = (await pendingRes.json()) as {
     transaction_authorization_id?: string;
     expires_in?: number;
@@ -1392,7 +1406,7 @@ async function main() {
   // mission unchanged (D42), carrying the verified approval + cnf(base jkt),
   // single-use.
   hop("Agent", "AS", "POST /transaction (poll — with transaction_authorization_id)", "HTTP");
-  httpReq("POST", accessChallenge.txn_endpoint, {
+  httpReq("POST", txnEndpoint, {
     headers: {
       authorization: "DPoP <base token>",
       dpop: "<DPoP proof: htu=/transaction, htm=POST>",

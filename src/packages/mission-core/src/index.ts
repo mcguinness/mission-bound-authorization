@@ -64,3 +64,20 @@ export {
 } from "./cross-org-presentation.js";
 export { compareAmounts, InvalidAmountError, isValidAmount } from "./decimal-amount.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";
+export {
+  ACCEPT_TXN_CHALLENGE_HEADER,
+  authorizationDetailsEqual,
+  MISSION_TXN_TOKEN_TYP,
+  type MissionTxnTokenClaims,
+  missionInvariantsEqual,
+  prohibitedTxnTokenClaims,
+  readTxnMissionClaim,
+  SUBJECT_TOKEN_TYPE_ACCESS_TOKEN,
+  TXN_AUTHORIZATION_REQUIRED,
+  TXN_CHALLENGE_TYP,
+  TXN_POLL_ERRORS,
+  TXN_TOKEN_PROHIBITED_CLAIMS,
+  type TxnChallengeClaims,
+  type TxnMissionClaim,
+  type TxnPollError,
+} from "./txn-authorization.js";
