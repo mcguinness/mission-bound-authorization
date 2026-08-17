@@ -228,22 +228,23 @@ export async function composeStack(opts: {
             (c) => c.resource === input.resource && (c.actions === undefined || c.actions.includes(input.action)),
           );
           if (contained) return { decision: "deny", reason: "authority_contained" };
-          const mapping = relationForAction(input.action);
-          if (!mapping) return { decision: "deny", reason: "unknown_action" };
-          // The authority join the PDP runs, over the vendor scope this entry
-          // still carries: mission-scoped tuples are supplied per check, never
-          // stored (D26).
+          if (!relationForAction(input.action)) return { decision: "deny", reason: "unknown_action" };
+          // The authority join, run against the SAME OpenFGA store the PEP
+          // decides on: does this Mission still reach the vendor scope its entry
+          // carries? Mission-scoped tuples are supplied per check, never stored
+          // (D26), and a vendor the entry's constraint no longer covers yields
+          // no tuple at all, so the join denies on its own.
           const vendor = entry.constraints?.vendors?.[0];
           if (!vendor) return { decision: "deny", reason: "no_vendor_scope" };
           const tuples = deriveContextualTuples({
             view,
             entry,
             target: { objectType: "vendor", objectId: vendor, vendorId: vendor },
-            relation: mapping.relation,
+            relation: "reader",
           });
           if (tuples.length === 0) return { decision: "deny", reason: "constraint_excluded" };
           const allowed = await fga.checkWithContext(
-            { user: `mission:${view.id}`, relation: mapping.relation, object: `vendor:${vendor}` },
+            { user: `mission:${view.id}`, relation: "reader", object: `vendor:${vendor}` },
             tuples,
           );
           return allowed ? { decision: "permit" } : { decision: "deny", reason: "entitlement_denied" };

@@ -13,7 +13,7 @@
  * {@link TxnConsumptionStore} must be linearizable across all of them).
  */
 
-import { openStore, type Database, type StoreOptions } from "@mission/store";
+import { openStore, redeemOnce, redemptionSchema, type Database, type StoreOptions } from "@mission/store";
 import type { JsonValue, TxnMissionClaim } from "@mission/core";
 
 const SCHEMA = `
@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS txn_pending_operations (
   subject TEXT NOT NULL,
   issued_at INTEGER NOT NULL
 ) STRICT;
+${redemptionSchema("txn_consumption")}
 `;
 
 /** One challenged operation the resource is holding open, keyed by `txn`. */
@@ -98,11 +99,61 @@ class SqliteTxnPendingStore implements TxnPendingStore {
 }
 
 /**
- * Open the resource-side transaction stores. Pass `db` to SHARE one database
- * between replicas (the cross-replica consumption case) or `file` to share one
- * on disk; the default is this replica's own in-memory database (D27).
+ * @spec txn-authorization#offline-verification — atomic first use of the
+ * resource-scoped `txn` in the consumption domain. Consumption MUST be
+ * LINEARIZABLE across every replica capable of executing the same operation,
+ * which is why this is a single-row insert in a database replicas share, not
+ * per-process memory.
  */
+export interface TxnConsumptionStore {
+  /** True exactly once per (resource, txn); false on every later attempt. */
+  consume(resource: string, txn: string): boolean;
+  /** Whether the (resource, txn) has already been consumed. */
+  consumed(resource: string, txn: string): boolean;
+}
+
+class SqliteTxnConsumptionStore implements TxnConsumptionStore {
+  constructor(
+    readonly db: Database,
+    private readonly epoch: string,
+  ) {
+    db.exec(SCHEMA);
+  }
+
+  consume(resource: string, txn: string): boolean {
+    return redeemOnce(this.db, "txn_consumption", key(resource, txn), this.epoch);
+  }
+
+  consumed(resource: string, txn: string): boolean {
+    return (
+      this.db.prepare("SELECT 1 FROM txn_consumption WHERE key = ?").get(key(resource, txn)) !== undefined
+    );
+  }
+}
+
+/** `txn` is scoped to the resource that issued the challenge for it. */
+function key(resource: string, txn: string): string {
+  return `${resource}|${txn}`;
+}
+
+/**
+ * Open the resource-side transaction stores over ONE database. Pass `db` to
+ * share it between replicas that can execute the same operation (consumption
+ * must be linearizable across all of them) or `file` to share one on disk; the
+ * default is this replica's own in-memory database (D27).
+ */
+export function openTxnStores(
+  opts: StoreOptions & { db?: Database; instanceEpoch?: string } = {},
+): { pending: TxnPendingStore; consumption: TxnConsumptionStore } {
+  const { db, instanceEpoch, ...storeOptions } = opts;
+  const database = db ?? openStore(SCHEMA, storeOptions);
+  return {
+    pending: new SqliteTxnPendingStore(database),
+    consumption: new SqliteTxnConsumptionStore(database, instanceEpoch ?? "default"),
+  };
+}
+
+/** The retained pending operations alone (the challenge-issuing half). */
 export function openTxnPendingStore(opts: StoreOptions & { db?: Database } = {}): TxnPendingStore {
-  const { db, ...storeOptions } = opts;
-  return new SqliteTxnPendingStore(db ?? openStore(SCHEMA, storeOptions));
+  return openTxnStores(opts).pending;
 }

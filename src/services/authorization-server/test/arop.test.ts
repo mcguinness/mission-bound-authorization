@@ -13,14 +13,14 @@ import {
   type AuthorityEntry,
   createExpansion,
   DeferralStore,
-  issueTxnToken,
+  MISSION_TXN_TOKEN_TYP,
   MissionKernel,
+  mintTransactionToken,
   TXN_CHALLENGE_TYP,
-  TxnReplayCache,
-  TXN_TOKEN_TYP,
   validateChallenge,
   validateMissionIntent,
 } from "../src/index.js";
+import { TXN_TOKEN_PROHIBITED_CLAIMS } from "@mission/core";
 
 /** Stand in for the Challenge-Issuing Resource (the resource owns the signing). */
 async function signChallenge(
@@ -220,10 +220,9 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
   });
 });
 
-describe("M7 scenario 7: AROP over Transaction Challenge (D42 -- carries the active Mission)", () => {
-  it("RS signs a challenge -> AS validates + issues a txn-bound single-use token carrying the ACTIVE Mission -> re-presented once", async () => {
-    const mission = approveMission(7, ["acme"]); // the active Mission (unchanged by AROP)
-    // RS signing key (rs-txn / txn_challenge_jwks_uri), AS-txn key, client DPoP key.
+describe("challenge verification and the transaction token (@spec txn-authorization#transaction-token)", () => {
+  it("verifies a challenge under its own issuer's keys and mints a conforming transaction token", async () => {
+    const mission = approveMission(7, ["acme"]); // the active Mission (unchanged)
     const rsKeys = await generateKeyPair("ES256", { extractable: true });
     const rsPubJwk = { ...(await exportJWK(rsKeys.publicKey)), kid: "rs-txn", alg: "ES256" };
     const asKeys = await generateKeyPair("ES256", { extractable: true });
@@ -231,12 +230,12 @@ describe("M7 scenario 7: AROP over Transaction Challenge (D42 -- carries the act
     const clientKeys = await generateKeyPair("ES256", { extractable: true });
     const cnfJkt = await calculateJwkThumbprint(await exportJWK(clientKeys.publicKey));
 
-    // RS emits an in-process access_challenge for a gated action (the 401 +
-    // WWW-Authenticate transport is an accepted O-33 simplification). The
-    // requested authority is a subset of the active Mission's Authority Set.
     const txn = "txn_abc123";
     const parameter_digest = "sha-256:deadbeefcafefeed";
-    const requested = mission.authority_set.filter((e) => e.actions.includes("payments:payment.execute"));
+    const requested = mission.authority_set
+      .filter((e) => e.actions.includes("payments:payment.execute"))
+      .map((e) => ({ ...e, actions: ["payments:payment.execute"] }));
+    const missionClaim = kernel.missionClaim(mission) as unknown as Record<string, unknown>;
     const challenge = await signChallenge(
       {
         txn,
@@ -245,67 +244,77 @@ describe("M7 scenario 7: AROP over Transaction Challenge (D42 -- carries the act
         aud: ISS,
         reason: "over-cap wire requires approval",
         parameter_digest,
-        mission: kernel.missionClaim(mission) as unknown as Record<string, unknown>,
+        mission: missionClaim,
         cnf: { jkt: cnfJkt },
       },
       rsKeys.privateKey,
       "rs-txn",
     );
 
-    // @spec txn-authorization#two-phase-expiry — the TAS resolves the challenge
-    // issuer's keys from that ISSUER's published set, keyed by the challenge iss.
-    const validated = await validateChallenge(
-      challenge,
-      new Map([[RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPubJwk as never] }) }]]),
-      ISS,
-    );
+    // The TAS resolves the challenge issuer's keys from THAT issuer's set.
+    const issuers = new Map([[RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPubJwk as never] }) }]]);
+    const validated = await validateChallenge(challenge, issuers, ISS);
     expect(validated.txn).toBe(txn);
     expect(validated.iss).toBe(RESOURCE);
     expect(validated.parameter_digest).toBe(parameter_digest);
+    expect(validated.mission.id).toBe(mission.id);
+    expect(validated.cnf.jkt).toBe(cnfJkt);
 
-    // AS issues a txn-bound, audience-restricted, single-use token carrying the
-    // ACTIVE Mission unchanged (D42 -- no Expansion) plus the verified approval.
-    const approvedUntil = "2026-12-31T00:00:00Z";
-    const token = await issueTxnToken({
-      jti: "mtt_test_1",
-      txn,
-      audience: RESOURCE,
-      mission: kernel.missionClaim(mission),
-      authorizationDetails: validated.authorization_details,
-      approval: {
-        id: "apr_txn_1",
-        approved_at: "2026-07-20T00:00:00Z",
-        approved_until: approvedUntil,
+    // A signature by a DIFFERENT key under the same iss does not verify.
+    const foreign = await generateKeyPair("ES256", { extractable: true });
+    const forged = await signChallenge(
+      {
+        txn,
+        authorization_details: requested,
+        iss: RESOURCE,
+        aud: ISS,
+        reason: "forged",
         parameter_digest,
+        mission: missionClaim,
+        cnf: { jkt: cnfJkt },
       },
-      approvedUntil,
+      foreign.privateKey,
+      "rs-txn",
+    );
+    await expect(validateChallenge(forged, issuers, ISS)).rejects.toThrow(/did not verify/);
+
+    const expS = Math.floor(Date.parse("2026-12-31T00:00:00Z") / 1000);
+    const token = await mintTransactionToken({
+      issuer: ISS,
+      audience: RESOURCE,
+      jti: "mtt_test_1",
+      expS,
+      subject: "alice",
+      clientId: "ap-agent",
+      txn,
+      authorizationDetails: validated.authorization_details,
+      parameterDigest: validated.parameter_digest,
+      mission: validated.mission,
       cnfJkt,
       key: asKeys.privateKey,
       kid: "as-txn",
-      issuer: ISS,
     });
 
-    // The token is audience-restricted, carries the txn, and is single_use.
     const { payload, protectedHeader } = await jwtVerify(token, createLocalJWKSet({ keys: [asPubJwk] } as never), {
       issuer: ISS,
       audience: RESOURCE,
+      typ: MISSION_TXN_TOKEN_TYP,
     });
-    expect(protectedHeader.typ).toBe(TXN_TOKEN_TYP);
+    expect(protectedHeader.typ).toBe(MISSION_TXN_TOKEN_TYP);
     expect(payload.txn).toBe(txn);
-    expect(payload.single_use).toBe(true);
+    expect(payload.aud).toBe(RESOURCE);
+    expect(payload.sub).toBe("alice");
+    expect(payload.client_id).toBe("ap-agent");
+    expect(payload.jti).toBe("mtt_test_1");
+    expect(payload.parameter_digest).toBe(parameter_digest);
     expect((payload.cnf as { jkt: string }).jkt).toBe(cnfJkt);
-    expect(Date.parse(approvedUntil) / 1000).toBe(payload.exp);
-    // D42: the token carries the ACTIVE Mission -- no successor, no predecessor.
     expect((payload.mission as { id: string }).id).toBe(mission.id);
     expect((payload.mission as { predecessor?: string }).predecessor).toBeUndefined();
-    expect((payload.mission as { successor?: string }).successor).toBeUndefined();
+    expect(payload.exp).toBe(expS);
     expect(kernel.get(mission.id)?.state).toBe("active");
-    // Carries the verified approval, incl. the parameter_digest.
-    expect((payload.approval as { parameter_digest: string }).parameter_digest).toBe(parameter_digest);
-
-    // RS honors the txn exactly once.
-    const cache = new TxnReplayCache();
-    expect(cache.accept(payload.txn as string)).toBe(true);
-    expect(cache.accept(payload.txn as string)).toBe(false);
+    // Nothing from the MUST NOT list rides here.
+    for (const prohibited of TXN_TOKEN_PROHIBITED_CLAIMS) {
+      expect(payload[prohibited], prohibited).toBeUndefined();
+    }
   });
 });

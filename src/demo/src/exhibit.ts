@@ -1451,23 +1451,30 @@ async function main() {
     );
   }
   const txnClaims = decodeClaims(txnToken);
-  block("txn-token — protected header", decodeHeader(txnToken));
-  block("txn-token — decoded claims", {
+  block("transaction token — protected header", decodeHeader(txnToken));
+  block("transaction token — decoded claims", {
+    jti: txnClaims.jti,
+    aud: txnClaims.aud,
+    sub: txnClaims.sub,
+    client_id: txnClaims.client_id,
     txn: txnClaims.txn,
     mission: txnClaims.mission,
     authorization_details: txnClaims.authorization_details,
-    approval: txnClaims.approval,
+    parameter_digest: txnClaims.parameter_digest,
     cnf: txnClaims.cnf,
-    single_use: txnClaims.single_use,
   });
   note(
-    `mission.id == active mission ${missionId} (unchanged, D42); approval.parameter_digest carries the gated operation; ` +
-      `cnf.jkt ${(txnClaims.cnf as { jkt: string }).jkt === issued.dpopJkt ? "==" : "!="} base token jkt; single_use=${txnClaims.single_use}.`,
+    `aud is a singleton (${String(txnClaims.aud)}), exactly the challenge's iss; sub is the effective subject ` +
+      `${String(txnClaims.sub)}, never the approver; mission.id == active mission ${missionId} (unchanged); ` +
+      `cnf.jkt ${(txnClaims.cnf as { jkt: string }).jkt === issued.dpopJkt ? "==" : "!="} base token jkt. ` +
+      "No approval object and no single_use flag ride here: the token is not a bearer approval.",
   );
 
-  // 7.5 Agent re-calls the RS tool WITH the txn-token (5th arg, no approval
-  // object anywhere). The RS validates it and derives the approval; the
-  // UNCHANGED PDP step 8 permits and the operation commits.
+  // 7.5 Agent re-calls the RS tool WITH the transaction token. The RS verifies
+  // it OFFLINE against the pending operation it retained when it challenged
+  // (typ, issuer, aud, cnf, txn, mission invariants, authorization_details, and
+  // a RECOMPUTED parameter_digest), reads no approval object off the token, and
+  // consumes the txn exactly once before the irreversible effect.
   hop("Agent", "Payments RS", "tools/call send_remittance_email (re-present txn-token)", "in-process MCP · O-33");
   block("MCP tools/call — send_remittance_email (re-present, carrying the txn-token)", {
     tool: "send_remittance_email",

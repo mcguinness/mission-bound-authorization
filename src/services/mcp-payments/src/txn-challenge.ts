@@ -81,16 +81,3 @@ export async function signChallenge(
     .sign(key);
   return { challenge, txn: input.txn, jti };
 }
-
-/** @deprecated superseded by MISSION_TXN_TOKEN_TYP + the offline-verification path. */
-export const TXN_TOKEN_TYP = "txn-token+jwt";
-
-/** @deprecated superseded by the linearizable consumption store. */
-export class TxnReplayCache {
-  private readonly used = new Set<string>();
-  accept(txn: string): boolean {
-    if (this.used.has(txn)) return false;
-    this.used.add(txn);
-    return true;
-  }
-}

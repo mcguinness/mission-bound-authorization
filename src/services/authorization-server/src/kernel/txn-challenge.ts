@@ -17,8 +17,7 @@ import {
   type JsonValue,
   type TxnChallengeClaims,
 } from "@mission/core";
-import { decodeJwt, jwtVerify, SignJWT, type CryptoKey, type JWTVerifyGetKey } from "jose";
-import type { MissionClaim } from "./types.js";
+import { decodeJwt, jwtVerify, type JWTVerifyGetKey } from "jose";
 
 export { TXN_CHALLENGE_TYP, type TxnChallengeClaims };
 
@@ -127,49 +126,4 @@ export async function validateChallenge(
     ...(payload.act !== undefined ? { act: payload.act as JsonValue } : {}),
     ...(typeof payload.reason_uri === "string" ? { reason_uri: payload.reason_uri } : {}),
   };
-}
-
-/** @deprecated superseded by the conforming mission-txn-token+jwt mint. */
-export const TXN_TOKEN_TYP = "txn-token+jwt";
-
-/** @deprecated superseded by the conforming mission-txn-token+jwt mint. */
-export async function issueTxnToken(input: {
-  txn: string;
-  audience: string;
-  mission: MissionClaim | Record<string, unknown>;
-  authorizationDetails: unknown[];
-  approval: { id: string; approved_at: string; approved_until: string; parameter_digest: string };
-  approvedUntil: string;
-  cnfJkt: string;
-  key: CryptoKey;
-  kid: string;
-  issuer: string;
-  jti: string;
-}): Promise<string> {
-  const exp = Math.floor(Date.parse(input.approvedUntil) / 1000);
-  return new SignJWT({
-    txn: input.txn,
-    mission: input.mission,
-    authorization_details: input.authorizationDetails,
-    single_use: true,
-    cnf: { jkt: input.cnfJkt },
-    approval: input.approval,
-  })
-    .setProtectedHeader({ alg: "ES256", kid: input.kid, typ: TXN_TOKEN_TYP })
-    .setIssuer(input.issuer)
-    .setAudience(input.audience)
-    .setIssuedAt()
-    .setExpirationTime(exp)
-    .setJti(input.jti)
-    .sign(input.key);
-}
-
-/** @deprecated superseded by the linearizable consumption store. */
-export class TxnReplayCache {
-  private readonly used = new Set<string>();
-  accept(txn: string): boolean {
-    if (this.used.has(txn)) return false;
-    this.used.add(txn);
-    return true;
-  }
 }

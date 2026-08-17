@@ -5,7 +5,15 @@
  * enforcement tier (M4) requires. RFC 9728 PRM is published.
  */
 
-import { parseAatToolId, readTxnMissionClaim, toolsOf, verifyAttenuationChain } from "@mission/core";
+import {
+  authorizationDetailsEqual,
+  MISSION_TXN_TOKEN_TYP,
+  missionInvariantsEqual,
+  parseAatToolId,
+  readTxnMissionClaim,
+  toolsOf,
+  verifyAttenuationChain,
+} from "@mission/core";
 import { calculateJwkThumbprint, createLocalJWKSet, decodeProtectedHeader, type JWK, jwtVerify } from "jose";
 import type { ActObject } from "@mission/actor-chain";
 import type { MissionView } from "@mission/pdp";
@@ -19,12 +27,13 @@ import {
   type TokenFacts,
   TOOL_ACTIONS,
 } from "./pep.js";
-import { openTxnPendingStore, type TxnPendingStore } from "./txn-store.js";
+import { openTxnStores, type TxnConsumptionStore, type TxnPendingStore } from "./txn-store.js";
 import type { PaymentsStore } from "./payments-store.js";
 import type { Connectors } from "./connectors.js";
 import type { EvidenceStore } from "./evidence.js";
 import { operationKey, type TransactionEngine } from "./transaction.js";
-import { TxnReplayCache, TXN_TOKEN_TYP } from "./txn-challenge.js";
+import { buildEffectiveParams, parameterDigest } from "./effective-params.js";
+
 
 export interface ToolDef {
   name: string;
@@ -75,10 +84,12 @@ export interface McpServerDeps {
   };
   /**
    * @spec txn-authorization#offline-verification — the retained pending
-   * operations. Injectable so replicas that can execute the same operation
-   * share one database; defaulted to this replica's own in-memory store.
+   * operations and the `txn` consumption domain. Injectable so replicas that
+   * can execute the same operation share ONE database (consumption must be
+   * linearizable across all of them); defaulted to this replica's own
+   * in-memory stores.
    */
-  txnPending?: TxnPendingStore;
+  txnStores?: { pending: TxnPendingStore; consumption: TxnConsumptionStore };
 }
 
 /**
@@ -103,13 +114,16 @@ export interface TransactionToolResult {
 export class McpPaymentsServer {
   private readonly resolveKey;
   private readonly resolveTxnKey?: ReturnType<typeof createLocalJWKSet>;
-  private readonly txnReplay = new TxnReplayCache();
   /** @spec txn-authorization#offline-verification — the retained pending operations. */
   private readonly txnPending: TxnPendingStore;
+  /** @spec txn-authorization#offline-verification — the `txn` consumption domain. */
+  private readonly txnConsumption: TxnConsumptionStore;
   constructor(private readonly deps: McpServerDeps) {
     this.resolveKey = createLocalJWKSet(deps.jwks as never);
     if (deps.txnTokenJwks) this.resolveTxnKey = createLocalJWKSet(deps.txnTokenJwks as never);
-    this.txnPending = deps.txnPending ?? openTxnPendingStore();
+    const stores = deps.txnStores ?? openTxnStores();
+    this.txnPending = stores.pending;
+    this.txnConsumption = stores.consumption;
   }
 
   /** RFC 9728 Protected Resource Metadata. */
@@ -395,17 +409,19 @@ export class McpPaymentsServer {
     const tx = this.deps.transaction;
     if (!tx) throw new Error("transaction tier not configured");
 
-    // Hybrid AROP path: an AS-signed txn-token carries the verified approval.
-    // Validate it (signature/iss/aud/typ, cnf chaining, single-use) and derive
-    // the action-bound approval, which the UNCHANGED PDP step 8 then checks.
-    // The approval's source is the AS signature; the carrier is the trusted RS.
-    // There is no agent-supplied approval entry point: the only way an approval
-    // reaches the PDP is via a validated txn-token.
+    // @spec txn-authorization#offline-verification — a presented transaction
+    // token is verified LOCALLY, with no call to the Transaction Authorization
+    // Server on the request path, and against the operation THIS resource
+    // retained when it issued the challenge. The resource reads no approval
+    // object off the token: the action-approval context below is derived only
+    // from the typed verified claims.
     let derivedApproval: ActionApprovalInput | undefined;
+    let consumedTxn: string | undefined;
     if (txnToken !== undefined) {
-      const derived = await this.deriveApprovalFromTxnToken(txnToken, token);
-      if (!derived.ok) return { ok: false, refusal_reason: derived.refusal_reason };
-      derivedApproval = derived.approval;
+      const verified = await this.verifyTransactionToken(txnToken, token, tool, args);
+      if (!verified.ok) return { ok: false, refusal_reason: verified.refusal_reason };
+      derivedApproval = verified.approval;
+      consumedTxn = verified.txn;
     }
 
     const res = await this.deps.pep.enforce(tool, args, token, derivedApproval, signals);
@@ -448,6 +464,26 @@ export class McpPaymentsServer {
     if (!tx.engine.leaseValid(opKey) || !this.deps.pep.reverify(res.effective, digest, token)) {
       tx.engine.advance(opKey, "abandoned");
       return { ok: false, refusal_reason: "parameter_mismatch" };
+    }
+
+    // @spec txn-authorization#offline-verification — atomic first use of the
+    // resource-scoped `txn`, LINEARIZABLE across every replica that can execute
+    // this operation and committed BEFORE the irreversible effect. A second,
+    // distinct token jti for an already-consumed txn is the same replay: it is
+    // refused as duplicate_suppressed and never executed as a new attempt. If
+    // the consumption store is unavailable the resource fails CLOSED.
+    if (consumedTxn !== undefined) {
+      let firstUse: boolean;
+      try {
+        firstUse = this.txnConsumption.consume(CANONICAL_RESOURCE, consumedTxn);
+      } catch {
+        tx.engine.advance(opKey, "abandoned");
+        return { ok: false, refusal_reason: "consumption_unavailable" };
+      }
+      if (!firstUse) {
+        tx.engine.advance(opKey, "abandoned");
+        return { ok: false, refusal_reason: "duplicate_suppressed" };
+      }
     }
 
     // Commit point (D36): connector accepts with the idempotency key.
@@ -512,51 +548,121 @@ export class McpPaymentsServer {
   }
 
   /**
-   * Validate a presented AROP txn-token and derive the action-bound approval.
-   * Checks (in order): AS signature + issuer/audience/typ; `cnf.jkt` chains to
-   * the base mission token's key; single-use per `txn` (replay -> txn_replayed).
+   * @spec txn-authorization#offline-verification — verify a presented
+   * transaction token locally, in the order the profile fixes:
+   *
+   *  1. exact `typ`, trusted issuer and signature, intended `aud` (a singleton,
+   *     this resource), and `iat`/`exp`. An unknown `typ` -- an ordinary
+   *     Mission-bound access token, or any other JWT -- is rejected outright by
+   *     the verifier, never parsed on a best-effort basis;
+   *  2. `cnf` proof by the CURRENT presenter;
+   *  3. equality of `txn`, the `mission` invariants, the operation
+   *     `authorization_details`, and the RECOMPUTED `parameter_digest` with the
+   *     pending operation this resource retained when it challenged;
+   *  4. principal, subject and actor consistency.
+   *
+   * Step 5 (current local policy, entitlement and Mission state) is the
+   * existing PEP/PDP path the caller runs next; step 6 (atomic first use) is
+   * taken at the commit point.
    */
-  private async deriveApprovalFromTxnToken(
+  private async verifyTransactionToken(
     txnToken: string,
     token: TokenFacts,
-  ): Promise<{ ok: true; approval: ActionApprovalInput } | { ok: false; refusal_reason: string }> {
+    tool: string,
+    args: Record<string, unknown>,
+  ): Promise<
+    { ok: true; approval: ActionApprovalInput; txn: string } | { ok: false; refusal_reason: string }
+  > {
     if (!this.resolveTxnKey || !this.deps.asIssuer) return { ok: false, refusal_reason: "txn_not_configured" };
     let payload: Record<string, unknown>;
     try {
-      ({ payload } = await jwtVerify(txnToken, this.resolveTxnKey, {
+      // The TAS's token-signing key is trusted through pre-established
+      // federation metadata (this JWKS), never through the request.
+      ({ payload } = (await jwtVerify(txnToken, this.resolveTxnKey, {
         issuer: this.deps.asIssuer,
         audience: CANONICAL_RESOURCE,
-        typ: TXN_TOKEN_TYP,
-      }));
+        typ: MISSION_TXN_TOKEN_TYP,
+      })) as { payload: Record<string, unknown> });
     } catch {
       return { ok: false, refusal_reason: "txn_invalid" };
     }
-    // The txn-token must be bound to the same key as the base mission token.
+    // `aud` is a SINGLETON, exactly this resource; a list is not this profile.
+    if (typeof payload.aud !== "string") return { ok: false, refusal_reason: "txn_invalid" };
+    if (typeof payload.jti !== "string" || typeof payload.iat !== "number" || typeof payload.exp !== "number") {
+      return { ok: false, refusal_reason: "txn_invalid" };
+    }
+
+    // 2. Proof by the current presenter: the same key the credential on THIS
+    //    request is bound to.
     const cnf = payload.cnf as { jkt?: string } | undefined;
     if (cnf?.jkt !== token.cnfJkt) return { ok: false, refusal_reason: "txn_cnf_mismatch" };
-    // §6.2 token-vs-challenge binding: the token's txn must be one this RS
-    // actually issued a challenge for (checked after cnf, before the replay
-    // consume, so a foreign or bad-cnf token never burns a replay slot).
+
+    // 3. Against the RETAINED pending operation -- never against the token's
+    //    own account of the operation.
     const txn = payload.txn as string | undefined;
-    if (!txn || !this.txnPending.get(CANONICAL_RESOURCE, txn)) {
-      return { ok: false, refusal_reason: "txn_unknown" };
+    const pending = txn ? this.txnPending.get(CANONICAL_RESOURCE, txn) : undefined;
+    if (!txn || !pending) return { ok: false, refusal_reason: "txn_unknown" };
+    if (pending.cnfJkt !== cnf.jkt) return { ok: false, refusal_reason: "txn_cnf_mismatch" };
+    if (!missionInvariantsEqual(payload.mission, pending.mission)) {
+      return { ok: false, refusal_reason: "txn_mission_mismatch" };
     }
-    // Single-use across presentations.
-    if (!this.txnReplay.accept(txn)) return { ok: false, refusal_reason: "txn_replayed" };
-    const approval = payload.approval as
-      | { id: string; approved_at: string; approved_until?: string; parameter_digest: string }
-      | undefined;
-    if (!approval) return { ok: false, refusal_reason: "txn_missing_approval" };
+    if (!authorizationDetailsEqual(payload.authorization_details, pending.authorizationDetails)) {
+      return { ok: false, refusal_reason: "txn_authority_mismatch" };
+    }
+    const recomputed = this.recomputeParameterDigest(tool, args);
+    if (
+      recomputed === undefined ||
+      recomputed !== pending.parameterDigest ||
+      payload.parameter_digest !== recomputed
+    ) {
+      return { ok: false, refusal_reason: "txn_parameter_mismatch" };
+    }
+
+    // 4. Principal, subject and actor consistency.
+    if (payload.sub !== pending.subject) return { ok: false, refusal_reason: "txn_subject_mismatch" };
+    if (token.act !== undefined && payload.act === undefined) {
+      return { ok: false, refusal_reason: "txn_actor_mismatch" };
+    }
+
+    // An already-consumed txn is a replay whatever token jti carries it. The
+    // authoritative, atomic check is at the commit point; this read only lets
+    // the resource answer with the right reason instead of a later one.
+    try {
+      if (this.txnConsumption.consumed(CANONICAL_RESOURCE, txn)) {
+        return { ok: false, refusal_reason: "duplicate_suppressed" };
+      }
+    } catch {
+      return { ok: false, refusal_reason: "consumption_unavailable" };
+    }
+
+    // The action-approval context the PDP re-evaluates is derived ONLY from
+    // these typed, verified claims: the token carries no approval object.
     return {
       ok: true,
-      // Carry approved_until through so the UNCHANGED PDP step 8 can honor it.
+      txn,
       approval: {
-        id: approval.id,
-        approved_at: approval.approved_at,
-        parameter_digest: approval.parameter_digest,
-        ...(approval.approved_until !== undefined ? { approved_until: approval.approved_until } : {}),
+        id: `txn:${payload.jti}`,
+        approved_at: new Date(payload.iat * 1000).toISOString(),
+        approved_until: new Date(payload.exp * 1000).toISOString(),
+        parameter_digest: recomputed,
       },
     };
+  }
+
+  /**
+   * @spec runtime (parameter binding) — recompute the operation's digest from
+   * authoritative store state, exactly as the enforcement path does. The token
+   * is matched against THIS value, never against a digest it supplies.
+   */
+  private recomputeParameterDigest(tool: string, args: Record<string, unknown>): string | undefined {
+    const mapping = TOOL_ACTIONS[tool];
+    if (!mapping?.needsInvoice) return undefined;
+    const invoice = this.deps.payments.getInvoice(String(args.invoice_id ?? ""));
+    const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
+    if (!invoice || !vendor) return undefined;
+    return parameterDigest(
+      buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: CANONICAL_RESOURCE }),
+    );
   }
 
   private execute(tool: string, args: Record<string, unknown>): unknown {

@@ -1,13 +1,9 @@
 /**
- * Phase 1 AROP Transaction Challenge over real HTTP: the AS
- * transaction_authorization_endpoint. A client presents its base mission token
- * (DPoP) + an RS-signed txn-challenge ONCE (initiation); the AS validates +
- * subset-gates against the ACTIVE Mission (D42), opens an ARS task, and returns
- * a continuation handle (transaction_authorization_id). The client then POLLS
- * the same endpoint WITH the handle: pending until approval, then a txn-bound,
- * audience-restricted, single-use token carrying the active Mission unchanged
- * plus the verified approval (incl. parameter_digest). The hybrid design: the
- * AS signature is the source of the approval, the RS (phase 2) is the carrier.
+ * The `transaction_authorization_endpoint` over real HTTP. An authenticated
+ * client submits the resource's signed challenge with the Mission-bound access
+ * token as an RFC 8693 `subject_token`, proving possession of the challenge's
+ * `cnf` key; initial validation only ADMITS a workflow, and the authorization
+ * result is the fresh decision at completion.
  */
 
 import { type Server } from "node:http";
@@ -23,10 +19,11 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { TXN_TOKEN_PROHIBITED_CLAIMS } from "@mission/core";
 import {
   buildAuthorizationServer,
+  MISSION_TXN_TOKEN_TYP,
   TXN_CHALLENGE_TYP,
-  TXN_TOKEN_TYP,
   type AuthorityEntry,
   type BuiltAs,
   type ChallengeIssuers,
@@ -342,13 +339,13 @@ afterAll(() => {
   asServer?.close();
 });
 
-describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42)", () => {
-  it("advertises transaction_authorization_endpoint in metadata", async () => {
+describe("transaction endpoint redemption (@spec txn-authorization#challenge-redemption)", () => {
+  it("advertises the transaction endpoint in Authorization Server metadata", async () => {
     const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
     expect(meta.transaction_authorization_endpoint).toBe(`${ISSUER}/transaction`);
   });
 
-  it("initiates with a handle, pends on poll, then on approval issues a txn-bound single-use token carrying the ACTIVE Mission", async () => {
+  it("admits a workflow, pends on poll, then on approval issues a conforming transaction token", async () => {
     // Requested authority is a genuine subset of the active Mission (the RS
     // read the Mission's Authority Set from the base token).
     const record = as.kernel.get(missionId);
@@ -430,22 +427,32 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
     expect(tokenBody.txn).toBeUndefined();
     expect(tokenBody.expires_in).toBeGreaterThan(0);
 
-    // Verify the AS-signed txn-token against the AS /jwks (as-txn published).
+    // Verify the TAS-signed transaction token against the AS /jwks.
     const jwks = createRemoteJWKSet(new URL(`${ISSUER}/jwks`));
     const { payload, protectedHeader } = await jwtVerify(tokenBody.access_token as string, jwks, {
       issuer: ISSUER,
       audience: RESOURCE,
+      typ: MISSION_TXN_TOKEN_TYP,
     });
-    expect(protectedHeader.typ).toBe(TXN_TOKEN_TYP);
+    expect(protectedHeader.typ).toBe(MISSION_TXN_TOKEN_TYP);
+    // @spec txn-authorization#transaction-token — the REQUIRED claim set.
     expect(payload.txn).toBe(txn);
-    expect(payload.single_use).toBe(true);
+    expect(typeof payload.jti).toBe("string");
+    // aud is a SINGLETON string, exactly the challenge's iss. Never a list.
+    expect(payload.aud).toBe(RESOURCE);
+    expect(Array.isArray(payload.aud)).toBe(false);
+    // sub is the verified effective subject, never the Approver (bob).
+    expect(payload.sub).toBe("alice");
+    expect(payload.client_id).toBe("ap-agent");
+    expect(payload.parameter_digest).toBe(parameter_digest);
     expect((payload.cnf as { jkt: string }).jkt).toBe(dpopJkt);
-    // D42: the token carries the ACTIVE Mission -- no successor, no predecessor.
     expect((payload.mission as { id: string }).id).toBe(missionId);
     expect((payload.mission as { predecessor?: string }).predecessor).toBeUndefined();
-    expect((payload.mission as { successor?: string }).successor).toBeUndefined();
-    // The verified approval (incl. parameter_digest) is carried.
-    expect((payload.approval as { parameter_digest: string }).parameter_digest).toBe(parameter_digest);
+    // The MUST NOT list: no approval object, no single_use bearer flag, no raw
+    // parameters or rendered text, no refresh token or token-exchange input.
+    for (const prohibited of TXN_TOKEN_PROHIBITED_CLAIMS) {
+      expect(payload[prohibited], prohibited).toBeUndefined();
+    }
     // @spec txn-authorization#transaction-token — never later than the earliest
     // of the approval's validity and the deployment maximum, and NEVER bounded
     // by the already-consumed challenge exp.
@@ -453,7 +460,7 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
     expect(payload.exp as number).toBeGreaterThan(Math.floor(Date.now() / 1000));
   });
 
-  it("rejects a challenge whose authority widens beyond the Mission with 403 out_of_authority", async () => {
+  it("refuses a challenge whose authority widens beyond the Mission", async () => {
     // Same action, but a cap above the Mission's max_amount -> not a subset.
     const widen: AuthorityEntry[] = [
       {
@@ -481,14 +488,14 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
     expect(body.error).toBe("invalid_grant");
   });
 
-  it("returns 404 for a poll with an unknown transaction_authorization_id", async () => {
+  it("refuses a poll for a transaction_authorization_id it never admitted", async () => {
     const res = await postTransaction({ transaction_authorization_id: "txa_does-not-exist" });
     const body = (await res.json()) as { error?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_grant");
   });
 
-  it("rejects a poll from a different client (cnf.jkt mismatch) with 403 invalid_token", async () => {
+  it("refuses a poll from a client the workflow was not admitted for", async () => {
     // Initiate a fresh handle, bound to the real base token's DPoP key.
     const record = as.kernel.get(missionId);
     const requested = (record as { authority_set: AuthorityEntry[] }).authority_set.filter((e) =>
@@ -521,7 +528,7 @@ describe("AS transaction_authorization_endpoint (AROP Transaction Challenge, D42
     expect(body.error).toBe("invalid_grant");
   });
 
-  it("polls a DENIED task -> 400 access_denied (§5.3), so the client stops rather than polling forever", async () => {
+  it("reports a denied approval as access_denied so the client stops polling", async () => {
     const record = as.kernel.get(missionId);
     const requested = (record as { authority_set: AuthorityEntry[] }).authority_set.filter((e) =>
       e.actions.includes("payments:remittance.send"),

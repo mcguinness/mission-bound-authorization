@@ -242,12 +242,25 @@ export {
   type ChallengeIssuerKeys,
   type ChallengeIssuers,
   validateChallenge,
-  issueTxnToken,
-  TxnReplayCache,
   TXN_CHALLENGE_TYP,
-  TXN_TOKEN_TYP,
   type TxnChallengeClaims,
 } from "./kernel/txn-challenge.js";
+export {
+  MISSION_TXN_TOKEN_TYP,
+  mintTransactionToken,
+  type MintTransactionTokenInput,
+} from "./kernel/transaction-token.js";
+export {
+  TxnWorkflowStore,
+  type TxnWorkflowRecord,
+  type TxnWorkflowState,
+} from "./kernel/txn-workflow-store.js";
+export type {
+  DestinationPolicy,
+  FreshDecision,
+  FreshDecisionInput,
+  TxnAuthorizationOptions,
+} from "./adapters/transaction-authorization.js";
 export {
   StatusListPublisher,
   signStatusListToken,

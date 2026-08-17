@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS txn_workflows (
   action TEXT NOT NULL,
   operation_type TEXT NOT NULL,
   subject TEXT NOT NULL,
+  act_json TEXT,
   parameter_digest TEXT NOT NULL,
   challenge_json TEXT NOT NULL,
   subject_token_exp INTEGER NOT NULL,
@@ -73,6 +74,12 @@ export interface TxnWorkflowRecord {
   subjectTokenExpS: number;
   /** The Mission's expiry at admission (epoch seconds). */
   missionExpS: number;
+  /**
+   * @spec txn-authorization#transaction-token — the requester/actor context
+   * that existed upstream (on `subject_token` or the challenge), pinned at
+   * admission. Its presence is what makes `act` REQUIRED on the token.
+   */
+  act?: unknown;
   /** The WORKFLOW's expiry (epoch seconds), independent of the challenge's. */
   expiresAtS: number;
   state: TxnWorkflowState;
@@ -89,6 +96,7 @@ interface Row {
   action: string;
   operation_type: string;
   subject: string;
+  act_json: string | null;
   challenge_json: string;
   subject_token_exp: number;
   mission_exp: number;
@@ -142,9 +150,9 @@ export class TxnWorkflowStore {
       .prepare(
         `INSERT INTO txn_workflows
            (id, challenge_iss, challenge_jti, client_id, cnf_jkt, txn, task_id, mission_id, action,
-            operation_type, subject, parameter_digest, challenge_json, subject_token_exp, mission_exp,
-            expires_at, state, issued_token, issued_jti, issued_exp, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, unixepoch())
+            operation_type, subject, act_json, parameter_digest, challenge_json, subject_token_exp,
+            mission_exp, expires_at, state, issued_token, issued_jti, issued_exp, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, unixepoch())
          ON CONFLICT DO NOTHING`,
       )
       .run(
@@ -159,6 +167,7 @@ export class TxnWorkflowStore {
         record.action,
         record.operationType,
         record.subject,
+        record.act === undefined ? null : JSON.stringify(record.act),
         record.challenge.parameter_digest,
         JSON.stringify(record.challenge),
         record.subjectTokenExpS,
@@ -221,6 +230,7 @@ function toRecord(row: Row): TxnWorkflowRecord {
     action: row.action,
     operationType: row.operation_type,
     subject: row.subject,
+    ...(row.act_json !== null ? { act: JSON.parse(row.act_json) as unknown } : {}),
     subjectTokenExpS: row.subject_token_exp,
     missionExpS: row.mission_exp,
     expiresAtS: row.expires_at,

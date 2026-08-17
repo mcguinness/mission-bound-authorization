@@ -31,9 +31,9 @@ import { GateError, type MissionKernel } from "../kernel/kernel.js";
 import {
   ChallengeError,
   type ChallengeIssuers,
-  issueTxnToken,
   validateChallenge,
 } from "../kernel/txn-challenge.js";
+import { mintTransactionToken } from "../kernel/transaction-token.js";
 import type { AuthorityEntry } from "../kernel/types.js";
 import { TxnWorkflowStore, type TxnWorkflowRecord } from "../kernel/txn-workflow-store.js";
 import type { DpopProofReplay } from "./dpop-replay.js";
@@ -359,6 +359,13 @@ async function admit(
     expiresAtS: nowS + txn.workflowLifetimeSeconds,
     subjectTokenExpS: typeof subject.exp === "number" ? subject.exp : nowS,
     missionExpS: Math.floor(Date.parse(active.expires_at) / 1000),
+    // Actor context from EITHER upstream carrier; its presence is what makes
+    // `act` REQUIRED on the issued token.
+    ...(subject.act !== undefined
+      ? { act: subject.act }
+      : challenge.act !== undefined
+        ? { act: challenge.act }
+        : {}),
     state: "pending",
   });
   respondAdmitted(ctx, txn, workflow, nowS);
@@ -517,19 +524,26 @@ async function poll(
     fail(ctx, 400, "access_denied", "this transaction already produced an authorization result");
     return;
   }
+  // @spec txn-authorization#transaction-token — `parameter_digest` is copied
+  // only after it has been verified against the challenge (the approval above
+  // is bound to the same value), and `mission` is the challenge's profiled
+  // members, value-equal by construction.
   const tokenJti = `mtt_${randomBytes(12).toString("base64url")}`;
-  const token = await issueTxnToken({
-    jti: tokenJti,
-    txn: wf.challenge.txn,
+  const token = await mintTransactionToken({
+    issuer: deps.issuer,
     audience: wf.challenge.iss,
-    mission: wf.challenge.mission as unknown as Record<string, unknown>,
-    authorizationDetails: wf.challenge.authorization_details as unknown as unknown[],
-    approval,
-    approvedUntil: new Date(exp * 1000).toISOString(),
+    jti: tokenJti,
+    expS: exp,
+    subject: wf.subject,
+    clientId: wf.clientId,
+    txn: wf.challenge.txn,
+    authorizationDetails: wf.challenge.authorization_details,
+    parameterDigest: wf.challenge.parameter_digest,
+    mission: wf.challenge.mission,
     cnfJkt: wf.challenge.cnf.jkt,
+    ...(wf.act !== undefined ? { act: wf.act as never } : {}),
     key: txn.tokenKey,
     kid: txn.tokenKid,
-    issuer: deps.issuer,
   });
   workflows.recordIssued(wf.id, token, tokenJti, exp);
   respondWithToken(ctx, token, exp - nowS);

@@ -70,14 +70,14 @@ export {
   signChallenge,
   type SignChallengeInput,
   type SignedChallenge,
-  TxnReplayCache,
   TXN_CHALLENGE_TYP,
-  TXN_TOKEN_TYP,
   type TxnChallengeClaims,
 } from "./txn-challenge.js";
 export {
   openTxnPendingStore,
+  openTxnStores,
   type PendingOperation,
+  type TxnConsumptionStore,
   type TxnPendingStore,
 } from "./txn-store.js";
 export {

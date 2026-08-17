@@ -87,6 +87,11 @@ function build(
     asIssuer?: string;
     /** Gate remittance on a per-action approval without wiring the ARAP signer. */
     gateRemittance?: boolean;
+    /** @spec txn-authorization#offline-verification — share a consumption domain. */
+    txnStores?: {
+      pending: import("../src/index.js").TxnPendingStore;
+      consumption: import("../src/index.js").TxnConsumptionStore;
+    };
   } = {},
 ) {
   const payments = new PaymentsStore();
@@ -123,6 +128,7 @@ function build(
     transaction: { engine, connectors, evidence },
     ...(opts.txnTokenJwks ? { txnTokenJwks: opts.txnTokenJwks } : {}),
     ...(opts.asIssuer ? { asIssuer: opts.asIssuer } : {}),
+    ...(opts.txnStores ? { txnStores: opts.txnStores } : {}),
   });
   return { payments, evidence, connectors, engine, server };
 }
@@ -142,21 +148,47 @@ function digestFor(payments: PaymentsStore): string {
   );
 }
 
-/** Sign an AS-shaped txn-token inline (mirrors the shape in txn-endpoint.test.ts). */
+/**
+ * Stand in for the Transaction Authorization Server: mint a conforming
+ * `mission-txn-token+jwt` (@spec txn-authorization#transaction-token).
+ */
 async function signTxnToken(input: {
   key: import("jose").CryptoKey;
   txn: string;
   cnfJkt: string;
-  approval: { id: string; approved_at: string; approved_until: string; parameter_digest: string };
+  parameterDigest: string;
+  authorizationDetails: unknown[];
+  mission?: Record<string, unknown>;
+  subject?: string;
+  jti?: string;
+  typ?: string;
+  audience?: string | string[];
+  expS?: number;
 }): Promise<string> {
   const { SignJWT } = await import("jose");
-  return new SignJWT({ txn: input.txn, single_use: true, cnf: { jkt: input.cnfJkt }, approval: input.approval })
-    .setProtectedHeader({ alg: "ES256", kid: "as-txn", typ: "txn-token+jwt" })
+  return new SignJWT({
+    sub: input.subject ?? "alice",
+    client_id: "ap-agent",
+    txn: input.txn,
+    authorization_details: input.authorizationDetails,
+    parameter_digest: input.parameterDigest,
+    mission: input.mission ?? (TOKEN.missionClaim as unknown as Record<string, unknown>),
+    cnf: { jkt: input.cnfJkt },
+  })
+    .setProtectedHeader({ alg: "ES256", kid: "as-txn", typ: input.typ ?? "mission-txn-token+jwt" })
     .setIssuer(AS_ISSUER)
-    .setAudience(CANONICAL_RESOURCE)
+    .setAudience(input.audience ?? CANONICAL_RESOURCE)
     .setIssuedAt()
-    .setExpirationTime(Math.floor(Date.parse(input.approval.approved_until) / 1000))
+    .setExpirationTime(input.expS ?? Math.floor(Date.now() / 1000) + 300)
+    .setJti(input.jti ?? `mtt_${Math.random().toString(36).slice(2)}`)
     .sign(input.key);
+}
+
+/** The single `authorization_details` entry the RS challenges the remittance with. */
+function remittanceEntry(): unknown[] {
+  return VIEW.authority_set
+    .filter((e) => e.resource === CANONICAL_RESOURCE && e.actions.includes("payments:remittance.send"))
+    .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
 }
 
 d("M5 transaction-assurance tier", () => {
@@ -266,13 +298,19 @@ d("M5 transaction-assurance tier", () => {
     expect(evidence.forMission("msn_m5").some((e) => e.kind === "execution")).toBe(true);
   });
 
-  it("AROP: a gated action with challengeSigner and no txn-token yields a signed txn-challenge", async () => {
+  it("returns a signed challenge, and retains the pending operation, when the client signals it accepts one (@spec txn-authorization#resource-challenge)", async () => {
     const { generateKeyPair, exportJWK, createLocalJWKSet, jwtVerify } = await import("jose");
     const rsTxn = await generateKeyPair("ES256", { extractable: true });
     const rsTxnPub = { ...(await exportJWK(rsTxn.publicKey)), kid: "rs-txn", alg: "ES256" };
     const { server, payments } = build({
       challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
     });
+
+    // Without the signal the client just sees the denial.
+    const unsignalled = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN);
+    expect(unsignalled.ok).toBe(false);
+    expect(unsignalled.denial_reason).toBe("action_approval_required");
+    expect(unsignalled.transaction_challenge).toBeUndefined();
 
     const res = await server.callTransactionTool(
       "send_remittance_email",
@@ -284,117 +322,32 @@ d("M5 transaction-assurance tier", () => {
     );
     expect(res.ok).toBe(false);
     expect(res.denial_reason).toBe("action_approval_required");
+    // The upstream wire members, verbatim: no bespoke envelope, no endpoint hint.
     expect(res.error).toBe("transaction_authorization_required");
-
-    // The challenge is a real rs-txn-signed txn-challenge, aud=AS, bound to the
-    // exact operation parameter_digest the PEP gated on.
     const challenge = res.transaction_challenge as string;
     expect(challenge).toBeTruthy();
+
     const { payload, protectedHeader } = await jwtVerify(challenge, createLocalJWKSet({ keys: [rsTxnPub] } as never), {
       audience: AS_ISSUER,
       typ: "txn-authz-challenge+jwt",
     });
     expect(protectedHeader.typ).toBe("txn-authz-challenge+jwt");
     expect(payload.iss).toBe(CANONICAL_RESOURCE);
-    // §4.2: the txn id travels as a body claim (not sub) and a jti is REQUIRED.
     expect(typeof payload.txn).toBe("string");
     expect(typeof payload.jti).toBe("string");
     expect(payload.sub).toBeUndefined();
     expect(payload.parameter_digest).toBe(digestFor(payments));
-    // The challenge carries the active Mission's authority_set entry for this
-    // resource+action (what the AS subset-gate consumes) -- not an empty set.
+    // This profile's REQUIRED additions, derived from the verified token.
+    expect((payload.mission as { id: string }).id).toBe("msn_m5");
+    expect((payload.cnf as { jkt: string }).jkt).toBe(TOKEN.cnfJkt);
+    // Exactly one operation-scoped entry.
     const details = payload.authorization_details as { resource: string; actions: string[] }[];
     expect(details).toHaveLength(1);
     expect(details[0]?.resource).toBe(CANONICAL_RESOURCE);
-    expect(details[0]?.actions).toContain("payments:remittance.send");
+    expect(details[0]?.actions).toEqual(["payments:remittance.send"]);
   });
 
-  it("AROP: a valid presented txn-token derives the approval and commits (hybrid)", async () => {
-    const { generateKeyPair, exportJWK } = await import("jose");
-    const rsTxn = await generateKeyPair("ES256", { extractable: true });
-    const asTxn = await generateKeyPair("ES256", { extractable: true });
-    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
-    // Wire both the challenge signer AND the txn-token validator so the §6.2
-    // token-vs-challenge binding is exercised, not bypassed.
-    const { server, payments } = build({
-      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
-      txnTokenJwks: { keys: [asTxnPub] },
-      asIssuer: AS_ISSUER,
-    });
-
-    // First call (no txn-token) -> the RS emits a challenge and records its txn.
-    const challengeRes = await server.callTransactionTool(
-      "send_remittance_email",
-      { invoice_id: "inv-1" },
-      TOKEN,
-      undefined,
-      undefined,
-      ACCEPT_CHALLENGE,
-    );
-    expect(challengeRes.ok).toBe(false);
-    const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
-    expect(txn).toBeTruthy();
-
-    const approvedUntil = new Date(Date.now() + 300_000).toISOString();
-    const txnToken = await signTxnToken({
-      key: asTxn.privateKey,
-      txn,
-      cnfJkt: TOKEN.cnfJkt,
-      approval: { id: "apr_unit", approved_at: new Date().toISOString(), approved_until: approvedUntil, parameter_digest: digestFor(payments) },
-    });
-
-    // No agent-supplied actionApproval; the approval is derived from the token.
-    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, txnToken);
-    expect(res.ok, JSON.stringify(res)).toBe(true);
-    expect(res.result).toMatchObject({ executed: true, invoice_id: "inv-1" });
-  });
-
-  it("AROP: a txn-token whose txn was never challenged is refused (txn_unknown, §6.2)", async () => {
-    const { generateKeyPair, exportJWK } = await import("jose");
-    const rsTxn = await generateKeyPair("ES256", { extractable: true });
-    const asTxn = await generateKeyPair("ES256", { extractable: true });
-    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
-    const { server, payments } = build({
-      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
-      txnTokenJwks: { keys: [asTxnPub] },
-      asIssuer: AS_ISSUER,
-    });
-
-    // A well-formed, correctly-cnf-bound token, but its txn was never issued as
-    // a challenge by this RS -> the §6.2 binding refuses it.
-    const approvedUntil = new Date(Date.now() + 300_000).toISOString();
-    const txnToken = await signTxnToken({
-      key: asTxn.privateKey,
-      txn: "txn_never_challenged",
-      cnfJkt: TOKEN.cnfJkt,
-      approval: { id: "apr_unit", approved_at: new Date().toISOString(), approved_until: approvedUntil, parameter_digest: digestFor(payments) },
-    });
-
-    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, txnToken);
-    expect(res.ok).toBe(false);
-    expect(res.refusal_reason).toBe("txn_unknown");
-  });
-
-  it("AROP: a txn-token bound to a different key is rejected (cnf mismatch)", async () => {
-    const { generateKeyPair, exportJWK } = await import("jose");
-    const asTxn = await generateKeyPair("ES256", { extractable: true });
-    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
-    const { server, payments } = build({ gateRemittance: true, txnTokenJwks: { keys: [asTxnPub] }, asIssuer: AS_ISSUER });
-
-    const approvedUntil = new Date(Date.now() + 300_000).toISOString();
-    const txnToken = await signTxnToken({
-      key: asTxn.privateKey,
-      txn: "txn_unit_cnf",
-      cnfJkt: "jkt-someone-else", // not TOKEN.cnfJkt
-      approval: { id: "apr_unit", approved_at: new Date().toISOString(), approved_until: approvedUntil, parameter_digest: digestFor(payments) },
-    });
-
-    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, txnToken);
-    expect(res.ok).toBe(false);
-    expect(res.refusal_reason).toBe("txn_cnf_mismatch");
-  });
-
-  it("AROP: replaying the same txn is rejected (txn_replayed) and does not double-execute", async () => {
+  it("executes exactly once for a verified transaction token that matches the retained operation (@spec txn-authorization#offline-verification)", async () => {
     const { generateKeyPair, exportJWK } = await import("jose");
     const rsTxn = await generateKeyPair("ES256", { extractable: true });
     const asTxn = await generateKeyPair("ES256", { extractable: true });
@@ -405,7 +358,6 @@ d("M5 transaction-assurance tier", () => {
       asIssuer: AS_ISSUER,
     });
 
-    // Register the txn via a real challenge, then sign a token that quotes it.
     const challengeRes = await server.callTransactionTool(
       "send_remittance_email",
       { invoice_id: "inv-1" },
@@ -415,22 +367,245 @@ d("M5 transaction-assurance tier", () => {
       ACCEPT_CHALLENGE,
     );
     const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
-    expect(txn).toBeTruthy();
-
-    const approvedUntil = new Date(Date.now() + 300_000).toISOString();
     const txnToken = await signTxnToken({
       key: asTxn.privateKey,
       txn,
       cnfJkt: TOKEN.cnfJkt,
-      approval: { id: "apr_unit", approved_at: new Date().toISOString(), approved_until: approvedUntil, parameter_digest: digestFor(payments) },
+      parameterDigest: digestFor(payments),
+      authorizationDetails: remittanceEntry(),
     });
 
-    const first = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, txnToken);
-    expect(first.ok, JSON.stringify(first)).toBe(true);
-    // Replay is refused before enforce/redeem/commit, so nothing executes twice.
-    const second = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN, undefined, txnToken);
-    expect(second.ok).toBe(false);
-    expect(second.refusal_reason).toBe("txn_replayed");
+    const res = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      txnToken,
+    );
+    expect(res.ok, JSON.stringify(res)).toBe(true);
     expect(evidence.forMission("msn_m5").filter((e) => e.kind === "execution")).toHaveLength(1);
+  });
+
+  it("refuses a transaction token whose txn this resource never challenged", async () => {
+    const { generateKeyPair, exportJWK } = await import("jose");
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    const { server, payments } = build({
+      gateRemittance: true,
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+    });
+    const txnToken = await signTxnToken({
+      key: asTxn.privateKey,
+      txn: "txn_never_challenged",
+      cnfJkt: TOKEN.cnfJkt,
+      parameterDigest: digestFor(payments),
+      authorizationDetails: remittanceEntry(),
+    });
+    const res = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      txnToken,
+    );
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("txn_unknown");
+  });
+
+  it("refuses a transaction token bound to a key the current presenter does not hold", async () => {
+    const { generateKeyPair, exportJWK } = await import("jose");
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    const { server, payments } = build({
+      gateRemittance: true,
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+    });
+    const txnToken = await signTxnToken({
+      key: asTxn.privateKey,
+      txn: "txn_wrong_key",
+      cnfJkt: "jkt-someone-else",
+      parameterDigest: digestFor(payments),
+      authorizationDetails: remittanceEntry(),
+    });
+    const res = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      txnToken,
+    );
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("txn_cnf_mismatch");
+  });
+
+  it("rejects an ordinary Mission-bound token, and any other typ, outright", async () => {
+    const { generateKeyPair, exportJWK, SignJWT } = await import("jose");
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    const { server, payments } = build({
+      gateRemittance: true,
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+    });
+
+    // An ordinary access token: right issuer, right audience, wrong class.
+    const ordinary = await new SignJWT({ sub: "alice", cnf: { jkt: TOKEN.cnfJkt }, mission: TOKEN.missionClaim })
+      .setProtectedHeader({ alg: "ES256", kid: "as-txn", typ: "at+jwt" })
+      .setIssuer(AS_ISSUER)
+      .setAudience(CANONICAL_RESOURCE)
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(asTxn.privateKey);
+    const asOrdinary = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      ordinary,
+    );
+    expect(asOrdinary.ok).toBe(false);
+    expect(asOrdinary.refusal_reason).toBe("txn_invalid");
+
+    // An otherwise well-formed transaction token under an unknown typ.
+    const wrongTyp = await signTxnToken({
+      key: asTxn.privateKey,
+      txn: "txn_wrong_typ",
+      cnfJkt: TOKEN.cnfJkt,
+      parameterDigest: digestFor(payments),
+      authorizationDetails: remittanceEntry(),
+      typ: "txn-token+jwt",
+    });
+    const res = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      wrongTyp,
+    );
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("txn_invalid");
+  });
+
+  it("executes once across two replicas sharing a consumption domain, whatever token jti carries the txn", async () => {
+    const { generateKeyPair, exportJWK } = await import("jose");
+    const { openStore } = await import("@mission/store");
+    const { openTxnStores } = await import("../src/index.js");
+    const rsTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+
+    // ONE database behind two servers: consumption of a txn must be
+    // linearizable across every replica that can execute the operation.
+    const shared = openStore("");
+    const stores = openTxnStores({ db: shared });
+    const a = build({
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+      txnStores: stores,
+    });
+    const b = build({
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+      gateRemittance: true,
+      txnStores: stores,
+    });
+
+    const challengeRes = await a.server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      undefined,
+      ACCEPT_CHALLENGE,
+    );
+    const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
+    const mint = (jti: string) =>
+      signTxnToken({
+        key: asTxn.privateKey,
+        txn,
+        jti,
+        cnfJkt: TOKEN.cnfJkt,
+        parameterDigest: digestFor(a.payments),
+        authorizationDetails: remittanceEntry(),
+      });
+
+    const first = await a.server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      await mint("mtt_one"),
+    );
+    expect(first.ok, JSON.stringify(first)).toBe(true);
+
+    // A DISTINCT token jti for the same txn, presented at the OTHER replica, is
+    // the same replay: refused, never executed as a new attempt.
+    const second = await b.server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      await mint("mtt_two"),
+    );
+    expect(second.ok).toBe(false);
+    expect(second.refusal_reason).toBe("duplicate_suppressed");
+    expect(a.evidence.forMission("msn_m5").filter((e) => e.kind === "execution")).toHaveLength(1);
+    expect(b.evidence.forMission("msn_m5").filter((e) => e.kind === "execution")).toHaveLength(0);
+  });
+
+  it("fails closed when the consumption store is unavailable", async () => {
+    const { generateKeyPair, exportJWK } = await import("jose");
+    const { openStore } = await import("@mission/store");
+    const { openTxnStores } = await import("../src/index.js");
+    const rsTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    const stores = openTxnStores({ db: openStore("") });
+    const unavailable = {
+      pending: stores.pending,
+      consumption: {
+        consume(): boolean {
+          throw new Error("consumption store unavailable");
+        },
+        consumed(): boolean {
+          return false;
+        },
+      },
+    };
+    const { server, connectors, payments } = build({
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+      txnStores: unavailable,
+    });
+    const challengeRes = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      undefined,
+      ACCEPT_CHALLENGE,
+    );
+    const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
+    const txnToken = await signTxnToken({
+      key: asTxn.privateKey,
+      txn,
+      cnfJkt: TOKEN.cnfJkt,
+      parameterDigest: digestFor(payments),
+      authorizationDetails: remittanceEntry(),
+    });
+    const res = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      txnToken,
+    );
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("consumption_unavailable");
+    expect(connectors.ledgerEntries("msn_m5")).toHaveLength(0);
   });
 });
