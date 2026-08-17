@@ -1512,6 +1512,15 @@ audience-scoped evidence a consumer needs.<a href="#section-2-3.2.1" class="pilc
 completion condition has been met (<a href="#completion" class="auto internal xref">Section 7</a>). A discharged
 entry's authority is spent: it is no longer derivable.<a href="#section-2-3.4.1" class="pilcrow">¶</a></p>
 </dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.5">Effective Authority Set:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.6">
+          <p id="section-2-3.6.1">The approved Authority Set after applying every issuer-held,
+monotonic narrowing mechanism the deployment runs. This profile
+contributes discharged entries (<a href="#discharge" class="auto internal xref">Section 7.3</a>). Each other narrowing
+profile defines its own subtraction. No narrowing mechanism adds or
+restores authority.<a href="#section-2-3.6.1" class="pilcrow">¶</a></p>
+</dd>
       <dd class="break"></dd>
 </dl>
 <p id="section-2-4">All JSON shown in this document is non-normative and illustrative; the
@@ -3989,6 +3998,14 @@ and size Mission-bound access-token TTLs to it
 (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 8</a>).<a href="#section-10-3.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
+<p id="section-10-4">An implementation meets the following requirement independent of
+which extensions above it claims. Every issuer-held narrowing
+mechanism a deployment runs, this profile's discharge or a companion
+profile's own overlay alike, <span class="bcp14">MUST</span> feed the single Effective Authority
+Set computation. Every derivation and every authority-reporting
+surface <span class="bcp14">MUST</span> use that same computation; no mechanism computes a
+parallel view, and no surface reports authority the computation has
+not reduced.<a href="#section-10-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">

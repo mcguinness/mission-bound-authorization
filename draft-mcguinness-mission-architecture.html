@@ -1599,7 +1599,8 @@ actually take, and the second is the reference:<a href="#section-6-1" class="pil
         <dd style="margin-left: 1.5em" id="section-6-2.2">
           <p id="section-6-2.2.1">the issuance profile alone: the standardizable primitive
 (approved, anchored, state-gated Missions), Mission-substrate
-conformance (<a href="#requirements" class="auto internal xref">Section 19</a>), no per-action control.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+conformance (<a href="#requirements" class="auto internal xref">Section 19</a>), no per-action control (the OAuth
+realization of Baseline Issuance, <a href="#assurance-levels" class="auto internal xref">Section 16</a>).<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.3">
@@ -1957,14 +1958,17 @@ integrity anchors.<a href="#section-9-3.14.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-9-4">Read against "approved" in the first invariant, the core names three
-authorization bases, never an eighth invariant: <code>direct</code>, a human's
-own approval; <code>template</code>, a dispatch drawing on a ceiling the human
-consented to once; and <code>policy_drawdown</code>, a child instance a policy
-adjudicates within a bound the parent's human already consented to.
-All three fix the same accountable human as <code>consent_principal</code>; they
-differ only in what activated this instance and what root that
-activation traces to (the core).<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-4">Read against "approved" in the first invariant, the core fully
+defines one authorization basis, <code>direct</code>, a human's own approval. It
+provides the extension point, an authorization-basis <code>type</code> string,
+that companion profiles use to define others: <code>template</code>, a dispatch
+drawing on a ceiling the human consented to once, and
+<code>policy_drawdown</code>, a child instance a policy adjudicates within a
+bound the parent's human already consented to. This is never an
+eighth invariant: every value of the basis, core-defined or
+companion-defined, fixes the same accountable human as
+<code>consent_principal</code>; they differ only in what activated this instance
+and what root that activation traces to (the core).<a href="#section-9-4" class="pilcrow">¶</a></p>
 <p id="section-9-5">Read as shared capabilities rather than universal wire semantics, the
 bindings carry durability, attribution, and termination. Narrowing and
 containment require a structured-authority capability and are not
@@ -1974,8 +1978,12 @@ riding a work product an agent produces: no authority is acquired by
 information propagation alone, and a work product crossing into a
 Mission is input that the receiving Mission re-evaluates under its own
 Authority Set. This is a reading of the invariants above, not an eighth
-invariant; its normative home is the Mission Work Products companion
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>).<a href="#section-9-6" class="pilcrow">¶</a></p>
+invariant; carrying that boundary through non-transitive
+Mission-to-Mission handoff is the Mission Work Products companion's
+role (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>). The core
+states that rule in its "Authority Does Not Propagate With
+Information" section (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); that
+section, not this summary, is the normative text this passage tracks.<a href="#section-9-6" class="pilcrow">¶</a></p>
 <p id="section-9-7">Read under composition, the invariants bound one Mission's own
 Authority Set; they do not by themselves bound the aggregate surface a
 delegation tree, a cross-domain hop, or a chain of child generations
@@ -1989,7 +1997,10 @@ cross-domain and child-delegation profiles' role
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), and bounding
 aggregate consumption is the metering profile's
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9-7" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). The core states the same
+composition property in its "Composition and the Effective Ceiling"
+section (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); that section, not
+this summary, is the normative text this passage tracks.<a href="#section-9-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="components">
@@ -2421,10 +2432,11 @@ identity is a Child Mission
 kernel every binding provides (native reference and controller, actor
 binding, approved context, approval event, governance gate, bounded
 reliance, context propagation, and an ordered governance record) and
-seven optional capabilities each binding claims through its Mission
+eight optional capabilities each binding claims through its Mission
 Substrate Statement (Lifecycle-Gated Authorization, State-Observable,
 Structured Authority, Monotonic Derivation, Credential-Bound,
-Independently Verifiable, and Portable Evidence).<a href="#section-11-1" class="pilcrow">¶</a></p>
+Authorized Context Correlation, Independently Verifiable, and Portable
+Evidence).<a href="#section-11-1" class="pilcrow">¶</a></p>
 <p id="section-11-2">The bindings declare what they provide, each in its Mission Substrate
 Statement. The companion profiles named without "oauth" are defined
 against the binding-neutral contract and declare what they consume,

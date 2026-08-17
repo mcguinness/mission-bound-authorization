@@ -451,6 +451,13 @@ Table of Contents
       approver recorded on that final evidence is the principal who
       approved the final, narrowed set.
 
+   Approval governance:  Each revision_required outcome is interim: no
+      Mission is created, so no Approval Governance Record commits for
+      it, under the atomic commitment rule of Mission Approval
+      Governance ([I-D.draft-mcguinness-mission-approval-governance]).
+      Where an Approval Governance Record is recorded for the final
+      approval, it governs the final approval-governance facts.
+
    Shaping:  The rejected_scope and rejected_authorization_details
       parameters are the machine-readable input a client-side shaper
       ([I-D.draft-mcguinness-mission-shaping]) uses to plan the narrowed
@@ -768,6 +775,11 @@ Table of Contents
               <https://www.rfc-editor.org/rfc/rfc9396>.
 
 13.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-approval-governance]
+              McGuinness, K., "Mission Approval Governance", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-approval-governance.html>.
 
    [I-D.draft-mcguinness-mission-shaping]
               McGuinness, K., "Mission Intent Shaping", 2026,

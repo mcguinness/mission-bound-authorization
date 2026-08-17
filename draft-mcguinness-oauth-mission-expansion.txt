@@ -594,7 +594,7 @@ Table of Contents
    7.  Derive the successor's Authority Set under policy from the
        submitted Mission Intent (Section 5) and verify that it widens
        the predecessor: when the derived requested authority is a subset
-       of the predecessor's own effective Authority Set, refuse the
+       of the predecessor's own Effective Authority Set, refuse the
        exchange with the nothing_to_expand denial reason, as there is
        nothing to expand (Section 12).
 
@@ -606,14 +606,12 @@ Table of Contents
    invalid_grant, or invalid_token as appropriate, and MUST NOT create a
    successor.
 
-   The predecessor's *effective Authority Set*, the right-hand side of
-   step 7's subset test, is its approved Authority Set as reduced by the
-   overlays the deployment runs: authority removed by the containment
-   profile's issuer-held overlay
-   ([I-D.draft-mcguinness-oauth-mission-containment]) and entries
-   discharged under the Mission Status profile's completion machinery
-   ([I-D.draft-mcguinness-oauth-mission-status]) are not in it.  Where
-   neither profile is deployed, the effective set is the approved set.
+   The predecessor's Effective Authority Set, the right-hand side of
+   step 7's subset test, is the term
+   [I-D.draft-mcguinness-oauth-mission-status] defines: the approved
+   Authority Set after applying every issuer-held narrowing mechanism
+   the deployment runs, including the containment profile's overlay
+   where deployed ([I-D.draft-mcguinness-oauth-mission-containment]).
 
    Authority the predecessor once held but containment or discharge has
    removed is therefore never nothing_to_expand: a request for it widens
@@ -653,7 +651,7 @@ Table of Contents
    This document defines no synchronous exchange completion.  An
    expansion response is a successor or a refusal, never a token derived
    under the predecessor: a request whose derived authority is a subset
-   of the predecessor's own effective Authority Set is refused with
+   of the predecessor's own Effective Authority Set is refused with
    nothing_to_expand (Section 5.1, Section 12).  Policy-adjudicated
    expansion within a pre-consented authority ceiling is the
    experimental progressive authorization companion's concern
@@ -1322,7 +1320,7 @@ Table of Contents
       expansion of this one, is the appropriate vehicle.
 
    nothing_to_expand:  The derived requested authority is a subset of
-      the predecessor's own effective Authority Set, so there is nothing
+      the predecessor's own Effective Authority Set, so there is nothing
       to expand: ordinary token derivation under the predecessor already
       serves the request (Section 5.1).  This refusal surfaces on the
       token exchange response itself, as invalid_request, and MUST carry
@@ -1463,7 +1461,7 @@ Table of Contents
       retention rules of Section 11;
 
    *  refuse an exchange whose derived requested authority is a subset
-      of the predecessor's own effective Authority Set, carrying the
+      of the predecessor's own Effective Authority Set, carrying the
       nothing_to_expand denial reason (Section 5.1, Section 12);
 
    *  complete the expansion in one of the modes of Section 5.2,
@@ -1830,7 +1828,7 @@ Table of Contents
    |                          | authority is a |            |Section  |
    |                          | subset of the  |            |12       |
    |                          | predecessor's  |            |         |
-   |                          | own effective  |            |         |
+   |                          | own Effective  |            |         |
    |                          | Authority Set, |            |         |
    |                          | so there is    |            |         |
    |                          | nothing to     |            |         |

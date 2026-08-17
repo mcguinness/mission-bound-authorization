@@ -1209,6 +1209,9 @@ treats session continuity as proof that Mission authority continues.<a href="#se
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
                 <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-interaction-with-the-orches" class="internal xref">Interaction with the Orchestration Profile</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-interaction-with-mission-co" class="internal xref">Interaction with Mission Containment</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
@@ -2005,6 +2008,53 @@ holding even when the Mission is active.<a href="#section-7.2-1" class="pilcrow"
 <p id="section-7.2-2">The harness records its decision in Harness Evidence and the
 orchestrator records its decision in Orchestration Evidence, and the
 two records cross-link through their evidence identifiers.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="containment-interaction">
+<section id="section-7.3">
+        <h3 id="name-interaction-with-mission-co">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-interaction-with-mission-co" class="section-name selfRef">Interaction with Mission Containment</a>
+        </h3>
+<p id="section-7.3-1">Mission Containment (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>)
+narrows a Mission's effective authority while the Mission stays
+<code>active</code>, so the resume check of <a href="#resume-checks" class="auto internal xref">Section 7</a> does not observe
+it on its own: an <code>active</code> check is a lifecycle-state check, and a
+contain transition changes no lifecycle state. This document adds no
+general resume duty for a contain transition; which residual applies
+follows from the containment property the deployment's other
+profiles already establish:<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.3-2.1">
+            <p id="section-7.3-2.1.1">A Runtime-Enforced deployment closes the path at the PDP: the
+cached-access rule already requires a fresh runtime decision for a
+consequential action (<a href="#cached-access" class="auto internal xref">Section 10</a>), and that decision denies
+contained capability whether or not the harness itself checked for
+containment.<a href="#section-7.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.3-2.2">
+            <p id="section-7.3-2.2.1">A harness that is also a Signals consumer materializing effective
+authority already rematerializes on containment through Signals'
+own rule: an in-order <code>mission.lifecycle-change</code> event carrying
+<code>authority_changed</code> true triggers rematerialization before further
+consequential reliance, containment included, without this
+document adding a duty of its own
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>, Section "Consumer
+Behavior on Receipt").<a href="#section-7.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.3-2.3">
+            <p id="section-7.3-2.3.1">A Baseline-only deployment retains the documented pre-transition
+residual: a credential derived before the contain transition
+remains usable to its own bound, because Containment defines
+Baseline as a new-derivation kill, not a revocation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>).<a href="#section-7.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.3-3"><code>containment_version</code> can appear on both the Mission Status response
+and a Signals event; <code>authority_changed</code> is a Signals event
+discriminator only, not a Status response member. A harness that
+reads Mission Status directly and is not a Signals consumer reads
+<code>containment_version</code> there to notice a narrowing: it has no
+<code>authority_changed</code> member to read.<a href="#section-7.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3449,6 +3499,10 @@ of <a href="#harness-evidence" class="auto internal xref">Section 15</a> is loca
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>

@@ -259,7 +259,8 @@ Table of Contents
    issuer, authority_hash), the integrity anchors (intent_hash,
    authority_hash), and authorization_details entries of type
    mission_resource_access are used as defined in
-   [I-D.draft-mcguinness-oauth-mission].
+   [I-D.draft-mcguinness-oauth-mission].  Effective Authority Set is
+   used as defined in [I-D.draft-mcguinness-oauth-mission-status].
 
    Additional terms specific to this binding:
 
@@ -450,25 +451,25 @@ Table of Contents
       happen to be equal.
 
    This context anchors the Mission's approved Authority Set through
-   authority_hash.  Where a Mission participates in a companion that
-   overlays evaluated authority on top of the approved set, for example
-   Mission Containment's Effective Authority Set
-   ([I-D.draft-mcguinness-oauth-mission-containment]), the PDP evaluates
-   the request against that overlaid set, not the approved set alone,
-   per the runtime profile's Authority decision input
-   ([I-D.draft-mcguinness-mission-runtime]).  This document defines no
-   member carrying such an overlay's evaluated state.  A companion
-   profile MAY extend the mission context with the member it needs, by
-   specification, mirroring the denial-reason extension rule
-   (Section 6.5): an extension member name MUST be a collision-resistant
-   name or a name coordinated within this document family, and a PDP
-   that does not recognize an extension member evaluates the approved
-   Authority Set unchanged.  A denial produced against the overlaid set
-   carries the overlay's own denial reason, not out_of_authority: the
-   Containment profile's authority_contained denies capability the
-   Approver granted and the issuer later removed, a distinct history
-   from capability never approved
-   ([I-D.draft-mcguinness-oauth-mission-containment]).
+   authority_hash.  Where a Mission runs a narrowing mechanism, the PDP
+   evaluates the request against the Effective Authority Set
+   ([I-D.draft-mcguinness-oauth-mission-status]), not the approved set
+   alone, per the runtime profile's Authority decision input
+   ([I-D.draft-mcguinness-mission-runtime]).  The Containment profile is
+   one such mechanism, contributing its own subtraction
+   ([I-D.draft-mcguinness-oauth-mission-containment]).  This document
+   defines no member carrying the Effective Authority Set's evaluated
+   state.  A companion profile MAY extend the mission context with the
+   member it needs, by specification, mirroring the denial-reason
+   extension rule (Section 6.5): an extension member name MUST be a
+   collision-resistant name or a name coordinated within this document
+   family, and a PDP that does not recognize an extension member does
+   not apply the subtraction carried only by that member.  A denial
+   produced against the Effective Authority Set carries its narrowing
+   mechanism's own denial reason, not out_of_authority: the Containment
+   profile's authority_contained denies capability the Approver granted
+   and the issuer later removed, a distinct history from capability
+   never approved ([I-D.draft-mcguinness-oauth-mission-containment]).
 
 5.3.  Actor Decision Context
 

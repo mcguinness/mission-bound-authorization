@@ -1747,6 +1747,16 @@ digest (<a href="#envelope" class="auto internal xref">Section 8</a>).<a href="#
 </li>
       </ul>
 <p id="section-10-3">The AGR governs on any disagreement.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4">Where a deferred approval revises under Mission Approval Revision
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>) and the
+deployment records consent evidence, each <code>revision_required</code> outcome
+produces a <code>narrowed</code> consent-evidence decision with no corresponding
+record: no Mission yet exists for the atomic commitment rule
+(<a href="#atomic-commitment" class="auto internal xref">Section 7</a>) to attach to. Where consent evidence is
+recorded, it owns the narrowing history, through its <code>narrowed</code>
+entries and <code>predecessor_intent_hashes</code>. Where an AGR is recorded for
+the final approval, it owns the final approval-governance facts. This
+is a deliberate artifact separation, not an authority conflict.<a href="#section-10-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="boundaries">
@@ -2054,6 +2064,10 @@ version before treating the evaluation as re-checked
 <dt id="I-D.draft-mcguinness-oauth-mission-approval">[I-D.draft-mcguinness-oauth-mission-approval]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Deferred Approval for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-approval-revision">[I-D.draft-mcguinness-oauth-mission-approval-revision]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Revision for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>

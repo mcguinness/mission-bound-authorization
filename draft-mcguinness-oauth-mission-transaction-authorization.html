@@ -1828,6 +1828,15 @@ fresh decision relied on a valid approval. A resource's own
 authorization decision rests on the trusted, typed transaction token
 plus the current local checks of <a href="#offline-verification" class="auto internal xref">Section 8</a>, never on
 parsing an arbitrary evidence blob presented at the request.<a href="#section-9-2" class="pilcrow">¶</a></p>
+<p id="section-9-3">This profile defines no Continuation Transport and no continuity
+guarantee of its own
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>). Its token is a
+bounded, single-use authorization artifact. The token carries <code>txn</code>,
+its own <code>jti</code>, and <code>parameter_digest</code>; those correlate the runtime
+evidence profile's execution-time evidence to this hop
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>). The Operation
+Profile's idempotency identity correlates the effect and is not
+carried by the token.<a href="#section-9-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="failure-semantics">
@@ -2367,6 +2376,10 @@ cross-organizational, execution-time approval.<a href="#section-16-1" class="pil
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-continuation">[I-D.draft-mcguinness-oauth-mission-continuation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Continuation: Authorization Continuity for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>

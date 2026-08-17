@@ -1686,7 +1686,8 @@ Server", "client", "protected resource", "resource owner", and
 incorporated by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. It also uses
 the Mission, Mission Intent, Mission Issuer, Authority Set,
 Approver, delegation, and <code>mission</code> claim terminology from
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, and Effective Authority Set
+and discharge from <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-2-3">
         <dt id="section-2-3.1">Policy Enforcement Point (PEP):</dt>
         <dd style="margin-left: 1.5em" id="section-2-3.2">
@@ -2933,37 +2934,47 @@ deployment declares it.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 that is otherwise available to the PEP or PDP for that token under
 the issuance profile (for example, through introspection when the
 authority is not represented inline).<a href="#section-7.2.1-1" class="pilcrow">¶</a></p>
-<p id="section-7.2.1-2">Where a Mission participates in the Containment profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), this input is
-the Mission's current Effective Authority Set, the approved set
-minus contained capability, not the approved set the token's
-<code>authorization_details</code> entry names at face value. The PDP <span class="bcp14">MUST</span>
-refuse an action within an entry that is currently contained even
-though a token issued before the contain transition still carries
-it, established from the same Mission state source and freshness
-bound that governs the <code>active</code> check (<a href="#state-freshness" class="auto internal xref">Section 7.4</a>); a
-Mission stays <code>active</code> while contained, so this check, not the state
-check, is what a containment-aware PDP adds. A deployment that does
-not deploy the Containment profile evaluates the approved Authority
-Set unchanged, as the rest of this section states. The decision-API
-binding provides the extension point through which a companion
-profile carries which evaluated set the PDP used (<a href="#authzen" class="auto internal xref">Section 15</a>).<a href="#section-7.2.1-2" class="pilcrow">¶</a></p>
-<p id="section-7.2.1-3">For an entry of type <code>mission_resource_access</code>, the action's
+<p id="section-7.2.1-2">This input is the Mission's current Effective Authority Set
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), not the approved
+set the token's <code>authorization_details</code> entry names at face value. A
+deployment that runs no narrowing mechanism evaluates an Effective
+Authority Set equal to the approved set. A deployment that runs one,
+for example discharge or the Containment profile, does not.<a href="#section-7.2.1-2" class="pilcrow">¶</a></p>
+<p id="section-7.2.1-3">Where the deployment runs discharge
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), this input excludes
+a discharged entry once the PDP can establish discharge state from
+its Mission state source. A PDP that recognizes <code>terminal_when</code>
+            <span class="bcp14">SHOULD</span> refuse an action within a discharged entry at the point of
+use, learning discharge state from the surfaces that report it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
+"Relationship to Runtime Enforcement").<a href="#section-7.2.1-3" class="pilcrow">¶</a></p>
+<p id="section-7.2.1-4">Where a Mission participates in the Containment profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), this input
+excludes contained capability as well. The PDP <span class="bcp14">MUST</span> refuse an action
+within an entry that is currently contained even though a token
+issued before the contain transition still carries it, established
+from the same Mission state source and freshness bound that governs
+the <code>active</code> check (<a href="#state-freshness" class="auto internal xref">Section 7.4</a>); a Mission stays <code>active</code>
+while contained, so this check, not the state check, is what a
+containment-aware PDP adds. The decision-API binding provides the
+extension point through which a companion profile carries which
+evaluated set the PDP used (<a href="#authzen" class="auto internal xref">Section 15</a>).<a href="#section-7.2.1-4" class="pilcrow">¶</a></p>
+<p id="section-7.2.1-5">For an entry of type <code>mission_resource_access</code>, the action's
 <code>resource</code> and invoked action or tool identity <span class="bcp14">MUST</span> be within that
 entry's <code>resource</code> and <code>actions</code>, under the subset rule of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. The PEP asserts the
 capability identity (for example, the tool or function name) it will
 invoke. The PDP <span class="bcp14">MUST</span> refuse an identity outside the approved
-<code>actions</code>.<a href="#section-7.2.1-3" class="pilcrow">¶</a></p>
-<p id="section-7.2.1-4">For any other <code>authorization_details</code> type, the PDP <span class="bcp14">MUST</span> evaluate
+<code>actions</code>.<a href="#section-7.2.1-5" class="pilcrow">¶</a></p>
+<p id="section-7.2.1-6">For any other <code>authorization_details</code> type, the PDP <span class="bcp14">MUST</span> evaluate
 the action under that type's documented runtime semantics and <span class="bcp14">MUST</span>
-refuse if it does not understand or cannot enforce those semantics.<a href="#section-7.2.1-4" class="pilcrow">¶</a></p>
-<p id="section-7.2.1-5">The identity of the executing component that serves a capability
+refuse if it does not understand or cannot enforce those semantics.<a href="#section-7.2.1-6" class="pilcrow">¶</a></p>
+<p id="section-7.2.1-7">The identity of the executing component that serves a capability
 (for example, an MCP server instance) is a request-time fact the
 decision-API binding <span class="bcp14">MAY</span> carry (<a href="#authzen" class="auto internal xref">Section 15</a>); Resource policy <span class="bcp14">MAY</span>
-refuse an executor outside the deployment's trusted set.<a href="#section-7.2.1-5" class="pilcrow">¶</a></p>
-<p id="section-7.2.1-6">A capability sourced from a discovered catalog is additionally
-subject to the capability-drift rule of <a href="#capability-drift" class="auto internal xref">Section 7.2.2</a>.<a href="#section-7.2.1-6" class="pilcrow">¶</a></p>
+refuse an executor outside the deployment's trusted set.<a href="#section-7.2.1-7" class="pilcrow">¶</a></p>
+<p id="section-7.2.1-8">A capability sourced from a discovered catalog is additionally
+subject to the capability-drift rule of <a href="#capability-drift" class="auto internal xref">Section 7.2.2</a>.<a href="#section-7.2.1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="capability-drift">

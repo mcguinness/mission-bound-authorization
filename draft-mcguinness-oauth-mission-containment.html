@@ -12,8 +12,8 @@ authority at a single approval event: the approved Authority Set and
 its integrity anchors never change. This document defines Mission
 Containment, an optional layered extension for narrowing a live
 Mission without ending it. When a declared protected event fires (a
-tainted read, an anomaly signal, an open-world discovery
-tainted-session event), the Mission Issuer commits a contain
+tainted read, an anomaly signal, a routed-to-approval open-world
+discovery encounter), the Mission Issuer commits a contain
 transition: an issuer-held, versioned overlay removes capability from
 the Mission's effective authority while the Mission stays  active 
 and the approved anchors stay immutable. Containment is monotonic and
@@ -1102,8 +1102,8 @@ authority at a single approval event: the approved Authority Set and
 its integrity anchors never change. This document defines Mission
 Containment, an optional layered extension for narrowing a live
 Mission without ending it. When a declared protected event fires (a
-tainted read, an anomaly signal, an open-world discovery
-tainted-session event), the Mission Issuer commits a contain
+tainted read, an anomaly signal, a routed-to-approval open-world
+discovery encounter), the Mission Issuer commits a contain
 transition: an issuer-held, versioned overlay removes capability from
 the Mission's effective authority while the Mission stays <code>active</code>
 and the approved anchors stay immutable. Containment is monotonic and
@@ -1463,7 +1463,8 @@ described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</s
 appear in all capitals, as shown here.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">This document uses the terms Mission, Mission Intent, Authority Set,
 Mission Issuer, Mission-bound token, and delegation from
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, and state version from
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, and state version and
+Effective Authority Set from
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-5-2" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-5-3">
         <dt id="section-5-3.1">Containment overlay:</dt>
@@ -1476,31 +1477,25 @@ Mission's effective authority (<a href="#overlay" class="auto internal xref">Sec
         <dd style="margin-left: 1.5em" id="section-5-3.4">
           <p id="section-5-3.4.1">A <code>{resource, actions}</code> pair in the overlay's contained set. An
 entry with no <code>actions</code> member contains the whole Authority Set
-entry for that resource.<a href="#section-5-3.4.1" class="pilcrow">¶</a></p>
+entry for that resource. It is this profile's own contribution to
+the Effective Authority Set's reduction: every derivation gated
+after a contain transition excludes it; authority that left the
+Mission before the transition keeps its own bound, not this one
+(<a href="#derivation-gating" class="auto internal xref">Section 10</a>).<a href="#section-5-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-5-3.5">Effective Authority Set:</dt>
+<dt id="section-5-3.5">Protected event:</dt>
         <dd style="margin-left: 1.5em" id="section-5-3.6">
-          <p id="section-5-3.6.1">The approved Authority Set minus contained capability and, where
-the Status profile's completion capability runs, minus discharged
-entries. Every derivation gated after a contain transition is
-bounded by it; authority that left the Mission before the
-transition keeps its own bound, not this one
-(<a href="#derivation-gating" class="auto internal xref">Section 10</a>).<a href="#section-5-3.6.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-5-3.7">Protected event:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-3.8">
-          <p id="section-5-3.8.1">An event class the containment policy declares as a containment
+          <p id="section-5-3.6.1">An event class the containment policy declares as a containment
 trigger, whose verified occurrence commits a contain transition
-(<a href="#protected-events" class="auto internal xref">Section 9</a>).<a href="#section-5-3.8.1" class="pilcrow">¶</a></p>
+(<a href="#protected-events" class="auto internal xref">Section 9</a>).<a href="#section-5-3.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-5-3.9">Contain transition:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-3.10">
-          <p id="section-5-3.10.1">The committed, metadata-only change that adds capability to the
+<dt id="section-5-3.7">Contain transition:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-3.8">
+          <p id="section-5-3.8.1">The committed, metadata-only change that adds capability to the
 contained set and increments <code>containment_version</code>
-(<a href="#contain-transition" class="auto internal xref">Section 8</a>).<a href="#section-5-3.10.1" class="pilcrow">¶</a></p>
+(<a href="#contain-transition" class="auto internal xref">Section 8</a>).<a href="#section-5-3.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1731,8 +1726,12 @@ detectably obsolete after a containment.<a href="#section-8-3" class="pilcrow">�
 classes that trigger containment. Representative classes, defined by
 their own layers, not here: a tainted read under the harness taint
 policy (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), an anomaly signal
-from the deployment's monitoring, and the tainted-session event of
-open-world discovery (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>).<a href="#section-9-1" class="pilcrow">¶</a></p>
+from the deployment's monitoring, and a <code>routed_to_approval</code> outcome
+or a <code>tainted</code> Discovery Evidence record from open-world discovery
+(<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>, Section "Discovery
+Evidence"). Event-to-policy mapping stays deployment-defined: neither
+the outcome nor the evidence field is, by itself, this document's
+protected event.<a href="#section-9-1" class="pilcrow">¶</a></p>
 <p id="section-9-2">A protected event is a trusted input to authority: the Mission Issuer
 <span class="bcp14">MUST</span> authenticate and integrity-verify an event source outside its
 own trust domain before acting on its report. The mechanism is

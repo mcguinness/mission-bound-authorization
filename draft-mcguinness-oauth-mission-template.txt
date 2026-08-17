@@ -601,7 +601,7 @@ Table of Contents
       member ([I-D.draft-mcguinness-oauth-mission]). expires_in above
       describes only the access token.
 
-   authorization_details:  REQUIRED.  The instance's effective Authority
+   authorization_details:  REQUIRED.  The instance's committed Authority
       Set.
 
    A Dispatch refused under Section 7 or Section 8 carries the OAuth

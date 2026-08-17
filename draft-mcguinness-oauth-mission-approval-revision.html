@@ -1681,24 +1681,34 @@ chain. The <code>approver</code> recorded on that final evidence is the
 principal who approved the final, narrowed set.<a href="#section-7-1.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-7-1.3">Shaping:</dt>
+<dt id="section-7-1.3">Approval governance:</dt>
         <dd style="margin-left: 1.5em" id="section-7-1.4">
-          <p id="section-7-1.4.1">The <code>rejected_scope</code> and <code>rejected_authorization_details</code> parameters
+          <p id="section-7-1.4.1">Each <code>revision_required</code> outcome is interim: no Mission is created,
+so no Approval Governance Record commits for it, under the atomic
+commitment rule of Mission Approval Governance
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>). Where an
+Approval Governance Record is recorded for the final approval, it
+governs the final approval-governance facts.<a href="#section-7-1.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-1.5">Shaping:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-1.6">
+          <p id="section-7-1.6.1">The <code>rejected_scope</code> and <code>rejected_authorization_details</code> parameters
 are the machine-readable input a client-side shaper
 (<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>) uses to plan the
 narrowed revision. Shaping narrows a proposal before submission; this
 profile narrows it during review. Together they let an orchestrator
-propose, learn what was refused, and re-propose without losing state.<a href="#section-7-1.4.1" class="pilcrow">¶</a></p>
+propose, learn what was refused, and re-propose without losing state.<a href="#section-7-1.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-7-1.5">Integrity anchors:</dt>
-        <dd style="margin-left: 1.5em" id="section-7-1.6">
-          <p id="section-7-1.6.1">The approval commits the final, narrowed Authority Set. The
+<dt id="section-7-1.7">Integrity anchors:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-1.8">
+          <p id="section-7-1.8.1">The approval commits the final, narrowed Authority Set. The
 <code>intent_hash</code> and <code>authority_hash</code> are computed over the revised
 Mission Intent and Authority Set actually approved, not the originating
 proposal; where the revision pushed an <code>authorization_details</code>
 proposal, <code>proposal_hash</code> commits that revised proposal as submitted
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-1.6.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-1.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2074,6 +2084,10 @@ registry:<a href="#section-12-6" class="pilcrow">¶</a></p>
 <a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Governance"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-shaping">[I-D.draft-mcguinness-mission-shaping]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Shaping"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html</a>&gt;</span>. </dd>

@@ -1538,7 +1538,8 @@ described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</s
 appear in all capitals, as shown here.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">This document uses the terms Mission, Mission Intent, Authority Set,
 Mission Issuer, Mission-bound token, and delegation from
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, and Effective Authority Set
+from <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-5-2" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-5-3">
         <dt id="section-5-3.1">Parent Mission:</dt>
         <dd style="margin-left: 1.5em" id="section-5-3.2">
@@ -2880,8 +2881,8 @@ contained, the Mission Issuer <span class="bcp14">MUST</span> propagate the cont
 child entry justified by it, so a Child Mission does not keep deriving
 contained authority while the parent stays <code>active</code>. A containment
 transition on the parent does not itself change any child's lifecycle
-state; it narrows the child's effective authority exactly as it
-narrows the parent's.<a href="#section-10.1-7" class="pilcrow">¶</a></p>
+state; it narrows the child's own Effective Authority Set exactly as
+it narrows the parent's.<a href="#section-10.1-7" class="pilcrow">¶</a></p>
 <p id="section-10.1-8">The issuer holds both records in either case, so the propagation needs
 no consumer coordination.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
 <p id="section-10.1-9">While a parent is <code>suspended</code>, the issuer <span class="bcp14">MUST</span> report each dependent

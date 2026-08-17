@@ -102,7 +102,7 @@ Table of Contents
      8.3.  Expansion Semantics
      8.4.  Child-Creation Semantics
      8.5.  Expansion Example
-   9.  Mission Discovery
+   9.  Mission Authority Server Metadata
    10. Mission Join
    11. Mission Reference Propagation
      11.1.  The Reference Tuple
@@ -1023,7 +1023,7 @@ Table of Contents
    active and supersedes the predecessor.  The client's next poll
    returns approved with the successor's mission_id (Section 6).
 
-9.  Mission Discovery
+9.  Mission Authority Server Metadata
 
    A MAS publishes a metadata document at the well-known URI [RFC8615]
    path /.well-known/mission-authority-server, registered in Section 19:
