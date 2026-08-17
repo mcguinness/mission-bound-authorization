@@ -337,3 +337,57 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
   });
 });
+
+d("entry-driven action approval (@spec txn-authorization#applicability)", () => {
+  beforeAll(async () => {
+    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    fga = conn.fga;
+    modelId = conn.modelId;
+  });
+
+  /** A view whose matched entry carries the Common Constraint, with no deployment predicate. */
+  const gatedView = view({
+    authority_set: [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read", "payments:payment.execute"],
+        constraints: {
+          max_amount: { amount: "500.00", currency: "USD" },
+          vendors: ["acme"],
+          requires_action_approval: true,
+        },
+      },
+    ],
+  });
+
+  it("denies an action the matched entry gates even when deployment policy does not", async () => {
+    const decision = await evaluate(req(), opts(gatedView));
+    expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("action_approval_required");
+  });
+
+  it("permits the same action once an approval bound to the parameters is presented", async () => {
+    const decision = await evaluate(
+      req({
+        context: {
+          audience: RESOURCE,
+          mission: { id: "msn_test_1", authority_hash: "sha-256:testhash" },
+          parameter_digest: "sha-256:gated-op",
+          action_approval: {
+            id: "apr_1",
+            approved_at: NOW.toISOString(),
+            parameter_digest: "sha-256:gated-op",
+          },
+        },
+      }),
+      opts(gatedView),
+    );
+    expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
+  });
+
+  it("leaves an ungated entry unaffected", async () => {
+    const decision = await evaluate(req(), opts(view()));
+    expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
+  });
+});

@@ -14,7 +14,15 @@ export interface AuthorityEntry {
   type: "mission_resource_access";
   resource: string;
   actions: string[];
-  constraints?: { max_amount?: { amount: string; currency: string }; vendors?: string[] };
+  constraints?: {
+    max_amount?: { amount: string; currency: string };
+    vendors?: string[];
+    /**
+     * @spec txn-authorization#applicability — the matched entry requires an
+     * action-bound approval. The PDP reads it beside the deployment predicate.
+     */
+    requires_action_approval?: boolean;
+  };
 }
 
 /** The subset of the Mission Record the PDP evaluates against. */

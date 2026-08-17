@@ -116,6 +116,15 @@ export interface AuthorityEntry {
   constraints?: {
     max_amount?: { amount: string; currency: string };
     vendors?: string[];
+    /**
+     * @spec txn-authorization#applicability — the Common Constraint that puts
+     * this entry's operations under the Transaction Authorization profile: the
+     * matched entry requires an action-bound approval. MONOTONIC under the
+     * subset rule: `true` NARROWS (a delegated child may add it or keep it, and
+     * may never drop it), and `false` is equivalent to omitting the member and
+     * cannot override a `true` ancestor.
+     */
+    requires_action_approval?: boolean;
   };
   /**
    * @spec attenuation#delegation, child-delegation#fanout — per-entry delegation

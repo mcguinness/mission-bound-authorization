@@ -210,7 +210,14 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions): Pro
   //    requires one, the presented approval MUST match the request's
   //    parameter_digest and be within the max approval age; else deny
   //    action_approval_required, marked requestable (@spec requestable-denials).
-  if (opts.requiresActionApproval?.(req.action.name, actionClass)) {
+  // @spec txn-authorization#applicability — the requirement is the DEPLOYMENT
+  // predicate OR the matched entry's effective Common Constraint, so a
+  // delegated leaf carrying `requires_action_approval: true` is gated even
+  // where deployment policy alone would not gate the action.
+  if (
+    opts.requiresActionApproval?.(req.action.name, actionClass) ||
+    entry.constraints?.requires_action_approval === true
+  ) {
     const appr = req.context.action_approval;
     const maxAge = (opts.maxApprovalAgeSeconds ?? 300) * 1000;
     const valid =

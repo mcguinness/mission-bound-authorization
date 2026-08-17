@@ -35,7 +35,7 @@ const REGISTERED_COMMON_CONSTRAINTS = new Set([
 ]);
 
 /** Common Constraint keys this derivation engine implements narrowing for. */
-const IMPLEMENTED_COMMON_CONSTRAINTS = new Set(["max_amount"]);
+const IMPLEMENTED_COMMON_CONSTRAINTS = new Set(["max_amount", "requires_action_approval"]);
 
 /**
  * @spec mission#common-constraints — FAIL CLOSED (refuse the derivation)
@@ -122,6 +122,12 @@ function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): Authority
   if (vendors) {
     if (vendors.length === 0) return null;
     constraints.vendors = vendors;
+  }
+  // @spec txn-authorization#applicability — monotonic OR: `true` on EITHER
+  // operand narrows, so a ceiling that requires action-bound approval cannot be
+  // shed by a proposal that omits the member (and `false` is just omission).
+  if (ceiling.constraints?.requires_action_approval === true || proposal.constraints?.requires_action_approval === true) {
+    constraints.requires_action_approval = true;
   }
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
   const delegation = narrowDelegation(proposal.delegation, ceiling.delegation);
@@ -307,6 +313,13 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
   if (gVendors) {
     if (!cVendors) return false;
     if (!cVendors.every((v) => gVendors.includes(v))) return false;
+  }
+  // @spec txn-authorization#applicability — a delegated child MUST preserve
+  // `requires_action_approval: true`; dropping it (or restating it as `false`,
+  // which is equivalent to omission) would WIDEN, so it is not a subset.
+  if (granted.constraints?.requires_action_approval === true &&
+      candidate.constraints?.requires_action_approval !== true) {
+    return false;
   }
   // @spec attenuation#delegation, child-delegation#attenuation — delegation is a
   // GRANT and NARROWS: the direction is the OPPOSITE of the constraint rules
