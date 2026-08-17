@@ -49,6 +49,13 @@ export interface TxnArs {
     action: string;
     parameter_digest: string;
     subject: string;
+    /**
+     * @spec txn-authorization#applicability — why this operation is under an
+     * action-bound approval: the matched entry's `requires_action_approval`
+     * Common Constraint or the deployment's destination policy said so, as
+     * opposed to the endpoint's own profile requirement.
+     */
+    requires_action_approval: boolean;
   }): { taskId: string; state: string };
   getTask(taskId: string):
     | {
@@ -73,7 +80,8 @@ export interface TxnCtx {
 /**
  * @spec txn-authorization#challenge-redemption step 4 — the destination
  * resource policy consulted at admission. Deny ends the flow before any
- * approval is opened.
+ * approval is opened; `requires_approval` is the deployment's own half of the
+ * approval requirement, OR'd with the matched entry's Common Constraint.
  */
 export type DestinationPolicy = (input: {
   resource: string;
@@ -82,7 +90,7 @@ export type DestinationPolicy = (input: {
   clientId: string;
   subject: string;
   authorizationDetails: AuthorityEntry[];
-}) => { decision: "permit" | "deny"; reason?: string };
+}) => { decision: "permit" | "deny"; reason?: string; requires_approval?: boolean };
 
 /**
  * @spec txn-authorization#challenge-redemption step 7 — the inputs the fresh
@@ -300,9 +308,17 @@ async function admit(
     return;
   }
 
-  // 4. `requires_action_approval` and destination resource policy.
+  // 4. `requires_action_approval` and destination resource policy. The
+  //    requirement is the matched effective entry's Common Constraint OR the
+  //    deployment's destination policy, so a delegated leaf carrying an
+  //    ancestor's requirement is gated here even where deployment policy is
+  //    silent about the action. The constraint is monotonic: either source
+  //    alone establishes it, and neither can shed the other's.
   const action = requested[0]?.actions?.[0] ?? challenge.reason;
   const subjectId = principalOf(subject, challenge);
+  const entryRequiresApproval =
+    requiresActionApproval(subjectAuthority, challenge.iss, action) ||
+    requiresActionApproval(effective, challenge.iss, action);
   const policy = txn.destinationPolicy?.({
     resource: challenge.iss,
     action,
@@ -315,6 +331,7 @@ async function admit(
     fail(ctx, 400, "access_denied", policy.reason ?? "destination policy denied the operation");
     return;
   }
+  const requiresApproval = entryRequiresApproval || policy?.requires_approval === true;
 
   const nowS = Math.floor(deps.now().getTime() / 1000);
 
@@ -334,13 +351,15 @@ async function admit(
 
   // 5. Obtain or resolve a governed approval, bound to `txn`, the operation,
   //    `parameter_digest`, the resource, the Mission, the origin principal and
-  //    the presenter key.
+  //    the presenter key. This endpoint opens one for every admitted operation;
+  //    the requirement above travels with it as the basis it rests on.
   const { taskId } = txn.ars.openForTxn({
     txn: challenge.txn,
     missionId,
     action,
     parameter_digest: challenge.parameter_digest,
     subject: subjectId,
+    requires_action_approval: requiresApproval,
   });
 
   const workflow = workflows.admit({
@@ -554,6 +573,26 @@ function respondWithToken(ctx: TxnCtx, accessToken: string, expiresIn: number): 
   ctx.status = 200;
   ctx.body = { access_token: accessToken, token_type: "DPoP", expires_in: Math.max(1, expiresIn) };
   ctx.set("cache-control", "no-store");
+}
+
+/**
+ * @spec txn-authorization#applicability — whether the entry covering this
+ * operation carries the `requires_action_approval` Common Constraint. The
+ * kernel normalizes the constraint onto every delegated child entry at
+ * creation, so the effective entry a leaf presents carries an ancestor's
+ * requirement even where the child's own proposal omitted the member.
+ */
+function requiresActionApproval(
+  entries: readonly AuthorityEntry[],
+  resource: string,
+  action: string,
+): boolean {
+  return entries.some(
+    (e) =>
+      e.resource === resource &&
+      e.actions.includes(action) &&
+      e.constraints?.requires_action_approval === true,
+  );
 }
 
 /**
