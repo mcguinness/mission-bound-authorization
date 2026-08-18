@@ -221,7 +221,7 @@ export async function composeStack(opts: {
         // the input no longer holds -- the Mission is no longer active, the
         // containment overlay has narrowed the entry away, the deployment does
         // not recognize the action, the entry has no vendor scope left, or the
-        // origin principal is no longer an entitled account.
+        // local subject is no longer an entitled account.
         freshDecision: async (input) => {
           const view = viewFor(input.missionId);
           if (!view || view.state !== "active") return { decision: "deny", reason: "mission_inactive" };
@@ -236,7 +236,10 @@ export async function composeStack(opts: {
           if (!relationForAction(input.action)) return { decision: "deny", reason: "unknown_action" };
           if (!entry.constraints?.vendors?.length) return { decision: "deny", reason: "no_vendor_scope" };
           // Principal entitlement, from the deployment's own identity config:
-          // the effective subject must still be an account the estate carries.
+          // the DESTINATION-LOCAL subject must still be an account this estate
+          // carries. Where the Origin Principal profile applies the decision
+          // also receives `originPrincipal`, issuer-qualified and separate; a
+          // local account list is never matched against a foreign namespace.
           if (!USERS.some((u) => u.sub === input.subject)) {
             return { decision: "deny", reason: "entitlement_denied" };
           }

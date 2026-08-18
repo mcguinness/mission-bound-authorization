@@ -641,7 +641,7 @@ d("M5 transaction-assurance tier", () => {
     expect(executed.ok, JSON.stringify(executed)).toBe(true);
   });
 
-  it("retains the origin principal as the challenged operation's subject (@spec txn-authorization#challenge-redemption)", async () => {
+  it("retains the destination-local subject, with the origin principal issuer-qualified (@spec txn-authorization#challenge-redemption)", async () => {
     const { generateKeyPair, exportJWK } = await import("jose");
     const { openStore } = await import("@mission/store");
     const { openTxnStores } = await import("../src/index.js");
@@ -657,8 +657,10 @@ d("M5 transaction-assurance tier", () => {
     });
 
     // Where the Origin Principal profile applies the Mission claim carries the
-    // invariant origin principal, and the TAS mints `sub` from it. The resource
-    // retains the pending operation under the SAME rule, so the two agree.
+    // issuer-qualified origin principal AND the credential keeps its own local
+    // `sub`. The TAS mints `sub` from the local subject and leaves
+    // `mission.subject` verbatim; the resource retains the pending operation
+    // under the SAME rule, so the two agree on both identities.
     const originClaim = {
       ...(TOKEN.missionClaim as unknown as Record<string, unknown>),
       subject: { iss: "https://as.test", sub: "origin-alice" },
@@ -672,10 +674,16 @@ d("M5 transaction-assurance tier", () => {
       ACCEPT_CHALLENGE,
     );
     const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
-    expect(stores.pending.get(CANONICAL_RESOURCE, txn)?.subject).toBe("origin-alice");
+    const pending = stores.pending.get(CANONICAL_RESOURCE, txn);
+    // The retained subject is the LOCAL one...
+    expect(pending?.subject).toBe("alice");
+    // ...and the origin principal survives, issuer-qualified, on the mission
+    // claim the challenge copied unchanged.
+    expect(pending?.mission.subject).toEqual({ iss: "https://as.test", sub: "origin-alice" });
 
-    // A token minted for the token's own `sub` rather than the origin principal
-    // is not this operation's credential.
+    // A token minted for the ORIGIN principal in place of the local subject is
+    // not this operation's credential: the substitution is exactly what the
+    // cross-domain profile keeps apart.
     const mint = (subject: string) =>
       signTxnToken({
         key: asTxn.privateKey,
@@ -686,10 +694,12 @@ d("M5 transaction-assurance tier", () => {
         authorizationDetails: remittanceEntry(),
         mission: originClaim,
       });
-    const other = await mint("alice");
+    const other = await mint("origin-alice");
     const wrong = await server.verifyTransactionCredential(other, await popFor(other));
     expect(wrong.ok === false && wrong.refusal_reason).toBe("txn_subject_mismatch");
-    expect((await credentialFor(server, await mint("origin-alice"))).sub).toBe("origin-alice");
+    const accepted = await credentialFor(server, await mint("alice"));
+    expect(accepted.sub).toBe("alice");
+    expect(accepted.missionClaim?.subject).toEqual({ iss: "https://as.test", sub: "origin-alice" });
   });
 
   it("refuses a transaction token whose txn this resource never challenged", async () => {

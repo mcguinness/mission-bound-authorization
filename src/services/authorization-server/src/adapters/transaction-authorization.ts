@@ -12,7 +12,6 @@
 
 import {
   missionInvariantsEqual,
-  readTxnMissionClaim,
   SUBJECT_TOKEN_TYPE_ACCESS_TOKEN,
   txnApprovalBindingDigest,
   type JsonValue,
@@ -133,7 +132,20 @@ export interface FreshDecisionInput {
   /** The operation's `authorization_details` `type` as pinned at admission. */
   operationType: string;
   clientId: string;
+  /**
+   * The DESTINATION-LOCAL subject: the `subject_token`'s own `sub`, in this
+   * Authorization Server's namespace. This is what OAuth's `sub` means and what
+   * the transaction token carries.
+   */
   subject: string;
+  /**
+   * @spec mission#the-mission-claim — the issuer-qualified ORIGIN principal,
+   * where the Origin Principal profile applies. It travels ALONGSIDE the local
+   * subject, never in place of it: the cross-domain profile separates the two
+   * deliberately, and a policy that needs the originating identity reads this
+   * member rather than a local `sub` silently overwritten with a foreign value.
+   */
+  originPrincipal?: { iss: string; sub: string };
   parameterDigest: string;
   authorizationDetails: AuthorityEntry[];
   cnfJkt: string;
@@ -409,7 +421,14 @@ async function admit(
   //    silent about the action. The constraint is monotonic: either source
   //    alone establishes it, and neither can shed the other's.
   const action = requested[0]?.actions?.[0] ?? challenge.reason;
-  const subjectId = principalOf(subject, challenge);
+  // @spec mission#the-mission-claim — the workflow's subject is the
+  // `subject_token`'s OWN `sub`: the principal in THIS Authorization Server's
+  // namespace, which is what the transaction token's `sub` means. The
+  // issuer-qualified origin principal stays in `mission.subject`, preserved
+  // verbatim on the copied claim; flattening it into `sub` would put a foreign
+  // namespace's identifier in a local OAuth subject and lose the qualification
+  // the cross-domain profile exists to keep.
+  const subjectId = String(subject.sub ?? "");
   const entryRequiresApproval =
     requiresActionApproval(subjectAuthority, challenge.iss, action) ||
     requiresActionApproval(effective, challenge.iss, action);
@@ -570,6 +589,7 @@ async function poll(
     operationType: wf.operationType,
     clientId: wf.clientId,
     subject: wf.subject,
+    ...(wf.challenge.mission.subject ? { originPrincipal: wf.challenge.mission.subject } : {}),
     parameterDigest: wf.challenge.parameter_digest,
     authorizationDetails: before.permitted,
     cnfJkt: wf.challenge.cnf.jkt,
@@ -824,16 +844,6 @@ function requiresActionApproval(
       e.actions.includes(action) &&
       e.constraints?.requires_action_approval === true,
   );
-}
-
-/**
- * The verified effective subject: the origin principal where the Origin
- * Principal profile applies, otherwise the Mission's subject. Never the
- * Approver.
- */
-function principalOf(subjectToken: Record<string, unknown>, challenge: TxnChallengeClaims): string {
-  const origin = challenge.mission.subject ?? readTxnMissionClaim(subjectToken.mission)?.subject;
-  return origin ? origin.sub : String(subjectToken.sub ?? "");
 }
 
 /**

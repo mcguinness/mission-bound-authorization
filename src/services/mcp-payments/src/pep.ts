@@ -454,12 +454,14 @@ export class Pep {
             authorizationDetails: requested,
             cnfJkt: token.cnfJkt,
             // @spec txn-authorization#challenge-redemption — the verified
-            // effective subject, under the SAME rule the Transaction
-            // Authorization Server mints `sub` by: the invariant origin
-            // principal where the Origin Principal profile applies, otherwise
-            // the token's own subject. The retained operation and the token
-            // that comes back must agree on it.
-            subject: token.missionClaim.subject?.sub ?? token.sub,
+            // subject, under the SAME rule the Transaction Authorization Server
+            // mints `sub` by: the credential's OWN `sub`, in the issuing
+            // Authorization Server's namespace. The origin principal, where the
+            // Origin Principal profile applies, stays issuer-qualified inside
+            // the `mission` claim and is covered by the mission-invariants
+            // equality check -- never flattened into a local subject. The
+            // retained operation and the token that comes back must agree.
+            subject: token.sub,
           },
         };
       }

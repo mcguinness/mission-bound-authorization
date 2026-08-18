@@ -32,6 +32,15 @@ import {
   type BuiltAs,
   type ChallengeIssuers,
 } from "../src/index.js";
+import { newDpopProofReplay } from "../src/adapters/dpop-replay.js";
+import {
+  handleTransactionAuthorization,
+  newTxnWorkflows,
+  type TxnAuthorizationDeps,
+} from "../src/adapters/transaction-authorization.js";
+import type { TxnWorkflowStore } from "../src/kernel/txn-workflow-store.js";
+import { Readable } from "node:stream";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { createLocalJWKSet, decodeJwt, type JWK } from "jose";
 
 const PORT = 14450;
@@ -57,6 +66,8 @@ let clientKey: CryptoKey;
 let dpopKeys: DpopKeys;
 let dpopJkt: string;
 let rsTxnKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
+/** The agent client's PUBLIC assertion key, for a deps built in-test. */
+let agentClientPublicJwk: JWK;
 let baseToken = "";
 let missionId = "";
 let missionClaim: Record<string, unknown> = {};
@@ -327,6 +338,42 @@ async function postTransaction(
   });
 }
 
+/**
+ * Drive the endpoint DIRECTLY, with a caller-supplied `deps`. The AS's own
+ * `authorization_code` path mints only local subjects, so the Origin Principal
+ * profile's credential shape (local `sub` + issuer-qualified
+ * `mission.subject`, exactly as the cross-org grant mints one) is presented
+ * here against a deps whose `publicJwks` the test holds the private half of.
+ * Everything else -- client authentication, the DPoP proof, the real kernel and
+ * the real ARS -- is unchanged.
+ */
+async function callTransactionEndpoint(
+  deps: TxnAuthorizationDeps,
+  workflows: TxnWorkflowStore,
+  params: Record<string, string>,
+): Promise<{ status: number; body: unknown }> {
+  const htu = `${ISSUER}/transaction`;
+  const encoded = new URLSearchParams({
+    client_id: "ap-agent",
+    client_assertion: await clientAssertion(),
+    client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    ...params,
+  }).toString();
+  const proof = await dpopProof(htu, "POST");
+  const ctx = {
+    method: "POST",
+    path: "/transaction",
+    status: 0,
+    body: undefined as unknown,
+    req: Readable.from([Buffer.from(encoded, "utf8")]) as unknown as IncomingMessage,
+    res: {} as ServerResponse,
+    set: () => {},
+    get: (name: string) => (name.toLowerCase() === "dpop" ? proof : ""),
+  };
+  await handleTransactionAuthorization(deps, ctx, workflows);
+  return { status: ctx.status, body: ctx.body };
+}
+
 /** An initial submission carrying the Mission-bound access token as subject_token. */
 async function submit(
   challenge: string,
@@ -437,6 +484,10 @@ beforeAll(async () => {
   });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
+  {
+    const { d: _private, ...pub } = as.agentClientJwk as Record<string, unknown>;
+    agentClientPublicJwk = pub as JWK;
+  }
   dpopKeys = await generateKeyPair("ES256", { extractable: true });
   dpopJkt = await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey));
 
@@ -1043,6 +1094,153 @@ describe("approval bound to the whole transaction (@spec txn-authorization#chall
  * `exp`, and every completion input is re-read on a fresh clock immediately
  * before the mint.
  */
+/**
+ * @spec mission#the-mission-claim, txn-authorization#transaction-token — OAuth
+ * subject semantics where the Origin Principal profile applies.
+ *
+ * The credential carries BOTH identities: a destination-local `sub` in this
+ * Authorization Server's namespace, and the issuer-qualified origin principal
+ * inside `mission.subject`. The transaction token's `sub` is the LOCAL one and
+ * `mission.subject` survives verbatim; substituting one for the other would put
+ * a foreign namespace's identifier in a local OAuth subject and lose exactly
+ * the qualification the cross-domain profile keeps.
+ *
+ * This AS's own `authorization_code` path mints no origin principal (its
+ * subjects are already local), so the profile is exercised against the endpoint
+ * directly, with a `subject_token` shaped the way the cross-org grant mints one.
+ */
+describe("origin principal vs the local subject (@spec txn-authorization#transaction-token)", () => {
+  const ORIGIN = { iss: "https://partner.example", sub: "origin-alice" };
+  const LOCAL_SUB = "alice-local";
+
+  it("mints the LOCAL subject and preserves the origin principal, and the decision sees both", async () => {
+    const asKeys = await generateKeyPair("ES256", { extractable: true });
+    const rsKeys = await generateKeyPair("ES256", { extractable: true });
+    const txnKeys = await generateKeyPair("ES256", { extractable: true });
+    const asPub = { ...(await exportJWK(asKeys.publicKey)), kid: "local-at", alg: "ES256" } as JWK;
+    const rsPub = { ...(await exportJWK(rsKeys.publicKey)), kid: "local-rs", alg: "ES256" } as JWK;
+
+    const record = as.kernel.get(missionId) as { authority_set: AuthorityEntry[]; expires_at: string };
+    const requested = record.authority_set
+      .filter((e) => e.actions.includes("payments:remittance.send"))
+      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+    // The mission claim as a cross-domain credential carries it: the invariants
+    // PLUS the issuer-qualified origin principal.
+    const claim = { ...missionClaim, subject: ORIGIN };
+
+    // A `subject_token` whose own `sub` is destination-local while the origin
+    // principal rides, qualified, on the mission claim.
+    const subjectToken = await new SignJWT({
+      sub: LOCAL_SUB,
+      client_id: "ap-agent",
+      cnf: { jkt: dpopJkt },
+      mission: claim,
+      authorization_details: requested,
+    })
+      .setProtectedHeader({ alg: "ES256", kid: "local-at", typ: "at+jwt" })
+      .setIssuer(ISSUER)
+      .setAudience(RESOURCE)
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .setJti(`at_${crypto.randomUUID()}`)
+      .sign(asKeys.privateKey);
+
+    const txn = "txn_origin_principal";
+    const challenge = await signChallenge(
+      {
+        txn,
+        authorization_details: requested,
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: `sha-256:${txn}`,
+        mission: claim,
+      },
+      rsKeys.privateKey,
+      "local-rs",
+    );
+
+    const opened: Array<{ subject: string; binding: TxnApprovalBinding }> = [];
+    const decisions: Array<{ subject: string; originPrincipal?: { iss: string; sub: string } }> = [];
+    const localArs = {
+      openForTxn: (input: {
+        txn: string;
+        resource: string;
+        missionId: string;
+        action: string;
+        parameter_digest: string;
+        subject: string;
+        requires_action_approval: boolean;
+        binding: TxnApprovalBinding;
+        binding_digest: string;
+      }) => {
+        opened.push({ subject: input.subject, binding: input.binding });
+        return ars.openForTxn(input);
+      },
+      getTask: (taskId: string) => ars.getTask(taskId),
+    };
+    const deps = {
+      issuer: ISSUER,
+      kernel: as.kernel,
+      clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
+      publicJwks: { keys: [asPub] },
+      dpopProofReplay: newDpopProofReplay(),
+      subjectTokenLive: async () => true,
+      now: () => new Date(),
+      txn: {
+        challengeIssuers: new Map([
+          [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
+        ]) as ChallengeIssuers,
+        ars: localArs,
+        tokenKey: txnKeys.privateKey,
+        tokenKid: "local-txn",
+        workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
+        maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
+        freshDecision: async (input: {
+          subject: string;
+          originPrincipal?: { iss: string; sub: string };
+        }) => {
+          decisions.push({
+            subject: input.subject,
+            ...(input.originPrincipal ? { originPrincipal: input.originPrincipal } : {}),
+          });
+          return { decision: "permit" as const };
+        },
+      },
+    };
+    const workflows = newTxnWorkflows();
+
+    const admitted = await callTransactionEndpoint(deps, workflows, {
+      transaction_challenge: challenge,
+      subject_token: subjectToken,
+      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    });
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    const handle = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+
+    // The approval is opened against the LOCAL subject, with the origin
+    // principal carried alongside it in the binding -- both, never one for the
+    // other.
+    expect(opened[0]?.subject).toBe(LOCAL_SUB);
+    expect(opened[0]?.binding.subject).toBe(LOCAL_SUB);
+    expect(opened[0]?.binding.origin_principal).toEqual(ORIGIN);
+
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    const issued = await callTransactionEndpoint(deps, workflows, {
+      transaction_authorization_id: handle,
+    });
+    expect(issued.status, JSON.stringify(issued.body)).toBe(200);
+    const token = (issued.body as { access_token: string }).access_token;
+    const claims = decodeJwt(token);
+    // `sub` is the DESTINATION-LOCAL subject...
+    expect(claims.sub).toBe(LOCAL_SUB);
+    // ...and the origin principal survives issuer-qualified on the claim.
+    expect((claims.mission as { subject: unknown }).subject).toEqual(ORIGIN);
+    // The fresh decision saw both identities.
+    expect(decisions).toEqual([{ subject: LOCAL_SUB, originPrincipal: ORIGIN }]);
+  });
+});
+
 describe("subject credential liveness and the post-decision fence (@spec txn-authorization#challenge-redemption)", () => {
   /** A dedicated Mission + base token, so revoking it disturbs nothing else. */
   async function ownMission(): Promise<{ token: string; missionId: string; claim: Record<string, unknown> }> {
