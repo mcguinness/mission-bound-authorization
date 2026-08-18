@@ -289,6 +289,14 @@ satisfy the levels' structured-authority or runtime proof obligations.
 | **Governed Agent** (recommended for AI agents) | Runtime-Enforced + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. Add child-delegation for sub-agents and expansion for mid-task growth, orchestration (experimental) for safe unwinding of in-flight work, and discovery (experimental, with progressive) for agents that meet resources their approval could not name. |
 | **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness, agent-isolated approval rendering | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |
 
+A deployment can add just a freshness surface (Mission Status or
+introspection with a published staleness bound) atop Baseline
+Issuance, without the rest of Runtime-Enforced: a half-step that
+bounds the revocation cutoff to that staleness window, not prompt,
+and without per-action enforcement. See the Mission Assurance Levels
+in the architecture document, including the composed table of what
+each rung and binding actually stops, and when.
+
 Most estates start, and many legacy resources stay, on
 **lifetime-bounded reliance**: short-lived Mission-bound tokens whose
 expiry is the state check, with no status or introspection calls at

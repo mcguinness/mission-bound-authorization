@@ -2497,6 +2497,52 @@ The evidence levels are accountability, not prevention: they make
 what was recorded tamper-evident, not what was perceived true or
 what was never recorded present.
 
+## Composed Kill-Switch Reality {#kill-switch-composition}
+
+"Baseline" and "Runtime-Enforced" name two different things that
+share spelling. Above, they name a level a deployment adopts. The
+containment profile uses the same two words for a property a
+consumer obtains per action class
+({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
+"Containment Properties"). The two are not 1:1: a Runtime-Enforced
+deployment can still provide only the Baseline property for a class
+its Enforcement Scope Statement leaves lifecycle-gated-only, because
+the property requires a state-observable substrate per class, not
+per deployment ({{I-D.draft-mcguinness-mission-runtime}}). The table
+below names the property in its own column, apart from the rung; a
+row can carry a Runtime-Enforced rung and a Baseline property
+together without contradiction.
+
+The table composes a deployment that runs the containment profile
+with a rung and a binding. A rung and a binding alone confer neither
+containment property: containment is an overlay a deployment
+separately adopts
+({{I-D.draft-mcguinness-oauth-mission-containment}}). "Stops at
+commit" names what a contain transition's own state-version commit
+reaches immediately ({{I-D.draft-mcguinness-oauth-mission-containment}},
+Section "The Contain Transition"); "runs to its own bound" names the
+residual the transition does not reach. Every cell is informative
+and carries no RFC 2119 language of its own; the cited normative
+profile controls wherever a cell and its citation appear to differ.
+
+| Rung | Binding | Property | Stops at commit | Runs to its own bound |
+|---|---|---|---|---|
+| Baseline Issuance | OAuth core, structured-authority | Baseline, a new-derivation kill ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties") | New derivation, delegation, cross-domain projection, and offline attenuation roots minted after the transition ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | Tokens already issued, to `exp`; a cross-domain projection grant already redeemed and an offline attenuation root already minted before the transition, each to its own lifetime or `del_max_depth` ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "The Materialized-Capability Residual"); a consequential read under the token-lifetime default, the same bound ({{I-D.draft-mcguinness-mission-runtime}}) |
+| Baseline Issuance | Standalone MAS, no credential-carried authority | Neither; the runtime layer is the only cutoff, and it is absent at this rung | Nothing at the resource; the transition commits and is visible on the Mission Status Response and the introspection projection ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Visibility") | Every action, to whatever native credential, session, or resource-local bound the resource enforces on its own, if any, until a freshness half-step arrives or the issuance join restores a gate ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) |
+| Runtime-Enforced | Any binding, a class using a containment-aware state source within its published bound | Runtime-Enforced for that class ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"): full Status or introspection carrying `containment_version`, or Signals carrying the overlay change; a fresh derivation narrows what it mints and can shorten the residual, but it checks nothing at action time, so it carries Baseline, not Runtime-Enforced ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"); a class checked only against an active-but-not-containment-aware source, gated only by fresh derivation, or left lifecycle-gated-only, gets Baseline only regardless of rung ({{I-D.draft-mcguinness-mission-runtime}}) | The contained capability, denied at the class's next gated action once the source reflects the overlay, within the staleness bound plus the permit window plus the class's execution bound ({{I-D.draft-mcguinness-mission-runtime}}) | Ungated paths, bounded by token lifetime alone |
+| Baseline Issuance | MAS as estate control plane, issuance join at each consuming AS | Baseline, from Derivation Gating at the Mission Issuer ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating"); the consuming AS's redemption and refresh checks are the issuance profile's ordinary `active` gate, not containment-aware on their own, since a contained Mission stays `active`, unless the consuming AS separately retrieves and applies the containment overlay or current Effective Authority Set ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Redemption") | New grant minting only: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | An outstanding grant redeems once, to its own maximum lifetime of 300 seconds, at any consuming AS whose redemption check is active-only rather than containment-aware ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Redemption") |
+
+None of this closes the conforming Baseline residual on a path or for
+a class no containment-aware action-time gate reaches. For a class a
+Runtime-Enforced action-time gate reaches instead, a pre-transition
+credential does not run to its own bound at all. The binding
+determines the artifact and its cutoff where the residual does
+persist: an ungated standalone-MAS path, for instance, runs to
+whatever native credential, session, or resource-local bound the
+resource enforces on its own, if any, or to none, not to a token
+lifetime. What changes row to row is which gate, if any, reaches a
+class before its own bound, and how tight that bound is.
+
 ## Assurance Claims {#assurance-claims-axis}
 
 The levels are the adoption ladder: what a deployment has built, in
