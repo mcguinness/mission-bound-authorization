@@ -16,6 +16,8 @@
 //   (g) adoption-map gap      - a draft not listed exactly once in README's "The adoption map"
 //                                table, on a row whose Zone/Track cells match the manifest's
 //                                declared presentation_zone/presentation_track
+//   (h) maintenance enum      - a draft's `maintenance` is not one of the manifest's declared
+//                                `maintenance_classes`
 
 import fs from "node:fs";
 import path from "node:path";
@@ -291,6 +293,18 @@ function main() {
           `${d.slug}: adoption map row has Track "${row.track}" but manifest declares presentation_track "${d.presentation_track}"`
         );
       }
+    }
+  }
+
+  // (h) maintenance enum: `maintenance` must be one of the manifest's own
+  // declared `maintenance_classes`.
+  const validMaintenance = new Set(manifest.maintenance_classes || []);
+  if (validMaintenance.size === 0) {
+    fail("maintenance-enum", `family-manifest.json is missing a non-empty top-level "maintenance_classes" array`);
+  }
+  for (const d of drafts) {
+    if (!validMaintenance.has(d.maintenance)) {
+      fail("maintenance-enum", `${d.slug}: maintenance "${d.maintenance}" is not one of ${JSON.stringify([...validMaintenance])}`);
     }
   }
 

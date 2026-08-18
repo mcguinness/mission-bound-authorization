@@ -451,9 +451,10 @@ facts are the next subsection.
    join is the family's newest mechanism), **aauth** (where the
    substrate is AAuth), **aauth-management** (native AAuth status,
    permanent termination, expiry, and delegation-tree queries),
-   **aauth-expiry** (profiles AAuth's native `expires_at` mission
-   lifetime bound; the
-   **aauth** binding requires it), **issuance-grant** (the issuance join:
+   **aauth-expiry** (a citable specification of AAuth's native
+   `expires_at` mission lifetime bound; base AAuth enforces the
+   member itself, and the profile is OPTIONAL by its own conformance
+   section), **issuance-grant** (the issuance join:
    estate ASs redeem MAS-minted grants for Mission-bound,
    state-gated tokens), **substrate** (for authors of new bindings).
 5. **Advanced, when the use case arrives**: **approval** (asynchronous
