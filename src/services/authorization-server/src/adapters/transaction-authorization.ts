@@ -553,33 +553,14 @@ async function poll(
     return;
   }
 
-  // At most one authorization result per `txn`: the slot is taken exactly once,
-  // so a second token under a different jti is structurally impossible.
-  if (!workflows.reserveIssuance(wf.challenge.iss, wf.challenge.txn, wf.id)) {
-    if (workflows.issuanceHolder(wf.challenge.iss, wf.challenge.txn) === wf.id) {
-      // THIS workflow holds the slot. Serve its stored token; a poll that
-      // catches the mint mid-flight stays pending rather than reading a
-      // terminal denial off a workflow that is about to issue.
-      const current = workflows.get(wf.id);
-      if (current?.issuedToken) {
-        respondWithToken(
-          ctx,
-          current.issuedToken,
-          (current.issuedExpS ?? nowS) - nowS,
-          current.challenge.authorization_details,
-        );
-        return;
-      }
-      fail(ctx, 400, "authorization_pending");
-      return;
-    }
-    fail(ctx, 400, "access_denied", "this transaction already produced an authorization result");
-    return;
-  }
   // @spec txn-authorization#transaction-token — `parameter_digest` is copied
   // only after it has been verified against the challenge (the approval above
   // is bound to the same value), and `mission` is the challenge's profiled
   // members, value-equal by construction.
+  //
+  // The mint runs BEFORE the issuance slot is taken: a signing error here
+  // leaves nothing reserved, so a later poll completes cleanly instead of
+  // pending forever against a wedged, token-less reservation.
   const tokenJti = `mtt_${randomBytes(12).toString("base64url")}`;
   const token = await mintTransactionToken({
     issuer: deps.issuer,
@@ -597,7 +578,30 @@ async function poll(
     key: txn.tokenKey,
     kid: txn.tokenKid,
   });
-  workflows.recordIssued(wf.id, token, tokenJti, exp);
+
+  // At most one authorization result per (resource, txn): reserving the slot
+  // and storing the token commit together, so a taken slot ALWAYS has its
+  // token and a second token under a different jti is structurally impossible.
+  if (!workflows.reserveAndRecordIssuance(wf.challenge.iss, wf.challenge.txn, wf.id, token, tokenJti, exp)) {
+    if (workflows.issuanceHolder(wf.challenge.iss, wf.challenge.txn) === wf.id) {
+      // A concurrent poll of THIS workflow won the slot: its token is already
+      // stored (the reserve-and-record is atomic), so the losing mint is
+      // discarded -- never returned, never observable -- and the stored token
+      // is served, stably.
+      const current = workflows.get(wf.id);
+      if (current?.issuedToken) {
+        respondWithToken(
+          ctx,
+          current.issuedToken,
+          (current.issuedExpS ?? nowS) - nowS,
+          current.challenge.authorization_details,
+        );
+        return;
+      }
+    }
+    fail(ctx, 400, "access_denied", "this transaction already produced an authorization result");
+    return;
+  }
   respondWithToken(ctx, token, exp - nowS, wf.challenge.authorization_details);
 }
 

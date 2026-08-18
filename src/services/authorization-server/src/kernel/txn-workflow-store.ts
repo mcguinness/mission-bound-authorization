@@ -24,7 +24,7 @@
  * how that holds without a second registry.
  */
 
-import { type Database, openStore, type StoreOptions } from "@mission/store";
+import { type Database, openStore, type StoreOptions, withTransaction } from "@mission/store";
 import type { TxnChallengeClaims } from "@mission/core";
 
 const SCHEMA = `
@@ -217,21 +217,40 @@ export class TxnWorkflowStore {
   }
 
   /**
-   * Take the single issuance slot for this `txn`. `txn` is unique within the
-   * resource that issued the challenge for it, never globally, so the slot is
-   * keyed by (challenge issuer, txn): two accepted resources selecting the
-   * same `txn` value cannot interfere. True exactly once per slot across every
-   * workflow; false thereafter, including for the workflow that already took
-   * it (the caller then serves its stored token).
+   * Take the single issuance slot for this `txn` AND record the already-minted
+   * token, in one transaction. `txn` is unique within the resource that issued
+   * the challenge for it, never globally, so the slot is keyed by (challenge
+   * issuer, txn): two accepted resources selecting the same `txn` value cannot
+   * interfere. True exactly once per slot across every workflow; false
+   * thereafter, including for the workflow that already took it (the caller
+   * discards its own mint and serves the stored token).
+   *
+   * The caller mints BEFORE this runs: a signing error or crash therefore
+   * leaves the slot untaken and a later poll can complete cleanly, and a taken
+   * slot always has its token stored -- a reserved-but-empty workflow cannot
+   * exist.
    */
-  reserveIssuance(challengeIss: string, txn: string, workflowId: string): boolean {
-    return (
+  reserveAndRecordIssuance(
+    challengeIss: string,
+    txn: string,
+    workflowId: string,
+    token: string,
+    jti: string,
+    expS: number,
+  ): boolean {
+    return withTransaction(this.db, () => {
+      const reserved =
+        this.db
+          .prepare(
+            "INSERT INTO txn_issuance_guard (challenge_iss, txn, workflow_id, issued_at) VALUES (?, ?, ?, unixepoch()) ON CONFLICT(challenge_iss, txn) DO NOTHING",
+          )
+          .run(challengeIss, txn, workflowId).changes === 1;
+      if (!reserved) return false;
       this.db
-        .prepare(
-          "INSERT INTO txn_issuance_guard (challenge_iss, txn, workflow_id, issued_at) VALUES (?, ?, ?, unixepoch()) ON CONFLICT(challenge_iss, txn) DO NOTHING",
-        )
-        .run(challengeIss, txn, workflowId).changes === 1
-    );
+        .prepare("UPDATE txn_workflows SET state = 'issued', issued_token = ?, issued_jti = ?, issued_exp = ? WHERE id = ?")
+        .run(token, jti, expS, workflowId);
+      return true;
+    });
   }
 
   /** The workflow that already produced the authorization result for a `txn`. */
@@ -240,12 +259,6 @@ export class TxnWorkflowStore {
       .prepare("SELECT workflow_id FROM txn_issuance_guard WHERE challenge_iss = ? AND txn = ?")
       .get(challengeIss, txn) as { workflow_id: string } | undefined;
     return row?.workflow_id;
-  }
-
-  recordIssued(id: string, token: string, jti: string, expS: number): void {
-    this.db
-      .prepare("UPDATE txn_workflows SET state = 'issued', issued_token = ?, issued_jti = ?, issued_exp = ? WHERE id = ?")
-      .run(token, jti, expS, id);
   }
 }
 
