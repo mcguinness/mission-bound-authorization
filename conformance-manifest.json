@@ -2001,6 +2001,25 @@
    "tests": []
   },
   {
+   "id": "txn-authorization.verification.current-effective-authority-set",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "offline-verification",
+   "text": "that the challenged operation remains within the Mission's current Effective Authority Set, observed through the Mission Status surface, the Status List, or issuer token introspection within their declared freshness bounds",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "offline verification refuses a challenged operation whose Mission has been narrowed by containment or discharge since the challenge was issued, re-evaluating current Effective Authority Set membership at the point of use rather than relying on a stale active check or the token's own claims"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "txn-authorization.consumption.linearizable-cross-replica",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "offline-verification",

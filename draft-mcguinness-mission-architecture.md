@@ -1808,6 +1808,13 @@ binding, the concrete decision API
 ({{I-D.draft-mcguinness-mission-authzen}}); the runtime evidence
 companion, the Decision Evidence, Execution Evidence, and Refusal
 Record objects ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+Its decision composes conjunctively with the structural plane above:
+Effective Authority Set membership, every applicable
+cumulative-consumption or stateful operational gate, and a required
+action-bound approval are each independently necessary, and none
+grants, widens, or restores another
+({{I-D.draft-mcguinness-mission-runtime}}, Section "The Runtime
+Decision").
 
 ## Run and Wind Down
 
