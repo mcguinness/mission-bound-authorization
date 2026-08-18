@@ -55,9 +55,11 @@ CREATE TABLE IF NOT EXISTS txn_workflows (
 CREATE UNIQUE INDEX IF NOT EXISTS txn_workflows_admission
   ON txn_workflows (challenge_iss, challenge_jti, client_id, cnf_jkt);
 CREATE TABLE IF NOT EXISTS txn_issuance_guard (
-  txn TEXT PRIMARY KEY,
+  challenge_iss TEXT NOT NULL,
+  txn TEXT NOT NULL,
   workflow_id TEXT NOT NULL,
-  issued_at INTEGER NOT NULL
+  issued_at INTEGER NOT NULL,
+  PRIMARY KEY (challenge_iss, txn)
 ) STRICT;
 `;
 
@@ -215,25 +217,28 @@ export class TxnWorkflowStore {
   }
 
   /**
-   * Take the single issuance slot for this `txn`. True exactly once per `txn`
-   * across every workflow; false thereafter, including for the workflow that
-   * already took it (the caller then serves its stored token).
+   * Take the single issuance slot for this `txn`. `txn` is unique within the
+   * resource that issued the challenge for it, never globally, so the slot is
+   * keyed by (challenge issuer, txn): two accepted resources selecting the
+   * same `txn` value cannot interfere. True exactly once per slot across every
+   * workflow; false thereafter, including for the workflow that already took
+   * it (the caller then serves its stored token).
    */
-  reserveIssuance(txn: string, workflowId: string): boolean {
+  reserveIssuance(challengeIss: string, txn: string, workflowId: string): boolean {
     return (
       this.db
         .prepare(
-          "INSERT INTO txn_issuance_guard (txn, workflow_id, issued_at) VALUES (?, ?, unixepoch()) ON CONFLICT(txn) DO NOTHING",
+          "INSERT INTO txn_issuance_guard (challenge_iss, txn, workflow_id, issued_at) VALUES (?, ?, ?, unixepoch()) ON CONFLICT(challenge_iss, txn) DO NOTHING",
         )
-        .run(txn, workflowId).changes === 1
+        .run(challengeIss, txn, workflowId).changes === 1
     );
   }
 
   /** The workflow that already produced the authorization result for a `txn`. */
-  issuanceHolder(txn: string): string | undefined {
-    const row = this.db.prepare("SELECT workflow_id FROM txn_issuance_guard WHERE txn = ?").get(txn) as
-      | { workflow_id: string }
-      | undefined;
+  issuanceHolder(challengeIss: string, txn: string): string | undefined {
+    const row = this.db
+      .prepare("SELECT workflow_id FROM txn_issuance_guard WHERE challenge_iss = ? AND txn = ?")
+      .get(challengeIss, txn) as { workflow_id: string } | undefined;
     return row?.workflow_id;
   }
 

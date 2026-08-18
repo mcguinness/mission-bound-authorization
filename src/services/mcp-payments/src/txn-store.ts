@@ -18,7 +18,7 @@ import type { JsonValue, TxnMissionClaim } from "@mission/core";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS txn_pending_operations (
-  txn TEXT PRIMARY KEY,
+  txn TEXT NOT NULL,
   resource TEXT NOT NULL,
   challenge_jti TEXT NOT NULL,
   mission_json TEXT NOT NULL,
@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS txn_pending_operations (
   authorization_details TEXT NOT NULL,
   cnf_jkt TEXT NOT NULL,
   subject TEXT NOT NULL,
-  issued_at INTEGER NOT NULL
+  issued_at INTEGER NOT NULL,
+  PRIMARY KEY (resource, txn)
 ) STRICT;
 ${redemptionSchema("txn_consumption")}
 `;
@@ -64,7 +65,7 @@ class SqliteTxnPendingStore implements TxnPendingStore {
         `INSERT INTO txn_pending_operations
            (txn, resource, challenge_jti, mission_json, action, parameter_digest, authorization_details, cnf_jkt, subject, issued_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch())
-         ON CONFLICT(txn) DO NOTHING`,
+         ON CONFLICT(resource, txn) DO NOTHING`,
       )
       .run(
         op.txn,
