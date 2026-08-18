@@ -24,10 +24,13 @@
 //   (i) maintenance evidence  - a draft whose `maintenance` is "active-experimental" is missing
 //                                a non-empty `maintenance_owner`, or its `maintenance_review_after`
 //                                is not a YYYY-MM-DD date string
+//   (j) external-pins shape   - notes/external-pins.json fails structural validation
+//                                (see scripts/check-external-pins.mjs)
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { validateExternalPins } from "./check-external-pins.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -354,6 +357,11 @@ function main() {
       fail("maintenance-evidence", `${d.slug}: maintenance "active-experimental" requires a date-shaped (YYYY-MM-DD) "maintenance_review_after", got ${JSON.stringify(d.maintenance_review_after)}`);
     }
   }
+
+  // (j) External pin registry: structural validation only (P2, review of
+  // PR #595). Content verification against live source repos happens at
+  // Ship 3, not here.
+  for (const e of validateExternalPins(ROOT)) fail("external-pins", e);
 
   if (errors.length > 0) {
     console.error(`family-manifest check FAILED with ${errors.length} finding(s):\n`);
