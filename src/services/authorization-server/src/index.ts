@@ -28,6 +28,7 @@ import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
 import { CreationIdempotencyStore } from "./kernel/creation-idempotency.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
+import type { TxnAuthorizationOptions } from "./adapters/transaction-authorization.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
 import { createTemplate } from "./kernel/template.js";
 import { TemplateStore } from "./kernel/template-store.js";
@@ -67,6 +68,13 @@ export {
   verifyIntentSubmissionEvidence,
 } from "./kernel/intent.js";
 export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
+export {
+  missionResourceAccessProfile,
+  type OperationProfile,
+  OperationProfileRegistry,
+  type OperationResolution,
+  type ResolvedOperation,
+} from "./kernel/operation-profile.js";
 export { delegatePermitted, type DelegateCandidate } from "./kernel/delegate-matcher.js";
 export {
   authorizationDetailsTypesMetadata,
@@ -236,14 +244,30 @@ export {
   type DeferredToken,
 } from "./kernel/deferred.js";
 export {
-  signChallenge,
+  ChallengeError,
+  type ChallengeErrorCode,
+  type ChallengeIssuerKeys,
+  type ChallengeIssuers,
   validateChallenge,
-  issueTxnToken,
-  TxnReplayCache,
   TXN_CHALLENGE_TYP,
-  TXN_TOKEN_TYP,
   type TxnChallengeClaims,
 } from "./kernel/txn-challenge.js";
+export {
+  MISSION_TXN_TOKEN_TYP,
+  mintTransactionToken,
+  type MintTransactionTokenInput,
+} from "./kernel/transaction-token.js";
+export {
+  TxnWorkflowStore,
+  type TxnWorkflowRecord,
+  type TxnWorkflowState,
+} from "./kernel/txn-workflow-store.js";
+export type {
+  DestinationPolicy,
+  FreshDecision,
+  FreshDecisionInput,
+  TxnAuthorizationOptions,
+} from "./adapters/transaction-authorization.js";
 export {
   StatusListPublisher,
   signStatusListToken,
@@ -396,10 +420,13 @@ export async function buildAuthorizationServer(opts: {
    * `required_intent_evidence_types`. Empty as shipped.
    */
   requiredIntentEvidenceTypes?: string[];
-  /** The resource's txn-challenge keys, for the transaction endpoint. */
-  resourceTxnJwks?: { keys: JWK[] };
-  /** AROP transaction task store (AS vouches; owns the txn pending id, D37). */
-  ars?: TxnArs;
+  /**
+   * @spec txn-authorization#challenge-redemption — the
+   * transaction_authorization_endpoint's deployment configuration. The
+   * transaction-token signing key is this AS's own per-purpose as-txn key and
+   * is filled in here, so callers supply only policy and collaborators.
+   */
+  transactionAuthorization?: Omit<TxnAuthorizationOptions, "tokenKey" | "tokenKid">;
   /**
    * @spec signals#lifecycle-event — an additional lifecycle-commit subscriber,
    * composed with the Status List republisher so BOTH run on every committed
@@ -633,8 +660,18 @@ export async function buildAuthorizationServer(opts: {
     // RFC 7662 introspection principals (config/introspection.json).
     introspectionPrincipals: INTROSPECTION_PRINCIPALS,
     ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),
-    txnKey: txnKeys.privateKey,
-    txnKid: asTxn.kid,
+    // @spec txn-authorization#challenge-redemption — the endpoint's
+    // configuration, assembled from the caller's deployment inputs plus this
+    // AS's own per-purpose transaction-token signing key (D39).
+    ...(opts.transactionAuthorization
+      ? {
+          txnAuthorization: {
+            ...opts.transactionAuthorization,
+            tokenKey: txnKeys.privateKey,
+            tokenKid: asTxn.kid,
+          },
+        }
+      : {}),
     // @spec child-delegation#child-client-identity — sign the child-bound RFC 7523
     // authorization grant with the AS token key (verifies on the jwks_uri).
     childGrantKey: tokenPrivateKey,
@@ -660,8 +697,6 @@ export async function buildAuthorizationServer(opts: {
     templateStore,
     protectedEventSources,
     issuerEvidence,
-    ...(opts.resourceTxnJwks ? { resourceTxnJwks: opts.resourceTxnJwks } : {}),
-    ...(opts.ars ? { ars: opts.ars } : {}),
   });
   // @spec async-delegation — publish the provider to the terminal subscriber now
   // that construction is complete (no lifecycle commit could have fired earlier).

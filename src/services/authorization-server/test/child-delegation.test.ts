@@ -815,3 +815,71 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
     ).toBe("urn:policy:child-drawdown:v1");
   });
 });
+
+describe("requires_action_approval Common Constraint (@spec txn-authorization#applicability)", () => {
+  /** A proposal restating the ceiling's constraints plus the approval requirement. */
+  const gated = (actions: string[]): AuthorityEntry[] => [
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions,
+      constraints: {
+        max_amount: { amount: "500.00", currency: "USD" },
+        vendors: ["acme"],
+        requires_action_approval: true,
+      },
+    },
+  ];
+
+  const approveGatedParent = (actions = ["payments:invoice.read", "payments:payment.execute"]) =>
+    kernel.approve({
+      intent: validateMissionIntent(
+        JSON.stringify({ goal: "Pay Acme invoices for Q3", resources: [RESOURCE], expires_at: PARENT_EXP }),
+      ),
+      proposedAuthority: gated(actions),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "parent-agent",
+      approvalEventId: `apev-gated-${seq++}`,
+    });
+
+  it("carries the requirement onto the derived Authority Set", () => {
+    const parent = approveGatedParent();
+    expect(parent.authority_set[0]?.constraints?.requires_action_approval).toBe(true);
+  });
+
+  it("keeps a delegated child under the requirement even when the child's own proposal omits it", () => {
+    const parent = approveGatedParent();
+    const { child } = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: childIntent(["payments:invoice.read"]),
+      // The child restates max_amount/vendors but says nothing about approval.
+      proposedAuthority: proposed(["payments:invoice.read"]),
+      childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+    });
+    expect(child.authority_set[0]?.constraints?.requires_action_approval).toBe(true);
+  });
+
+  it("refuses a candidate entry that drops a requirement the grant carries", () => {
+    const parent = approveGatedParent();
+    const granted = parent.authority_set;
+    const dropped: AuthorityEntry[] = [
+      { ...(granted[0] as AuthorityEntry), constraints: { ...granted[0]?.constraints, requires_action_approval: false } },
+    ];
+    expect(isSubsetSet(dropped, granted)).toBe(false);
+    const omitted: AuthorityEntry[] = [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ];
+    expect(isSubsetSet(omitted, granted)).toBe(false);
+  });
+
+  it("accepts a candidate that adds the requirement the grant does not carry", () => {
+    const parent = approveParent();
+    expect(isSubsetSet(gated(["payments:invoice.read"]), parent.authority_set)).toBe(true);
+  });
+});

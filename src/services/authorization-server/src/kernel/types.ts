@@ -116,6 +116,15 @@ export interface AuthorityEntry {
   constraints?: {
     max_amount?: { amount: string; currency: string };
     vendors?: string[];
+    /**
+     * @spec txn-authorization#applicability — the Common Constraint that puts
+     * this entry's operations under the Transaction Authorization profile: the
+     * matched entry requires an action-bound approval. MONOTONIC under the
+     * subset rule: `true` NARROWS (a delegated child may add it or keep it, and
+     * may never drop it), and `false` is equivalent to omitting the member and
+     * cannot override a `true` ancestor.
+     */
+    requires_action_approval?: boolean;
   };
   /**
    * @spec attenuation#delegation, child-delegation#fanout — per-entry delegation
@@ -502,7 +511,12 @@ export interface MissionClaim {
   id: string;
   issuer: string;
   authority_hash: string;
-  expires_at: number;
+  /**
+   * @spec mission#the-mission-claim — an RFC 3339 date-time STRING, the same
+   * form the Mission Record and every other family surface render it in. Epoch
+   * seconds here would be a second representation of one value on one wire.
+   */
+  expires_at: string;
   /**
    * @spec mission#approval-basis — the read-only wire signal of the basis
    * type. MUST NOT be relied on to grant authority; the full

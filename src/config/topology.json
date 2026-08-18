@@ -17,6 +17,15 @@
     "as": 4400,
     "console": 4407
   },
+  "txnChallenge": {
+    "payments": {
+      "jwksPath": "/.well-known/txn-challenge-jwks",
+      "signingAlgValuesSupported": ["ES256"],
+      "challengeLifetimeSeconds": 300,
+      "workflowLifetimeSeconds": 600,
+      "maxTokenLifetimeSeconds": 300
+    }
+  },
   "ttls": {
     "accessTokenSeconds": 300,
     "rasLocalTokenSeconds": 120,

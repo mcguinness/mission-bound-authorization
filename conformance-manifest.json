@@ -1826,8 +1826,21 @@
     "normative": "a resource challenge's mission, parameter_digest, and cnf are always the resource's own derived values from the verified Mission-bound access token; a client-supplied replacement for any of them is never reflected into the signed challenge"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > derives the challenge's mission, parameter_digest and cnf itself, never from the client's arguments (@spec txn-authorization#resource-challenge)",
+     "level": "endpoint",
+     "surface": "challenge-endpoint"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > returns a signed challenge, and retains the pending operation, when the client signals it accepts one (@spec txn-authorization#resource-challenge)",
+     "level": "endpoint",
+     "surface": "challenge-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.challenge.upstream-response-behavior",
@@ -1845,8 +1858,39 @@
     "normative": "the resource's challenge signal and response wire shape (Accept-Txn-Challenge, transaction_authorization_required, transaction_challenge, and the txn-authz-challenge+jwt typ) match the upstream transaction-challenge protocol unchanged, with no substitute mechanism"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > returns a signed challenge, and retains the pending operation, when the client signals it accepts one (@spec txn-authorization#resource-challenge)",
+     "level": "endpoint",
+     "surface": "challenge-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-authorization-e2e.test.ts",
+     "name": "transaction authorization end to end (@spec txn-authorization#challenge-redemption) > challenges, redeems, approves, decides fresh, and executes exactly once",
+     "level": "cross-component",
+     "surface": "challenge-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/txn-authorization.test.ts",
+     "name": "Accept-Txn-Challenge as an RFC 8941 Boolean Item (@spec txn-authorization#resource-challenge) > accepts a Boolean true, with or without parameters",
+     "level": "unit",
+     "surface": "challenge-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/txn-authorization.test.ts",
+     "name": "Accept-Txn-Challenge as an RFC 8941 Boolean Item (@spec txn-authorization#resource-challenge) > does not treat a Boolean false as acceptance, parameters or not",
+     "level": "unit",
+     "surface": "challenge-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/txn-authorization.test.ts",
+     "name": "Accept-Txn-Challenge as an RFC 8941 Boolean Item (@spec txn-authorization#resource-challenge) > does not treat a malformed value, or a repeated field, as acceptance",
+     "level": "unit",
+     "surface": "challenge-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.challenge.operation-profile-drift",
@@ -1864,8 +1908,15 @@
     "normative": "a resource-side Operation Profile version change during a pending workflow does not invalidate that workflow's basis: the TAS keeps recognizing the superseded version until the workflow it backs resolves"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "Operation Profile resolution and drift (@spec txn-authorization#resource-challenge) > completes a workflow admitted under a superseded version, and refuses new challenges naming it",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.redemption.subject-token-audience-pop",
@@ -1883,8 +1934,21 @@
     "normative": "a subject_token whose audience is not the challenge's iss, or whose cnf does not match the proof of possession presented at the transaction endpoint, is never accepted as the presenter's credential"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "subject_token binding (@spec txn-authorization#challenge-redemption) > refuses a subject_token that was not issued for the challenged resource",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "challenge trust boundaries (@spec txn-authorization#two-phase-expiry) > refuses an unauthenticated client and a proof of the wrong key",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.redemption.approval-never-bypasses-fresh-decision",
@@ -1902,8 +1966,45 @@
     "normative": "a completed approval alone never issues a transaction token; the fresh decision runs on every redemption and a denial there refuses issuance regardless of approval status"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "fresh decision at completion (@spec txn-authorization#challenge-redemption) > refuses an approved workflow when current entitlement or policy denies",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "fresh decision at completion (@spec txn-authorization#challenge-redemption) > never issues on a step-up context alone: only approval state satisfies the requirement",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "approval bound to the whole transaction (@spec txn-authorization#challenge-redemption) > refuses an approval adjudicated for a different transaction",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "approval bound to the whole transaction (@spec txn-authorization#challenge-redemption) > refuses an approval whose binding the workflow cannot reproduce at all",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "approval bound to the whole transaction (@spec txn-authorization#challenge-redemption) > refuses an approval granted in the future beyond the clock skew",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "approval bound to the whole transaction (@spec txn-authorization#challenge-redemption) > refuses an approval whose validity ends before it was granted",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.redemption.initial-vs-final-validation",
@@ -1921,8 +2022,33 @@
     "normative": "initial challenge validation only admits a workflow; it is never treated as the authorization decision, which the fresh decision at redemption completion alone makes, refusing even a previously admitted workflow when a fresh input no longer holds"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "fresh decision at completion (@spec txn-authorization#challenge-redemption) > refuses after containment narrows the entry away between admission and approval",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "fresh decision at completion (@spec txn-authorization#challenge-redemption) > refuses an approved workflow when current entitlement or policy denies",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "subject credential liveness and the post-decision fence (@spec txn-authorization#challenge-redemption) > refuses a subject_token revoked between admission and completion",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "subject credential liveness and the post-decision fence (@spec txn-authorization#challenge-redemption) > refuses when the credential is revoked DURING the fresh decision, and mints nothing",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.applicability.constraint-preservation-under-delegation",
@@ -1940,8 +2066,33 @@
     "normative": "a delegation chain whose leaf attempts to drop requires_action_approval: true carried by an ancestor entry fails redemption; the designation survives every hop"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "the approval requirement under delegation (@spec txn-authorization#applicability) > refuses a leaf entry that drops the requirement its grant carries",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "the approval requirement under delegation (@spec txn-authorization#applicability) > gates a leaf that inherited the requirement, on the entry alone",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "requires_action_approval Common Constraint (@spec txn-authorization#applicability) > keeps a delegated child under the requirement even when the child's own proposal omits it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "requires_action_approval Common Constraint (@spec txn-authorization#applicability) > refuses a candidate entry that drops a requirement the grant carries",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ]
   },
   {
    "id": "txn-authorization.applicability.step-up-is-not-approval",
@@ -1959,8 +2110,15 @@
     "normative": "redemption presenting only a step-up authentication context, with no governed approval, fails to satisfy requires_action_approval and is refused"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "fresh decision at completion (@spec txn-authorization#challenge-redemption) > never issues on a step-up context alone: only approval state satisfies the requirement",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.workflow.task-handle-correlation",
@@ -1978,8 +2136,27 @@
     "normative": "a pending workflow's transaction_authorization_id correlates to the ARAP task handle backing it wherever ARAP runs the approval, so a party holding either identifier can locate the same workflow"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "two-phase expiry and idempotency (@spec txn-authorization#two-phase-expiry) > still issues when the approval lands after the challenge expired but inside the workflow lifetime",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "transaction endpoint redemption (@spec txn-authorization#challenge-redemption) > reports a denied approval as access_denied so the client stops polling",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "approval bound to the whole transaction (@spec txn-authorization#challenge-redemption) > fails closed when one resource-scoped txn is opened under two different transactions",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.verification.exact-match-set",
@@ -1997,8 +2174,27 @@
     "normative": "offline verification recomputes and requires exact equality of txn, the mission invariants, the authorization_details entry, and parameter_digest against the pending operation before execution proceeds"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > refuses a transaction token whose mission, authority or recomputed parameter_digest differs from the retained operation (@spec txn-authorization#offline-verification)",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > refuses a transaction token whose txn this resource never challenged",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > executes exactly once for a verified transaction token that matches the retained operation (@spec txn-authorization#offline-verification)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ]
   },
   {
    "id": "txn-authorization.verification.current-effective-authority-set",
@@ -2035,8 +2231,27 @@
     "normative": "simultaneous presentation of tokens for the same txn to two replicas capable of executing the same operation yields exactly one consumption and one execution"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > consumes a txn exactly once when two replicas are presented distinct token jtis simultaneously",
+     "level": "concurrency",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > executes once across two replicas sharing a consumption domain, whatever token jti carries the txn",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "txn consumption domain (@spec txn-authorization#offline-verification) > admits the first use of a resource-scoped txn exactly once across replicas sharing the domain",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ]
   },
   {
    "id": "txn-authorization.consumption.two-jti-one-txn-rejected",
@@ -2054,8 +2269,27 @@
     "normative": "two distinct transaction tokens, each with its own jti, presented for one already-consumed txn are both treated as the same replay at the resource; the second, differently-keyed jti never authorizes a second execution"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > consumes a txn exactly once when two replicas are presented distinct token jtis simultaneously",
+     "level": "concurrency",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > executes once across two replicas sharing a consumption domain, whatever token jti carries the txn",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > refuses a DIFFERENT operation presented under an already-consumed txn",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ]
   },
   {
    "id": "txn-authorization.workflow.exactly-one-issuance",
@@ -2073,8 +2307,21 @@
     "normative": "repeated polling of a workflow that already produced a token never causes the TAS to mint a second, differently-keyed token for the same txn; at most one authorization result exists per accepted workflow"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "at most one authorization result per txn (@spec txn-authorization#offline-verification) > mints no second jti when a decided workflow is polled concurrently",
+     "level": "concurrency",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "two-phase expiry and idempotency (@spec txn-authorization#two-phase-expiry) > returns the same token, under the same jti, on every poll after the decision",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.consumption.fail-closed-store-unavailable",
@@ -2092,8 +2339,15 @@
     "normative": "an unavailable consumption store refuses execution rather than proceeding without a consumption check"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > fails closed when the consumption store is unavailable",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ]
   },
   {
    "id": "txn-authorization.token.must-not-list",
@@ -2111,8 +2365,15 @@
     "normative": "a minted transaction token carries no approval object, no single_use member, no raw approval text or action parameters, no approval-conferred roles or relationships, and no evidence object"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "transaction endpoint redemption (@spec txn-authorization#challenge-redemption) > admits a workflow, pends on poll, then on approval issues a conforming transaction token",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.token.no-refresh-no-derivation",
@@ -2130,8 +2391,21 @@
     "normative": "a transaction token never carries a refresh token, a delegation grant, or token-exchange input, and a resource never accepts it as a general Mission-bound access token beyond the challenged operation"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > refuses a transaction token presented as an ordinary Mission-bound access token (@spec txn-authorization#transaction-token)",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "transaction endpoint redemption (@spec txn-authorization#challenge-redemption) > admits a workflow, pends on poll, then on approval issues a conforming transaction token",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.token.singleton-audience",
@@ -2149,8 +2423,15 @@
     "normative": "the transaction token's aud is always a singleton exactly equal to the verified challenge's iss; it is never a list and never any other value"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "transaction endpoint redemption (@spec txn-authorization#challenge-redemption) > admits a workflow, pends on poll, then on approval issues a conforming transaction token",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.token.identity-projection",
@@ -2168,8 +2449,27 @@
     "normative": "the token's sub is always the verified effective subject (the Mission subject or, under the Origin Principal profile, the origin principal), never the Approver; client_id is the client authenticated at the transaction endpoint, and act is present whenever requester or actor context existed on subject_token or the challenge, since the upstream client and the executing agent may be different parties"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "transaction token identity projection (@spec txn-authorization#transaction-token) > projects the effective subject and authenticated client, and carries act only where actor context existed",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "transaction endpoint redemption (@spec txn-authorization#challenge-redemption) > admits a workflow, pends on poll, then on approval issues a conforming transaction token",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "client identification (@spec txn-authorization#challenge-redemption) > resolves the authenticated client from its own assertion, never from another client's record",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.token.exp-minimum",
@@ -2187,8 +2487,21 @@
     "normative": "a minted transaction token's exp never exceeds the earliest of approval freshness or approved_until, subject_token's own validity, Mission expiry, and the pending workflow's remaining lifetime; it is never bounded by the already-consumed challenge exp"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "two-phase expiry and idempotency (@spec txn-authorization#two-phase-expiry) > bounds the token by the earliest live term, never by the challenge exp",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "two-phase expiry and idempotency (@spec txn-authorization#two-phase-expiry) > still issues when the approval lands after the challenge expired but inside the workflow lifetime",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ]
   },
   {
    "id": "txn-authorization.verification.unknown-typ-rejection",
@@ -2206,8 +2519,21 @@
     "normative": "a challenge or token carrying an unrecognized typ or unrecognized authorization_details semantics is rejected outright rather than parsed on a best-effort basis"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > rejects an ordinary Mission-bound token, and any other typ, outright",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > refuses a transaction token presented as an ordinary Mission-bound access token (@spec txn-authorization#transaction-token)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ]
   }
  ]
 }

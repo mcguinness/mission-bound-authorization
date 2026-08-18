@@ -53,6 +53,13 @@ export interface MediatedToolResult {
   /** @spec I-D.draft-zehavi-oauth-rar-metadata §4 — present on a genuine
    * out_of_authority denial; see pep.ts's InsufficientAuthorization. */
   insufficient_authorization?: InsufficientAuthorization;
+  /**
+   * @spec txn-authorization#resource-challenge — the upstream members, carried
+   * verbatim onto the tool-result surface: `transaction_authorization_required`
+   * plus the signed challenge.
+   */
+  error?: string;
+  transaction_challenge?: string;
 }
 
 /** Map an internal ToolDef to an MCP `Tool` (least-exposure list entry). */
@@ -110,7 +117,7 @@ function createMcpServer(paymentsServer: McpPaymentsServer): Server {
     if (typeof cred !== "string") return { tools: [] };
     let token: TokenFacts;
     try {
-      token = await paymentsServer.validateMissionToken(cred);
+      token = await paymentsServer.validateCredential(cred);
     } catch {
       // An unvalidated caller sees nothing (fail closed, least exposure).
       return { tools: [] };
@@ -124,9 +131,24 @@ function createMcpServer(paymentsServer: McpPaymentsServer): Server {
     let token: TokenFacts;
     try {
       if (typeof cred !== "string") throw new Error("missing mission credential in _meta");
-      token = await paymentsServer.validateMissionToken(cred);
-    } catch {
+      // @spec txn-authorization#transaction-token — ONE credential crosses the
+      // boundary: the ordinary Mission-bound token, or the transaction token
+      // that authorizes the retry of a challenged operation. There is no
+      // separate txn carrier on this channel either.
+      //
+      // @spec txn-authorization#offline-verification step 2 — but a transaction
+      // credential requires proof of possession on the request that presents
+      // it, and this channel has no HTTP request to bind a proof to (the
+      // documented simplification the ordinary class runs under). The
+      // transaction-token path is therefore NOT available here: it is refused
+      // outright, with its own reason, rather than admitted unproven. The
+      // challenged retry goes over the HTTP transport.
+      token = await paymentsServer.validateCredential(cred);
+    } catch (e) {
       // No valid credential -> structured denial, not a thrown transport error.
+      if (String((e as Error)?.message ?? "").includes("txn_pop_required")) {
+        return toCallToolResult({ ok: false, refusal_reason: "txn_pop_required" });
+      }
       return toCallToolResult({ ok: false, denial_reason: "invalid_credential" });
     }
     const verdict = await route(paymentsServer, request.params.name, args, token);

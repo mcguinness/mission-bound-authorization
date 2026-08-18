@@ -8,6 +8,7 @@
  * (so the caller can build resource-side proofs that match cnf.jkt).
  */
 
+import { createHash } from "node:crypto";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, importJWK, SignJWT, type JWK } from "jose";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 
@@ -91,7 +92,7 @@ function jarClosures(cookies: CookieJar): { cookieHeader: () => string; storeCoo
 }
 
 /** private_key_jwt client-assertion signer for the agent confidential client. */
-async function clientAssertionSigner(asUrl: string, agentClientJwk: Record<string, unknown>): Promise<() => Promise<string>> {
+export async function clientAssertionSigner(asUrl: string, agentClientJwk: Record<string, unknown>): Promise<() => Promise<string>> {
   const clientKey = (await importJWK(agentClientJwk as JWK, "ES256")) as CryptoKey;
   return () =>
     new SignJWT({})
@@ -475,10 +476,26 @@ export async function tokenGrantRequest(
  * Build a resource-side DPoP proof with the SAME DPoP key the token is bound to
  * (so the proof's jwk thumbprint matches the token's cnf.jkt). The resource
  * server verifies htu/htm against this proof.
+ *
+ * @spec RFC 9449 §4.2 — pass the credential the proof accompanies and it
+ * carries `ath` as well, naming that exact credential. A Resource Server
+ * REQUIRES it; an Authorization Server endpoint that authenticates the client
+ * separately does not.
  */
-export async function dpopProofFor(dpopKeys: DpopKeys, htu: string, htm: string): Promise<string> {
+export async function dpopProofFor(
+  dpopKeys: DpopKeys,
+  htu: string,
+  htm: string,
+  accessToken?: string,
+): Promise<string> {
   const jwk = await exportJWK(dpopKeys.publicKey);
-  return new SignJWT({ htu, htm })
+  return new SignJWT({
+    htu,
+    htm,
+    ...(accessToken !== undefined
+      ? { ath: createHash("sha256").update(accessToken, "ascii").digest("base64url") }
+      : {}),
+  })
     .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk })
     .setIssuedAt()
     .setJti(crypto.randomUUID())

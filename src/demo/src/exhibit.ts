@@ -16,9 +16,14 @@ import { SAAS_RESOURCE } from "@mission/mcp-saas";
 import type { TokenFacts } from "@mission/mcp-payments";
 import type { Decision, EvaluationRequest } from "@mission/pdp";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
-import { composeStack, type AuthServerExtras, type DemoStack } from "./stack.js";
+import {
+  callWithTransactionCredential,
+  composeStack,
+  type AuthServerExtras,
+  type DemoStack,
+} from "./stack.js";
 import { label as humanName } from "./labels.js";
-import { dpopProofFor, issueMissionToken, tokenGrantRequest } from "./oauth-client.js";
+import { clientAssertionSigner, dpopProofFor, issueMissionToken, tokenGrantRequest } from "./oauth-client.js";
 
 /**
  * The AAM grant-type URNs are NOT re-exported from @mission/authorization-server
@@ -757,7 +762,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   );
   // Validate the REAL dispatched token at the RS (exhibit idiom): the RS-side
   // DPoP proof re-presents the dispatcher key, so proof jkt == token cnf.jkt.
-  const rsProof = await dpopProofFor(dispatcherDpop, CANONICAL_RESOURCE, "POST");
+  const rsProof = await dpopProofFor(dispatcherDpop, CANONICAL_RESOURCE, "POST", dispatchedAccessToken);
   const facts: TokenFacts = await stack.server.validateToken(dispatchedAccessToken, rsProof, CANONICAL_RESOURCE, "POST");
   note(`verified dispatched token at the RS (aud=${CANONICAL_RESOURCE}, DPoP jkt==cnf.jkt, mission claim present).`);
   hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "get_invoice")}`, "in-process MCP · O-33");
@@ -843,7 +848,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
       `${humanRecord.template === undefined ? "absent" : "present"}; subject ${humanRecord.subject.sub} != approver ${humanRecord.approver.sub} ` +
       "(write-bearing missions need a distinct approver, Governance D37).",
   );
-  const humanRsProof = await dpopProofFor(humanIssued.dpopKeys, CANONICAL_RESOURCE, "POST");
+  const humanRsProof = await dpopProofFor(humanIssued.dpopKeys, CANONICAL_RESOURCE, "POST", humanIssued.accessToken);
   const humanFacts: TokenFacts = await stack.server.validateToken(humanIssued.accessToken, humanRsProof, CANONICAL_RESOURCE, "POST");
   const humanOk = humanRecord.approval_basis.type === "direct" && humanRecord.template === undefined;
   outcome({
@@ -1237,7 +1242,7 @@ async function main() {
   );
   hop("Payments RS", "AS", "verify AS-signed token — GET /jwks", "in-process; fetches the AS jwks");
   note(`RS-side DPoP proof: same DPoP key as the token, htu=${CANONICAL_RESOURCE}, htm=POST.`);
-  const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST");
+  const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST", issued.accessToken);
   let facts: TokenFacts = await stack.server.validateToken(issued.accessToken, rsProof, CANONICAL_RESOURCE, "POST");
   // Augment with the client instance id for a richer actor in the envelope.
   facts = { ...facts, clientInstanceId: "inst-ap-agent-01" };
@@ -1314,27 +1319,41 @@ async function main() {
   );
   note("send_remittance_email is WITHIN the mission's authority, but deployment policy requires an action-bound approval, resolved just-in-time over real HTTP.");
 
-  // 7.1 Base token, no txn-token: the RS gates the action and returns an
-  // access_challenge (an rs-txn-signed txn-challenge + the AS endpoint for it).
+  // 7.1 Base token, no transaction token: the RS gates the action and returns
+  // the upstream transaction_authorization_required error plus a signed
+  // transaction_challenge; the endpoint to redeem it at comes from AS metadata.
   hop("Agent", "Payments RS", "tools/call send_remittance_email (base token, no txn-token)", "in-process MCP · O-33");
   block("MCP tools/call — send_remittance_email (base token, no txn-token)", {
     tool: "send_remittance_email",
     arguments: { invoice_id: "inv-1" },
     authorization: "DPoP <real mission-bound access token>",
   });
-  const challengeAttempt = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
+  const challengeAttempt = await stack.server.callTransactionTool(
+    "send_remittance_email",
+    { invoice_id: "inv-1" },
+    facts,
+    undefined,
+    // @spec txn-authorization#resource-challenge — the client signals that it
+    // can redeem a challenge; without the signal the RS returns a plain denial.
+    { acceptTxnChallenge: true },
+  );
   outcome({
     decision: "DENY",
     reason: gloss("reason", challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason ?? ""),
-    observed: `${gloss("tool", "send_remittance_email")}(inv-1) denied ${challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason ?? ""}; the RS returns an access_challenge to present`,
+    observed: `${gloss("tool", "send_remittance_email")}(inv-1) denied ${challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason ?? ""}; the RS returns a transaction_challenge to present`,
     ok: !challengeAttempt.ok && (challengeAttempt.denial_reason ?? challengeAttempt.refusal_reason) === "action_approval_required",
   });
-  const accessChallenge = challengeAttempt.access_challenge;
-  if (!accessChallenge) throw new Error("expected an access_challenge (RS challengeSigner wired)");
-  hop("Payments RS", "Agent", "401-style txn-challenge (RS-signed)", "in-process");
-  note(`RS emitted a txn-challenge to present to ${accessChallenge.txn_endpoint}`);
-  block("access_challenge — protected header", decodeHeader(accessChallenge.challenge));
-  block("access_challenge — decoded txn-challenge", decodeClaims(accessChallenge.challenge));
+  const transactionChallenge = challengeAttempt.transaction_challenge;
+  if (!transactionChallenge) throw new Error("expected a transaction_challenge (RS challengeSigner wired)");
+  // @spec txn-authorization#two-phase-expiry — the client discovers the TAS
+  // through `transaction_authorization_endpoint` in AS metadata, never from the
+  // challenge itself.
+  const asMetadata = (await (await fetch(`${asUrl}/.well-known/openid-configuration`)).json()) as Record<string, string>;
+  const txnEndpoint = asMetadata.transaction_authorization_endpoint as string;
+  hop("Payments RS", "Agent", "transaction_authorization_required + transaction_challenge (RS-signed)", "in-process");
+  note(`RS returned error=${challengeAttempt.error} with a challenge to present to ${txnEndpoint}`);
+  block("transaction_challenge — protected header", decodeHeader(transactionChallenge));
+  block("transaction_challenge — decoded challenge", decodeClaims(transactionChallenge));
 
   // 7.2 Agent POSTs the challenge to the AS transaction endpoint over HTTP ONCE
   // (initiation), authenticating with its base mission token (DPoP). The AS
@@ -1342,26 +1361,43 @@ async function main() {
   // the validated challenge; the client polls WITH that handle from here on.
   // A fresh DPoP proof per call binds htu=/transaction, htm=POST to the base
   // token's cnf.jkt.
-  const postTxn = async (payload: Record<string, unknown>) =>
-    fetch(accessChallenge.txn_endpoint, {
+  // @spec txn-authorization#challenge-redemption — the client authenticates as
+  // itself (private_key_jwt), presents the Mission-bound access token as an RFC
+  // 8693 `subject_token`, and proves possession of the challenge's `cnf` key.
+  const txnClientAssertion = await clientAssertionSigner(asUrl, as.agentClientJwk);
+  const postTxn = async (payload: Record<string, string>) =>
+    fetch(txnEndpoint, {
       method: "POST",
       headers: {
-        authorization: `DPoP ${issued.accessToken}`,
-        dpop: await dpopProofFor(issued.dpopKeys, accessChallenge.txn_endpoint, "POST"),
-        "content-type": "application/json",
+        dpop: await dpopProofFor(issued.dpopKeys, txnEndpoint, "POST"),
+        "content-type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify(payload),
+      body: new URLSearchParams({
+        client_id: "ap-agent",
+        client_assertion: await txnClientAssertion(),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        ...payload,
+      }).toString(),
     });
   hop("Agent", "AS", "POST /transaction (initiation — challenge presented once)", "HTTP");
-  httpReq("POST", accessChallenge.txn_endpoint, {
+  httpReq("POST", txnEndpoint, {
     headers: {
-      authorization: "DPoP <base token>",
-      dpop: "<DPoP proof: htu=/transaction, htm=POST>",
-      "content-type": "application/json",
+      dpop: "<DPoP proof of the challenge cnf key: htu=/transaction, htm=POST>",
+      "content-type": "application/x-www-form-urlencoded",
     },
-    body: { challenge: `${accessChallenge.challenge.slice(0, 40)}... (the txn-challenge above)` },
+    body: {
+      client_id: "ap-agent",
+      client_assertion: "<private_key_jwt>",
+      transaction_challenge: `${transactionChallenge.slice(0, 40)}... (the challenge above)`,
+      subject_token: "<the Mission-bound access token>",
+      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    },
   });
-  const pendingRes = await postTxn({ challenge: accessChallenge.challenge });
+  const pendingRes = await postTxn({
+    transaction_challenge: transactionChallenge,
+    subject_token: issued.accessToken,
+    subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+  });
   const pendingBody = (await pendingRes.json()) as {
     transaction_authorization_id?: string;
     expires_in?: number;
@@ -1392,13 +1428,12 @@ async function main() {
   // mission unchanged (D42), carrying the verified approval + cnf(base jkt),
   // single-use.
   hop("Agent", "AS", "POST /transaction (poll — with transaction_authorization_id)", "HTTP");
-  httpReq("POST", accessChallenge.txn_endpoint, {
+  httpReq("POST", txnEndpoint, {
     headers: {
-      authorization: "DPoP <base token>",
-      dpop: "<DPoP proof: htu=/transaction, htm=POST>",
-      "content-type": "application/json",
+      dpop: "<DPoP proof of the challenge cnf key: htu=/transaction, htm=POST>",
+      "content-type": "application/x-www-form-urlencoded",
     },
-    body: { transaction_authorization_id: txaId },
+    body: { client_id: "ap-agent", client_assertion: "<private_key_jwt>", transaction_authorization_id: txaId },
   });
   const tokenRes = await postTxn({ transaction_authorization_id: txaId });
   // §5.3 poll shape: 200 carries the txn-token; a 400 carries authorization_pending
@@ -1421,31 +1456,50 @@ async function main() {
     );
   }
   const txnClaims = decodeClaims(txnToken);
-  block("txn-token — protected header", decodeHeader(txnToken));
-  block("txn-token — decoded claims", {
+  block("transaction token — protected header", decodeHeader(txnToken));
+  block("transaction token — decoded claims", {
+    jti: txnClaims.jti,
+    aud: txnClaims.aud,
+    sub: txnClaims.sub,
+    client_id: txnClaims.client_id,
     txn: txnClaims.txn,
     mission: txnClaims.mission,
     authorization_details: txnClaims.authorization_details,
-    approval: txnClaims.approval,
+    parameter_digest: txnClaims.parameter_digest,
     cnf: txnClaims.cnf,
-    single_use: txnClaims.single_use,
   });
   note(
-    `mission.id == active mission ${missionId} (unchanged, D42); approval.parameter_digest carries the gated operation; ` +
-      `cnf.jkt ${(txnClaims.cnf as { jkt: string }).jkt === issued.dpopJkt ? "==" : "!="} base token jkt; single_use=${txnClaims.single_use}.`,
+    `aud is a singleton (${String(txnClaims.aud)}), exactly the challenge's iss; sub is the effective subject ` +
+      `${String(txnClaims.sub)}, never the approver; mission.id == active mission ${missionId} (unchanged); ` +
+      `cnf.jkt ${(txnClaims.cnf as { jkt: string }).jkt === issued.dpopJkt ? "==" : "!="} base token jkt. ` +
+      "No approval object and no single_use flag ride here: the token is not a bearer approval.",
   );
 
-  // 7.5 Agent re-calls the RS tool WITH the txn-token (5th arg, no approval
-  // object anywhere). The RS validates it and derives the approval; the
-  // UNCHANGED PDP step 8 permits and the operation commits.
-  hop("Agent", "Payments RS", "tools/call send_remittance_email (re-present txn-token)", "in-process MCP · O-33");
+  // 7.5 Agent re-calls the RS tool WITH the transaction token. The RS verifies
+  // it OFFLINE against the pending operation it retained when it challenged
+  // (typ, issuer, aud, cnf, txn, mission invariants, authorization_details, and
+  // a RECOMPUTED parameter_digest), reads no approval object off the token, and
+  // consumes the txn exactly once before the irreversible effect.
+  hop("Agent", "Payments RS", "tools/call send_remittance_email (re-present txn-token)", "HTTP MCP · DPoP");
   block("MCP tools/call — send_remittance_email (re-present, carrying the txn-token)", {
     tool: "send_remittance_email",
     arguments: { invoice_id: "inv-1" },
-    authorization: "DPoP <real mission-bound access token>",
-    txn_token: truncTok(txnToken),
+    authorization: `DPoP ${truncTok(txnToken)} (the transaction token, presented as the request's ONLY credential)`,
+    dpop: "<DPoP proof of the txn-token's cnf key: htu=/mcp, htm=POST, ath=hash(txn-token)>",
   });
-  const granted = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts, undefined, txnToken);
+  // @spec txn-authorization#transaction-token, #offline-verification step 2 —
+  // the retry presents the transaction token as the sole OAuth credential over
+  // a REAL HTTP request: the request's identity, Mission, client and presenter
+  // key all come from THAT verified token, proof of possession is proven
+  // against the key the challenge committed to, and `ath` names this exact
+  // credential. The in-process channel cannot carry this class at all.
+  const granted = await callWithTransactionCredential(
+    stack.server,
+    txnToken,
+    issued.dpopKeys,
+    "send_remittance_email",
+    { invoice_id: "inv-1" },
+  );
   if (captured) block("PDP decision (permit: token-derived approval matched parameter_digest)", captured.decision);
   outcome({
     decision: granted.ok ? "PERMIT" : "DENY",
@@ -1455,7 +1509,10 @@ async function main() {
       : `${gloss("tool", "send_remittance_email")}(inv-1) denied`,
     ok: granted.ok,
   });
-  note("The approval was carried by the AS-issued txn-token, never as a tool input. The mission was never widened; the gate sat inside the mission's authority.");
+  note(
+    "The approval was carried by the AS-issued txn-token, never as a tool input, and the retry proved possession of the " +
+      "challenge's cnf key over a real HTTP request. The mission was never widened; the gate sat inside the mission's authority.",
+  );
 
   // ---- 8. AROP over DTR: deferred token response on the real /token endpoint --
   step(8, "AROP over DTR: a deferred token response, approved just-in-time (real /token)");

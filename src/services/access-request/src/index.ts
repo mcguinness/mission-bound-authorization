@@ -10,9 +10,24 @@
  */
 
 import { openStore, type Database } from "@mission/store";
+import type { TxnApprovalBinding } from "@mission/core";
 import { createLocalJWKSet, jwtVerify, SignJWT, type CryptoKey, type JWK } from "jose";
 
 export type TaskState = "pending" | "approved" | "denied";
+
+/**
+ * @spec txn-authorization#challenge-redemption step 5 — a second open of one
+ * (resource, txn) correlation identity under a DIFFERENT transaction binding.
+ * Distinct from every ordinary refusal: nothing was adjudicated wrongly, two
+ * different transactions claimed one identity, and the service refuses both
+ * rather than letting the second inherit the first's approval.
+ */
+export class TxnBindingConflictError extends Error {
+  readonly code = "txn_binding_conflict";
+  constructor(readonly taskId: string) {
+    super(`task ${taskId} was already opened under a different transaction binding`);
+  }
+}
 
 export interface AccessRequestSubmission {
   /** PDP-signed denial binding (the denied evaluation), verified by the ARS. */
@@ -44,9 +59,20 @@ CREATE TABLE tasks (
   parameter_digest TEXT NOT NULL,
   subject TEXT NOT NULL,
   approval_json TEXT,
+  binding_digest TEXT,
   created_at INTEGER NOT NULL
 ) STRICT;
 `;
+
+/**
+ * @spec txn-authorization#offline-verification — the ARS correlation identity
+ * for one challenged operation. `txn` is unique within a protected resource,
+ * so the resource is part of the identity; it is base64url-encoded so a
+ * resource URI cannot collide with, or run into, the task id's own separators.
+ */
+export function txnTaskId(resource: string, txn: string): string {
+  return `arq_txn_${Buffer.from(resource, "utf8").toString("base64url")}_${txn}`;
+}
 
 export class AccessRequestService {
   readonly db: Database;
@@ -89,7 +115,7 @@ export class AccessRequestService {
     const taskId = `arq_${binding.decision_id}_${this.taskСounterSeed}`;
     this.db
       .prepare(
-        "INSERT INTO tasks (id, state, mission_id, action, parameter_digest, subject, approval_json, created_at) VALUES (?, 'pending', ?, ?, ?, ?, NULL, ?)",
+        "INSERT INTO tasks (id, state, mission_id, action, parameter_digest, subject, approval_json, binding_digest, created_at) VALUES (?, 'pending', ?, ?, ?, ?, NULL, NULL, ?)",
       )
       .run(taskId, binding.mission_id, binding.action, binding.parameter_digest, sub.requested.subject, this.now().getTime());
     return { taskId, state: "pending" };
@@ -102,21 +128,54 @@ export class AccessRequestService {
    * (contrast `submit`, which verifies one for a separate ARS). D37: the AS
    * owns the txn pending id; the ARS owns the approval. Reuses the same tasks
    * table + `adjudicate`/`getTask` unchanged.
+   *
+   * IDEMPOTENT: opening the same (resource, txn) twice resolves to the ONE
+   * task, whatever its current state. `txn` is unique within the Challenge-
+   * Issuing Resource, never globally, so the correlation identity carries the
+   * resource too (@spec txn-authorization#offline-verification).
    */
   openForTxn(input: {
     txn: string;
+    resource: string;
     missionId: string;
     action: string;
     parameter_digest: string;
     subject: string;
+    /**
+     * @spec txn-authorization#challenge-redemption step 5 — the COMPLETE
+     * transaction this approval is opened against, and its digest. The
+     * approval is only ever good for THIS transaction.
+     */
+    binding: TxnApprovalBinding;
+    binding_digest: string;
   }): { taskId: string; state: TaskState } {
-    const taskId = `arq_txn_${input.txn}`;
+    const taskId = txnTaskId(input.resource, input.txn);
     this.db
       .prepare(
-        "INSERT INTO tasks (id, state, mission_id, action, parameter_digest, subject, approval_json, created_at) VALUES (?, 'pending', ?, ?, ?, ?, NULL, ?)",
+        "INSERT INTO tasks (id, state, mission_id, action, parameter_digest, subject, approval_json, binding_digest, created_at) VALUES (?, 'pending', ?, ?, ?, ?, NULL, ?, ?) ON CONFLICT(id) DO NOTHING",
       )
-      .run(taskId, input.missionId, input.action, input.parameter_digest, input.subject, this.now().getTime());
-    return { taskId, state: "pending" };
+      .run(
+        taskId,
+        input.missionId,
+        input.action,
+        input.parameter_digest,
+        input.subject,
+        input.binding_digest,
+        this.now().getTime(),
+      );
+    const row = this.db.prepare("SELECT state, binding_digest FROM tasks WHERE id = ?").get(taskId) as
+      | { state: TaskState; binding_digest: string | null }
+      | undefined;
+    // (resource, txn) is the correlation identity, not the transaction. A
+    // second open under the SAME identity but a DIFFERENT binding is a
+    // different transaction wearing the first one's name: resolving it to the
+    // existing approval would hand it an approval granted for something else,
+    // so it FAILS CLOSED rather than resolving. An identical binding is the
+    // idempotent retry this endpoint depends on and returns the one task.
+    if (row && row.binding_digest !== null && row.binding_digest !== input.binding_digest) {
+      throw new TxnBindingConflictError(taskId);
+    }
+    return { taskId, state: row?.state ?? "pending" };
   }
 
   /** The approver's adjudication queue (approver app consumes this). */
@@ -158,14 +217,28 @@ export class AccessRequestService {
     return approval;
   }
 
-  getTask(taskId: string): { state: TaskState; approval?: ApprovalObject & { state?: string } } | undefined {
-    const row = this.db.prepare("SELECT state, approval_json FROM tasks WHERE id = ?").get(taskId) as
-      | { state: TaskState; approval_json: string | null }
+  /**
+   * The task, and on an approved one the approval WITH the binding digest it
+   * was opened under. The relying party recomputes that digest from its own
+   * pinned state: an approval whose binding it cannot reproduce is refused.
+   */
+  getTask(
+    taskId: string,
+  ): { state: TaskState; approval?: ApprovalObject & { state?: string; binding_digest?: string } } | undefined {
+    const row = this.db.prepare("SELECT state, approval_json, binding_digest FROM tasks WHERE id = ?").get(taskId) as
+      | { state: TaskState; approval_json: string | null; binding_digest: string | null }
       | undefined;
     if (!row) return undefined;
     return {
       state: row.state,
-      ...(row.approval_json ? { approval: JSON.parse(row.approval_json) } : {}),
+      ...(row.approval_json
+        ? {
+            approval: {
+              ...(JSON.parse(row.approval_json) as ApprovalObject & { state?: string }),
+              ...(row.binding_digest !== null ? { binding_digest: row.binding_digest } : {}),
+            },
+          }
+        : {}),
     };
   }
 

@@ -1,62 +1,83 @@
 /**
- * @spec AROP Transaction Challenge binding (I-D.rosomakho-oauth-txn-challenge),
- * openid/authzen#531 -- resource-server (PEP) side.
+ * @spec txn-authorization#resource-challenge — the Challenge-Issuing Resource's
+ * signing side.
  *
- * These primitives are a deliberate COPY of the leaf helpers in
- * `@mission/authorization-server` (src/kernel/txn-challenge.ts). The resource
- * server must not depend on the authorization-server package: that would drag
- * the whole AS kernel (incl. oidc-provider) into the RS closure and close a
- * workspace dependency loop (authorization-server --(dev)--> access-request -->
- * mcp-payments). Both sides depend only on `jose`, so the format-coupling cost
- * of the copy is small; keep the two in sync if the wire format changes.
+ * The wire vocabulary (typ constants, claim interfaces, the value-equality
+ * helpers) lives in `@mission/core`; only the signing, which needs this
+ * resource's own key, lives here. `mission`, `parameter_digest` and `cnf` are
+ * REQUIRED and are derived by the resource from the request and the VERIFIED
+ * Mission-bound access token: a client-supplied replacement for any of them is
+ * never accepted, which is why this function takes them as typed inputs rather
+ * than as an open claim bag.
  */
 
+import {
+  TXN_CHALLENGE_TYP,
+  type JsonValue,
+  type TxnChallengeClaims,
+  type TxnMissionClaim,
+} from "@mission/core";
 import { SignJWT, type CryptoKey } from "jose";
 
-export const TXN_CHALLENGE_TYP = "txn-authz-challenge+jwt";
-export const TXN_TOKEN_TYP = "txn-token+jwt";
+export { TXN_CHALLENGE_TYP, type TxnChallengeClaims };
 
-export interface TxnChallengeClaims {
+/** The resource-derived inputs to one challenge. */
+export interface SignChallengeInput {
   txn: string;
-  authorization_details: unknown[];
-  iss: string; // the resource
-  aud: string; // the AS
+  /** Exactly one operation-scoped entry. */
+  authorization_details: JsonValue[];
+  /** This resource (the challenge `iss`). */
+  iss: string;
+  /** The Transaction Authorization Server (the challenge `aud`). */
+  aud: string;
   reason: string;
-  /** Digest of the effective operation parameters the RS gated on. */
-  parameter_digest?: string;
+  /** Copied unchanged from the verified Mission-bound access token. */
+  mission: TxnMissionClaim;
+  /** The runtime profile's digest over the effective operation parameters. */
+  parameter_digest: string;
+  /** The presenter key the resulting transaction token must be bound to. */
+  cnf: { jkt: string };
+  /** Seconds the challenge admits a workflow; it bounds admission only. */
+  lifetimeSeconds?: number;
+  act?: JsonValue;
+  reason_uri?: string;
+}
+
+/** The signed challenge plus the identifiers the resource retains for it. */
+export interface SignedChallenge {
+  challenge: string;
+  txn: string;
+  jti: string;
 }
 
 /**
- * RS side: sign a challenge with the rs-txn key (txn_challenge_jwks_uri). The
- * transaction id travels as a `txn` claim in the signed body (draft §4.2.1);
- * a REQUIRED `jti` (§4.2.2) makes each challenge uniquely identifiable.
+ * Sign a transaction authorization challenge with this resource's
+ * txn-challenge key (the key published at its `txn_challenge_jwks_uri`).
  */
-export async function signChallenge(claims: TxnChallengeClaims, key: CryptoKey, kid: string): Promise<string> {
+export async function signChallenge(
+  input: SignChallengeInput,
+  key: CryptoKey,
+  kid: string,
+  alg = "ES256",
+): Promise<SignedChallenge> {
+  const jti = crypto.randomUUID();
   const body: Record<string, unknown> = {
-    txn: claims.txn,
-    authorization_details: claims.authorization_details,
-    reason: claims.reason,
+    txn: input.txn,
+    authorization_details: input.authorization_details,
+    reason: input.reason,
+    mission: input.mission,
+    parameter_digest: input.parameter_digest,
+    cnf: input.cnf,
+    ...(input.act !== undefined ? { act: input.act } : {}),
+    ...(input.reason_uri !== undefined ? { reason_uri: input.reason_uri } : {}),
   };
-  if (claims.parameter_digest !== undefined) body.parameter_digest = claims.parameter_digest;
-  return new SignJWT(body)
-    .setProtectedHeader({ alg: "ES256", kid, typ: TXN_CHALLENGE_TYP })
-    .setIssuer(claims.iss)
-    .setAudience(claims.aud)
-    .setJti(crypto.randomUUID())
+  const challenge = await new SignJWT(body)
+    .setProtectedHeader({ alg, kid, typ: TXN_CHALLENGE_TYP })
+    .setIssuer(input.iss)
+    .setAudience(input.aud)
+    .setJti(jti)
     .setIssuedAt()
-    .setExpirationTime("5m")
+    .setExpirationTime(`${input.lifetimeSeconds ?? 300}s`)
     .sign(key);
-}
-
-/**
- * RS side: single-use re-presentation cache. Returns true the first time a
- * txn-bound token is presented for its txn, false on replay.
- */
-export class TxnReplayCache {
-  private readonly used = new Set<string>();
-  accept(txn: string): boolean {
-    if (this.used.has(txn)) return false;
-    this.used.add(txn);
-    return true;
-  }
+  return { challenge, txn: input.txn, jti };
 }

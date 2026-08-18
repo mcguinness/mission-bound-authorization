@@ -36,9 +36,12 @@ import {
   type ListToolsResult,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
+import { ACCEPT_TXN_CHALLENGE_HEADER, acceptsTxnChallenge } from "@mission/core";
 import { exportJWK, SignJWT } from "jose";
+import { accessTokenHash } from "./dpop.js";
 import type { MediatedToolResult } from "./mcp-transport.js";
-import { TOOL_ACTIONS, type TokenFacts } from "./pep.js";
+import { TOOL_ACTIONS, type RequestSignals, type TokenFacts } from "./pep.js";
+import { serveResourceMetadata } from "./resource-metadata.js";
 import type { McpPaymentsServer, ToolDef } from "./server.js";
 
 /** The ES256 DPoP keypair the harness holds for the life of a mission credential. */
@@ -77,10 +80,24 @@ export function canonicalHtu(input: string | URL): string {
  * A resource-side DPoP proof (`dpop+jwt`) bound to `dpopKeys`, carrying the
  * canonical `htu`/`htm`, a fresh `jti`, and `iat`. The header `jwk` is the public
  * key, so the RS can compute its thumbprint and match it to the token's `cnf.jkt`.
+ *
+ * @spec RFC 9449 §4.2 — pass the credential this proof accompanies and the
+ * proof carries `ath` too, naming that exact credential. Every request to a
+ * Resource Server needs it: without `ath` a proof binds only to a KEY, so two
+ * credentials bound to the same key are interchangeable on the wire.
  */
-export async function dpopProofFor(dpopKeys: DpopKeys, htu: string, htm: string): Promise<string> {
+export async function dpopProofFor(
+  dpopKeys: DpopKeys,
+  htu: string,
+  htm: string,
+  accessToken?: string,
+): Promise<string> {
   const jwk = await exportJWK(dpopKeys.publicKey);
-  return new SignJWT({ htu, htm })
+  return new SignJWT({
+    htu,
+    htm,
+    ...(accessToken !== undefined ? { ath: accessTokenHash(accessToken) } : {}),
+  })
     .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk })
     .setIssuedAt()
     .setJti(randomUUID())
@@ -114,10 +131,11 @@ async function route(
   name: string,
   args: Record<string, unknown>,
   token: TokenFacts,
+  signals?: RequestSignals,
 ): Promise<MediatedToolResult> {
   const mapping = TOOL_ACTIONS[name];
   if (mapping?.actionClass && paymentsServer.hasTransactionTier()) {
-    return paymentsServer.callTransactionTool(name, args, token);
+    return paymentsServer.callTransactionTool(name, args, token, undefined, signals);
   }
   if (name === "schedule_payment" || (mapping?.actionClass && !paymentsServer.hasTransactionTier())) {
     return paymentsServer.callWriteTool(name, args, token);
@@ -146,9 +164,10 @@ function createHttpMcpServer(paymentsServer: McpPaymentsServer): Server {
 
   server.setRequestHandler(CallToolRequestSchema, async (request, extra): Promise<CallToolResult> => {
     const token = extra.authInfo?.extra?.tokenFacts as TokenFacts | undefined;
+    const signals = extra.authInfo?.extra?.signals as RequestSignals | undefined;
     const args = (request.params.arguments ?? {}) as Record<string, unknown>;
     if (!token) return toCallToolResult({ ok: false, denial_reason: "invalid_credential" });
-    const verdict = await route(paymentsServer, request.params.name, args, token);
+    const verdict = await route(paymentsServer, request.params.name, args, token, signals);
     return toCallToolResult(verdict);
   });
 
@@ -190,13 +209,27 @@ async function authenticate(
 
   let facts: TokenFacts;
   try {
-    facts = await paymentsServer.validateToken(accessToken, proof, htu, htm);
+    // @spec txn-authorization#transaction-token — ONE credential in the
+    // Authorization header: an ordinary Mission-bound access token, or the
+    // transaction token that authorizes the retry of a challenged operation.
+    // Nothing else on this request carries a transaction token.
+    facts = await paymentsServer.validateCredential(accessToken, { proof, htu, htm });
   } catch {
     return unauthorized(res, "DPoP proof-of-possession failed");
   }
 
+  // @spec txn-authorization#resource-challenge — the client's
+  // Accept-Txn-Challenge signal gates the challenge; it travels as an ordinary
+  // request header (an RFC 8941 Boolean, so `?1` and nothing else is
+  // acceptance) and is carried to the PEP alongside the validated facts.
+  const acceptTxnChallenge = acceptsTxnChallenge(req.headers[ACCEPT_TXN_CHALLENGE_HEADER]);
   // The SDK's AuthInfo shape; the MCP handlers read facts from extra.tokenFacts.
-  req.auth = { token: accessToken, clientId: facts.clientId, scopes: [], extra: { tokenFacts: facts } };
+  req.auth = {
+    token: accessToken,
+    clientId: facts.clientId,
+    scopes: [],
+    extra: { tokenFacts: facts, signals: { acceptTxnChallenge } },
+  };
   await transport.handleRequest(req, res);
 }
 
@@ -221,6 +254,10 @@ export async function createHttpMcpChannel(
   await mcpServer.connect(transport as unknown as Transport);
 
   const httpServer: HttpServer = createServer((req, res) => {
+    // @spec txn-authorization#two-phase-expiry — the unauthenticated discovery
+    // routes (RFC 9728 metadata + txn_challenge_jwks_uri) are served in front of
+    // the credential gate: they publish public keys and metadata.
+    if (serveResourceMetadata(paymentsServer, req, res)) return;
     authenticate(req as AuthedRequest, res, paymentsServer, transport).catch(() => {
       if (!res.headersSent) {
         res.writeHead(500, { "content-type": "application/json" });
@@ -253,15 +290,24 @@ export async function createHttpMcpChannel(
 }
 
 /** A custom fetch that DPoP-binds every request: fresh proof (canonical htu +
- * method) + `Authorization: DPoP <token>` + `DPoP: <proof>`, merged over any
- * headers the SDK set (content-type, accept, mcp-session-id, ...). */
-export function dpopFetch(missionToken: string, dpopKeys: DpopKeys): FetchLike {
+ * method) + `Authorization: DPoP <credential>` + `DPoP: <proof>`, merged over
+ * any headers the SDK set (content-type, accept, mcp-session-id, ...). The
+ * credential is the request's ONE OAuth credential: an ordinary Mission-bound
+ * access token, or the transaction token that authorizes the retry of a
+ * challenged operation. `extraHeaders` carries per-client request signals such
+ * as `Accept-Txn-Challenge`. */
+export function dpopFetch(
+  credential: string,
+  dpopKeys: DpopKeys,
+  extraHeaders: Record<string, string> = {},
+): FetchLike {
   return async (input, init) => {
     const htu = canonicalHtu(input);
     const htm = init?.method ?? "GET";
-    const proof = await dpopProofFor(dpopKeys, htu, htm);
+    const proof = await dpopProofFor(dpopKeys, htu, htm, credential);
     const headers = new Headers(init?.headers);
-    headers.set("authorization", `DPoP ${missionToken}`);
+    for (const [name, value] of Object.entries(extraHeaders)) headers.set(name, value);
+    headers.set("authorization", `DPoP ${credential}`);
     headers.set("dpop", proof);
     return fetch(input, { ...init, headers });
   };
@@ -275,11 +321,12 @@ export function dpopFetch(missionToken: string, dpopKeys: DpopKeys): FetchLike {
  */
 export async function createHttpMediatedClient(
   url: string,
-  missionToken: string,
+  credential: string,
   dpopKeys: DpopKeys,
+  extraHeaders: Record<string, string> = {},
 ): Promise<{ client: HttpMediatedClient; close: () => Promise<void> }> {
   const transport = new StreamableHTTPClientTransport(new URL(url), {
-    fetch: dpopFetch(missionToken, dpopKeys),
+    fetch: dpopFetch(credential, dpopKeys, extraHeaders),
   });
   const mcp = new Client({ name: "mission-harness-http", version: "0.0.1" }, { capabilities: {} });
   await mcp.connect(transport as unknown as Transport);

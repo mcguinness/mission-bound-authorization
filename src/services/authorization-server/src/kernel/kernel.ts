@@ -986,7 +986,8 @@ export class MissionKernel {
       id: record.id,
       issuer: record.issuer,
       authority_hash: record.authority_hash,
-      expires_at: Math.floor(Date.parse(record.expires_at) / 1000),
+      // @spec mission#the-mission-claim — the RFC 3339 date-time, verbatim.
+      expires_at: record.expires_at,
       // @spec mission#approval-basis: the read-only wire signal. MUST NOT be
       // relied on to grant authority.
       approval_basis: { type: record.approval_basis.type },

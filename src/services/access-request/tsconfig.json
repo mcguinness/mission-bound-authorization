@@ -3,6 +3,7 @@
   "compilerOptions": { "rootDir": "src", "outDir": "dist" },
   "include": ["src"],
   "references": [
+    { "path": "../../packages/mission-core" },
     { "path": "../../packages/store" },
     { "path": "../../packages/telemetry" },
     { "path": "../mcp-payments" },

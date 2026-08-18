@@ -28,7 +28,9 @@ export {
 export {
   Pep,
   type PepDeps,
+  type RequestSignals,
   type TokenFacts,
+  type TxnCredential,
   type EnforceResult,
   type ActionApprovalInput,
   buildInsufficientAuthorization,
@@ -37,7 +39,14 @@ export {
   TOOL_BASE,
   sourceDigestOf,
 } from "./pep.js";
-export { McpPaymentsServer, TOOLS, type ToolDef, type McpServerDeps } from "./server.js";
+export {
+  McpPaymentsServer,
+  TOOLS,
+  type ToolDef,
+  type McpServerDeps,
+  type TransactionToolResult,
+  type VerifiedTxnCredential,
+} from "./server.js";
 export {
   createMcpChannel,
   createMediatedClient,
@@ -59,4 +68,26 @@ export { Connectors, type WireCommit, type EmailCommit, type CommitResult } from
 export { TransactionEngine, operationKey, type OpState } from "./transaction.js";
 export { reconcile, type ReconciliationReport } from "./reconcile.js";
 export type { ExecutionEvidence } from "./evidence.js";
-export { signChallenge, TxnReplayCache, TXN_CHALLENGE_TYP, TXN_TOKEN_TYP, type TxnChallengeClaims } from "./txn-challenge.js";
+export {
+  signChallenge,
+  type SignChallengeInput,
+  type SignedChallenge,
+  TXN_CHALLENGE_TYP,
+  type TxnChallengeClaims,
+} from "./txn-challenge.js";
+export {
+  openTxnPendingStore,
+  openTxnStores,
+  type PendingOperation,
+  type TxnConsumeOutcome,
+  type TxnConsumptionRecord,
+  type TxnConsumptionState,
+  type TxnConsumptionStore,
+  type TxnPendingStore,
+} from "./txn-store.js";
+export {
+  PROTECTED_RESOURCE_METADATA_PATH,
+  type ResourceMetadataServer,
+  serveResourceMetadata,
+  startResourceMetadataServer,
+} from "./resource-metadata.js";

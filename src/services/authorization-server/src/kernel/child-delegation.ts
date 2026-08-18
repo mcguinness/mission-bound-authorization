@@ -155,6 +155,28 @@ function childrenOf(entry: AuthorityEntry): ChildFanoutControls | undefined {
 }
 
 /**
+ * @spec txn-authorization#applicability — carry `requires_action_approval:
+ * true` down to every child entry an ancestor entry for the same resource set
+ * it on. Run BEFORE the strict-subset proof, so a delegated leaf that simply
+ * omits the member is NORMALIZED (and therefore still challenged and enforced
+ * at the resource) rather than refused: the constraint is monotonic, `false` is
+ * equivalent to omission, and a child can only ever add it.
+ */
+function inheritActionApprovalRequirement(
+  childAuthority: AuthorityEntry[],
+  parentEffective: readonly AuthorityEntry[],
+): AuthorityEntry[] {
+  return childAuthority.map((entry) => {
+    if (entry.constraints?.requires_action_approval === true) return entry;
+    const required = parentEffective.some(
+      (p) => p.resource === entry.resource && p.constraints?.requires_action_approval === true,
+    );
+    if (!required) return entry;
+    return { ...entry, constraints: { ...entry.constraints, requires_action_approval: true } };
+  });
+}
+
+/**
  * @spec child-delegation#fanout-accounting — the justifying parent entry for a
  * child entry: the index of the FIRST parent entry (Authority Set order) the
  * child entry is a subset of. -1 only if none (never for a proven-subset child).
@@ -260,7 +282,10 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // constraint the parent narrowed (max_amount / vendors) is refused, so a child
   // MUST restate constraints at or below the parent's.
   const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
-  const childAuthority = kernel.derive(input.intent, proposal);
+  const childAuthority = inheritActionApprovalRequirement(
+    kernel.derive(input.intent, proposal),
+    kernel.effectiveAuthoritySet(parent),
+  );
 
   // The prospective child identity, computed BEFORE the fan-out gates so a deny
   // Child Evidence record carries a real `child` member (REQUIRED unconditionally,

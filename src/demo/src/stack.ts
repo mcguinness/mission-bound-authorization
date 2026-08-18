@@ -5,27 +5,37 @@
  * surfaces exercise the identical enforcement path.
  */
 
-import { exportJWK, generateKeyPair } from "jose";
+import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
 import {
   type AuthorityEntry,
   buildAuthorizationServer,
+  type ChallengeIssuers,
   CatalogProvider,
   type DeferralStore,
   issueCrossDomainGrant,
   type IssuerEvidenceStore,
   MissionKernel,
+  missionResourceAccessProfile,
+  OperationProfileRegistry,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, type SeededTrustedSource, TOPOLOGY } from "@mission/demo-data";
-import { Fga, type MissionView } from "@mission/pdp";
+import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
+import { Fga, type MissionView, relationForAction } from "@mission/pdp";
 import {
+  CANONICAL_RESOURCE,
   Connectors,
+  createHttpMcpChannel,
+  createHttpMediatedClient,
+  type DpopKeys,
   EvidenceStore,
   McpPaymentsServer,
+  type MediatedToolResult,
   PaymentsStore,
   Pep,
   type PepDeps,
+  type ResourceMetadataServer,
   sourceDigestOf,
+  startResourceMetadataServer,
 } from "@mission/mcp-payments";
 import { ResourceAuthorizationServer } from "@mission/ras";
 import { SaasMcpServer } from "@mission/mcp-saas";
@@ -137,9 +147,17 @@ export async function composeStack(opts: {
   // real /transaction endpoint exists): the RS-side challenge signer (rs-txn),
   // and the AS txn public JWKS + issuer the RS validates a presented txn-token
   // against.
-  let challengeSigner: { sign: import("jose").CryptoKey; kid: string; txnEndpoint: string; asIssuer: string } | undefined;
+  let challengeSigner: PepDeps["challengeSigner"];
   let txnTokenJwks: { keys: Record<string, unknown>[] } | undefined;
   let rsAsIssuer: string | undefined;
+  // @spec txn-authorization#two-phase-expiry — the resource's PUBLISHED
+  // txn-challenge key material: served over real HTTP at the resource's
+  // `txn_challenge_jwks_uri`, which is where (and only where) the TAS resolves
+  // this issuer's keys from.
+  let txnChallengePublication: NonNullable<
+    ConstructorParameters<typeof McpPaymentsServer>[0]["txnChallenge"]
+  > | undefined;
+  let metadataServer: ResourceMetadataServer | undefined;
 
   // Kernel + token-issuer + the RS's token-verification JWKS differ by mode:
   // with the auth server, the real provider owns the kernel and signs tokens;
@@ -152,6 +170,9 @@ export async function composeStack(opts: {
   // provider retains ingestion + Containment Evidence there). Exposed so the
   // Activity Log join can read it (BuiltAs.issuerEvidence).
   let issuerEvidenceStore: IssuerEvidenceStore | undefined;
+  // Resolved after the RS is constructed; the discovery listener reads it
+  // lazily because the resource's own metadata names that listener's origin.
+  let paymentsServerRef: McpPaymentsServer | undefined;
 
   if (opts.withAuthServer) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
@@ -162,11 +183,80 @@ export async function composeStack(opts: {
     const rsTxnKey = TOPOLOGY.keys.rsTxn;
     const rsTxnKeys = await generateKeyPair(rsTxnKey.alg, { extractable: true });
     const rsTxnPub = { ...(await exportJWK(rsTxnKeys.publicKey)), kid: rsTxnKey.kid, alg: rsTxnKey.alg };
+    // @spec txn-authorization#two-phase-expiry — the resource publishes its
+    // challenge-signing keys at `txn_challenge_jwks_uri` and the TAS resolves
+    // them THERE over a real fetch. The listener comes up first so its origin
+    // can be baked into the URI the resource publishes and the AS resolves.
+    const txnTopo = TOPOLOGY.txnChallenge.payments;
+    metadataServer = await startResourceMetadataServer(() => paymentsServerRef);
+    txnChallengePublication = {
+      jwksUri: `${metadataServer.origin}${txnTopo.jwksPath}`,
+      jwksPath: txnTopo.jwksPath,
+      signingAlgValuesSupported: txnTopo.signingAlgValuesSupported,
+      jwks: { keys: [rsTxnPub as never] },
+    };
+    const challengeIssuers: ChallengeIssuers = new Map([
+      [
+        CANONICAL_RESOURCE,
+        {
+          jwks: createRemoteJWKSet(new URL(txnChallengePublication.jwksUri)),
+          algs: txnTopo.signingAlgValuesSupported,
+        },
+      ],
+    ]);
     const as = await buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
-      resourceTxnJwks: { keys: [rsTxnPub as never] },
-      ars,
+      transactionAuthorization: {
+        challengeIssuers,
+        ars,
+        // @spec txn-authorization#two-phase-expiry — the pending workflow's own
+        // lifetime and the deployment maximum for an issued transaction token
+        // are INDEPENDENT of the challenge's admission window.
+        workflowLifetimeSeconds: txnTopo.workflowLifetimeSeconds,
+        maxTokenLifetimeSeconds: txnTopo.maxTokenLifetimeSeconds,
+        maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
+        // @spec txn-authorization#resource-challenge — the Operation Profiles
+        // this deployment recognizes. The payments resource challenges with the
+        // family's own `mission_resource_access` entry, so that profile governs
+        // its operations; an entry naming any other type is refused at
+        // admission rather than read structurally.
+        operationProfiles: new OperationProfileRegistry().register(
+          CANONICAL_RESOURCE,
+          missionResourceAccessProfile(),
+        ),
+        // @spec txn-authorization#challenge-redemption step 7 — the deployment's
+        // entitlement and resource-policy decision, run FRESH at completion
+        // against LIVE state. A completed approval is context here, never a
+        // bypass: each of these denies on its own, after an approval, whenever
+        // the input no longer holds -- the Mission is no longer active, the
+        // containment overlay has narrowed the entry away, the deployment does
+        // not recognize the action, the entry has no vendor scope left, or the
+        // local subject is no longer an entitled account.
+        freshDecision: async (input) => {
+          const view = viewFor(input.missionId);
+          if (!view || view.state !== "active") return { decision: "deny", reason: "mission_inactive" };
+          const entry = view.authority_set.find(
+            (e) => e.resource === input.resource && e.actions.includes(input.action),
+          );
+          if (!entry) return { decision: "deny", reason: "out_of_authority" };
+          const contained = view.containment?.contained.some(
+            (c) => c.resource === input.resource && (c.actions === undefined || c.actions.includes(input.action)),
+          );
+          if (contained) return { decision: "deny", reason: "authority_contained" };
+          if (!relationForAction(input.action)) return { decision: "deny", reason: "unknown_action" };
+          if (!entry.constraints?.vendors?.length) return { decision: "deny", reason: "no_vendor_scope" };
+          // Principal entitlement, from the deployment's own identity config:
+          // the DESTINATION-LOCAL subject must still be an account this estate
+          // carries. Where the Origin Principal profile applies the decision
+          // also receives `originPrincipal`, issuer-qualified and separate; a
+          // local account list is never matched against a foreign namespace.
+          if (!USERS.some((u) => u.sub === input.subject)) {
+            return { decision: "deny", reason: "entitlement_denied" };
+          }
+          return { decision: "permit" };
+        },
+      },
     });
     const asServer = as.provider.listen(asPort);
     kernel = as.kernel;
@@ -175,7 +265,13 @@ export async function composeStack(opts: {
     // The RS verifies real tokens against the AS's published public JWKS (the
     // as-txn public key is published there too; createLocalJWKSet resolves by kid).
     serverJwks = (await (await fetch(`${asUrl}/jwks`)).json()) as { keys: Record<string, unknown>[] };
-    challengeSigner = { sign: rsTxnKeys.privateKey, kid: rsTxnKey.kid, txnEndpoint: `${asUrl}/transaction`, asIssuer: asUrl };
+    challengeSigner = {
+      sign: rsTxnKeys.privateKey,
+      kid: rsTxnKey.kid,
+      alg: rsTxnKey.alg,
+      asIssuer: asUrl,
+      lifetimeSeconds: txnTopo.challengeLifetimeSeconds,
+    };
     txnTokenJwks = serverJwks;
     rsAsIssuer = asUrl;
 
@@ -230,7 +326,10 @@ export async function composeStack(opts: {
           cnfJkt,
           resourceToAs,
         }),
-      closeAuthServer: () => asServer.close(),
+      closeAuthServer: () => {
+        asServer.close();
+        void metadataServer?.close();
+      },
     };
   } else {
     const asKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });
@@ -319,7 +418,9 @@ export async function composeStack(opts: {
     // JWKS (published on /jwks under the as-txn kid) and issuer.
     ...(txnTokenJwks ? { txnTokenJwks } : {}),
     ...(rsAsIssuer ? { asIssuer: rsAsIssuer } : {}),
+    ...(txnChallengePublication ? { txnChallenge: txnChallengePublication } : {}),
   });
+  paymentsServerRef = server;
 
   // Transparency + producers.
   const transparencyKey = TOPOLOGY.keys.transparency;
@@ -410,4 +511,31 @@ export function approveDemoMission(stack: DemoStack): { id: string } {
     clientId: "ap-agent",
     approvalEventId: `apev-demo-${stack.kernel.allMissions().length + 1}`,
   });
+}
+
+/**
+ * @spec txn-authorization#offline-verification step 2 — present a transaction
+ * credential the only way it can be presented: over a REAL HTTP MCP request,
+ * DPoP-bound to the key the challenge committed to and naming THIS credential
+ * (`ath`). The in-process channel has no request to bind a proof to, so it
+ * cannot carry this class at all; the challenged retry goes over HTTP.
+ */
+export async function callWithTransactionCredential(
+  server: McpPaymentsServer,
+  credential: string,
+  dpopKeys: DpopKeys,
+  tool: string,
+  args: Record<string, unknown>,
+): Promise<MediatedToolResult> {
+  const channel = await createHttpMcpChannel(server);
+  try {
+    const { client, close } = await createHttpMediatedClient(channel.url, credential, dpopKeys);
+    try {
+      return await client.callTool(tool, args);
+    } finally {
+      await close();
+    }
+  } finally {
+    await channel.close();
+  }
 }

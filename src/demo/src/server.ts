@@ -16,12 +16,14 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono, type Context } from "hono";
+import { txnTaskId } from "@mission/access-request";
 import type { TokenFacts } from "@mission/mcp-payments";
 import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { shapeIntent } from "@mission/agent";
-import { composeStack } from "./stack.js";
+import { callWithTransactionCredential, composeStack } from "./stack.js";
 import { ACTION_LABELS, REASON_LABELS, TOOL_LABELS } from "./labels.js";
 import {
+  clientAssertionSigner,
   completeMissionApproval,
   denyMissionApproval,
   dpopProofFor,
@@ -40,6 +42,12 @@ const TX_TOOLS = new Set(["execute_wire_transfer", "send_remittance_email"]);
  */
 const RUN_INVOICES = ["inv-1", "inv-2", "inv-3"];
 
+/**
+ * @spec txn-authorization#resource-challenge — this console redeems challenges,
+ * so it signals `Accept-Txn-Challenge` on every transaction-tier call.
+ */
+const ACCEPT_CHALLENGE = { acceptTxnChallenge: true } as const;
+
 /** A tool-call result, loosely typed for the display-only step detail below. */
 interface ToolResult {
   ok: boolean;
@@ -47,7 +55,9 @@ interface ToolResult {
   denial_reason?: string | undefined;
   refusal_reason?: string | undefined;
   deduped?: boolean | undefined;
-  access_challenge?: { challenge: string; txn_endpoint: string; txn?: string } | undefined;
+  /** @spec txn-authorization#resource-challenge — the upstream wire members. */
+  error?: string | undefined;
+  transaction_challenge?: string | undefined;
 }
 
 /**
@@ -129,7 +139,7 @@ async function main() {
     },
   ]);
   const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, authorizationDetails, scope: "payments" });
-  const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST");
+  const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST", issued.accessToken);
   const facts: TokenFacts = {
     ...(await stack.server.validateToken(issued.accessToken, rsProof, CANONICAL_RESOURCE, "POST")),
     clientInstanceId: "inst-1",
@@ -171,19 +181,25 @@ async function main() {
     publishedCounts.set(mid, all.length);
   };
 
-  // POST to the AS transaction endpoint, presenting the base mission token
-  // (DPoP). Initiation carries { challenge } (presented once) and returns a
-  // continuation handle; the poll carries { transaction_authorization_id } and
-  // returns the txn-token once the AROP task is approved.
-  const postTransaction = async (payload: Record<string, unknown>) => {
+  // @spec txn-authorization#challenge-redemption — POST to the AS transaction
+  // endpoint. The client authenticates as itself (private_key_jwt), presents
+  // the challenge with the Mission-bound access token as `subject_token`, and
+  // proves possession of the challenge's cnf key with a DPoP proof bound to
+  // this endpoint. Polls carry `transaction_authorization_id` alone.
+  const clientAssertion = await clientAssertionSigner(asUrl, stack.authServer.agentClientJwk);
+  const postTransaction = async (payload: Record<string, string>) => {
     const res = await fetch(`${asUrl}/transaction`, {
       method: "POST",
       headers: {
-        authorization: `DPoP ${active.issued.accessToken}`,
         dpop: await dpopProofFor(active.issued.dpopKeys, `${asUrl}/transaction`, "POST"),
-        "content-type": "application/json",
+        "content-type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify(payload),
+      body: new URLSearchParams({
+        client_id: "ap-agent",
+        client_assertion: await clientAssertion(),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        ...payload,
+      }).toString(),
     });
     const body = (await res.json()) as {
       transaction_authorization_id?: string;
@@ -272,7 +288,7 @@ async function main() {
         ? { invoice_id: inv.id, vendor: inv.vendor_id, amount: inv.amount, currency: inv.currency }
         : { invoice_id: invoiceId, vendor: null, amount: null, currency: null };
     }
-    const paused = !r.ok && !!r.access_challenge;
+    const paused = !r.ok && !!r.transaction_challenge;
     const outcome: StepDetail["outcome"] = paused ? "paused" : !r.ok ? "denied" : TX_TOOLS.has(tool) ? "executed" : "read";
     const evidence: StepDetail["evidence"] =
       outcome === "executed" ? "execution committed" : outcome === "read" ? "read" : outcome === "paused" ? "awaiting approval" : "refused";
@@ -291,13 +307,15 @@ async function main() {
 
   // Initiate the AROP flow for a challenge-bearing denial: present the RS
   // challenge to the AS transaction endpoint ONCE, capture the continuation
-  // handle keyed by the ARS task id (arq_txn_<txn>), and return the pending
+  // handle keyed by the ARS task id (resource-scoped: a `txn` is unique within
+  // a Challenge-Issuing Resource, never globally), and return the pending
   // fields the UI/JIT retry wire on. Shared by /agent/act and /agent/run so both
   // open the AROP task through identical logic.
-  const initiateArop = async (ch: { challenge: string; txn_endpoint: string }, tool: string, invoiceId?: string) => {
-    const challengeClaims = decodeClaims(ch.challenge);
+  const initiateArop = async (challenge: string, tool: string, invoiceId?: string) => {
+    const challengeClaims = decodeClaims(challenge);
     const txn = challengeClaims.txn as string | undefined;
-    const taskId = txn ? `arq_txn_${txn}` : undefined;
+    const resource = challengeClaims.iss as string | undefined;
+    const taskId = txn && resource ? txnTaskId(resource, txn) : undefined;
     if (taskId) {
       // Stash the challenge-derived detail keyed by taskId so the enriched queue
       // can show tool + invoice + digest for this pending approval.
@@ -307,7 +325,11 @@ async function main() {
         ...(challengeClaims.parameter_digest ? { parameter_digest: challengeClaims.parameter_digest as string } : {}),
       });
     }
-    const pending = await postTransaction({ challenge: ch.challenge });
+    const pending = await postTransaction({
+      transaction_challenge: challenge,
+      subject_token: active.issued.accessToken,
+      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    });
     if (taskId && pending.body.transaction_authorization_id) {
       txnHandles.set(taskId, pending.body.transaction_authorization_id);
     }
@@ -316,7 +338,7 @@ async function main() {
       taskId,
       transaction_authorization_id: pending.body.transaction_authorization_id,
       task_state: "authorization_pending" as const,
-      access_challenge: { txn_endpoint: ch.txn_endpoint, challenge: challengeClaims },
+      transaction_challenge: challengeClaims,
     };
   };
 
@@ -377,7 +399,7 @@ async function main() {
       } catch (e) {
         return c.json({ approved: false, error: (e as Error).message }, 400);
       }
-      const proof = await dpopProofFor(issuedMission.dpopKeys, CANONICAL_RESOURCE, "POST");
+      const proof = await dpopProofFor(issuedMission.dpopKeys, CANONICAL_RESOURCE, "POST", issuedMission.accessToken);
       const newFacts: TokenFacts = {
         ...(await stack.server.validateToken(issuedMission.accessToken, proof, CANONICAL_RESOURCE, "POST")),
         clientInstanceId: "inst-1",
@@ -539,27 +561,28 @@ async function main() {
     return c.json({ state: rec.state, ...(rec.missionId ? { missionId: rec.missionId } : {}) });
   });
   // Agent action: attempt a tool call and report the enforcement outcome. When
-  // a gated action yields an access_challenge (AROP), the server presents it to
-  // the AS transaction endpoint on the agent's behalf, opening an AROP task on
+  // a gated action yields a transaction_challenge, the server redeems it at the
+  // AS transaction endpoint on the agent's behalf, opening an approval task on
   // the shared ARS, and hands the pending txn back to the agent.
   app.post("/agent/act", async (c) => {
     const body = await readJson(c);
     const tool = String(body.tool);
     const args = (body.args as Record<string, unknown>) ?? {};
     const r = TX_TOOLS.has(tool)
-      ? await stack.server.callTransactionTool(tool, args, active.facts)
+      ? await stack.server.callTransactionTool(tool, args, active.facts, undefined, ACCEPT_CHALLENGE)
       : await stack.server.callReadTool(tool, args, active.facts);
     await publishNew();
     // Structured detail for the log renderer, ADDED alongside the existing
     // fields (ok/denial_reason/... stay for the JIT UI + /agent/retry contract).
     const detail = stepDetail(tool, args, r, active.missionId);
-    const ch = (r as ToolResult).access_challenge;
+    const ch = (r as ToolResult).transaction_challenge;
     if (!r.ok && ch) {
-      // The ARS task id is derived from the challenge's txn (openForTxn keys the
-      // task arq_txn_<txn>), so the approver queue + retry correlate on it while
+      // The ARS task id is derived from the challenge's issuer and txn (a `txn`
+      // is unique within the resource), so the approver queue + retry correlate
+      // on it while
       // the client polls the AS by the continuation handle. `arop` is spread
       // AFTER `r` so its decoded challenge overrides the raw one; `detail` carries
-      // no access_challenge/taskId, so it never clobbers those.
+      // no transaction_challenge/taskId, so it never clobbers those.
       const arop = await initiateArop(ch, tool, args.invoice_id as string | undefined);
       return c.json({ ...r, ...arop, ...detail });
     }
@@ -590,7 +613,18 @@ async function main() {
       }
       return c.json({ ok: false, pending: true, state: task.state });
     }
-    const r = await stack.server.callTransactionTool(tool, args, active.facts, undefined, txnToken);
+    // @spec txn-authorization#transaction-token, #offline-verification step 2 —
+    // the retry runs under the transaction token as its sole credential, never
+    // alongside the base one, and over a REAL HTTP request: proof of possession
+    // of the key the challenge committed to is not optional for this class.
+    const r = await callWithTransactionCredential(
+      stack.server,
+      String(txnToken),
+      active.issued.dpopKeys,
+      tool,
+      args,
+    );
+    if (!r.ok && r.refusal_reason?.startsWith("txn_")) txnHandles.delete(taskId);
     await publishNew();
     txnHandles.delete(taskId);
     return c.json(r);
@@ -607,7 +641,7 @@ async function main() {
     const steps: Array<StepDetail & { taskId?: string | undefined; transaction_authorization_id?: string | undefined }> = [];
     for (const invoice_id of RUN_INVOICES) {
       const args = { invoice_id };
-      const r = await stack.server.callTransactionTool("execute_wire_transfer", args, active.facts);
+      const r = await stack.server.callTransactionTool("execute_wire_transfer", args, active.facts, undefined, ACCEPT_CHALLENGE);
       await publishNew();
       steps.push(stepDetail("execute_wire_transfer", args, r, active.missionId));
     }
@@ -615,11 +649,11 @@ async function main() {
     // STOP (no auto-approve). The paused step carries taskId + tool + args so the
     // UI can arm the existing retry button against the AROP task.
     const jitArgs = { invoice_id: "inv-1" };
-    const jr = await stack.server.callTransactionTool("send_remittance_email", jitArgs, active.facts);
+    const jr = await stack.server.callTransactionTool("send_remittance_email", jitArgs, active.facts, undefined, ACCEPT_CHALLENGE);
     await publishNew();
     const jitDetail = stepDetail("send_remittance_email", jitArgs, jr, active.missionId);
-    if (!jr.ok && jr.access_challenge) {
-      const arop = await initiateArop(jr.access_challenge, "send_remittance_email", jitArgs.invoice_id);
+    if (!jr.ok && jr.transaction_challenge) {
+      const arop = await initiateArop(jr.transaction_challenge, "send_remittance_email", jitArgs.invoice_id);
       steps.push({ ...jitDetail, taskId: arop.taskId, transaction_authorization_id: arop.transaction_authorization_id });
     } else {
       steps.push(jitDetail);

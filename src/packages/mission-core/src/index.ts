@@ -63,4 +63,29 @@ export {
   parseChainPresentation,
 } from "./cross-org-presentation.js";
 export { compareAmounts, InvalidAmountError, isValidAmount } from "./decimal-amount.js";
+export {
+  DPOP_PROOF_REPLAY_WINDOW_S,
+  type DpopProofReplay,
+  newDpopProofReplay,
+} from "./dpop-replay.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";
+export {
+  ACCEPT_TXN_CHALLENGE_HEADER,
+  acceptsTxnChallenge,
+  authorizationDetailsEqual,
+  MISSION_TXN_TOKEN_TYP,
+  type MissionTxnTokenClaims,
+  missionInvariantsEqual,
+  prohibitedTxnTokenClaims,
+  readTxnMissionClaim,
+  SUBJECT_TOKEN_TYPE_ACCESS_TOKEN,
+  TXN_AUTHORIZATION_REQUIRED,
+  TXN_CHALLENGE_TYP,
+  TXN_POLL_ERRORS,
+  TXN_TOKEN_PROHIBITED_CLAIMS,
+  type TxnApprovalBinding,
+  type TxnChallengeClaims,
+  type TxnMissionClaim,
+  type TxnPollError,
+  txnApprovalBindingDigest,
+} from "./txn-authorization.js";
