@@ -1,4 +1,4 @@
-# Mission Adoption Plan (v4, plan of record)
+# Mission Adoption Plan (v4.1, plan of record)
 
 Status: plan of record, 2026-08-18. The plan states decisions as fact; all revision history
 lives in the Provenance section at the end. Refs #220, #238, #253.
@@ -7,10 +7,12 @@ lives in the Provenance section at the end. Refs #220, #238, #253.
 product inside the 41-document family is a small normative floor plus a preface, and a
 newcomer currently meets all 41 as one flat surface.
 
-**Success is measured from the adopter's side:** a first-time reader can name the six floor
-documents and pick a track from the README's first screen, unaided. Checked by handing the
-README to one outside reader and timing it; every other signal in this plan (fields,
-validators, gates) is means, not ends.
+**Success is measured from the adopter's side.** Pass rubric, written before the test: a
+reader (a) names the six floor documents and (b) picks the correct track for two given
+scenarios (an AAuth estate; an OAuth AS adding runtime enforcement), from the README's first
+screen, unaided, within five minutes. Run asynchronously with two or three outside readers;
+the result is logged as a PLAN.md entry, pass or fail. Every other signal in this plan
+(fields, validators, gates) is means, not ends.
 
 Two manifests appear below and are always named in full: the **family manifest**
 (`family-manifest.json`, the catalog's machine source of truth) and the **bundle manifest**
@@ -84,9 +86,18 @@ that property while staying experimental (this is also a freeze class below).
 group-keyed sections; the map is a compact table near the top of the README (zone, track,
 architectural group, documents, one-line trigger) carrying the five-minute path and linking
 into the verb-organized catalog. The map first ships hand-written, straight from the
-per-document table below, with no new metadata; the machine-validated form is a retrofit
-(execution wave 2) once the map has stabilized. In the retrofit: `presentation_zone` and
-`presentation_track` are both required family-manifest fields (track derivation from prefix
+per-document table below, placed immediately after the README's at-a-glance opening block
+and before "The architecture" (displacing nothing; the "Start with the Architecture" pointer
+folds into the map's first row). It ships WITH one cheap guard: a one-assertion extension to
+the existing validator checking that the map's row set equals the family manifest's
+`drafts[]` (the same drift class the validator already guards for the catalog). Two
+executor warnings: the README edit must not alter the two exact headings the validator
+extracts ("The documents", "Adoption order"), and the family manifest's `deps` arrays are
+inert to the validator (that edit is informational). The full machine-validated form (the
+fields below) is the Retrofit wave, whose entry condition is observable: the map has
+survived one success-rubric run without structural rework. In the retrofit (NOTE: this placement is itself the third flagged resequencing, see
+Provenance; the third review ruled these fields required in the near-term PR):
+`presentation_zone` and `presentation_track` are both required family-manifest fields (track derivation from prefix
 and group is not deterministic; the AAuth cluster falsifies it: management carries the
 `mission-*` prefix and the lifecycle group, expiry carries neither recognized prefix and the
 same group, both belong to Bindings), validated by table membership, with prefix/group kept
@@ -192,11 +203,16 @@ External-pin work is asymmetric: ARAP has a copyable pin in SPEC_VERSIONS.md; th
 Obligations Profile has no pin anywhere and is established from scratch.
 
 **Two publications, honestly labeled.**
-- **Exploratory v0 ships in the first execution wave**, on today's coverage, labeled
-  exploratory and never marketed as conformance-ready. Today's known aggregate for the floor:
-  13 tested, 5 partial, 35 todo, with runtime, authzen, and substrate uninventoried
-  (runtime-evidence's six tested rows do not prove its inventory complete).
-- **The marketed v0** waits on the completeness gate: every normative requirement in all six
+- **Exploratory v0 ships in wave Ship 3** as `notes/oauth-mission-runtime-baseline-v0.md`
+  (in-repo markdown; gh-pages publication joins the Retrofit wave with the bundle manifest),
+  tracked by a dedicated issue opened when Ship 2 completes. It carries the pin table
+  (inline, per document by commit and date, the ARAP pin copied, the Obligations pin
+  established), the reading order, and the two level definitions, and it carries NO
+  conformance-coverage claims: today's numbers have an unknown denominator (13 tested, 5
+  partial, 35 todo across an inventory that omits runtime, authzen, and substrate entirely,
+  and runtime-evidence's six tested rows do not prove its inventory complete), and a partial
+  number reads worse than none. Labeled exploratory, never marketed.
+- **The marketed v0** adds the coverage ledger and waits on the completeness gate: every normative requirement in all six
   floor documents inventoried; zero uninventoried baseline requirements; zero todo rows on
   authorization invariants or fail-closed/refusal requirements; positive and negative tests
   for every baseline protocol surface; every partial row naming exactly what remains
@@ -216,7 +232,8 @@ near-term action is the pin, not the apparatus:** today's upstream citation carr
 revision pin at all (the seriesinfo was removed in the #472 alignment; the front-matter
 target is the live editor's copy), and datatracker's -10 is a divergent pre-person-token
 document. The pin record (repo `dickhardt/AAuth`, PR #73 merged, commit `f156926...`, file
-path, content digest) is committed now; the bundle apparatus (manifest entry, aauth reader
+path, content digest) is committed now, in a new `notes/external-pins.md` (one table: id,
+repo, ref, commit, path, digest, note; the bundle manifest consumes it at Retrofit); the bundle apparatus (manifest entry, aauth reader
 editions, exploratory publication) is built when a first AAuth implementation exists, and it
 reuses the OAuth bundle's machinery.
 
@@ -253,19 +270,23 @@ stability; `maintenance` is repository responsiveness; neither implies the other
 | `lab-floor-referenced` | Lab maturity; active-tier responsiveness for the property floor text points at | containment, metering |
 | `lab-best-effort` | Best effort, no cadence; the gate out of the Lab: a Mission Substrate Statement where a new substrate is bound, the abstract drops deferred/sketch language, a named adopter or implementer commitment on record, and category/maturity/rung updated together in one PR | uma, aam, gnap, remaining Lab documents |
 
-**Enforcement is staged by an explicit trigger.** Immediately: the `maintenance` enum lands
-as family-manifest data with a one-line assertion in the existing validator (value in the
-enum). The full gate, whose design is settled and waits only on its trigger (the first
-second contributor or external adopter): an always-running required PR status check that
-fails when a frozen document changed without an exception, re-running on `labeled`,
-`unlabeled`, `synchronize`, and ordinary PR events, with a deeper checkout fetch for base
-diffs; an exception requires BOTH the designated label AND approval from an authorized
-maintainer or CODEOWNER; branch protection prohibits direct pushes to main. The rationale
-for staging: the apparatus defends against concurrent-editor drift, which cannot occur with
-one committer, and main has no branch protection today. One decision rides the trigger: the
-branch-protection rule collides with the repository's convention of committing PLAN.md log
-entries directly to main; either the convention moves to PRs or that path gets a named
-exemption.
+**Enforcement is staged by an explicit trigger.** In wave Ship 1: the `maintenance` enum
+lands as family-manifest data with a one-line assertion in the existing validator (value in
+the enum). The full gate, whose design is settled and waits only on its trigger: an
+always-running required PR status check that fails when a frozen document changed without an
+exception, re-running on `labeled`, `unlabeled`, `synchronize`, and ordinary PR events, with
+a deeper checkout fetch for base diffs; an exception requires BOTH the designated label AND
+approval from an authorized maintainer or CODEOWNER; branch protection prohibits direct
+pushes to main. The rationale for staging: the apparatus defends against concurrent-editor
+drift, which cannot occur with one committer, and main has no branch protection today.
+**Triggers carry tripwires, since an unrecorded trigger is a rename of "later":** each
+firing is recorded as a labeled issue plus a PLAN.md entry; "second contributor" fires on
+the first external PR opened against the repository; "external adopter" fires on an issue
+identifying an adopter; the AAuth trigger (below) fires on AAuth code landing in src, which
+is self-evident. A trigger firing also ends this plan's implicit serial-execution
+assumption. One decision rides the freeze trigger: the branch-protection rule collides with
+the repository's convention of committing PLAN.md log entries directly to main; either the
+convention moves to PRs or that path gets a named exemption.
 
 ## Consolidation and retirement
 
@@ -287,13 +308,13 @@ trigger.
 
 | Wave | Work | Contents |
 |---|---|---|
-| Ship 1 | Rename + hand-written adoption map (one small PR) | Bundle and zone/track vocabulary; the adoption map as a plain README table built from the per-document table above, no new metadata; substrate-into-floor and dependency-closure prose; the no-consolidation policy record; the expiry-framing precision fix; the management-to-aauth dependency reconciliation; the AAuth pin record committed |
+| Ship 1 | Three small PRs, in order | 1a, append-only records: the AAuth pin record in `notes/external-pins.md`; the no-consolidation policy record. 1b, the storefront: bundle and zone/track vocabulary; the adoption map as a plain README table from the per-document table above, placed after the at-a-glance block, with the one-assertion map-membership validator check and the two executor warnings honored. 1c, precision and data: the expiry-framing fix; the management-to-aauth dependency reconciliation (default align-to-citations; the override window closes when 1c lands); the `maintenance` enum plus its one-line validator assertion |
 | Ship 2 | Reader editions | The `make reader-editions` target and script, `latest` editions for the floor and Governed Agent lists, per the hardening rules above |
-| Ship 3 | Exploratory v0 | The guide body on today's coverage, labeled exploratory, with the pin snapshot and the honest ledger; owner: the author's next session |
-| Retrofit | Manifest and validation | `presentation_zone` + `presentation_track` (required), table-membership validation, Architectural-group column, `maintenance` enum + one-line validator assertion; the compatibility-metadata spike; the verb-spine vocabulary decision and then the `verbs` array; the Adoption-order supersession decision; the bundle manifest and the immutable publish path |
+| Ship 3 | Exploratory v0 | `notes/oauth-mission-runtime-baseline-v0.md`: the inline pin table, reading order, and level definitions; NO coverage claims (the ledger joins the marketed v0); labeled exploratory; tracked by a dedicated issue opened when Ship 2 completes |
+| Retrofit | Manifest and validation (entry condition: the map has survived one success-rubric run without structural rework; this wave's placement of the ruled-now field work is the third flagged resequencing) | `presentation_zone` + `presentation_track` (required), table-membership validation, Architectural-group column; the compatibility-metadata spike; the verb-spine vocabulary decision and then the `verbs` array; the Adoption-order supersession decision; the bundle manifest (consuming `notes/external-pins.md`) and the immutable publish path; gh-pages publication of the exploratory guide |
 | Gated | Marketed v0 | The six-document completeness gate above; then the marketed Issuance and Runtime-Enforced Baselines |
 | Deferred | RAR-free mode | Behind #220 landing normatively |
-| Trigger | Freeze gate; AAuth apparatus | The full freeze gate on the first second contributor or external adopter (with the PLAN.md convention decision); the AAuth bundle apparatus on the first AAuth implementation |
+| Trigger | Freeze gate; AAuth apparatus | The full freeze gate on the first second contributor or external adopter, the AAuth bundle apparatus on the first AAuth implementation; every trigger firing is recorded as a labeled issue plus a PLAN.md entry (tripwires defined in the Freeze section); the PLAN.md convention decision rides the freeze trigger |
 
 ## Provenance
 
@@ -315,5 +336,16 @@ history confined to this section, the adopter-side success measure added, the fi
 right-sized, the exploratory v0 given an execution line and owner, and two resequencings
 flagged for the author's confirmation in the PR: the freeze gate's settled design now waits
 on an explicit trigger rather than riding the first wave, and the AAuth bundle's near-term
-action reduces to the committed pin. Where this document and any earlier version disagree,
-this document governs.
+action reduces to the committed pin. v4.1 applied the v4 critique (a ruling-fidelity audit,
+a cold read, and an adversarial pass): it surfaces and flags a THIRD resequencing awaiting
+the author's confirmation, that the third review ruled `presentation_zone`/
+`presentation_track`, the compatibility-metadata shape, and the verb-spine decision into the
+near-term PR while this plan places them in Retrofit; it repaired three table-prose
+contradictions (the exploratory v0's wave, the maintenance enum's wave, the Ship 3 pin
+source, now an inline guide table with the machine-readable bundle manifest at Retrofit); it
+made Ship 3 startable (named file, tracked issue, no coverage claims until the denominator
+exists); split Ship 1 into three PRs with the map-membership guard, the two executor
+warnings, the pin record's named home, and the dependency-reconciliation override window
+closed at 1c; gave the triggers tripwires; made the Retrofit entry condition observable; and
+turned the success measure into a pre-written rubric with a logged result. Where this
+document and any earlier version disagree, this document governs.
