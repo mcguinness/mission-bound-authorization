@@ -2538,16 +2538,40 @@ Both this claim and agent-compromise-resistant enforcement
 ({{compromise-resistant}}) rest on the execution-environment scope
 statement, a self-declared artifact: the wire alone does not let a
 relying party distinguish a deployment that built the declared
-isolation from one that only published the statement. A deployment
-claiming either MUST bind the statement to execution-environment
-attestation, presenting Entity Attestation Token {{RFC9711}} evidence
+isolation from one that only published the statement.
+
+The conditions the two claims name do not share one evidence type.
+The table below fixes, per condition: a stable identifier, the
+evidence that authoritatively establishes it, the scope that evidence
+covers, the verifier and trust anchor a relying party checks it
+against, the freshness the evidence must carry, and the behavior when
+the evidence is missing.
+
+| Condition | Evidence producer/type | Covered scope | Verifier / trust anchor | Freshness | Failure behavior |
+|---|---|---|---|---|---|
+| `key_custody`: the sender-constraint key is held and generated in the mediating PEP, never transferred to the agent ({{compromise-resistant}}, {{custody}}) | EAT ({{RFC9711}}) | The mediating PEP's key-holding component | The relying party, against the attester's hardware or platform trust anchor | Current at the session or credential issuance the claim covers | Absent, stale, or unverifiable evidence makes the claim unavailable |
+| `isolation_boundary`: the execution environment separates the agent component from the mediating PEP, approval service, and rendering component, and credential material stays out of the agent ({{compromise-resistant}}, {{trifecta-containment}}, {{custody}}) | EAT ({{RFC9711}}) | The boundary between the agent component and each isolated component | The relying party, against the same attester trust anchor | Current at the session the claim covers | Absent, stale, or unverifiable evidence makes the claim unavailable |
+| `workload_measurement`: the attested component runs the software the Enforcement Scope Statement declares ({{compromise-resistant}}, {{runtime-conformance}}) | EAT ({{RFC9711}}) | Each component the statement names as isolated or mediating | The relying party, against the same attester trust anchor | Current at attestation time | Absent, stale, or unverifiable evidence makes the claim unavailable |
+| `approval_policy`: each action in the claimed classes requires action-bound approval ({{compromise-resistant}}, {{action-approval}}) | Signed configuration, or independent service evidence from the approval service | The approval service's enforcement over the classes claimed | The auditor reading the configuration, against the approval service's operator key | Current with the approval service's active policy version | Unknown or unverifiable configuration makes the claim unavailable |
+| `rendering_independence`: the disclosure is derived from the bound normalized parameters, never composed by the agent ({{compromise-resistant}}, {{action-approval}}) | Independent service evidence, the committed Consent Evidence where available | The rendering component's output for the approval event claimed | The party evaluating the evidence, against the rendering component's or Consent Evidence signer's key | Per approval event | An approval event lacking this evidence cannot be counted toward the claim; a class with no such event verified does not carry the claim |
+| `freshness_sourcing`: the Mission state source is an active freshness mechanism, not token-lifetime expiry ({{compromise-resistant}}, {{state-freshness}}) | Signed configuration naming the state source and its staleness bound ({{I-D.draft-mcguinness-mission-architecture}}), or independent evidence from the state source | The state source used for the classes claimed | The auditor reading the Deployment Profile, against the state source's operator key | The published staleness bound | A stale or unverifiable state source makes the claim unavailable |
+| `path_completeness`: no unmediated path reaches the mediated classes or a fresh usable credential for them ({{compromise-resistant}}) | Negative tests ({{negative-conformance}}) and organizational topology audit | Every path to the classes claimed, deployment-wide | The auditor who ran or reviewed the tests and audit, an organizational anchor | Per the deployment's stated audit cadence | Untested, stale, or a found unmediated path makes the claim unavailable |
+| `taint_egress_topology`: the taint policy and egress rule are enforced, and every egress channel is enumerated ({{trifecta-containment}}) | Topology audit (channel enumeration) and negative tests | Every egress channel available to the agent's execution environment | The auditor, an organizational anchor | Per audit cycle or channel-inventory change | A stale enumeration or a found unenumerated channel makes the claim unavailable |
+
+A deployment claiming either named property MUST bind its statement
+to the evidence this table names, for each condition its Enforcement
+Scope Statement claims. Evidence that is unknown, stale, or
+unverifiable for a required condition makes the named claim
+unavailable. Entity Attestation Token ({{RFC9711}}) evidence, carried
 under the AI-agent-instance profile
-({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) covering the
-isolation properties the statement declares, and MUST NOT represent
-the claim as met without it. The requirement is scoped to these two
-High-Assurance Agent claims; base runtime conformance does not
-require attestation, and a deployment claiming only the base profile
-MAY publish its scope statement unattested.
+({{I-D.draft-mcguinness-oauth-ai-agent-instance}}), proves the
+execution-environment facts this table assigns to EAT; it does not by
+itself prove the approval, rendering, freshness, path, or topology
+facts the table assigns elsewhere, and a deployment MUST NOT represent
+EAT evidence alone as satisfying those. The requirement is scoped to
+these two High-Assurance Agent claims; base runtime conformance does
+not require this evidence map, and a deployment claiming only the
+base profile MAY publish its scope statement unattested.
 
 # Negative Conformance Tests {#negative-conformance}
 

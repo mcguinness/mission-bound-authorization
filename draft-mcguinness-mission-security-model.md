@@ -432,8 +432,10 @@ Authorization Server (Mission Issuer):
   event, commits the integrity anchors, and gates issuance on Mission
   state. It must derive faithfully and gate correctly; it assumes the
   Approver is authenticated and the agent is untrusted. Its compromise
-  voids the model: a compromised issuer can mint arbitrary authority.
-  This is the strongest trust assumption in the suite
+  voids the model ({{documenting}} names the key-custody statement a
+  deployment publishes for this assumption): a compromised issuer can
+  mint arbitrary authority. This is the strongest trust assumption in
+  the suite
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
 Resource Authorization Server (cross-domain):

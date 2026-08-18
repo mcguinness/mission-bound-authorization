@@ -94,6 +94,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-harness:
+    title: "Mission-Aware Agent Harnesses"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   IN-TOTO:
     target: https://in-toto.io/
     title: "in-toto: A Framework to Secure the Integrity of the Software Supply Chain"
@@ -603,6 +611,37 @@ referencing, embedding, or communicating an artifact. An agent that
 reads a work product and proposes an action is gated by the Receiving
 Mission's own Authority Set, so a work product cannot be used as a
 capability.
+
+The trusted mediator that attaches Work Product Provenance is itself
+a residual this document does not close. A Work Product
+Binding's signature proves that the signing mediator's key bound the
+artifact and provenance bytes together ({{binding-verification}}); it
+does not prove that the claimed production happened. A compromised
+`harness`-role mediator ({{binding-object}}) can attach and sign a
+Work Product Provenance object attributing a fabricated or malicious
+artifact to a legitimate active Mission, and the binding verifies
+exactly as a faithful one would. Detection is conditional, not
+assured. Where the binding is registered as Mission evidence
+({{I-D.draft-mcguinness-mission-audit}}) and a deployment separately
+retains independently produced Decision and Execution Evidence under
+its own declared correlation rule, that evidence can reveal a
+contradiction, or a missing event the rule expects, against the
+binding's claimed `mission_id` and `created_at`. This is not a
+general guarantee: Work Product Binding registration is optional
+({{binding-verification}}), runtime evidence registration is not
+universal, and a work product's creation need not correspond
+one-to-one to a consequential action with evidence of its own.
+Without an independent witness to production, a compromised mediator
+can produce a forgery no correlation rule catches. Transparency
+registration makes a false claim permanent and attributable once
+made; it does not make the claim detectable, and it does not make a
+dishonest mediator honest. Routing the mediator role through the
+Mission Issuer ({{binding-object}}) helps only where the issuer
+independently observed the production it signs for, a condition an
+issuer typically lacks for harness-executed work ({{provenance}}).
+The harness profile's own compromise analysis states the same split
+between prevention and after-the-fact detectability for a compromised
+execution environment ({{I-D.draft-mcguinness-mission-harness}}).
 
 One residual is not closed by this document. Independent Missions,
 each acting within its own bounds, can communicate through shared state
