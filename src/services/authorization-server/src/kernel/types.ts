@@ -511,7 +511,12 @@ export interface MissionClaim {
   id: string;
   issuer: string;
   authority_hash: string;
-  expires_at: number;
+  /**
+   * @spec mission#the-mission-claim — an RFC 3339 date-time STRING, the same
+   * form the Mission Record and every other family surface render it in. Epoch
+   * seconds here would be a second representation of one value on one wire.
+   */
+  expires_at: string;
   /**
    * @spec mission#approval-basis — the read-only wire signal of the basis
    * type. MUST NOT be relied on to grant authority; the full

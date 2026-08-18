@@ -60,15 +60,27 @@ export type TxnPollError = (typeof TXN_POLL_ERRORS)[number];
 /**
  * @spec mission#the-mission-claim — the `mission` members this profile compares
  * for value equality across the challenge, the `subject_token`, and the
- * transaction token. `subject` is the invariant origin principal, present only
+ * transaction token.
+ *
+ * The shape is the CORE's, not a second one: `id`, `issuer` and
+ * `authority_hash` are the REQUIRED invariants; `expires_at` is OPTIONAL and an
+ * RFC 3339 date-time STRING (the same form the Mission Record and every other
+ * family surface render it in, never epoch seconds); `approval_basis` is
+ * OPTIONAL. `subject` is the issuer-qualified origin principal, present only
  * where the Origin Principal profile applies.
+ *
+ * A parser that REQUIRED the optional members would reject conforming claims --
+ * the cross-org grant mints one carrying only the invariants and `subject` --
+ * and, because this parser fails closed, would turn them into unequal
+ * invariants and refusals with no visible cause.
  */
 export interface TxnMissionClaim {
   id: string;
   issuer: string;
   authority_hash: string;
-  expires_at: number;
-  approval_basis: { type: string };
+  /** RFC 3339 date-time. OPTIONAL. */
+  expires_at?: string;
+  approval_basis?: { type: string };
   subject?: { iss: string; sub: string };
 }
 
@@ -201,27 +213,36 @@ export function prohibitedTxnTokenClaims(payload: Record<string, unknown>): stri
  * fails closed rather than comparing partial claims.
  */
 export function readTxnMissionClaim(value: unknown): TxnMissionClaim | undefined {
-  if (typeof value !== "object" || value === null) return undefined;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
   const m = value as Record<string, unknown>;
-  const basis = m.approval_basis as { type?: unknown } | undefined;
   if (
     typeof m.id !== "string" ||
     typeof m.issuer !== "string" ||
-    typeof m.authority_hash !== "string" ||
-    typeof m.expires_at !== "number" ||
-    typeof basis?.type !== "string"
+    typeof m.authority_hash !== "string"
   ) {
     return undefined;
   }
-  const subject = m.subject as { iss?: unknown; sub?: unknown } | undefined;
   const claim: TxnMissionClaim = {
     id: m.id,
     issuer: m.issuer,
     authority_hash: m.authority_hash,
-    expires_at: m.expires_at,
-    approval_basis: { type: basis.type },
   };
-  if (subject !== undefined) {
+  // Present-but-wrong-type is a REFUSAL, never a silently ignored member: a
+  // claim this parser cannot read in full is not one anything should compare.
+  if (m.expires_at !== undefined) {
+    if (typeof m.expires_at !== "string" || !Number.isFinite(Date.parse(m.expires_at)))
+      return undefined;
+    claim.expires_at = m.expires_at;
+  }
+  if (m.approval_basis !== undefined) {
+    const basis = m.approval_basis as { type?: unknown };
+    if (typeof basis !== "object" || basis === null || typeof basis.type !== "string")
+      return undefined;
+    claim.approval_basis = { type: basis.type };
+  }
+  if (m.subject !== undefined) {
+    const subject = m.subject as { iss?: unknown; sub?: unknown };
+    if (typeof subject !== "object" || subject === null) return undefined;
     if (typeof subject.iss !== "string" || typeof subject.sub !== "string") return undefined;
     claim.subject = { iss: subject.iss, sub: subject.sub };
   }
