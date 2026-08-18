@@ -1459,87 +1459,95 @@ terminally cascades to the predecessor's non-terminal Child Missions
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-5.1-6" class="pilcrow">¶</a></p>
 <p id="section-5.1-7">The Mission Issuer therefore <span class="bcp14">MUST NOT</span> policy-adjudicate an in-ceiling
 drawdown while the predecessor has non-terminal Child Missions: such
-a request falls back to a fresh human approval, which renders that
-notice.<a href="#section-5.1-7" class="pilcrow">¶</a></p>
-<p id="section-5.1-8">This does not widen authority without consent
+a request falls back to a fresh human approval, at which that notice
+can be rendered.<a href="#section-5.1-7" class="pilcrow">¶</a></p>
+<p id="section-5.1-8">Policy adjudication has no interactive disclosure boundary: nothing
+renders the expansion profile's child-cascade consent notice for a
+human to witness when a policy, not an Approver, adjudicates the
+drawdown. The prohibition above therefore has no safe exception while
+live children exist; the fallback to full human approval is the only
+widening path at which the cascade notice can be rendered. Relaxing
+that for the human-approved path specifically remains future work; no
+such relaxation is specified here.<a href="#section-5.1-8" class="pilcrow">¶</a></p>
+<p id="section-5.1-9">This does not widen authority without consent
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>). The consent is the
 human consent given at the initial approval to the ceiling and the
 drawdown policy; policy adjudication only draws within that pre-given
-consent and can never exceed the ceiling.<a href="#section-5.1-8" class="pilcrow">¶</a></p>
-<p id="section-5.1-9">The Mission Issuer <span class="bcp14">MUST</span> refuse, with <code>out_of_ceiling</code>
+consent and can never exceed the ceiling.<a href="#section-5.1-9" class="pilcrow">¶</a></p>
+<p id="section-5.1-10">The Mission Issuer <span class="bcp14">MUST</span> refuse, with <code>out_of_ceiling</code>
 (<a href="#denial-reason" class="auto internal xref">Section 6</a>), a requested authority that is not within the
 consented <code>authority_ceiling</code>. Exceeding the ceiling requires a fresh
-human approval that raises it, which is an ordinary expansion.<a href="#section-5.1-9" class="pilcrow">¶</a></p>
-<p id="section-5.1-10">Policy adjudication is bounded per drawdown and across the chain, so
+human approval that raises it, which is an ordinary expansion.<a href="#section-5.1-10" class="pilcrow">¶</a></p>
+<p id="section-5.1-11">Policy adjudication is bounded per drawdown and across the chain, so
 a pre-consented ceiling cannot become a standing grant a compromised
-agent walks up to unattended.<a href="#section-5.1-10" class="pilcrow">¶</a></p>
-<p id="section-5.1-11">A single policy-adjudicated in-ceiling drawdown <span class="bcp14">MUST NOT</span> activate the
+agent walks up to unattended.<a href="#section-5.1-11" class="pilcrow">¶</a></p>
+<p id="section-5.1-12">A single policy-adjudicated in-ceiling drawdown <span class="bcp14">MUST NOT</span> activate the
 entire remaining ceiling. The drawdown policy <span class="bcp14">MUST</span> bound each
-drawdown incrementally, by one or both of:<a href="#section-5.1-11" class="pilcrow">¶</a></p>
+drawdown incrementally, by one or both of:<a href="#section-5.1-12" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.1-12.1">
-            <p id="section-5.1-12.1.1">a per-drawdown delta bound; or<a href="#section-5.1-12.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-5.1-13.1">
+            <p id="section-5.1-13.1.1">a per-drawdown delta bound; or<a href="#section-5.1-13.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.1-12.2">
-            <p id="section-5.1-12.2.1">narrowing the successor's Authority Set to what the triggering
-action needs.<a href="#section-5.1-12.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.1-13.2">
+            <p id="section-5.1-13.2.1">narrowing the successor's Authority Set to what the triggering
+action needs.<a href="#section-5.1-13.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.1-13">The concrete per-drawdown bound <span class="bcp14">MUST</span> be published in the Mission
+<p id="section-5.1-14">The concrete per-drawdown bound <span class="bcp14">MUST</span> be published in the Mission
 Deployment Profile. Reaching the ceiling therefore takes many
-bounded, individually adjudicated and recorded drawdowns, not one.<a href="#section-5.1-13" class="pilcrow">¶</a></p>
-<p id="section-5.1-14">Each in-ceiling drawdown creates a successor Mission, so a
-per-Mission bound would reset at every step. A deployment:<a href="#section-5.1-14" class="pilcrow">¶</a></p>
+bounded, individually adjudicated and recorded drawdowns, not one.<a href="#section-5.1-14" class="pilcrow">¶</a></p>
+<p id="section-5.1-15">Each in-ceiling drawdown creates a successor Mission, so a
+per-Mission bound would reset at every step. A deployment:<a href="#section-5.1-15" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.1-15.1">
-            <p id="section-5.1-15.1.1"><span class="bcp14">MUST</span> rate-bound policy-adjudicated expansions per expansion chain,
+<li class="normal" id="section-5.1-16.1">
+            <p id="section-5.1-16.1.1"><span class="bcp14">MUST</span> rate-bound policy-adjudicated expansions per expansion chain,
 keyed by the chain's root Mission and counted across <code>predecessor</code>
-links per unit time;<a href="#section-5.1-15.1.1" class="pilcrow">¶</a></p>
+links per unit time;<a href="#section-5.1-16.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.1-15.2">
-            <p id="section-5.1-15.2.1"><span class="bcp14">MUST</span> publish the concrete rate bound in the Mission Deployment
-Profile; and<a href="#section-5.1-15.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.1-16.2">
+            <p id="section-5.1-16.2.1"><span class="bcp14">MUST</span> publish the concrete rate bound in the Mission Deployment
+Profile; and<a href="#section-5.1-16.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.1-15.3">
-            <p id="section-5.1-15.3.1"><span class="bcp14">MUST</span> record each policy-adjudicated expansion as an approval event
+          <li class="normal" id="section-5.1-16.3">
+            <p id="section-5.1-16.3.1"><span class="bcp14">MUST</span> record each policy-adjudicated expansion as an approval event
 whose approver context is the drawdown policy that authorized it
-(<a href="#audit-linkage" class="auto internal xref">Section 7</a>).<a href="#section-5.1-15.3.1" class="pilcrow">¶</a></p>
+(<a href="#audit-linkage" class="auto internal xref">Section 7</a>).<a href="#section-5.1-16.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.1-16">Some authority classes always require a fresh human approval even
+<p id="section-5.1-17">Some authority classes always require a fresh human approval even
 within the ceiling. To make that testable, a deployment <span class="bcp14">MUST</span> publish
 in the Mission Deployment Profile a mapping from its action
 identifiers to the runtime profile's action classes
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), or an equivalent declared
-classification.<a href="#section-5.1-16" class="pilcrow">¶</a></p>
-<p id="section-5.1-17">A drawdown <span class="bcp14">MUST</span> be adjudicated by a fresh human approval when it:<a href="#section-5.1-17" class="pilcrow">¶</a></p>
+classification.<a href="#section-5.1-17" class="pilcrow">¶</a></p>
+<p id="section-5.1-18">A drawdown <span class="bcp14">MUST</span> be adjudicated by a fresh human approval when it:<a href="#section-5.1-18" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.1-18.1">
-            <p id="section-5.1-18.1.1">grants authority in the irreversible, external-commitment, or
-privileged-administration class;<a href="#section-5.1-18.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-5.1-19.1">
+            <p id="section-5.1-19.1.1">grants authority in the irreversible, external-commitment, or
+privileged-administration class;<a href="#section-5.1-19.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.1-18.2">
-            <p id="section-5.1-18.2.1">satisfies the runtime profile's external-communication predicate
+          <li class="normal" id="section-5.1-19.2">
+            <p id="section-5.1-19.2.1">satisfies the runtime profile's external-communication predicate
 (the exfiltration leg, <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>);
-or<a href="#section-5.1-18.2.1" class="pilcrow">¶</a></p>
+or<a href="#section-5.1-19.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.1-18.3">
-            <p id="section-5.1-18.3.1">grants cross-domain authority.<a href="#section-5.1-18.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.1-19.3">
+            <p id="section-5.1-19.3.1">grants cross-domain authority.<a href="#section-5.1-19.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.1-19">The drawdown policy <span class="bcp14">MUST NOT</span> permit policy-only adjudication of such
-a drawdown.<a href="#section-5.1-19" class="pilcrow">¶</a></p>
-<p id="section-5.1-20">An in-ceiling request the drawdown policy does not authorize is not
+<p id="section-5.1-20">The drawdown policy <span class="bcp14">MUST NOT</span> permit policy-only adjudication of such
+a drawdown.<a href="#section-5.1-20" class="pilcrow">¶</a></p>
+<p id="section-5.1-21">An in-ceiling request the drawdown policy does not authorize is not
 refused with <code>out_of_ceiling</code>; it falls back to an ordinary, freshly
-human-approved expansion.<a href="#section-5.1-20" class="pilcrow">¶</a></p>
-<p id="section-5.1-21">The drawdown policy <span class="bcp14">MUST NOT</span> policy-adjudicate a successor Authority
+human-approved expansion.<a href="#section-5.1-21" class="pilcrow">¶</a></p>
+<p id="section-5.1-22">The drawdown policy <span class="bcp14">MUST NOT</span> policy-adjudicate a successor Authority
 Set entry whose authority intersects a predecessor entry discharged
 under the status profile's completion machinery
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). The test is overlap
 in authority, not structural equality: any successor entry that
 overlaps a discharged predecessor entry in authority falls back to a
 fresh human approval. Completion-discharged authority therefore
-cannot be resurrected by policy.<a href="#section-5.1-21" class="pilcrow">¶</a></p>
+cannot be resurrected by policy.<a href="#section-5.1-22" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="progressive-limits">

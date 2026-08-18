@@ -2084,6 +2084,24 @@ successor through ordinary child creation, in generation order. A
 deployment <span class="bcp14">MAY</span> additionally support an expansion-request parameter by
 which the client asks the Mission Issuer to refuse the expansion while
 live Child Missions exist.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
+<p id="section-5.3-4">This is the priced limitation of the current design. Cascade applies
+to every non-terminal Child Mission regardless of whether that
+child's own Authority Set would still satisfy strict-subset validation
+against the successor: the successor's Authority Set is freshly
+derived, not inherited by reference, so a child's creation-time subset
+check does not carry forward
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>, Section
+"Cascade Revocation"). The re-creation above is paid for per child: a
+fresh assertion conveyed to the child actor that held the terminated
+child, and an interval in which that child actor's outstanding tokens
+under the terminated child run to the earlier of their own <code>exp</code> and
+the runtime staleness bound, where the runtime enforcement layer is
+deployed, while the replacement is delivered
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>, Section
+"Cascade Failure"). Where a deployment provides the notice recommended
+above, the expansion consent event is where this price is rendered;
+that consent event is the only point in this profile at which a human
+can witness the cascade before it happens.<a href="#section-5.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="successor-expiry">
