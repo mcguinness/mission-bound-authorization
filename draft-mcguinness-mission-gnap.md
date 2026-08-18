@@ -38,9 +38,25 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-issuance-grant:
-    title: "Mission Issuance Grant for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+  I-D.draft-mcguinness-oauth-mission-status:
+    title: "Mission Status and Lifecycle for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
     author:
       -
         ins: K. McGuinness
@@ -104,14 +120,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-status:
-    title: "Mission Status and Lifecycle for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
@@ -163,22 +171,6 @@ informative:
   I-D.draft-mcguinness-oauth-mission-progressive:
     title: "Mission Progressive Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-expansion:
-    title: "Mission Expansion for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-containment:
-    title: "Mission Containment for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
     author:
       -
         ins: K. McGuinness
@@ -244,8 +236,8 @@ informative:
 --- abstract
 
 The Grant Negotiation and Authorization Protocol (GNAP) standardized
-the negotiation the OAuth issuance profile assembles from parts: an
-intent-first grant request delivered by direct post, client instances
+the negotiation the OAuth issuance profile assembles from parts: a
+grant request delivered by direct post, client instances
 identified by key with every request signed, a native pending state
 whose continuation carries asynchronous approval, structured access
 rights, interaction ceremonies with an integrity-protected finish,
@@ -256,7 +248,8 @@ design, and no lifecycle governs authority already issued when
 circumstances change. This document supplies that interior from the
 Mission model of Mission-Bound Authorization for OAuth 2.0. The
 Mission Intent rides the grant request as a registered member, the
-interaction ceremony or standing policy is the approval event that
+interaction ceremony, or a standing basis an adopted companion
+supplies, is the approval event that
 creates the Mission record with its integrity anchors, the Mission
 lifecycle gates every access token issuance and rotation, grant
 modification is profiled as in-Mission drawdown or Approver-routed
@@ -301,10 +294,11 @@ that substrate. This document is that binding.
 Four mechanics the OAuth binding assembles from parts are native
 here. The grant request is delivered by direct post by construction,
 the property the OAuth binding retrofits with pushed authorization
-requests. Structured authority rides the grant request's native
-access rights arrays, the role Rich Authorization Requests play, and
-every request is signed with the client instance's key, so the
-proposal is cryptographically attributable. Asynchronous approval is
+requests. Structured authority proposals ride the grant request's
+native access rights, the intake role Rich Authorization Requests
+play ({{authority-adapter}} defines their projection into the
+family's Authority Set), and every request is signed with the client
+instance's key, so the proposal is cryptographically attributable. Asynchronous approval is
 the _pending_ grant state with continuation under the server's
 declared wait interval, the surface the OAuth binding reaches through
 the Mission Deferred Approval companion
@@ -358,7 +352,8 @@ requires the Approved Context to be immutable
 the tension with one split: a modification within the approved
 Authority Set is a drawdown the authorization server may adjudicate
 by policy, and a modification beyond it is an expansion that MUST
-return to the Approver ({{drawdown}}). The grant is the negotiation
+return to the Approver and, on approval, yields a successor Mission
+({{drawdown}}). The grant is the negotiation
 surface; the Mission record, never the grant, is the approved value.
 
 ## Applicability
@@ -376,8 +371,8 @@ what that dependency choice trades.
 
 This document is an experimental sketch. It fixes the binding's
 shape and its Mission Substrate Statement; worked test vectors, a
-per-surface error taxonomy, and the registrations noted in
-{{iana}} are deferred to a later revision.
+per-surface error taxonomy, and the discovery-field registrations
+noted in {{iana}} are deferred to a later revision.
 
 ## Conventions and Terminology
 
@@ -394,7 +389,8 @@ records an authority proposal, `proposal_hash`), the subset rule, the
 only-`active` rule, and the audit horizon as defined by
 {{I-D.draft-mcguinness-oauth-mission}}, and Effective Authority Set
 as defined by {{I-D.draft-mcguinness-oauth-mission-status}}. It uses
-authorization server (AS), client instance, resource owner (RO), end
+authorization server (AS), client instance, instance identifier,
+resource owner (RO), end
 user, grant request, grant endpoint, access rights, the grant states
 (_processing_, _pending_, _approved_, _finalized_), continuation,
 continuation access token, token management, interaction start modes
@@ -418,27 +414,33 @@ Mission-Bound GNAP Client Instance:
 | GNAP role | Mission model role |
 |---|---|
 | Authorization server | Mission Issuer: runs the assessment, holds the Mission record, gates every token issuance and rotation, serves Mission state |
-| Resource owner | Approver: decides grants interactively or through standing policy |
-| End user | Subject: the party on whose behalf the client instance acts |
-| Client instance | Agent: its key is the Actor handle; an instance identifier maps to it where the AS registers one |
+| Client instance | Agent: the Actor, identified by its instance identifier or a stable key-derived identifier; its requests are key-proved ({{mission-record}}) |
+| Resource owner | Candidate Approver, and authority source where the assessment consumes its standing authority |
+| End user | The interacting operator; no Mission role follows automatically |
 | Resource server | Resource Server: {{RFC9767}} participant or structured-token validator, no Mission awareness required |
+
+The Subject is not a wire role. It is the issuer-qualified principal
+on whose behalf the Mission runs, established by the authorization
+server under the issuance profile's authority-source rules and
+recorded with the Mission: often the resource owner, and in GNAP's
+cross-user flows (an operator working a client on a customer's
+behalf) it follows the authority source, not the operator. The grant
+request's `user` member is an unauthenticated hint and never
+establishes it ({{approval}}).
 
 Two properties of this mapping are structural in GNAP rather than
 profile rules. First, the proposer is never the approver on the
 wire: the client instance can only request, and every grant of
-authority is decided at the authorization server by the resource
-owner during interaction or by the owner's standing policy. Second,
-both of the issuance profile's approval modes are native GNAP modes:
-a grant the AS approves without interaction is the authorized-policy
-approver deciding at machine speed, and the _pending_ grant with
-continuation is the human Approver deciding asynchronously
+authority is decided at the authorization server. Second, the
+_pending_ grant with continuation makes the human Approver's
+asynchronous decision native rather than a companion overlay
 ({{approval}}).
 
-GNAP permits the end user and the resource owner to be the same
-natural person, and in the agent deployments this profile targets
-they usually are: the person's agent is the client instance, and the
-person is both Subject and Approver, the core's default geometry.
-Nothing in this binding requires them to differ.
+In the agent deployments this profile targets, one natural person
+commonly operates the client, owns the resources, and is the
+principal the Mission serves: operator, Approver, and Subject
+coincide, the core's default geometry. The table's role assignments,
+not that coincidence, are normative.
 
 # Mission Flow {#flow}
 
@@ -498,14 +500,14 @@ failing, and the submission is untrusted client input, never
 authority). The grant request's signature attributes the submission
 to the client instance's key; attribution confers no authority.
 
-The `access` arrays of the grant request's access token requests are
+The access rights of the grant request's access token requests are
 this binding's authority proposal, replacing the issuance profile's
-PAR-only carriage rule; that profile's validation, derivation,
-recording, and hashing semantics apply unchanged (a proposal, never
-authority; the Intent itself carries no authority members). A
-Mission created from a grant request records `proposed_authority`
-and `proposal_hash` as the issuance profile's Mission record defines
-them, computed over the proposal as received.
+PAR-only carriage rule. GNAP rights are not an OAuth
+`authorization_details` array: {{authority-adapter}} defines the
+normative projection that resolves, normalizes, and aggregates them
+before the issuance profile's recording and hashing semantics apply
+(a proposal, never authority; the Intent itself carries no authority
+members).
 
 A Mission-Bound GNAP Client Instance MUST carry the Mission Intent
 on the first grant request it makes under a prospective Mission, and
@@ -514,7 +516,9 @@ access rights name. The authorization server derives the Authority
 Set from the Intent, and from the authority proposal, bounded by the
 issuance profile's Mission Authority rules; the requested access
 locates the first drawdown, not the Mission's extent
-({{intent-first}}). A grant request with no `mission_intent` and no
+({{intent-first}}). The `mission_intent` member is valid only on the
+grant request that opens the negotiation ({{revision}}). A grant
+request with no `mission_intent` and no
 Mission association is plain GNAP, outside this profile's scope.
 
 The Subject arrives through GNAP's own channels: interaction at the
@@ -528,18 +532,63 @@ deployment that shapes free-text instructions into structured
 Intents composes here unchanged
 ({{I-D.draft-mcguinness-mission-shaping}}).
 
+# Mission Authority Adapter {#authority-adapter}
+
+GNAP access rights are strings or type-defined objects whose
+semantics belong to each type, per {{RFC9635}}; a grant request may
+carry several labeled access token requests; and nothing makes two
+rights comparable because their members share names. The family's
+`proposed_authority` is specifically an array of authorization
+details objects. This section is the normative bridge between the
+two.
+
+A Mission-Bound GNAP Authorization Server MUST project the grant
+request's access rights into the family representation as follows:
+
+1. **Resolve.** Every reference string resolves to the
+   authorization-server-defined access-right object it names, pinned
+   as an immutable, versioned value for the Mission's retention
+   period. An unresolvable reference refuses intake.
+2. **Type contract.** For each access-right type the deployment
+   supports, the authorization server defines: normalization to a
+   canonical form, audience and location interpretation, conversion
+   to an authorization details object, equality, and, where the type
+   admits one, a subset relation in the type's value space. An
+   unsupported type refuses intake; nothing is inferred from
+   member-name coincidence.
+3. **Aggregate.** Rights are aggregated across all of the grant
+   request's access token requests and deduplicated under
+   type-defined equality. Token labels are issuance metadata, never
+   authority.
+4. **Record.** The resulting canonical authorization details array
+   is recorded as `proposed_authority` and hashed as `proposal_hash`
+   under the issuance profile's rules. The raw GNAP request MAY be
+   retained as transaction evidence; it is not the record field.
+
+A type that defines equality but no subset relation is an
+**exact-carry** type: its rights enter the Authority Set and later
+comparisons only as exact values at their original audience, and a
+modification touching them classifies as exact drawdown or refusal,
+never as attenuation ({{subset}}, {{drawdown}}). The derived
+Authority Set remains bounded by the issuance profile's Mission
+Authority rules; the adapter governs the proposal input, not the
+derivation.
+
 # Mission Approval {#approval}
 
 GNAP's grant processing is this binding's approval surface. Where
 processing concludes that a new Mission is proposed, it executes the
 issuance profile's approval steps:
 
-1. Authenticate the Approver: the resource owner at the
-   authorization server's interaction surface, or the principal
-   whose standing policy the deployment authorizes to decide. When
+1. Authenticate the Approver: the resource owner or other
+   accountable principal at the authorization server's interaction
+   surface, or establish the standing basis of an adopted companion
+   profile ({{approval-modes}}). When
    the Intent carries `controls.acr`, the authentication MUST be one
    the deployment's policy maps as satisfying the named class.
-2. Establish the Subject: the end user, from interaction the
+2. Establish the Subject: the issuer-qualified principal on whose
+   behalf the Mission runs, per the deployment's authority-source
+   policy ({{roles}}), from interaction the
    authorization server itself conducted or from subject assertions
    it verified, never from the grant request's `user` member, the
    Mission Intent, or other unauthenticated client input.
@@ -552,6 +601,8 @@ issuance profile's approval steps:
 5. Create the Mission record in the `active` state atomically with
    the approval decision. The grant request MUST NOT reach the
    _approved_ state under the Mission before the record is `active`.
+
+## Approval Modes {#approval-modes}
 
 Three native processing outcomes realize the approval event:
 
@@ -574,14 +625,17 @@ companion for ({{I-D.draft-mcguinness-oauth-mission-approval}});
 here it is the substrate's ratified machinery, and that companion
 does not apply.
 
-**Standing policy.** Where the resource owner's standing policy at
-the authorization server covers the proposal, the grant moves from
-_processing_ to _approved_ without interaction: that policy is the
-issuance profile's authorized-policy approver, the approval event
-records the policy identity and version as the Approver context, and
-the anchors commit as in the interactive case. A deployment SHOULD
-reserve policy approval for Missions within bounds the owner has
-expressly pre-consented and route everything else to interaction.
+**Standing basis.** A policy is not the Approver. A grant the
+authorization server would approve without interaction creates a
+Mission only where an adopted profile supplies the complete
+`approval_basis` the issuance profile defines (type, consent
+principal, root commitment, activation, and activation actor),
+tracing the machine-speed activation to an accountable human
+consent; the family's Mission Templates profile is that shape. The
+GNAP policy identifier and version are activation context, never the
+Approver. Absent such a profile, noninteractive processing MUST NOT
+create a Mission: baseline Mission creation under this binding is
+interactive or deferred.
 
 The negotiation loop is the clarification and narrowing surface: the
 owner or the authorization server may narrow the proposal across
@@ -591,15 +645,34 @@ response of {{RFC9635}}. That loop is most of the state machine the
 approval-revision companion defines, native to the substrate
 ({{I-D.draft-mcguinness-oauth-mission-approval-revision}}); where a
 deployment adopts that companion's semantics, the continuation URI
-is its revision handle. If the derived Authority Set changes between
-rendering and consent, the authorization server MUST recompute the
-anchors and re-obtain consent, per the issuance profile.
+is its revision handle.
 
 Mission Consent Evidence composes unchanged, with the authorization
 server as the committing issuer
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}): the
 interaction surface is where the disclosure is rendered, and what
 was shown is what the evidence commits.
+
+## Proposal Revision {#revision}
+
+A grant under a prospective Mission is mutable until approval, and
+the ceremony must bind what was actually approved. The authorization
+server MUST maintain a proposal revision for the grant: every
+modification that changes what rendering depends on (the access
+token requests, the subject request, user assertions, or the
+interaction arrangement) increments it. Rendering, the approval
+decision, the interaction reference, Consent Evidence, and the
+anchors MUST all bind the same revision, and an interaction
+completion presented for a stale revision MUST NOT approve a later
+one: the authorization server refuses it (`invalid_interaction`) and
+re-renders. The anchors are computed over the revision actually
+approved.
+
+The `mission_intent` member is valid only on the grant request that
+opens the negotiation; the authorization server MUST reject a
+modification that carries it (`invalid_request`). After activation,
+modification is adjudicated per {{drawdown}}, and the Approved
+Context is never revised behind the existing reference.
 
 # Mission Record {#mission-record}
 
@@ -609,9 +682,12 @@ supplies it. A Mission-Bound GNAP Authorization Server MUST create a
 Mission record, as the issuance profile's Mission Record section
 defines it, for every Mission it approves, with `issuer` its grant
 endpoint URI (the value {{RFC9635}} defines as the identifier of the
-AS) and `client_id` the instance identifier the authorization server
-associates with the client instance's key, or a stable identifier it
-derives from that key where no instance identifier is registered.
+AS) and `client_id` the client instance's instance identifier where
+the authorization server registers one, or a stable approval-time
+identifier it derives from the instance's key where none is
+registered. That value is the Actor identity; token presenter keys
+are credential bindings recorded separately
+({{security-key-rotation}}).
 `expires_at` is REQUIRED, in RFC 3339 {{RFC3339}} date-time form;
 when the proposal's Intent carries none, the authorization server
 MUST set one by policy.
@@ -635,15 +711,18 @@ unrecognized states fail-safe non-active.
 | Family state | GNAP surface |
 |---|---|
 | `active` | continuation, token issuance, and rotation served; introspection reports tokens by their own status |
-| `completed` | grant finalized; continuation refused (`invalid_continuation`); rotation refused (`invalid_rotation`); introspection reports inactive |
-| `revoked` | grant finalized; continuation refused (`invalid_continuation`); rotation refused (`invalid_rotation`); introspection reports inactive |
-| `expired` | grant finalized; continuation refused (`invalid_continuation`); rotation refused (`invalid_rotation`); introspection reports inactive |
-| `suspended` | continuation defers: a `continue` object with `wait` and no new tokens; rotation refused (`invalid_rotation`); introspection reports inactive |
+| `completed` | grant finalized; continuation refused (`invalid_continuation`); rotation refused (`invalid_rotation`); introspection reports `active: false` |
+| `revoked` | grant finalized; continuation refused (`invalid_continuation`); rotation refused (`invalid_rotation`); introspection reports `active: false` |
+| `expired` | grant finalized; continuation refused (`invalid_continuation`); rotation refused (`invalid_rotation`); introspection reports `active: false` |
+| `suspended` | continuation defers: a `continue` object with `wait` and no new tokens; rotation refused (`invalid_rotation`); introspection reports `active: false` |
 
 The projection is fail-safe: every non-`active` state projects to a
-non-permitting native signal. The family surfaces report the
-distinct state, and the introspection response's `mission.state`
-member carries it verbatim ({{mission-claim}}). This binding adds to
+non-permitting native signal. The introspection projection is
+binary: a response for a token under a non-active Mission is
+`active: false` with every other member omitted, per {{RFC9767}},
+the `mission` member appears only in active responses
+({{mission-claim}}), and the lifecycle reason is obtained from the
+family state surfaces ({{state-surfaces}}). This binding adds to
 GNAP's model:
 
 - **Revocation.** The authorization server MUST provide an
@@ -657,12 +736,14 @@ GNAP's model:
 - **Expiry.** When the record's `expires_at` passes, the Mission
   transitions to `expired` without a request.
 - **Completion.** The client instance's `DELETE` of the continuation
-  URI is this binding's native completion proposal: the
-  authorization server commits the Mission to `completed` with the
-  semantics of the status profile's `complete` operation and the
-  grant is finalized, per {{RFC9635}}'s revocation of a grant
-  request. A deployment MAY also serve completion as a family
-  surface for parties other than the client.
+  URI is grant cancellation: it always finalizes the grant, per
+  {{RFC9635}}. A Mission-Bound GNAP Authorization Server MAY
+  additionally treat it as a completion proposal, adjudicated under
+  the Issuer's lifecycle policy with the semantics of the status
+  profile's `complete` operation; a rejected or unauthorized
+  proposal leaves the grant finalized without changing Mission
+  state. A deployment MAY also serve completion as a family surface
+  for parties other than the client.
 - **Suspension.** A deployment that adopts the status profile's
   `suspended` state defers rather than denies: continuation
   responses carry `continue` with `wait` and no new tokens, so the
@@ -685,8 +766,12 @@ UMA authorization server. On that precondition the authorization
 server MUST NOT issue an access token, honor a grant modification,
 or rotate a token's value or key under a Mission that is not
 `active`, and the `active` check MUST be atomic with the operation.
-Each token issuance and each rotation counts as one derivation under
-the Mission; where the Intent's `controls.max_derivations` is
+One derivation is counted per successful GNAP operation that issues
+or rotates credentials under the Mission (an initial grant response,
+a continuation response, a modifying request's response, or a token
+rotation), regardless of the number of tokens the response carries;
+an operation that issues none counts zero. Where the Intent's
+`controls.max_derivations` is
 present, the authorization server MUST refuse the derivation that
 would exceed it, per the issuance profile's count-and-gate rule. An
 access token issued under a Mission MUST NOT expire later than the
@@ -712,13 +797,17 @@ on GNAP's error object is deferred wire work ({{limitations}}).
 ## Mission State Surfaces {#state-surfaces}
 
 Per-use introspection is this binding's native state source for
-resource servers: a response for a token under a Mission carries the
-`mission` member with its `state` ({{mission-claim}}), and, under
-Containment, an `access` array filtered to the Effective Authority
-Set at access-right grain. The response's top-level `active` member
-MUST remain `true` while the token is otherwise active, whether or
-not any right survives intersection: an empty `access` array reports
-narrowed authority, not a token that has ceased to be valid, and
+resource servers. A response for a token under an active Mission
+carries the `mission` member with its `state` ({{mission-claim}})
+and, under Containment, an `access` array filtered to the Effective
+Authority Set at access-right grain. {{RFC9767}} evaluates activity
+in the resource server's context: where the introspection request
+named minimum `access` rights and the filtered set no longer
+satisfies them, the token is inactive in that context and the
+response is `active: false` with every other member omitted. Where
+no minimum was named, an otherwise valid token reports
+`active: true` with the filtered, possibly empty, `access` array:
+the resource server then holds no disclosed authority to permit.
 `mission.state` continues to report `active` because containment
 narrows authority without changing Mission state. The staleness
 bound is the introspection caching the deployment permits, which the
@@ -767,9 +856,9 @@ Mission Deployment Profile.
 An access token issued under a Mission names it through the
 `mission` object: the family members `id`, `issuer`, and
 `authority_hash` as the issuance profile defines them, and it SHOULD
-carry the `expires_at` member as the issuance-grant profile defines
-it ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), a
-bounding commitment with no liveness. The object is delivered on
+carry the record's `expires_at`, a bounding commitment with no
+liveness that the token's own expiry already sits inside
+({{gating}}). The object is delivered on
 three carriage surfaces:
 
 - **Token-carried**: a deployment issuing structured tokens (for
@@ -778,7 +867,8 @@ three carriage surfaces:
 - **Introspection-carried**: a deployment issuing opaque tokens
   carries the same object, with the `state` member per the issuance
   profile's introspection section, in a `mission` member of the
-  {{RFC9767}} introspection response, beside `access` ({{iana}}).
+  {{RFC9767}} introspection response, beside `access`, on active
+  responses only ({{lifecycle}}, {{iana}}).
 - **Grant-response-carried**: the grant response carries a `mission`
   member ({{iana}}) giving the client instance the Mission
   Reference, `expires_at`, and current `state`. This surface informs
@@ -797,20 +887,21 @@ member to grant or widen authority, per the issuance profile.
 ## Authority Subset and Grain {#subset}
 
 The access rights a token carries MUST be a subset of the Mission's
-Authority Set under the issuance profile's subset rule, projected
-onto GNAP's grain: type-qualified access rights objects whose
-`actions`, `locations`, `datatypes`, `identifier`, and `privileges`
-members admit comparison in each type's value space. Unknown types
-or incomparable members fail closed at the decision point that
-requires their semantics. An access right requested by reference
-string resolves to authorization-server-defined rights and is
-compared in the resolved value space. Where the deployment adopts
+Authority Set under the issuance profile's subset rule, evaluated
+through the authority adapter ({{authority-adapter}}): each right
+maps to its type's canonical authorization-detail form and is
+compared in the type's declared value space. Unknown types,
+unresolved references, or incomparable members fail closed at the
+decision point that requires their semantics, and an exact-carry
+type is satisfied only by the exact right at its original audience.
+Where the deployment adopts
 Mission Containment, {{gating}} states the set a token is gated
 against at issuance and modification.
 
 The grain is finer than UMA's resource-and-scopes projection: a
 type-qualified rights object can carry parameter bounds the family's
-Authority Set expresses. What it still cannot carry is cumulative
+Authority Set expresses, where its type defines them. What it still
+cannot carry is cumulative
 consumption: the metering companion's budgets
 ({{I-D.draft-mcguinness-mission-metering}}) and cross-action
 constraints bind at the runtime layer, where the PDP evaluates each
@@ -836,9 +927,12 @@ derivation gated per {{gating}}.
 A requested right outside the Authority Set is an expansion, not a
 drawdown. The authorization server MUST NOT widen by policy: it
 routes the modification to the Approver through interaction or the
-_pending_ deferral, and an approval revises the Mission under the
-expansion companion's semantics, recomputed anchors included
-({{I-D.draft-mcguinness-oauth-mission-expansion}}). The wire needs
+_pending_ deferral, and an approval creates a successor Mission
+under the expansion companion's semantics
+({{I-D.draft-mcguinness-oauth-mission-expansion}}), atomically
+associating the grant with the successor. The predecessor record and
+its anchors are never rewritten, and previously issued tokens retain
+the predecessor's Mission reference. The wire needs
 nothing new: widening is another negotiation round the owner must
 decide.
 
@@ -928,27 +1022,36 @@ The contextual-governance kernel maps as follows:
    RS-facing discovery ({{RFC9767}}), and verification keys for
    signed family artifacts are deployment-distributed
    ({{state-surfaces}}).
-3. **Actor binding**: the client instance key is the Actor handle,
-   proved by the key proofing method on every signed request. At
-   approval the Controller binds the key that signed the grant
-   request carrying the Intent; later token issuance, continuation,
-   and use are established by the same key binding. Delegation is
-   not defined by this binding; an instance identifier, where
-   registered, maps to the key at the authorization server
-   ({{roles}}, {{approval}}, {{credential}}).
+3. **Actor binding**: the Actor is the client instance, identified
+   by its instance identifier where the authorization server
+   registers one, otherwise by a stable approval-time identifier the
+   Controller derives from the instance's key. Instance requests are
+   proved by the key proofing method on every signed request; at
+   approval the Controller binds the instance that signed the
+   negotiation-opening request. Access-token presenter keys are
+   credential bindings recorded separately: token key rotation is a
+   credential event, never Actor succession, and client-instance
+   identity migration is outside {{RFC9635}}, requiring a
+   deployment-authenticated rule or a fresh approval. Delegation is
+   not defined by this binding ({{roles}}, {{mission-record}},
+   {{security-key-rotation}}).
 4. **Approved Context**: the immutable Mission Intent, the recorded
-   authority proposal, and the derived Authority Set in the Mission
-   record are the Approved Context. The family `intent_hash`,
-   `authority_hash`, and `proposal_hash` commit them under the
-   issuance profile's canonicalization; they are this binding's
-   chosen mechanism, not a substrate-kernel requirement. The mutable
-   grant request is never the approved value ({{intent-first}},
-   {{mission-record}}).
+   authority proposal (the adapter's canonical array,
+   {{authority-adapter}}), and the derived Authority Set in the
+   Mission record are the Approved Context. The family
+   `intent_hash`, `authority_hash`, and `proposal_hash` commit them
+   under the issuance profile's canonicalization; they are this
+   binding's chosen mechanism, not a substrate-kernel requirement.
+   The mutable grant request is never the approved value, and
+   modification never revises the record behind its reference:
+   approved widening yields a successor Mission ({{intent-first}},
+   {{mission-record}}, {{drawdown}}).
 5. **Approval ceremony**: grant processing performs the five
-   approval steps in the interactive, deferred, or standing-policy
-   mode and creates the record `active` atomically with approval;
+   approval steps in the interactive or deferred mode, or under a
+   companion-supplied standing basis, binding one proposal revision,
+   and creates the record `active` atomically with approval;
    the grant does not reach _approved_ before the record does
-   ({{approval}}).
+   ({{approval}}, {{revision}}).
 6. **Governance gate**: only the issuance profile's `active` state
    is active. Every other or unrecognized value fails closed at
    continuation, issuance, rotation, and the introspection
@@ -962,7 +1065,8 @@ The contextual-governance kernel maps as follows:
    transition ({{gating}}, {{state-surfaces}}).
 8. **Context propagation**: the protected `mission` claim in a
    structured token proves issuance under the Mission and verifies
-   offline; the `mission` member of the introspection response is
+   offline; the `mission` member of the introspection response (on
+   active responses only) is
    the Controller's authenticated per-use assertion of the same
    fact and current state; the `mission` grant response member is
    correlation for the client instance only. The continuation
@@ -983,8 +1087,8 @@ The binding declares these capabilities:
 | --- | --- | --- | --- | --- |
 | Lifecycle-Gated Authorization | supplied | always | Token issuance, grant modification, and token rotation at the AS ({{gating}}) | A structured token without a state check remains usable only for its bounded lifetime |
 | State-Observable | supplied | {{RFC9767}} introspection deployed, or Mission Status active | Resource servers via per-use introspection with a declared cache bound; any authorized consumer via Mission Status ({{state-surfaces}}) | Token lifetime alone is not observation |
-| Structured Authority | supplied | always | Access rights arrays; the AS owns the semantics; comparison per type value space ({{subset}}) | Consumption bounds bind at the runtime layer; reference strings resolve to AS-defined rights |
-| Monotonic Derivation | supplied | always | The no-broader-than relation at issuance, modification adjudication, and rotation refusal ({{subset}}, {{drawdown}}, {{gating}}) | Covers the declared Authority Set projection within this issuer's boundary |
+| Structured Authority | supplied | always | Access rights admitted through the authority adapter; the AS owns each supported type's semantics; comparison in the type's declared value space ({{authority-adapter}}, {{subset}}) | Unsupported types refuse at intake; exact-carry types compare by equality only; consumption bounds bind at the runtime layer |
+| Monotonic Derivation | supplied | always | The no-broader-than relation of adapter-supported types at issuance, modification adjudication, and rotation refusal ({{subset}}, {{drawdown}}, {{gating}}) | Exact-carry types classify exact matches or refuse; covers this issuer's boundary |
 | Credential-Bound | supplied | always | Key-bound token with a protected `mission` claim, or the authenticated introspection assertion; fact semantics: lifecycle-gated issuance ({{mission-claim}}) | Introspection carriage is an online issuer assertion; a `bearer`-flagged token weakens holder proof |
 | Authorized Context Correlation | not supplied | -- | -- | The Controller binds Mission, Actor, Subject, and tokens natively; no cross-authority join is defined |
 | Independently Verifiable | supplied | structured token format issued, or signed Mission Status active | Offline verification of issuance-under-Mission and of state as of a signed observation ({{mission-claim}}, {{state-surfaces}}) | Key distribution is deployment-configured; GNAP publishes no client-facing key surface |
@@ -1070,7 +1174,8 @@ record and its anchors, never the grant, are what was approved.
 this sketch defers: carriage of the containment profile's denial
 reason on GNAP's error object; registration of the family discovery
 members for both GNAP discovery surfaces; re-attaching a new grant
-request to an existing Mission after finalization; GNAP-native Child
+request to an existing Mission after finalization; client-instance
+identity migration; GNAP-native Child
 Missions; and the attenuable-token-format composition
 ({{mission-substrate}}).
 
@@ -1082,29 +1187,41 @@ validation and have no role to claim.
 
 A **Mission-Bound GNAP Authorization Server**:
 
-- accepts the `mission_intent` grant request member and bounds it as
-  untrusted input ({{mission-intent}});
+- accepts the `mission_intent` grant request member on
+  negotiation-opening requests only, and bounds it as
+  untrusted input ({{mission-intent}}, {{revision}});
+- projects access rights into the family representation through the
+  authority adapter: resolves references, refuses unsupported types,
+  aggregates and deduplicates across token requests, and records the
+  canonical array as `proposed_authority` ({{authority-adapter}});
 - executes the approval event on its grant processing surface in the
-  interactive, deferred, and standing-policy modes, creating the
-  record `active` atomically with the decision and computing the
-  anchors ({{approval}}, {{mission-record}});
+  interactive and deferred modes, and in the standing-basis mode
+  only where an adopted profile supplies the complete approval
+  basis, binding one proposal revision, creating the
+  record `active` atomically with the decision, and computing the
+  anchors ({{approval}}, {{revision}}, {{mission-record}});
 - operates the lifecycle of {{lifecycle}}: authenticated revocation
-  by `mission_id`, expiry, completion on grant revocation, fail-safe
+  by `mission_id`, expiry, completion adjudicated on grant
+  revocation, fail-safe
   projection onto continuation and token-management outcomes, and
   the only-`active` gate atomic with every issuance, modification,
   and rotation ({{gating}});
 - issues access tokens as Mission-bound credentials on a declared
   carriage surface, applies the subset rule at every issuance and
-  modification, and routes out-of-set modifications to the Approver
+  modification, and routes out-of-set modifications to the Approver,
+  realizing approved widening as a successor Mission
   ({{credential}}, {{drawdown}});
 - where it adopts Mission Containment, intersects every issued
   token's rights with the Effective Authority Set at access-right
   grain at every issuance and modification, refuses a result with no
   surviving right (`request_denied`), refuses rotation of a token
   whose rights the set no longer covers (`invalid_rotation`), and
-  filters per-use introspection the same way while reporting the
-  top-level `active` member by the token's own status
+  filters per-use introspection the same way, reporting
+  `active: false` where a named minimum access is no longer
+  satisfied and the filtered `access` array otherwise
   ({{gating}}, {{state-surfaces}});
+- treats token key rotation as a credential event, never Actor
+  succession ({{security-key-rotation}});
 - keeps continuation and token management access tokens confined to
   their surfaces, as continuity, never authority ({{continuity}});
 - serves Mission state with a declared staleness bound per
@@ -1125,7 +1242,8 @@ A **Mission-Bound GNAP Client Instance**:
   it, the token management token, or `mission_id` as a credential
   ({{continuity}}); and
 - proposes completion by revoking the grant request when the task is
-  done ({{lifecycle}}).
+  done, understanding that revocation finalizes the grant and
+  completion is the Issuer's adjudication ({{lifecycle}}).
 
 # Security Considerations
 
@@ -1165,17 +1283,23 @@ confusable-character presentation, and keep the derived Authority
 Set visually distinct from client-supplied narrative, so crafted
 text cannot pass as derived authority.
 
-## Actor Key Rotation {#security-key-rotation}
+## Token Keys and Actor Identity {#security-key-rotation}
 
-The Actor handle is the client instance's key, and {{RFC9635}}
-permits rotating an access token's key only under dual proof of the
-old and new keys. A Mission-Bound GNAP Authorization Server MUST
-record any accepted key rotation affecting a Mission's Actor binding
-in the governance record, and MUST apply subsequent Actor checks
-against the successor key. A deployment that cannot attribute a
-rotation to the bound Actor refuses it
-(`key_rotation_not_supported`); silent key succession would let a
-compromised instance walk the Mission to an attacker-held key.
+The Actor is the client instance ({{roles}}); an access token's key
+is a credential binding, and the two must not be conflated: GNAP
+tokens can be bound to a different key than the instance's, to an
+AS-provided key, or carry the `bearer` flag. {{RFC9635}} permits
+rotating a token's key only under dual proof of the old and new
+keys, and defines no modification of client-instance keys. A
+Mission-Bound GNAP Authorization Server MUST record an accepted
+token key rotation in the governance record as a credential event,
+MUST NOT treat it as Actor succession or rewrite the Mission's Actor
+binding, and refuses a rotation it cannot attribute to the bound
+Actor (`key_rotation_not_supported`). Client-instance identity
+migration is outside {{RFC9635}}: a deployment defines an
+authenticated migration rule or requires a fresh approval; silent
+key succession would let a compromised instance walk the Mission to
+an attacker-held key.
 
 ## Authorization Server Compromise {#security-as-compromise}
 
@@ -1226,15 +1350,37 @@ crosses to resource servers.
 
 # IANA Considerations {#iana}
 
-This sketch revision requests no IANA actions. A later revision will
-register: `mission_intent` in the GNAP Grant Request Parameters
-registry of {{RFC9635}}; `mission` in the GNAP Grant Response
-Parameters registry of {{RFC9635}}; `mission` in the token
-introspection response field registry of {{RFC9767}}; and the family
-discovery members of {{state-surfaces}} in the GNAP Authorization
-Server Discovery Fields registry of {{RFC9635}} and the RS-facing
-discovery registry of {{RFC9767}}. The `mission` JWT claim is
-registered by the issuance profile.
+This document registers two GNAP extension members and one
+introspection response member; the behavior fixed here is the
+registration content.
+
+**GNAP Grant Request Parameters registry** ({{RFC9635}}):
+
+- Name: `mission_intent`. Type: object. Reference: {{mission-intent}}
+  of this document. Behavior by grant state: valid only in the grant
+  request that opens a negotiation; a continuation or modification
+  request carrying it is rejected with `invalid_request` in every
+  state ({{revision}}). It never appears in responses.
+
+**GNAP Grant Response Parameters registry** ({{RFC9635}}):
+
+- Name: `mission`. Type: object. Reference: {{mission-claim}} of
+  this document. Behavior by grant state: returned in responses for
+  a grant governed by a Mission once the approval event has created
+  the record, in the _approved_ state and in _pending_ or
+  _processing_ rounds that follow it; absent before approval.
+
+**Token introspection response registry** ({{RFC9767}}):
+
+- Name: `mission`. Type: object. Reference: {{mission-claim}} and
+  {{state-surfaces}} of this document. Returned only in active
+  introspection responses for tokens issued under a Mission.
+
+The family discovery members of {{state-surfaces}} remain to be
+registered in the GNAP Authorization Server Discovery Fields
+registry of {{RFC9635}} and the RS-facing discovery registry of
+{{RFC9767}} in a later revision ({{limitations}}). The `mission` JWT
+claim is registered by the issuance profile.
 
 --- back
 

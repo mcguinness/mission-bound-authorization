@@ -2800,7 +2800,8 @@ reclassification, not by a stable document absorbing a dependency.
 
 `mission-gnap`:
 : Experimental sketch. The GNAP binding: the Mission Intent rides a
-  registered grant request member, interaction or standing policy is
+  registered grant request member, interaction or a
+  companion-supplied standing basis is
   the approval event, grant modification splits into in-Mission
   drawdown and Approver-routed expansion, and the continuation access
   token is continuity that is never authority; the second binding

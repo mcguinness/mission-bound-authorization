@@ -895,14 +895,15 @@ Experimental sketch: the fifth binding, to the Grant Negotiation and
 Authorization Protocol (RFC 9635) authorization server, and the
 second authored against the Mission Substrate Requirements contract.
 GNAP standardized the negotiation the OAuth binding assembles from
-parts (an intent-first grant request that is pushed by construction,
+parts (a grant request that is pushed by construction,
 key-bound client instances, the native `pending` grant with
 continuation, structured access rights, and token management) and
 left the object of that negotiation unspecified: no durable record
 governs what the resource owner approved, in what bounds, under what
 lifecycle. This binding fills that interior with the Mission. The
 Mission Intent rides a registered grant request member, the
-interaction ceremony or standing policy is the approval event, the
+interaction ceremony, or a companion-supplied standing basis, is the
+approval event, the
 lifecycle gates every access token issuance and rotation, grant
 modification splits into in-Mission drawdown and Approver-routed
 expansion, and the continuation access token is Mission continuity
