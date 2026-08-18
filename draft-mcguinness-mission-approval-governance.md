@@ -99,6 +99,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -172,9 +180,10 @@ which this document imports normatively
 `approval_policy.digest` is an envelope anchor, and the record
 digest ({{envelope}}) is a canonical-object digest.
 
-The terms Mission, Mission Issuer, Approver, approval event,
-`approval_event_id`, `intent_hash`, and `authority_hash` are used as
-defined in {{I-D.draft-mcguinness-oauth-mission}}.
+The terms Mission, Mission Issuer, Approver, approval event, Mission
+Intent, `approval_event_id`, `intent_hash`, `authority_hash`, and
+`controls` are used as defined in
+{{I-D.draft-mcguinness-oauth-mission}}.
 
 Approval Governance Record (AGR):
 : The record this document defines: the policy, assertions, and
@@ -429,10 +438,13 @@ of {{record}} that the retained policy lets an auditor re-run the
 decision.
 
 At evaluation, the issuer MUST classify the committed Mission's
-derived Authority Set by consequence class and select, across every
-class the set carries, the strictest maximum age that applies,
-accounting for any declared exception. This is a property of the
-whole Authority Set the record's `mission.authority_hash` binds to
+consequence classes from the derived Authority Set and from any
+consumption bound Mission Intent `controls` carries
+({{I-D.draft-mcguinness-mission-metering}}). The issuer MUST select,
+across every class either source carries, the strictest maximum age
+that applies, accounting for any declared exception. This is a
+property of the whole committed Mission the record's
+`mission.authority_hash` and `mission.intent_hash` bind to
 ({{record}}), never of one assertion or entry in isolation.
 
 For each `policy` assertion the evaluation would count toward the
@@ -471,9 +483,10 @@ or the policy's freshness does not narrow or terminate it.
 Four conditions are the high-risk classes the issuance profile
 defines: irreversible action, external commitment, privileged
 administration, and a consumption bound
-({{I-D.draft-mcguinness-oauth-mission}}). Where the
-committed Mission's derived Authority Set carries one, the assertion
-satisfying the accountable-approver rule of
+({{I-D.draft-mcguinness-oauth-mission}}). Where the committed
+Mission's derived Authority Set or Mission Intent `controls`
+({{I-D.draft-mcguinness-mission-metering}}) carries one, the
+assertion satisfying the accountable-approver rule of
 {{assertion-requirements}} MUST be `kind: human`, unless a committed,
 class-named exception under this section admits `kind: policy` for
 that class.
@@ -713,12 +726,13 @@ A **Recording Issuer** MUST:
 - include the accountable-approver assertion;
 - evaluate under the retained policy version;
 - enforce the strictest applicable policy-approval maximum age across
-  the derived Authority Set's consequence classes, from a committed
-  ceiling and any committed exception ({{policy-approval-recency}});
+  the consequence classes the committed Mission's derived Authority
+  Set and Mission Intent `controls` carry, from a committed ceiling
+  and any committed exception ({{policy-approval-recency}});
 - require `kind: human` for the accountable-approver assertion where
-  the derived Authority Set carries a high-risk class, unless a
-  committed class-named exception applies
-  ({{policy-approval-recency}});
+  the committed Mission's derived Authority Set or Mission Intent
+  `controls` carries a high-risk class, unless a committed
+  class-named exception applies ({{policy-approval-recency}});
 - commit the record atomically with Mission creation and let failure
   prevent activation ({{atomic-commitment}});
 - sign the committed record and keep it immutable

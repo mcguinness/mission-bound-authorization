@@ -106,6 +106,7 @@
    "deps": [
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
+    "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
