@@ -1,0 +1,49 @@
+name: "Reader Editions"
+
+on:
+  pull_request:
+  push:
+    branches:
+    - main
+
+jobs:
+  build:
+    name: "Build Reader Editions"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - name: "Checkout"
+      uses: actions/checkout@v6
+
+    - name: "Setup"
+      id: setup
+      run: date -u "+date=%FT%T" >>"$GITHUB_OUTPUT"
+
+    - name: "Caching"
+      uses: actions/cache@v5
+      with:
+        path: |
+          .refcache
+          .venv
+          .gems
+          node_modules
+          .targets.mk
+        key: i-d-${{ steps.setup.outputs.date }}
+        restore-keys: i-d-
+
+    - name: "Build Reader Editions"
+      id: build
+      uses: martinthomson/i-d-template@v1
+      with:
+        make: reader-editions
+        token: ${{ github.token }}
+
+    - name: "Archive Reader Editions"
+      if: ${{ github.event_name == 'pull_request' }}
+      uses: actions/upload-artifact@v6
+      with:
+        name: reader-editions
+        path: |
+          edition-*.html
+          edition-*.txt
