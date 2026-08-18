@@ -1773,11 +1773,15 @@ active one: a contained Mission stays `active`, so a Mission Status
 List bit does not move
 ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
 "Propagation"). A containment-aware source is full Status or
-introspection carrying `containment_version`, Mission Lifecycle
-Signals carrying the overlay change, or a fresh state-gated
-derivation that re-materializes the narrowed Authority Set
+introspection carrying `containment_version`, or Mission Lifecycle
+Signals carrying the overlay change
 ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
-"Visibility").
+"Visibility"). A fresh derivation narrows what it mints and can
+shorten the residual, but it checks nothing at action time, so it
+carries Baseline, not Runtime-Enforced, and is not a containment-aware
+source for this tightening
+({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
+"Containment Properties").
 
 A deployment MAY instead tighten on any nonzero overlay regardless of
 class. That is a defensible conservative default; its cost is
