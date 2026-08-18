@@ -2654,6 +2654,39 @@ it does not cover. An illustrative shape:
     "key_generated_in_pep": true,
     "agent_receives_bearer_token": false
   },
+  "key_custody": [
+    {
+      "key_class": "issuer_signing",
+      "artifact_classes": ["mission_tokens"],
+      "kid_selector": "issuer-token-2026",
+      "holder": "hsm_or_kms",
+      "exportable": false,
+      "generation": "dual_controlled",
+      "signing_use_controls": "online_token_signing",
+      "compromise_recovery_ref": "https://ops.example.com/procedures/issuer-key-compromise"
+    },
+    {
+      "key_class": "issuer_signing",
+      "artifact_classes": ["registered_evidence", "portable_artifacts"],
+      "kid_selector": "issuer-evidence-2026",
+      "holder": "hsm_or_kms",
+      "exportable": false,
+      "generation": "dual_controlled",
+      "signing_use_controls": "low_volume_high_value_signing",
+      "compromise_recovery_ref": "https://ops.example.com/procedures/issuer-key-compromise"
+    },
+    {
+      "key_class": "mediating_pep_custody",
+      "artifact_classes": ["sender_constraint_proof"],
+      "kid_selector": "pep-dpop-2026",
+      "holder": "software",
+      "exportable": false,
+      "generation": "generated_in_pep",
+      "signing_use_controls": "per_session_sender_constraint",
+      "compromise_recovery_ref": "https://ops.example.com/procedures/pep-key-rotation",
+      "attestation_ref": "https://attest.example.com/pep/2026"
+    }
+  ],
   "approval_rendering": {
     "rendered_by": "agent-isolated-component"
   },
@@ -2705,6 +2738,28 @@ posture beside its guarantees: the field-classification scheme its
 records use, whether access to Mission evidence is itself audited,
 and the erasure policy that pairs retention with deletion
 accountability ({{I-D.draft-mcguinness-mission-audit}}).
+
+The `key_custody` member declares, as a list keyed by key and
+application rather than one row per key class, the custody a
+deployment states for each signing key it operates: the key class
+(the five classes {{I-D.draft-mcguinness-mission-security-model}}
+enumerates: issuer signing, evidence signing, agent
+sender-constraint, mediating-PEP custody, attenuation roots), the
+artifact classes or `kid` selector the entry covers (core recommends
+segmenting issuer signing keys by artifact class under distinct `kid`
+values within one `jwks_uri`,
+{{I-D.draft-mcguinness-oauth-mission}}), the holder, whether the key
+is exportable, its generation and signing-use controls, a reference
+to its documented compromise-recovery procedure, and any attestation
+or verifier reference for that key. `software` and `hsm_or_kms` are
+example holder values, a mechanism family rather than an assurance
+grade; this document defines neither as a normative custody-grade
+enum and fixes no validation rule for either. `key_custody` makes the
+trusted-base key-custody statement
+{{I-D.draft-mcguinness-mission-security-model}} already requires
+legible in the Deployment Profile; it does not make that statement
+checked. Custody assurance stays open until a normative reader or
+verifier for this declaration exists.
 
 Two deployments that both "support Mission" but publish different
 Deployment Profiles provide different security properties, and the

@@ -948,6 +948,7 @@
    "deps": [
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
+    "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-security-model",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
