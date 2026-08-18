@@ -866,9 +866,12 @@ authentication context rather than approving a specific action.
 
 Four rules govern the approval's enforcement:
 
-1. A PEP MUST refuse an action for which deployment policy or
-   Resource policy requires an action-bound approval and a valid
-   fresh approval bound to the action's parameters is not present.
+1. A PEP MUST refuse an action for which the applicable entry's
+   `constraints.requires_action_approval` is `true`, or deployment
+   policy or Resource policy otherwise requires an action-bound
+   approval, and for which a valid fresh approval bound to the
+   action's parameters is not present. Absent a usable approval
+   mechanism, the action fails closed.
 2. An action-bound approval MUST carry a maximum age, bounded by a
    value the deployment set publishes, and MAY additionally carry an
    absolute `approved_until` expiry (the AuthZEN binding surfaces ARAP's
@@ -1367,6 +1370,15 @@ Mission's `issuer`, embedded in the Resource Server, a tenant-scoped
 service, or a shared service); this document does not mandate one. The
 requirement is only that a PEP at each consequential boundary can
 reach an applicable PDP.
+
+In addition to every other required decision input, the runtime
+decision MUST require the action to remain within the Mission's
+current Effective Authority Set ({{input-authority}}); MUST enforce
+every applicable cumulative-consumption or stateful operational gate
+({{metering}}); and MUST require a valid fresh action-bound approval
+whenever the applicable entry or applicable policy requires one
+({{action-approval}}). Each gate is independently necessary and none
+grants, widens, or restores another.
 
 ## Decision Output {#decision-output}
 
