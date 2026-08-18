@@ -155,12 +155,28 @@ for ((i = 1; i <= N; i++)); do
   # removed the links this pass is not supposed to touch.
   sed -i -E '/class="refTitle"/ s#(<a href="https?://[^"]+")>([^<]*)</a>#\1 class="reader-edition-ext-link" target="_blank" rel="noopener">\2</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>#g' "$out"
 
-  # Internal consistency check: no family-host bibliography link may
-  # survive both passes unrewritten and unmarked.
+  # Internal consistency check, part one: no family-host bibliography
+  # link may survive both passes unrewritten and unmarked (a link is
+  # either rewritten to a local file, or explicitly marked external;
+  # nothing may fall through both).
   if grep -F "class=\"refTitle\"" "$out" | grep -F "href=\"${FAMILY_HOST}" | grep -qv 'reader-edition-ext-link'; then
     echo "error: $out has an unmarked family-host bibliography link" >&2
     exit 1
   fi
+
+  # Internal consistency check, part two: the check above alone would
+  # also pass if the rewrite pass silently missed an in-edition member
+  # (a slug typo, a trailing slash) and pass two marked it external
+  # instead of pass one rewriting it. Assert the positive directly: no
+  # reference line may still carry an unrewritten href pointing at a
+  # document that is a member of THIS edition.
+  for ((k = 1; k <= N; k++)); do
+    member="${DOCS[$((k - 1))]}"
+    if grep -F "class=\"refTitle\"" "$out" | grep -qF "href=\"${FAMILY_HOST}${member}.html\""; then
+      echo "error: $out still has an unrewritten in-edition link to ${member}" >&2
+      exit 1
+    fi
+  done
 done
 
 INDEX_CSS='body{font-family:sans-serif;max-width:48em;margin:2em auto;padding:0 1em;color:#222;background:#fff}a{color:#2a6496}ol{padding-left:1.5em}li{margin-bottom:.75em}@media (prefers-color-scheme:dark){body{color:#f0f0f0;background:#121212}a{color:#4da4f0}}'
