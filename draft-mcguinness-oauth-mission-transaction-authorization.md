@@ -145,6 +145,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-signals:
+    title: "Mission Lifecycle Signals for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-continuation:
     title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
@@ -584,10 +592,16 @@ path:
    ({{I-D.draft-mcguinness-oauth-mission-cross-domain}});
 5. current local policy, principal entitlement, and that the
    challenged operation remains within the Mission's current
-   Effective Authority Set, observed through the Mission Status
-   surface, the Status List, or issuer token introspection within
-   their declared freshness bounds
+   Effective Authority Set, observed through a full audience-scoped
+   Mission Status Response, containment- and discharge-aware issuer
+   token introspection, or an equivalent authenticated, versioned
+   authority source that reflects every relevant `authority_changed`
+   update, each within its declared freshness bounds; the Status
+   List MAY serve as a lifecycle prefilter only and MUST NOT alone
+   satisfy this step, since its two-bit reliance state does not
+   observe containment or discharge
    ({{I-D.draft-mcguinness-oauth-mission-status}},
+   {{I-D.draft-mcguinness-oauth-mission-signals}},
    {{I-D.draft-mcguinness-mission-runtime}}); and
 6. atomic first use of the resource-scoped `txn` in the consumption
    domain; a second, distinct token `jti` presented for an
