@@ -2168,16 +2168,16 @@ standardizes:
 5. **Persistent narrowing.** A stateful Authorization Server or PDP
    can store reduced entitlements and consult them at issuance.
    Mission standardizes monotonic subset semantics across issuance,
-   delegation, attenuation, and successors, auditable across
-   components ({{invariants}}).
+   delegation, attenuation, and cross-domain projections, auditable
+   across components ({{invariants}}).
 
-| Requirement | Conventional OAuth+PDP realization | Mission standardization | Added Mission cost |
+| Requirement | Conventional OAuth+PDP realization | Mission standardization | Illustrative added Mission cost |
 |---|---|---|---|
 | Durable task semantics | Grants, refresh families, or PDP records outlive the token | An addressable, lifecycle-bearing approved task with anchors consistently interpreted across components | Durable-object and lifecycle storage |
 | Multi-credential join | A deployment-invented transaction, grant, or workflow identifier | A stable approved-task reference bound to authority, carried through delegation and fan-out | New claims and endpoints |
 | Second trust domain | The partner calls the origin PDP, shares state, or federates policy | Bounded local credentials and common anchors carried by projection | State consistency and distribution; privacy and correlation surface |
 | Approval as a record | A consent or grant database plus versioned decision logs | A standardized immutable snapshot with integrity anchors and one portable reference | Evidence operations |
-| Persistent narrowing | A stateful Authorization Server or PDP stores reduced entitlements and consults them at issuance | Monotonic subset semantics enforced across issuance, delegation, attenuation, and successors | AS or MAS integration; ecosystem adoption |
+| Persistent narrowing | A stateful Authorization Server or PDP stores reduced entitlements and consults them at issuance | Monotonic subset semantics enforced across issuance, delegation, attenuation, and cross-domain projections | AS or MAS integration; ecosystem adoption |
 
 Past these crossovers, a conventional deployment often accumulates a
 durable task record, a stable join key, lifecycle checks, narrowing
