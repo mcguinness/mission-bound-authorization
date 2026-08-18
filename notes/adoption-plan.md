@@ -1,7 +1,7 @@
-# Mission Adoption Plan (v3.2, plan of record)
+# Mission Adoption Plan (v3.3, plan of record)
 
 Status: plan of record, 2026-08-18, after two author review rounds, the verb-taxonomy
-preservation ruling, and the AAuth bundle directive. Dispositions: execution
+preservation ruling, the AAuth bundle directive, and the composition-axis track correction. Dispositions: execution
 items 1, 2, 3, 4, and 10 approved; items 5 and 9 specified here and hold-lifted on the
 author's confirmation; item 6 expanded; item 7 held on 6; item 8 deferred by ruling.
 Refs #220, #238, #253.
@@ -55,13 +55,18 @@ are the remedy; consolidation is not (see the final section).
 ## Zones and tracks
 
 Three top-level zones with subordinate tracks, and names that cannot be mistaken for
-conformance classes:
+conformance classes. Within Compose and Lab, the tracks follow the composition axis the
+family's own naming rule already encodes: `oauth-mission-*` documents extend the OAuth AS's
+wire surfaces and apply only to the OAuth path; `mission-*` documents are substrate-neutral
+and compose with any binding; binding clusters are the substrate adapters themselves. An
+AAuth adopter reads Compose as: pick your binding, take the substrate-neutral components,
+skip the OAuth extensions.
 
 | Zone | Tracks | Contents |
 |---|---|---|
 | **Start** | Reader preface; OAuth Implementation Floor; Governed Agent Add-ons | architecture (preface); substrate, oauth-mission, status, runtime, runtime-evidence, authzen (floor); harness, consent-evidence (add-ons) |
-| **Compose** | By binding; Advanced capabilities; Security guide | authority-server, issuance-grant, aauth cluster (bindings); the 11 advanced extensions, cross-domain among them as the floor's conditional dependency; security-model (guide) |
-| **Lab** | Experimental profiles; Sketches | the experimental profiles (containment and metering flagged as floor-referenced); uma, aam, gnap (sketches) |
+| **Compose** | Bindings; OAuth extensions; Substrate-neutral components; Security guide | authority-server, issuance-grant, the aauth cluster (bindings); expansion, child-delegation, cross-domain, signals, approval, management (OAuth extensions, cross-domain among them as the floor's conditional dependency); audit, mandate, approval-governance, shaping, capability-binding (substrate-neutral); security-model (guide) |
+| **Lab** | OAuth experimental; Substrate-neutral experimental; Sketches | attenuation, containment, continuation, cross-org-delegation, progressive, template, transaction-authorization, approval-revision, work-products (OAuth experimental; containment floor-referenced); discovery, metering, orchestration (substrate-neutral; metering floor-referenced); uma, aam, gnap (sketches) |
 
 **Zones are an overlay, never a regrouping.** The README's catalog keeps its group-keyed
 sections, which are the verb spine's noun form; nothing is fragmented or re-headed. Zones
@@ -77,12 +82,14 @@ placements: substrate shares the By-binding rung with four documents that stay i
 and architecture and security-model share outside-ordering but land in different zones.
 Validation is table-membership, simpler than heading placement: the validator checks that
 the adoption-map table lists every document exactly once under the zone and track the
-manifest declares. Tracks are validated too: the track is derived from `presentation_zone`,
-`adoption_rung`, and `maturity` plus the intentional special cases (architecture, substrate,
-and the AAuth bundle row: a literal group-to-verb derivation would split it, since
-mission-aauth is grouped `bindings-substrate` while expiry and management are grouped
-`lifecycle`); with three exception cases already known, the explicit `presentation_track`
-field is the likely landing point rather than the fallback. The two existing validator constraints still hold (every slug in the
+manifest declares. With the composition-axis tracks, track derivation is deterministic
+again: within Compose and Lab, the track follows from the document's own name prefix
+(`oauth-mission-*` = OAuth extension or OAuth experimental; `mission-*` = substrate-neutral)
+plus the manifest's bindings group for the adapter clusters and `maturity` for sketches;
+Start keeps its two named special cases (architecture as preface, substrate in the floor).
+The earlier AAuth-row exception dissolves: the whole bundle row sits in the Bindings track.
+`presentation_track` returns to being the fallback, needed only if future exceptions
+accumulate. The two existing validator constraints still hold (every slug in the
 catalog subtree; all 39 bolded nicknames in the adoption-order section). The execution PR
 also adds a **Verb** column to the adoption map, derived from the manifest's existing
 `group` field, so the two axes stay visibly joined per document. Four fields are orthogonal
@@ -103,35 +110,35 @@ describes the verb-spine role; none implies any of the others.
 | mission-authzen | Start / floor | The PDP speaks AuthZEN and needs the decision-contract wire mapping. |
 | mission-harness | Start / add-on | A harness holds session state across restarts and must stop work when the Mission dies. |
 | oauth-mission-consent-evidence | Start / add-on | You must prove what the Approver actually saw, not only what was approved. |
-| mission-authority-server | Compose / binding | The AS cannot change: run Mission governance as a standalone control plane. |
-| oauth-mission-issuance-grant | Compose / binding | A MAS-governed estate wants Mission-bound gated tokens without full intake at each AS. |
-| mission-aauth | Compose / binding | The substrate is AAuth: Mission context on its native propose/approve flow. |
-| mission-aauth-management | Compose / binding | Alongside the AAuth binding: status, termination, delegation-tree queries. |
-| aauth-mission-expiry | Compose / binding | A citable profile of AAuth's native `expires_at` member is needed (base AAuth enforces the member regardless; the profile's own conformance line is OPTIONAL). |
-| oauth-mission-expansion | Compose / advanced | Approved authority will predictably need to widen mid-task via fresh approval. |
-| oauth-mission-child-delegation | Compose / advanced | A sub-agent needs its own Mission outliving a call frame, with cascade termination. |
-| oauth-mission-cross-domain | Compose / advanced | A Mission from one trust domain must be honored by an AS in another (also the floor's conditional dependency). |
-| mission-audit | Compose / advanced | A cross-domain party must verify evidence integrity without trusting issuer logs. |
-| oauth-mission-signals | Compose / advanced | Consumers need push notice of state changes instead of polling per Mission. |
-| oauth-mission-approval | Compose / advanced | Approval is asynchronous: a human review queue, not an immediate decision. |
-| mission-mandate | Compose / advanced | An outside party must verify what was approved without a token-exchange hop. |
-| oauth-mission-management | Compose / advanced | An operator needs fleet enumeration and bulk lifecycle across many Missions. |
-| mission-approval-governance | Compose / advanced | Approval authority itself needs authenticated, policy-backed provenance. |
-| mission-shaping | Compose / advanced | You need a defined client-side path from user prompt to candidate Mission Intent. |
-| mission-capability-binding | Compose / advanced | Actions come from a discovered catalog where invoked identity can drift from approval. |
+| mission-authority-server | Compose / bindings | The AS cannot change: run Mission governance as a standalone control plane. |
+| oauth-mission-issuance-grant | Compose / bindings | A MAS-governed estate wants Mission-bound gated tokens without full intake at each AS. |
+| mission-aauth | Compose / bindings | The substrate is AAuth: Mission context on its native propose/approve flow. |
+| mission-aauth-management | Compose / bindings | Alongside the AAuth binding: status, termination, delegation-tree queries. |
+| aauth-mission-expiry | Compose / bindings | A citable profile of AAuth's native `expires_at` member is needed (base AAuth enforces the member regardless; the profile's own conformance line is OPTIONAL). |
+| oauth-mission-expansion | Compose / OAuth extensions | Approved authority will predictably need to widen mid-task via fresh approval. |
+| oauth-mission-child-delegation | Compose / OAuth extensions | A sub-agent needs its own Mission outliving a call frame, with cascade termination. |
+| oauth-mission-cross-domain | Compose / OAuth extensions | A Mission from one trust domain must be honored by an AS in another (also the floor's conditional dependency). |
+| mission-audit | Compose / substrate-neutral | A cross-domain party must verify evidence integrity without trusting issuer logs. |
+| oauth-mission-signals | Compose / OAuth extensions | Consumers need push notice of state changes instead of polling per Mission. |
+| oauth-mission-approval | Compose / OAuth extensions | Approval is asynchronous: a human review queue, not an immediate decision. |
+| mission-mandate | Compose / substrate-neutral | An outside party must verify what was approved without a token-exchange hop. |
+| oauth-mission-management | Compose / OAuth extensions | An operator needs fleet enumeration and bulk lifecycle across many Missions. |
+| mission-approval-governance | Compose / substrate-neutral | Approval authority itself needs authenticated, policy-backed provenance. |
+| mission-shaping | Compose / substrate-neutral | You need a defined client-side path from user prompt to candidate Mission Intent. |
+| mission-capability-binding | Compose / substrate-neutral | Actions come from a discovered catalog where invoked identity can drift from approval. |
 | mission-security-model | Compose / guide | Reviewing or auditing: the one consolidated trust and blast-radius view. |
-| oauth-mission-containment | Lab (floor-referenced) | A live Mission must be narrowed, not ended, on a protected event. |
-| mission-metering | Lab (floor-referenced) | A Mission needs cumulative caps (budget, calls, duration, egress), not just scope. |
-| mission-discovery | Lab | An open-world agent meets resources its approval never named. |
-| mission-orchestration | Lab | In-flight work must unwind safely if the Mission ends mid-workflow. |
-| oauth-mission-transaction-authorization | Lab | One action needs a fresh, portable, cross-org authorization with no live callback. |
-| oauth-mission-approval-revision | Lab | Reviewers routinely narrow a proposed Mission rather than approve or deny. |
-| oauth-mission-attenuation | Lab | Deep fan-out makes an AS round-trip per narrowing too costly; mint offline. |
-| oauth-mission-continuation | Lab | Authorized work continues across hops or time without re-presented credentials. |
-| oauth-mission-cross-org-delegation | Lab | An attenuation chain crosses organizational trust domains. |
-| oauth-mission-progressive | Lab | Authority cannot be enumerated up front; policy-bounded drawdown beats over-provisioning. |
-| oauth-mission-template | Lab | Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling. |
-| oauth-mission-work-products | Lab | Artifacts cross into another Mission and must carry provenance, never authority. |
+| oauth-mission-containment | Lab / OAuth experimental (floor-referenced) | A live Mission must be narrowed, not ended, on a protected event. |
+| mission-metering | Lab / substrate-neutral (floor-referenced) | A Mission needs cumulative caps (budget, calls, duration, egress), not just scope. |
+| mission-discovery | Lab / substrate-neutral | An open-world agent meets resources its approval never named. |
+| mission-orchestration | Lab / substrate-neutral | In-flight work must unwind safely if the Mission ends mid-workflow. |
+| oauth-mission-transaction-authorization | Lab / OAuth experimental | One action needs a fresh, portable, cross-org authorization with no live callback. |
+| oauth-mission-approval-revision | Lab / OAuth experimental | Reviewers routinely narrow a proposed Mission rather than approve or deny. |
+| oauth-mission-attenuation | Lab / OAuth experimental | Deep fan-out makes an AS round-trip per narrowing too costly; mint offline. |
+| oauth-mission-continuation | Lab / OAuth experimental | Authorized work continues across hops or time without re-presented credentials. |
+| oauth-mission-cross-org-delegation | Lab / OAuth experimental | An attenuation chain crosses organizational trust domains. |
+| oauth-mission-progressive | Lab / OAuth experimental | Authority cannot be enumerated up front; policy-bounded drawdown beats over-provisioning. |
+| oauth-mission-template | Lab / OAuth experimental | Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling. |
+| oauth-mission-work-products | Lab / OAuth experimental | Artifacts cross into another Mission and must carry provenance, never authority. |
 | mission-uma | Lab / sketch | Evaluating a UMA 2.0 deployment only. |
 | mission-aam | Lab / sketch | Adopting Cloudflare's AAM vocabulary and mapping it onto existing mechanisms. |
 | mission-gnap | Lab / sketch | Evaluating a GNAP deployment only. |
@@ -354,5 +361,8 @@ Verb column so the two axes stay joined. v3.2 added the AAuth Mission Context Bu
 author's directive, scoped from derived dependency closure: coherence-not-composition
 membership, the upstream commit pin as the substance of frozen-until-upstream-release,
 exploratory-only publication behind five gates, and the third presentation-track exception
-case it surfaced. Where this document and any earlier version disagree, this document
-governs.
+case it surfaced. v3.3 corrected the Compose and Lab tracks to the composition axis the
+family's naming rule already encodes (bindings; OAuth extensions; substrate-neutral
+components; with OAuth-experimental and substrate-neutral-experimental in the Lab), which
+restored deterministic track derivation and dissolved the AAuth-row exception. Where this
+document and any earlier version disagree, this document governs.
