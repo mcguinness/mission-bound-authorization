@@ -3,6 +3,7 @@
   "version": "v0-preview.1",
   "source_repository_commit": "eb3a8f234a6367d388957f1be4ac73b0cc78fb13",
   "source_repository_commit_note": "Full SHA of the branch's base commit at Ship 3 (the commit feat/ship3-preview branched from, 2026-08-18), covering every in-repository document as one coherent snapshot. Known caveat: a pull_request CI build sees the platform's ephemeral merge commit SHA for the head ref, not this base commit; that ephemeral SHA is never the pin recorded here, and re-deriving this field from a merge-commit checkout would silently drift the snapshot.",
+  "external_pins_note": "external_pins copies every established entry in notes/external-pins.json verbatim, for registry fidelity, not only those a bundle document cites. Six entries (ARAP, AUTHZEN, AUTHZEN-OBL, RAR-METADATA, STATUS-LIST, ISO4217) are normative dependencies of this bundle's seven documents. AAUTH is not: it pins the upstream for mission-aauth, a Compose/bindings document (the AAuth Mission Context Bundle) outside this bundle's Start/floor set, and is carried here for registry completeness rather than because any Start/floor document cites it.",
   "documents": [
     {
       "slug": "draft-mcguinness-mission-architecture",
@@ -119,7 +120,7 @@
     }
   ],
   "artifact_digests": {
-    "notes/oauth-mission-baseline-bundle-preview.md": "d77db284fb1435641ab3f7ae41d743f57c60b6a8641804331c0ba300123620cb"
+    "notes/oauth-mission-baseline-bundle-preview.md": "7c8c8ca1413ac33c2d22a83596247077e9025fbb562fb9d14c2fb16342f0f3c8"
   },
   "disabled_capabilities": [
     {

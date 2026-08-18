@@ -72,7 +72,14 @@ Coherent snapshot commit: `eb3a8f234a6367d388957f1be4ac73b0cc78fb13` (2026-08-18
 ### External normative dependencies
 
 Copied verbatim from `notes/external-pins.json`, whose entries are all
-established (none pending) as of this preview.
+established (none pending) as of this preview. This copies every
+established registry entry for registry fidelity, not only those a bundle
+document cites. Six entries (ARAP, AUTHZEN, AUTHZEN-OBL, RAR-METADATA,
+STATUS-LIST, ISO4217) are normative dependencies of the seven documents
+above. AAUTH is not: it pins the upstream for `mission-aauth`, a
+Compose/bindings document (the AAuth Mission Context Bundle) outside this
+bundle's Start/floor set, and is carried here for registry completeness
+rather than because any floor document cites it.
 
 | Id | Kind | Source | Pin | Location | SHA-256 |
 |---|---|---|---|---|---|

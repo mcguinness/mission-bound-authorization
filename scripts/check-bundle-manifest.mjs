@@ -23,9 +23,13 @@
 //
 // This does NOT re-verify external_pins against live source repositories;
 // that independent verification happens once, by hand, when a pin is
-// established (see notes/external-pins.json's "description"). This script
-// verifies internal consistency: the bundle manifest's pins are exactly
-// what the registry currently says, and none of them is pending.
+// established (see notes/external-pins.json's "description"). It also does
+// NOT re-run notes/external-pins.json's own structural validation (see
+// scripts/check-external-pins.mjs) to avoid reporting the same malformed
+// registry entry twice when both scripts are chained from
+// scripts/check-family-manifest.mjs. This script verifies internal
+// consistency: the bundle manifest's pins are exactly what the registry
+// currently says, and none of them is pending.
 //
 // Usage: node scripts/check-bundle-manifest.mjs
 // Also imported by scripts/check-family-manifest.mjs, which calls
@@ -36,7 +40,6 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { validateExternalPins } from "./check-external-pins.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -69,10 +72,13 @@ function deepEqual(a, b) {
   return aKeys.every((k) => deepEqual(a[k], b[k]));
 }
 
+// This deliberately does not re-run validateExternalPins' structural checks:
+// scripts/check-family-manifest.mjs already runs those once as its own (j)
+// check, and re-running them here would report the same finding twice under
+// two different check labels. A caller that runs this script standalone,
+// without also running check-external-pins.mjs, gets read/parse errors here
+// but not the finer-grained structural findings; run both for full coverage.
 function loadRegistryPinsById(rootDir, errors) {
-  const structuralErrors = validateExternalPins(rootDir);
-  for (const e of structuralErrors) errors.push(`[registry] ${e}`);
-
   const pinsPath = path.join(rootDir, "notes", "external-pins.json");
   let doc;
   try {
