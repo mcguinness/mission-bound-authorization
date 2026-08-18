@@ -11,7 +11,20 @@
 //   (d) architecture map gap  - a draft not named in the architecture's Mission Document Map
 //   (e) adoption-order gap    - a draft with a real adoption_rung missing from README's
 //                                Adoption order section (adoption_rung "outside-ordering" is exempt)
-//   (f) external-pins shape   - notes/external-pins.json fails structural validation
+//   (f) presentation enum     - a draft's `presentation_zone`/`presentation_track` is not one of
+//                                the manifest's declared `presentation_zones`/`presentation_tracks`,
+//                                or either declared array is empty, non-string-valued, or has a
+//                                duplicate entry
+//   (g) adoption-map gap      - a draft not listed exactly once in README's "The adoption map"
+//                                table, on a row whose Zone/Track/Group cells match the manifest's
+//                                declared presentation_zone/presentation_track/group and whose
+//                                "Pull this when..." cell is non-empty
+//   (h) maintenance enum      - a draft's `maintenance` is not one of the manifest's declared
+//                                `maintenance_classes`
+//   (i) maintenance evidence  - a draft whose `maintenance` is "active-experimental" is missing
+//                                a non-empty `maintenance_owner`, or its `maintenance_review_after`
+//                                is not a YYYY-MM-DD date string
+//   (j) external-pins shape   - notes/external-pins.json fails structural validation
 //                                (see scripts/check-external-pins.mjs)
 
 import fs from "node:fs";
@@ -118,6 +131,37 @@ function adoptionNickname(draft) {
   return shortForm(draft.slug).replace(/^oauth-mission-/, "").replace(/^mission-/, "");
 }
 
+// Parses the data rows of a "Document | Zone | Track | Group | Pull this
+// when..." markdown table out of a section body. Tolerant of surrounding
+// whitespace around cells; strict about shape: a row only counts as a
+// document row when its first cell opens with a backtick-quoted slug,
+// either bare (`` `slug` ``) or as a linked code label
+// (`` [`slug`](url) ``), which also lets the header and separator rows
+// fall out without special-casing them. Trailing text after the slug/link
+// (e.g. a "floor-referenced*" marker) is ignored, wherever the marker sits.
+function parseAdoptionMapRows(section) {
+  const rows = [];
+  for (const line of section.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) continue;
+    const inner = trimmed.slice(1, -1).split("|").map((c) => c.trim());
+    if (inner.length < 5) continue;
+    const linkMatch = inner[0].match(/^\[`([^`]+)`\]\([^)]+\)/);
+    const bareMatch = inner[0].match(/^`([^`]+)`/);
+    const slugMatch = linkMatch || bareMatch;
+    if (!slugMatch) continue;
+    rows.push({
+      slug: slugMatch[1],
+      zone: inner[1],
+      track: inner[2],
+      group: inner[3],
+      trigger: inner.slice(4).join("|").trim(),
+      line,
+    });
+  }
+  return rows;
+}
+
 function main() {
   const manifest = loadManifest();
   const drafts = manifest.drafts;
@@ -207,7 +251,114 @@ function main() {
     }
   }
 
-  // (f) External pin registry: structural validation only (P2, review of
+  // (f) presentation enum: presentation_zone/presentation_track must be one
+  // of the manifest's own declared values, and those declared arrays
+  // themselves must be non-empty, string-valued, and duplicate-free.
+  function validateEnumArray(name, arr) {
+    if (!Array.isArray(arr) || arr.length === 0) {
+      fail("presentation-enum", `family-manifest.json's top-level "${name}" must be a non-empty array`);
+      return;
+    }
+    const seen = new Set();
+    for (const v of arr) {
+      if (typeof v !== "string" || v.length === 0) {
+        fail("presentation-enum", `family-manifest.json's "${name}" contains a non-string or empty entry: ${JSON.stringify(v)}`);
+        continue;
+      }
+      if (seen.has(v)) {
+        fail("presentation-enum", `family-manifest.json's "${name}" has a duplicate entry: "${v}"`);
+      }
+      seen.add(v);
+    }
+  }
+  validateEnumArray("presentation_zones", manifest.presentation_zones);
+  validateEnumArray("presentation_tracks", manifest.presentation_tracks);
+  const validZones = new Set(manifest.presentation_zones || []);
+  const validTracks = new Set(manifest.presentation_tracks || []);
+  for (const d of drafts) {
+    if (!validZones.has(d.presentation_zone)) {
+      fail("presentation-enum", `${d.slug}: presentation_zone "${d.presentation_zone}" is not one of ${JSON.stringify([...validZones])}`);
+    }
+    if (!validTracks.has(d.presentation_track)) {
+      fail("presentation-enum", `${d.slug}: presentation_track "${d.presentation_track}" is not one of ${JSON.stringify([...validTracks])}`);
+    }
+  }
+
+  // (g) Adoption map coverage: every draft must appear exactly once in
+  // README's "The adoption map" table, on a row whose Zone and Track cells
+  // match the manifest's declared presentation_zone/presentation_track.
+  const adoptionMapSection = extractSection(readme, (t, l) => l === 2 && t === "The adoption map");
+  if (adoptionMapSection === null) {
+    fail("adoption-map", `could not find a "## The adoption map" section in README.md`);
+  } else {
+    const rows = parseAdoptionMapRows(adoptionMapSection);
+    if (rows.length !== drafts.length) {
+      fail(
+        "adoption-map",
+        `README's "The adoption map" table has ${rows.length} document row(s) but family-manifest.json has ${drafts.length} drafts`
+      );
+    }
+    for (const d of drafts) {
+      const short = shortForm(d.slug);
+      const matches = rows.filter((r) => r.slug === short);
+      if (matches.length === 0) {
+        fail("adoption-map", `${d.slug} (short form "${short}") is not listed in README's "The adoption map" table`);
+        continue;
+      }
+      if (matches.length > 1) {
+        fail("adoption-map", `${d.slug} (short form "${short}") appears ${matches.length} times in README's "The adoption map" table`);
+      }
+      const row = matches[0];
+      if (row.zone !== d.presentation_zone) {
+        fail(
+          "adoption-map",
+          `${d.slug}: adoption map row has Zone "${row.zone}" but manifest declares presentation_zone "${d.presentation_zone}"`
+        );
+      }
+      if (row.track !== d.presentation_track) {
+        fail(
+          "adoption-map",
+          `${d.slug}: adoption map row has Track "${row.track}" but manifest declares presentation_track "${d.presentation_track}"`
+        );
+      }
+      if (row.group !== d.group) {
+        fail(
+          "adoption-map",
+          `${d.slug}: adoption map row has Group "${row.group}" but manifest declares group "${d.group}"`
+        );
+      }
+      if (row.trigger === "") {
+        fail("adoption-map", `${d.slug}: adoption map row has an empty "Pull this when..." cell`);
+      }
+    }
+  }
+
+  // (h) maintenance enum: `maintenance` must be one of the manifest's own
+  // declared `maintenance_classes`.
+  const validMaintenance = new Set(manifest.maintenance_classes || []);
+  if (validMaintenance.size === 0) {
+    fail("maintenance-enum", `family-manifest.json is missing a non-empty top-level "maintenance_classes" array`);
+  }
+  for (const d of drafts) {
+    if (!validMaintenance.has(d.maintenance)) {
+      fail("maintenance-enum", `${d.slug}: maintenance "${d.maintenance}" is not one of ${JSON.stringify([...validMaintenance])}`);
+    }
+  }
+
+  // (i) maintenance evidence: an "active-experimental" draft must name a
+  // maintenance owner and carry a date-shaped review horizon.
+  const DATE_SHAPED = /^\d{4}-\d{2}-\d{2}$/;
+  for (const d of drafts) {
+    if (d.maintenance !== "active-experimental") continue;
+    if (typeof d.maintenance_owner !== "string" || d.maintenance_owner.length === 0) {
+      fail("maintenance-evidence", `${d.slug}: maintenance "active-experimental" requires a non-empty "maintenance_owner"`);
+    }
+    if (typeof d.maintenance_review_after !== "string" || !DATE_SHAPED.test(d.maintenance_review_after)) {
+      fail("maintenance-evidence", `${d.slug}: maintenance "active-experimental" requires a date-shaped (YYYY-MM-DD) "maintenance_review_after", got ${JSON.stringify(d.maintenance_review_after)}`);
+    }
+  }
+
+  // (j) External pin registry: structural validation only (P2, review of
   // PR #595). Content verification against live source repos happens at
   // Ship 3, not here.
   for (const e of validateExternalPins(ROOT)) fail("external-pins", e);
