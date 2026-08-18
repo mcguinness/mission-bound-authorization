@@ -1,4 +1,4 @@
-# Mission Adoption Plan (v4.1, plan of record)
+# Mission Adoption Plan (v5, plan of record)
 
 Status: plan of record, 2026-08-18. The plan states decisions as fact; all revision history
 lives in the Provenance section at the end. Refs #220, #238, #253.
@@ -7,12 +7,14 @@ lives in the Provenance section at the end. Refs #220, #238, #253.
 product inside the 41-document family is a small normative floor plus a preface, and a
 newcomer currently meets all 41 as one flat surface.
 
-**Success is measured from the adopter's side.** Pass rubric, written before the test: a
-reader (a) names the six floor documents and (b) picks the correct track for two given
-scenarios (an AAuth estate; an OAuth AS adding runtime enforcement), from the README's first
-screen, unaided, within five minutes. Run asynchronously with two or three outside readers;
-the result is logged as a PLAN.md entry, pass or fail. Every other signal in this plan
-(fields, validators, gates) is means, not ends.
+**Success is measured from the adopter's side.** Pass rubric, written before the test:
+unfamiliar readers select the correct documents for three scenarios (issuance-only OAuth;
+Runtime-Enforced OAuth; an AAuth estate), scored on correct inclusion, correct exclusion,
+and recognition of unsupported composition (a Mission component whose declaration their
+binding does not satisfy), working from the README's first screen, unaided, within five
+minutes per scenario. Run asynchronously with two or three readers; the result is logged as
+a PLAN.md entry, pass or fail. Every other signal in this plan (fields, validators, gates)
+is means, not ends.
 
 Two manifests appear below and are always named in full: the **family manifest**
 (`family-manifest.json`, the catalog's machine source of truth) and the **bundle manifest**
@@ -27,12 +29,16 @@ Two manifests appear below and are always named in full: the **family manifest**
   construction and kernel contract. Cross-Domain is a conditional normative dependency the
   baseline disables. External normative dependencies (including AuthZEN's ARAP and
   Obligations profiles) are pinned alongside the family documents.
-- **The bundle is an OAuth product:** working name **OAuth Mission Runtime Baseline v0**
-  (alternative: Mission OAuth Adoption Bundle v0). "Mission Core Profile" is retired (it
-  collided with the OAuth core draft and the Mission Deployment Profile, and implied the
-  family as a whole is OAuth-shaped, which it is not). Its two published levels are the
-  **OAuth Mission Issuance Baseline** and the **OAuth Mission Runtime-Enforced Baseline**,
-  deliberately parallel to the Mission Assurance Levels they realize.
+- **The bundle is an OAuth product: the OAuth Mission Baseline Bundle** ("Runtime Baseline"
+  is retired as the product name, since the product also publishes an issuance-only level;
+  "Mission Core Profile" was retired earlier for its collisions). Its two published levels
+  are the **OAuth Mission Issuance Baseline** and the **OAuth Mission Runtime-Enforced
+  Baseline**, deliberately parallel to the Mission Assurance Levels they realize.
+  **Bundle contents and minimum conformance profile are never synonymous**: the
+  seven-document bundle is the reader edition's union; each level's exact normative slice is
+  defined in the profile matrix (Baseline section). An issuance-only adopter is never told
+  the runtime documents are mandatory, and the Issuance Baseline is never blocked on their
+  conformance inventories.
 - **The RAR-free mode is excluded from v0.** It is protocol design, not packaging: it would
   override mandatory `authorization_details` carriage, define a new conformance mode, and
   create negotiation and downgrade requirements. It is an alternate projection mode, framed
@@ -88,16 +94,17 @@ architectural group, documents, one-line trigger) carrying the five-minute path 
 into the verb-organized catalog. The map first ships hand-written, straight from the
 per-document table below, placed immediately after the README's at-a-glance opening block
 and before "The architecture" (displacing nothing; the "Start with the Architecture" pointer
-folds into the map's first row). It ships WITH one cheap guard: a one-assertion extension to
-the existing validator checking that the map's row set equals the family manifest's
-`drafts[]` (the same drift class the validator already guards for the catalog). Two
-executor warnings: the README edit must not alter the two exact headings the validator
-extracts ("The documents", "Adoption order"), and the family manifest's `deps` arrays are
-inert to the validator (that edit is informational). The full machine-validated form (the
-fields below) is the Retrofit wave, whose entry condition is observable: the map has
-survived one success-rubric run without structural rework. In the retrofit (NOTE: this placement is itself the third flagged resequencing, see
-Provenance; the third review ruled these fields required in the near-term PR):
-`presentation_zone` and `presentation_track` are both required family-manifest fields (track derivation from prefix
+folds into the map's first row). To avoid a third unvalidated source of catalog truth, the map's PLACEMENT is
+manifest-backed from day one: Ship 1 adds `presentation_zone` and `presentation_track` to
+the family manifest and extends the existing validator to check that the map lists all 41
+slugs exactly once, each under the zone and track the manifest declares. Only the map's
+prose (the pull-triggers) is hand-authored. Two executor warnings: the README edit must not
+alter the two exact headings the validator extracts ("The documents", "Adoption order"),
+and the family manifest's `deps` arrays are inert to the validator (that edit is
+informational). The richer metadata (compatibility fields, `verbs`) waits for the Retrofit
+wave, whose entry condition is observable: the map has survived one success-rubric run
+without structural rework. `presentation_zone` and `presentation_track` are required family-manifest fields, landing
+in Ship 1 as stated above (track derivation from prefix
 and group is not deterministic; the AAuth cluster falsifies it: management carries the
 `mission-*` prefix and the lifecycle group, expiry carries neither recognized prefix and the
 same group, both belong to Bindings), validated by table membership, with prefix/group kept
@@ -187,12 +194,24 @@ machinery with a second document list. A moving `latest` edition publishes now; 
 versioned bundles are part of the retrofit wave and need a dedicated publish path (verified:
 `GHPAGES_EXTRA` cannot carry them on the default branch), whose publisher refuses to
 overwrite an existing version with different bytes, serializes concurrent Pages
-publications, and verifies every artifact against the bundle manifest's digests.
+publications, and verifies every artifact against the bundle manifest's digests. An
+immutable bundle's index and bibliography also expose the pinned normative-dependency URL
+alongside the live editor's copy, so the reading path is as reproducible as the bytes.
 
 ## OAuth Mission Runtime Baseline v0
 
 An implementation guide, not a 42nd I-D: it selects and pins existing normative text and
-never invents requirements; it replaces reading six documents rather than adding a seventh.
+never invents requirements; it replaces discovering, ordering, and reconciling six documents
+rather than adding a seventh.
+
+**The profile matrix** (bundle contents are the reader edition's union; profiles are the
+conformance slices):
+
+| | Normative documents | Disabled conditionals |
+|---|---|---|
+| Bundle contents | substrate, core, status, runtime, runtime-evidence, authzen (+ architecture, informative preface) | listed per profile below |
+| OAuth Mission Issuance Baseline | core (self-contained by design) | core's OPTIONAL capabilities as elected; Cross-Domain disabled |
+| OAuth Mission Runtime-Enforced Baseline | the issuance slice plus substrate, status, runtime, runtime-evidence, authzen | Cross-Domain disabled; the transaction-assurance tier a named extension |
 
 **Pinning is one coherent snapshot.** The bundle manifest carries a single
 `source_repository_commit` covering every in-repository document (per-document last-modified
@@ -203,22 +222,29 @@ External-pin work is asymmetric: ARAP has a copyable pin in SPEC_VERSIONS.md; th
 Obligations Profile has no pin anywhere and is established from scratch.
 
 **Two publications, honestly labeled.**
-- **Exploratory v0 ships in wave Ship 3** as `notes/oauth-mission-runtime-baseline-v0.md`
-  (in-repo markdown; gh-pages publication joins the Retrofit wave with the bundle manifest),
-  tracked by a dedicated issue opened when Ship 2 completes. It carries the pin table
-  (inline, per document by commit and date, the ARAP pin copied, the Obligations pin
+- **The preview ships in wave Ship 3** as `notes/oauth-mission-baseline-bundle-preview.md`,
+  versioned `v0-preview.1` (never `v0`: a preview and the gated publication cannot share one
+  version identity when bundles promise digest-verified immutability), tracked by a
+  dedicated issue opened when Ship 2 completes. A publication claiming a coherent pin
+  snapshot carries the machine-readable **bundle manifest with it**, so the manifest ships
+  in Ship 3 too (only the immutable historical publisher waits for Retrofit). The preview
+  carries the pin table (full SHAs and digests, the ARAP pin copied, the Obligations pin
   established), the reading order, and the two level definitions, and it carries NO
   conformance-coverage claims: today's numbers have an unknown denominator (13 tested, 5
   partial, 35 todo across an inventory that omits runtime, authzen, and substrate entirely,
   and runtime-evidence's six tested rows do not prove its inventory complete), and a partial
-  number reads worse than none. Labeled exploratory, never marketed.
-- **The marketed v0** adds the coverage ledger and waits on the completeness gate: every normative requirement in all six
+  number reads worse than none. Labeled preview, never marketed.
+- **v0 proper** (the marketed publication; the identifier is reserved for it) adds the
+  coverage ledger and waits on the completeness gate: every normative requirement in all six
   floor documents inventoried; zero uninventoried baseline requirements; zero todo rows on
   authorization invariants or fail-closed/refusal requirements; positive and negative tests
   for every baseline protocol surface; every partial row naming exactly what remains
   unproved; composition tests over the selected bundle; applicability narrowed to the
-  baseline; exact external pins; the disabled-capability list; one overall coverage
-  snapshot. #238's ledger discipline is a prerequisite; the Runtime-Enforced floor pins
+  baseline and expressed by machine, never manual judgment: each conformance-manifest
+  requirement gains a `profiles` field enumerating which published baseline(s) it applies
+  to (a separate bundle-conformance manifest was the alternative; the per-requirement field
+  is the single source); exact external pins; the disabled-capability list; one overall
+  coverage snapshot. #238's ledger discipline is a prerequisite; the Runtime-Enforced floor pins
   today's runtime text verbatim and re-pins if #238's re-cut lands.
 
 The worked example stitches demo scenarios 1, 2, and 8; the revocation-denial leg is
@@ -232,8 +258,10 @@ near-term action is the pin, not the apparatus:** today's upstream citation carr
 revision pin at all (the seriesinfo was removed in the #472 alignment; the front-matter
 target is the live editor's copy), and datatracker's -10 is a divergent pre-person-token
 document. The pin record (repo `dickhardt/AAuth`, PR #73 merged, commit `f156926...`, file
-path, content digest) is committed now, in a new `notes/external-pins.md` (one table: id,
-repo, ref, commit, path, digest, note; the bundle manifest consumes it at Retrofit); the bundle apparatus (manifest entry, aauth reader
+path, content digest) is committed now, in a new `notes/external-pins.md` (a planning-pin registry, deliberately not
+SPEC_VERSIONS.md, which describes implemented surfaces; one table: id, repo, ref, full
+commit SHA, path, content digest, note, never abbreviated; the bundle manifest consumes it
+at Ship 3); the bundle apparatus (manifest entry, aauth reader
 editions, exploratory publication) is built when a first AAuth implementation exists, and it
 reuses the OAuth bundle's machinery.
 
@@ -248,14 +276,15 @@ normatively in the OAuth core); PDP-over-AAuth is unspecified and stays out unti
 (flagged author call: whether it gets a named out-of-scope mention).
 
 **Gates beyond exploratory:** an upstream release reaching the pinned commit; a conformance
-inventory for the three cluster documents AND substrate, with tested coverage of the
+inventory for the CORE bundle documents (substrate, the binding, and management; the expiry
+profile's inventory and tests gate only the optional add-on edition), with tested coverage of the
 capabilities the AAuth Statement claims plus AAuth-to-Substrate composition tests; an actual
 AAuth implementation (none exists in src today); and the documentation-precision fix (README
 and family-manifest language saying the binding "requires" the expiry profile overstates its
 informative register; reconciled in the first execution wave). The management-to-aauth
 family-manifest dependency is reconciled in the first wave too, default
 align-manifest-to-citations (remove the stale dependency; it returns if the #445-slated
-revision adds the citation), author override open.
+revision adds the citation); the override window closes when Ship 1c lands.
 
 ## Freeze policy
 
@@ -279,11 +308,14 @@ a deeper checkout fetch for base diffs; an exception requires BOTH the designate
 approval from an authorized maintainer or CODEOWNER; branch protection prohibits direct
 pushes to main. The rationale for staging: the apparatus defends against concurrent-editor
 drift, which cannot occur with one committer, and main has no branch protection today.
-**Triggers carry tripwires, since an unrecorded trigger is a rename of "later":** each
-firing is recorded as a labeled issue plus a PLAN.md entry; "second contributor" fires on
-the first external PR opened against the repository; "external adopter" fires on an issue
-identifying an adopter; the AAuth trigger (below) fires on AAuth code landing in src, which
-is self-evident. A trigger firing also ends this plan's implicit serial-execution
+**Triggers are operational repository events, recorded when they fire** (a labeled issue
+plus a PLAN.md entry): the freeze trigger fires BEFORE merging the first PR authored by
+anyone outside the maintainer set, or before granting additional write or triage access,
+whichever comes first; "external adopter" fires on an issue identifying an adopter; the
+AAuth trigger (below) fires on AAuth code landing in src, which is self-evident. Firing the
+freeze trigger also extends CODEOWNERS, which today assigns owners to exactly one file and
+none to the AAuth documents, so the gate's authorized-maintainer source exists before the
+gate does. A trigger firing also ends this plan's implicit serial-execution
 assumption. One decision rides the freeze trigger: the branch-protection rule collides with
 the repository's convention of committing PLAN.md log entries directly to main; either the
 convention moves to PRs or that path gets a named exemption.
@@ -308,13 +340,14 @@ trigger.
 
 | Wave | Work | Contents |
 |---|---|---|
-| Ship 1 | Three small PRs, in order | 1a, append-only records: the AAuth pin record in `notes/external-pins.md`; the no-consolidation policy record. 1b, the storefront: bundle and zone/track vocabulary; the adoption map as a plain README table from the per-document table above, placed after the at-a-glance block, with the one-assertion map-membership validator check and the two executor warnings honored. 1c, precision and data: the expiry-framing fix; the management-to-aauth dependency reconciliation (default align-to-citations; the override window closes when 1c lands); the `maintenance` enum plus its one-line validator assertion |
+| Ship 1 | Three small PRs, in order | 1a, append-only records: the AAuth pin record in `notes/external-pins.md`; the no-consolidation policy record. 1b, the storefront: bundle and zone/track vocabulary; the adoption map as a README table from the per-document table above, placed after the at-a-glance block, with `presentation_zone` and `presentation_track` landing in the family manifest and exact-membership validation (all 41 slugs once, each under its declared zone and track), the Architectural-group column, and the two executor warnings honored. 1c, precision and data: the expiry-framing fix; the management-to-aauth dependency reconciliation (default align-to-citations; the override window closes when 1c lands); the `maintenance` enum plus its one-line validator assertion |
 | Ship 2 | Reader editions | The `make reader-editions` target and script, `latest` editions for the floor and Governed Agent lists, per the hardening rules above |
-| Ship 3 | Exploratory v0 | `notes/oauth-mission-runtime-baseline-v0.md`: the inline pin table, reading order, and level definitions; NO coverage claims (the ledger joins the marketed v0); labeled exploratory; tracked by a dedicated issue opened when Ship 2 completes |
-| Retrofit | Manifest and validation (entry condition: the map has survived one success-rubric run without structural rework; this wave's placement of the ruled-now field work is the third flagged resequencing) | `presentation_zone` + `presentation_track` (required), table-membership validation, Architectural-group column; the compatibility-metadata spike; the verb-spine vocabulary decision and then the `verbs` array; the Adoption-order supersession decision; the bundle manifest (consuming `notes/external-pins.md`) and the immutable publish path; gh-pages publication of the exploratory guide |
-| Gated | Marketed v0 | The six-document completeness gate above; then the marketed Issuance and Runtime-Enforced Baselines |
+| Ship 3 | Preview (`v0-preview.1`) | `notes/oauth-mission-baseline-bundle-preview.md` plus the machine-readable bundle manifest (consuming `notes/external-pins.md`): the pin table with full SHAs and digests, reading order, level definitions per the profile matrix; NO coverage claims (the ledger joins v0 proper); tracked by a dedicated issue opened when Ship 2 completes |
+| Ledger | Conformance inventories and tests (four tracked issues, each with an owner and acceptance criteria) | Inventory runtime, authzen, and substrate; prove runtime-evidence's inventory complete; add the missing positive, negative, and composition tests; add the per-requirement `profiles` field expressing Issuance vs Runtime-Enforced applicability |
+| Retrofit | Richer metadata and publishing (entry condition: the map has survived one success-rubric run without structural rework) | The compatibility-metadata spike; the verb-spine vocabulary decision and then the `verbs` array; the Adoption-order supersession decision; the immutable publish path with the pinned-URL bibliography exposure; gh-pages publication of the preview |
+| Gated | v0 proper | The completeness gate above, consuming the Ledger wave; then the marketed Issuance and Runtime-Enforced Baselines with the coverage ledger |
 | Deferred | RAR-free mode | Behind #220 landing normatively |
-| Trigger | Freeze gate; AAuth apparatus | The full freeze gate on the first second contributor or external adopter, the AAuth bundle apparatus on the first AAuth implementation; every trigger firing is recorded as a labeled issue plus a PLAN.md entry (tripwires defined in the Freeze section); the PLAN.md convention decision rides the freeze trigger |
+| Trigger | Freeze gate; AAuth apparatus | The full freeze gate fires before merging the first PR authored outside the maintainer set or before granting additional write/triage access, and its firing extends CODEOWNERS (today one file, no AAuth owners) so the authorized-maintainer source exists before the gate; the AAuth bundle apparatus fires on AAuth code landing in src; every firing is recorded as a labeled issue plus a PLAN.md entry; the PLAN.md convention decision rides the freeze trigger |
 
 ## Provenance
 
@@ -347,5 +380,19 @@ made Ship 3 startable (named file, tracked issue, no coverage claims until the d
 exists); split Ship 1 into three PRs with the map-membership guard, the two executor
 warnings, the pin record's named home, and the dependency-reconciliation override window
 closed at 1c; gave the triggers tripwires; made the Retrofit entry condition observable; and
-turned the success measure into a pre-written rubric with a logged result. Where this
-document and any earlier version disagree, this document governs.
+turned the success measure into a pre-written rubric with a logged result. v5 applied the
+fourth author review, which settled the three outstanding resequencing flags: the third flag
+resolved by ruling (the presentation fields and exact-membership validation return to Ship
+1; the richer compatibility metadata and `verbs` are sanctioned to wait), and the first two
+were accepted as refined (the freeze trigger became an operational repository event with a
+CODEOWNERS extension; the pin registry was confirmed as `notes/external-pins.md` with full
+SHAs and digests). Its five blocking corrections: the profile matrix separating bundle
+contents from the two conformance slices (and the product renamed OAuth Mission Baseline
+Bundle, since a Runtime name over an issuance-only level misled); the preview/v0 version
+split with the bundle manifest moved into Ship 3; the Ship 1 metadata reversal above; the
+restored Ledger execution wave for the conformance inventories, tests, and per-requirement
+`profiles` field; and the AAuth gate split so the optional expiry add-on no longer gates
+the core bundle. Its additional corrections: pinned bundles expose the pinned
+normative-dependency URL beside the live copy; the success rubric became three scored
+scenarios; and the guide replaces discovering, ordering, and reconciling, never reading.
+Where this document and any earlier version disagree, this document governs.
