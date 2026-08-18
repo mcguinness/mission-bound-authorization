@@ -1,7 +1,7 @@
-# Mission Adoption Plan (v3.1, plan of record)
+# Mission Adoption Plan (v3.2, plan of record)
 
-Status: plan of record, 2026-08-18, after two author review rounds plus the verb-taxonomy
-preservation ruling. Dispositions: execution
+Status: plan of record, 2026-08-18, after two author review rounds, the verb-taxonomy
+preservation ruling, and the AAuth bundle directive. Dispositions: execution
 items 1, 2, 3, 4, and 10 approved; items 5 and 9 specified here and hold-lifted on the
 author's confirmation; item 6 expanded; item 7 held on 6; item 8 deferred by ruling.
 Refs #220, #238, #253.
@@ -78,9 +78,11 @@ and architecture and security-model share outside-ordering but land in different
 Validation is table-membership, simpler than heading placement: the validator checks that
 the adoption-map table lists every document exactly once under the zone and track the
 manifest declares. Tracks are validated too: the track is derived from `presentation_zone`,
-`adoption_rung`, and `maturity` plus the two intentional special cases (architecture and
-substrate); if the derivation accumulates more exceptions, an explicit `presentation_track`
-field replaces it. The two existing validator constraints still hold (every slug in the
+`adoption_rung`, and `maturity` plus the intentional special cases (architecture, substrate,
+and the AAuth bundle row: a literal group-to-verb derivation would split it, since
+mission-aauth is grouped `bindings-substrate` while expiry and management are grouped
+`lifecycle`); with three exception cases already known, the explicit `presentation_track`
+field is the likely landing point rather than the fallback. The two existing validator constraints still hold (every slug in the
 catalog subtree; all 39 bolded nicknames in the adoption-order section). The execution PR
 also adds a **Verb** column to the adoption map, derived from the manifest's existing
 `group` field, so the two axes stay visibly joined per document. Four fields are orthogonal
@@ -105,7 +107,7 @@ describes the verb-spine role; none implies any of the others.
 | oauth-mission-issuance-grant | Compose / binding | A MAS-governed estate wants Mission-bound gated tokens without full intake at each AS. |
 | mission-aauth | Compose / binding | The substrate is AAuth: Mission context on its native propose/approve flow. |
 | mission-aauth-management | Compose / binding | Alongside the AAuth binding: status, termination, delegation-tree queries. |
-| aauth-mission-expiry | Compose / binding | Alongside the AAuth binding: an enforced mission lifetime cap. |
+| aauth-mission-expiry | Compose / binding | A citable profile of AAuth's native `expires_at` member is needed (base AAuth enforces the member regardless; the profile's own conformance line is OPTIONAL). |
 | oauth-mission-expansion | Compose / advanced | Approved authority will predictably need to widen mid-task via fresh approval. |
 | oauth-mission-child-delegation | Compose / advanced | A sub-agent needs its own Mission outliving a call frame, with cascade termination. |
 | oauth-mission-cross-domain | Compose / advanced | A Mission from one trust domain must be honored by an AS in another (also the floor's conditional dependency). |
@@ -211,6 +213,71 @@ the selected baseline, exact external pins, the disabled-capability list, and on
 coverage snapshot. An exploratory bundle may publish earlier, labeled as exploratory, never
 marketed as conformance-ready.
 
+## AAuth Mission Context Bundle v0
+
+The AAuth-path counterpart to the OAuth bundle, named from the binding's own vocabulary
+(Mission Context Binding) to avoid collision with AAM and the OAuth bundle's names. It reuses
+the OAuth plan's machinery (bundle manifest, single-snapshot pinning, parametrized reader
+editions) and cannot execute before execution items 4 and 5 land.
+
+**The honest frame: coherence, not composition.** Derived from front matters, not the
+manifest: the cluster's only in-family normative edge is mission-aauth to mission-substrate;
+mission-aauth-management never cites mission-aauth at all, and aauth-mission-expiry has zero
+family dependencies. Every cluster document's sole external normative dependency is
+`draft-hardt-oauth-aauth-protocol`. Membership is therefore justified by a shared upstream
+pin, which is exactly what an adopter needs from it. The closure never reaches oauth-mission,
+status, runtime, or authzen (each roots normatively in the OAuth core), so their exclusion is
+structural, not stylistic; a PDP-over-AAuth composition is conceivable but unspecified today
+(no document defines the `mission_s256`-to-PDP join) and stays out until requested.
+
+| Document | Role | Justification |
+|---|---|---|
+| mission-substrate | floor | the sole in-family normative dependency of the binding |
+| mission-aauth | core | the binding; supplies Lifecycle-Gated Authorization and the Reliance Bound via AAuth's native `expires_at` |
+| mission-aauth-management | core | the kill switch: revocation, status query, delegation-tree query; without it the bundle has completion and expiry but no revocation |
+| aauth-mission-expiry | add-on | profiles an already-native, base-enforced member; informative register in the binding; its own conformance line is OPTIONAL; kept standalone so the bare-AAuth audience is not stranded |
+| mission-architecture | preface | informative; situates the cluster |
+
+**Pinning is the point.** Today's in-repo citation carries no revision pin at all (the
+seriesinfo was removed in the #472 alignment; the front-matter target is the live editor's
+copy), and datatracker's -10 is a divergent pre-person-token document, disclosed and never
+cited as the pin. The bundle manifest's external pin is what makes
+frozen-until-upstream-release mean something concrete:
+
+```json
+"external_pins": [{
+  "id": "AAUTH",
+  "repo": "dickhardt/AAuth",
+  "ref": "PR #73 merged",
+  "commit": "f1569261d0b9d179324f1665db1597f81cd0a851",
+  "path": "draft-hardt-oauth-aauth-protocol.md",
+  "digest": "sha256:computed-at-build",
+  "note": "datatracker -10 is divergent (pre-person-token); disclosed, not the pin"
+}]
+```
+
+Publication is exploratory only, re-issued on an upstream datatracker release reaching or
+superseding the pinned commit, or on a deliberate re-pin under the never-implicit discipline
+SPEC_VERSIONS.md already uses.
+
+**Reader editions:** architecture, substrate, mission-aauth, mission-aauth-management as the
+core list; a second optional list adds aauth-mission-expiry (the same add-on pattern as the
+Governed Agent edition). Link rewriting is materially lighter than the OAuth editions: the
+cluster's out-of-edition family citations are few and informative, and upstream AAuth
+references resolve to a non-family host the rewrite rule leaves untouched automatically.
+
+**Gates before this bundle is more than exploratory:** an upstream release reaching the
+pinned commit (none exists; datatracker is at -10); a conformance inventory for all three
+cluster documents (zero rows exist today) meeting the same coverage bar as the OAuth floor;
+an actual AAuth implementation (none exists anywhere in src/, so composition tests are
+unreachable, not merely undone); execution items 4 and 5 landed; and a documentation-precision
+fix: README and family-manifest language saying the binding "requires" the expiry profile
+overstates its informative register and OPTIONAL conformance line, and must be reconciled so
+this bundle's coherence-not-composition framing does not contradict the family's public
+claims. Two flagged author calls: whether management's next revision (already slated by #445
+for `mission_control_endpoint`) should add a normative citation to mission-aauth, closing the
+informative-only gap; and whether PDP-over-AAuth deserves a named out-of-scope mention.
+
 ## Freeze policy
 
 Machine-enumerated, human-enforced. The manifest carries a required `maintenance` enum; CI
@@ -266,6 +333,7 @@ into the Mission AAuth binding stays rejected (it would strand the bare-AAuth au
 | 8 | RAR-free mode stays behind #220 (normative landing in core or a Standards-Track profile) | Deferred by ruling |
 | 9 | Maintenance enum with the human-reviewed frozen-change gate (required check; label-AND-CODEOWNER bypass; branch protection) | Hold lifted on confirming the gate design and the PLAN.md convention decision; rides 3 |
 | 10 | Record "no consolidation before WG adoption"; aauth-mission-expiry goes upstream-first | Approved; rides 3 |
+| 11 | AAuth Mission Context Bundle v0: pin the upstream commit, bundle manifest entry, aauth reader editions, exploratory publication; the expiry-framing precision fix in README/manifest rides item 3's PR | Directed; after 4 and 5; exploratory until its gates |
 
 ## Provenance
 
@@ -282,5 +350,9 @@ tier numbering; concrete out-of-edition navigation; the orthogonality statement)
 applied the verb-taxonomy preservation ruling: the verb spine is the family's semantic
 signature and is not replaced; zones become a manifest-validated adoption-map overlay, the
 catalog's group-keyed (verb-spine) sections stay untouched, and the adoption map carries a
-Verb column so the two axes stay joined. Where this document and any earlier version
-disagree, this document governs.
+Verb column so the two axes stay joined. v3.2 added the AAuth Mission Context Bundle per the
+author's directive, scoped from derived dependency closure: coherence-not-composition
+membership, the upstream commit pin as the substance of frozen-until-upstream-release,
+exploratory-only publication behind five gates, and the third presentation-track exception
+case it surfaced. Where this document and any earlier version disagree, this document
+governs.
