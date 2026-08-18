@@ -101,6 +101,39 @@ protocol requirement. And a runner never marks an unclaimed optional
 capability nonconforming, or a justified SHOULD departure a failure
 (RFC 2119 Section 3); both are recorded, not failed.
 
+## Maintenance Classes Convention
+
+`family-manifest.json`'s `maintenance` field states how responsively
+this repository maintains a draft. Maintenance is orthogonal to
+maturity: `maturity` is specification stability, `maintenance` is
+repository responsiveness, and neither implies the other. The design
+record for this split, and for the classes below, is
+[notes/adoption-plan.md](notes/adoption-plan.md).
+
+Five classes, machine-enumerated in `family-manifest.json`'s
+`maintenance_classes` array and enforced by
+`scripts/check-family-manifest.mjs`:
+
+- **active**: full peer-symmetry maintenance.
+- **active-experimental**: active maintenance while the draft stays
+  experimental, earned by implementation evidence (a named
+  `maintenance_owner`, an active implementation, and meaningful
+  tested conformance coverage, recorded in `maintenance_evidence`).
+  Promotion to `active` is always a recorded human decision, made
+  against a `maintenance_review_after` horizon rather than
+  automatically.
+- **frozen-until-upstream-release**: text fixes only; a shape change
+  waits on the cited upstream specification's own release.
+- **lab-floor-referenced**: Lab maturity, but active-tier
+  responsiveness for the specific property that a floor document's
+  text points at.
+- **lab-best-effort**: best effort, no maintenance cadence; the gate
+  out of the Lab is a four-condition check (a Mission Substrate
+  Statement where the draft binds a new substrate, the abstract
+  dropping deferred/sketch language, a named adopter or implementer
+  commitment on record, and category/maturity/rung updated together
+  in one PR).
+
 ## Working Group Information
 
 Discussion of this work occurs on the [Web Authorization Protocol

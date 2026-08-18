@@ -485,9 +485,10 @@ facts are the next subsection.
    substrate is AAuth), **aauth-management** (native AAuth status,
    permanent termination, expiry, and delegation-tree queries),
    **aauth-expiry** (a citable specification of AAuth's native
-   `expires_at` mission lifetime bound; base AAuth enforces the
-   member itself, and the profile is OPTIONAL by its own conformance
-   section), **issuance-grant** (the issuance join:
+   `expires_at` mission lifetime bound; base AAuth enforces
+   `expires_at` when present, and adopting the additional format and
+   timing requirements of this profile remains OPTIONAL),
+   **issuance-grant** (the issuance join:
    estate ASs redeem MAS-minted grants for Mission-bound,
    state-gated tokens), **substrate** (for authors of new bindings).
 5. **Advanced, when the use case arrives**: **approval** (asynchronous
@@ -1250,7 +1251,9 @@ unaffected.
 
 `family-manifest.json` at the repository root is the machine-readable
 inventory of the suite: one entry per `draft-*.md`, with its title,
-category, maturity, architectural group (matching "The documents"
+category, maturity, maintenance class (plus a `maintenance_owner`,
+`maintenance_review_after`, and `maintenance_evidence` once a draft is
+`active-experimental`), architectural group (matching "The documents"
 below), adoption-order rung, adoption-map placement
 (`presentation_zone` and `presentation_track`), and the other family
 drafts it references. It is the single source of truth that README's
@@ -1271,5 +1274,7 @@ linked under "The documents" below, a draft missing from the
 architecture's Mission Document Map, a draft with a real
 `adoption_rung` missing from the Adoption order list above, a
 `presentation_zone`/`presentation_track` outside the manifest's
-declared enums, or a draft missing from (or misplaced in) the
-adoption map's table.
+declared enums, a draft missing from (or misplaced in) the adoption
+map's table, a `maintenance` value outside the manifest's declared
+classes, or an `active-experimental` draft missing a maintenance
+owner or a date-shaped review horizon.

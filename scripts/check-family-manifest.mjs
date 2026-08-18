@@ -21,6 +21,9 @@
 //                                "Pull this when..." cell is non-empty
 //   (h) maintenance enum      - a draft's `maintenance` is not one of the manifest's declared
 //                                `maintenance_classes`
+//   (i) maintenance evidence  - a draft whose `maintenance` is "active-experimental" is missing
+//                                a non-empty `maintenance_owner`, or its `maintenance_review_after`
+//                                is not a YYYY-MM-DD date string
 
 import fs from "node:fs";
 import path from "node:path";
@@ -336,6 +339,19 @@ function main() {
   for (const d of drafts) {
     if (!validMaintenance.has(d.maintenance)) {
       fail("maintenance-enum", `${d.slug}: maintenance "${d.maintenance}" is not one of ${JSON.stringify([...validMaintenance])}`);
+    }
+  }
+
+  // (i) maintenance evidence: an "active-experimental" draft must name a
+  // maintenance owner and carry a date-shaped review horizon.
+  const DATE_SHAPED = /^\d{4}-\d{2}-\d{2}$/;
+  for (const d of drafts) {
+    if (d.maintenance !== "active-experimental") continue;
+    if (typeof d.maintenance_owner !== "string" || d.maintenance_owner.length === 0) {
+      fail("maintenance-evidence", `${d.slug}: maintenance "active-experimental" requires a non-empty "maintenance_owner"`);
+    }
+    if (typeof d.maintenance_review_after !== "string" || !DATE_SHAPED.test(d.maintenance_review_after)) {
+      fail("maintenance-evidence", `${d.slug}: maintenance "active-experimental" requires a date-shaped (YYYY-MM-DD) "maintenance_review_after", got ${JSON.stringify(d.maintenance_review_after)}`);
     }
   }
 

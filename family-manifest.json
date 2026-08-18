@@ -537,6 +537,12 @@
    "category": "exp",
    "maturity": "experimental",
    "maintenance": "active-experimental",
+   "maintenance_owner": "@mcguinness",
+   "maintenance_review_after": "2027-02-18",
+   "maintenance_evidence": {
+    "implementation": "src/packages/mission-core/src/txn-authorization.ts, src/services/authorization-server/src/adapters/transaction-authorization.ts, src/services/mcp-payments/src/txn-challenge.ts",
+    "conformance_prefix": "txn-authorization."
+   },
    "group": "runtime-enforcement",
    "presentation_zone": "Lab",
    "presentation_track": "OAuth experimental",
@@ -892,6 +898,12 @@
    "category": "exp",
    "maturity": "experimental",
    "maintenance": "active-experimental",
+   "maintenance_owner": "@mcguinness",
+   "maintenance_review_after": "2027-02-18",
+   "maintenance_evidence": {
+    "implementation": "src/packages/mission-core/src/cross-org-presentation.ts, src/services/authorization-server/src/kernel/cross-org-chain.ts, src/services/authorization-server/src/adapters/cross-org-grant.ts",
+    "conformance_prefix": "cross-org."
+   },
    "group": "cross-domain-projection",
    "presentation_zone": "Lab",
    "presentation_track": "OAuth experimental",
