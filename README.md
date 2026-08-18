@@ -28,7 +28,7 @@ At a glance:
 - **Deliberately decomposed.** One mandatory core (the
   OAuth 2.0 issuance profile, [on the
   datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)),
-  three further bindings (one an experimental sketch) and normative
+  four further bindings (two experimental sketches) and normative
   substrate requirements, optional companion profiles organized by
   verb, and two Informational views (the Architecture and the
   Security Model).
@@ -39,13 +39,13 @@ At a glance:
   orthogonal set of named assurance claims a deployment lists in its
   Deployment Profile. The first three levels run on ratified
   dependencies and the tracked in-progress ones noted below.
-- **Three authorization bindings, an AAuth context binding, and one
-  sketch.** The OAuth Authorization Server and standalone Mission
+- **Four authorization bindings, an AAuth context binding, and two
+  sketches.** The OAuth Authorization Server and standalone Mission
   Authority Server carry the family's portable-authority model. The
   AAuth Person Server supplies the shared approval, reference,
   lifecycle-gate, and audit capabilities in AAuth's own contextual
-  governance model. The UMA 2.0 binding remains an experimental
-  sketch.
+  governance model. The UMA 2.0 and GNAP bindings remain experimental
+  sketches.
 
 **Start with the
 [Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html)
@@ -101,7 +101,11 @@ experimental fourth binding is sketched for the
 **UMA 2.0** Authorization Server: the pushed Mission Intent rides UMA
 claims pushing, the resource owner's decision fills UMA's deliberately
 unspecified authorization assessment, and every RPT issuance is gated
-on Mission state. The OAuth-shaped bindings preserve monotonic
+on Mission state. An experimental fifth is sketched for the **GNAP**
+Authorization Server: the Mission Intent rides the grant request,
+grant continuation carries deferred approval and in-Mission drawdown,
+and every access token issuance and rotation is gated on Mission
+state. The OAuth-shaped bindings preserve monotonic
 narrowing. AAuth deliberately does not impose a universal cross-hop
 subset rule: each chained downstream hop is a fresh resource decision,
 with contextual governance applied by the Person Server when it is on
@@ -117,17 +121,17 @@ it.
  propose      Mission Intent Shaping (client side, untrusted proposal)
                          |
                          v
- approve      Mission control point, one of four bindings:
- and record   +-------------+ +-------------+ +-------------+ +-------------+
-              | OAuth AS    | | Standalone  | | AAuth PS:   | | UMA 2.0 AS  |
-              | (core): PAR | | MAS: async  | | native      | | (sketch):   |
-              | -> approval | | approvals,  | | missions,   | | tickets +   |
-              | tokens      | | no tokens,  | | context +   | | pushed      |
-              | gated on    | | PDP joins   | | PS-path     | | Intent, RPT |
-              | state       | | to Mission  | | gating      | | state-gated |
-              +-------------+ +-------------+ +-------------+ +-------------+
-                       \             |             |             /
-                        v            v             v            v
+ approve      Mission control point, one of five bindings:
+ and record   +-----------+ +-----------+ +-----------+ +-----------+ +-----------+
+              | OAuth AS  | | Standalone| | AAuth PS: | | UMA 2.0 AS| | GNAP AS   |
+              | (core):   | | MAS: async| | native    | | (sketch): | | (sketch): |
+              | PAR ->    | | approvals,| | missions, | | Intent in | | Intent in |
+              | approval, | | no tokens,| | context + | | claims;   | | grant;    |
+              | tokens    | | PDP joins | | PS-path   | | RPT       | | tokens    |
+              |state-gated| | to Mission| | gating    | |state-gated| |state-gated|
+              +-----------+ +-----------+ +-----------+ +-----------+ +-----------+
+                      \            \           |           /            /
+                       v            v          v          v            v
               THE MISSION: durable approved context and lifecycle;
               portable authority commitments are binding-dependent
               Approval Governance Record (issuer-retained provenance
@@ -293,8 +297,8 @@ consequence warrants it, not a prerequisite for every resource; only
 the three high-consequence classes require an active freshness
 source.
 
-The model deploys through four bindings, one of them an experimental
-sketch. The OAuth binding is the
+The model deploys through five bindings, two of them experimental
+sketches. The OAuth binding is the
 core's own: the Authorization Server implements the
 issuance profile, tokens carry the `mission` claim, and issuance is
 gated on Mission state. The standalone binding runs a Mission
@@ -313,7 +317,12 @@ the OAuth family claim or a portable Authority Set. The
 UMA 2.0 binding (experimental) fills UMA's deliberately unspecified
 authorization assessment with the Mission: the pushed Intent rides
 claims pushing, `request_submitted` is the native deferred approval,
-and every RPT issuance and upgrade is gated on Mission state. The Mission Mandate makes a Mission portable
+and every RPT issuance and upgrade is gated on Mission state. The
+GNAP binding (experimental) profiles grant negotiation: the Mission
+Intent rides a registered grant request member, the `pending` grant
+with continuation is the native deferred approval, grant modification
+splits into in-Mission drawdown and Approver-routed expansion, and
+every access token issuance and rotation is gated on Mission state. The Mission Mandate makes a Mission portable
 across the authority-bearing bindings: a signed, verifiable statement
 of what was approved, checkable by any party without a token exchange.
 It is not a baseline AAuth facility; an AAuth evidence extension would
@@ -332,8 +341,8 @@ proposal instead. Mission Deferred Approval is an
 approval-time option for deployments whose approvals are asynchronous or
 whose reviewers narrow a proposed Mission; it layers onto the
 OAuth-binding levels (the Mission Authority Server, the AAuth
-Person Server, and the UMA binding are natively asynchronous and do
-not use it).
+Person Server, and the UMA and GNAP bindings are natively
+asynchronous and do not use it).
 
 Each draft also states its own scoped conformance; the levels are
 guidance, not a new conformance class.
@@ -405,7 +414,9 @@ facts are the next subsection.
    async-delegation / cross-domain transports), **uma** (the UMA 2.0
    binding sketch, the first written against the substrate contract),
    **aam** (Cloudflare's Agent Access Model realized component by
-   component on existing mechanisms).
+   component on existing mechanisms), **gnap** (the GNAP binding
+   sketch: intent-first grant negotiation with native deferred
+   approval and drawdown).
    Each names a stable path to prefer where one exists.
 
 The architecture and security model are Informational companions and
@@ -443,7 +454,7 @@ tool-authorization (COAZ) integration remains informative and
 optional.
 
 Family-internal normative dependencies are Internet-Drafts by
-construction: the substrate contract anchors the **uma**,
+construction: the substrate contract anchors the **uma**, **gnap**,
 **authority-server**, and **aauth** Statements; **aauth-expiry**
 anchors the AAuth binding and its management companion; and the
 **core** anchors its OAuth companions. The family manifest tracks
@@ -880,6 +891,30 @@ profiles. The trades are UMA's thin deployed base and its scope-coarse
 authority grain, which leaves runtime enforcement's role unchanged.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-uma.html)
+
+#### Mission-Bound Authorization for GNAP
+
+Experimental sketch: the fifth binding, to the Grant Negotiation and
+Authorization Protocol (RFC 9635) authorization server, and the
+second authored against the Mission Substrate Requirements contract.
+GNAP standardized the negotiation the OAuth binding assembles from
+parts (a grant request that is pushed by construction,
+key-bound client instances, the native `pending` grant with
+continuation, structured access rights, and token management) and
+left the object of that negotiation unspecified: no durable record
+governs what the resource owner approved, in what bounds, under what
+lifecycle. This binding fills that interior with the Mission. The
+Mission Intent rides a registered grant request member, the
+interaction ceremony, or a companion-supplied standing basis, is the
+approval event, the
+lifecycle gates every access token issuance and rotation, grant
+modification splits into in-Mission drawdown and Approver-routed
+expansion, and the continuation access token is Mission continuity
+that is never authority. The trades are GNAP's thin deployed base
+and the mutability discipline the binding must impose on grant
+updates.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-gnap.html)
 
 #### Mission Substrate Requirements
 
