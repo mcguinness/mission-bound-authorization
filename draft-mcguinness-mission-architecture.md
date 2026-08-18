@@ -608,6 +608,21 @@ No single lever closes the gap; a deployment composes the ones its
 risk warrants ({{assurance-levels}}), and the verbs of {{layers}}
 organize the levers by the question each answers.
 
+What approval commits is broader than the structured Authority Set
+alone: it also commits the rendered intent context (`goal`,
+`constraints`, and, where it differs, the requested ceiling), the
+effective `expires_at`, and the rendered `controls` bounds
+({{I-D.draft-mcguinness-oauth-mission}}). Concrete request values,
+current consumption, and action sequencing are decision-time facts,
+evaluated later by runtime policy, metering, or action-bound
+(transaction) approval; core does not require them to be re-rendered
+to the original Approver, though action-bound approval may re-render
+exactly that. The lifecycle control gates new derivation from the
+envelope; a credential already materialized under it keeps running
+to its own bound. The two halves compose but do not substitute: an
+envelope real at approval time can still admit, at decision time, an
+effect the Approver never saw rendered in that form.
+
 The levers share one strategy: they convert semantic risk into
 structural signals. A policy decision point is never asked to judge
 whether content is harmful; provenance (the harness taint context),

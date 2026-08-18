@@ -269,10 +269,20 @@ plus the integrity `envelope` {{envelope}} defines.
     : REQUIRED. A reference to the provenance under which this
       principal was authorized to decide. For a `human` assertion,
       the authentication context of the assertion. For a `policy`
-      assertion, the deciding policy's identifier and version: the
-      family's provenance chain for non-human approval, in which the
-      policy approves the instance because a human approved the
-      policy.
+      assertion, the deciding policy's identifier and version, and
+      `approved_at`: the family's provenance chain for non-human
+      approval, in which the policy approves the instance because a
+      human approved the policy.
+
+      `approved_at` is an RFC 3339 timestamp: the human approval
+      instant of that exact policy version, not the assertion
+      instant. `decided_at` records when the policy asserted;
+      `approved_at` records when a human approved the version it
+      asserts under. The issuer MUST verify `approved_at` from
+      retained, authenticated governance state for the named
+      `policy_id` and `version`; it MUST NOT accept `approved_at` as
+      the assertion's own uncorroborated clock value
+      ({{policy-approval-recency}}).
 
     `reason`:
     : OPTIONAL. A string.
@@ -319,7 +329,8 @@ plus the integrity `envelope` {{envelope}} defines.
       "decided_at": "2026-09-30T16:58:12Z",
       "authority": { "policy_id": "dlg-matrix", "version": "v7",
         "approved_by": { "iss": "https://login.example.com",
-          "sub": "cfo@example.com" } } }
+          "sub": "cfo@example.com" },
+        "approved_at": "2026-09-15T09:00:00Z" } }
   ],
   "evaluation": {
     "decision": "approved",
@@ -364,7 +375,8 @@ These rules are the record's security core.
   `approver` and carry an `approve` decision; the record supports
   the approval it claims to govern or it does not commit. A
   policy-authority Approver satisfies this with a `policy` assertion
-  carrying its provenance chain.
+  carrying its provenance chain, subject to the high-risk-class
+  restriction of {{policy-approval-recency}}.
 - An assertion that fails authentication, event binding, or policy
   authorization MUST NOT contribute to the evaluation and MUST NOT
   be counted toward any policy rule.
@@ -393,6 +405,88 @@ evaluation and precedes persistence, never the reverse.
 A committed record is immutable. A subsequent governance action, a
 re-review or an incident finding, is a new record about a new event,
 never an edit.
+
+# Policy-Approval Recency {#policy-approval-recency}
+
+This section bounds staleness on the AGR `policy` assertion path: it
+governs a `policy` assertion's `authority.approved_at` and the
+`kind` of the accountable-approver's assertion. It does not apply to
+a `human` assertion, whose `decided_at` is the approval instant
+itself.
+
+A Recording Issuer that admits `policy` assertions MUST declare a
+maximum policy-approval age per consequence class (a **recency
+ceiling**) and a bounded clock-skew allowance, and MAY declare, per
+class, an **exception** admitting a `policy` assertion as the
+accountable approver's assertion for that class, each exception
+carrying its own maximum age. The ceiling, the skew allowance, and
+any exception MUST be part of the retained `approval_policy` snapshot
+that `approval_policy.digest` commits ({{record}}), or a separately
+versioned declaration committed from that snapshot. A mutable,
+out-of-band deployment statement MUST NOT serve this role: it would
+make the evaluation impossible to reproduce, contrary to the promise
+of {{record}} that the retained policy lets an auditor re-run the
+decision.
+
+At evaluation, the issuer MUST classify the committed Mission's
+derived Authority Set by consequence class and select, across every
+class the set carries, the strictest maximum age that applies,
+accounting for any declared exception. This is a property of the
+whole Authority Set the record's `mission.authority_hash` binds to
+({{record}}), never of one assertion or entry in isolation.
+
+For each `policy` assertion the evaluation would count toward the
+applicable maximum, the issuer:
+
+- MUST verify `authority.approved_at` from retained, authenticated
+  governance state for the exact `policy_id` and `version` the
+  assertion names;
+- MUST measure the assertion's age as `evaluation.evaluated_at` minus
+  `authority.approved_at`, using the atomic-commitment instant
+  ({{atomic-commitment}});
+- MUST enforce `authority.approved_at` <= `decided_at` <=
+  `evaluation.evaluated_at`, subject to the declared clock-skew
+  allowance; and
+- MUST reject the assertion if `authority.approved_at` or
+  `decided_at` is later than the issuer's own clock at evaluation,
+  beyond that allowance.
+
+A `policy` assertion whose age exceeds the applicable maximum, or
+whose ordering the previous paragraph does not admit, fails
+policy-authorization under {{assertion-requirements}}: the issuer
+MUST NOT count it toward the evaluation, and by
+{{atomic-commitment}} the Mission MUST NOT be created `active` on an
+evaluation that depended on it. An `evaluation.evaluated_at` later
+than the issuer's own clock, beyond the declared allowance, is a
+defect of the record rather than of one assertion: the evaluation
+MUST NOT be treated as complete, and by {{atomic-commitment}} the
+Mission MUST NOT be created `active` on it.
+
+This is issuance-time eligibility. It determines whether a Mission
+activates and does not reach back into a Mission already `active`:
+that Mission's governing policy approval was measured fresh at its
+own approval event, and a later change to the ceiling, the exception,
+or the policy's freshness does not narrow or terminate it.
+
+Four conditions are the high-risk classes the issuance profile
+defines: irreversible action, external commitment, privileged
+administration, and a consumption bound
+({{I-D.draft-mcguinness-oauth-mission}}). Where the
+committed Mission's derived Authority Set carries one, the assertion
+satisfying the accountable-approver rule of
+{{assertion-requirements}} MUST be `kind: human`, unless a committed,
+class-named exception under this section admits `kind: policy` for
+that class.
+
+Approval Governance is an optional extension
+({{optional-status}}); the rules of this section are a conservative
+default of that profile, not a family-wide guarantee, and a
+deployment that records no Approval Governance Record is unbounded
+by them. `kind: human` is not by itself an assurance property: the
+authentication-strength, rendering, and accountable-principal
+requirements the issuance profile and {{assertion-requirements}}
+otherwise impose still carry that property; this section only
+decides which assertion kind MUST be present.
 
 # Envelope and Verification {#envelope}
 
@@ -504,6 +598,14 @@ same boundary for rich authorization requests); this record therefore
 stays off protocol messages and out of enforcement projections,
 matching the issuance profile's control-plane discipline.
 
+{{policy-approval-recency}} bounds only the AGR `policy` assertion
+path. The issuance profile's standing-consent authority bases and
+their related provenance carry no equivalent human-approval instant
+and trace only through a consent principal and a commitment; that
+gap is a distinct, tracked concern outside this document's
+assertions, for the issuance profile or whichever companion defines
+those standing-consent types to close.
+
 # Mission Evidence {#audit-evidence}
 
 The AGR is registrable Mission evidence under the audit
@@ -538,6 +640,14 @@ The accountable-approver assertion rule of
 {{assertion-requirements}} prevents a set of service and policy
 assertions from claiming a Mission whose named Approver never
 asserted anything.
+
+## Stale Policy Approval
+
+Without {{policy-approval-recency}}, a `policy` assertion could rely
+on a human approval far in the past, or stand in for the accountable
+approver on a high-risk consequence with no human assertion at all.
+The recency ceiling, its ordering checks, and the human-by-default
+consequence-class rule are the control.
 
 ## Immutability Witness
 
@@ -602,6 +712,13 @@ A **Recording Issuer** MUST:
 - record denials;
 - include the accountable-approver assertion;
 - evaluate under the retained policy version;
+- enforce the strictest applicable policy-approval maximum age across
+  the derived Authority Set's consequence classes, from a committed
+  ceiling and any committed exception ({{policy-approval-recency}});
+- require `kind: human` for the accountable-approver assertion where
+  the derived Authority Set carries a high-risk class, unless a
+  committed class-named exception applies
+  ({{policy-approval-recency}});
 - commit the record atomically with Mission creation and let failure
   prevent activation ({{atomic-commitment}});
 - sign the committed record and keep it immutable
