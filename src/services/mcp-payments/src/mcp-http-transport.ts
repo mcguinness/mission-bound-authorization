@@ -36,7 +36,7 @@ import {
   type ListToolsResult,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { ACCEPT_TXN_CHALLENGE_HEADER } from "@mission/core";
+import { ACCEPT_TXN_CHALLENGE_HEADER, acceptsTxnChallenge } from "@mission/core";
 import { exportJWK, SignJWT } from "jose";
 import type { MediatedToolResult } from "./mcp-transport.js";
 import { TOOL_ACTIONS, type RequestSignals, type TokenFacts } from "./pep.js";
@@ -205,8 +205,9 @@ async function authenticate(
 
   // @spec txn-authorization#resource-challenge — the client's
   // Accept-Txn-Challenge signal gates the challenge; it travels as an ordinary
-  // request header and is carried to the PEP alongside the validated facts.
-  const acceptTxnChallenge = String(req.headers[ACCEPT_TXN_CHALLENGE_HEADER] ?? "").trim().length > 0;
+  // request header (an RFC 8941 Boolean, so `?1` and nothing else is
+  // acceptance) and is carried to the PEP alongside the validated facts.
+  const acceptTxnChallenge = acceptsTxnChallenge(req.headers[ACCEPT_TXN_CHALLENGE_HEADER]);
   // The SDK's AuthInfo shape; the MCP handlers read facts from extra.tokenFacts.
   req.auth = {
     token: accessToken,

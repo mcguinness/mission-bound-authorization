@@ -1935,7 +1935,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // method (registered-principal HTTP Basic, authenticateIntrospection
       // above), matching RFC 8414's *_endpoint_auth_methods_supported idiom.
       meta.introspection_endpoint_auth_methods_supported = ["client_secret_basic"];
-      meta.transaction_authorization_endpoint = `${opts.issuer}/transaction`;
+      // @spec txn-authorization#challenge-redemption — advertised only where the
+      // endpoint is CONFIGURED. An AS without transaction authorization answers
+      // 501 there, and advertising it would send clients to a dead endpoint.
+      if (opts.txnAuthorization) meta.transaction_authorization_endpoint = `${opts.issuer}/transaction`;
       // @spec mission#other-types, I-D.draft-zehavi-oauth-rar-metadata — the
       // metadata endpoint is the source of truth for "AS-supported types"; its
       // key set is authorization_details_types_supported (below, already

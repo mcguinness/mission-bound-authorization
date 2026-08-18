@@ -336,6 +336,21 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
     asServer?.close();
   });
 
+  it("treats Accept-Txn-Challenge as an RFC 8941 Boolean: only ?1 signals acceptance", async () => {
+    // `?0` is the client declining, and a malformed value is not a Boolean at
+    // all. Neither is acceptance, so the resource returns the plain denial and
+    // no challenge -- and never hands one to a client that cannot redeem it.
+    for (const signal of ["?0", "sure"]) {
+      const client = await connect(accessToken, { "accept-txn-challenge": signal });
+      const denied = await client.client.callTool("send_remittance_email", { invoice_id: "inv-1" });
+      expect(denied.ok, signal).toBe(false);
+      expect(denied.denial_reason, signal).toBe("action_approval_required");
+      expect(denied.error, signal).toBeUndefined();
+      expect(denied.transaction_challenge, signal).toBeUndefined();
+      await client.close();
+    }
+  });
+
   it("challenges, redeems, approves, decides fresh, and executes exactly once", async () => {
     // 1. The agent calls the gated tool over MCP, signalling that it can redeem
     //    a challenge. Its credential is the Mission-bound access token.

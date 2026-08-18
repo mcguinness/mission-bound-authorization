@@ -14,6 +14,7 @@ import {
   missionInvariantsEqual,
   readTxnMissionClaim,
   SUBJECT_TOKEN_TYPE_ACCESS_TOKEN,
+  type JsonValue,
   type TxnChallengeClaims,
 } from "@mission/core";
 import {
@@ -435,7 +436,7 @@ async function poll(
   if (wf.state === "issued" && wf.issuedToken) {
     // At most one authorization result per workflow: repeated polling after a
     // decision returns the SAME token (same jti), never a second issuance.
-    respondWithToken(ctx, wf.issuedToken, (wf.issuedExpS ?? nowS) - nowS);
+    respondWithToken(ctx, wf.issuedToken, (wf.issuedExpS ?? nowS) - nowS, wf.challenge.authorization_details);
     return;
   }
   // @spec txn-authorization#two-phase-expiry — the workflow's OWN lifetime is
@@ -554,7 +555,12 @@ async function poll(
       // terminal denial off a workflow that is about to issue.
       const current = workflows.get(wf.id);
       if (current?.issuedToken) {
-        respondWithToken(ctx, current.issuedToken, (current.issuedExpS ?? nowS) - nowS);
+        respondWithToken(
+          ctx,
+          current.issuedToken,
+          (current.issuedExpS ?? nowS) - nowS,
+          current.challenge.authorization_details,
+        );
         return;
       }
       fail(ctx, 400, "authorization_pending");
@@ -585,13 +591,28 @@ async function poll(
     kid: txn.tokenKid,
   });
   workflows.recordIssued(wf.id, token, tokenJti, exp);
-  respondWithToken(ctx, token, exp - nowS);
+  respondWithToken(ctx, token, exp - nowS, wf.challenge.authorization_details);
 }
 
-/** The standard OAuth token response; no bespoke members ride alongside it. */
-function respondWithToken(ctx: TxnCtx, accessToken: string, expiresIn: number): void {
+/**
+ * The standard OAuth token response; no bespoke members ride alongside it.
+ * `authorization_details` is the RFC 9396 response parameter, carrying the
+ * EXACT permitted set -- identical to the token's own claim -- so a client
+ * learns what was authorized without inspecting the token.
+ */
+function respondWithToken(
+  ctx: TxnCtx,
+  accessToken: string,
+  expiresIn: number,
+  authorizationDetails: JsonValue[],
+): void {
   ctx.status = 200;
-  ctx.body = { access_token: accessToken, token_type: "DPoP", expires_in: Math.max(1, expiresIn) };
+  ctx.body = {
+    access_token: accessToken,
+    token_type: "DPoP",
+    expires_in: Math.max(1, expiresIn),
+    authorization_details: authorizationDetails,
+  };
   ctx.set("cache-control", "no-store");
 }
 

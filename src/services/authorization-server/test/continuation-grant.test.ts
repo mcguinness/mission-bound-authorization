@@ -380,6 +380,11 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     >;
     expect(meta.identity_continuation_supported).toBe(true);
 
+    // @spec txn-authorization#challenge-redemption — this AS is built WITHOUT
+    // transaction authorization, so it does not advertise an endpoint that
+    // would answer 501.
+    expect(meta.transaction_authorization_endpoint).toBeUndefined();
+
     // (5) RAS metadata advertises both id-jag grant profiles.
     const rasKeys = await generateKeyPair("ES256", { extractable: true });
     const ras = new ResourceAuthorizationServer({

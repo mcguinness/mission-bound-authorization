@@ -66,6 +66,7 @@ export { compareAmounts, InvalidAmountError, isValidAmount } from "./decimal-amo
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";
 export {
   ACCEPT_TXN_CHALLENGE_HEADER,
+  acceptsTxnChallenge,
   authorizationDetailsEqual,
   MISSION_TXN_TOKEN_TYP,
   type MissionTxnTokenClaims,

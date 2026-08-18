@@ -28,6 +28,18 @@ export const TXN_AUTHORIZATION_REQUIRED = "transaction_authorization_required";
 /** @spec txn-authorization#resource-challenge — the client signal that gates the challenge. */
 export const ACCEPT_TXN_CHALLENGE_HEADER = "accept-txn-challenge";
 
+/**
+ * @spec txn-authorization#resource-challenge — `Accept-Txn-Challenge` is an RFC
+ * 8941 Structured Field Boolean, so ONLY `?1` signals that the client accepts a
+ * challenge. `?0` is the client saying it does not; an empty, repeated or
+ * malformed value is not a Boolean at all. None of those is acceptance, and a
+ * resource that treated mere presence as acceptance would hand challenges to
+ * clients that declined them.
+ */
+export function acceptsTxnChallenge(value: string | string[] | undefined): boolean {
+  return typeof value === "string" && value.trim() === "?1";
+}
+
 /** @spec txn-authorization#challenge-redemption — the RFC 8693 subject token type. */
 export const SUBJECT_TOKEN_TYPE_ACCESS_TOKEN = "urn:ietf:params:oauth:token-type:access_token";
 

@@ -492,12 +492,15 @@ describe("transaction endpoint redemption (@spec txn-authorization#challenge-red
       token_type?: string;
       expires_in?: number;
       txn?: string;
+      authorization_details?: unknown;
     };
     expect(tokenRes.status, JSON.stringify(tokenBody)).toBe(200);
     expect(tokenBody.token_type).toBe("DPoP");
     // A standard OAuth token response: no bespoke members ride alongside it.
     expect(tokenBody.txn).toBeUndefined();
     expect(tokenBody.expires_in).toBeGreaterThan(0);
+    // The RFC 9396 response parameter carries the EXACT permitted set.
+    expect(tokenBody.authorization_details).toEqual(requested);
 
     // Verify the TAS-signed transaction token against the AS /jwks.
     const jwks = createRemoteJWKSet(new URL(`${ISSUER}/jwks`));
@@ -517,6 +520,8 @@ describe("transaction endpoint redemption (@spec txn-authorization#challenge-red
     expect(payload.sub).toBe("alice");
     expect(payload.client_id).toBe("ap-agent");
     expect(payload.parameter_digest).toBe(parameter_digest);
+    // ...and it is identical to the token's own claim, never wider.
+    expect(payload.authorization_details).toEqual(tokenBody.authorization_details);
     expect((payload.cnf as { jkt: string }).jkt).toBe(dpopJkt);
     expect((payload.mission as { id: string }).id).toBe(missionId);
     expect((payload.mission as { predecessor?: string }).predecessor).toBeUndefined();
