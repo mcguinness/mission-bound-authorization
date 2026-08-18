@@ -4,10 +4,14 @@
  *
  * Two invariants are STRUCTURAL here rather than left to handler logic:
  *
- *  - ADMISSION IDEMPOTENCY. A UNIQUE index over (challenge issuer, challenge
- *    jti, client, cnf) means a repeated initial submission of the same admitted
- *    challenge returns the EXISTING workflow; a second workflow for it cannot
- *    be created.
+ *  - ADMISSION IDEMPOTENCY, AND ADMISSION AS THE RESERVATION. A UNIQUE index
+ *    over (challenge issuer, challenge jti, client, cnf) means a repeated
+ *    initial submission of the same admitted challenge returns the EXISTING
+ *    workflow; a second workflow for it cannot be created. The insert runs
+ *    BEFORE any approval is opened and reports whether THIS caller won it, so
+ *    only the winner opens an approval: two concurrent submissions of one
+ *    challenge cannot open two. A workflow whose `task_id` is still empty has
+ *    not reached the Access Request Service yet and polls as pending.
  *  - AT MOST ONE AUTHORIZATION RESULT PER `txn`. Issuance is guarded by a
  *    redeem-once insert keyed on `txn`, so a second token under a different
  *    `jti` for a `txn` whose workflow already produced one is impossible even
@@ -59,14 +63,25 @@ CREATE TABLE IF NOT EXISTS txn_issuance_guard (
 
 export type TxnWorkflowState = "pending" | "denied" | "issued";
 
+/** The admission outcome: the row of record, and whether THIS caller created
+ *  it (and therefore owns opening the approval for it). */
+export interface TxnAdmission {
+  record: TxnWorkflowRecord;
+  won: boolean;
+}
+
 /** One admitted workflow, with the challenge it was admitted on pinned. */
 export interface TxnWorkflowRecord {
   id: string;
   challenge: TxnChallengeClaims;
   clientId: string;
-  taskId: string;
   missionId: string;
   action: string;
+  /**
+   * The approval task this workflow's decision waits on. EMPTY until the
+   * workflow that won admission has opened it; a poll before that is pending.
+   */
+  taskId: string;
   /** The `authorization_details` entry's `type` at admission (profile version). */
   operationType: string;
   subject: string;
@@ -141,11 +156,12 @@ export class TxnWorkflowStore {
   }
 
   /**
-   * Admit a workflow. A concurrent submission of the same admitted challenge
-   * loses the UNIQUE index race and gets the winner's record back, so the
-   * caller never observes two workflows for one challenge.
+   * Admit a workflow. THIS insert is the reservation: a concurrent submission
+   * of the same admitted challenge loses the UNIQUE index race and gets the
+   * winner's record back with `won: false`, so the caller never observes two
+   * workflows for one challenge and only the winner opens an approval.
    */
-  admit(record: TxnWorkflowRecord): TxnWorkflowRecord {
+  admit(record: TxnWorkflowRecord): TxnAdmission {
     const info = this.db
       .prepare(
         `INSERT INTO txn_workflows
@@ -175,7 +191,7 @@ export class TxnWorkflowStore {
         record.expiresAtS,
         record.state,
       );
-    if (info.changes === 1) return record;
+    if (info.changes === 1) return { record, won: true };
     const existing = this.findAdmission({
       challengeIss: record.challenge.iss,
       challengeJti: record.challenge.jti,
@@ -183,7 +199,15 @@ export class TxnWorkflowStore {
       cnfJkt: record.challenge.cnf.jkt,
     });
     if (!existing) throw new Error("workflow admission conflicted without an existing row");
-    return existing;
+    return { record: existing, won: false };
+  }
+
+  /**
+   * Record the approval task the winner opened for an admitted workflow. Until
+   * it is recorded the workflow has no decision to wait on and polls pending.
+   */
+  recordTask(id: string, taskId: string): void {
+    this.db.prepare("UPDATE txn_workflows SET task_id = ? WHERE id = ?").run(taskId, id);
   }
 
   setState(id: string, state: TxnWorkflowState): void {

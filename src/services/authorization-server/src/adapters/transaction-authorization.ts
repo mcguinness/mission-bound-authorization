@@ -46,6 +46,8 @@ import type { DpopProofReplay } from "./dpop-replay.js";
 export interface TxnArs {
   openForTxn(input: {
     txn: string;
+    /** The Challenge-Issuing Resource `txn` is scoped to (the challenge `iss`). */
+    resource: string;
     missionId: string;
     action: string;
     parameter_digest: string;
@@ -336,36 +338,14 @@ async function admit(
 
   const nowS = Math.floor(deps.now().getTime() / 1000);
 
-  // @spec txn-authorization#two-phase-expiry — a repeated initial submission of
-  // the SAME admitted challenge returns the existing pending workflow; it never
-  // creates a second one (and never opens a second approval).
-  const admitted = workflows.findAdmission({
-    challengeIss: challenge.iss,
-    challengeJti: challenge.jti,
-    clientId,
-    cnfJkt: challenge.cnf.jkt,
-  });
-  if (admitted) {
-    respondAdmitted(ctx, txn, admitted, nowS);
-    return;
-  }
-
-  // 5. Obtain or resolve a governed approval, bound to `txn`, the operation,
-  //    `parameter_digest`, the resource, the Mission, the origin principal and
-  //    the presenter key. This endpoint opens one for every admitted operation;
-  //    the requirement above travels with it as the basis it rests on.
-  const { taskId } = txn.ars.openForTxn({
-    txn: challenge.txn,
-    missionId,
-    action,
-    parameter_digest: challenge.parameter_digest,
-    subject: subjectId,
-    requires_action_approval: requiresApproval,
-  });
-
-  const workflow = workflows.admit({
+  // @spec txn-authorization#two-phase-expiry — the admission insert IS the
+  // reservation, and it runs BEFORE any approval is opened: a repeated (or
+  // concurrent) initial submission of the SAME admitted challenge loses the
+  // race, returns the existing pending workflow, and never opens a second
+  // approval. The row is created with no task; only the winner opens one.
+  const { record: workflow, won } = workflows.admit({
     id: `txa_${randomBytes(12).toString("base64url")}`,
-    taskId,
+    taskId: "",
     challenge,
     clientId,
     subject: subjectId,
@@ -388,6 +368,26 @@ async function admit(
         : {}),
     state: "pending",
   });
+
+  // 5. Obtain or resolve a governed approval, bound to `txn`, the operation,
+  //    `parameter_digest`, the resource, the Mission, the origin principal and
+  //    the presenter key. This endpoint opens one for every admitted operation;
+  //    the requirement above travels with it as the basis it rests on. An
+  //    empty `taskId` on a workflow this caller did not win means an earlier
+  //    submission reserved the slot and did not reach the ARS; opening is
+  //    idempotent, so the retry resolves to that same approval.
+  if (won || workflow.taskId === "") {
+    const { taskId } = txn.ars.openForTxn({
+      txn: challenge.txn,
+      resource: challenge.iss,
+      missionId,
+      action,
+      parameter_digest: challenge.parameter_digest,
+      subject: subjectId,
+      requires_action_approval: requiresApproval,
+    });
+    workflows.recordTask(workflow.id, taskId);
+  }
   respondAdmitted(ctx, txn, workflow, nowS);
 }
 
@@ -443,6 +443,13 @@ async function poll(
   // but within this window still issues; the challenge exp is already consumed.
   if (nowS >= wf.expiresAtS) {
     fail(ctx, 400, "expired_token");
+    return;
+  }
+  // The workflow reserved admission but has not opened its approval yet (a
+  // crash between the two, or a concurrent submission still in flight). There
+  // is nothing to decide on yet; the workflow's own lifetime bounds the wait.
+  if (!wf.taskId) {
+    fail(ctx, 400, "authorization_pending");
     return;
   }
   const task = txn.ars.getTask(wf.taskId);

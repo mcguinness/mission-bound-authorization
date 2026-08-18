@@ -16,6 +16,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono, type Context } from "hono";
+import { txnTaskId } from "@mission/access-request";
 import type { TokenFacts } from "@mission/mcp-payments";
 import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { shapeIntent } from "@mission/agent";
@@ -306,13 +307,15 @@ async function main() {
 
   // Initiate the AROP flow for a challenge-bearing denial: present the RS
   // challenge to the AS transaction endpoint ONCE, capture the continuation
-  // handle keyed by the ARS task id (arq_txn_<txn>), and return the pending
+  // handle keyed by the ARS task id (resource-scoped: a `txn` is unique within
+  // a Challenge-Issuing Resource, never globally), and return the pending
   // fields the UI/JIT retry wire on. Shared by /agent/act and /agent/run so both
   // open the AROP task through identical logic.
   const initiateArop = async (challenge: string, tool: string, invoiceId?: string) => {
     const challengeClaims = decodeClaims(challenge);
     const txn = challengeClaims.txn as string | undefined;
-    const taskId = txn ? `arq_txn_${txn}` : undefined;
+    const resource = challengeClaims.iss as string | undefined;
+    const taskId = txn && resource ? txnTaskId(resource, txn) : undefined;
     if (taskId) {
       // Stash the challenge-derived detail keyed by taskId so the enriched queue
       // can show tool + invoice + digest for this pending approval.
@@ -574,8 +577,9 @@ async function main() {
     const detail = stepDetail(tool, args, r, active.missionId);
     const ch = (r as ToolResult).transaction_challenge;
     if (!r.ok && ch) {
-      // The ARS task id is derived from the challenge's txn (openForTxn keys the
-      // task arq_txn_<txn>), so the approver queue + retry correlate on it while
+      // The ARS task id is derived from the challenge's issuer and txn (a `txn`
+      // is unique within the resource), so the approver queue + retry correlate
+      // on it while
       // the client polls the AS by the continuation handle. `arop` is spread
       // AFTER `r` so its decoded challenge overrides the raw one; `detail` carries
       // no transaction_challenge/taskId, so it never clobbers those.

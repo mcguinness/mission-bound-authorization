@@ -48,6 +48,16 @@ CREATE TABLE tasks (
 ) STRICT;
 `;
 
+/**
+ * @spec txn-authorization#offline-verification — the ARS correlation identity
+ * for one challenged operation. `txn` is unique within a protected resource,
+ * so the resource is part of the identity; it is base64url-encoded so a
+ * resource URI cannot collide with, or run into, the task id's own separators.
+ */
+export function txnTaskId(resource: string, txn: string): string {
+  return `arq_txn_${Buffer.from(resource, "utf8").toString("base64url")}_${txn}`;
+}
+
 export class AccessRequestService {
   readonly db: Database;
   private taskСounterSeed = 0;
@@ -102,21 +112,30 @@ export class AccessRequestService {
    * (contrast `submit`, which verifies one for a separate ARS). D37: the AS
    * owns the txn pending id; the ARS owns the approval. Reuses the same tasks
    * table + `adjudicate`/`getTask` unchanged.
+   *
+   * IDEMPOTENT: opening the same (resource, txn) twice resolves to the ONE
+   * task, whatever its current state. `txn` is unique within the Challenge-
+   * Issuing Resource, never globally, so the correlation identity carries the
+   * resource too (@spec txn-authorization#offline-verification).
    */
   openForTxn(input: {
     txn: string;
+    resource: string;
     missionId: string;
     action: string;
     parameter_digest: string;
     subject: string;
   }): { taskId: string; state: TaskState } {
-    const taskId = `arq_txn_${input.txn}`;
+    const taskId = txnTaskId(input.resource, input.txn);
     this.db
       .prepare(
-        "INSERT INTO tasks (id, state, mission_id, action, parameter_digest, subject, approval_json, created_at) VALUES (?, 'pending', ?, ?, ?, ?, NULL, ?)",
+        "INSERT INTO tasks (id, state, mission_id, action, parameter_digest, subject, approval_json, created_at) VALUES (?, 'pending', ?, ?, ?, ?, NULL, ?) ON CONFLICT(id) DO NOTHING",
       )
       .run(taskId, input.missionId, input.action, input.parameter_digest, input.subject, this.now().getTime());
-    return { taskId, state: "pending" };
+    const row = this.db.prepare("SELECT state FROM tasks WHERE id = ?").get(taskId) as
+      | { state: TaskState }
+      | undefined;
+    return { taskId, state: row?.state ?? "pending" };
   }
 
   /** The approver's adjudication queue (approver app consumes this). */

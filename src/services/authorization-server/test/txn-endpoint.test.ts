@@ -7,7 +7,7 @@
  */
 
 import { type Server } from "node:http";
-import { AccessRequestService } from "@mission/access-request";
+import { AccessRequestService, txnTaskId } from "@mission/access-request";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
@@ -40,6 +40,9 @@ const WORKFLOW_LIFETIME_S = 600;
 const MAX_TOKEN_LIFETIME_S = 300;
 /** A second accepted Challenge-Issuing Resource the subject_token is NOT for. */
 const OTHER_RESOURCE = "http://localhost:4499/mcp";
+/** @spec txn-authorization#offline-verification — `txn` is unique within a
+ *  Challenge-Issuing Resource, so the ARS task id carries the resource too. */
+const taskFor = (txn: string, resource: string = RESOURCE): string => txnTaskId(resource, txn);
 
 type DpopKeys = { privateKey: CryptoKey; publicKey: CryptoKey };
 
@@ -349,6 +352,7 @@ beforeAll(async () => {
   const txnArs = {
     openForTxn: (input: {
       txn: string;
+      resource: string;
       missionId: string;
       action: string;
       parameter_digest: string;
@@ -617,8 +621,8 @@ describe("transaction endpoint redemption (@spec txn-authorization#challenge-red
     const initBody = (await (await submit(challenge)).json()) as { transaction_authorization_id: string };
     expect(initBody.transaction_authorization_id).toMatch(/^txa_/);
 
-    // Bob denies the AS-vouched task (openForTxn keys it arq_txn_<txn>).
-    const denied = await ars.adjudicate(`arq_txn_${txn}`, "deny", "bob");
+    // Bob denies the AS-vouched task (the id is resource-scoped: taskFor).
+    const denied = await ars.adjudicate(taskFor(txn), "deny", "bob");
     expect(denied).toBeNull();
 
     // Poll -> 400 access_denied, terminal.
@@ -660,7 +664,22 @@ describe("two-phase expiry and idempotency (@spec txn-authorization#two-phase-ex
     expect(first.transaction_authorization_id).toMatch(/^txa_/);
     expect(second.transaction_authorization_id).toBe(first.transaction_authorization_id);
     // Exactly one approval task was opened for the one admitted challenge.
-    expect(ars.pending().filter((t) => t.id === "arq_txn_txn_repeat_submit")).toHaveLength(1);
+    expect(ars.pending().filter((t) => t.id === taskFor("txn_repeat_submit"))).toHaveLength(1);
+  });
+
+  it("opens exactly one approval when the same challenge is submitted concurrently", async () => {
+    const challenge = await challengeFor("txn_concurrent_submit");
+    const bodies = (await Promise.all(
+      (await Promise.all([submit(challenge), submit(challenge), submit(challenge)])).map((r) => r.json()),
+    )) as { transaction_authorization_id?: string }[];
+
+    // The admission insert IS the reservation and runs before the ARS is
+    // invoked, so the three submissions resolve to ONE workflow and only the
+    // one that won it opened an approval.
+    const ids = new Set(bodies.map((b) => b.transaction_authorization_id));
+    expect(ids.size, JSON.stringify(bodies)).toBe(1);
+    expect(openedApprovals.filter((o) => o.txn === "txn_concurrent_submit")).toHaveLength(1);
+    expect(ars.pending().filter((t) => t.id === taskFor("txn_concurrent_submit"))).toHaveLength(1);
   });
 
   it("refuses a challenge that expired before it was submitted, rather than reviving one", async () => {
@@ -684,7 +703,7 @@ describe("two-phase expiry and idempotency (@spec txn-authorization#two-phase-ex
     expect((await late.json()).error).toBe("invalid_grant");
 
     // ...but the workflow it already admitted still completes.
-    const approval = await ars.adjudicate("arq_txn_txn_slow_approval", "approve", "bob");
+    const approval = await ars.adjudicate(taskFor("txn_slow_approval"), "approve", "bob");
     expect(approval).not.toBeNull();
     const res = await postTransaction({
       transaction_authorization_id: init.transaction_authorization_id,
@@ -700,7 +719,7 @@ describe("two-phase expiry and idempotency (@spec txn-authorization#two-phase-ex
   it("returns the same token, under the same jti, on every poll after the decision", async () => {
     const challenge = await challengeFor("txn_stable_result");
     const init = (await (await submit(challenge)).json()) as { transaction_authorization_id: string };
-    await ars.adjudicate("arq_txn_txn_stable_result", "approve", "bob");
+    await ars.adjudicate(taskFor("txn_stable_result"), "approve", "bob");
     const first = (await (
       await postTransaction({ transaction_authorization_id: init.transaction_authorization_id })
     ).json()) as { access_token: string };
@@ -717,10 +736,10 @@ describe("two-phase expiry and idempotency (@spec txn-authorization#two-phase-ex
     // Run 1: an approval that outlives nothing. `approved_until` is the
     // earliest of the four terms, so it is what the token's exp equals.
     const approvedUntil = new Date(Date.now() + 20_000).toISOString();
-    approvalOverrides.set("arq_txn_txn_exp_approval", approvedUntil);
+    approvalOverrides.set(taskFor("txn_exp_approval"), approvedUntil);
     const short = await challengeFor("txn_exp_approval");
     const shortInit = (await (await submit(short)).json()) as { transaction_authorization_id: string };
-    await ars.adjudicate("arq_txn_txn_exp_approval", "approve", "bob");
+    await ars.adjudicate(taskFor("txn_exp_approval"), "approve", "bob");
     const shortBody = (await (
       await postTransaction({ transaction_authorization_id: shortInit.transaction_authorization_id })
     ).json()) as { access_token: string };
@@ -733,10 +752,10 @@ describe("two-phase expiry and idempotency (@spec txn-authorization#two-phase-ex
     // and the token follows it rather than the approval or the deployment
     // maximum. Either way the already-consumed challenge exp never binds.
     const longUntil = new Date(Date.now() + 5_000_000).toISOString();
-    approvalOverrides.set("arq_txn_txn_exp_bound", longUntil);
+    approvalOverrides.set(taskFor("txn_exp_bound"), longUntil);
     const challenge = await challengeFor("txn_exp_bound");
     const init = (await (await submit(challenge)).json()) as { transaction_authorization_id: string };
-    await ars.adjudicate("arq_txn_txn_exp_bound", "approve", "bob");
+    await ars.adjudicate(taskFor("txn_exp_bound"), "approve", "bob");
     const body = (await (
       await postTransaction({ transaction_authorization_id: init.transaction_authorization_id })
     ).json()) as { access_token: string };
@@ -855,7 +874,7 @@ describe("fresh decision at completion (@spec txn-authorization#challenge-redemp
   it("refuses an approved workflow when current entitlement or policy denies", async () => {
     policyDeniesTxns.add("txn_policy_denies");
     const id = await admit("txn_policy_denies");
-    const approval = await ars.adjudicate("arq_txn_txn_policy_denies", "approve", "bob");
+    const approval = await ars.adjudicate(taskFor("txn_policy_denies"), "approve", "bob");
     expect(approval).not.toBeNull();
 
     const res = await postTransaction({ transaction_authorization_id: id });
@@ -894,7 +913,7 @@ describe("fresh decision at completion (@spec txn-authorization#challenge-redemp
       },
       remove: [{ resource: RESOURCE, actions: ["payments:remittance.send"] }],
     });
-    await ars.adjudicate("arq_txn_txn_contained_after_admission", "approve", "bob");
+    await ars.adjudicate(taskFor("txn_contained_after_admission"), "approve", "bob");
     const res = await postTransaction({ transaction_authorization_id: id });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status).toBe(400);
@@ -1056,7 +1075,7 @@ describe("the approval requirement under delegation (@spec txn-authorization#app
     // And the gated leaf is still bound: nothing issues until the approval lands.
     const pending = await postTransaction({ transaction_authorization_id: init.transaction_authorization_id });
     expect((await pending.json()).error).toBe("authorization_pending");
-    await ars.adjudicate(`arq_txn_${txn}`, "approve", "bob");
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
     const issued = await postTransaction({ transaction_authorization_id: init.transaction_authorization_id });
     const body = (await issued.json()) as { access_token?: string };
     expect(issued.status, JSON.stringify(body)).toBe(200);
@@ -1099,7 +1118,7 @@ describe("Operation Profile drift (@spec txn-authorization#resource-challenge)",
     expect(bumped.transaction_authorization_id).not.toBe(admitted.transaction_authorization_id);
 
     // The pending workflow still resolves, on the version it was admitted under.
-    await ars.adjudicate("arq_txn_txn_profile_v1", "approve", "bob");
+    await ars.adjudicate(taskFor("txn_profile_v1"), "approve", "bob");
     const res = await postTransaction({ transaction_authorization_id: admitted.transaction_authorization_id });
     const body = (await res.json()) as { access_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(200);
@@ -1133,7 +1152,7 @@ describe("at most one authorization result per txn (@spec txn-authorization#offl
     const init = (await (await submit(challenge, { token: mission.token })).json()) as {
       transaction_authorization_id: string;
     };
-    await ars.adjudicate(`arq_txn_${txn}`, "approve", "bob");
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
 
     const poll = () => postTransaction({ transaction_authorization_id: init.transaction_authorization_id });
     const bodies = (await Promise.all(
@@ -1173,7 +1192,7 @@ describe("transaction token identity projection (@spec txn-authorization#transac
       const init = (await (await submit(challenge, { token: mission.token })).json()) as {
         transaction_authorization_id: string;
       };
-      await ars.adjudicate(`arq_txn_${txn}`, "approve", "bob");
+      await ars.adjudicate(taskFor(txn), "approve", "bob");
       const body = (await (
         await postTransaction({ transaction_authorization_id: init.transaction_authorization_id })
       ).json()) as { access_token?: string };
