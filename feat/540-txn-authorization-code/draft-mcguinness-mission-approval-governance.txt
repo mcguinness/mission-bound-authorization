@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          17 August 2026
-Expires: 18 February 2027
+Intended status: Standards Track                          18 August 2026
+Expires: 19 February 2027
 
 
                       Mission Approval Governance
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 February 2027.
+   This Internet-Draft will expire on 19 February 2027.
 
 Copyright Notice
 
@@ -460,6 +460,17 @@ Table of Contents
 
    The AGR governs on any disagreement.
 
+   Where a deferred approval revises under Mission Approval Revision
+   ([I-D.draft-mcguinness-oauth-mission-approval-revision]) and the
+   deployment records consent evidence, each revision_required outcome
+   produces a narrowed consent-evidence decision with no corresponding
+   record: no Mission yet exists for the atomic commitment rule
+   (Section 7) to attach to.  Where consent evidence is recorded, it
+   owns the narrowing history, through its narrowed entries and
+   predecessor_intent_hashes.  Where an AGR is recorded for the final
+   approval, it owns the final approval-governance facts.  This is a
+   deliberate artifact separation, not an authority conflict.
+
 11.  Boundaries
 
    The record governs the Mission approval event; an action-time
@@ -674,6 +685,12 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-
               approval.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-approval-revision]
+              McGuinness, K., "Mission Approval Revision for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-approval-
+              revision.html>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",

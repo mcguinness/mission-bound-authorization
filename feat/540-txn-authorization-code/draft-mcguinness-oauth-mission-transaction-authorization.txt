@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             17 August 2026
-Expires: 18 February 2027
+Intended status: Experimental                             18 August 2026
+Expires: 19 February 2027
 
 
         Mission Transaction Authorization Profile for OAuth 2.0
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 February 2027.
+   This Internet-Draft will expire on 19 February 2027.
 
 Copyright Notice
 
@@ -566,6 +566,16 @@ Table of Contents
    plus the current local checks of Section 8, never on parsing an
    arbitrary evidence blob presented at the request.
 
+   This profile defines no Continuation Transport and no continuity
+   guarantee of its own
+   ([I-D.draft-mcguinness-oauth-mission-continuation]).  Its token is a
+   bounded, single-use authorization artifact.  The token carries txn,
+   its own jti, and parameter_digest; those correlate the runtime
+   evidence profile's execution-time evidence to this hop
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).  The Operation
+   Profile's idempotency identity correlates the effect and is not
+   carried by the token.
+
 10.  Failure Semantics
 
    The pending and polling states and errors of
@@ -1009,6 +1019,12 @@ Informative References
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-consent-
               evidence.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-continuation]
+              McGuinness, K., "Mission Continuation: Authorization
+              Continuity for Mission-Bound Authorization", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-continuation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth

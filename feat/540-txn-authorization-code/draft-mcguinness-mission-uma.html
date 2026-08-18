@@ -39,14 +39,14 @@ fixed here, and wire-level completeness is deferred.
 <meta content="draft-mcguinness-mission-uma-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
-    Python 3.14.5
+    Python 3.14.7
     ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
     lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.11.0
+    platformdirs 4.11.3
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
@@ -1070,7 +1070,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 18 February 2027</td>
+<td class="center">Expires 19 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1083,12 +1083,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-uma-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-17" class="published">17 August 2026</time>
+<time datetime="2026-08-18" class="published">18 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-18">18 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-19">19 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1153,7 +1153,7 @@ fixed here, and wire-level completeness is deferred.<a href="#section-abstract-1
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 18 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 19 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1415,10 +1415,11 @@ Authority Set, Approver, Subject, <code>mission_id</code>, the integrity
 anchors (<code>intent_hash</code>, <code>authority_hash</code>, and, where the Mission
 records an authority proposal, <code>proposal_hash</code>), the subset rule, the
 only-<code>active</code> rule, and the audit horizon as defined by
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. It uses resource owner,
-requesting party, client, permission ticket, claims pushing, claim
-token, claims interaction endpoint, requesting party token (RPT),
-persisted claims token (PCT), and the <code>need_info</code>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, and Effective Authority Set as
+defined by <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>. It uses
+resource owner, requesting party, client, permission ticket, claims
+pushing, claim token, claims interaction endpoint, requesting party
+token (RPT), persisted claims token (PCT), and the <code>need_info</code>,
 <code>request_submitted</code>, and <code>request_denied</code> outcomes as defined by
 <span>[<a href="#UMA-GRANT" class="cite xref">UMA-GRANT</a>]</span>, and resource server, protection API, protection API
 access token (PAT), resource registration, permission endpoint, and
@@ -1817,6 +1818,23 @@ refuse the derivation that would exceed it, per the issuance
 profile's count-and-gate rule. An RPT issued under a Mission <span class="bcp14">MUST NOT</span> expire later than the Mission's <code>expires_at</code>, and the <code>exp</code> of
 each permission within it is likewise capped, so no credential
 outlives the Mission.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">Where the deployment adopts Mission Containment
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), the
+authorization server <span class="bcp14">MUST</span> intersect the entire resulting RPT,
+including any permission carried forward from before a contain
+transition, with the Mission's current Effective Authority Set
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) at every ticket
+exchange and every upgrade. A UMA permission is a resource and its
+scopes, so the intersection runs at scope grain: the authorization
+server removes from each permission every scope the Effective
+Authority Set no longer grants at that resource, and omits the
+permission only when no scope survives. A result with a surviving
+scope on any permission issues the RPT with any contained scope
+removed; a result with no surviving scope on any permission <span class="bcp14">MUST NOT</span>
+be issued: the authorization server refuses the request, the OAuth
+<code>error</code> member carrying <code>request_denied</code> accompanied by
+<code>authority_contained</code> in the <code>mission_denial_reason</code> member, the
+containment profile's registered denial carrier.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="state-surfaces">
@@ -1831,7 +1849,25 @@ introspects per <span>[<a href="#UMA-FEDAUTHZ" class="cite xref">UMA-FEDAUTHZ</a
 access. Its staleness bound is the introspection caching the
 deployment permits, which the deployment <span class="bcp14">MUST</span> state; with caching
 disabled the bound is effectively zero.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<p id="section-7.2-2">A deployment whose RPTs are self-contained and validated without
+<p id="section-7.2-2">Where the deployment adopts Mission Containment, introspection of an
+RPT issued or upgraded before a contain transition applies the same
+scope-grain intersection: for each entry of the introspection
+response's <code>permissions</code>, the authorization server removes every
+scope the Effective Authority Set no longer grants at that resource,
+and omits the entry only when no scope survives. An omitted
+permission, or a scope removed from a surviving one, is authority the
+resource server cannot rely on, the same result as an RPT that never
+carried it. <code>mission.state</code> continues to report <code>active</code>: containment
+narrows authority without changing Mission state, and per
+<a href="#lifecycle" class="auto internal xref">Section 7</a>'s active-Mission projection the response's top-level
+<code>active</code> member (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>) <span class="bcp14">MUST</span> remain <code>true</code> while the RPT is
+otherwise active, whether or not any permission survives
+intersection: an empty <code>permissions</code> array reports narrowed authority,
+not a token that has ceased to be valid. Introspection is this
+binding's continued-reliance surface for containment, and closes the
+residual a self-contained RPT without a state check cannot
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>).<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+<p id="section-7.2-3">A deployment whose RPTs are self-contained and validated without
 introspection loses that source, and <span class="bcp14">MUST</span> either cap RPT lifetime at
 its declared staleness bound (lifetime-bounded reliance) or serve an
 active state surface. A Mission-Bound UMA Authorization Server
@@ -1845,14 +1881,14 @@ high-consequence classes <span class="bcp14">MUST</span> provide an active fresh
 with a published staleness bound
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); per-use introspection
 with a stated cache bound satisfies it, and token lifetime alone
-does not.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
-<p id="section-7.2-3">An authorization server that serves these surfaces publishes the
+does not.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-4">An authorization server that serves these surfaces publishes the
 corresponding members (<code>mission_status_endpoint</code>,
 <code>mission_status_signing_alg_values_supported</code>,
 <code>mission_lifecycle_endpoint</code>, <code>mission_event_stream_endpoint</code>,
 <code>mission_max_stale_seconds</code>) in its UMA discovery document, with the
 semantics those profiles define; its existing <code>jwks_uri</code> is the
-published key material for its signed artifacts.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+published key material for its signed artifacts.<a href="#section-7.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1910,7 +1946,10 @@ Authority Set under the issuance profile's subset rule, projected
 onto UMA's grain: a permission is a resource and its scopes, so
 every scope a permission grants <span class="bcp14">MUST</span> correspond to authority the set
 grants at that resource, and no permission may convey authority, or
-relaxation of a constraint, that the set does not.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+relaxation of a constraint, that the set does not. Where the
+deployment adopts Mission Containment, <a href="#gating" class="auto internal xref">Section 7.1</a> states the set an
+RPT is gated against at issuance and upgrade
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>).<a href="#section-8.2-1" class="pilcrow">¶</a></p>
 <p id="section-8.2-2">The projection is coarse, and this binding does not pretend
 otherwise. A UMA permission carries no parameter bounds and no
 consumption bounds: an amount cap on a payment action, argument
@@ -2200,10 +2239,18 @@ servers within the authorization server's own trust domain, the
 multi-resource-server case the flow shows (<a href="#flow" class="auto internal xref">Section 3</a>).<a href="#section-9-8.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-8.6">
-          <p id="section-9-8.6.1">The family's Mission Assurance Levels layer on top unchanged
+          <p id="section-9-8.6.1">Mission Containment composes at the token endpoint: RPT issuance
+and upgrade gate on the Effective Authority Set, and per-use
+introspection applies the same filtering to an RPT issued or
+upgraded before a contain transition
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, <a href="#gating" class="auto internal xref">Section 7.1</a>,
+<a href="#subset" class="auto internal xref">Section 8.2</a>).<a href="#section-9-8.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-8.7">
+          <p id="section-9-8.7.1">The family's Mission Assurance Levels layer on top unchanged
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>); a deployment
 states its level, binding, state sources, and staleness bounds in
-its Mission Deployment Profile.<a href="#section-9-8.6.1" class="pilcrow">¶</a></p>
+its Mission Deployment Profile.<a href="#section-9-8.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2270,16 +2317,35 @@ surface, applies the subset rule at every issuance and upgrade,
 and routes out-of-set requests to the Approver (<a href="#credential" class="auto internal xref">Section 8</a>);<a href="#section-11-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-3.5">
-          <p id="section-11-3.5.1">associates PCTs with Missions as continuity, never authority
-(<a href="#pct" class="auto internal xref">Section 8.4</a>);<a href="#section-11-3.5.1" class="pilcrow">¶</a></p>
+          <p id="section-11-3.5.1">where it adopts Mission Containment, intersects the entire
+resulting RPT, including permissions carried forward from before a
+contain transition, with the Effective Authority Set at every
+issuance and upgrade, at scope grain: removes from each permission
+every scope the set no longer grants and omits the permission only
+when no scope survives; and refuses a result with no surviving
+scope on any permission, the OAuth <code>error</code> member carrying
+<code>request_denied</code> accompanied by <code>authority_contained</code> in the
+<code>mission_denial_reason</code> member
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, <a href="#gating" class="auto internal xref">Section 7.1</a>);<a href="#section-11-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-3.6">
-          <p id="section-11-3.6.1">serves Mission state with a declared staleness bound per
-<a href="#state-surfaces" class="auto internal xref">Section 7.2</a>, and retains the record and assessment log for
-the audit horizon; and<a href="#section-11-3.6.1" class="pilcrow">¶</a></p>
+          <p id="section-11-3.6.1">applies the same scope-grain filtering to per-use introspection of
+an RPT issued or upgraded before a contain transition, and reports
+the introspection response's top-level <code>active</code> member <code>true</code>
+while the RPT is otherwise active regardless of whether any
+permission survives (<a href="#state-surfaces" class="auto internal xref">Section 7.2</a>);<a href="#section-11-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-3.7">
-          <p id="section-11-3.7.1">publishes its Mission surfaces in its UMA discovery document.<a href="#section-11-3.7.1" class="pilcrow">¶</a></p>
+          <p id="section-11-3.7.1">associates PCTs with Missions as continuity, never authority
+(<a href="#pct" class="auto internal xref">Section 8.4</a>);<a href="#section-11-3.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.8">
+          <p id="section-11-3.8.1">serves Mission state with a declared staleness bound per
+<a href="#state-surfaces" class="auto internal xref">Section 7.2</a>, and retains the record and assessment log for
+the audit horizon; and<a href="#section-11-3.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.9">
+          <p id="section-11-3.9.1">publishes its Mission surfaces in its UMA discovery document.<a href="#section-11-3.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-11-4">A <strong>Mission-Bound UMA Client</strong>:<a href="#section-11-4" class="pilcrow">¶</a></p>
@@ -2546,6 +2612,10 @@ document's control.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             17 August 2026
-Expires: 18 February 2027
+Intended status: Experimental                             18 August 2026
+Expires: 19 February 2027
 
 
                    Mission Containment for OAuth 2.0
@@ -18,18 +18,18 @@ Abstract
    its integrity anchors never change.  This document defines Mission
    Containment, an optional layered extension for narrowing a live
    Mission without ending it.  When a declared protected event fires (a
-   tainted read, an anomaly signal, an open-world discovery tainted-
-   session event), the Mission Issuer commits a contain transition: an
-   issuer-held, versioned overlay removes capability from the Mission's
-   effective authority while the Mission stays active and the approved
-   anchors stay immutable.  Containment is monotonic and removal-only.
-   Token derivation, child delegation, cross-domain projection, and
-   offline attenuation are gated on the effective authority; a
-   derivation that asks only for contained capability fails with
-   authority_contained.  Removed authority returns only through a new
-   approval, as a successor Mission under the expansion profile, with
-   the predecessor's containment history disclosed to the Approver.  A
-   deployment that never contains a Mission is unaffected by this
+   tainted read, an anomaly signal, a routed-to-approval open-world
+   discovery encounter), the Mission Issuer commits a contain
+   transition: an issuer-held, versioned overlay removes capability from
+   the Mission's effective authority while the Mission stays active and
+   the approved anchors stay immutable.  Containment is monotonic and
+   removal-only.  Token derivation, child delegation, cross-domain
+   projection, and offline attenuation are gated on the effective
+   authority; a derivation that asks only for contained capability fails
+   with authority_contained.  Removed authority returns only through a
+   new approval, as a successor Mission under the expansion profile,
+   with the predecessor's containment history disclosed to the Approver.
+   A deployment that never contains a Mission is unaffected by this
    document.
 
 About This Document
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 February 2027.
+   This Internet-Draft will expire on 19 February 2027.
 
 Copyright Notice
 
@@ -238,22 +238,19 @@ Table of Contents
 
    This document uses the terms Mission, Mission Intent, Authority Set,
    Mission Issuer, Mission-bound token, and delegation from
-   [I-D.draft-mcguinness-oauth-mission], and state version from
-   [I-D.draft-mcguinness-oauth-mission-status].
+   [I-D.draft-mcguinness-oauth-mission], and state version and Effective
+   Authority Set from [I-D.draft-mcguinness-oauth-mission-status].
 
    Containment overlay:  The issuer-held, versioned record of capability
       removed from a Mission's effective authority (Section 7).
 
    Contained capability:  A {resource, actions} pair in the overlay's
       contained set.  An entry with no actions member contains the whole
-      Authority Set entry for that resource.
-
-   Effective Authority Set:  The approved Authority Set minus contained
-      capability and, where the Status profile's completion capability
-      runs, minus discharged entries.  Every derivation gated after a
-      contain transition is bounded by it; authority that left the
-      Mission before the transition keeps its own bound, not this one
-      (Section 10).
+      Authority Set entry for that resource.  It is this profile's own
+      contribution to the Effective Authority Set's reduction: every
+      derivation gated after a contain transition excludes it; authority
+      that left the Mission before the transition keeps its own bound,
+      not this one (Section 10).
 
    Protected event:  An event class the containment policy declares as a
       containment trigger, whose verified occurrence commits a contain
@@ -477,8 +474,12 @@ Table of Contents
    trigger containment.  Representative classes, defined by their own
    layers, not here: a tainted read under the harness taint policy
    ([I-D.draft-mcguinness-mission-harness]), an anomaly signal from the
-   deployment's monitoring, and the tainted-session event of open-world
-   discovery ([I-D.draft-mcguinness-mission-discovery]).
+   deployment's monitoring, and a routed_to_approval outcome or a
+   tainted Discovery Evidence record from open-world discovery
+   ([I-D.draft-mcguinness-mission-discovery], Section "Discovery
+   Evidence").  Event-to-policy mapping stays deployment-defined:
+   neither the outcome nor the evidence field is, by itself, this
+   document's protected event.
 
    A protected event is a trusted input to authority: the Mission Issuer
    MUST authenticate and integrity-verify an event source outside its

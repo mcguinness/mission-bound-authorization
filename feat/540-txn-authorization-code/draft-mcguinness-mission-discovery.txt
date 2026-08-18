@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             17 August 2026
-Expires: 18 February 2027
+Intended status: Experimental                             18 August 2026
+Expires: 19 February 2027
 
 
                       Mission Open-World Discovery
@@ -59,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 February 2027.
+   This Internet-Draft will expire on 19 February 2027.
 
 Copyright Notice
 
@@ -623,6 +623,14 @@ Table of Contents
      "adjudicated_at": "2026-07-08T15:04:05Z"
    }
 
+   A deployment adopting Mission Containment
+   ([I-D.draft-mcguinness-oauth-mission-containment]) may configure its
+   containment policy to treat a routed_to_approval outcome of this
+   section, or a Discovery Evidence record carrying tainted true, as a
+   protected event.  Neither field alone determines the event: this
+   document defines the outcome and the evidence it produces, not the
+   policy that consumes them into a containment trigger.
+
 11.  Conformance
 
    A deployment claiming this profile MUST:
@@ -811,6 +819,11 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-
               approval.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-containment]
+              McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-containment.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth

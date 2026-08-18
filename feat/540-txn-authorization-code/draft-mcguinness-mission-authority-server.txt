@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          17 August 2026
-Expires: 18 February 2027
+Intended status: Standards Track                          18 August 2026
+Expires: 19 February 2027
 
 
                         Mission Authority Server
@@ -67,7 +67,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 February 2027.
+   This Internet-Draft will expire on 19 February 2027.
 
 Copyright Notice
 
@@ -102,7 +102,7 @@ Table of Contents
      8.3.  Expansion Semantics
      8.4.  Child-Creation Semantics
      8.5.  Expansion Example
-   9.  Mission Discovery
+   9.  Mission Authority Server Metadata
    10. Mission Join
    11. Mission Reference Propagation
      11.1.  The Reference Tuple
@@ -1023,7 +1023,7 @@ Table of Contents
    active and supersedes the predecessor.  The client's next poll
    returns approved with the successor's mission_id (Section 6).
 
-9.  Mission Discovery
+9.  Mission Authority Server Metadata
 
    A MAS publishes a metadata document at the well-known URI [RFC8615]
    path /.well-known/mission-authority-server, registered in Section 19:

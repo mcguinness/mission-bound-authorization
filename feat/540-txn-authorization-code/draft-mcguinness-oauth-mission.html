@@ -39,14 +39,14 @@ separate, optional layer.
 <meta content="draft-mcguinness-oauth-mission-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
-    Python 3.14.5
+    Python 3.14.7
     ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
     lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.11.0
+    platformdirs 4.11.3
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
@@ -1070,7 +1070,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 18 February 2027</td>
+<td class="center">Expires 19 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1083,12 +1083,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-17" class="published">17 August 2026</time>
+<time datetime="2026-08-18" class="published">18 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-18">18 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-19">19 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1153,7 +1153,7 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 18 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 19 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -3714,20 +3714,21 @@ Set from client-supplied text, so crafted client text cannot pass
 as derived authority.<a href="#section-6-7.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-6-8">A deployment <span class="bcp14">MUST</span> declare a minimum approval-authentication strength
-for Missions whose derived Authority Set carries high-risk authority:
-irreversible, external-commitment, or privileged-administration
-actions under the deployment's classification, or a consumption bound
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). The declaration's home
-is the deployment's published statement of what it enforces (the
-Mission Deployment Profile of
-<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), so the floor is a
-checkable published fact rather than a floating duty. The approval
-authentication for such a Mission <span class="bcp14">MUST</span> meet that minimum, and
-<code>controls.acr</code> can raise the required strength but never lower it below
-the floor. The material notices of the consent-evidence profile
-identify these same high-risk classes
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-6-8" class="pilcrow">¶</a></p>
+<p id="section-6-8">A deployment <span class="bcp14">MUST</span> publish a statement declaring the minimum
+approval-authentication strength it enforces for Missions whose
+derived Authority Set carries high-risk authority: irreversible,
+external-commitment, or privileged-administration actions under the
+deployment's classification, or a consumption bound
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>), and the deployment scope
+to which that declaration applies. Approval authentication for such a
+Mission <span class="bcp14">MUST</span> satisfy both the published floor and, when present,
+<code>controls.acr</code>, under the deployment's policy mapping; this document
+defines no global ordering of <code>acr</code> values. The Mission Deployment
+Profile of <span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span> names the
+system-level composition of such statements informatively; this
+specification requires no particular serialization. The material
+notices of the consent-evidence profile identify these same high-risk
+classes (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-6-8" class="pilcrow">¶</a></p>
 <p id="section-6-9">An Approver who declines, and an Approver whose authentication cannot
 satisfy <code>controls.acr</code> or the declared approval-strength floor, yield
 <code>access_denied</code> on the authorization

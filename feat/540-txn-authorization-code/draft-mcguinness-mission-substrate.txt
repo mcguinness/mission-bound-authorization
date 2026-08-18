@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          17 August 2026
-Expires: 18 February 2027
+Intended status: Standards Track                          18 August 2026
+Expires: 19 February 2027
 
 
                      Mission Substrate Requirements
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 February 2027.
+   This Internet-Draft will expire on 19 February 2027.
 
 Copyright Notice
 
@@ -461,6 +461,15 @@ Table of Contents
    behavior during the transition, verifier selection and downgrade
    behavior when recognition sets differ, and the transition procedure
    itself.
+
+   Core's Integrity Anchor Test Vectors
+   ([I-D.draft-mcguinness-oauth-mission]) give a byte-level worked
+   example of the envelope-anchor species alone (intent_hash,
+   proposal_hash, authority_hash); an implementation can check its own
+   computation against them.  The canonical-object and raw-octet species
+   above, the parse-time duplicate-detection rule, the I-JSON numeric
+   domain, and the reject-unknown-prefix and no-downgrade agility rules
+   remain prose-only: no vector pins them.
 
 3.5.  Approval Event
 
@@ -1584,6 +1593,82 @@ B.1.  OAuth Mission Binding Statement
    authorization_details type fail closed; where a row's activation
    condition does not hold, the property is not supplied and a consumer
    MUST NOT rely on it.
+
+   Core's three OPTIONAL capabilities, named in its Conformance section
+   ([I-D.draft-mcguinness-oauth-mission]), are implementation roles:
+   surfaces an implementation may or may not offer, each independent of
+   the others.  The capability table above states scoped guarantee
+   claims: properties the OAuth binding supplies and the conditions
+   under which each is supplied.  The two vocabularies answer different
+   questions and are not equivalent; the table below relates them
+   without collapsing one into the other.  Declaring an OPTIONAL role
+   never creates a claim beyond the eight already stated above.
+
+   +===============+===================+===============================+
+   | Core OPTIONAL | Substrate         | Relationship                  |
+   | capability    | capability        |                               |
+   |               | claim(s)          |                               |
+   |               | exercised         |                               |
+   +===============+===================+===============================+
+   | Introspection | State-Observable  | One of State-Observable's     |
+   |               |                   | three named activation        |
+   |               |                   | surfaces, alongside Status    |
+   |               |                   | and Signals; declaring it     |
+   |               |                   | activates that otherwise-     |
+   |               |                   | conditional claim.            |
+   +---------------+-------------------+-------------------------------+
+   | Delegation    | Lifecycle-Gated   | Core delegation subset-       |
+   |               | Authorization,    | checks                        |
+   |               | Structured        | authorization_details,        |
+   |               | Authority,        | carries the mission claim     |
+   |               | Monotonic         | unchanged, sender-constrains  |
+   |               | Derivation,       | the delegated credential to   |
+   |               | Credential-Bound, | the delegate's own key, and   |
+   |               | Authorized        | refuses issuance unless the   |
+   |               | Context           | Mission is active.  The       |
+   |               | Correlation       | Token Exchange that issues    |
+   |               |                   | the delegated credential is   |
+   |               |                   | itself a grant binding at     |
+   |               |                   | issuance: the AS joins the    |
+   |               |                   | Mission and Subject carried   |
+   |               |                   | by the Mission-bound          |
+   |               |                   | subject_token with the        |
+   |               |                   | delegate identity             |
+   |               |                   | established by the            |
+   |               |                   | actor_token or the            |
+   |               |                   | delegate's own client         |
+   |               |                   | authentication, binding both  |
+   |               |                   | to the newly issued           |
+   |               |                   | credential.  All five claims  |
+   |               |                   | are already supplied always;  |
+   |               |                   | Delegation exercises them     |
+   |               |                   | rather than creating them.    |
+   |               |                   | The act chain itself          |
+   |               |                   | supplies none of them: it is  |
+   |               |                   | attribution, never            |
+   |               |                   | authority.                    |
+   +---------------+-------------------+-------------------------------+
+   | Cross-Domain  | Lifecycle-Gated   | Carries these four always-    |
+   |               | Authorization,    | supplied guarantees across    |
+   |               | Structured        | the domain hop: the Mission   |
+   |               | Authority,        | reference and authority_hash  |
+   |               | Monotonic         | intact, authority that only   |
+   |               | Derivation,       | narrows, and projection       |
+   |               | Credential-Bound  | gated on active state, while  |
+   |               |                   | adding an interoperable       |
+   |               |                   | projection surface the        |
+   |               |                   | guarantees alone do not       |
+   |               |                   | provide.  It does not become  |
+   |               |                   | Portable Evidence by          |
+   |               |                   | crossing a domain: that       |
+   |               |                   | claim activates only when an  |
+   |               |                   | Evidence, Mandate, or audit   |
+   |               |                   | companion is active, and      |
+   |               |                   | Cross-Domain is not among     |
+   |               |                   | them.                         |
+   +---------------+-------------------+-------------------------------+
+
+    Table 5: Core optional roles related to substrate capability claims
 
    Ownership migrates by touch, not by relocation.  When a binding-
    neutral definition next changes substantively, the change MUST land

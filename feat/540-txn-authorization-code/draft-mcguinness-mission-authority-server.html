@@ -42,14 +42,14 @@ Mission Authority Profile for that role.
 <meta content="draft-mcguinness-mission-authority-server-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
-    Python 3.14.5
+    Python 3.14.7
     ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
     lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.11.0
+    platformdirs 4.11.3
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
@@ -1073,7 +1073,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 18 February 2027</td>
+<td class="center">Expires 19 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1086,12 +1086,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-authority-server-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-17" class="published">17 August 2026</time>
+<time datetime="2026-08-18" class="published">18 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-18">18 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-19">19 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1159,7 +1159,7 @@ Mission Authority Profile for that role.<a href="#section-abstract-1" class="pil
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 18 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 19 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1246,7 +1246,7 @@ Mission Authority Profile for that role.<a href="#section-abstract-1" class="pil
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-mission-discovery" class="internal xref">Mission Discovery</a></p>
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-mission-authority-server-me" class="internal xref">Mission Authority Server Metadata</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
             <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-mission-join" class="internal xref">Mission Join</a></p>
@@ -1361,7 +1361,7 @@ Mission Authority Profile for that role.<a href="#section-abstract-1" class="pil
                 <p id="section-toc.1-1.19.2.2.1"><a href="#section-19.2" class="auto internal xref">19.2</a>.  <a href="#name-well-known-uri-registration" class="internal xref">Well-Known URI Registration</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19.2.3">
-                <p id="section-toc.1-1.19.2.3.1"><a href="#section-19.3" class="auto internal xref">19.3</a>.  <a href="#name-mission-authority-server-me" class="internal xref">Mission Authority Server Metadata Registry</a></p>
+                <p id="section-toc.1-1.19.2.3.1"><a href="#section-19.3" class="auto internal xref">19.3</a>.  <a href="#name-mission-authority-server-met" class="internal xref">Mission Authority Server Metadata Registry</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19.2.4">
                 <p id="section-toc.1-1.19.2.4.1"><a href="#section-19.4" class="auto internal xref">19.4</a>.  <a href="#name-media-type-registration" class="internal xref">Media Type Registration</a></p>
@@ -2506,8 +2506,8 @@ poll returns <code>approved</code> with the successor's <code>mission_id</code>
 </div>
 <div id="discovery">
 <section id="section-9">
-      <h2 id="name-mission-discovery">
-<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-mission-discovery" class="section-name selfRef">Mission Discovery</a>
+      <h2 id="name-mission-authority-server-me">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-mission-authority-server-me" class="section-name selfRef">Mission Authority Server Metadata</a>
       </h2>
 <p id="section-9-1">A MAS publishes a metadata document at the well-known URI <span>[<a href="#RFC8615" class="cite xref">RFC8615</a>]</span>
 path <code>/.well-known/mission-authority-server</code>, registered in <a href="#iana" class="auto internal xref">Section 19</a>:
@@ -4160,8 +4160,8 @@ registry <span>[<a href="#RFC8615" class="cite xref">RFC8615</a>]</span>:<a href
 </div>
 <div id="mission-authority-server-metadata-registry">
 <section id="section-19.3">
-        <h3 id="name-mission-authority-server-me">
-<a href="#section-19.3" class="section-number selfRef">19.3. </a><a href="#name-mission-authority-server-me" class="section-name selfRef">Mission Authority Server Metadata Registry</a>
+        <h3 id="name-mission-authority-server-met">
+<a href="#section-19.3" class="section-number selfRef">19.3. </a><a href="#name-mission-authority-server-met" class="section-name selfRef">Mission Authority Server Metadata Registry</a>
         </h3>
 <p id="section-19.3-1">IANA is requested to create the "Mission Authority Server Metadata"
 registry. The registration policy is

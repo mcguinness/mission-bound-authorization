@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          17 August 2026
-Expires: 18 February 2027
+Intended status: Standards Track                          18 August 2026
+Expires: 19 February 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 February 2027.
+   This Internet-Draft will expire on 19 February 2027.
 
 Copyright Notice
 
@@ -349,7 +349,8 @@ Table of Contents
    incorporated by [I-D.draft-mcguinness-oauth-mission].  It also uses
    the Mission, Mission Intent, Mission Issuer, Authority Set, Approver,
    delegation, and mission claim terminology from
-   [I-D.draft-mcguinness-oauth-mission].
+   [I-D.draft-mcguinness-oauth-mission], and Effective Authority Set and
+   discharge from [I-D.draft-mcguinness-oauth-mission-status].
 
    Policy Enforcement Point (PEP):  The component that can prevent a
       consequential action and that obtains and enforces a decision
@@ -1398,21 +1399,33 @@ Table of Contents
    example, through introspection when the authority is not represented
    inline).
 
+   This input is the Mission's current Effective Authority Set
+   ([I-D.draft-mcguinness-oauth-mission-status]), not the approved set
+   the token's authorization_details entry names at face value.  A
+   deployment that runs no narrowing mechanism evaluates an Effective
+   Authority Set equal to the approved set.  A deployment that runs one,
+   for example discharge or the Containment profile, does not.
+
+   Where the deployment runs discharge
+   ([I-D.draft-mcguinness-oauth-mission-status]), this input excludes a
+   discharged entry once the PDP can establish discharge state from its
+   Mission state source.  A PDP that recognizes terminal_when SHOULD
+   refuse an action within a discharged entry at the point of use,
+   learning discharge state from the surfaces that report it
+   ([I-D.draft-mcguinness-oauth-mission-status], Section "Relationship
+   to Runtime Enforcement").
+
    Where a Mission participates in the Containment profile
-   ([I-D.draft-mcguinness-oauth-mission-containment]), this input is the
-   Mission's current Effective Authority Set, the approved set minus
-   contained capability, not the approved set the token's
-   authorization_details entry names at face value.  The PDP MUST refuse
-   an action within an entry that is currently contained even though a
-   token issued before the contain transition still carries it,
-   established from the same Mission state source and freshness bound
-   that governs the active check (Section 7.4); a Mission stays active
-   while contained, so this check, not the state check, is what a
-   containment-aware PDP adds.  A deployment that does not deploy the
-   Containment profile evaluates the approved Authority Set unchanged,
-   as the rest of this section states.  The decision-API binding
-   provides the extension point through which a companion profile
-   carries which evaluated set the PDP used (Section 15).
+   ([I-D.draft-mcguinness-oauth-mission-containment]), this input
+   excludes contained capability as well.  The PDP MUST refuse an action
+   within an entry that is currently contained even though a token
+   issued before the contain transition still carries it, established
+   from the same Mission state source and freshness bound that governs
+   the active check (Section 7.4); a Mission stays active while
+   contained, so this check, not the state check, is what a containment-
+   aware PDP adds.  The decision-API binding provides the extension
+   point through which a companion profile carries which evaluated set
+   the PDP used (Section 15).
 
    For an entry of type mission_resource_access, the action's resource
    and invoked action or tool identity MUST be within that entry's

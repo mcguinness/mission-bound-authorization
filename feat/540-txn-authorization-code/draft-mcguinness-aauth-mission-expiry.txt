@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          17 August 2026
-Expires: 18 February 2027
+Intended status: Standards Track                          18 August 2026
+Expires: 19 February 2027
 
 
                           AAuth Mission Expiry
@@ -48,7 +48,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 February 2027.
+   This Internet-Draft will expire on 19 February 2027.
 
 Copyright Notice
 
@@ -72,9 +72,10 @@ Table of Contents
    4.  Enforcement
    5.  Proposal and Approval
    6.  Relationship to Other Specifications
-   7.  Security Considerations
-   8.  Privacy Considerations
-   9.  IANA Considerations
+   7.  Conformance
+   8.  Security Considerations
+   9.  Privacy Considerations
+   10. IANA Considerations
    Acknowledgments
    References
      Normative References
@@ -165,7 +166,23 @@ Table of Contents
    automatic expiry with explicit termination as that document
    specifies.
 
-7.  Security Considerations
+7.  Conformance
+
+   An *AAuth Person Server* conforms to this profile when it:
+
+   1.  requires expires_at, once present in the approved mission blob,
+       to be an RFC 3339 date-time naming an instant later than
+       approved_at (Section 3); and
+
+   2.  documents its clock synchronization, comparison precision, and
+       tolerated clock skew (Section 8).
+
+   Prompt termination at the deadline itself, rather than at the next
+   request under the reference, remains a SHOULD (Section 4).  Support
+   for expires_at remains OPTIONAL, following the approved blob member
+   it profiles.
+
+8.  Security Considerations
 
    Clock synchronization, comparison precision, and tolerated clock skew
    MUST be documented by the deployment.  An Agent SHOULD NOT schedule
@@ -183,13 +200,13 @@ Table of Contents
    Agent cannot stretch an approved mission's lifetime; a longer
    lifetime requires a new proposal and a new approval by the Person.
 
-8.  Privacy Considerations
+9.  Privacy Considerations
 
    expires_at is part of the private mission blob and is not disclosed
    to Resources or Access Servers.  It adds no correlation surface
    beyond the blob itself.
 
-9.  IANA Considerations
+10.  IANA Considerations
 
    This document requests no IANA registrations.  The AAuth Protocol
    does not currently establish a registry for approved mission-blob
