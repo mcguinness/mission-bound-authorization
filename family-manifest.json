@@ -24,6 +24,23 @@
   "Experimental",
   "outside-ordering"
  ],
+ "presentation_zones": [
+  "Start",
+  "Compose",
+  "Lab"
+ ],
+ "presentation_tracks": [
+  "preface",
+  "floor",
+  "add-on",
+  "bindings",
+  "OAuth extensions",
+  "Mission components",
+  "guide",
+  "OAuth experimental",
+  "Mission experimental",
+  "sketch"
+ ],
  "count": 41,
  "drafts": [
   {
@@ -33,6 +50,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "lifecycle",
+   "presentation_zone": "Compose",
+   "presentation_track": "bindings",
    "adoption_rung": "By binding",
    "adoption_alias": "aauth-expiry",
    "is_published_core": false,
@@ -45,6 +64,8 @@
    "category": "exp",
    "maturity": "sketch",
    "group": "architecture",
+   "presentation_zone": "Lab",
+   "presentation_track": "sketch",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -71,6 +92,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "bindings-substrate",
+   "presentation_zone": "Compose",
+   "presentation_track": "bindings",
    "adoption_rung": "By binding",
    "is_published_core": false,
    "deps": [
@@ -85,6 +108,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "lifecycle",
+   "presentation_zone": "Compose",
+   "presentation_track": "bindings",
    "adoption_rung": "By binding",
    "is_published_core": false,
    "deps": [
@@ -101,6 +126,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "approval-time",
+   "presentation_zone": "Compose",
+   "presentation_track": "Mission components",
    "adoption_rung": "Advanced",
    "is_published_core": false,
    "deps": [
@@ -121,6 +148,8 @@
    "category": "info",
    "maturity": "informational",
    "group": "architecture",
+   "presentation_zone": "Start",
+   "presentation_track": "preface",
    "adoption_rung": "outside-ordering",
    "is_published_core": false,
    "deps": [
@@ -166,6 +195,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "proof-portability",
+   "presentation_zone": "Compose",
+   "presentation_track": "Mission components",
    "adoption_rung": "Advanced",
    "is_published_core": false,
    "deps": [
@@ -193,6 +224,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "bindings-substrate",
+   "presentation_zone": "Compose",
+   "presentation_track": "bindings",
    "adoption_rung": "By binding",
    "is_published_core": false,
    "deps": [
@@ -224,6 +257,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "runtime-enforcement",
+   "presentation_zone": "Start",
+   "presentation_track": "floor",
    "adoption_rung": "Implementation minimum",
    "is_published_core": false,
    "deps": [
@@ -246,6 +281,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "agent-runtime",
+   "presentation_zone": "Compose",
+   "presentation_track": "Mission components",
    "adoption_rung": "Advanced",
    "is_published_core": false,
    "deps": [
@@ -261,6 +298,8 @@
    "category": "exp",
    "maturity": "experimental",
    "group": "lifecycle",
+   "presentation_zone": "Lab",
+   "presentation_track": "Mission experimental",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -287,6 +326,8 @@
    "category": "exp",
    "maturity": "sketch",
    "group": "bindings-substrate",
+   "presentation_zone": "Lab",
+   "presentation_track": "sketch",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -324,6 +365,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "agent-runtime",
+   "presentation_zone": "Start",
+   "presentation_track": "add-on",
    "adoption_rung": "Recommended for AI agents",
    "is_published_core": false,
    "deps": [
@@ -349,6 +392,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "proof-portability",
+   "presentation_zone": "Compose",
+   "presentation_track": "Mission components",
    "adoption_rung": "Advanced",
    "is_published_core": false,
    "deps": [
@@ -372,6 +417,8 @@
    "category": "exp",
    "maturity": "experimental",
    "group": "bindings-substrate",
+   "presentation_zone": "Lab",
+   "presentation_track": "Mission experimental",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -392,6 +439,8 @@
    "category": "exp",
    "maturity": "experimental",
    "group": "agent-runtime",
+   "presentation_zone": "Lab",
+   "presentation_track": "Mission experimental",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -413,6 +462,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "runtime-enforcement",
+   "presentation_zone": "Start",
+   "presentation_track": "floor",
    "adoption_rung": "Implementation minimum",
    "is_published_core": false,
    "deps": [
@@ -428,6 +479,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "runtime-enforcement",
+   "presentation_zone": "Start",
+   "presentation_track": "floor",
    "adoption_rung": "Implementation minimum",
    "is_published_core": false,
    "deps": [
@@ -460,6 +513,8 @@
    "category": "exp",
    "maturity": "experimental",
    "group": "runtime-enforcement",
+   "presentation_zone": "Lab",
+   "presentation_track": "OAuth experimental",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -484,6 +539,8 @@
    "category": "info",
    "maturity": "informational",
    "group": "security-model",
+   "presentation_zone": "Compose",
+   "presentation_track": "guide",
    "adoption_rung": "outside-ordering",
    "is_published_core": false,
    "deps": [
@@ -524,6 +581,8 @@
    "category": "info",
    "maturity": "informational",
    "group": "approval-time",
+   "presentation_zone": "Compose",
+   "presentation_track": "Mission components",
    "adoption_rung": "Advanced",
    "is_published_core": false,
    "deps": [
@@ -546,6 +605,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "bindings-substrate",
+   "presentation_zone": "Start",
+   "presentation_track": "floor",
    "adoption_rung": "By binding",
    "is_published_core": false,
    "deps": [
@@ -570,6 +631,8 @@
    "category": "exp",
    "maturity": "sketch",
    "group": "bindings-substrate",
+   "presentation_zone": "Lab",
+   "presentation_track": "sketch",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -607,6 +670,8 @@
    "category": "exp",
    "maturity": "experimental",
    "group": "approval-time",
+   "presentation_zone": "Lab",
+   "presentation_track": "OAuth experimental",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -625,6 +690,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "approval-time",
+   "presentation_zone": "Compose",
+   "presentation_track": "OAuth extensions",
    "adoption_rung": "Advanced",
    "is_published_core": false,
    "deps": [
@@ -643,6 +710,8 @@
    "category": "exp",
    "maturity": "experimental",
    "group": "sub-agents",
+   "presentation_zone": "Lab",
+   "presentation_track": "OAuth experimental",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -662,6 +731,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "sub-agents",
+   "presentation_zone": "Compose",
+   "presentation_track": "OAuth extensions",
    "adoption_rung": "Advanced",
    "is_published_core": false,
    "deps": [
@@ -684,6 +755,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "approval-time",
+   "presentation_zone": "Start",
+   "presentation_track": "add-on",
    "adoption_rung": "Recommended for AI agents",
    "is_published_core": false,
    "deps": [
@@ -707,6 +780,8 @@
    "category": "exp",
    "maturity": "experimental",
    "group": "lifecycle",
+   "presentation_zone": "Lab",
+   "presentation_track": "OAuth experimental",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -735,6 +810,8 @@
    "category": "exp",
    "maturity": "experimental",
    "group": "cross-domain-projection",
+   "presentation_zone": "Lab",
+   "presentation_track": "OAuth experimental",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -756,6 +833,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "cross-domain-projection",
+   "presentation_zone": "Compose",
+   "presentation_track": "OAuth extensions",
    "adoption_rung": "Advanced",
    "is_published_core": false,
    "deps": [
@@ -776,6 +855,8 @@
    "category": "exp",
    "maturity": "experimental",
    "group": "cross-domain-projection",
+   "presentation_zone": "Lab",
+   "presentation_track": "OAuth experimental",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -798,6 +879,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "lifecycle",
+   "presentation_zone": "Compose",
+   "presentation_track": "OAuth extensions",
    "adoption_rung": "Advanced",
    "is_published_core": false,
    "deps": [
@@ -816,6 +899,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "bindings-substrate",
+   "presentation_zone": "Compose",
+   "presentation_track": "bindings",
    "adoption_rung": "By binding",
    "is_published_core": false,
    "deps": [
@@ -836,6 +921,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "lifecycle",
+   "presentation_zone": "Compose",
+   "presentation_track": "OAuth extensions",
    "adoption_rung": "Advanced",
    "is_published_core": false,
    "deps": [
@@ -857,6 +944,8 @@
    "category": "exp",
    "maturity": "experimental",
    "group": "lifecycle",
+   "presentation_zone": "Lab",
+   "presentation_track": "OAuth experimental",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -880,6 +969,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "lifecycle",
+   "presentation_zone": "Compose",
+   "presentation_track": "OAuth extensions",
    "adoption_rung": "Advanced",
    "is_published_core": false,
    "deps": [
@@ -901,6 +992,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "lifecycle",
+   "presentation_zone": "Start",
+   "presentation_track": "floor",
    "adoption_rung": "Implementation minimum",
    "is_published_core": false,
    "deps": [
@@ -922,6 +1015,8 @@
    "category": "exp",
    "maturity": "experimental",
    "group": "approval-time",
+   "presentation_zone": "Lab",
+   "presentation_track": "OAuth experimental",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -943,6 +1038,8 @@
    "category": "exp",
    "maturity": "experimental",
    "group": "security-model",
+   "presentation_zone": "Lab",
+   "presentation_track": "OAuth experimental",
    "adoption_rung": "Experimental",
    "is_published_core": false,
    "deps": [
@@ -963,6 +1060,8 @@
    "category": "std",
    "maturity": "stable",
    "group": "core",
+   "presentation_zone": "Start",
+   "presentation_track": "floor",
    "adoption_rung": "Adopt first",
    "is_published_core": true,
    "deps": [

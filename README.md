@@ -48,15 +48,70 @@ At a glance:
   sketches.
 
 **Start with the
-[Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html)
-and the [OAuth
-core](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html).**
-Everything else is optional companion work, and the minimal
-implementation below fits on one screen. For the story told in prose
-rather than protocol, the
+[Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html).**
+It is the reader preface for the adoption map below, which is the
+five-minute path through the rest of the suite (all optional companion
+work); the minimal implementation fits on one screen further down.
+For the story told in prose rather than protocol, the
 **[Mission Handbook](https://notes.karlmcguinness.com/mission-handbook/)**
 is the published narrative companion: it motivates the model,
 chapter by chapter, for readers who want the why before the wire.
+
+## The adoption map
+
+Start with the
+[Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html)
+as the reader preface, then the OAuth Implementation Floor: substrate,
+core, status, runtime, runtime-evidence, and authzen. Bundle contents
+and minimum conformance profile are not synonymous; the profile matrix
+in [notes/adoption-plan.md](notes/adoption-plan.md) draws the line
+between them. The table below is the family manifest's adoption
+placement for every document: the zone and track to read it in, the
+architectural group it belongs to, and the trigger for pulling it.
+
+| Document | Zone | Track | Group | Pull this when... |
+|---|---|---|---|---|
+| `oauth-mission` | Start | floor | core | Any agent's approval must bind durably to the tokens it later uses. The floor; start here. |
+| `mission-architecture` | Start | preface | architecture | Before adopting anything: the Mission model, invariants, and assurance levels the rest cite. |
+| `mission-substrate` | Start | floor | bindings-substrate | Runtime implementers consume its commitment construction and kernel contract; binding authors profile it. |
+| `oauth-mission-status` | Start | floor | lifecycle | You must observe or change Mission state beyond token expiry (revoke, suspend, complete). |
+| `mission-runtime` | Start | floor | runtime-enforcement | Actions need a point-of-use check, not just issuance-time gating. |
+| `mission-runtime-evidence` | Start | floor | runtime-enforcement | Runtime enforcement is deployed and decisions need durable, verifiable records. |
+| `mission-authzen` | Start | floor | runtime-enforcement | The PDP speaks AuthZEN and needs the decision-contract wire mapping. |
+| `mission-harness` | Start | add-on | agent-runtime | A harness holds session state across restarts and must stop work when the Mission dies. |
+| `oauth-mission-consent-evidence` | Start | add-on | approval-time | You must prove what the Approver actually saw, not only what was approved. |
+| `mission-authority-server` | Compose | bindings | bindings-substrate | The AS cannot change: run Mission governance as a standalone control plane. |
+| `oauth-mission-issuance-grant` | Compose | bindings | bindings-substrate | A MAS-governed estate wants Mission-bound gated tokens without full intake at each AS. |
+| `mission-aauth` | Compose | bindings | bindings-substrate | The substrate is AAuth: Mission context on its native propose/approve flow. |
+| `mission-aauth-management` | Compose | bindings | lifecycle | Alongside the AAuth binding: status, termination, delegation-tree queries. |
+| `aauth-mission-expiry` | Compose | bindings | lifecycle | A citable profile of AAuth's native `expires_at` is needed (base AAuth enforces it regardless; the profile's own conformance line is OPTIONAL). |
+| `oauth-mission-expansion` | Compose | OAuth extensions | lifecycle | Approved authority will predictably need to widen mid-task via fresh approval. |
+| `oauth-mission-child-delegation` | Compose | OAuth extensions | sub-agents | A sub-agent needs its own Mission outliving a call frame, with cascade termination. |
+| `oauth-mission-cross-domain` | Compose | OAuth extensions | cross-domain-projection | A Mission from one trust domain must be honored by an AS in another (also the floor's conditional dependency). |
+| `oauth-mission-signals` | Compose | OAuth extensions | lifecycle | Consumers need push notice of state changes instead of polling per Mission. |
+| `oauth-mission-approval` | Compose | OAuth extensions | approval-time | Approval is asynchronous: a human review queue, not an immediate decision. |
+| `oauth-mission-management` | Compose | OAuth extensions | lifecycle | An operator needs fleet enumeration and bulk lifecycle across many Missions. |
+| `mission-audit` | Compose | Mission components | proof-portability | A cross-domain party must verify evidence integrity without trusting issuer logs. |
+| `mission-mandate` | Compose | Mission components | proof-portability | An outside party must verify what was approved without a token-exchange hop. |
+| `mission-approval-governance` | Compose | Mission components | approval-time | Approval authority itself needs authenticated, policy-backed provenance. |
+| `mission-shaping` | Compose | Mission components | approval-time | You need a defined client-side path from user prompt to candidate Mission Intent. |
+| `mission-capability-binding` | Compose | Mission components | agent-runtime | Actions come from a discovered catalog where invoked identity can drift from approval. |
+| `mission-security-model` | Compose | guide | security-model | Reviewing or auditing: the one consolidated trust and blast-radius view. |
+| `oauth-mission-containment` | Lab | OAuth experimental | lifecycle | A live Mission must be narrowed, not ended, on a protected event. |
+| `mission-metering` | Lab | Mission experimental | bindings-substrate | A Mission needs cumulative caps (budget, calls, duration, egress), not just scope. |
+| `mission-discovery` | Lab | Mission experimental | lifecycle | An open-world agent meets resources its approval never named. |
+| `mission-orchestration` | Lab | Mission experimental | agent-runtime | In-flight work must unwind safely if the Mission ends mid-workflow. |
+| `oauth-mission-transaction-authorization` | Lab | OAuth experimental | runtime-enforcement | One action needs a fresh, portable, cross-org authorization with no live callback. |
+| `oauth-mission-approval-revision` | Lab | OAuth experimental | approval-time | Reviewers routinely narrow a proposed Mission rather than approve or deny. |
+| `oauth-mission-attenuation` | Lab | OAuth experimental | sub-agents | Deep fan-out makes an AS round-trip per narrowing too costly; mint offline. |
+| `oauth-mission-continuation` | Lab | OAuth experimental | cross-domain-projection | Authorized work continues across hops or time without re-presented credentials. |
+| `oauth-mission-cross-org-delegation` | Lab | OAuth experimental | cross-domain-projection | An attenuation chain crosses organizational trust domains. |
+| `oauth-mission-progressive` | Lab | OAuth experimental | lifecycle | Authority cannot be enumerated up front; policy-bounded drawdown beats over-provisioning. |
+| `oauth-mission-template` | Lab | OAuth experimental | approval-time | Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling. |
+| `oauth-mission-work-products` | Lab | OAuth experimental | security-model | Artifacts cross into another Mission and must carry provenance, never authority. |
+| `mission-uma` | Lab | sketch | bindings-substrate | Evaluating a UMA 2.0 deployment only. |
+| `mission-aam` | Lab | sketch | architecture | Adopting Cloudflare's AAM vocabulary and mapping it onto existing mechanisms. |
+| `mission-gnap` | Lab | sketch | bindings-substrate | Evaluating a GNAP deployment only. |
 
 ## The Mission
 
@@ -254,7 +309,11 @@ conforming deployment of the core implements:
 - optionally, token introspection reporting Mission state.
 
 That is the whole mandatory surface; the core's Conformance section
-names it. What the core alone does **not** protect, by design:
+names it. Issuance-only conformance is core alone; the six-document
+normative floor for Runtime-Enforced is substrate, core, status,
+runtime, runtime-evidence, and authzen, with substrate a normative
+dependency of the runtime three and architecture as the reader
+preface. What the core alone does **not** protect, by design:
 already-issued tokens run to expiry (prompt cutoff needs introspection,
 Status, or the runtime layer); completed actions are not undone;
 off-path execution by a compromised agent is the runtime and harness
@@ -1158,10 +1217,12 @@ unaffected.
 `family-manifest.json` at the repository root is the machine-readable
 inventory of the suite: one entry per `draft-*.md`, with its title,
 category, maturity, architectural group (matching "The documents"
-below), adoption-order rung, and the other family drafts it
-references. It is the single source of truth that README's document
-catalog, the Adoption order list, and the architecture's Mission
-Document Map are all expected to stay consistent with.
+below), adoption-order rung, adoption-map placement
+(`presentation_zone` and `presentation_track`), and the other family
+drafts it references. It is the single source of truth that README's
+document catalog, the adoption map, the Adoption order list, and the
+architecture's Mission Document Map are all expected to stay
+consistent with.
 
 ```sh
 $ node scripts/check-family-manifest.mjs
@@ -1173,5 +1234,8 @@ runs in CI on every pull request and push
 (a draft on disk with no manifest entry, or vice versa), a
 front-matter `category` that disagrees with the manifest, a draft not
 linked under "The documents" below, a draft missing from the
-architecture's Mission Document Map, or a draft with a real
-`adoption_rung` missing from the Adoption order list above.
+architecture's Mission Document Map, a draft with a real
+`adoption_rung` missing from the Adoption order list above, a
+`presentation_zone`/`presentation_track` outside the manifest's
+declared enums, or a draft missing from (or misplaced in) the
+adoption map's table.

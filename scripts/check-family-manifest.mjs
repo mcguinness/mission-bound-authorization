@@ -11,6 +11,11 @@
 //   (d) architecture map gap  - a draft not named in the architecture's Mission Document Map
 //   (e) adoption-order gap    - a draft with a real adoption_rung missing from README's
 //                                Adoption order section (adoption_rung "outside-ordering" is exempt)
+//   (f) presentation enum     - a draft's `presentation_zone`/`presentation_track` is not one of
+//                                the manifest's declared `presentation_zones`/`presentation_tracks`
+//   (g) adoption-map gap      - a draft not listed exactly once in README's "The adoption map"
+//                                table, on a row whose Zone/Track cells match the manifest's
+//                                declared presentation_zone/presentation_track
 
 import fs from "node:fs";
 import path from "node:path";
@@ -115,6 +120,32 @@ function adoptionNickname(draft) {
   return shortForm(draft.slug).replace(/^oauth-mission-/, "").replace(/^mission-/, "");
 }
 
+// Parses the data rows of a "Document | Zone | Track | Group | Pull this
+// when..." markdown table out of a section body. Tolerant of surrounding
+// whitespace around cells; strict about shape: a row only counts as a
+// document row when its first cell is a backtick-quoted slug, which also
+// lets the header and separator rows fall out without special-casing them.
+function parseAdoptionMapRows(section) {
+  const rows = [];
+  for (const line of section.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) continue;
+    const inner = trimmed.slice(1, -1).split("|").map((c) => c.trim());
+    if (inner.length < 5) continue;
+    const slugMatch = inner[0].match(/^`([^`]+)`$/);
+    if (!slugMatch) continue;
+    rows.push({
+      slug: slugMatch[1],
+      zone: inner[1],
+      track: inner[2],
+      group: inner[3],
+      trigger: inner.slice(4).join("|").trim(),
+      line,
+    });
+  }
+  return rows;
+}
+
 function main() {
   const manifest = loadManifest();
   const drafts = manifest.drafts;
@@ -199,6 +230,65 @@ function main() {
         fail(
           "adoption-order",
           `${d.slug} has adoption_rung "${d.adoption_rung}" but nickname "${nickname}" is not present in README's "Adoption order" section`
+        );
+      }
+    }
+  }
+
+  // (f) presentation enum: presentation_zone/presentation_track must be one
+  // of the manifest's own declared values.
+  const validZones = new Set(manifest.presentation_zones || []);
+  const validTracks = new Set(manifest.presentation_tracks || []);
+  if (validZones.size === 0) {
+    fail("presentation-enum", `family-manifest.json is missing a non-empty top-level "presentation_zones" array`);
+  }
+  if (validTracks.size === 0) {
+    fail("presentation-enum", `family-manifest.json is missing a non-empty top-level "presentation_tracks" array`);
+  }
+  for (const d of drafts) {
+    if (!validZones.has(d.presentation_zone)) {
+      fail("presentation-enum", `${d.slug}: presentation_zone "${d.presentation_zone}" is not one of ${JSON.stringify([...validZones])}`);
+    }
+    if (!validTracks.has(d.presentation_track)) {
+      fail("presentation-enum", `${d.slug}: presentation_track "${d.presentation_track}" is not one of ${JSON.stringify([...validTracks])}`);
+    }
+  }
+
+  // (g) Adoption map coverage: every draft must appear exactly once in
+  // README's "The adoption map" table, on a row whose Zone and Track cells
+  // match the manifest's declared presentation_zone/presentation_track.
+  const adoptionMapSection = extractSection(readme, (t, l) => l === 2 && t === "The adoption map");
+  if (adoptionMapSection === null) {
+    fail("adoption-map", `could not find a "## The adoption map" section in README.md`);
+  } else {
+    const rows = parseAdoptionMapRows(adoptionMapSection);
+    if (rows.length !== drafts.length) {
+      fail(
+        "adoption-map",
+        `README's "The adoption map" table has ${rows.length} document row(s) but family-manifest.json has ${drafts.length} drafts`
+      );
+    }
+    for (const d of drafts) {
+      const short = shortForm(d.slug);
+      const matches = rows.filter((r) => r.slug === short);
+      if (matches.length === 0) {
+        fail("adoption-map", `${d.slug} (short form "${short}") is not listed in README's "The adoption map" table`);
+        continue;
+      }
+      if (matches.length > 1) {
+        fail("adoption-map", `${d.slug} (short form "${short}") appears ${matches.length} times in README's "The adoption map" table`);
+      }
+      const row = matches[0];
+      if (row.zone !== d.presentation_zone) {
+        fail(
+          "adoption-map",
+          `${d.slug}: adoption map row has Zone "${row.zone}" but manifest declares presentation_zone "${d.presentation_zone}"`
+        );
+      }
+      if (row.track !== d.presentation_track) {
+        fail(
+          "adoption-map",
+          `${d.slug}: adoption map row has Track "${row.track}" but manifest declares presentation_track "${d.presentation_track}"`
         );
       }
     }
