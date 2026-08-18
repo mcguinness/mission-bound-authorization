@@ -14,6 +14,7 @@
  * verifies it and signs the transaction token.
  */
 
+import { createHash } from "node:crypto";
 import { canonicalize, type JsonValue } from "./canonicalize.js";
 
 /** @spec txn-authorization#resource-challenge — the challenge's protected `typ`. */
@@ -69,6 +70,57 @@ export interface TxnMissionClaim {
   expires_at: number;
   approval_basis: { type: string };
   subject?: { iss: string; sub: string };
+}
+
+/**
+ * @spec txn-authorization#challenge-redemption step 5 — the COMPLETE
+ * transaction an approval is opened against, and the only thing it is ever
+ * good for.
+ *
+ * `parameter_digest` alone identifies the operation's PARAMETERS, not the
+ * transaction: the same digest can be reached under a different Mission, a
+ * different client, a different presenter key or a different principal. An
+ * approval carrying only the digest would therefore satisfy a transaction it
+ * was never granted for. This structure is the whole binding, and its digest
+ * travels with the approval so the Transaction Authorization Server can
+ * recompute it from its OWN pinned state at completion and refuse anything the
+ * approval was not opened under.
+ *
+ * `subject` is the destination-local principal (the `subject_token`'s `sub`);
+ * `origin_principal` is the issuer-qualified origin identity where the Origin
+ * Principal profile applies. Both travel: the approver and the policy see the
+ * identity that acts locally AND the identity it originates from, and neither
+ * is ever substituted for the other.
+ */
+export interface TxnApprovalBinding {
+  /** The Challenge-Issuing Resource (the challenge `iss`). */
+  resource: string;
+  txn: string;
+  mission: TxnMissionClaim;
+  /** The operation's `authorization_details` `type` (the Operation Profile). */
+  operation_type: string;
+  authorization_details: JsonValue[];
+  parameter_digest: string;
+  /** The destination-local subject: the `subject_token`'s own `sub`. */
+  subject: string;
+  /** The issuer-qualified origin principal, where the profile applies. */
+  origin_principal?: { iss: string; sub: string };
+  /** The client AUTHENTICATED at the transaction endpoint. */
+  client_id: string;
+  /** The presenter key the resulting transaction token is bound to. */
+  cnf_jkt: string;
+}
+
+/**
+ * The approval binding's digest: the family's anchor idiom (JCS-canonical,
+ * SHA-256, `"sha-256:" + base64url`) over {@link TxnApprovalBinding}. Value
+ * equality of the whole transaction reduces to equality of this one string.
+ */
+export function txnApprovalBindingDigest(binding: TxnApprovalBinding): string {
+  const digest = createHash("sha256")
+    .update(canonicalize(binding as unknown as JsonValue))
+    .digest("base64url");
+  return `sha-256:${digest}`;
 }
 
 /** @spec txn-authorization#resource-challenge — the challenge's claim set. */

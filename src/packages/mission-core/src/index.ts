@@ -78,7 +78,9 @@ export {
   TXN_CHALLENGE_TYP,
   TXN_POLL_ERRORS,
   TXN_TOKEN_PROHIBITED_CLAIMS,
+  type TxnApprovalBinding,
   type TxnChallengeClaims,
   type TxnMissionClaim,
   type TxnPollError,
+  txnApprovalBindingDigest,
 } from "./txn-authorization.js";

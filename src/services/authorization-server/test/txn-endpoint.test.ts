@@ -19,7 +19,11 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { TXN_TOKEN_PROHIBITED_CLAIMS } from "@mission/core";
+import {
+  TXN_TOKEN_PROHIBITED_CLAIMS,
+  txnApprovalBindingDigest,
+  type TxnApprovalBinding,
+} from "@mission/core";
 import {
   buildAuthorizationServer,
   MISSION_TXN_TOKEN_TYP,
@@ -67,6 +71,8 @@ const freshDecisionInputs: { txn: string; operationType: string; parameterDigest
  * at step 4 for every approval it opened.
  */
 const openedApprovals: { txn: string; requires_action_approval: boolean }[] = [];
+/** The transaction binding (and its digest) every opened approval carries. */
+const openedBindings: { txn: string; binding: TxnApprovalBinding; digest: string }[] = [];
 /** The basis recorded for one `txn` (undefined when no approval was opened). */
 const approvalBasisFor = (txn: string): boolean | undefined =>
   openedApprovals.find((o) => o.txn === txn)?.requires_action_approval;
@@ -75,6 +81,15 @@ const approvalBasisFor = (txn: string): boolean | undefined =>
  * own validity, or something else, the minimum term of the token's exp bound.
  */
 const approvalOverrides = new Map<string, string>();
+/** Per-task `approved_at` the ARS reports (grant-time sanity vectors). */
+const approvedAtOverrides = new Map<string, string>();
+/**
+ * @spec txn-authorization#challenge-redemption step 5 — per-`txn` mutations of
+ * the transaction binding the approval is OPENED under, so a run can produce an
+ * approval genuinely adjudicated for a DIFFERENT transaction and prove the TAS
+ * refuses it at completion.
+ */
+const bindingMutations = new Map<string, (b: TxnApprovalBinding) => TxnApprovalBinding>();
 
 /**
  * Stand in for the Challenge-Issuing Resource: sign a challenge carrying every
@@ -358,16 +373,33 @@ beforeAll(async () => {
       parameter_digest: string;
       subject: string;
       requires_action_approval: boolean;
+      binding: TxnApprovalBinding;
+      binding_digest: string;
     }) => {
       openedApprovals.push({ txn: input.txn, requires_action_approval: input.requires_action_approval });
-      return ars.openForTxn(input);
+      openedBindings.push({ txn: input.txn, binding: input.binding, digest: input.binding_digest });
+      // A run can make the approval be opened against a DIFFERENT transaction
+      // than the one the workflow pinned: the approver still adjudicates a real
+      // task, and the TAS must refuse to rely on it at completion.
+      const mutate = bindingMutations.get(input.txn);
+      if (!mutate) return ars.openForTxn(input);
+      const mutated = mutate(input.binding);
+      return ars.openForTxn({ ...input, binding: mutated, binding_digest: txnApprovalBindingDigest(mutated) });
     },
     getTask: (taskId: string) => {
       const task = ars.getTask(taskId);
+      if (!task?.approval) return task;
       const until = approvalOverrides.get(taskId);
-      return task?.approval && until
-        ? { ...task, approval: { ...task.approval, approved_until: until } }
-        : task;
+      const at = approvedAtOverrides.get(taskId);
+      if (!until && !at) return task;
+      return {
+        ...task,
+        approval: {
+          ...task.approval,
+          ...(until ? { approved_until: until } : {}),
+          ...(at ? { approved_at: at } : {}),
+        },
+      };
     },
   };
 
@@ -849,6 +881,152 @@ describe("challenge trust boundaries (@spec txn-authorization#two-phase-expiry)"
     expect(wrongKey.status).toBe(400);
     expect(body.error).toBe("invalid_grant");
     expect(body.error_description).toContain("same key");
+  });
+});
+
+/**
+ * @spec txn-authorization#challenge-redemption step 5, step 6 — the approval is
+ * bound to the COMPLETE transaction, not to its parameters. `parameter_digest`
+ * identifies the operation's parameters; the same parameters are reachable
+ * under another Mission, principal, client or presenter key, so an approval
+ * carrying only that digest would satisfy a transaction it was never granted
+ * for.
+ */
+describe("approval bound to the whole transaction (@spec txn-authorization#challenge-redemption)", () => {
+  /** Admit one challenge and return its handle and `txn`. */
+  async function admitOne(
+    txn: string,
+    opts: { parameter_digest?: string } = {},
+  ): Promise<{ txaId: string; status: number; body: Record<string, unknown> }> {
+    const record = as.kernel.get(missionId);
+    const requested = (record as { authority_set: AuthorityEntry[] }).authority_set.filter((e) =>
+      e.actions.includes("payments:remittance.send"),
+    );
+    const challenge = await signChallenge(
+      {
+        txn,
+        authorization_details: requested,
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "over-cap remittance requires approval",
+        parameter_digest: opts.parameter_digest ?? `sha-256:${txn}`,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const res = await submit(challenge);
+    const body = (await res.json()) as Record<string, unknown>;
+    return { txaId: String(body.transaction_authorization_id ?? ""), status: res.status, body };
+  }
+
+  it("carries the Mission, both identities, the client and the presenter key into the approval it opens", async () => {
+    const txn = "txn_binding_shape";
+    await admitOne(txn);
+    const opened = openedBindings.find((b) => b.txn === txn);
+    expect(opened).toBeDefined();
+    const binding = (opened as { binding: TxnApprovalBinding }).binding;
+    expect(binding.resource).toBe(RESOURCE);
+    expect(binding.txn).toBe(txn);
+    expect(binding.mission.id).toBe(missionId);
+    expect(binding.operation_type).toBe("mission_resource_access");
+    expect(binding.client_id).toBe("ap-agent");
+    expect(binding.cnf_jkt).toBe(dpopJkt);
+    expect(binding.parameter_digest).toBe(`sha-256:${txn}`);
+    // The digest is the whole binding, reproducibly.
+    expect((opened as { digest: string }).digest).toBe(txnApprovalBindingDigest(binding));
+    expect((opened as { digest: string }).digest).toMatch(/^sha-256:/);
+  });
+
+  it("refuses an approval adjudicated for a different transaction", async () => {
+    const txn = "txn_binding_foreign_client";
+    // The approval is genuinely opened, genuinely adjudicated -- but against a
+    // transaction whose authenticated client is someone else.
+    bindingMutations.set(txn, (b) => ({ ...b, client_id: "some-other-client" }));
+    const { txaId, status } = await admitOne(txn);
+    expect(status).toBe(200);
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+
+    const res = await postTransaction({ transaction_authorization_id: txaId });
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("access_denied");
+    expect(body.error_description).toMatch(/not bound to this transaction/);
+    expect(body.access_token).toBeUndefined();
+    // Refused BEFORE the fresh decision: an approval this workflow cannot
+    // reproduce is never carried into step 7 as context.
+    expect(freshDecisionCalls).not.toContain(txn);
+    bindingMutations.delete(txn);
+  });
+
+  it("refuses an approval whose binding the workflow cannot reproduce at all", async () => {
+    const txn = "txn_binding_absent";
+    // An ARS that reports an approval carrying NO binding at all: absent is
+    // never equal to the digest the workflow recomputes.
+    bindingMutations.set(txn, (b) => ({ ...b, subject: "mallory" }));
+    const { txaId } = await admitOne(txn);
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    const res = await postTransaction({ transaction_authorization_id: txaId });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("access_denied");
+    expect(body.error_description).toMatch(/not bound to this transaction/);
+    bindingMutations.delete(txn);
+  });
+
+  it("fails closed when one resource-scoped txn is opened under two different transactions", async () => {
+    const txn = "txn_binding_duplicate";
+    const first = await admitOne(txn, { parameter_digest: "sha-256:first-parameters" });
+    expect(first.status).toBe(200);
+    // A SECOND challenge naming the same (resource, txn) but a different
+    // operation. It is a different transaction wearing the first one's
+    // correlation identity; resolving it to the existing approval would hand it
+    // an adjudication granted for something else.
+    const second = await admitOne(txn, { parameter_digest: "sha-256:second-parameters" });
+    expect(second.status).toBe(400);
+    expect(second.body.error).toBe("invalid_grant");
+    expect(String(second.body.error_description)).toMatch(/already bound to a different transaction/);
+    // The FIRST transaction is untouched: one task, one binding.
+    expect(openedBindings.filter((b) => b.txn === txn)).toHaveLength(2);
+    const task = ars.getTask(taskFor(txn));
+    expect(task?.state).toBe("pending");
+  });
+
+  it("refuses an approval granted in the future beyond the clock skew", async () => {
+    const txn = "txn_approval_future";
+    const { txaId } = await admitOne(txn);
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    const futureS = Math.floor(Date.now() / 1000) + 600;
+    approvedAtOverrides.set(taskFor(txn), new Date(futureS * 1000).toISOString());
+    approvalOverrides.set(taskFor(txn), new Date((futureS + 300) * 1000).toISOString());
+
+    const res = await postTransaction({ transaction_authorization_id: txaId });
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("access_denied");
+    expect(body.error_description).toMatch(/granted in the future/);
+    expect(body.access_token).toBeUndefined();
+    approvedAtOverrides.delete(taskFor(txn));
+    approvalOverrides.delete(taskFor(txn));
+  });
+
+  it("refuses an approval whose validity ends before it was granted", async () => {
+    const txn = "txn_approval_inverted";
+    const { txaId } = await admitOne(txn);
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    const nowS = Math.floor(Date.now() / 1000);
+    // approved_until is still in the future (so it is "current"), but it
+    // precedes the moment the approval says it was granted.
+    approvedAtOverrides.set(taskFor(txn), new Date((nowS + 20) * 1000).toISOString());
+    approvalOverrides.set(taskFor(txn), new Date((nowS + 10) * 1000).toISOString());
+
+    const res = await postTransaction({ transaction_authorization_id: txaId });
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("access_denied");
+    expect(body.error_description).toMatch(/ends before it was granted/);
+    expect(body.access_token).toBeUndefined();
+    approvedAtOverrides.delete(taskFor(txn));
+    approvalOverrides.delete(taskFor(txn));
   });
 });
 

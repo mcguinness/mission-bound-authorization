@@ -14,7 +14,9 @@ import {
   missionInvariantsEqual,
   readTxnMissionClaim,
   SUBJECT_TOKEN_TYPE_ACCESS_TOKEN,
+  txnApprovalBindingDigest,
   type JsonValue,
+  type TxnApprovalBinding,
   type TxnChallengeClaims,
 } from "@mission/core";
 import {
@@ -60,11 +62,32 @@ export interface TxnArs {
      * opposed to the endpoint's own profile requirement.
      */
     requires_action_approval: boolean;
+    /**
+     * @spec txn-authorization#challenge-redemption step 5 — the COMPLETE
+     * transaction the approval is bound to: `txn` and the resource, the
+     * Mission, the operation's profile type and entry, the parameters' digest,
+     * BOTH identities, the authenticated client, and the presenter key. The
+     * approver adjudicates THIS, and nothing else can later claim it.
+     */
+    binding: TxnApprovalBinding;
+    /** {@link txnApprovalBindingDigest} of `binding`; travels with the approval. */
+    binding_digest: string;
   }): { taskId: string; state: string };
   getTask(taskId: string):
     | {
         state: string;
-        approval?: { id: string; approved_at: string; approved_until: string; parameter_digest: string };
+        approval?: {
+          id: string;
+          approved_at: string;
+          approved_until: string;
+          parameter_digest: string;
+          /**
+           * The binding the approval was OPENED under. Absent is never
+           * equal to anything the TAS recomputes, so an approval that does
+           * not carry one is refused like any other mismatch.
+           */
+          binding_digest?: string;
+        };
       }
     | undefined;
 }
@@ -167,6 +190,43 @@ export interface TxnAuthorizationDeps {
 }
 
 const DEFAULT_POLL_INTERVAL_S = 5;
+
+/**
+ * Tolerance for clock disagreement between the Access Request Service that
+ * stamps an approval and the Transaction Authorization Server that relies on
+ * it (seconds). Bounded and explicit: without it a future-dated `approved_at`
+ * would defeat the maximum-age check simply by being far enough ahead.
+ */
+const CLOCK_SKEW_S = 30;
+
+/**
+ * @spec txn-authorization#challenge-redemption step 5 — the COMPLETE
+ * transaction an approval is opened against, recomputed from the workflow's
+ * PINNED state. Admission builds it once; completion rebuilds it and compares
+ * digests, so an approval adjudicated for any other transaction (another
+ * Mission, principal, client, presenter key, operation or parameter set) is
+ * refused however it reaches this workflow's task id.
+ */
+function approvalBindingFor(wf: {
+  challenge: TxnChallengeClaims;
+  clientId: string;
+  subject: string;
+  operationType: string;
+}): TxnApprovalBinding {
+  const origin = wf.challenge.mission.subject;
+  return {
+    resource: wf.challenge.iss,
+    txn: wf.challenge.txn,
+    mission: wf.challenge.mission,
+    operation_type: wf.operationType,
+    authorization_details: wf.challenge.authorization_details,
+    parameter_digest: wf.challenge.parameter_digest,
+    subject: wf.subject,
+    ...(origin ? { origin_principal: origin } : {}),
+    client_id: wf.clientId,
+    cnf_jkt: wf.challenge.cnf.jkt,
+  };
+}
 
 function fail(ctx: TxnCtx, status: number, error: string, description?: string): void {
   ctx.status = status;
@@ -385,15 +445,27 @@ async function admit(
   //    submission reserved the slot and did not reach the ARS; opening is
   //    idempotent, so the retry resolves to that same approval.
   if (won || workflow.taskId === "") {
-    const { taskId } = txn.ars.openForTxn({
-      txn: challenge.txn,
-      resource: challenge.iss,
-      missionId,
-      action,
-      parameter_digest: challenge.parameter_digest,
-      subject: subjectId,
-      requires_action_approval: requiresApproval,
-    });
+    const binding = approvalBindingFor(workflow);
+    let taskId: string;
+    try {
+      ({ taskId } = txn.ars.openForTxn({
+        txn: challenge.txn,
+        resource: challenge.iss,
+        missionId,
+        action,
+        parameter_digest: challenge.parameter_digest,
+        subject: workflow.subject,
+        requires_action_approval: requiresApproval,
+        binding,
+        binding_digest: txnApprovalBindingDigest(binding),
+      }));
+    } catch {
+      // The correlation identity is already held by a DIFFERENT transaction.
+      // Resolving to its approval would grant this operation one adjudicated
+      // for something else, so admission fails closed here.
+      fail(ctx, 400, "invalid_grant", "this txn is already bound to a different transaction");
+      return;
+    }
     workflows.recordTask(workflow.id, taskId);
   }
   respondAdmitted(ctx, txn, workflow, nowS);
@@ -480,6 +552,17 @@ async function poll(
     fail(ctx, 400, "access_denied", "approval is not bound to the challenged operation");
     return;
   }
+  // The approval is bound to the WHOLE transaction, not to its parameters: the
+  // digest above identifies the operation's parameters, and the same parameters
+  // are reachable under another Mission, principal, client or presenter key.
+  // The expected binding is recomputed from THIS workflow's pinned state, so an
+  // approval opened under any other transaction is refused here -- before the
+  // fresh decision ever sees it as context.
+  const expectedBindingDigest = txnApprovalBindingDigest(approvalBindingFor(wf));
+  if (approval.binding_digest !== expectedBindingDigest) {
+    fail(ctx, 400, "access_denied", "approval is not bound to this transaction");
+    return;
+  }
   const approvedUntilS = Math.floor(Date.parse(approval.approved_until) / 1000);
   const approvedAtS = Math.floor(Date.parse(approval.approved_at) / 1000);
   const maxAgeS = txn.maxApprovalAgeSeconds ?? 300;
@@ -489,6 +572,18 @@ async function poll(
   }
   if (!Number.isFinite(approvedAtS) || nowS - approvedAtS > maxAgeS) {
     fail(ctx, 400, "access_denied", "approval is older than the maximum age");
+    return;
+  }
+  // Approval time sanity, bounded by an explicit skew allowance. A grant time
+  // in the FUTURE would otherwise pass the maximum-age check by construction
+  // (its age is negative), and an approval whose validity ends before it began
+  // never described a window at all.
+  if (approvedAtS > nowS + CLOCK_SKEW_S) {
+    fail(ctx, 400, "access_denied", "approval was granted in the future");
+    return;
+  }
+  if (approvedUntilS < approvedAtS) {
+    fail(ctx, 400, "access_denied", "approval validity ends before it was granted");
     return;
   }
 
