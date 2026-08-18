@@ -654,6 +654,11 @@ architecture defines ({{I-D.draft-mcguinness-mission-architecture}}). It MUST in
   and, where the agent-isolated evidence-emission condition is
   claimed, its per-emitter declaration
   ({{agent-isolated-evidence-emission}});
+- where a High-Assurance Agent claim rests on EAT evidence
+  ({{compromise-resistant}}, {{trifecta-containment}}), the per-row
+  selections the evidence table requires: the claim or profile
+  identifiers, the expected measurements or reference values, the
+  appraisal policy, the attester identity, and the freshness rule;
 - the reconciliation window for matching execution-outcome evidence to
   decisions, the component responsible for orphaned-evidence and
   sequence-gap detection and for actively reconciling each unresolved
@@ -2549,29 +2554,41 @@ the evidence is missing.
 
 | Condition | Evidence producer/type | Covered scope | Verifier / trust anchor | Freshness | Failure behavior |
 |---|---|---|---|---|---|
-| `key_custody`: the sender-constraint key is held and generated in the mediating PEP, never transferred to the agent ({{compromise-resistant}}, {{custody}}) | EAT ({{RFC9711}}) | The mediating PEP's key-holding component | The relying party, against the attester's hardware or platform trust anchor | Current at the session or credential issuance the claim covers | Absent, stale, or unverifiable evidence makes the claim unavailable |
-| `isolation_boundary`: the execution environment separates the agent component from the mediating PEP, approval service, and rendering component, and credential material stays out of the agent ({{compromise-resistant}}, {{trifecta-containment}}, {{custody}}) | EAT ({{RFC9711}}) | The boundary between the agent component and each isolated component | The relying party, against the same attester trust anchor | Current at the session the claim covers | Absent, stale, or unverifiable evidence makes the claim unavailable |
-| `workload_measurement`: the attested component runs the software the Enforcement Scope Statement declares ({{compromise-resistant}}, {{runtime-conformance}}) | EAT ({{RFC9711}}) | Each component the statement names as isolated or mediating | The relying party, against the same attester trust anchor | Current at attestation time | Absent, stale, or unverifiable evidence makes the claim unavailable |
+| `key_custody`: the sender-constraint key is held and generated in the mediating PEP, never transferred to the agent ({{compromise-resistant}}, {{custody}}) | EAT ({{RFC9711}}) | The mediating PEP's key-holding component | The relying party, against the attester identity and appraisal policy the Enforcement Scope Statement selects for this row | The nonce, timestamp, or session-binding rule the statement selects for this row, current at the session or credential issuance the claim covers | Absent, stale, or unverifiable evidence, or a missing selection this row requires, makes the claim unavailable |
+| `isolation_boundary`: the execution environment separates the agent component from the mediating PEP, approval service, and rendering component, and credential material stays out of the agent ({{compromise-resistant}}, {{trifecta-containment}}, {{custody}}) | EAT ({{RFC9711}}) | The boundary between the agent component and each isolated component | The relying party, against the attester identity and appraisal policy the statement selects for this row | The freshness rule the statement selects for this row, current at the session the claim covers | Absent, stale, or unverifiable evidence, or a missing selection this row requires, makes the claim unavailable |
+| `workload_measurement`: the attested component runs the software the Enforcement Scope Statement declares ({{compromise-resistant}}, {{runtime-conformance}}) | EAT ({{RFC9711}}) | Each component the statement names as isolated or mediating | The relying party, against the attester identity, appraisal policy, and reference values the statement selects for this row | The freshness rule the statement selects for this row, current at attestation time | Absent, stale, or unverifiable evidence, or a missing selection this row requires, makes the claim unavailable |
 | `approval_policy`: each action in the claimed classes requires action-bound approval ({{compromise-resistant}}, {{action-approval}}) | Signed configuration, or independent service evidence from the approval service | The approval service's enforcement over the classes claimed | The auditor reading the configuration, against the approval service's operator key | Current with the approval service's active policy version | Unknown or unverifiable configuration makes the claim unavailable |
 | `rendering_independence`: the disclosure is derived from the bound normalized parameters, never composed by the agent ({{compromise-resistant}}, {{action-approval}}) | Independent service evidence, the committed Consent Evidence where available | The rendering component's output for the approval event claimed | The party evaluating the evidence, against the rendering component's or Consent Evidence signer's key | Per approval event | An approval event lacking this evidence cannot be counted toward the claim; a class with no such event verified does not carry the claim |
 | `freshness_sourcing`: the Mission state source is an active freshness mechanism, not token-lifetime expiry ({{compromise-resistant}}, {{state-freshness}}) | Signed configuration naming the state source and its staleness bound ({{I-D.draft-mcguinness-mission-architecture}}), or independent evidence from the state source | The state source used for the classes claimed | The auditor reading the Deployment Profile, against the state source's operator key | The published staleness bound | A stale or unverifiable state source makes the claim unavailable |
 | `path_completeness`: no unmediated path reaches the mediated classes or a fresh usable credential for them ({{compromise-resistant}}) | Negative tests ({{negative-conformance}}) and organizational topology audit | Every path to the classes claimed, deployment-wide | The auditor who ran or reviewed the tests and audit, an organizational anchor | Per the deployment's stated audit cadence | Untested, stale, or a found unmediated path makes the claim unavailable |
+| `least_exposure`: the context surfaced to the agent (prompts, retrieved documents, memory, tool catalogs, schemas, and downstream responses) is scoped to the active Mission ({{trifecta-containment}}, {{least-exposure}}) | Signed configuration naming the exposure-scoping rule for the classes claimed, and negative tests demonstrating out-of-Mission context is withheld | The exposure-scoping rule's coverage over the classes claimed | The auditor reading the configuration, against the deployment's operator key | Current with the deployment's active exposure-scoping configuration version | Unknown, stale, or unverifiable configuration, or a found unscoped exposure, makes the claim unavailable |
 | `taint_egress_topology`: the taint policy and egress rule are enforced, and every egress channel is enumerated ({{trifecta-containment}}) | Topology audit (channel enumeration) and negative tests | Every egress channel available to the agent's execution environment | The auditor, an organizational anchor | Per audit cycle or channel-inventory change | A stale enumeration or a found unenumerated channel makes the claim unavailable |
 
 A deployment claiming either named property MUST bind its statement
 to the evidence this table names, for each condition its Enforcement
 Scope Statement claims. Evidence that is unknown, stale, or
 unverifiable for a required condition makes the named claim
-unavailable. Entity Attestation Token ({{RFC9711}}) evidence, carried
-under the AI-agent-instance profile
-({{I-D.draft-mcguinness-oauth-ai-agent-instance}}), proves the
-execution-environment facts this table assigns to EAT; it does not by
-itself prove the approval, rendering, freshness, path, or topology
-facts the table assigns elsewhere, and a deployment MUST NOT represent
-EAT evidence alone as satisfying those. The requirement is scoped to
-these two High-Assurance Agent claims; base runtime conformance does
-not require this evidence map, and a deployment claiming only the
-base profile MAY publish its scope statement unattested.
+unavailable.
+
+For each condition this table assigns to EAT evidence, the
+Enforcement Scope Statement MUST select the claim or profile
+identifiers the attestation carries, the expected measurements or
+reference values it is appraised against, the appraisal policy
+applied, the attester identity, and a checkable nonce, timestamp, or
+session-binding freshness rule. Entity Attestation Token
+({{RFC9711}}) evidence, carried under the AI-agent-instance profile
+({{I-D.draft-mcguinness-oauth-ai-agent-instance}}), establishes the
+execution-environment fact a row assigns to it only against those
+selections; where a selection this paragraph names is absent, the
+token is a declaration or evidence input, not proof, and the named
+claim is unavailable on the same terms. Verified EAT evidence does
+not by itself establish the exposure, approval, rendering, freshness,
+path, or topology facts the table assigns elsewhere, and a deployment
+MUST NOT represent EAT evidence alone as satisfying those. The
+requirement is scoped to these two High-Assurance Agent claims; base
+runtime conformance does not require this evidence map, and a
+deployment claiming only the base profile MAY publish its scope
+statement unattested.
 
 # Negative Conformance Tests {#negative-conformance}
 
@@ -2589,6 +2606,7 @@ claim, and a deployment SHOULD retain evidence that it ran them.
 | Agent resumes background work after Mission state went stale | Paused or refused on resume re-check |
 | Agent delegates to a sub-agent with no explicit delegation | Blocked (no inheritance by session ancestry) |
 | Agent alters action parameters after the permit is issued | Blocked by parameter-digest reverification |
+| Agent requests or receives context outside the active Mission's scope | Refused or withheld |
 | Agent egresses over a secondary channel (DNS, logs, shared store) | Blocked if the channel is in the mediated set; otherwise declared outside the claim |
 
 These are the observable form of the requirements stated normatively
