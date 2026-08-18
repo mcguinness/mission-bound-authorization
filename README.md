@@ -68,7 +68,10 @@ authority representation is binding-dependent. In the OAuth binding,
 Rich Authorization Requests express authority, a client proposes a
 **Mission Intent**, the Mission Issuer derives an **Authority Set**, and
 an **approval event** commits both as `intent_hash` and
-`authority_hash`. AAuth instead keeps the approved natural-language
+`authority_hash`. The
+[Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html)
+compares this against RAR, short tokens, and a stateful PDP composed
+without a Mission. AAuth instead keeps the approved natural-language
 context at the Person Server and leaves deterministic resource
 authorization to scopes, resource tokens, Resource and Access Server
 policy, and optionally R3.

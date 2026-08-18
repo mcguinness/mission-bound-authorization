@@ -2114,6 +2114,77 @@ freshly approved unit Missions with deferred approval
 volume: the experimental profile changes the unit economics, not the
 governance shape.
 
+## Comparison to a Conventional Stack {#standardization-crossovers}
+
+A skeptical reading of this family asks why Rich Authorization
+Requests {{RFC9396}}, short-lived tokens, and an AuthZEN PDP holding
+policy and session state server-side would not suffice. Steelmanned
+first: RAR supplies structured authorization data an Authorization
+Server renders into an itemized approval experience; RAR itself
+guarantees neither approval fidelity nor a consent UI. A short token
+lifetime bounds revocation only when every issuance, refresh, and
+exchange path re-evaluates current grant or session state; absent
+that discipline a fresh short token keeps issuing against stale
+state regardless of lifetime, the dependency the Validity Model
+already states ({{validity-model}}). AuthZEN specifies a decision
+API, not a global PDP, a durable session store, complete PEP
+placement, or a state model; a deployment supplies those properties
+in either design.
+
+Inside one administrative domain, a conventional stack (structured
+request data, an Authorization Server's consent or grant record,
+short credentials, and a stateful PDP) implements durable task
+state, fan-out joins, persistent narrowing, and audit locally. Five
+places mark where that local composition meets what this family
+standardizes:
+
+1. **Durable task semantics across tokens and restarts.** OAuth
+   grants, refresh families, or PDP records can outlive a token.
+   Mission standardizes an independently addressable,
+   lifecycle-bearing approved task with anchors consistently
+   interpreted by the Authorization Server, PDP, agents, audiences,
+   and evidence producers (the core's Why a New Object and
+   Relationship to Other Authorization Objects sections,
+   {{I-D.draft-mcguinness-oauth-mission}}); it does not make
+   persistence newly possible.
+2. **Multi-credential, multi-actor join.** A deployment can invent a
+   transaction, grant, or workflow identifier shared across
+   credentials. Mission gives that join stable approved-task
+   semantics, binds it to authority, and carries it through
+   delegation and fan-out outside one private PDP schema
+   ({{swarm-execution}}).
+3. **A second trust domain.** A partner can call the origin PDP,
+   share state, or federate policy. The trade is synchronous
+   coupling, availability, and disclosure. Cross-Domain Projection
+   offers bounded local credentials and common anchors while
+   accepting local-token revocation latency (the Project verb). It
+   is a portability choice, not the only possible design.
+4. **Approval as a first-class record.** A local consent or grant
+   database plus versioned decision logs can preserve what was
+   approved. Mission's value is a standardized immutable snapshot,
+   integrity anchors, and one reference portable evidence can cite
+   (the core's Why a New Object section,
+   {{I-D.draft-mcguinness-oauth-mission}}; the Prove verb).
+5. **Persistent narrowing.** A stateful Authorization Server or PDP
+   can store reduced entitlements and consult them at issuance.
+   Mission standardizes monotonic subset semantics across issuance,
+   delegation, attenuation, and successors, auditable across
+   components ({{invariants}}).
+
+| Requirement | Conventional OAuth+PDP realization | Mission standardization | Added Mission cost |
+|---|---|---|---|
+| Durable task semantics | Grants, refresh families, or PDP records outlive the token | An addressable, lifecycle-bearing approved task with anchors consistently interpreted across components | Durable-object and lifecycle storage |
+| Multi-credential join | A deployment-invented transaction, grant, or workflow identifier | A stable approved-task reference bound to authority, carried through delegation and fan-out | New claims and endpoints |
+| Second trust domain | The partner calls the origin PDP, shares state, or federates policy | Bounded local credentials and common anchors carried by projection | State consistency and distribution; privacy and correlation surface |
+| Approval as a record | A consent or grant database plus versioned decision logs | A standardized immutable snapshot with integrity anchors and one portable reference | Evidence operations |
+| Persistent narrowing | A stateful Authorization Server or PDP stores reduced entitlements and consults them at issuance | Monotonic subset semantics enforced across issuance, delegation, attenuation, and successors | AS or MAS integration; ecosystem adoption |
+
+Past these crossovers, a conventional deployment often accumulates a
+durable task record, a stable join key, lifecycle checks, narrowing
+rules, and audit correlations. Mission standardizes that recurring
+shape across bindings and trust domains; it does not claim local
+policy systems cannot implement equivalent outcomes.
+
 ## A Worked Composition {#worked-composition}
 
 This non-normative example composes an Action-Enforced deployment
