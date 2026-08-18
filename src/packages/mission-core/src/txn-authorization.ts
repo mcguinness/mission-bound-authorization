@@ -29,16 +29,48 @@ export const TXN_AUTHORIZATION_REQUIRED = "transaction_authorization_required";
 /** @spec txn-authorization#resource-challenge — the client signal that gates the challenge. */
 export const ACCEPT_TXN_CHALLENGE_HEADER = "accept-txn-challenge";
 
+/** RFC 8941 §3.1.2 `key`: the shape a parameter name may take. */
+const SF_PARAM_KEY = /^[a-z*][a-z0-9_.*-]*$/;
+
 /**
  * @spec txn-authorization#resource-challenge — `Accept-Txn-Challenge` is an RFC
- * 8941 Structured Field Boolean, so ONLY `?1` signals that the client accepts a
- * challenge. `?0` is the client saying it does not; an empty, repeated or
- * malformed value is not a Boolean at all. None of those is acceptance, and a
- * resource that treated mere presence as acceptance would hand challenges to
- * clients that declined them.
+ * 8941 Structured Field Boolean ITEM, so acceptance is a Boolean true: `?1`,
+ * with or without parameters. `?0` is the client saying it does not accept one;
+ * an empty, repeated or malformed value is not a Boolean at all. None of those
+ * is acceptance, and a resource that treated mere presence as acceptance would
+ * hand challenges to clients that declined them.
+ *
+ * PARAMETERS ARE IGNORED, NOT REJECTED. An Item carries parameters by
+ * definition, and a future extension parameter on a field whose Boolean this
+ * code already understands must not turn understood acceptance into a refusal:
+ * that is what makes the field extensible rather than frozen at its first
+ * deployment. They are still PARSED -- trailing junk is malformed, not a
+ * parameter -- so `?1junk` is not acceptance either.
  */
 export function acceptsTxnChallenge(value: string | string[] | undefined): boolean {
-  return typeof value === "string" && value.trim() === "?1";
+  // A repeated field is a List, not an Item: not this field's type.
+  if (typeof value !== "string") return false;
+  const raw = value.trim();
+  if (raw.length < 2 || raw[0] !== "?") return false;
+  const bit = raw[1];
+  if (bit !== "0" && bit !== "1") return false;
+  if (!parametersWellFormed(raw.slice(2))) return false;
+  return bit === "1";
+}
+
+/** RFC 8941 §3.1.2 — `*( ";" *SP parameter )`, where a parameter is a key with
+ *  an optional value. The values are not interpreted; only the shape is. */
+function parametersWellFormed(rest: string): boolean {
+  if (rest === "") return true;
+  if (!rest.startsWith(";")) return false;
+  for (const segment of rest.slice(1).split(";")) {
+    const trimmed = segment.replace(/^ +/, "");
+    const eq = trimmed.indexOf("=");
+    const key = eq === -1 ? trimmed : trimmed.slice(0, eq);
+    if (!SF_PARAM_KEY.test(key)) return false;
+    if (eq !== -1 && trimmed.slice(eq + 1) === "") return false;
+  }
+  return true;
 }
 
 /** @spec txn-authorization#challenge-redemption — the RFC 8693 subject token type. */

@@ -280,7 +280,12 @@ export async function handleTransactionAuthorization(
     return;
   }
   const store = txn.store ?? workflows;
-  const params = await readParams(ctx.req);
+  const read = await readParams(ctx);
+  if (!read.ok) {
+    fail(ctx, 400, "invalid_request", read.description);
+    return;
+  }
+  const params = read.params;
 
   // The TAS authenticates the Presenting Client. `client_id` on the issued
   // token is THIS authenticated identity, never a request assertion.
@@ -979,20 +984,62 @@ async function verifyDpop(deps: TxnAuthorizationDeps, ctx: TxnCtx): Promise<stri
   }
 }
 
-/** Read a form-encoded (or JSON) request body. */
-async function readParams(req: IncomingMessage): Promise<Record<string, unknown>> {
+/** The request body this endpoint will read at all (bytes). */
+const MAX_BODY_BYTES = 64 * 1024;
+
+/**
+ * @spec txn-authorization#challenge-redemption — the parameters that decide who
+ * is asking, for what, under which credential. A repeated occurrence of any of
+ * them is a request with two answers to one question: whichever the server
+ * happens to read, some other participant (a proxy, a log, the client itself)
+ * may read the other. They are single-valued here, and a repetition is refused
+ * rather than resolved.
+ */
+const SINGLE_VALUED_PARAMS = [
+  "transaction_challenge",
+  "subject_token",
+  "subject_token_type",
+  "client_id",
+  "client_assertion",
+  "client_assertion_type",
+  "transaction_authorization_id",
+] as const;
+
+type ParamsResult =
+  | { ok: true; params: Record<string, unknown> }
+  | { ok: false; description: string };
+
+/**
+ * Read the request body as an OAuth request: `application/x-www-form-urlencoded`
+ * and nothing else. This is a token-endpoint-shaped request, and accepting a
+ * second body format would mean two parsers deciding what the same request
+ * says. The body is bounded, and the security-sensitive parameters are
+ * single-valued.
+ */
+async function readParams(ctx: TxnCtx): Promise<ParamsResult> {
+  const contentType = (ctx.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase();
+  if (contentType !== "application/x-www-form-urlencoded") {
+    return { ok: false, description: "content-type must be application/x-www-form-urlencoded" };
+  }
   const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(chunk as Buffer);
-  const text = Buffer.concat(chunks).toString("utf8");
-  if (!text) return {};
-  if (text.trimStart().startsWith("{")) {
-    try {
-      return JSON.parse(text) as Record<string, unknown>;
-    } catch {
-      return {};
+  let size = 0;
+  let oversize = false;
+  // Drain even past the cap: the request is refused, not left half-read on a
+  // connection the server then has to reset.
+  for await (const chunk of ctx.req) {
+    const buf = chunk as Buffer;
+    size += buf.length;
+    if (size > MAX_BODY_BYTES) oversize = true;
+    if (!oversize) chunks.push(buf);
+  }
+  if (oversize) return { ok: false, description: "request body is too large" };
+  const form = new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
+  for (const name of SINGLE_VALUED_PARAMS) {
+    if (form.getAll(name).length > 1) {
+      return { ok: false, description: `${name} MUST NOT appear more than once` };
     }
   }
-  return Object.fromEntries(new URLSearchParams(text));
+  return { ok: true, params: Object.fromEntries(form) };
 }
 
 /** A fresh workflow table (one per provider instance). */

@@ -372,7 +372,12 @@ async function callTransactionEndpoint(
     req: Readable.from([Buffer.from(encoded, "utf8")]) as unknown as IncomingMessage,
     res: {} as ServerResponse,
     set: () => {},
-    get: (name: string) => (name.toLowerCase() === "dpop" ? proof : ""),
+    get: (name: string) =>
+      name.toLowerCase() === "dpop"
+        ? proof
+        : name.toLowerCase() === "content-type"
+          ? "application/x-www-form-urlencoded"
+          : "",
   };
   await handleTransactionAuthorization(deps, ctx, workflows);
   return { status: ctx.status, body: ctx.body };
@@ -1429,6 +1434,73 @@ describe("fresh decision at completion (@spec txn-authorization#challenge-redemp
     expect(res.status).toBe(400);
     expect(body.error).toBe("access_denied");
     expect(body.error_description).toContain("effective Authority Set");
+  });
+});
+
+/**
+ * @spec txn-authorization#challenge-redemption — the endpoint reads an OAuth
+ * request: one body format, bounded, and no security-sensitive parameter with
+ * two answers.
+ */
+describe("request parsing at the transaction endpoint (@spec txn-authorization#challenge-redemption)", () => {
+  const post = async (body: string, contentType: string): Promise<Response> =>
+    fetch(`${ISSUER}/transaction`, {
+      method: "POST",
+      headers: {
+        "content-type": contentType,
+        dpop: await dpopProof(`${ISSUER}/transaction`, "POST"),
+      },
+      body,
+    });
+
+  it("refuses a JSON body, and anything that is not form encoding", async () => {
+    // A token-endpoint-shaped request has ONE body format; a second parser is
+    // a second opinion about what the same request says.
+    const json = await post(
+      JSON.stringify({
+        client_id: "ap-agent",
+        client_assertion: await clientAssertion(),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        transaction_authorization_id: "txa_whatever",
+      }),
+      "application/json",
+    );
+    const body = (await json.json()) as { error?: string; error_description?: string };
+    expect(json.status).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/x-www-form-urlencoded/);
+
+    const none = await post("client_id=ap-agent", "text/plain");
+    expect(none.status).toBe(400);
+    expect(((await none.json()) as { error?: string }).error).toBe("invalid_request");
+  });
+
+  it("refuses a repeated security-sensitive parameter rather than picking one", async () => {
+    const form = new URLSearchParams({
+      client_id: "ap-agent",
+      client_assertion: await clientAssertion(),
+      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    });
+    // Two answers to one question: whichever this server reads, a proxy, a log
+    // or the client itself may read the other.
+    form.append("subject_token", baseToken);
+    form.append("subject_token", "an-entirely-different-credential");
+    const res = await post(form.toString(), "application/x-www-form-urlencoded");
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/subject_token MUST NOT appear more than once/);
+  });
+
+  it("refuses a body beyond the endpoint's limit", async () => {
+    const form = new URLSearchParams({ transaction_authorization_id: "txa_x" });
+    form.append("padding", "p".repeat(70 * 1024));
+    const res = await post(form.toString(), "application/x-www-form-urlencoded");
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/too large/);
   });
 });
 

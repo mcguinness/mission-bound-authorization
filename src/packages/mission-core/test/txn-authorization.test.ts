@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { missionInvariantsEqual, readTxnMissionClaim } from "../src/index.js";
+import { acceptsTxnChallenge, missionInvariantsEqual, readTxnMissionClaim } from "../src/index.js";
 
 const INVARIANTS = {
   id: "msn_wire",
@@ -69,5 +69,37 @@ describe("the mission claim on the transaction wire (@spec mission#the-mission-c
       missionInvariantsEqual(INVARIANTS, { ...INVARIANTS, expires_at: "2027-01-01T00:00:00Z" }),
     ).toBe(false);
     expect(missionInvariantsEqual(INVARIANTS, { ...INVARIANTS, id: "msn_other" })).toBe(false);
+  });
+});
+
+describe("Accept-Txn-Challenge as an RFC 8941 Boolean Item (@spec txn-authorization#resource-challenge)", () => {
+  it("accepts a Boolean true, with or without parameters", () => {
+    expect(acceptsTxnChallenge("?1")).toBe(true);
+    expect(acceptsTxnChallenge(" ?1 ")).toBe(true);
+    // An Item carries parameters by definition. An extension parameter this
+    // code does not know must not turn understood acceptance into a refusal:
+    // that is what keeps the field extensible rather than frozen.
+    expect(acceptsTxnChallenge("?1;extension=value")).toBe(true);
+    expect(acceptsTxnChallenge("?1; extension=value; other")).toBe(true);
+    expect(acceptsTxnChallenge("?1;flag")).toBe(true);
+  });
+
+  it("does not treat a Boolean false as acceptance, parameters or not", () => {
+    expect(acceptsTxnChallenge("?0")).toBe(false);
+    expect(acceptsTxnChallenge("?0;x=1")).toBe(false);
+  });
+
+  it("does not treat a malformed value, or a repeated field, as acceptance", () => {
+    expect(acceptsTxnChallenge("1")).toBe(false);
+    expect(acceptsTxnChallenge("true")).toBe(false);
+    expect(acceptsTxnChallenge("?2")).toBe(false);
+    // Trailing junk is not a parameter.
+    expect(acceptsTxnChallenge("?1junk")).toBe(false);
+    expect(acceptsTxnChallenge("?1;=value")).toBe(false);
+    expect(acceptsTxnChallenge("?1;Bad=1")).toBe(false);
+    expect(acceptsTxnChallenge("")).toBe(false);
+    expect(acceptsTxnChallenge(undefined)).toBe(false);
+    // A repeated field is a List, not this field's type.
+    expect(acceptsTxnChallenge(["?1", "?1"])).toBe(false);
   });
 });
