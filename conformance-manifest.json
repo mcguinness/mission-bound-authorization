@@ -1890,7 +1890,7 @@
     "normative": "a resource-side Operation Profile version change during a pending workflow does not invalidate that workflow's basis: the TAS keeps recognizing the superseded version until the workflow it backs resolves"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
