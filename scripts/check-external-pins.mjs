@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 // Structural validation for notes/external-pins.json, the machine-readable
 // registry of external planning pins. This checks shape only: unique ids,
-// full-SHA commit + path + 64-hex sha256 on "established" entries, null pin
-// fields on "pending" entries, status in the enum. It does NOT verify that
+// a "kind" in the enum with its kind-appropriate required fields, full-SHA
+// commit + path + 64-hex sha256 on "established" git entries, doc + rev +
+// url + 64-hex sha256 on "established" datatracker entries, publisher +
+// edition on "established" standard entries (sha256 optional there), and
+// null kind-specific fields on "pending" entries. It does NOT verify that
 // a commit exists, that a blob lives at a path, or that a digest matches
 // live content; that independent verification happens at Ship 3 against
-// the source repositories (see the registry's own "description" field).
+// the source repositories (see the registry's own "description" field and
+// scripts/check-bundle-manifest.mjs, which also enforces that no "pending"
+// entry is consumed by a bundle build).
 //
 // Usage: node scripts/check-external-pins.mjs
 // Also imported by scripts/check-family-manifest.mjs, which calls
@@ -19,8 +24,27 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const STATUS_VALUES = new Set(["established", "pending"]);
+const KIND_VALUES = new Set(["git", "datatracker", "standard"]);
 const FULL_SHA_RE = /^[0-9a-f]{40}$/;
 const SHA256_RE = /^[0-9a-f]{64}$/;
+
+function isNonEmptyString(v) {
+  return typeof v === "string" && v.trim() !== "";
+}
+
+// Kind-specific field groups. `identityField` names what is being pinned
+// (which repo, which datatracker document, which standard) and is always
+// required, even while pending: it is the breadcrumb of what still needs
+// establishing. `pinFields` are the specifics of the pin itself; they must
+// be null while pending and are validated in kind-appropriate shape once
+// established. `sha256Required` is false only for "standard", whose
+// entries may cite a paywalled publication with no fetchable canonical
+// file to hash (disclosed via the always-required "note" field instead).
+const KIND_FIELDS = {
+  git: { identityField: "repo", pinFields: ["commit", "path", "sha256"], sha256Required: true },
+  datatracker: { identityField: "doc", pinFields: ["rev", "url", "sha256"], sha256Required: true },
+  standard: { identityField: "publisher", pinFields: ["edition", "sha256"], sha256Required: false },
+};
 
 export function validateExternalPins(rootDir) {
   const pinsPath = path.join(rootDir, "notes", "external-pins.json");
@@ -67,10 +91,6 @@ export function validateExternalPins(rootDir) {
       seenIds.add(entry.id);
     }
 
-    if (typeof entry.repo !== "string" || entry.repo.trim() === "") {
-      errors.push(`${label}: missing a non-empty string "repo"`);
-    }
-
     if (typeof entry.ref !== "string" || entry.ref.trim() === "") {
       errors.push(`${label}: missing a non-empty string "ref"`);
     }
@@ -84,26 +104,51 @@ export function validateExternalPins(rootDir) {
       return;
     }
 
+    if (!KIND_VALUES.has(entry.kind)) {
+      errors.push(`${label}: "kind" must be one of [${[...KIND_VALUES].join(", ")}], got ${JSON.stringify(entry.kind)}`);
+      return;
+    }
+
+    const { identityField, pinFields, sha256Required } = KIND_FIELDS[entry.kind];
+
+    // The identity field (repo / doc / publisher) is always required,
+    // regardless of status: it names what is being pinned even before the
+    // pin itself is established.
+    if (!isNonEmptyString(entry[identityField])) {
+      errors.push(`${label}: ${entry.kind} entry needs a non-empty "${identityField}"`);
+    }
+
     if (entry.status === "established") {
-      if (typeof entry.commit !== "string" || !FULL_SHA_RE.test(entry.commit)) {
-        errors.push(`${label}: established entry needs a full 40-hex "commit", got ${JSON.stringify(entry.commit)}`);
+      for (const field of pinFields) {
+        if (field === "sha256") continue; // handled below, kind-dependent requiredness
+        if (field === "commit") {
+          if (!FULL_SHA_RE.test(entry.commit ?? "")) {
+            errors.push(`${label}: established ${entry.kind} entry needs a full 40-hex "commit", got ${JSON.stringify(entry.commit)}`);
+          }
+          continue;
+        }
+        if (!isNonEmptyString(entry[field])) {
+          errors.push(`${label}: established ${entry.kind} entry needs a non-empty "${field}"`);
+        }
       }
-      if (typeof entry.path !== "string" || entry.path.trim() === "") {
-        errors.push(`${label}: established entry needs a non-null "path"`);
-      }
-      if (typeof entry.sha256 !== "string" || !SHA256_RE.test(entry.sha256)) {
-        errors.push(`${label}: established entry needs a 64-hex "sha256", got ${JSON.stringify(entry.sha256)}`);
+
+      if (sha256Required) {
+        if (!SHA256_RE.test(entry.sha256 ?? "")) {
+          errors.push(`${label}: established ${entry.kind} entry needs a 64-hex "sha256", got ${JSON.stringify(entry.sha256)}`);
+        }
+      } else if (entry.sha256 !== null && !SHA256_RE.test(entry.sha256)) {
+        // kind "standard": sha256 is optional (null), but if present it must
+        // be a real 64-hex digest, not a placeholder.
+        errors.push(`${label}: established ${entry.kind} entry's "sha256" must be null or a 64-hex digest, got ${JSON.stringify(entry.sha256)}`);
       }
     } else {
-      // pending
-      if (entry.commit !== null) {
-        errors.push(`${label}: pending entry must have "commit": null, got ${JSON.stringify(entry.commit)}`);
-      }
-      if (entry.path !== null) {
-        errors.push(`${label}: pending entry must have "path": null, got ${JSON.stringify(entry.path)}`);
-      }
-      if (entry.sha256 !== null) {
-        errors.push(`${label}: pending entry must have "sha256": null, got ${JSON.stringify(entry.sha256)}`);
+      // pending: every pin-specific field (including sha256) must be null,
+      // regardless of whether that kind requires sha256 once established.
+      // The identity field, checked above, stays required.
+      for (const field of pinFields) {
+        if (entry[field] !== null) {
+          errors.push(`${label}: pending ${entry.kind} entry must have "${field}": null, got ${JSON.stringify(entry[field])}`);
+        }
       }
     }
   });

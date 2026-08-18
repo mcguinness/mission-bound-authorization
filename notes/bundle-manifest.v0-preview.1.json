@@ -1,6 +1,46 @@
 {
-  "description": "This is a partial registry of established planning pins, not a complete inventory of every external normative dependency the floor drafts carry. Every entry carries a \"kind\" (git, datatracker, or standard) with kind-appropriate required fields: git needs repo, commit (full 40-hex), path, and sha256; datatracker needs doc, rev, url, and sha256; standard needs publisher and edition, with sha256 optional (paywalled standards carry no fetchable canonical file to hash, disclosed in the entry's note). As of Ship 3, every entry in this registry is established; none is pending. Live-source verification (object type, path at commit or revision, content digest) against each entry's actual repository, datatracker revision, or published standard happens once, by hand, when a pin is established; it is disclosed per entry in that entry's note. A bundle manifest (notes/bundle-manifest.*.json) copies established entries here verbatim into its external_pins, and scripts/check-bundle-manifest.mjs enforces, on every run, that each copy is identical to its registry entry and that the build REJECTS if any registry entry a bundle consumes has status \"pending\". Completeness of this registry against the selected profiles' normative front matter is checked at Ship 3, not here.",
-  "pins": [
+  "bundle_id": "oauth-mission-baseline-bundle",
+  "version": "v0-preview.1",
+  "source_repository_commit": "eb3a8f234a6367d388957f1be4ac73b0cc78fb13",
+  "source_repository_commit_note": "Full SHA of the branch's base commit at Ship 3 (the commit feat/ship3-preview branched from, 2026-08-18), covering every in-repository document as one coherent snapshot. Known caveat: a pull_request CI build sees the platform's ephemeral merge commit SHA for the head ref, not this base commit; that ephemeral SHA is never the pin recorded here, and re-deriving this field from a merge-commit checkout would silently drift the snapshot.",
+  "documents": [
+    {
+      "slug": "draft-mcguinness-mission-architecture",
+      "file": "draft-mcguinness-mission-architecture.md",
+      "last_modified_commit": "122586a334069ba4a934a9b988b7bb1b0ed7926a"
+    },
+    {
+      "slug": "draft-mcguinness-mission-substrate",
+      "file": "draft-mcguinness-mission-substrate.md",
+      "last_modified_commit": "77eb14b40b6a203bcdc4ea6bab270ebbbc1c767f"
+    },
+    {
+      "slug": "draft-mcguinness-oauth-mission",
+      "file": "draft-mcguinness-oauth-mission.md",
+      "last_modified_commit": "7d97a7b38a844163db1eaa6bf6e01e002554e487"
+    },
+    {
+      "slug": "draft-mcguinness-oauth-mission-status",
+      "file": "draft-mcguinness-oauth-mission-status.md",
+      "last_modified_commit": "2399f170964924d80f8ceaad81d41892411d4465"
+    },
+    {
+      "slug": "draft-mcguinness-mission-runtime",
+      "file": "draft-mcguinness-mission-runtime.md",
+      "last_modified_commit": "122586a334069ba4a934a9b988b7bb1b0ed7926a"
+    },
+    {
+      "slug": "draft-mcguinness-mission-runtime-evidence",
+      "file": "draft-mcguinness-mission-runtime-evidence.md",
+      "last_modified_commit": "3694449a787e0be021803eb82c5ee6eaae3f7ddd"
+    },
+    {
+      "slug": "draft-mcguinness-mission-authzen",
+      "file": "draft-mcguinness-mission-authzen.md",
+      "last_modified_commit": "f5977e02bfb4bf8af22d2114ed1e16f520672b07"
+    }
+  ],
+  "external_pins": [
     {
       "id": "AAUTH",
       "kind": "git",
@@ -76,6 +116,19 @@
       "ref": "ISO 4217:2015, established at Ship 3 (2026-08-18)",
       "status": "established",
       "note": "draft-mcguinness-oauth-mission cites ISO4217 as a normative reference with front-matter seriesinfo `ISO: \"4217:2015\"`; this entry pins that same edition. No sha256: ISO 4217:2015 is a paywalled standard with no freely republishable canonical file, so there is no text this registry can legally fetch and hash; the publisher and edition identifier are the pin, and this note is the disclosed reason sha256 is absent. scripts/check-external-pins.mjs accepts a null sha256 only for kind \"standard\"; git and datatracker entries must always carry one."
+    }
+  ],
+  "artifact_digests": {
+    "notes/oauth-mission-baseline-bundle-preview.md": "d77db284fb1435641ab3f7ae41d743f57c60b6a8641804331c0ba300123620cb"
+  },
+  "disabled_capabilities": [
+    {
+      "capability": "cross-domain",
+      "reason": "Cross-Domain is a conditional normative dependency the baseline disables, for both the Issuance and Runtime-Enforced levels (profile matrix, notes/adoption-plan.md)."
+    },
+    {
+      "capability": "rar-free-mode",
+      "reason": "The RAR-free mode is absent by design, not merely disabled: it is protocol design work, not a packaging decision this bundle makes, and it waits on #220 landing normatively before it could be a mode this bundle selects."
     }
   ]
 }
