@@ -22,6 +22,7 @@ import {
   sourceDigestOf,
   type TokenFacts,
   TransactionEngine,
+  type TxnConsumptionStore,
 } from "../src/index.js";
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
@@ -1038,11 +1039,12 @@ d("M5 transaction-assurance tier", () => {
     const unavailable = {
       pending: stores.pending,
       consumption: {
-        consume(): boolean {
+        consume(): never {
           throw new Error("consumption store unavailable");
         },
-        consumed(): boolean {
-          return false;
+        commit(): void {},
+        get(): undefined {
+          return undefined;
         },
       },
     };
@@ -1078,6 +1080,115 @@ d("M5 transaction-assurance tier", () => {
   });
 });
 
+describe("the crash window between consumption and the effect (@spec txn-authorization#offline-verification)", () => {
+  /** A challenged remittance, its txn-token, and the operation key the commit
+   *  point will compute for it. */
+  async function challenged(): Promise<{
+    server: McpPaymentsServer;
+    connectors: Connectors;
+    evidence: EvidenceStore;
+    stores: { consumption: TxnConsumptionStore };
+    txnToken: string;
+    txn: string;
+    opKey: string;
+  }> {
+    const { openStore } = await import("@mission/store");
+    const { openTxnStores, operationKey } = await import("../src/index.js");
+    const rsTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    const stores = openTxnStores({ db: openStore("") });
+    const { server, connectors, evidence, payments } = build({
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+      txnStores: stores,
+    });
+    const challengeRes = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      ACCEPT_CHALLENGE,
+    );
+    const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
+    const digest = digestFor(payments);
+    return {
+      server,
+      connectors,
+      evidence,
+      stores,
+      txn,
+      opKey: operationKey("msn_m5", "payments:remittance.send", digest),
+      txnToken: await signTxnToken({
+        key: asTxn.privateKey,
+        txn,
+        cnfJkt: TOKEN.cnfJkt,
+        parameterDigest: digest,
+        authorizationDetails: remittanceEntry(),
+      }),
+    };
+  }
+
+  it("resumes its own interrupted request instead of reporting a false duplicate", async () => {
+    const { server, connectors, stores, txnToken, txn, opKey } = await challenged();
+
+    // The crash: the single use was taken and the effect landed, but the
+    // process died before the consumption row could record that. The row says
+    // `consumed`, which is indistinguishable from "the effect never happened"
+    // to anything that only knows a boolean.
+    expect(stores.consumption.consume(CANONICAL_RESOURCE, txn, opKey).first).toBe(true);
+    connectors.sendEmail({
+      opKey,
+      invoiceId: "inv-1",
+      to: "acme@vendor.example",
+      permitId: "permit-crashed",
+      missionId: "msn_m5",
+    });
+
+    // The same operation is presented again. It is THIS request resuming, not a
+    // replay: refusing it would strand an operation whose effect exists, and
+    // re-running it would be a second effect.
+    const resumed = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      await credentialFor(server, txnToken),
+    );
+    expect(resumed.ok, JSON.stringify(resumed)).toBe(true);
+    // The connector's own idempotency reports it: exactly one effect exists.
+    expect(resumed.deduped).toBe(true);
+    // ...and the operation is now durably settled, so a later presentation is a
+    // plain duplicate.
+    expect(stores.consumption.get(CANONICAL_RESOURCE, txn)?.state).toBe("effect_committed");
+    const again = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      await credentialFor(server, txnToken),
+    );
+    expect(again.ok).toBe(false);
+    expect(again.refusal_reason).toBe("duplicate_suppressed");
+  });
+
+  it("refuses a DIFFERENT operation presented under an already-consumed txn", async () => {
+    const { server, connectors, stores, txnToken, txn } = await challenged();
+    // Someone else's operation holds the single use for this txn.
+    expect(stores.consumption.consume(CANONICAL_RESOURCE, txn, "op:msn_m5:some:other:sha-256:x").first).toBe(
+      true,
+    );
+
+    const res = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      await credentialFor(server, txnToken),
+    );
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("duplicate_suppressed");
+    expect(connectors.ledgerEntries("msn_m5")).toHaveLength(0);
+    // The stored consumption is untouched: the refusal does not adopt it.
+    expect(stores.consumption.get(CANONICAL_RESOURCE, txn)?.state).toBe("consumed");
+  });
+});
+
 describe("txn consumption domain (@spec txn-authorization#offline-verification)", () => {
   it("admits the first use of a resource-scoped txn exactly once across replicas sharing the domain", async () => {
     const { openStore } = await import("@mission/store");
@@ -1085,18 +1196,28 @@ describe("txn consumption domain (@spec txn-authorization#offline-verification)"
     // Two replicas' handles over ONE database: consumption must be
     // linearizable across every replica that can execute the same operation.
     const shared = openStore("");
-    const a = openTxnStores({ db: shared, instanceEpoch: "replica-a" });
-    const b = openTxnStores({ db: shared, instanceEpoch: "replica-b" });
+    const a = openTxnStores({ db: shared });
+    const b = openTxnStores({ db: shared });
 
-    expect(a.consumption.consume(CANONICAL_RESOURCE, "txn_shared")).toBe(true);
-    expect(b.consumption.consume(CANONICAL_RESOURCE, "txn_shared")).toBe(false);
-    expect(a.consumption.consume(CANONICAL_RESOURCE, "txn_shared")).toBe(false);
-    expect(b.consumption.consumed(CANONICAL_RESOURCE, "txn_shared")).toBe(true);
+    const OP = "op:msn_m5:payments:remittance.send:sha-256:d";
+    expect(a.consumption.consume(CANONICAL_RESOURCE, "txn_shared", OP).first).toBe(true);
+    const atOther = b.consumption.consume(CANONICAL_RESOURCE, "txn_shared", "op:other");
+    expect(atOther.first).toBe(false);
+    // The stored record travels with the refusal, so the caller can tell a
+    // replay from a resumption of its own interrupted request.
+    expect(atOther.first === false && atOther.record.opKey).toBe(OP);
+    expect(atOther.first === false && atOther.record.state).toBe("consumed");
+    expect(b.consumption.get(CANONICAL_RESOURCE, "txn_shared")?.state).toBe("consumed");
+
+    // The effect's own state is durable, on the SAME row every replica shares.
+    a.consumption.commit(CANONICAL_RESOURCE, "txn_shared");
+    expect(b.consumption.get(CANONICAL_RESOURCE, "txn_shared")?.state).toBe("effect_committed");
+    expect(b.consumption.get(CANONICAL_RESOURCE, "txn_shared")?.committedAt).toBeGreaterThan(0);
 
     // `txn` is scoped to the resource that challenged for it: the same value at
     // a different resource is a different transaction.
-    expect(b.consumption.consume("https://other.test/mcp", "txn_shared")).toBe(true);
-    expect(a.consumption.consumed("https://other.test/mcp", "txn_shared")).toBe(true);
-    expect(a.consumption.consumed(CANONICAL_RESOURCE, "txn_never_seen")).toBe(false);
+    expect(b.consumption.consume("https://other.test/mcp", "txn_shared", OP).first).toBe(true);
+    expect(a.consumption.get("https://other.test/mcp", "txn_shared")?.state).toBe("consumed");
+    expect(a.consumption.get(CANONICAL_RESOURCE, "txn_never_seen")).toBeUndefined();
   });
 });

@@ -1133,6 +1133,87 @@ describe("approval bound to the whole transaction (@spec txn-authorization#chall
  * subjects are already local), so the profile is exercised against the endpoint
  * directly, with a `subject_token` shaped the way the cross-org grant mints one.
  */
+/**
+ * @spec txn-authorization#failure-semantics, #two-phase-expiry — a stored
+ * authorization result is still subject to expiry. The terminal states are
+ * ORDERED: expiry is decided before the stored token is served, so a client is
+ * never handed a dead credential inside a 200.
+ */
+describe("terminal result ordering (@spec txn-authorization#failure-semantics)", () => {
+  it("reports expired_token rather than serving a stored token that has expired", async () => {
+    const rsKeys = await generateKeyPair("ES256", { extractable: true });
+    const txnKeys = await generateKeyPair("ES256", { extractable: true });
+    const rsPub = { ...(await exportJWK(rsKeys.publicKey)), kid: "expiry-rs", alg: "ES256" } as JWK;
+    const asJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: JWK[] };
+
+    // A movable clock, so a token can be watched past its own exp.
+    let clockMs = Date.now();
+    const TOKEN_LIFETIME_S = 60;
+    const deps = {
+      issuer: ISSUER,
+      kernel: as.kernel,
+      clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
+      publicJwks: asJwks,
+      dpopProofReplay: newDpopProofReplay(),
+      subjectTokenLive: async () => true,
+      now: () => new Date(clockMs),
+      txn: {
+        challengeIssuers: new Map([
+          [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
+        ]) as ChallengeIssuers,
+        ars,
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        tokenKey: txnKeys.privateKey,
+        tokenKid: "expiry-txn",
+        workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
+        maxTokenLifetimeSeconds: TOKEN_LIFETIME_S,
+        freshDecision: async () => ({ decision: "permit" as const }),
+      },
+    };
+    const workflows = newTxnWorkflows();
+
+    const txn = "txn_stored_expiry";
+    const challenge = await signChallenge(
+      {
+        txn,
+        authorization_details: (as.kernel.get(missionId) as { authority_set: AuthorityEntry[] }).authority_set
+          .filter((e) => e.actions.includes("payments:remittance.send"))
+          .map((e) => ({ ...e, actions: ["payments:remittance.send"] })),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: `sha-256:${txn}`,
+      },
+      rsKeys.privateKey,
+      "expiry-rs",
+    );
+    const admitted = await callTransactionEndpoint(deps, workflows, {
+      transaction_challenge: challenge,
+      subject_token: baseToken,
+      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    });
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    const handle = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+
+    const issued = await callTransactionEndpoint(deps, workflows, {
+      transaction_authorization_id: handle,
+    });
+    expect(issued.status, JSON.stringify(issued.body)).toBe(200);
+    // The REAL remaining lifetime, unclamped.
+    expect((issued.body as { expires_in: number }).expires_in).toBe(TOKEN_LIFETIME_S);
+
+    // The stored result is still there; its lifetime is not.
+    clockMs += (TOKEN_LIFETIME_S + 5) * 1000;
+    const stale = await callTransactionEndpoint(deps, workflows, {
+      transaction_authorization_id: handle,
+    });
+    expect(stale.status).toBe(400);
+    expect((stale.body as { error: string }).error).toBe("expired_token");
+    expect((stale.body as { access_token?: string }).access_token).toBeUndefined();
+  });
+});
+
 describe("origin principal vs the local subject (@spec txn-authorization#transaction-token)", () => {
   const ORIGIN = { iss: "https://partner.example", sub: "origin-alice" };
   const LOCAL_SUB = "alice-local";

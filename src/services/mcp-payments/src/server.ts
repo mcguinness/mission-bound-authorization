@@ -31,7 +31,12 @@ import {
   type TxnCredential,
 } from "./pep.js";
 import { type DpopPresentation, verifyDpopProof } from "./dpop.js";
-import { openTxnStores, type TxnConsumptionStore, type TxnPendingStore } from "./txn-store.js";
+import {
+  openTxnStores,
+  type TxnConsumeOutcome,
+  type TxnConsumptionStore,
+  type TxnPendingStore,
+} from "./txn-store.js";
 import type { PaymentsStore } from "./payments-store.js";
 import type { Connectors } from "./connectors.js";
 import type { EvidenceStore } from "./evidence.js";
@@ -672,16 +677,27 @@ export class McpPaymentsServer {
     // refused as duplicate_suppressed and never executed as a new attempt. If
     // the consumption store is unavailable the resource fails CLOSED.
     if (consumedTxn !== undefined) {
-      let firstUse: boolean;
+      let outcome: TxnConsumeOutcome;
       try {
-        firstUse = this.txnConsumption.consume(CANONICAL_RESOURCE, consumedTxn);
+        outcome = this.txnConsumption.consume(CANONICAL_RESOURCE, consumedTxn, opKey);
       } catch {
         tx.engine.advance(opKey, "abandoned");
         return { ok: false, refusal_reason: "consumption_unavailable" };
       }
-      if (!firstUse) {
-        tx.engine.advance(opKey, "abandoned");
-        return { ok: false, refusal_reason: "duplicate_suppressed" };
+      if (!outcome.first) {
+        const prior = outcome.record;
+        // A DIFFERENT operation under an already-consumed txn, or a txn whose
+        // effect already committed, is a replay: refused, never executed as a
+        // new attempt.
+        if (prior.state === "effect_committed" || prior.opKey !== opKey) {
+          tx.engine.advance(opKey, "abandoned");
+          return { ok: false, refusal_reason: "duplicate_suppressed" };
+        }
+        // Otherwise this is THIS operation, consumed but never committed: a
+        // crash landed in the window between taking the single use and the
+        // effect. Refusing it as a duplicate would strand an operation that
+        // never happened. It RESUMES instead -- the connector commit below is
+        // idempotent by `op_key`, so at most one effect exists either way.
       }
     }
 
@@ -706,6 +722,17 @@ export class McpPaymentsServer {
             missionId: token.mission.id,
           });
     tx.engine.advance(opKey, "connector_committed");
+    // The effect is durable, so the consumption row says so. A failure to write
+    // it leaves the row at `consumed`, which is exactly the resumable state: a
+    // later presentation of the same txn under the same operation re-runs the
+    // idempotent commit and settles it, and no second effect can exist.
+    if (consumedTxn !== undefined) {
+      try {
+        this.txnConsumption.commit(CANONICAL_RESOURCE, consumedTxn);
+      } catch {
+        /* self-healing on the resume path above */
+      }
+    }
 
     // Execution Evidence, then reconciliation state.
     tx.evidence.record({
@@ -773,11 +800,14 @@ export class McpPaymentsServer {
       return { ok: false, refusal_reason: "txn_parameter_mismatch" };
     }
 
-    // An already-consumed txn is a replay whatever token jti carries it. The
-    // authoritative, atomic check is at the commit point; this read only lets
-    // the resource answer with the right reason instead of a later one.
+    // A txn whose EFFECT already committed is a replay whatever token jti
+    // carries it. A txn merely `consumed` is not decidable here: it may be this
+    // very request resuming after a crash between consumption and the effect,
+    // and only the commit point holds both operation keys. The authoritative,
+    // atomic decision is taken there; this read only lets the resource answer
+    // the settled case with the right reason instead of a later one.
     try {
-      if (this.txnConsumption.consumed(CANONICAL_RESOURCE, credential.txn)) {
+      if (this.txnConsumption.get(CANONICAL_RESOURCE, credential.txn)?.state === "effect_committed") {
         return { ok: false, refusal_reason: "duplicate_suppressed" };
       }
     } catch {

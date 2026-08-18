@@ -591,15 +591,20 @@ async function poll(
     return;
   }
   if (wf.state === "issued" && wf.issuedToken) {
+    // @spec txn-authorization#two-phase-expiry, #failure-semantics — EXPIRY IS
+    // CHECKED BEFORE THE STORED RESULT IS SERVED. A stored token past its own
+    // `exp`, or one held by a workflow past its lifetime, is not an
+    // authorization result any more: serving it would hand the client a dead
+    // credential as a success and hide the terminal state behind a 200.
+    const servedAtS = Math.floor(deps.now().getTime() / 1000);
+    const remaining = (wf.issuedExpS ?? servedAtS) - servedAtS;
+    if (remaining <= 0 || servedAtS >= wf.expiresAtS) {
+      fail(ctx, 400, "expired_token");
+      return;
+    }
     // At most one authorization result per workflow: repeated polling after a
     // decision returns the SAME token (same jti), never a second issuance.
-    const servedAtS = Math.floor(deps.now().getTime() / 1000);
-    respondWithToken(
-      ctx,
-      wf.issuedToken,
-      (wf.issuedExpS ?? servedAtS) - servedAtS,
-      wf.challenge.authorization_details,
-    );
+    respondWithToken(ctx, wf.issuedToken, remaining, wf.challenge.authorization_details);
     return;
   }
   // The completion checks, run as ONE pass. They run TWICE: once before the
@@ -874,7 +879,10 @@ function respondWithToken(
   ctx.body = {
     access_token: accessToken,
     token_type: "DPoP",
-    expires_in: Math.max(1, expiresIn),
+    // The REAL remaining lifetime. A floor of 1 would report a second of life
+    // on a credential with none, so both callers establish `expiresIn > 0`
+    // before reaching here and a workflow with none returns `expired_token`.
+    expires_in: expiresIn,
     authorization_details: authorizationDetails,
   };
   ctx.set("cache-control", "no-store");

@@ -13,7 +13,7 @@
  * {@link TxnConsumptionStore} must be linearizable across all of them).
  */
 
-import { openStore, redeemOnce, redemptionSchema, type Database, type StoreOptions } from "@mission/store";
+import { openStore, type Database, type StoreOptions } from "@mission/store";
 import type { JsonValue, TxnMissionClaim } from "@mission/core";
 
 const SCHEMA = `
@@ -30,7 +30,15 @@ CREATE TABLE IF NOT EXISTS txn_pending_operations (
   issued_at INTEGER NOT NULL,
   PRIMARY KEY (resource, txn)
 ) STRICT;
-${redemptionSchema("txn_consumption")}
+CREATE TABLE IF NOT EXISTS txn_consumption (
+  resource TEXT NOT NULL,
+  txn TEXT NOT NULL,
+  op_key TEXT NOT NULL,
+  state TEXT NOT NULL,
+  consumed_at INTEGER NOT NULL,
+  committed_at INTEGER,
+  PRIMARY KEY (resource, txn)
+) STRICT;
 `;
 
 /** One challenged operation the resource is holding open, keyed by `txn`. */
@@ -100,41 +108,102 @@ class SqliteTxnPendingStore implements TxnPendingStore {
 }
 
 /**
+ * @spec txn-authorization#offline-verification — where a consumed `txn` stands
+ * relative to the IRREVERSIBLE EFFECT it authorized.
+ *
+ * A boolean "consumed" cannot tell the two apart, and the difference is the
+ * whole question a crash asks: `consumed` means the resource took the single
+ * use and the effect may or may not have landed; `effect_committed` means it
+ * landed. Only the second is a completed operation, and only the first can be
+ * safely resumed.
+ */
+export type TxnConsumptionState = "consumed" | "effect_committed";
+
+/** The consumption record for one (resource, txn). */
+export interface TxnConsumptionRecord {
+  resource: string;
+  txn: string;
+  /** The operation key the consuming request was executing. */
+  opKey: string;
+  state: TxnConsumptionState;
+  /** Set when the effect committed. */
+  committedAt?: number;
+}
+
+/** Taking the single use: `first` when THIS call took it. */
+export type TxnConsumeOutcome = { first: true } | { first: false; record: TxnConsumptionRecord };
+
+/**
  * @spec txn-authorization#offline-verification — atomic first use of the
- * resource-scoped `txn` in the consumption domain. Consumption MUST be
- * LINEARIZABLE across every replica capable of executing the same operation,
- * which is why this is a single-row insert in a database replicas share, not
- * per-process memory.
+ * resource-scoped `txn` in the consumption domain, and the DURABLE state of the
+ * effect it authorized. Consumption MUST be LINEARIZABLE across every replica
+ * capable of executing the same operation, which is why this is a single-row
+ * insert in a database replicas share, not per-process memory. The state lives
+ * on the SAME row, so the cross-replica property covers it unchanged.
  */
 export interface TxnConsumptionStore {
-  /** True exactly once per (resource, txn); false on every later attempt. */
-  consume(resource: string, txn: string): boolean;
-  /** Whether the (resource, txn) has already been consumed. */
-  consumed(resource: string, txn: string): boolean;
+  /**
+   * Take the single use for (resource, txn), recording the operation key of the
+   * request taking it. Reports `first: true` exactly once; every later attempt
+   * gets the STORED record, so the caller can tell a replay from a resumption
+   * of its own interrupted request.
+   */
+  consume(resource: string, txn: string, opKey: string): TxnConsumeOutcome;
+  /** Record that the irreversible effect committed. */
+  commit(resource: string, txn: string): void;
+  /** The consumption record, if this (resource, txn) was ever consumed. */
+  get(resource: string, txn: string): TxnConsumptionRecord | undefined;
+}
+
+interface ConsumptionRow {
+  resource: string;
+  txn: string;
+  op_key: string;
+  state: TxnConsumptionState;
+  committed_at: number | null;
 }
 
 class SqliteTxnConsumptionStore implements TxnConsumptionStore {
-  constructor(
-    readonly db: Database,
-    private readonly epoch: string,
-  ) {
+  constructor(readonly db: Database) {
     db.exec(SCHEMA);
   }
 
-  consume(resource: string, txn: string): boolean {
-    return redeemOnce(this.db, "txn_consumption", key(resource, txn), this.epoch);
+  consume(resource: string, txn: string, opKey: string): TxnConsumeOutcome {
+    const took =
+      this.db
+        .prepare(
+          `INSERT INTO txn_consumption (resource, txn, op_key, state, consumed_at, committed_at)
+           VALUES (?, ?, ?, 'consumed', unixepoch(), NULL)
+           ON CONFLICT(resource, txn) DO NOTHING`,
+        )
+        .run(resource, txn, opKey).changes === 1;
+    if (took) return { first: true };
+    const record = this.get(resource, txn);
+    if (!record) throw new Error("txn consumption conflicted without an existing row");
+    return { first: false, record };
   }
 
-  consumed(resource: string, txn: string): boolean {
-    return (
-      this.db.prepare("SELECT 1 FROM txn_consumption WHERE key = ?").get(key(resource, txn)) !== undefined
-    );
+  commit(resource: string, txn: string): void {
+    this.db
+      .prepare(
+        "UPDATE txn_consumption SET state = 'effect_committed', committed_at = unixepoch() WHERE resource = ? AND txn = ?",
+      )
+      .run(resource, txn);
   }
-}
 
-/** `txn` is scoped to the resource that issued the challenge for it. */
-function key(resource: string, txn: string): string {
-  return `${resource}|${txn}`;
+  get(resource: string, txn: string): TxnConsumptionRecord | undefined {
+    const row = this.db
+      .prepare("SELECT resource, txn, op_key, state, committed_at FROM txn_consumption WHERE resource = ? AND txn = ?")
+      .get(resource, txn) as ConsumptionRow | undefined;
+    if (!row) return undefined;
+    return {
+      resource: row.resource,
+      txn: row.txn,
+      opKey: row.op_key,
+      state: row.state,
+      ...(row.committed_at !== null ? { committedAt: row.committed_at } : {}),
+    };
+  }
 }
 
 /**
@@ -144,13 +213,13 @@ function key(resource: string, txn: string): string {
  * default is this replica's own in-memory database (D27).
  */
 export function openTxnStores(
-  opts: StoreOptions & { db?: Database; instanceEpoch?: string } = {},
+  opts: StoreOptions & { db?: Database } = {},
 ): { pending: TxnPendingStore; consumption: TxnConsumptionStore } {
-  const { db, instanceEpoch, ...storeOptions } = opts;
+  const { db, ...storeOptions } = opts;
   const database = db ?? openStore(SCHEMA, storeOptions);
   return {
     pending: new SqliteTxnPendingStore(database),
-    consumption: new SqliteTxnConsumptionStore(database, instanceEpoch ?? "default"),
+    consumption: new SqliteTxnConsumptionStore(database),
   };
 }
 

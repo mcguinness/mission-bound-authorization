@@ -79,6 +79,9 @@ export {
   openTxnPendingStore,
   openTxnStores,
   type PendingOperation,
+  type TxnConsumeOutcome,
+  type TxnConsumptionRecord,
+  type TxnConsumptionState,
   type TxnConsumptionStore,
   type TxnPendingStore,
 } from "./txn-store.js";
