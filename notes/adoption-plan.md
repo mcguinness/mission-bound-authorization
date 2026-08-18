@@ -1,6 +1,7 @@
-# Mission Adoption Plan (v3, plan of record)
+# Mission Adoption Plan (v3.1, plan of record)
 
-Status: plan of record, 2026-08-18, after two author review rounds. Dispositions: execution
+Status: plan of record, 2026-08-18, after two author review rounds plus the verb-taxonomy
+preservation ruling. Dispositions: execution
 items 1, 2, 3, 4, and 10 approved; items 5 and 9 specified here and hold-lifted on the
 author's confirmation; item 6 expanded; item 7 held on 6; item 8 deferred by ruling.
 Refs #220, #238, #253.
@@ -43,6 +44,13 @@ are the remedy; consolidation is not (see the final section).
   customization, state-gated refresh, extended introspection. Even full PAR support does not
   solve the immutable-IdP estate; the MAS entry ramp remains that answer.
 - **Conformance disclosure is bundle-level** (see the baseline section's gate below).
+- **The verb taxonomy is preserved as the family's semantic signature.** The verb spine
+  (propose; approve and record; govern; contain; enforce each action; run and wind down;
+  delegate; dispatch; project; continue; prove; analyze) is the family's unique conceptual
+  view, carried by the README architecture diagram, the architecture document's own spine,
+  and the catalog's group-keyed sections, which are the spine's noun form. Zones do not
+  replace it. Zones answer "what do I adopt, and when"; verbs answer "what does this document
+  do in the Mission's life". Both views stay, explicitly named as two axes over one catalog.
 
 ## Zones and tracks
 
@@ -55,22 +63,30 @@ conformance classes:
 | **Compose** | By binding; Advanced capabilities; Security guide | authority-server, issuance-grant, aauth cluster (bindings); the 11 advanced extensions, cross-domain among them as the floor's conditional dependency; security-model (guide) |
 | **Lab** | Experimental profiles; Sketches | the experimental profiles (containment and metering flagged as floor-referenced); uma, aam, gnap (sketches) |
 
+**Zones are an overlay, never a regrouping.** The README's catalog keeps its group-keyed
+sections, which are the verb spine's noun form; nothing is fragmented or re-headed. Zones
+land as a manifest-derived **adoption map**: a compact table near the top of the README (zone,
+track, documents, one-line trigger) carrying the five-minute path, with each entry linking
+into the verb-organized catalog below. This also dissolves what the executability review
+called the regrouping's real cost (one group section spans four zones; under the overlay
+design that is a feature of having two axes, not a fragmentation problem).
+
 Placement is manifest-derived and validator-enforced via a required `presentation_zone`
 field. A deterministic mapping from `adoption_rung` is disproven by this plan's own
 placements: substrate shares the By-binding rung with four documents that stay in Compose,
-and architecture and security-model share outside-ordering but land in different zones. The
-validator gains a per-zone heading-placement check (new logic; today it checks whole-section
-containment only), and the real cost of the regrouping is the catalog itself: the current
-subsections are group-keyed, and one of them (Lifecycle) spans four zones, so zone-keying
-fragments those sections rather than relabeling them. The two existing validator constraints
-still hold (every slug in the catalog subtree; all 39 bolded nicknames in the adoption-order
-section). Tracks are validated too, not just zones: the track is derived from
-`presentation_zone`, `adoption_rung`, and `maturity` plus the two intentional special cases
-(architecture and substrate), and the validator checks both the zone heading and the track
-heading; if the derivation accumulates more exceptions, an explicit `presentation_track`
-field replaces it. Three fields are orthogonal by convention: `maturity` describes
-specification stability, `maintenance` describes repository responsiveness,
-`presentation_zone` describes reader placement; none implies either of the others.
+and architecture and security-model share outside-ordering but land in different zones.
+Validation is table-membership, simpler than heading placement: the validator checks that
+the adoption-map table lists every document exactly once under the zone and track the
+manifest declares. Tracks are validated too: the track is derived from `presentation_zone`,
+`adoption_rung`, and `maturity` plus the two intentional special cases (architecture and
+substrate); if the derivation accumulates more exceptions, an explicit `presentation_track`
+field replaces it. The two existing validator constraints still hold (every slug in the
+catalog subtree; all 39 bolded nicknames in the adoption-order section). The execution PR
+also adds a **Verb** column to the adoption map, derived from the manifest's existing
+`group` field, so the two axes stay visibly joined per document. Four fields are orthogonal
+by convention: `maturity` describes specification stability, `maintenance` describes
+repository responsiveness, `presentation_zone` describes adoption placement, and `group`
+describes the verb-spine role; none implies any of the others.
 
 ### Per-document pull-triggers
 
@@ -242,7 +258,7 @@ into the Mission AAuth binding stays rejected (it would strand the bare-AAuth au
 |---|---|---|
 | 1 | Rename the bundle and zone/track vocabulary (incl. the OAuth Implementation Floor track name) | Approved |
 | 2 | Substrate into the OAuth Implementation Floor; define the normative/conditional dependency closure | Approved |
-| 3 | README regrouping plus zone-placement validation (required `presentation_zone`; tracks validated as well as zones; the group-keyed catalog sections fragment across zones, which is the real cost) | Approved; one PR with 1-2, 9, 10 |
+| 3 | README adoption-map overlay plus zone/track validation (required `presentation_zone`; table-membership check; Verb column from `group`; the group-keyed verb-spine catalog sections stay untouched) | Approved; one PR with 1-2, 9, 10 |
 | 4 | Hardened `latest` reader editions: author the edition-build target (none exists today); explicit `make reader-editions` step on PR and push; edition job builds every member from source | Approved; needs the build target |
 | 5 | Machine-readable versioned bundle manifest (single snapshot; establish the Obligations pin) and the dedicated immutable publish path with refuse-overwrite, serialized-publication, and verify-against-manifest rules | Hold lifted on confirming this plan's snapshot and publisher rules; after 4 |
 | 6 | Inventory all six floor documents, substrate included, and meet the coverage threshold (with #238's ledger discipline) | Prerequisite for 7 |
@@ -262,5 +278,9 @@ decision) and was verified by independent fidelity and executability passes. v3 
 author's second review (single-snapshot pinning and publisher immutability rules; the
 six-document conformance gate with a coverage threshold; the explicit PR edition-build step;
 track validation and the OAuth Implementation Floor rename; the resolved freeze gate; retired
-tier numbering; concrete out-of-edition navigation; the orthogonality statement). Where this
-document and any earlier version disagree, this document governs.
+tier numbering; concrete out-of-edition navigation; the orthogonality statement). v3.1
+applied the verb-taxonomy preservation ruling: the verb spine is the family's semantic
+signature and is not replaced; zones become a manifest-validated adoption-map overlay, the
+catalog's group-keyed (verb-spine) sections stay untouched, and the adoption map carries a
+Verb column so the two axes stay joined. Where this document and any earlier version
+disagree, this document governs.
