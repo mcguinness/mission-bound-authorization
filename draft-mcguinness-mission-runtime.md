@@ -1760,6 +1760,43 @@ class, adopted absent a documented, consequence-specific analysis:
 A deployment justifies any looser value for a high-consequence class
 in its Enforcement Scope Statement.
 
+For a Mission carrying a nonzero containment overlay
+({{I-D.draft-mcguinness-oauth-mission-containment}}), the RECOMMENDED
+posture for a consequential read whose authorizing entry or action
+class intersects the overlay tightens to a containment-aware state
+source, for the remainder of that Mission: the overlay never clears
+on the same Mission, and restoration is a successor Mission's own
+approval ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
+"Restoration Through Expansion"). A deployment adopting this
+tightening MUST name a containment-aware state source, not merely an
+active one: a contained Mission stays `active`, so a Mission Status
+List bit does not move
+({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
+"Propagation"). A containment-aware source is full Status or
+introspection carrying `containment_version`, Mission Lifecycle
+Signals carrying the overlay change, or a fresh state-gated
+derivation that re-materializes the narrowed Authority Set
+({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
+"Visibility").
+
+A deployment MAY instead tighten on any nonzero overlay regardless of
+class. That is a defensible conservative default; its cost is
+incident-time availability load on reads the overlay does not touch,
+since every consequential read then depends on state-source
+availability during the incident that triggered containment. The
+under-containment staleness bound for an affected class is declared
+in its Enforcement Scope Statement alongside the ordinary bound
+({{runtime-conformance}}); this posture adds no separate value, and
+the bound carries its latency consequence like any other.
+
+The tightening narrows the post-taint window for the classes and
+deployments that adopt a containment-aware source; it does not close
+the Baseline residual
+({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
+"Containment Properties"). A consumer bounded by token lifetime
+alone, or a class this tightening does not reach, still runs to its
+existing bound.
+
 ## Materialized Policy View {#policy-view}
 
 A PDP evaluates a Mission against an action through a **materialized

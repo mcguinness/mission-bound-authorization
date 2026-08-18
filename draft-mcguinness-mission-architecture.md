@@ -2417,6 +2417,48 @@ The evidence levels are accountability, not prevention: they make
 what was recorded tamper-evident, not what was perceived true or
 what was never recorded present.
 
+## Composed Kill-Switch Reality {#kill-switch-composition}
+
+"Baseline" and "Runtime-Enforced" name two different things that
+share spelling. Above, they name a level a deployment adopts. The
+containment profile uses the same two words for a property a
+consumer obtains per action class
+({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
+"Containment Properties"). The two are not 1:1: a Runtime-Enforced
+deployment can still provide only the Baseline property for a class
+its Enforcement Scope Statement leaves lifecycle-gated-only, because
+the property requires a state-observable substrate per class, not
+per deployment ({{I-D.draft-mcguinness-mission-runtime}}). The table
+below names the property in its own column, apart from the rung; a
+row can carry a Runtime-Enforced rung and a Baseline property
+together without contradiction.
+
+The table composes a deployment that runs the containment profile
+with a rung and a binding. A rung and a binding alone confer neither
+containment property: containment is an overlay a deployment
+separately adopts
+({{I-D.draft-mcguinness-oauth-mission-containment}}). "Stops at
+commit" names what a contain transition's own state-version commit
+reaches immediately ({{I-D.draft-mcguinness-oauth-mission-containment}},
+Section "The Contain Transition"); "runs to its own bound" names the
+residual the transition does not reach. Every cell is informative
+and carries no RFC 2119 language of its own; the cited normative
+profile controls wherever a cell and its citation appear to differ.
+
+| Rung | Binding | Property | Stops at commit | Runs to its own bound |
+|---|---|---|---|---|
+| Baseline Issuance | OAuth core, structured-authority | Baseline, a new-derivation kill ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties") | New derivation, delegation, cross-domain projection, and offline attenuation roots minted after the transition ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | Tokens already issued, to `exp`; a cross-domain projection grant already redeemed and an offline attenuation root already minted before the transition, each to its own lifetime or `del_max_depth` ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "The Materialized-Capability Residual"); a consequential read under the token-lifetime default, the same bound ({{I-D.draft-mcguinness-mission-runtime}}) |
+| Baseline Issuance | Standalone MAS, no credential-carried authority | Neither; the runtime layer is the only cutoff, and it is absent at this rung | Nothing at the resource; the transition commits and is visible on the Mission Status Response and the introspection projection ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Visibility") | Every action, to whatever native credential, session, or resource-local bound the resource enforces on its own, if any, until a freshness half-step arrives or the issuance join restores a gate ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) |
+| Runtime-Enforced | Any binding, a class using a containment-aware state source within its published bound | Runtime-Enforced for that class ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"): full Status or introspection carrying `containment_version`, Signals carrying the overlay change, or a fresh state-gated derivation; a class checked only against an active-but-not-containment-aware source, or left lifecycle-gated-only, gets Baseline only regardless of rung ({{I-D.draft-mcguinness-mission-runtime}}) | The contained capability, denied at the class's next gated action once the source reflects the overlay, within the staleness bound plus the permit window plus the class's execution bound ({{I-D.draft-mcguinness-mission-runtime}}) | Ungated paths, bounded by token lifetime alone |
+| Baseline Issuance | MAS as estate control plane, issuance join at each consuming AS | Baseline, contingent on the consuming AS's own state integration ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Redemption") | New grant minting, at the issuer's own `active` gate; refresh, gated on current Mission state at every cycle wherever a consuming AS issues refresh at all | At a consuming AS that does not exercise the redemption-time state check, optional even where a state integration exists: an outstanding grant already minted still redeems once, to the grant's own maximum lifetime, 300 seconds ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Redemption") |
+
+None of this closes the conforming Baseline residual. An
+already-issued token, a redeemed projection grant, a minted
+attenuation root, and, absent the redemption-time check, a still
+outstanding grant each run to their own bound under every rung and
+binding above; what changes row to row is how tight that bound is
+and how much a contain transition reaches before it.
+
 ## Assurance Claims {#assurance-claims-axis}
 
 The levels are the adoption ladder: what a deployment has built, in
