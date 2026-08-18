@@ -86,11 +86,25 @@ endif
 	bash scripts/build-reader-editions.sh agent edition-agent $(READER_EDITION_AGENT_DOCS)
 	touch $@
 
+## The stamp is evidence the script last ran to completion, not that
+## every output is still on disk: a member deleted by hand, or left
+## missing by a prior run the script interrupted, must invalidate the
+## stamp and trigger a fresh build rather than a hard failure. The
+## invalidation (`rm -f`) is kept on its own recipe line, separate from
+## the `$(MAKE)` recipe line: any recipe line referencing $(MAKE) is
+## run for real even under `make -n` (so the sub-make can print its
+## own dry-run output), which would make a combined line delete the
+## stamp during a dry run.
+
 $(READER_EDITION_FLOOR_HTML) edition-floor.html edition-floor.txt: .reader-edition-floor.stamp
-	@test -e $@ || { echo "error: $@ missing after building .reader-edition-floor.stamp" >&2; exit 1; }
+	@test -e $@ || rm -f .reader-edition-floor.stamp
+	@test -e $@ || $(MAKE) .reader-edition-floor.stamp
+	@test -f $@ || { echo "error: $@ not produced by the floor edition build" >&2; exit 1; }
 
 $(READER_EDITION_AGENT_HTML) edition-agent.html edition-agent.txt: .reader-edition-agent.stamp
-	@test -e $@ || { echo "error: $@ missing after building .reader-edition-agent.stamp" >&2; exit 1; }
+	@test -e $@ || rm -f .reader-edition-agent.stamp
+	@test -e $@ || $(MAKE) .reader-edition-agent.stamp
+	@test -f $@ || { echo "error: $@ not produced by the agent edition build" >&2; exit 1; }
 
 .PHONY: reader-editions
 reader-editions: $(READER_EDITION_FLOOR_HTML) edition-floor.html edition-floor.txt \

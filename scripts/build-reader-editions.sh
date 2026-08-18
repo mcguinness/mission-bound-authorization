@@ -13,9 +13,16 @@
 # Failure modes that abort the whole build (nonzero exit, message on
 # stderr): a member's .html/.txt is missing; a copy does not contain
 # exactly one external-metadata insertion point (the nav's anchor) or
-# exactly one head style block (the injected CSS's anchor); a
-# family-host bibliography link survives the rewrite/mark pass without
-# being rewritten or marked (an internal consistency check).
+# exactly one head style block (the injected CSS's anchor); the
+# injected CSS does not land inside that style block; a family-host
+# bibliography link survives the rewrite/mark pass without being
+# rewritten or marked (an internal consistency check).
+#
+# Every output is built in a private staging directory and moved into
+# place only once the whole edition (every member, the index, and the
+# bundle) has passed every check above: a failure leaves the
+# previously built edition's outputs untouched, never a half-rewritten
+# one.
 #
 # Canonical draft-*.html files are read, never edited: every output is
 # a copy under an edition-prefixed flat filename.
@@ -100,13 +107,17 @@ for doc in "${DOCS[@]}"; do
   [[ -f "$doc.txt" ]] || { echo "error: missing $doc.txt; build members before reader-editions" >&2; exit 1; }
 done
 
-rm -f "${OUT}"-[0-9]*-draft-mcguinness-*.html "${OUT}.html" "${OUT}.txt"
+# Stage every output here first; nothing below writes to the working
+# directory directly. The stale-output sweep and the move into place
+# happen together at the very end, after every check has passed.
+STAGE="$(mktemp -d)"
+trap 'rm -rf "$STAGE"' EXIT
 
 NAV_CSS='.reader-edition-nav{margin:0 0 1em;padding:.5em 1em;background-color:var(--highlight-color);border:1px solid var(--line-color);font-size:.9em}.reader-edition-nav a{color:var(--link-color)}.reader-edition-ext-marker{font-size:.8em;opacity:.7}'
 
 for ((i = 1; i <= N; i++)); do
   doc="${DOCS[$((i - 1))]}"
-  out="$(flat_html "$i")"
+  out="$STAGE/$(flat_html "$i")"
   cp -f "$doc.html" "$out"
 
   require_exactly_one '<div id="external-metadata" class="document-information"></div>' "$out" "the external-metadata insertion point"
@@ -116,16 +127,32 @@ for ((i = 1; i <= N; i++)); do
   # matching .xml sibling to point at.
   sed -i '/rel="alternate" type="application\/rfc+xml"/d' "$out"
 
-  # Add the reader-edition CSS to the existing style block.
-  css_file=$(mktemp)
-  printf '%s\n' "$NAV_CSS" >"$css_file"
-  sed -i "/<\/style>/r $css_file" "$out"
-  rm -f "$css_file"
+  # Add the reader-edition CSS inside the existing style block. `i`
+  # inserts BEFORE the matched line, so the rule lands ahead of
+  # </style>; the `r` command used here previously appends AFTER the
+  # matched line, which put the rule after </style> as stray text in
+  # <head> where no stylesheet ever applies it.
+  sed -i "/<\/style>/i\\
+$NAV_CSS" "$out"
+
+  # Structural assertion: the injected rule must actually sit inside
+  # the style element (between its last <style and its </style>), not
+  # merely appear somewhere in the file.
+  style_open_line=$(grep -n '<style' "$out" | tail -1 | cut -d: -f1 || true)
+  style_close_line=$(grep -n '</style>' "$out" | cut -d: -f1 || true)
+  css_line=$(grep -n -F '.reader-edition-nav{' "$out" | head -1 | cut -d: -f1 || true)
+  if [[ -z "$style_open_line" || -z "$style_close_line" || -z "$css_line" ]] \
+      || (( css_line <= style_open_line || css_line >= style_close_line )); then
+    echo "error: $out: reader-edition-nav CSS is not inside the style element" >&2
+    exit 1
+  fi
 
   # Build the navigation bar: permanent index link, position, prev/next.
+  # A <nav> landmark, not a <div>: this is a page-level navigation
+  # block, sibling to the document it accompanies.
   nav_file=$(mktemp)
   {
-    printf '<div id="reader-edition-nav" class="reader-edition-nav">\n'
+    printf '<nav aria-label="Reader edition navigation" class="reader-edition-nav">\n'
     printf '<p>Part of the <a href="%s.html">%s</a> reader edition, document %s of %s.' \
       "$OUT" "$EDITION_TITLE" "$i" "$N"
     if [[ "$i" -gt 1 ]]; then
@@ -134,7 +161,7 @@ for ((i = 1; i <= N; i++)); do
     if [[ "$i" -lt "$N" ]]; then
       printf ' <a href="%s">next</a>' "$(flat_html $((i + 1)))"
     fi
-    printf '</p>\n</div>\n'
+    printf '</p>\n</nav>\n'
   } >"$nav_file"
   sed -i "/<div id=\"external-metadata\" class=\"document-information\"><\/div>/r $nav_file" "$out"
   rm -f "$nav_file"
@@ -196,7 +223,7 @@ INDEX_CSS='body{font-family:sans-serif;max-width:48em;margin:2em auto;padding:0 
   printf '</ol>\n'
   printf '<p><a href="%s.txt">Download the concatenated text bundle</a>.</p>\n' "$OUT"
   printf '</body>\n</html>\n'
-} >"${OUT}.html"
+} >"$STAGE/${OUT}.html"
 
 # Concatenated text bundle: cover, edition manifest, then each member's
 # .txt separated by a form feed (none leading, none trailing: N members
@@ -220,14 +247,28 @@ INDEX_CSS='body{font-family:sans-serif;max-width:48em;margin:2em auto;padding:0 
     printf '  %s. %s (%s)\n' "$i" "$(title_for "$doc")" "$doc"
   done
   printf '\n'
-} >"${OUT}.txt"
+} >"$STAGE/${OUT}.txt"
 
 for ((i = 1; i <= N; i++)); do
   doc="${DOCS[$((i - 1))]}"
   if [[ "$i" -gt 1 ]]; then
-    printf '\f' >>"${OUT}.txt"
+    printf '\f' >>"$STAGE/${OUT}.txt"
   fi
-  cat "$doc.txt" >>"${OUT}.txt"
+  cat "$doc.txt" >>"$STAGE/${OUT}.txt"
 done
+
+# Every member, the index, and the bundle are staged and validated;
+# move them into place as the last step. The stale-output sweep (kept
+# broad: it clears members from a previously larger edition list, not
+# just the current one) happens right here, immediately before the
+# replacement, so a failure anywhere above never touches what was
+# already published.
+rm -f "${OUT}"-[0-9]*-draft-mcguinness-*.html "${OUT}.html" "${OUT}.txt"
+for ((i = 1; i <= N; i++)); do
+  html_name="$(flat_html "$i")"
+  mv -f "$STAGE/$html_name" "$html_name"
+done
+mv -f "$STAGE/${OUT}.html" "${OUT}.html"
+mv -f "$STAGE/${OUT}.txt" "${OUT}.txt"
 
 echo "built ${EDITION_NAME} edition: ${N} members -> ${OUT}.html, ${OUT}.txt"
