@@ -1,7 +1,8 @@
-# Mission Adoption Plan (v3.3, plan of record)
+# Mission Adoption Plan (v3.4, plan of record)
 
-Status: plan of record, 2026-08-18, after two author review rounds, the verb-taxonomy
-preservation ruling, the AAuth bundle directive, and the composition-axis track correction. Dispositions: execution
+Status: plan of record, 2026-08-18, after three author review rounds, the verb-taxonomy
+preservation ruling, the AAuth bundle directive, and the composition-axis track correction
+as amended by the third review (metadata made explicit; portability claims made checkable). Dispositions: execution
 items 1, 2, 3, 4, and 10 approved; items 5 and 9 specified here and hold-lifted on the
 author's confirmation; item 6 expanded; item 7 held on 6; item 8 deferred by ruling.
 Refs #220, #238, #253.
@@ -46,27 +47,39 @@ are the remedy; consolidation is not (see the final section).
 - **Conformance disclosure is bundle-level** (see the baseline section's gate below).
 - **The verb taxonomy is preserved as the family's semantic signature.** The verb spine
   (propose; approve and record; govern; contain; enforce each action; run and wind down;
-  delegate; dispatch; project; continue; prove; analyze) is the family's unique conceptual
-  view, carried by the README architecture diagram, the architecture document's own spine,
-  and the catalog's group-keyed sections, which are the spine's noun form. Zones do not
-  replace it. Zones answer "what do I adopt, and when"; verbs answer "what does this document
+  delegate; dispatch; project; continue; prove; analyze, as the README diagram renders it)
+  is the family's unique conceptual view, carried by the README architecture diagram, the
+  architecture document's own spine, and the catalog's group-keyed sections, which are the
+  spine's noun form. One source-of-truth mismatch is on record and resolves in item 3's PR:
+  the architecture document's explicit spine folds Containment into Govern and has no
+  Dispatch heading, so the author picks the canonical set (update architecture, or shrink
+  the diagram's list) before the vocabulary is declared canonical. Zones do not replace the
+  spine. Zones answer "what do I adopt, and when"; verbs answer "what does this document
   do in the Mission's life". Both views stay, explicitly named as two axes over one catalog.
 
 ## Zones and tracks
 
 Three top-level zones with subordinate tracks, and names that cannot be mistaken for
-conformance classes. Within Compose and Lab, the tracks follow the composition axis the
-family's own naming rule already encodes: `oauth-mission-*` documents extend the OAuth AS's
-wire surfaces and apply only to the OAuth path; `mission-*` documents are substrate-neutral
-and compose with any binding; binding clusters are the substrate adapters themselves. An
-AAuth adopter reads Compose as: pick your binding, take the substrate-neutral components,
-skip the OAuth extensions.
+conformance classes. Within Compose and Lab, the tracks follow the composition axis:
+`oauth-mission-*` documents extend the OAuth AS's wire surfaces and apply only to the OAuth
+path; **Mission components** (`mission-*`) live outside the OAuth AS, which is all the naming
+rule promises. Portability is conditional, not implied by the prefix: a Mission component
+composes with a given binding only where its Mission Substrate consumption declaration or
+Statement is satisfied by that binding's supplied capabilities (mission-approval-governance
+imports OAuth-core approval objects and anchors; mission-capability-binding normatively
+depends on core, runtime, and authzen; neither is portable to the AAuth path today). Per-
+document compatibility is therefore derived from the document's own Substrate declaration,
+surfaced as explicit manifest metadata (`applicable_bindings` or
+`required_substrate_capabilities`, shape decided in item 3's PR). An AAuth adopter reads
+Compose as: pick your binding, take the Mission components whose declarations your binding
+satisfies (checkable per document, never assumed from the prefix), skip the OAuth
+extensions.
 
 | Zone | Tracks | Contents |
 |---|---|---|
 | **Start** | Reader preface; OAuth Implementation Floor; Governed Agent Add-ons | architecture (preface); substrate, oauth-mission, status, runtime, runtime-evidence, authzen (floor); harness, consent-evidence (add-ons) |
-| **Compose** | Bindings; OAuth extensions; Substrate-neutral components; Security guide | authority-server, issuance-grant, the aauth cluster (bindings); expansion, child-delegation, cross-domain, signals, approval, management (OAuth extensions, cross-domain among them as the floor's conditional dependency); audit, mandate, approval-governance, shaping, capability-binding (substrate-neutral); security-model (guide) |
-| **Lab** | OAuth experimental; Substrate-neutral experimental; Sketches | attenuation, containment, continuation, cross-org-delegation, progressive, template, transaction-authorization, approval-revision, work-products (OAuth experimental; containment floor-referenced); discovery, metering, orchestration (substrate-neutral; metering floor-referenced); uma, aam, gnap (sketches) |
+| **Compose** | Bindings; OAuth extensions; Mission components; Security guide | authority-server, issuance-grant, the aauth cluster (bindings); expansion, child-delegation, cross-domain, signals, approval, management (OAuth extensions, cross-domain among them as the floor's conditional dependency); audit, mandate, approval-governance, shaping, capability-binding (Mission components, compatibility per declaration); security-model (guide) |
+| **Lab** | OAuth experimental; Mission experimental; Sketches | attenuation, containment, continuation, cross-org-delegation, progressive, template, transaction-authorization, approval-revision, work-products (OAuth experimental; containment floor-referenced); discovery, metering, orchestration (Mission experimental; metering floor-referenced); uma, aam, gnap (sketches) |
 
 **Zones are an overlay, never a regrouping.** The README's catalog keeps its group-keyed
 sections, which are the verb spine's noun form; nothing is fragmented or re-headed. Zones
@@ -82,20 +95,27 @@ placements: substrate shares the By-binding rung with four documents that stay i
 and architecture and security-model share outside-ordering but land in different zones.
 Validation is table-membership, simpler than heading placement: the validator checks that
 the adoption-map table lists every document exactly once under the zone and track the
-manifest declares. With the composition-axis tracks, track derivation is deterministic
-again: within Compose and Lab, the track follows from the document's own name prefix
-(`oauth-mission-*` = OAuth extension or OAuth experimental; `mission-*` = substrate-neutral)
-plus the manifest's bindings group for the adapter clusters and `maturity` for sketches;
-Start keeps its two named special cases (architecture as preface, substrate in the floor).
-The earlier AAuth-row exception dissolves: the whole bundle row sits in the Bindings track.
-`presentation_track` returns to being the fallback, needed only if future exceptions
-accumulate. The two existing validator constraints still hold (every slug in the
-catalog subtree; all 39 bolded nicknames in the adoption-order section). The execution PR
-also adds a **Verb** column to the adoption map, derived from the manifest's existing
-`group` field, so the two axes stay visibly joined per document. Four fields are orthogonal
-by convention: `maturity` describes specification stability, `maintenance` describes
-repository responsiveness, `presentation_zone` describes adoption placement, and `group`
-describes the verb-spine role; none implies any of the others.
+manifest declares. Track derivation is NOT deterministic under prefix and group rules: the
+AAuth cluster falsifies them (mission-aauth-management carries the `mission-*` prefix and
+the `lifecycle` group; aauth-mission-expiry carries neither recognized prefix and the same
+group; both belong to the Bindings track), and the manifest has no binding-cluster
+membership field. Therefore `presentation_track` is REQUIRED now, alongside
+`presentation_zone`, both validated by table membership; the prefix/group heuristics remain
+useful as a validator cross-check that flags surprising assignments, never as the source of
+truth. The two existing validator constraints still hold (every slug in the
+catalog subtree; all 39 bolded nicknames in the adoption-order section). The adoption map keeps the two axes joined per document, but `group` cannot produce a
+truthful per-document Verb column: the groups deliberately aggregate verbs (approval-time
+holds Propose, Approve, and Dispatch; lifecycle holds Govern and Contain; agent-runtime
+holds Enforce and Run). The map's column therefore ships as **Architectural group** (from
+`group`, truthful today), and a per-document `verbs` array validated against the canonical
+vocabulary is the target state. That vocabulary has a source-of-truth mismatch to resolve
+first, in item 3's PR: the README diagram carries contain and dispatch as rows, while the
+architecture document's explicit spine folds Containment into Govern and has no Dispatch
+heading; the author picks the canonical set (update architecture, or shrink the list) before
+any `verbs` field is declared canonical. Four fields stay orthogonal by convention:
+`maturity` describes specification stability, `maintenance` describes repository
+responsiveness, `presentation_zone`/`presentation_track` describe adoption placement, and
+`group` describes the architectural grouping; none implies any of the others.
 
 ### Per-document pull-triggers
 
@@ -118,19 +138,19 @@ describes the verb-spine role; none implies any of the others.
 | oauth-mission-expansion | Compose / OAuth extensions | Approved authority will predictably need to widen mid-task via fresh approval. |
 | oauth-mission-child-delegation | Compose / OAuth extensions | A sub-agent needs its own Mission outliving a call frame, with cascade termination. |
 | oauth-mission-cross-domain | Compose / OAuth extensions | A Mission from one trust domain must be honored by an AS in another (also the floor's conditional dependency). |
-| mission-audit | Compose / substrate-neutral | A cross-domain party must verify evidence integrity without trusting issuer logs. |
+| mission-audit | Compose / Mission components | A cross-domain party must verify evidence integrity without trusting issuer logs. |
 | oauth-mission-signals | Compose / OAuth extensions | Consumers need push notice of state changes instead of polling per Mission. |
 | oauth-mission-approval | Compose / OAuth extensions | Approval is asynchronous: a human review queue, not an immediate decision. |
-| mission-mandate | Compose / substrate-neutral | An outside party must verify what was approved without a token-exchange hop. |
+| mission-mandate | Compose / Mission components | An outside party must verify what was approved without a token-exchange hop. |
 | oauth-mission-management | Compose / OAuth extensions | An operator needs fleet enumeration and bulk lifecycle across many Missions. |
-| mission-approval-governance | Compose / substrate-neutral | Approval authority itself needs authenticated, policy-backed provenance. |
-| mission-shaping | Compose / substrate-neutral | You need a defined client-side path from user prompt to candidate Mission Intent. |
-| mission-capability-binding | Compose / substrate-neutral | Actions come from a discovered catalog where invoked identity can drift from approval. |
+| mission-approval-governance | Compose / Mission components | Approval authority itself needs authenticated, policy-backed provenance. |
+| mission-shaping | Compose / Mission components | You need a defined client-side path from user prompt to candidate Mission Intent. |
+| mission-capability-binding | Compose / Mission components | Actions come from a discovered catalog where invoked identity can drift from approval. |
 | mission-security-model | Compose / guide | Reviewing or auditing: the one consolidated trust and blast-radius view. |
 | oauth-mission-containment | Lab / OAuth experimental (floor-referenced) | A live Mission must be narrowed, not ended, on a protected event. |
-| mission-metering | Lab / substrate-neutral (floor-referenced) | A Mission needs cumulative caps (budget, calls, duration, egress), not just scope. |
-| mission-discovery | Lab / substrate-neutral | An open-world agent meets resources its approval never named. |
-| mission-orchestration | Lab / substrate-neutral | In-flight work must unwind safely if the Mission ends mid-workflow. |
+| mission-metering | Lab / Mission experimental (floor-referenced) | A Mission needs cumulative caps (budget, calls, duration, egress), not just scope. |
+| mission-discovery | Lab / Mission experimental | An open-world agent meets resources its approval never named. |
+| mission-orchestration | Lab / Mission experimental | In-flight work must unwind safely if the Mission ends mid-workflow. |
 | oauth-mission-transaction-authorization | Lab / OAuth experimental | One action needs a fresh, portable, cross-org authorization with no live callback. |
 | oauth-mission-approval-revision | Lab / OAuth experimental | Reviewers routinely narrow a proposed Mission rather than approve or deny. |
 | oauth-mission-attenuation | Lab / OAuth experimental | Deep fan-out makes an AS round-trip per narrowing too costly; mint offline. |
@@ -275,15 +295,20 @@ references resolve to a non-family host the rewrite rule leaves untouched automa
 
 **Gates before this bundle is more than exploratory:** an upstream release reaching the
 pinned commit (none exists; datatracker is at -10); a conformance inventory for all three
-cluster documents (zero rows exist today) meeting the same coverage bar as the OAuth floor;
-an actual AAuth implementation (none exists anywhere in src/, so composition tests are
-unreachable, not merely undone); execution items 4 and 5 landed; and a documentation-precision
-fix: README and family-manifest language saying the binding "requires" the expiry profile
-overstates its informative register and OPTIONAL conformance line, and must be reconciled so
-this bundle's coherence-not-composition framing does not contradict the family's public
-claims. Two flagged author calls: whether management's next revision (already slated by #445
-for `mission_control_endpoint`) should add a normative citation to mission-aauth, closing the
-informative-only gap; and whether PDP-over-AAuth deserves a named out-of-scope mention.
+cluster documents (zero rows exist today) AND for mission-substrate, the bundle's normative
+floor document, with tested coverage of the capabilities the AAuth Statement claims plus
+AAuth-to-Substrate composition tests over the bundle (item 11 therefore depends on that
+slice of item 6, not only on items 4 and 5); an actual AAuth implementation (none exists
+anywhere in src/, so composition tests are unreachable, not merely undone); execution items
+4 and 5 landed; and a documentation-precision fix: README and family-manifest language
+saying the binding "requires" the expiry profile overstates its informative register and
+OPTIONAL conformance line, and must be reconciled so this bundle's coherence-not-composition
+framing does not contradict the family's public claims. The known manifest inconsistency is
+scheduled, not merely recorded: item 3's PR reconciles mission-aauth-management's manifest
+entry with its citations now, default direction align-manifest-to-citations (remove the
+stale mission-aauth dependency; it returns if the #445-slated revision adds the citation),
+author override open. One flagged author call remains: whether PDP-over-AAuth deserves a
+named out-of-scope mention.
 
 ## Freeze policy
 
@@ -332,7 +357,7 @@ into the Mission AAuth binding stays rejected (it would strand the bare-AAuth au
 |---|---|---|
 | 1 | Rename the bundle and zone/track vocabulary (incl. the OAuth Implementation Floor track name) | Approved |
 | 2 | Substrate into the OAuth Implementation Floor; define the normative/conditional dependency closure | Approved |
-| 3 | README adoption-map overlay plus zone/track validation (required `presentation_zone`; table-membership check; Verb column from `group`; the group-keyed verb-spine catalog sections stay untouched) | Approved; one PR with 1-2, 9, 10 |
+| 3 | README adoption-map overlay plus zone/track validation (required `presentation_zone` AND `presentation_track`; table-membership check; Architectural-group column now, `verbs` array after the spine vocabulary is reconciled; compatibility metadata shape for Mission components; the management-to-aauth manifest-dep reconciliation; the verb-spine catalog sections stay untouched) | Approved; one PR with 1-2, 9, 10 |
 | 4 | Hardened `latest` reader editions: author the edition-build target (none exists today); explicit `make reader-editions` step on PR and push; edition job builds every member from source | Approved; needs the build target |
 | 5 | Machine-readable versioned bundle manifest (single snapshot; establish the Obligations pin) and the dedicated immutable publish path with refuse-overwrite, serialized-publication, and verify-against-manifest rules | Hold lifted on confirming this plan's snapshot and publisher rules; after 4 |
 | 6 | Inventory all six floor documents, substrate included, and meet the coverage threshold (with #238's ledger discipline) | Prerequisite for 7 |
@@ -340,7 +365,7 @@ into the Mission AAuth binding stays rejected (it would strand the bare-AAuth au
 | 8 | RAR-free mode stays behind #220 (normative landing in core or a Standards-Track profile) | Deferred by ruling |
 | 9 | Maintenance enum with the human-reviewed frozen-change gate (required check; label-AND-CODEOWNER bypass; branch protection) | Hold lifted on confirming the gate design and the PLAN.md convention decision; rides 3 |
 | 10 | Record "no consolidation before WG adoption"; aauth-mission-expiry goes upstream-first | Approved; rides 3 |
-| 11 | AAuth Mission Context Bundle v0: pin the upstream commit, bundle manifest entry, aauth reader editions, exploratory publication; the expiry-framing precision fix in README/manifest rides item 3's PR | Directed; after 4 and 5; exploratory until its gates |
+| 11 | AAuth Mission Context Bundle v0: pin the upstream commit, bundle manifest entry, aauth reader editions, exploratory publication; the expiry-framing precision fix rides item 3's PR | Directed; after 4 and 5; beyond exploratory only after item 6's substrate-plus-cluster slice with AAuth composition tests |
 
 ## Provenance
 
@@ -361,8 +386,14 @@ Verb column so the two axes stay joined. v3.2 added the AAuth Mission Context Bu
 author's directive, scoped from derived dependency closure: coherence-not-composition
 membership, the upstream commit pin as the substance of frozen-until-upstream-release,
 exploratory-only publication behind five gates, and the third presentation-track exception
-case it surfaced. v3.3 corrected the Compose and Lab tracks to the composition axis the
-family's naming rule already encodes (bindings; OAuth extensions; substrate-neutral
-components; with OAuth-experimental and substrate-neutral-experimental in the Lab), which
-restored deterministic track derivation and dissolved the AAuth-row exception. Where this
-document and any earlier version disagree, this document governs.
+case it surfaced. v3.3 corrected the Compose and Lab tracks to the composition axis. v3.4
+applied the third review: the Mission-components track replaces the substrate-neutral claim
+(portability is conditional and derived per document from its Substrate declaration, with
+explicit compatibility metadata); `presentation_track` is required now, the deterministic
+derivation having been falsified by the AAuth cluster; the Verb column ships as
+Architectural group until the spine vocabulary is reconciled (diagram vs architecture:
+contain and dispatch) and a validated per-document `verbs` array lands; the AAuth
+non-exploratory gate gains substrate's inventory, claimed-capability coverage, and
+composition tests; and the management-to-aauth manifest inconsistency is scheduled into
+item 3 rather than left as a recorded call. Where this document and any earlier version
+disagree, this document governs.
