@@ -22,8 +22,12 @@ import { Fga, type MissionView, relationForAction } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
   Connectors,
+  createHttpMcpChannel,
+  createHttpMediatedClient,
+  type DpopKeys,
   EvidenceStore,
   McpPaymentsServer,
+  type MediatedToolResult,
   PaymentsStore,
   Pep,
   type PepDeps,
@@ -493,4 +497,31 @@ export function approveDemoMission(stack: DemoStack): { id: string } {
     clientId: "ap-agent",
     approvalEventId: `apev-demo-${stack.kernel.allMissions().length + 1}`,
   });
+}
+
+/**
+ * @spec txn-authorization#offline-verification step 2 — present a transaction
+ * credential the only way it can be presented: over a REAL HTTP MCP request,
+ * DPoP-bound to the key the challenge committed to and naming THIS credential
+ * (`ath`). The in-process channel has no request to bind a proof to, so it
+ * cannot carry this class at all; the challenged retry goes over HTTP.
+ */
+export async function callWithTransactionCredential(
+  server: McpPaymentsServer,
+  credential: string,
+  dpopKeys: DpopKeys,
+  tool: string,
+  args: Record<string, unknown>,
+): Promise<MediatedToolResult> {
+  const channel = await createHttpMcpChannel(server);
+  try {
+    const { client, close } = await createHttpMediatedClient(channel.url, credential, dpopKeys);
+    try {
+      return await client.callTool(tool, args);
+    } finally {
+      await close();
+    }
+  } finally {
+    await channel.close();
+  }
 }

@@ -7,8 +7,10 @@
 
 import {
   authorizationDetailsEqual,
+  type DpopProofReplay,
   MISSION_TXN_TOKEN_TYP,
   missionInvariantsEqual,
+  newDpopProofReplay,
   parseAatToolId,
   readTxnMissionClaim,
   toolsOf,
@@ -28,6 +30,7 @@ import {
   TOOL_ACTIONS,
   type TxnCredential,
 } from "./pep.js";
+import { type DpopPresentation, verifyDpopProof } from "./dpop.js";
 import { openTxnStores, type TxnConsumptionStore, type TxnPendingStore } from "./txn-store.js";
 import type { PaymentsStore } from "./payments-store.js";
 import type { Connectors } from "./connectors.js";
@@ -48,26 +51,6 @@ function refuseTransactionToken(accessToken: string): void {
   if (decodeProtectedHeader(accessToken).typ === MISSION_TXN_TOKEN_TYP) {
     throw new Error("a transaction token is not a Mission-bound access token");
   }
-}
-
-/**
- * @spec RFC 9449 — proof of possession of `expectedJkt` by the presenter of
- * THIS request: the proof's header key thumbprints to the credential's `cnf`,
- * verifies under that key with the `dpop+jwt` type, and is bound to this
- * request's `htu`/`htm`. One function, so an ordinary Mission-bound credential
- * and a transaction credential are held to the identical discipline.
- */
-async function verifyDpopProof(
-  dpopProof: string,
-  expectedJkt: string,
-  htu: string,
-  htm: string,
-): Promise<void> {
-  const proofHeader = decodeProtectedHeader(dpopProof);
-  const proofJkt = await calculateJwkThumbprint(proofHeader.jwk as never);
-  if (proofJkt !== expectedJkt) throw new Error("DPoP key does not match token cnf.jkt");
-  const { payload: proof } = await jwtVerify(dpopProof, proofHeader.jwk as never, { typ: "dpop+jwt" });
-  if (proof.htu !== htu || proof.htm !== htm) throw new Error("DPoP htu/htm mismatch");
 }
 
 export interface ToolDef {
@@ -125,6 +108,12 @@ export interface McpServerDeps {
    * in-memory stores.
    */
   txnStores?: { pending: TxnPendingStore; consumption: TxnConsumptionStore };
+  /**
+   * @spec RFC 9449 §11.1 — the DPoP proof `jti` replay window. Injectable so a
+   * deployment can share one across replicas fronted as one resource; defaulted
+   * to this replica's own (D27).
+   */
+  dpopReplay?: DpopProofReplay;
 }
 
 /**
@@ -164,12 +153,34 @@ export class McpPaymentsServer {
   private readonly txnPending: TxnPendingStore;
   /** @spec txn-authorization#offline-verification — the `txn` consumption domain. */
   private readonly txnConsumption: TxnConsumptionStore;
+  /** @spec RFC 9449 §11.1 — this resource's DPoP proof `jti` replay window. */
+  private readonly dpopReplay: DpopProofReplay;
   constructor(private readonly deps: McpServerDeps) {
     this.resolveKey = createLocalJWKSet(deps.jwks as never);
     if (deps.txnTokenJwks) this.resolveTxnKey = createLocalJWKSet(deps.txnTokenJwks as never);
     const stores = deps.txnStores ?? openTxnStores();
     this.txnPending = stores.pending;
     this.txnConsumption = stores.consumption;
+    this.dpopReplay = deps.dpopReplay ?? newDpopProofReplay();
+  }
+
+  /**
+   * @spec RFC 9449 §4.3 — the ONE proof check every credential class this
+   * resource accepts runs, against this replica's replay window.
+   */
+  private async verifyPresentation(
+    accessToken: string,
+    expectedJkt: string,
+    pop: DpopPresentation,
+  ): Promise<void> {
+    await verifyDpopProof({
+      proof: pop.proof,
+      accessToken,
+      expectedJkt,
+      htu: pop.htu,
+      htm: pop.htm,
+      replay: this.dpopReplay,
+    });
   }
 
   /** RFC 9728 Protected Resource Metadata. */
@@ -215,8 +226,9 @@ export class McpPaymentsServer {
     });
     const cnf = payload.cnf as { jkt?: string } | undefined;
     if (!cnf?.jkt) throw new Error("token missing cnf.jkt");
-    // Verify the DPoP proof and bind it to the token's cnf.jkt.
-    await verifyDpopProof(dpopProof, cnf.jkt, htu, htm);
+    // Verify the DPoP proof and bind it to the token's cnf.jkt AND to the token
+    // itself (`ath`), under the same verifier the transaction path uses.
+    await this.verifyPresentation(accessToken, cnf.jkt, { proof: dpopProof, htu, htm });
 
     const mission = payload.mission as { id: string; authority_hash: string } | undefined;
     if (!mission?.id) throw new Error("token missing mission claim");
@@ -286,10 +298,7 @@ export class McpPaymentsServer {
    * request to bind one to; the in-process mediated channel omits it, exactly
    * as {@link validateMissionToken} documents for the ordinary class.
    */
-  async validateCredential(
-    accessToken: string,
-    pop?: { proof: string; htu: string; htm: string },
-  ): Promise<TokenFacts> {
+  async validateCredential(accessToken: string, pop?: DpopPresentation): Promise<TokenFacts> {
     if (decodeProtectedHeader(accessToken).typ === MISSION_TXN_TOKEN_TYP) {
       const verified = await this.verifyTransactionCredential(accessToken, pop);
       if (!verified.ok) throw new Error(`transaction credential refused: ${verified.refusal_reason}`);
@@ -325,9 +334,16 @@ export class McpPaymentsServer {
    */
   async verifyTransactionCredential(
     txnToken: string,
-    pop?: { proof: string; htu: string; htm: string },
+    pop?: DpopPresentation,
   ): Promise<VerifiedTxnCredential> {
     if (!this.resolveTxnKey || !this.deps.asIssuer) return { ok: false, refusal_reason: "txn_not_configured" };
+    // @spec txn-authorization#offline-verification step 2 — proof of possession
+    // is not optional for a transaction credential. It authorizes an
+    // irreversible operation under a key the challenge committed to; accepting
+    // it without a proof would make it a BEARER token for that operation. A
+    // transport with no request to bind a proof to therefore cannot carry one
+    // at all -- it is refused here rather than admitted unproven.
+    if (!pop) return { ok: false, refusal_reason: "txn_pop_required" };
     let payload: Record<string, unknown>;
     try {
       // The TAS's token-signing key is trusted through pre-established
@@ -359,13 +375,11 @@ export class McpPaymentsServer {
     if (!mission) return { ok: false, refusal_reason: "txn_invalid" };
 
     // 2. Proof by the CURRENT presenter: this request's proof, under the key
-    //    the credential itself is bound to.
-    if (pop) {
-      try {
-        await verifyDpopProof(pop.proof, cnf.jkt, pop.htu, pop.htm);
-      } catch {
-        return { ok: false, refusal_reason: "txn_cnf_mismatch" };
-      }
+    //    the credential itself is bound to and naming THIS credential (`ath`).
+    try {
+      await this.verifyPresentation(txnToken, cnf.jkt, pop);
+    } catch {
+      return { ok: false, refusal_reason: "txn_cnf_mismatch" };
     }
 
     // 3. Against the RETAINED pending operation.

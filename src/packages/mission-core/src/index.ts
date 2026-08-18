@@ -63,6 +63,11 @@ export {
   parseChainPresentation,
 } from "./cross-org-presentation.js";
 export { compareAmounts, InvalidAmountError, isValidAmount } from "./decimal-amount.js";
+export {
+  DPOP_PROOF_REPLAY_WINDOW_S,
+  type DpopProofReplay,
+  newDpopProofReplay,
+} from "./dpop-replay.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";
 export {
   ACCEPT_TXN_CHALLENGE_HEADER,

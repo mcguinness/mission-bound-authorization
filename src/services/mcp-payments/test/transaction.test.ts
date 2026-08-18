@@ -5,7 +5,8 @@
  * live OpenFGA, auto-skip when down.
  */
 
-import { decodeJwt } from "jose";
+import { createHash } from "node:crypto";
+import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
@@ -54,6 +55,42 @@ const VIEW: MissionView = {
     },
   ],
 };
+/**
+ * @spec RFC 9449 — the presenter's REAL key. A transaction credential is only
+ * ever accepted with a proof of possession bound to this request, so the
+ * fixtures hold live key material rather than a placeholder thumbprint.
+ */
+const holderKeys = await generateKeyPair("ES256", { extractable: true });
+const HOLDER_JKT = await calculateJwkThumbprint(await exportJWK(holderKeys.publicKey));
+/** The request a presented credential is bound to (RFC 9449 htu/htm). */
+const RS_HTU = CANONICAL_RESOURCE;
+const RS_HTM = "POST";
+
+/**
+ * @spec RFC 9449 §4.2 — a proof of possession for THIS credential on THIS
+ * request: `htu`/`htm`, a fresh `jti`, `iat`, and `ath` naming the credential.
+ */
+async function popFor(
+  credential: string,
+  opts: { keys?: typeof holderKeys; omitAth?: boolean; ath?: string; iat?: number; jti?: string } = {},
+): Promise<{ proof: string; htu: string; htm: string }> {
+  const keys = opts.keys ?? holderKeys;
+  const jwt = new SignJWT({
+    htu: RS_HTU,
+    htm: RS_HTM,
+    ...(opts.omitAth
+      ? {}
+      : { ath: opts.ath ?? createHash("sha256").update(credential, "ascii").digest("base64url") }),
+  })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(keys.publicKey) })
+    .setJti(opts.jti ?? crypto.randomUUID());
+  return {
+    proof: await (opts.iat !== undefined ? jwt.setIssuedAt(opts.iat) : jwt.setIssuedAt()).sign(keys.privateKey),
+    htu: RS_HTU,
+    htm: RS_HTM,
+  };
+}
+
 const TOKEN: TokenFacts = {
   sub: "alice",
   clientId: "ap-agent",
@@ -68,7 +105,7 @@ const TOKEN: TokenFacts = {
     expires_at: 4102444800,
     approval_basis: { type: "direct" },
   },
-  cnfJkt: "jkt-1",
+  cnfJkt: HOLDER_JKT,
 };
 
 /** @spec txn-authorization#resource-challenge — the client signal that gates a challenge. */
@@ -192,7 +229,7 @@ async function signTxnToken(input: {
  * from THAT token, so the challenged operation runs under it alone.
  */
 async function credentialFor(server: McpPaymentsServer, txnToken: string): Promise<TokenFacts> {
-  const verified = await server.verifyTransactionCredential(txnToken);
+  const verified = await server.verifyTransactionCredential(txnToken, await popFor(txnToken));
   if (!verified.ok) throw new Error(`transaction credential refused: ${verified.refusal_reason}`);
   return verified.facts;
 }
@@ -431,6 +468,132 @@ d("M5 transaction-assurance tier", () => {
     expect(evidence.forMission("msn_m5").filter((e) => e.kind === "execution")).toHaveLength(1);
   });
 
+  it("refuses a transaction credential on the transport that cannot prove possession (@spec txn-authorization#offline-verification)", async () => {
+    const { createMediatedClient } = await import("../src/index.js");
+    const rsTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    const { server, payments, connectors } = build({
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+    });
+    const challengeRes = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      ACCEPT_CHALLENGE,
+    );
+    const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
+    const txnToken = await signTxnToken({
+      key: asTxn.privateKey,
+      txn,
+      cnfJkt: TOKEN.cnfJkt,
+      parameterDigest: digestFor(payments),
+      authorizationDetails: remittanceEntry(),
+    });
+
+    // The in-process mediated channel has no HTTP request to bind a proof to.
+    // It carries the ordinary credential class under that documented
+    // simplification; a transaction credential is refused outright rather than
+    // admitted unproven, and the challenged effect never runs.
+    const { client } = await createMediatedClient(server);
+    const verdict = await client.callTool("send_remittance_email", { invoice_id: "inv-1" }, txnToken);
+    expect(verdict.ok).toBe(false);
+    expect(verdict.refusal_reason).toBe("txn_pop_required");
+    expect(connectors.ledgerEntries("msn_m5")).toHaveLength(0);
+    await client.close();
+  });
+
+  it("holds a transaction credential to the full RFC 9449 proof discipline (@spec txn-authorization#offline-verification)", async () => {
+    const rsTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    const { server, payments } = build({
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+    });
+    const challengeRes = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1" },
+      TOKEN,
+      undefined,
+      ACCEPT_CHALLENGE,
+    );
+    const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
+    const mint = async (): Promise<string> =>
+      signTxnToken({
+        key: asTxn.privateKey,
+        txn,
+        cnfJkt: TOKEN.cnfJkt,
+        parameterDigest: digestFor(payments),
+        authorizationDetails: remittanceEntry(),
+      });
+    const token = await mint();
+
+    // No proof at all. The credential authorizes an irreversible operation
+    // under a key the challenge committed to; unproven it would be a bearer
+    // token for that operation, so the transport that cannot carry a proof
+    // cannot carry this credential either.
+    expect((await server.verifyTransactionCredential(token)).ok).toBe(false);
+    expect(
+      ((await server.verifyTransactionCredential(token)) as { refusal_reason: string }).refusal_reason,
+    ).toBe("txn_pop_required");
+
+    // No `ath`: the proof would bind to a KEY alone.
+    expect(
+      (await server.verifyTransactionCredential(token, await popFor(token, { omitAth: true }))).ok,
+    ).toBe(false);
+
+    // `ath` naming a DIFFERENT credential bound to the SAME key. This is the
+    // swap `ath` exists to stop: without it the proof minted for one token
+    // presents the other.
+    const sibling = await mint();
+    expect(sibling).not.toBe(token);
+    const swapped = await popFor(token, {
+      ath: createHash("sha256").update(sibling, "ascii").digest("base64url"),
+    });
+    expect((await server.verifyTransactionCredential(token, swapped)).ok).toBe(false);
+
+    // A replayed `jti` is single-use within the acceptance window.
+    const once = await popFor(token, { jti: "jti-replayed-once" });
+    expect((await server.verifyTransactionCredential(token, once)).ok).toBe(true);
+    expect((await server.verifyTransactionCredential(token, once)).ok).toBe(false);
+
+    // `iat` outside the window, in BOTH directions.
+    const nowS = Math.floor(Date.now() / 1000);
+    expect((await server.verifyTransactionCredential(token, await popFor(token, { iat: nowS - 3600 }))).ok).toBe(
+      false,
+    );
+    expect((await server.verifyTransactionCredential(token, await popFor(token, { iat: nowS + 3600 }))).ok).toBe(
+      false,
+    );
+
+    // A header `jwk` carrying private material proves nothing.
+    const priv = (await exportJWK(holderKeys.privateKey)) as Record<string, unknown>;
+    const withPrivate = await new SignJWT({
+      htu: RS_HTU,
+      htm: RS_HTM,
+      ath: createHash("sha256").update(token, "ascii").digest("base64url"),
+    })
+      .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: priv as never })
+      .setIssuedAt()
+      .setJti(crypto.randomUUID())
+      .sign(holderKeys.privateKey);
+    expect(
+      (await server.verifyTransactionCredential(token, { proof: withPrivate, htu: RS_HTU, htm: RS_HTM })).ok,
+    ).toBe(false);
+
+    // Every refusal above names the proof, not the credential's own claims.
+    const refused = await server.verifyTransactionCredential(token, await popFor(token, { omitAth: true }));
+    expect((refused as { refusal_reason: string }).refusal_reason).toBe("txn_cnf_mismatch");
+
+    // ...and a conforming proof still verifies.
+    expect((await server.verifyTransactionCredential(token, await popFor(token))).ok).toBe(true);
+  });
+
   it("authorizes the challenged operation alone, never another tool (@spec txn-authorization#transaction-token)", async () => {
     const { generateKeyPair, exportJWK } = await import("jose");
     const rsTxn = await generateKeyPair("ES256", { extractable: true });
@@ -523,7 +686,8 @@ d("M5 transaction-assurance tier", () => {
         authorizationDetails: remittanceEntry(),
         mission: originClaim,
       });
-    const wrong = await server.verifyTransactionCredential(await mint("alice"));
+    const other = await mint("alice");
+    const wrong = await server.verifyTransactionCredential(other, await popFor(other));
     expect(wrong.ok === false && wrong.refusal_reason).toBe("txn_subject_mismatch");
     expect((await credentialFor(server, await mint("origin-alice"))).sub).toBe("origin-alice");
   });
@@ -546,7 +710,7 @@ d("M5 transaction-assurance tier", () => {
     });
     // No retained operation for this `txn`: the credential never resolves, so
     // no TokenFacts and no tool call can be derived from it at all.
-    const res = await server.verifyTransactionCredential(txnToken);
+    const res = await server.verifyTransactionCredential(txnToken, await popFor(txnToken));
     expect(res.ok).toBe(false);
     expect(res.ok === false && res.refusal_reason).toBe("txn_unknown");
   });
@@ -578,7 +742,7 @@ d("M5 transaction-assurance tier", () => {
       parameterDigest: digestFor(payments),
       authorizationDetails: remittanceEntry(),
     });
-    const res = await server.verifyTransactionCredential(txnToken);
+    const res = await server.verifyTransactionCredential(txnToken, await popFor(txnToken));
     expect(res.ok).toBe(false);
     expect(res.ok === false && res.refusal_reason).toBe("txn_cnf_mismatch");
   });
@@ -604,7 +768,7 @@ d("M5 transaction-assurance tier", () => {
     const digest = digestFor(payments);
     /** The refusal reason the credential layer gives, or undefined when it resolves. */
     const present = async (txnToken: string): Promise<string | undefined> => {
-      const verified = await server.verifyTransactionCredential(txnToken);
+      const verified = await server.verifyTransactionCredential(txnToken, await popFor(txnToken));
       return verified.ok ? undefined : verified.refusal_reason;
     };
 
@@ -669,7 +833,7 @@ d("M5 transaction-assurance tier", () => {
       .setIssuedAt()
       .setExpirationTime("5m")
       .sign(asTxn.privateKey);
-    const asOrdinary = await server.verifyTransactionCredential(ordinary);
+    const asOrdinary = await server.verifyTransactionCredential(ordinary, await popFor(ordinary));
     expect(asOrdinary.ok).toBe(false);
     expect(asOrdinary.ok === false && asOrdinary.refusal_reason).toBe("txn_invalid");
 
@@ -682,7 +846,7 @@ d("M5 transaction-assurance tier", () => {
       authorizationDetails: remittanceEntry(),
       typ: "txn-token+jwt",
     });
-    const res = await server.verifyTransactionCredential(wrongTyp);
+    const res = await server.verifyTransactionCredential(wrongTyp, await popFor(wrongTyp));
     expect(res.ok).toBe(false);
     expect(res.ok === false && res.refusal_reason).toBe("txn_invalid");
   });

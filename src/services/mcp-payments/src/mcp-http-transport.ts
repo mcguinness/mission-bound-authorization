@@ -38,6 +38,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { ACCEPT_TXN_CHALLENGE_HEADER, acceptsTxnChallenge } from "@mission/core";
 import { exportJWK, SignJWT } from "jose";
+import { accessTokenHash } from "./dpop.js";
 import type { MediatedToolResult } from "./mcp-transport.js";
 import { TOOL_ACTIONS, type RequestSignals, type TokenFacts } from "./pep.js";
 import { serveResourceMetadata } from "./resource-metadata.js";
@@ -79,10 +80,24 @@ export function canonicalHtu(input: string | URL): string {
  * A resource-side DPoP proof (`dpop+jwt`) bound to `dpopKeys`, carrying the
  * canonical `htu`/`htm`, a fresh `jti`, and `iat`. The header `jwk` is the public
  * key, so the RS can compute its thumbprint and match it to the token's `cnf.jkt`.
+ *
+ * @spec RFC 9449 §4.2 — pass the credential this proof accompanies and the
+ * proof carries `ath` too, naming that exact credential. Every request to a
+ * Resource Server needs it: without `ath` a proof binds only to a KEY, so two
+ * credentials bound to the same key are interchangeable on the wire.
  */
-export async function dpopProofFor(dpopKeys: DpopKeys, htu: string, htm: string): Promise<string> {
+export async function dpopProofFor(
+  dpopKeys: DpopKeys,
+  htu: string,
+  htm: string,
+  accessToken?: string,
+): Promise<string> {
   const jwk = await exportJWK(dpopKeys.publicKey);
-  return new SignJWT({ htu, htm })
+  return new SignJWT({
+    htu,
+    htm,
+    ...(accessToken !== undefined ? { ath: accessTokenHash(accessToken) } : {}),
+  })
     .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk })
     .setIssuedAt()
     .setJti(randomUUID())
@@ -289,7 +304,7 @@ export function dpopFetch(
   return async (input, init) => {
     const htu = canonicalHtu(input);
     const htm = init?.method ?? "GET";
-    const proof = await dpopProofFor(dpopKeys, htu, htm);
+    const proof = await dpopProofFor(dpopKeys, htu, htm, credential);
     const headers = new Headers(init?.headers);
     for (const [name, value] of Object.entries(extraHeaders)) headers.set(name, value);
     headers.set("authorization", `DPoP ${credential}`);

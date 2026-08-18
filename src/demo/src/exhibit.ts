@@ -16,7 +16,12 @@ import { SAAS_RESOURCE } from "@mission/mcp-saas";
 import type { TokenFacts } from "@mission/mcp-payments";
 import type { Decision, EvaluationRequest } from "@mission/pdp";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
-import { composeStack, type AuthServerExtras, type DemoStack } from "./stack.js";
+import {
+  callWithTransactionCredential,
+  composeStack,
+  type AuthServerExtras,
+  type DemoStack,
+} from "./stack.js";
 import { label as humanName } from "./labels.js";
 import { clientAssertionSigner, dpopProofFor, issueMissionToken, tokenGrantRequest } from "./oauth-client.js";
 
@@ -757,7 +762,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   );
   // Validate the REAL dispatched token at the RS (exhibit idiom): the RS-side
   // DPoP proof re-presents the dispatcher key, so proof jkt == token cnf.jkt.
-  const rsProof = await dpopProofFor(dispatcherDpop, CANONICAL_RESOURCE, "POST");
+  const rsProof = await dpopProofFor(dispatcherDpop, CANONICAL_RESOURCE, "POST", dispatchedAccessToken);
   const facts: TokenFacts = await stack.server.validateToken(dispatchedAccessToken, rsProof, CANONICAL_RESOURCE, "POST");
   note(`verified dispatched token at the RS (aud=${CANONICAL_RESOURCE}, DPoP jkt==cnf.jkt, mission claim present).`);
   hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "get_invoice")}`, "in-process MCP · O-33");
@@ -843,7 +848,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
       `${humanRecord.template === undefined ? "absent" : "present"}; subject ${humanRecord.subject.sub} != approver ${humanRecord.approver.sub} ` +
       "(write-bearing missions need a distinct approver, Governance D37).",
   );
-  const humanRsProof = await dpopProofFor(humanIssued.dpopKeys, CANONICAL_RESOURCE, "POST");
+  const humanRsProof = await dpopProofFor(humanIssued.dpopKeys, CANONICAL_RESOURCE, "POST", humanIssued.accessToken);
   const humanFacts: TokenFacts = await stack.server.validateToken(humanIssued.accessToken, humanRsProof, CANONICAL_RESOURCE, "POST");
   const humanOk = humanRecord.approval_basis.type === "direct" && humanRecord.template === undefined;
   outcome({
@@ -1237,7 +1242,7 @@ async function main() {
   );
   hop("Payments RS", "AS", "verify AS-signed token — GET /jwks", "in-process; fetches the AS jwks");
   note(`RS-side DPoP proof: same DPoP key as the token, htu=${CANONICAL_RESOURCE}, htm=POST.`);
-  const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST");
+  const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST", issued.accessToken);
   let facts: TokenFacts = await stack.server.validateToken(issued.accessToken, rsProof, CANONICAL_RESOURCE, "POST");
   // Augment with the client instance id for a richer actor in the envelope.
   facts = { ...facts, clientInstanceId: "inst-ap-agent-01" };
@@ -1475,19 +1480,26 @@ async function main() {
   // (typ, issuer, aud, cnf, txn, mission invariants, authorization_details, and
   // a RECOMPUTED parameter_digest), reads no approval object off the token, and
   // consumes the txn exactly once before the irreversible effect.
-  hop("Agent", "Payments RS", "tools/call send_remittance_email (re-present txn-token)", "in-process MCP · O-33");
+  hop("Agent", "Payments RS", "tools/call send_remittance_email (re-present txn-token)", "HTTP MCP · DPoP");
   block("MCP tools/call — send_remittance_email (re-present, carrying the txn-token)", {
     tool: "send_remittance_email",
     arguments: { invoice_id: "inv-1" },
     authorization: `DPoP ${truncTok(txnToken)} (the transaction token, presented as the request's ONLY credential)`,
+    dpop: "<DPoP proof of the txn-token's cnf key: htu=/mcp, htm=POST, ath=hash(txn-token)>",
   });
-  // @spec txn-authorization#transaction-token — the retry presents the
-  // transaction token as the sole OAuth credential: the request's identity,
-  // Mission, client and presenter key all come from THAT verified token, and it
-  // authorizes the challenged operation and nothing else.
-  const txnCredential = await stack.server.verifyTransactionCredential(txnToken);
-  if (!txnCredential.ok) throw new Error(`the RS refused the transaction credential: ${txnCredential.refusal_reason}`);
-  const granted = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, txnCredential.facts);
+  // @spec txn-authorization#transaction-token, #offline-verification step 2 —
+  // the retry presents the transaction token as the sole OAuth credential over
+  // a REAL HTTP request: the request's identity, Mission, client and presenter
+  // key all come from THAT verified token, proof of possession is proven
+  // against the key the challenge committed to, and `ath` names this exact
+  // credential. The in-process channel cannot carry this class at all.
+  const granted = await callWithTransactionCredential(
+    stack.server,
+    txnToken,
+    issued.dpopKeys,
+    "send_remittance_email",
+    { invoice_id: "inv-1" },
+  );
   if (captured) block("PDP decision (permit: token-derived approval matched parameter_digest)", captured.decision);
   outcome({
     decision: granted.ok ? "PERMIT" : "DENY",
@@ -1497,7 +1509,10 @@ async function main() {
       : `${gloss("tool", "send_remittance_email")}(inv-1) denied`,
     ok: granted.ok,
   });
-  note("The approval was carried by the AS-issued txn-token, never as a tool input. The mission was never widened; the gate sat inside the mission's authority.");
+  note(
+    "The approval was carried by the AS-issued txn-token, never as a tool input, and the retry proved possession of the " +
+      "challenge's cnf key over a real HTTP request. The mission was never widened; the gate sat inside the mission's authority.",
+  );
 
   // ---- 8. AROP over DTR: deferred token response on the real /token endpoint --
   step(8, "AROP over DTR: a deferred token response, approved just-in-time (real /token)");

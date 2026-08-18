@@ -20,7 +20,7 @@ import { txnTaskId } from "@mission/access-request";
 import type { TokenFacts } from "@mission/mcp-payments";
 import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { shapeIntent } from "@mission/agent";
-import { composeStack } from "./stack.js";
+import { callWithTransactionCredential, composeStack } from "./stack.js";
 import { ACTION_LABELS, REASON_LABELS, TOOL_LABELS } from "./labels.js";
 import {
   clientAssertionSigner,
@@ -139,7 +139,7 @@ async function main() {
     },
   ]);
   const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, authorizationDetails, scope: "payments" });
-  const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST");
+  const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST", issued.accessToken);
   const facts: TokenFacts = {
     ...(await stack.server.validateToken(issued.accessToken, rsProof, CANONICAL_RESOURCE, "POST")),
     clientInstanceId: "inst-1",
@@ -399,7 +399,7 @@ async function main() {
       } catch (e) {
         return c.json({ approved: false, error: (e as Error).message }, 400);
       }
-      const proof = await dpopProofFor(issuedMission.dpopKeys, CANONICAL_RESOURCE, "POST");
+      const proof = await dpopProofFor(issuedMission.dpopKeys, CANONICAL_RESOURCE, "POST", issuedMission.accessToken);
       const newFacts: TokenFacts = {
         ...(await stack.server.validateToken(issuedMission.accessToken, proof, CANONICAL_RESOURCE, "POST")),
         clientInstanceId: "inst-1",
@@ -613,14 +613,18 @@ async function main() {
       }
       return c.json({ ok: false, pending: true, state: task.state });
     }
-    // @spec txn-authorization#transaction-token — the retry runs under the
-    // transaction token as its sole credential, never alongside the base one.
-    const credential = await stack.server.verifyTransactionCredential(txnToken);
-    if (!credential.ok) {
-      txnHandles.delete(taskId);
-      return c.json({ ok: false, refusal_reason: credential.refusal_reason });
-    }
-    const r = await stack.server.callTransactionTool(tool, args, credential.facts);
+    // @spec txn-authorization#transaction-token, #offline-verification step 2 —
+    // the retry runs under the transaction token as its sole credential, never
+    // alongside the base one, and over a REAL HTTP request: proof of possession
+    // of the key the challenge committed to is not optional for this class.
+    const r = await callWithTransactionCredential(
+      stack.server,
+      String(txnToken),
+      active.issued.dpopKeys,
+      tool,
+      args,
+    );
+    if (!r.ok && r.refusal_reason?.startsWith("txn_")) txnHandles.delete(taskId);
     await publishNew();
     txnHandles.delete(taskId);
     return c.json(r);
