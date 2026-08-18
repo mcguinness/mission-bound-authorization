@@ -11,10 +11,13 @@
 //   (d) architecture map gap  - a draft not named in the architecture's Mission Document Map
 //   (e) adoption-order gap    - a draft with a real adoption_rung missing from README's
 //                                Adoption order section (adoption_rung "outside-ordering" is exempt)
+//   (f) external-pins shape   - notes/external-pins.json fails structural validation
+//                                (see scripts/check-external-pins.mjs)
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { validateExternalPins } from "./check-external-pins.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -203,6 +206,11 @@ function main() {
       }
     }
   }
+
+  // (f) External pin registry: structural validation only (P2, review of
+  // PR #595). Content verification against live source repos happens at
+  // Ship 3, not here.
+  for (const e of validateExternalPins(ROOT)) fail("external-pins", e);
 
   if (errors.length > 0) {
     console.error(`family-manifest check FAILED with ${errors.length} finding(s):\n`);

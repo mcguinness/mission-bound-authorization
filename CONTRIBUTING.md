@@ -105,16 +105,22 @@ capability nonconforming, or a justified SHOULD departure a failure
 
 No document consolidation happens before WG adoption or publication planning.
 Reader editions are the chosen remedy for reader-facing coherence in the
-meantime: a per-edition concatenated view built from the existing separate
-documents, never a merge of their source. The lifecycle group's and the
-runtime/evidence pair's document boundaries are reconsidered only when WG
-adoption or publication planning is reached; see `notes/adoption-plan.md`
-for the measured basis.
+meantime: navigation-linked per-document HTML copies plus a separately
+concatenated bundle-text artifact, built from the existing separate
+documents, never a merge of their source. Concatenated HTML inlining was
+rejected. The lifecycle group's and the runtime/evidence pair's document
+boundaries are reconsidered only when WG adoption or publication planning
+is reached; see `notes/adoption-plan.md` for the measured basis.
 
-`aauth-mission-expiry` retirement goes upstream-first: its distinctive
-requirements (RFC 3339 precision, prompt-transition behavior) are
-contributed to AAuth itself, and the standalone profile retires only if
-upstream absorbs them. Folding it into the Mission AAuth binding stays
+`aauth-mission-expiry` retirement goes upstream-first, and requires a
+released upstream AAuth revision, cited stably (never a transient
+editor-copy merge), that absorbs every normative requirement this
+profile's Conformance section adds: the rule that `expires_at`, once
+present, must name an instant later than `approved_at`; the
+deployment's documented clock synchronization, comparison precision,
+and tolerated clock skew; and the prompt deadline-transition SHOULD.
+The standalone profile retires only once that revision is released and
+covers all of it. Folding it into the Mission AAuth binding stays
 rejected, since that would strand the bare-AAuth audience.
 
 ## Working Group Information
