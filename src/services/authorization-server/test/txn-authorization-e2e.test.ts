@@ -39,7 +39,13 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { buildAuthorizationServer, type BuiltAs, type ChallengeIssuers } from "../src/index.js";
+import {
+  buildAuthorizationServer,
+  missionResourceAccessProfile,
+  OperationProfileRegistry,
+  type BuiltAs,
+  type ChallengeIssuers,
+} from "../src/index.js";
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const FGA_KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -256,6 +262,12 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
       transactionAuthorization: {
         challengeIssuers,
         ars,
+        // @spec txn-authorization#resource-challenge — the payments resource
+        // challenges with the family's own `mission_resource_access` entry.
+        operationProfiles: new OperationProfileRegistry().register(
+          CANONICAL_RESOURCE,
+          missionResourceAccessProfile(),
+        ),
         workflowLifetimeSeconds: 600,
         maxTokenLifetimeSeconds: 300,
         // The deployment's entitlement/policy decision at completion. Permit

@@ -68,6 +68,13 @@ export {
   verifyIntentSubmissionEvidence,
 } from "./kernel/intent.js";
 export { deriveAuthoritySet, isSubsetEntry, isSubsetSet } from "./kernel/derive.js";
+export {
+  missionResourceAccessProfile,
+  type OperationProfile,
+  OperationProfileRegistry,
+  type OperationResolution,
+  type ResolvedOperation,
+} from "./kernel/operation-profile.js";
 export { delegatePermitted, type DelegateCandidate } from "./kernel/delegate-matcher.js";
 export {
   authorizationDetailsTypesMetadata,

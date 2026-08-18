@@ -15,6 +15,8 @@ import {
   issueCrossDomainGrant,
   type IssuerEvidenceStore,
   MissionKernel,
+  missionResourceAccessProfile,
+  OperationProfileRegistry,
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
@@ -214,6 +216,15 @@ export async function composeStack(opts: {
         workflowLifetimeSeconds: txnTopo.workflowLifetimeSeconds,
         maxTokenLifetimeSeconds: txnTopo.maxTokenLifetimeSeconds,
         maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
+        // @spec txn-authorization#resource-challenge — the Operation Profiles
+        // this deployment recognizes. The payments resource challenges with the
+        // family's own `mission_resource_access` entry, so that profile governs
+        // its operations; an entry naming any other type is refused at
+        // admission rather than read structurally.
+        operationProfiles: new OperationProfileRegistry().register(
+          CANONICAL_RESOURCE,
+          missionResourceAccessProfile(),
+        ),
         // @spec txn-authorization#challenge-redemption step 7 — the deployment's
         // entitlement and resource-policy decision, run FRESH at completion
         // against LIVE state. A completed approval is context here, never a

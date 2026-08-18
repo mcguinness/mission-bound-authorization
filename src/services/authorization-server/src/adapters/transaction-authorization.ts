@@ -37,6 +37,7 @@ import {
   validateChallenge,
 } from "../kernel/txn-challenge.js";
 import { mintTransactionToken } from "../kernel/transaction-token.js";
+import type { OperationProfileRegistry } from "../kernel/operation-profile.js";
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
 import { TxnWorkflowStore, type TxnWorkflowRecord } from "../kernel/txn-workflow-store.js";
 import { DPOP_PROOF_REPLAY_WINDOW_S, type DpopProofReplay } from "./dpop-replay.js";
@@ -185,6 +186,14 @@ export interface TxnAuthorizationOptions {
   /** Poll cadence advertised to the client (seconds). */
   pollIntervalSeconds?: number;
   destinationPolicy?: DestinationPolicy;
+  /**
+   * @spec txn-authorization#resource-challenge — the Operation Profiles this
+   * deployment recognizes, per Challenge-Issuing Resource and
+   * `authorization_details` type. The registry is REQUIRED: an entry whose
+   * (resource, type) no profile governs is an operation this TAS cannot read,
+   * and it is refused at admission rather than interpreted structurally.
+   */
+  operationProfiles: OperationProfileRegistry;
   /** The pending-workflow table; defaulted per provider instance when unset. */
   store?: TxnWorkflowStore;
 }
@@ -391,8 +400,31 @@ async function admit(
   //    Authority Set under the subset rule, and applying to the challenge's
   //    resource. The Mission's CURRENT effective set is the funnel, so a
   //    contained capability cannot be laundered through an approval.
+  //
+  //    Reading the operation comes FIRST: whether an operation is within the
+  //    Authority Set is a question about an operation this TAS can read, and an
+  //    entry it cannot read is refused rather than measured structurally.
   const requested = challenge.authorization_details as unknown as AuthorityEntry[];
   const missionId = challenge.mission.id;
+
+  // @spec txn-authorization#resource-challenge — the operation, read through
+  // the Challenge-Issuing Resource's OWN Operation Profile. The profile
+  // validates the complete entry and names the action; an unrecognized
+  // (resource, type) pair is an operation this TAS cannot read, and `reason` is
+  // display text that never becomes authorization input.
+  const operationType = typeof requested[0]?.type === "string" ? (requested[0].type as string) : "";
+  const profile = txn.operationProfiles.forAdmission(challenge.iss, operationType);
+  if (!profile) {
+    fail(ctx, 400, "invalid_grant", "no Operation Profile governs this operation type");
+    return;
+  }
+  const resolved = profile.resolve(challenge.authorization_details[0] as JsonValue, { resource: challenge.iss });
+  if (!resolved.ok) {
+    fail(ctx, 400, "invalid_grant", `operation rejected by its Operation Profile (${resolved.reason})`);
+    return;
+  }
+  const action = resolved.operation.action;
+
   const record = deps.kernel.get(missionId);
   if (!record) {
     fail(ctx, 400, "invalid_grant", "unknown mission");
@@ -420,7 +452,6 @@ async function admit(
   //    ancestor's requirement is gated here even where deployment policy is
   //    silent about the action. The constraint is monotonic: either source
   //    alone establishes it, and neither can shed the other's.
-  const action = requested[0]?.actions?.[0] ?? challenge.reason;
   // @spec mission#the-mission-claim — the workflow's subject is the
   // `subject_token`'s OWN `sub`: the principal in THIS Authorization Server's
   // namespace, which is what the transaction token's `sub` means. The
@@ -462,8 +493,8 @@ async function admit(
     missionId,
     action,
     // Pinned: a superseded Operation Profile version stays recognized for as
-    // long as this workflow references it.
-    operationType: String(requested[0]?.type ?? ""),
+    // long as this workflow references it (the registry RETAINS it).
+    operationType,
     // @spec txn-authorization#two-phase-expiry — the workflow's own
     // deployment-declared lifetime, NOT the challenge's remaining window.
     expiresAtS: nowS + txn.workflowLifetimeSeconds,
@@ -709,6 +740,24 @@ async function completionChecks(
   // crash between the two, or a concurrent submission still in flight). There
   // is nothing to decide on yet; the workflow's own lifetime bounds the wait.
   if (!wf.taskId) return { ok: false, error: "authorization_pending" };
+
+  // @spec txn-authorization#resource-challenge — the operation is re-read
+  // through the profile version this workflow PINNED, which the registry
+  // retains for exactly as long as a workflow references it. Superseding a
+  // version stops NEW challenges naming it; it never revises the basis of a
+  // workflow already admitted under it. A version the deployment no longer
+  // retains at all is an operation this TAS can no longer read, and refuses.
+  const pinnedProfile = txn.operationProfiles.forPinned(wf.challenge.iss, wf.operationType);
+  const pinnedOperation = pinnedProfile?.resolve(wf.challenge.authorization_details[0] as JsonValue, {
+    resource: wf.challenge.iss,
+  });
+  if (!pinnedOperation?.ok || pinnedOperation.operation.action !== wf.action) {
+    return {
+      ok: false,
+      error: "access_denied",
+      description: "the Operation Profile version this workflow was admitted under no longer resolves it",
+    };
+  }
 
   const task = txn.ars.getTask(wf.taskId);
   if (task?.state === "denied") {

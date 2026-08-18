@@ -32,6 +32,7 @@ import {
   type BuiltAs,
   type ChallengeIssuers,
 } from "../src/index.js";
+import { missionResourceAccessProfile, OperationProfileRegistry } from "../src/index.js";
 import { newDpopProofReplay } from "../src/adapters/dpop-replay.js";
 import {
   handleTransactionAuthorization,
@@ -68,6 +69,9 @@ let dpopJkt: string;
 let rsTxnKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
 /** The agent client's PUBLIC assertion key, for a deps built in-test. */
 let agentClientPublicJwk: JWK;
+/** @spec txn-authorization#resource-challenge — the deployment's registry, so a
+ *  run can supersede a profile version mid-suite. */
+const operationProfiles = new OperationProfileRegistry();
 let baseToken = "";
 let missionId = "";
 let missionClaim: Record<string, unknown> = {};
@@ -462,6 +466,13 @@ beforeAll(async () => {
     transactionAuthorization: {
       challengeIssuers,
       ars: txnArs,
+      // @spec txn-authorization#resource-challenge — the Operation Profiles
+      // this deployment recognizes. BOTH accepted resources challenge with the
+      // family's `mission_resource_access` entry; a run can supersede a version
+      // to prove drift behaves.
+      operationProfiles: operationProfiles
+        .register(RESOURCE, missionResourceAccessProfile())
+        .register(OTHER_RESOURCE, missionResourceAccessProfile()),
       workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
       maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
       // @spec txn-authorization#challenge-redemption step 7 — a deployment
@@ -512,9 +523,11 @@ describe("transaction endpoint redemption (@spec txn-authorization#challenge-red
     // read the Mission's Authority Set from the base token).
     const record = as.kernel.get(missionId);
     expect(record).toBeDefined();
-    const requested = (record as { authority_set: AuthorityEntry[] }).authority_set.filter((e) =>
-      e.actions.includes("payments:remittance.send"),
-    );
+    const requested = (record as { authority_set: AuthorityEntry[] }).authority_set
+      // @spec txn-authorization#resource-challenge — a challenge names ONE
+      // operation, so the entry it carries names exactly one action.
+      .filter((e) => e.actions.includes("payments:remittance.send"))
+      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
     expect(requested.length).toBeGreaterThan(0);
 
     const txn = "txn_http_1";
@@ -665,9 +678,11 @@ describe("transaction endpoint redemption (@spec txn-authorization#challenge-red
   it("refuses a poll from a client the workflow was not admitted for", async () => {
     // Initiate a fresh handle, bound to the real base token's DPoP key.
     const record = as.kernel.get(missionId);
-    const requested = (record as { authority_set: AuthorityEntry[] }).authority_set.filter((e) =>
-      e.actions.includes("payments:remittance.send"),
-    );
+    const requested = (record as { authority_set: AuthorityEntry[] }).authority_set
+      // @spec txn-authorization#resource-challenge — a challenge names ONE
+      // operation, so the entry it carries names exactly one action.
+      .filter((e) => e.actions.includes("payments:remittance.send"))
+      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
     const challenge = await signChallenge(
       {
         txn: "txn_http_cnf",
@@ -697,9 +712,11 @@ describe("transaction endpoint redemption (@spec txn-authorization#challenge-red
 
   it("reports a denied approval as access_denied so the client stops polling", async () => {
     const record = as.kernel.get(missionId);
-    const requested = (record as { authority_set: AuthorityEntry[] }).authority_set.filter((e) =>
-      e.actions.includes("payments:remittance.send"),
-    );
+    const requested = (record as { authority_set: AuthorityEntry[] }).authority_set
+      // @spec txn-authorization#resource-challenge — a challenge names ONE
+      // operation, so the entry it carries names exactly one action.
+      .filter((e) => e.actions.includes("payments:remittance.send"))
+      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
     const txn = "txn_http_denied";
     const challenge = await signChallenge(
       {
@@ -957,9 +974,11 @@ describe("approval bound to the whole transaction (@spec txn-authorization#chall
     opts: { parameter_digest?: string } = {},
   ): Promise<{ txaId: string; status: number; body: Record<string, unknown> }> {
     const record = as.kernel.get(missionId);
-    const requested = (record as { authority_set: AuthorityEntry[] }).authority_set.filter((e) =>
-      e.actions.includes("payments:remittance.send"),
-    );
+    const requested = (record as { authority_set: AuthorityEntry[] }).authority_set
+      // @spec txn-authorization#resource-challenge — a challenge names ONE
+      // operation, so the entry it carries names exactly one action.
+      .filter((e) => e.actions.includes("payments:remittance.send"))
+      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
     const challenge = await signChallenge(
       {
         txn,
@@ -1192,6 +1211,7 @@ describe("origin principal vs the local subject (@spec txn-authorization#transac
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
         ]) as ChallengeIssuers,
         ars: localArs,
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
         tokenKey: txnKeys.privateKey,
         tokenKid: "local-txn",
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
@@ -1573,52 +1593,155 @@ describe("the approval requirement under delegation (@spec txn-authorization#app
   });
 });
 
-describe("Operation Profile drift (@spec txn-authorization#resource-challenge)", () => {
-  it("completes a workflow admitted under a superseded Operation Profile version", async () => {
+/**
+ * @spec txn-authorization#resource-challenge — the operation is read through
+ * the Challenge-Issuing Resource's OWN Operation Profile, and profile VERSIONS
+ * are retained: superseding one stops new challenges naming it without revising
+ * the basis of a workflow already admitted under it.
+ */
+describe("Operation Profile resolution and drift (@spec txn-authorization#resource-challenge)", () => {
+  const challengeFor = async (
+    mission: { missionId: string; mission: Record<string, unknown> },
+    txn: string,
+    details: unknown[],
+  ): Promise<string> =>
+    signChallenge(
+      {
+        txn,
+        authorization_details: details,
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "payments:invoice.read",
+        parameter_digest: `sha-256:${txn}`,
+        mission: mission.mission,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+
+  it("refuses an entry naming more than one action", async () => {
+    const mission = await freshMission();
+    const multi = (as.kernel.get(mission.missionId) as { authority_set: AuthorityEntry[] }).authority_set
+      .filter((e) => e.actions.includes("payments:remittance.send"))
+      .map((e) => ({ ...e, actions: ["payments:invoice.read", "payments:remittance.send"] }));
+    const res = await submit(await challengeFor(mission, "txn_profile_multi", multi), {
+      token: mission.token,
+    });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toMatch(/exactly one action/);
+    // Nothing was admitted, so no approval was opened for it either.
+    expect(openedApprovals.find((o) => o.txn === "txn_profile_multi")).toBeUndefined();
+  });
+
+  it("refuses an entry whose action is blank", async () => {
+    const mission = await freshMission();
+    const blank = remittanceEntry(mission.missionId).map((e) => ({ ...e, actions: ["   "] }));
+    const res = await submit(await challengeFor(mission, "txn_profile_blank", blank), {
+      token: mission.token,
+    });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+  });
+
+  it("refuses an entry whose type no Operation Profile governs", async () => {
+    const mission = await freshMission();
+    const unknown = remittanceEntry(mission.missionId).map((e) => ({ ...e, type: "payments_wire_v9" }));
+    const res = await submit(await challengeFor(mission, "txn_profile_unknown", unknown), {
+      token: mission.token,
+    });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toMatch(/no Operation Profile governs/);
+  });
+
+  it("never reads the human-readable reason as the operation's action", async () => {
+    // The challenge's `reason` names a REAL action of this Mission, and the
+    // entry is unreadable. A TAS that fell back to `reason` would admit an
+    // operation the resource never described.
+    const mission = await freshMission();
+    const unreadable = remittanceEntry(mission.missionId).map((e) => ({ ...e, actions: [] }));
+    const res = await submit(await challengeFor(mission, "txn_profile_reason", unreadable), {
+      token: mission.token,
+    });
+    expect(res.status).toBe(400);
+    expect(openedApprovals.find((o) => o.txn === "txn_profile_reason")).toBeUndefined();
+  });
+
+  it("completes a workflow admitted under a superseded version, and refuses new challenges naming it", async () => {
     const mission = await freshMission();
     const details = remittanceEntry(mission.missionId);
-    const sign = (txn: string, digest: string) =>
-      signChallenge(
-        {
-          txn,
-          authorization_details: details,
-          iss: RESOURCE,
-          aud: ISSUER,
-          reason: "action_approval_required",
-          parameter_digest: digest,
-          mission: mission.mission,
-        },
-        rsTxnKeys.privateKey,
-        "rs-txn",
-      );
-
-    // Version 1 of the resource's Operation Profile: the operation normalizes
-    // to this digest, and the workflow is admitted on that snapshot.
     const supersededDigest = "sha-256:operation-profile-v1";
+
+    // Version 1: the workflow is admitted on this snapshot.
     const admitted = (await (
-      await submit(await sign("txn_profile_v1", supersededDigest), { token: mission.token })
+      await submit(
+        await signChallenge(
+          {
+            txn: "txn_profile_v1",
+            authorization_details: details,
+            iss: RESOURCE,
+            aud: ISSUER,
+            reason: "action_approval_required",
+            parameter_digest: supersededDigest,
+            mission: mission.mission,
+          },
+          rsTxnKeys.privateKey,
+          "rs-txn",
+        ),
+        { token: mission.token },
+      )
     ).json()) as { transaction_authorization_id: string };
+    expect(admitted.transaction_authorization_id).toBeDefined();
 
-    // The resource then bumps the profile: the same operation now normalizes
-    // differently, and new challenges carry the new version. That is a SEPARATE
-    // workflow; it never revises the basis of the one already pending.
-    const bumped = (await (
-      await submit(await sign("txn_profile_v2", "sha-256:operation-profile-v2"), { token: mission.token })
-    ).json()) as { transaction_authorization_id: string };
-    expect(bumped.transaction_authorization_id).not.toBe(admitted.transaction_authorization_id);
+    // The resource then versions its Operation Profile: the old type leaves
+    // ADMISSION eligibility. The registry retains it, because a workflow
+    // already references it.
+    operationProfiles.supersede(RESOURCE, "mission_resource_access");
+    try {
+      // A NEW challenge naming the superseded type is refused outright.
+      const stale = await submit(
+        await signChallenge(
+          {
+            txn: "txn_profile_v2",
+            authorization_details: details,
+            iss: RESOURCE,
+            aud: ISSUER,
+            reason: "action_approval_required",
+            parameter_digest: "sha-256:operation-profile-v2",
+            mission: mission.mission,
+          },
+          rsTxnKeys.privateKey,
+          "rs-txn",
+        ),
+        { token: mission.token },
+      );
+      const staleBody = (await stale.json()) as { error?: string; error_description?: string };
+      expect(stale.status).toBe(400);
+      expect(staleBody.error_description).toMatch(/no Operation Profile governs/);
 
-    // The pending workflow still resolves, on the version it was admitted under.
-    await ars.adjudicate(taskFor("txn_profile_v1"), "approve", "bob");
-    const res = await postTransaction({ transaction_authorization_id: admitted.transaction_authorization_id });
-    const body = (await res.json()) as { access_token?: string };
-    expect(res.status, JSON.stringify(body)).toBe(200);
-    expect(decodeJwt(body.access_token as string).parameter_digest).toBe(supersededDigest);
-    // The fresh decision ran on the PINNED snapshot, not on the current profile.
-    expect(freshDecisionInputs.find((i) => i.txn === "txn_profile_v1")).toEqual({
-      txn: "txn_profile_v1",
-      operationType: "mission_resource_access",
-      parameterDigest: supersededDigest,
-    });
+      // ...while the PENDING workflow completes on the version it was admitted
+      // under: the retention is what makes drift survivable rather than a
+      // silent loss of in-flight approvals.
+      await ars.adjudicate(taskFor("txn_profile_v1"), "approve", "bob");
+      const res = await postTransaction({
+        transaction_authorization_id: admitted.transaction_authorization_id,
+      });
+      const body = (await res.json()) as { access_token?: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
+      expect(decodeJwt(body.access_token as string).parameter_digest).toBe(supersededDigest);
+      // The fresh decision ran on the PINNED snapshot, not on a current profile.
+      expect(freshDecisionInputs.find((i) => i.txn === "txn_profile_v1")).toEqual({
+        txn: "txn_profile_v1",
+        operationType: "mission_resource_access",
+        parameterDigest: supersededDigest,
+      });
+    } finally {
+      operationProfiles.register(RESOURCE, missionResourceAccessProfile());
+    }
   });
 });
 
