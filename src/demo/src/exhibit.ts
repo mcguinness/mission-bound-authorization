@@ -1328,7 +1328,6 @@ async function main() {
     { invoice_id: "inv-1" },
     facts,
     undefined,
-    undefined,
     // @spec txn-authorization#resource-challenge — the client signals that it
     // can redeem a challenge; without the signal the RS returns a plain denial.
     { acceptTxnChallenge: true },
@@ -1480,10 +1479,15 @@ async function main() {
   block("MCP tools/call — send_remittance_email (re-present, carrying the txn-token)", {
     tool: "send_remittance_email",
     arguments: { invoice_id: "inv-1" },
-    authorization: "DPoP <real mission-bound access token>",
-    txn_token: truncTok(txnToken),
+    authorization: `DPoP ${truncTok(txnToken)} (the transaction token, presented as the request's ONLY credential)`,
   });
-  const granted = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts, undefined, txnToken);
+  // @spec txn-authorization#transaction-token — the retry presents the
+  // transaction token as the sole OAuth credential: the request's identity,
+  // Mission, client and presenter key all come from THAT verified token, and it
+  // authorizes the challenged operation and nothing else.
+  const txnCredential = await stack.server.verifyTransactionCredential(txnToken);
+  if (!txnCredential.ok) throw new Error(`the RS refused the transaction credential: ${txnCredential.refusal_reason}`);
+  const granted = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, txnCredential.facts);
   if (captured) block("PDP decision (permit: token-derived approval matched parameter_digest)", captured.decision);
   outcome({
     decision: granted.ok ? "PERMIT" : "DENY",

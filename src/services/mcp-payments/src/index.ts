@@ -30,6 +30,7 @@ export {
   type PepDeps,
   type RequestSignals,
   type TokenFacts,
+  type TxnCredential,
   type EnforceResult,
   type ActionApprovalInput,
   buildInsufficientAuthorization,
@@ -44,6 +45,7 @@ export {
   type ToolDef,
   type McpServerDeps,
   type TransactionToolResult,
+  type VerifiedTxnCredential,
 } from "./server.js";
 export {
   createMcpChannel,

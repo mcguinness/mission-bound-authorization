@@ -566,7 +566,7 @@ async function main() {
     const tool = String(body.tool);
     const args = (body.args as Record<string, unknown>) ?? {};
     const r = TX_TOOLS.has(tool)
-      ? await stack.server.callTransactionTool(tool, args, active.facts, undefined, undefined, ACCEPT_CHALLENGE)
+      ? await stack.server.callTransactionTool(tool, args, active.facts, undefined, ACCEPT_CHALLENGE)
       : await stack.server.callReadTool(tool, args, active.facts);
     await publishNew();
     // Structured detail for the log renderer, ADDED alongside the existing
@@ -609,7 +609,14 @@ async function main() {
       }
       return c.json({ ok: false, pending: true, state: task.state });
     }
-    const r = await stack.server.callTransactionTool(tool, args, active.facts, undefined, txnToken);
+    // @spec txn-authorization#transaction-token — the retry runs under the
+    // transaction token as its sole credential, never alongside the base one.
+    const credential = await stack.server.verifyTransactionCredential(txnToken);
+    if (!credential.ok) {
+      txnHandles.delete(taskId);
+      return c.json({ ok: false, refusal_reason: credential.refusal_reason });
+    }
+    const r = await stack.server.callTransactionTool(tool, args, credential.facts);
     await publishNew();
     txnHandles.delete(taskId);
     return c.json(r);
@@ -626,7 +633,7 @@ async function main() {
     const steps: Array<StepDetail & { taskId?: string | undefined; transaction_authorization_id?: string | undefined }> = [];
     for (const invoice_id of RUN_INVOICES) {
       const args = { invoice_id };
-      const r = await stack.server.callTransactionTool("execute_wire_transfer", args, active.facts, undefined, undefined, ACCEPT_CHALLENGE);
+      const r = await stack.server.callTransactionTool("execute_wire_transfer", args, active.facts, undefined, ACCEPT_CHALLENGE);
       await publishNew();
       steps.push(stepDetail("execute_wire_transfer", args, r, active.missionId));
     }
@@ -634,7 +641,7 @@ async function main() {
     // STOP (no auto-approve). The paused step carries taskId + tool + args so the
     // UI can arm the existing retry button against the AROP task.
     const jitArgs = { invoice_id: "inv-1" };
-    const jr = await stack.server.callTransactionTool("send_remittance_email", jitArgs, active.facts, undefined, undefined, ACCEPT_CHALLENGE);
+    const jr = await stack.server.callTransactionTool("send_remittance_email", jitArgs, active.facts, undefined, ACCEPT_CHALLENGE);
     await publishNew();
     const jitDetail = stepDetail("send_remittance_email", jitArgs, jr, active.missionId);
     if (!jr.ok && jr.transaction_challenge) {

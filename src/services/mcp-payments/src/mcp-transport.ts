@@ -117,7 +117,7 @@ function createMcpServer(paymentsServer: McpPaymentsServer): Server {
     if (typeof cred !== "string") return { tools: [] };
     let token: TokenFacts;
     try {
-      token = await paymentsServer.validateMissionToken(cred);
+      token = await paymentsServer.validateCredential(cred);
     } catch {
       // An unvalidated caller sees nothing (fail closed, least exposure).
       return { tools: [] };
@@ -131,7 +131,11 @@ function createMcpServer(paymentsServer: McpPaymentsServer): Server {
     let token: TokenFacts;
     try {
       if (typeof cred !== "string") throw new Error("missing mission credential in _meta");
-      token = await paymentsServer.validateMissionToken(cred);
+      // @spec txn-authorization#transaction-token — ONE credential crosses the
+      // boundary: the ordinary Mission-bound token, or the transaction token
+      // that authorizes the retry of a challenged operation. There is no
+      // separate txn carrier on this channel either.
+      token = await paymentsServer.validateCredential(cred);
     } catch {
       // No valid credential -> structured denial, not a thrown transport error.
       return toCallToolResult({ ok: false, denial_reason: "invalid_credential" });

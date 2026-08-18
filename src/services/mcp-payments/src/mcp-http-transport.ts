@@ -120,7 +120,7 @@ async function route(
 ): Promise<MediatedToolResult> {
   const mapping = TOOL_ACTIONS[name];
   if (mapping?.actionClass && paymentsServer.hasTransactionTier()) {
-    return paymentsServer.callTransactionTool(name, args, token, undefined, undefined, signals);
+    return paymentsServer.callTransactionTool(name, args, token, undefined, signals);
   }
   if (name === "schedule_payment" || (mapping?.actionClass && !paymentsServer.hasTransactionTier())) {
     return paymentsServer.callWriteTool(name, args, token);
@@ -194,7 +194,11 @@ async function authenticate(
 
   let facts: TokenFacts;
   try {
-    facts = await paymentsServer.validateToken(accessToken, proof, htu, htm);
+    // @spec txn-authorization#transaction-token — ONE credential in the
+    // Authorization header: an ordinary Mission-bound access token, or the
+    // transaction token that authorizes the retry of a challenged operation.
+    // Nothing else on this request carries a transaction token.
+    facts = await paymentsServer.validateCredential(accessToken, { proof, htu, htm });
   } catch {
     return unauthorized(res, "DPoP proof-of-possession failed");
   }
@@ -270,15 +274,24 @@ export async function createHttpMcpChannel(
 }
 
 /** A custom fetch that DPoP-binds every request: fresh proof (canonical htu +
- * method) + `Authorization: DPoP <token>` + `DPoP: <proof>`, merged over any
- * headers the SDK set (content-type, accept, mcp-session-id, ...). */
-export function dpopFetch(missionToken: string, dpopKeys: DpopKeys): FetchLike {
+ * method) + `Authorization: DPoP <credential>` + `DPoP: <proof>`, merged over
+ * any headers the SDK set (content-type, accept, mcp-session-id, ...). The
+ * credential is the request's ONE OAuth credential: an ordinary Mission-bound
+ * access token, or the transaction token that authorizes the retry of a
+ * challenged operation. `extraHeaders` carries per-client request signals such
+ * as `Accept-Txn-Challenge`. */
+export function dpopFetch(
+  credential: string,
+  dpopKeys: DpopKeys,
+  extraHeaders: Record<string, string> = {},
+): FetchLike {
   return async (input, init) => {
     const htu = canonicalHtu(input);
     const htm = init?.method ?? "GET";
     const proof = await dpopProofFor(dpopKeys, htu, htm);
     const headers = new Headers(init?.headers);
-    headers.set("authorization", `DPoP ${missionToken}`);
+    for (const [name, value] of Object.entries(extraHeaders)) headers.set(name, value);
+    headers.set("authorization", `DPoP ${credential}`);
     headers.set("dpop", proof);
     return fetch(input, { ...init, headers });
   };
@@ -292,11 +305,12 @@ export function dpopFetch(missionToken: string, dpopKeys: DpopKeys): FetchLike {
  */
 export async function createHttpMediatedClient(
   url: string,
-  missionToken: string,
+  credential: string,
   dpopKeys: DpopKeys,
+  extraHeaders: Record<string, string> = {},
 ): Promise<{ client: HttpMediatedClient; close: () => Promise<void> }> {
   const transport = new StreamableHTTPClientTransport(new URL(url), {
-    fetch: dpopFetch(missionToken, dpopKeys),
+    fetch: dpopFetch(credential, dpopKeys, extraHeaders),
   });
   const mcp = new Client({ name: "mission-harness-http", version: "0.0.1" }, { capabilities: {} });
   await mcp.connect(transport as unknown as Transport);

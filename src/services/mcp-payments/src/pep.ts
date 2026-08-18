@@ -32,6 +32,24 @@ export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://l
 export const TOOL_BASE = "mcp://payments.demo/tools";
 const SERVER_CARD_URI = `${CANONICAL_RESOURCE.replace(/\/mcp$/, "")}/.well-known/mcp`;
 
+/**
+ * @spec txn-authorization#offline-verification — present exactly when the
+ * credential presented on THIS request was a transaction token. The retry of a
+ * challenged operation carries the transaction token as its SOLE OAuth
+ * credential, so these are the verified claims the enforcement path works from;
+ * a credential carrying this marker authorizes the challenged operation and
+ * nothing else.
+ */
+export interface TxnCredential {
+  /** The `txn` the credential is bound to; consumption is keyed on it. */
+  txn: string;
+  jti: string;
+  iatS: number;
+  expS: number;
+  /** The token's own `parameter_digest`, already matched to the pending operation. */
+  parameterDigest: string;
+}
+
 /** Validated token facts the PEP works from (token validation is upstream). */
 export interface TokenFacts {
   sub: string;
@@ -68,6 +86,12 @@ export interface TokenFacts {
    * Absent for an ordinary Mission-bound token (no leaf narrowing).
    */
   leafAuthority?: ReadonlyArray<{ resource: string; actions: readonly string[] }>;
+  /**
+   * @spec txn-authorization#offline-verification — present when the credential
+   * for this request was a transaction token (see {@link TxnCredential}).
+   * Absent for every ordinary Mission-bound credential.
+   */
+  txn?: TxnCredential;
 }
 
 export interface ActionMapping {
@@ -429,7 +453,13 @@ export class Pep {
             parameterDigest: digest,
             authorizationDetails: requested,
             cnfJkt: token.cnfJkt,
-            subject: token.sub,
+            // @spec txn-authorization#challenge-redemption — the verified
+            // effective subject, under the SAME rule the Transaction
+            // Authorization Server mints `sub` by: the invariant origin
+            // principal where the Origin Principal profile applies, otherwise
+            // the token's own subject. The retained operation and the token
+            // that comes back must agree on it.
+            subject: token.missionClaim.subject?.sub ?? token.sub,
           },
         };
       }

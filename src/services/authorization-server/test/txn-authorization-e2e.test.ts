@@ -18,7 +18,10 @@ import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
   Connectors,
+  createHttpMcpChannel,
+  createHttpMediatedClient,
   EvidenceStore,
+  type HttpMcpChannel,
   McpPaymentsServer,
   PaymentsStore,
   Pep,
@@ -65,6 +68,22 @@ let as: BuiltAs;
 let asServer: Server;
 let ars: AccessRequestService;
 let rs: McpPaymentsServer;
+const channels: HttpMcpChannel[] = [];
+
+/**
+ * A connected MCP-over-HTTP client presenting `credential` as the request's ONE
+ * Authorization credential. The transport is one session per channel, so each
+ * connection gets its own channel over the SAME resource server (and therefore
+ * the same retained operations and consumption domain).
+ */
+async function connect(
+  credential: string,
+  extraHeaders: Record<string, string> = {},
+): Promise<Awaited<ReturnType<typeof createHttpMediatedClient>>> {
+  const channel = await createHttpMcpChannel(rs);
+  channels.push(channel);
+  return createHttpMediatedClient(channel.url, credential, dpopKeys, extraHeaders);
+}
 let evidence: EvidenceStore;
 let clientKey: CryptoKey;
 let dpopKeys: DpopKeys;
@@ -312,24 +331,22 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
     });
   });
 
-  afterAll(() => {
+  afterAll(async () => {
+    for (const channel of channels) await channel.close();
     asServer?.close();
   });
 
   it("challenges, redeems, approves, decides fresh, and executes exactly once", async () => {
-    const facts = await rs.validateMissionToken(accessToken);
-    expect(facts.cnfJkt).toBe(dpopJkt);
-    expect(facts.missionClaim?.id).toBe(missionId);
-
-    // 1. The resource gates the operation and returns the upstream members.
-    const challenged = await rs.callTransactionTool(
-      "send_remittance_email",
-      { invoice_id: "inv-1" },
-      facts,
-      undefined,
-      undefined,
-      { acceptTxnChallenge: true },
-    );
+    // 1. The agent calls the gated tool over MCP, signalling that it can redeem
+    //    a challenge. Its credential is the Mission-bound access token.
+    // The resource runs over a REAL MCP-over-HTTP transport: every request is
+    // gated by the credential middleware, so nothing below reaches the PEP
+    // except through a validated Authorization credential + DPoP proof.
+    const agent = await connect(accessToken, {
+      // @spec txn-authorization#resource-challenge — an RFC 8941 Boolean.
+      "accept-txn-challenge": "?1",
+    });
+    const challenged = await agent.client.callTool("send_remittance_email", { invoice_id: "inv-1" });
     expect(challenged.ok).toBe(false);
     expect(challenged.error).toBe("transaction_authorization_required");
     const challenge = challenged.transaction_challenge as string;
@@ -337,6 +354,7 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
     const challengeClaims = decodeJwt(challenge);
     expect(challengeClaims.iss).toBe(RESOURCE);
     expect((challengeClaims.cnf as { jkt: string }).jkt).toBe(dpopJkt);
+    expect((challengeClaims.mission as { id: string }).id).toBe(missionId);
 
     // 2. The client redeems it at the TAS, with the Mission-bound token as the
     //    subject_token and a proof of the challenge's cnf key.
@@ -366,29 +384,27 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
     expect(issued.status, JSON.stringify(issuedBody)).toBe(200);
     expect(issuedBody.token_type).toBe("DPoP");
 
-    // 5. The resource verifies it offline against the operation it retained,
-    //    and the operation executes exactly once.
-    const executed = await rs.callTransactionTool(
-      "send_remittance_email",
-      { invoice_id: "inv-1" },
-      facts,
-      undefined,
-      issuedBody.access_token,
-    );
+    // 5. The retry presents the transaction token as the request's SOLE OAuth
+    //    credential. The resource verifies it offline against the operation it
+    //    retained, and the operation executes exactly once.
+    await agent.close();
+    const retry = await connect(issuedBody.access_token);
+    const executed = await retry.client.callTool("send_remittance_email", { invoice_id: "inv-1" });
     expect(executed.ok, JSON.stringify(executed)).toBe(true);
     expect(evidence.forMission(missionId).filter((e) => e.kind === "execution")).toHaveLength(1);
 
-    // 6. Re-presenting the same token is the same replay: refused, never a
+    // 6. Re-presenting the same credential is the same replay: refused, never a
     //    second execution.
-    const replay = await rs.callTransactionTool(
-      "send_remittance_email",
-      { invoice_id: "inv-1" },
-      facts,
-      undefined,
-      issuedBody.access_token,
-    );
+    const replay = await retry.client.callTool("send_remittance_email", { invoice_id: "inv-1" });
     expect(replay.ok).toBe(false);
     expect(replay.refusal_reason).toBe("duplicate_suppressed");
     expect(evidence.forMission(missionId).filter((e) => e.kind === "execution")).toHaveLength(1);
+
+    // The credential authorizes the challenged operation and nothing else: it is
+    // never a general credential for another tool.
+    const elsewhere = await retry.client.callTool("list_invoices", {});
+    expect(elsewhere.ok).toBe(false);
+    expect(elsewhere.refusal_reason).toBe("txn_action_mismatch");
+    await retry.close();
   });
 });

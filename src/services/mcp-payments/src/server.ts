@@ -26,6 +26,7 @@ import {
   type RequestSignals,
   type TokenFacts,
   TOOL_ACTIONS,
+  type TxnCredential,
 } from "./pep.js";
 import { openTxnStores, type TxnConsumptionStore, type TxnPendingStore } from "./txn-store.js";
 import type { PaymentsStore } from "./payments-store.js";
@@ -47,6 +48,26 @@ function refuseTransactionToken(accessToken: string): void {
   if (decodeProtectedHeader(accessToken).typ === MISSION_TXN_TOKEN_TYP) {
     throw new Error("a transaction token is not a Mission-bound access token");
   }
+}
+
+/**
+ * @spec RFC 9449 — proof of possession of `expectedJkt` by the presenter of
+ * THIS request: the proof's header key thumbprints to the credential's `cnf`,
+ * verifies under that key with the `dpop+jwt` type, and is bound to this
+ * request's `htu`/`htm`. One function, so an ordinary Mission-bound credential
+ * and a transaction credential are held to the identical discipline.
+ */
+async function verifyDpopProof(
+  dpopProof: string,
+  expectedJkt: string,
+  htu: string,
+  htm: string,
+): Promise<void> {
+  const proofHeader = decodeProtectedHeader(dpopProof);
+  const proofJkt = await calculateJwkThumbprint(proofHeader.jwk as never);
+  if (proofJkt !== expectedJkt) throw new Error("DPoP key does not match token cnf.jkt");
+  const { payload: proof } = await jwtVerify(dpopProof, proofHeader.jwk as never, { typ: "dpop+jwt" });
+  if (proof.htu !== htu || proof.htm !== htm) throw new Error("DPoP htu/htm mismatch");
 }
 
 export interface ToolDef {
@@ -113,6 +134,17 @@ export interface McpServerDeps {
  * and no endpoint hint (the client discovers the Transaction Authorization
  * Server through `transaction_authorization_endpoint` in AS metadata).
  */
+/**
+ * @spec txn-authorization#offline-verification — the outcome of verifying a
+ * presented transaction credential. On success the request's TokenFacts are
+ * derived FROM the transaction token, so the challenged operation runs under
+ * that credential alone; on failure the profile's refusal reason says which
+ * check the credential failed.
+ */
+export type VerifiedTxnCredential =
+  | { ok: true; facts: TokenFacts }
+  | { ok: false; refusal_reason: string };
+
 export interface TransactionToolResult {
   ok: boolean;
   result?: unknown;
@@ -184,11 +216,7 @@ export class McpPaymentsServer {
     const cnf = payload.cnf as { jkt?: string } | undefined;
     if (!cnf?.jkt) throw new Error("token missing cnf.jkt");
     // Verify the DPoP proof and bind it to the token's cnf.jkt.
-    const proofHeader = decodeProtectedHeader(dpopProof);
-    const proofJkt = await calculateJwkThumbprint(proofHeader.jwk as never);
-    if (proofJkt !== cnf.jkt) throw new Error("DPoP key does not match token cnf.jkt");
-    const { payload: proof } = await jwtVerify(dpopProof, proofHeader.jwk as never, { typ: "dpop+jwt" });
-    if (proof.htu !== htu || proof.htm !== htm) throw new Error("DPoP htu/htm mismatch");
+    await verifyDpopProof(dpopProof, cnf.jkt, htu, htm);
 
     const mission = payload.mission as { id: string; authority_hash: string } | undefined;
     if (!mission?.id) throw new Error("token missing mission claim");
@@ -239,6 +267,146 @@ export class McpPaymentsServer {
       ...(payload.identity_continuation_handle
         ? { identityContinuationHandle: payload.identity_continuation_handle as string }
         : {}),
+    };
+  }
+
+  /**
+   * @spec txn-authorization#transaction-token, #offline-verification — the
+   * SINGLE OAuth credential a request presents, resolved to TokenFacts.
+   *
+   * The protected-header `typ` is read BEFORE anything else and decides which
+   * class of credential this is: `mission-txn-token+jwt` is the retry of a
+   * challenged operation and takes the transaction-credential path below;
+   * everything else takes the ordinary path, which still refuses a transaction
+   * token outright. There is no second credential and no side channel: a
+   * transaction token authorizes the operation this resource challenged for and
+   * is never accepted as a general Mission-bound access token.
+   *
+   * `pop` carries the request's DPoP proof where the transport has an HTTP
+   * request to bind one to; the in-process mediated channel omits it, exactly
+   * as {@link validateMissionToken} documents for the ordinary class.
+   */
+  async validateCredential(
+    accessToken: string,
+    pop?: { proof: string; htu: string; htm: string },
+  ): Promise<TokenFacts> {
+    if (decodeProtectedHeader(accessToken).typ === MISSION_TXN_TOKEN_TYP) {
+      const verified = await this.verifyTransactionCredential(accessToken, pop);
+      if (!verified.ok) throw new Error(`transaction credential refused: ${verified.refusal_reason}`);
+      return verified.facts;
+    }
+    return pop
+      ? this.validateToken(accessToken, pop.proof, pop.htu, pop.htm)
+      : this.validateMissionToken(accessToken);
+  }
+
+  /**
+   * @spec txn-authorization#offline-verification — verify a presented
+   * transaction credential locally, in the order the profile fixes:
+   *
+   *  1. exact `typ`, trusted issuer and signature, intended `aud` (a singleton,
+   *     this resource), and the REQUIRED typed claims. An unknown `typ` -- an
+   *     ordinary Mission-bound access token, or any other JWT -- never reaches
+   *     here (the caller branches on `typ`) and is rejected outright by the
+   *     verifier besides;
+   *  2. `cnf` proof by the CURRENT presenter, under the same DPoP discipline
+   *     the ordinary credential path uses;
+   *  3. equality of the `mission` invariants, the operation
+   *     `authorization_details`, `cnf`, the subject and `parameter_digest` with
+   *     the pending operation this resource RETAINED when it challenged --
+   *     never with the token's own account of the operation.
+   *
+   * The operation-scoped half of step 3 (the action this credential is good
+   * for, and the digest RECOMPUTED from the request's own parameters) needs the
+   * tool and arguments, so it runs at the call site
+   * ({@link verifyChallengedOperation}); step 5 (current local policy,
+   * entitlement and Mission state) is the PEP/PDP path the caller runs next,
+   * and step 6 (atomic first use) is taken at the commit point.
+   */
+  async verifyTransactionCredential(
+    txnToken: string,
+    pop?: { proof: string; htu: string; htm: string },
+  ): Promise<VerifiedTxnCredential> {
+    if (!this.resolveTxnKey || !this.deps.asIssuer) return { ok: false, refusal_reason: "txn_not_configured" };
+    let payload: Record<string, unknown>;
+    try {
+      // The TAS's token-signing key is trusted through pre-established
+      // federation metadata (this JWKS), never through the request.
+      ({ payload } = (await jwtVerify(txnToken, this.resolveTxnKey, {
+        issuer: this.deps.asIssuer,
+        audience: CANONICAL_RESOURCE,
+        typ: MISSION_TXN_TOKEN_TYP,
+      })) as { payload: Record<string, unknown> });
+    } catch {
+      return { ok: false, refusal_reason: "txn_invalid" };
+    }
+    // `aud` is a SINGLETON, exactly this resource; a list is not this profile.
+    const cnf = payload.cnf as { jkt?: string } | undefined;
+    if (
+      typeof payload.aud !== "string" ||
+      typeof payload.jti !== "string" ||
+      typeof payload.iat !== "number" ||
+      typeof payload.exp !== "number" ||
+      typeof payload.sub !== "string" ||
+      typeof payload.client_id !== "string" ||
+      typeof payload.txn !== "string" ||
+      typeof payload.parameter_digest !== "string" ||
+      typeof cnf?.jkt !== "string"
+    ) {
+      return { ok: false, refusal_reason: "txn_invalid" };
+    }
+    const mission = readTxnMissionClaim(payload.mission);
+    if (!mission) return { ok: false, refusal_reason: "txn_invalid" };
+
+    // 2. Proof by the CURRENT presenter: this request's proof, under the key
+    //    the credential itself is bound to.
+    if (pop) {
+      try {
+        await verifyDpopProof(pop.proof, cnf.jkt, pop.htu, pop.htm);
+      } catch {
+        return { ok: false, refusal_reason: "txn_cnf_mismatch" };
+      }
+    }
+
+    // 3. Against the RETAINED pending operation.
+    const pending = this.txnPending.get(CANONICAL_RESOURCE, payload.txn);
+    if (!pending) return { ok: false, refusal_reason: "txn_unknown" };
+    if (pending.cnfJkt !== cnf.jkt) return { ok: false, refusal_reason: "txn_cnf_mismatch" };
+    if (!missionInvariantsEqual(payload.mission, pending.mission)) {
+      return { ok: false, refusal_reason: "txn_mission_mismatch" };
+    }
+    if (!authorizationDetailsEqual(payload.authorization_details, pending.authorizationDetails)) {
+      return { ok: false, refusal_reason: "txn_authority_mismatch" };
+    }
+    if (payload.parameter_digest !== pending.parameterDigest) {
+      return { ok: false, refusal_reason: "txn_parameter_mismatch" };
+    }
+    // The verified effective subject the challenge was issued for; the origin
+    // principal where the Origin Principal profile applies.
+    if (payload.sub !== pending.subject) return { ok: false, refusal_reason: "txn_subject_mismatch" };
+
+    // The request runs under THESE claims: subject, client, Mission, actor and
+    // presenter key all come from the verified transaction token, so an
+    // approval obtained for one Mission cannot carry an operation on another.
+    const txn: TxnCredential = {
+      txn: payload.txn,
+      jti: payload.jti,
+      iatS: payload.iat,
+      expS: payload.exp,
+      parameterDigest: payload.parameter_digest,
+    };
+    return {
+      ok: true,
+      facts: {
+        sub: payload.sub,
+        clientId: payload.client_id,
+        ...(payload.act ? { act: payload.act as ActObject } : {}),
+        mission: { id: mission.id, authority_hash: mission.authority_hash },
+        missionClaim: mission,
+        cnfJkt: cnf.jkt,
+        jti: payload.jti,
+        txn,
+      },
     };
   }
 
@@ -361,6 +529,7 @@ export class McpPaymentsServer {
     refusal_reason?: string;
     insufficient_authorization?: InsufficientAuthorization;
   }> {
+    if (token.txn) return { ok: false, refusal_reason: "txn_action_mismatch" };
     const res = await this.deps.pep.enforce(tool, args, token);
     if (!res.permitted) {
       return {
@@ -390,6 +559,7 @@ export class McpPaymentsServer {
     refusal_reason?: string;
     insufficient_authorization?: InsufficientAuthorization;
   }> {
+    if (token.txn) return { ok: false, refusal_reason: "txn_action_mismatch" };
     const res = await this.deps.pep.enforce(tool, args, token);
     if (!res.permitted || !res.effective || !res.decision) {
       return {
@@ -419,25 +589,24 @@ export class McpPaymentsServer {
     args: Record<string, unknown>,
     token: TokenFacts,
     beforeCommit?: () => void,
-    txnToken?: string,
     signals?: RequestSignals,
   ): Promise<TransactionToolResult> {
     const tx = this.deps.transaction;
     if (!tx) throw new Error("transaction tier not configured");
 
-    // @spec txn-authorization#offline-verification — a presented transaction
-    // token is verified LOCALLY, with no call to the Transaction Authorization
-    // Server on the request path, and against the operation THIS resource
-    // retained when it issued the challenge. The resource reads no approval
+    // @spec txn-authorization#offline-verification — where the credential IS a
+    // transaction token, it is matched against the operation THIS resource
+    // retained when it issued the challenge, with no call to the Transaction
+    // Authorization Server on the request path. The resource reads no approval
     // object off the token: the action-approval context below is derived only
     // from the typed verified claims.
     let derivedApproval: ActionApprovalInput | undefined;
     let consumedTxn: string | undefined;
-    if (txnToken !== undefined) {
-      const verified = await this.verifyTransactionToken(txnToken, token, tool, args);
+    if (token.txn) {
+      const verified = this.verifyChallengedOperation(token.txn, tool, args);
       if (!verified.ok) return { ok: false, refusal_reason: verified.refusal_reason };
       derivedApproval = verified.approval;
-      consumedTxn = verified.txn;
+      consumedTxn = token.txn.txn;
     }
 
     const res = await this.deps.pep.enforce(tool, args, token, derivedApproval, signals);
@@ -564,87 +733,37 @@ export class McpPaymentsServer {
   }
 
   /**
-   * @spec txn-authorization#offline-verification — verify a presented
-   * transaction token locally, in the order the profile fixes:
-   *
-   *  1. exact `typ`, trusted issuer and signature, intended `aud` (a singleton,
-   *     this resource), and `iat`/`exp`. An unknown `typ` -- an ordinary
-   *     Mission-bound access token, or any other JWT -- is rejected outright by
-   *     the verifier, never parsed on a best-effort basis;
-   *  2. `cnf` proof by the CURRENT presenter;
-   *  3. equality of `txn`, the `mission` invariants, the operation
-   *     `authorization_details`, and the RECOMPUTED `parameter_digest` with the
-   *     pending operation this resource retained when it challenged;
-   *  4. principal, subject and actor consistency.
-   *
-   * Step 5 (current local policy, entitlement and Mission state) is the
-   * existing PEP/PDP path the caller runs next; step 6 (atomic first use) is
-   * taken at the commit point.
+   * @spec txn-authorization#offline-verification — the operation-scoped half of
+   * the verification, taken where the tool and its arguments are known: the
+   * credential is good for the CHALLENGED operation and nothing else, so a call
+   * whose action or RECOMPUTED `parameter_digest` is not the retained
+   * operation's is refused. The digest is recomputed from authoritative store
+   * state, never read off the token.
    */
-  private async verifyTransactionToken(
-    txnToken: string,
-    token: TokenFacts,
+  private verifyChallengedOperation(
+    credential: TxnCredential,
     tool: string,
     args: Record<string, unknown>,
-  ): Promise<
-    { ok: true; approval: ActionApprovalInput; txn: string } | { ok: false; refusal_reason: string }
-  > {
-    if (!this.resolveTxnKey || !this.deps.asIssuer) return { ok: false, refusal_reason: "txn_not_configured" };
-    let payload: Record<string, unknown>;
-    try {
-      // The TAS's token-signing key is trusted through pre-established
-      // federation metadata (this JWKS), never through the request.
-      ({ payload } = (await jwtVerify(txnToken, this.resolveTxnKey, {
-        issuer: this.deps.asIssuer,
-        audience: CANONICAL_RESOURCE,
-        typ: MISSION_TXN_TOKEN_TYP,
-      })) as { payload: Record<string, unknown> });
-    } catch {
-      return { ok: false, refusal_reason: "txn_invalid" };
-    }
-    // `aud` is a SINGLETON, exactly this resource; a list is not this profile.
-    if (typeof payload.aud !== "string") return { ok: false, refusal_reason: "txn_invalid" };
-    if (typeof payload.jti !== "string" || typeof payload.iat !== "number" || typeof payload.exp !== "number") {
-      return { ok: false, refusal_reason: "txn_invalid" };
-    }
-
-    // 2. Proof by the current presenter: the same key the credential on THIS
-    //    request is bound to.
-    const cnf = payload.cnf as { jkt?: string } | undefined;
-    if (cnf?.jkt !== token.cnfJkt) return { ok: false, refusal_reason: "txn_cnf_mismatch" };
-
-    // 3. Against the RETAINED pending operation -- never against the token's
-    //    own account of the operation.
-    const txn = payload.txn as string | undefined;
-    const pending = txn ? this.txnPending.get(CANONICAL_RESOURCE, txn) : undefined;
-    if (!txn || !pending) return { ok: false, refusal_reason: "txn_unknown" };
-    if (pending.cnfJkt !== cnf.jkt) return { ok: false, refusal_reason: "txn_cnf_mismatch" };
-    if (!missionInvariantsEqual(payload.mission, pending.mission)) {
-      return { ok: false, refusal_reason: "txn_mission_mismatch" };
-    }
-    if (!authorizationDetailsEqual(payload.authorization_details, pending.authorizationDetails)) {
-      return { ok: false, refusal_reason: "txn_authority_mismatch" };
+  ): { ok: true; approval: ActionApprovalInput } | { ok: false; refusal_reason: string } {
+    const pending = this.txnPending.get(CANONICAL_RESOURCE, credential.txn);
+    if (!pending) return { ok: false, refusal_reason: "txn_unknown" };
+    if (TOOL_ACTIONS[tool]?.action !== pending.action) {
+      return { ok: false, refusal_reason: "txn_action_mismatch" };
     }
     const recomputed = this.recomputeParameterDigest(tool, args);
     if (
       recomputed === undefined ||
       recomputed !== pending.parameterDigest ||
-      payload.parameter_digest !== recomputed
+      credential.parameterDigest !== recomputed
     ) {
       return { ok: false, refusal_reason: "txn_parameter_mismatch" };
-    }
-
-    // 4. Principal, subject and actor consistency.
-    if (payload.sub !== pending.subject) return { ok: false, refusal_reason: "txn_subject_mismatch" };
-    if (token.act !== undefined && payload.act === undefined) {
-      return { ok: false, refusal_reason: "txn_actor_mismatch" };
     }
 
     // An already-consumed txn is a replay whatever token jti carries it. The
     // authoritative, atomic check is at the commit point; this read only lets
     // the resource answer with the right reason instead of a later one.
     try {
-      if (this.txnConsumption.consumed(CANONICAL_RESOURCE, txn)) {
+      if (this.txnConsumption.consumed(CANONICAL_RESOURCE, credential.txn)) {
         return { ok: false, refusal_reason: "duplicate_suppressed" };
       }
     } catch {
@@ -655,11 +774,10 @@ export class McpPaymentsServer {
     // these typed, verified claims: the token carries no approval object.
     return {
       ok: true,
-      txn,
       approval: {
-        id: `txn:${payload.jti}`,
-        approved_at: new Date(payload.iat * 1000).toISOString(),
-        approved_until: new Date(payload.exp * 1000).toISOString(),
+        id: `txn:${credential.jti}`,
+        approved_at: new Date(credential.iatS * 1000).toISOString(),
+        approved_until: new Date(credential.expS * 1000).toISOString(),
         parameter_digest: recomputed,
       },
     };
