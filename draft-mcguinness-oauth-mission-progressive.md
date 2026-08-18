@@ -330,6 +330,15 @@ drawdown while the predecessor has non-terminal Child Missions: such
 a request falls back to a fresh human approval, which renders that
 notice.
 
+Policy adjudication has no interactive disclosure boundary: nothing
+renders the expansion profile's child-cascade consent notice for a
+human to witness when a policy, not an Approver, adjudicates the
+drawdown. The prohibition above therefore has no safe exception while
+live children exist; the fallback to full human approval is the only
+widening path available to them. Relaxing that for the human-approved
+path specifically remains future work; no such relaxation is
+specified here.
+
 This does not widen authority without consent
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}). The consent is the
 human consent given at the initial approval to the ceiling and the

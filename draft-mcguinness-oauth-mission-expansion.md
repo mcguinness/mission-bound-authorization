@@ -741,6 +741,23 @@ deployment MAY additionally support an expansion-request parameter by
 which the client asks the Mission Issuer to refuse the expansion while
 live Child Missions exist.
 
+This is the priced limitation of the current design. Cascade applies
+to every non-terminal Child Mission regardless of whether that
+child's own Authority Set would still satisfy strict-subset validation
+against the successor: the successor's Authority Set is freshly
+derived, not inherited by reference, so a child's creation-time subset
+check does not carry forward
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+"Cascade Revocation"). The re-creation above is paid for per child: a
+fresh assertion conveyed to the child actor that held the terminated
+child, and an interval in which that child actor's outstanding tokens
+under the terminated child run to their own `exp` while the
+replacement is delivered
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+"Cascade Failure"). The expansion consent event above is where this
+price becomes visible: it is the only point in this profile at which a
+human sees the cascade before it happens.
+
 ## Successor expiry {#successor-expiry}
 
 The successor's effective `expires_at` follows the issuance profile's

@@ -1270,6 +1270,20 @@ Child Mission creation ({{child-creation}}) under a successor grant,
 which re-runs strict-subset validation ({{strict-subset}}) against the
 successor's Authority Set.
 
+There is no subtree-preserving path from fan-out to widening: a
+deployment that creates several Child Missions under a predecessor and
+later expands that predecessor pays for it by tearing down every
+non-terminal descendant and re-creating each one still needed under
+the successor. That cost is deliberate. A Child Mission's authority
+must always trace to a committed approval it was actually checked
+against: `parent.authority_hash` commits to the exact predecessor
+Authority Set the strict-subset check ran against
+({{parent-member}}), and a successor's freshly derived Authority Set
+is not that commitment. The expansion profile renders this cost to the
+Approver at the same consent event that approves the successor
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The
+deferred window").
+
 Cascade under this profile is issuer-committed. The Mission Issuer
 MUST implement the `immediate` cascade mode and record the mode on the
 Child Mission:
