@@ -1858,7 +1858,7 @@
     "normative": "the resource's challenge signal and response wire shape (Accept-Txn-Challenge, transaction_authorization_required, transaction_challenge, and the txn-authz-challenge+jwt typ) match the upstream transaction-challenge protocol unchanged, with no substitute mechanism"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/transaction.test.ts",
@@ -1870,6 +1870,24 @@
      "file": "src/services/authorization-server/test/txn-authorization-e2e.test.ts",
      "name": "transaction authorization end to end (@spec txn-authorization#challenge-redemption) > challenges, redeems, approves, decides fresh, and executes exactly once",
      "level": "cross-component",
+     "surface": "challenge-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/txn-authorization.test.ts",
+     "name": "Accept-Txn-Challenge as an RFC 8941 Boolean Item (@spec txn-authorization#resource-challenge) > accepts a Boolean true, with or without parameters",
+     "level": "unit",
+     "surface": "challenge-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/txn-authorization.test.ts",
+     "name": "Accept-Txn-Challenge as an RFC 8941 Boolean Item (@spec txn-authorization#resource-challenge) > does not treat a Boolean false as acceptance, parameters or not",
+     "level": "unit",
+     "surface": "challenge-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/txn-authorization.test.ts",
+     "name": "Accept-Txn-Challenge as an RFC 8941 Boolean Item (@spec txn-authorization#resource-challenge) > does not treat a malformed value, or a repeated field, as acceptance",
+     "level": "unit",
      "surface": "challenge-endpoint"
     }
    ]
@@ -1894,7 +1912,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
-     "name": "Operation Profile drift (@spec txn-authorization#resource-challenge) > completes a workflow admitted under a superseded Operation Profile version",
+     "name": "Operation Profile resolution and drift (@spec txn-authorization#resource-challenge) > completes a workflow admitted under a superseded version, and refuses new challenges naming it",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
     }
@@ -1961,6 +1979,30 @@
      "name": "fresh decision at completion (@spec txn-authorization#challenge-redemption) > never issues on a step-up context alone: only approval state satisfies the requirement",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "approval bound to the whole transaction (@spec txn-authorization#challenge-redemption) > refuses an approval adjudicated for a different transaction",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "approval bound to the whole transaction (@spec txn-authorization#challenge-redemption) > refuses an approval whose binding the workflow cannot reproduce at all",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "approval bound to the whole transaction (@spec txn-authorization#challenge-redemption) > refuses an approval granted in the future beyond the clock skew",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "approval bound to the whole transaction (@spec txn-authorization#challenge-redemption) > refuses an approval whose validity ends before it was granted",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
     }
    ]
   },
@@ -1980,7 +2022,7 @@
     "normative": "initial challenge validation only admits a workflow; it is never treated as the authorization decision, which the fresh decision at redemption completion alone makes, refusing even a previously admitted workflow when a fresh input no longer holds"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
@@ -1991,6 +2033,18 @@
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
      "name": "fresh decision at completion (@spec txn-authorization#challenge-redemption) > refuses an approved workflow when current entitlement or policy denies",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "subject credential liveness and the post-decision fence (@spec txn-authorization#challenge-redemption) > refuses a subject_token revoked between admission and completion",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "subject credential liveness and the post-decision fence (@spec txn-authorization#challenge-redemption) > refuses when the credential is revoked DURING the fresh decision, and mints nothing",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
     }
@@ -2082,7 +2136,7 @@
     "normative": "a pending workflow's transaction_authorization_id correlates to the ARAP task handle backing it wherever ARAP runs the approval, so a party holding either identifier can locate the same workflow"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
@@ -2093,6 +2147,12 @@
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
      "name": "transaction endpoint redemption (@spec txn-authorization#challenge-redemption) > reports a denied approval as access_denied so the client stops polling",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "approval bound to the whole transaction (@spec txn-authorization#challenge-redemption) > fails closed when one resource-scoped txn is opened under two different transactions",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
     }
@@ -2114,7 +2174,7 @@
     "normative": "offline verification recomputes and requires exact equality of txn, the mission invariants, the authorization_details entry, and parameter_digest against the pending operation before execution proceeds"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/transaction.test.ts",
@@ -2201,6 +2261,12 @@
     {
      "file": "src/services/mcp-payments/test/transaction.test.ts",
      "name": "M5 transaction-assurance tier > executes once across two replicas sharing a consumption domain, whatever token jti carries the txn",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > refuses a DIFFERENT operation presented under an already-consumed txn",
      "level": "endpoint",
      "surface": "verification"
     }
@@ -2364,7 +2430,7 @@
     "normative": "the token's sub is always the verified effective subject (the Mission subject or, under the Origin Principal profile, the origin principal), never the Approver; client_id is the client authenticated at the transaction endpoint, and act is present whenever requester or actor context existed on subject_token or the challenge, since the upstream client and the executing agent may be different parties"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
