@@ -1,0 +1,75 @@
+{
+  "description": "This is a partial registry of established planning pins, not a complete inventory of every external normative dependency the floor drafts carry. Ship 3's bundle build copies each entry here and independently verifies it (object type, path at commit, content digest) against the live source repository, and it MUST reject any entry whose status is \"pending\". Completeness of this registry against the selected profiles' normative front matter is checked at Ship 3, not here.",
+  "pins": [
+    {
+      "id": "AAUTH",
+      "repo": "dickhardt/AAuth",
+      "ref": "PR #73 merged",
+      "commit": "f1569261d0b9d179324f1665db1597f81cd0a851",
+      "path": "draft-hardt-oauth-aauth-protocol.md",
+      "sha256": "041f6a1f0ece3ca5b2f9820821e8fb6b1d7a8f2c2e8c58b53b52157684a5c4b6",
+      "status": "established",
+      "note": "datatracker -10 is divergent (pre-person-token); disclosed, not the pin"
+    },
+    {
+      "id": "ARAP",
+      "repo": "openid/authzen",
+      "ref": "openid/authzen #515, OIDF WG stream",
+      "commit": "7327cb1bcea8cfc223e7b6816535f60149845468",
+      "path": "profiles/authzen-access-request-approval/authzen-access-request-approval-profile-1_0.md",
+      "sha256": "621cebdba15a99eff00398052b560904793564de28b2062fce161fd73320094d",
+      "status": "established",
+      "note": "Corrected at PR #595 review (P1). Pins the later OIDF WG-stream commit (#515, 2026-06-03, 'Mark profile as OIDF stream document'), one day after the PR #508 merge commit (f4003c6b4604f889f2379f8953bc93ae8a8df961, 2026-06-02): the reference implementation was verified against this later content. Git blob hash 670f5831f6e786c70944887dec6ab14de26986f8 is preserved here as supplementary detail; it is confirmed by API to be the blob at this commit's path. The prior entry labeled that same blob 'PR #508 merged', which named the wrong commit for the pinned content: PR #508's own merge commit carries a different file at a different digest (27893ad72a766680c73530cbe911648dc28d921de6a76bf2f38b907aeb3f06cd, confirmed by API), so the old row mixed two WG streams under one label."
+    },
+    {
+      "id": "AUTHZEN-OBL",
+      "repo": "openid/authzen",
+      "ref": "(to be established at Ship 3)",
+      "commit": null,
+      "path": null,
+      "sha256": null,
+      "status": "pending",
+      "note": "established at Ship 3"
+    },
+    {
+      "id": "AUTHZEN",
+      "repo": "openid/authzen",
+      "ref": "(to be established at Ship 3)",
+      "commit": null,
+      "path": null,
+      "sha256": null,
+      "status": "pending",
+      "note": "draft-mcguinness-mission-authzen cites AUTHZEN (OpenID AuthZEN Authorization API 1.0) as a normative reference; derived at PR #595 review (P3); established at Ship 3"
+    },
+    {
+      "id": "RAR-METADATA",
+      "repo": "yaron-zehavi/oauth-rich-authorization-requests-metadata",
+      "ref": "(to be established at Ship 3)",
+      "commit": null,
+      "path": null,
+      "sha256": null,
+      "status": "pending",
+      "note": "draft-mcguinness-oauth-mission and draft-mcguinness-mission-authzen cite I-D.draft-zehavi-oauth-rar-metadata (RAR-type metadata) as a normative reference; derived at PR #595 review (P3); established at Ship 3"
+    },
+    {
+      "id": "STATUS-LIST",
+      "repo": "oauth-wg/draft-ietf-oauth-status-list",
+      "ref": "(to be established at Ship 3)",
+      "commit": null,
+      "path": null,
+      "sha256": null,
+      "status": "pending",
+      "note": "draft-mcguinness-oauth-mission-status cites I-D.draft-ietf-oauth-status-list (OAuth Status List) as a normative reference; derived at PR #595 review (P3); established at Ship 3. Note: src/SPEC_VERSIONS.md already pins an implemented revision (-21) of this draft; that is a version pin for shipped code, not the commit+digest planning pin this registry tracks"
+    },
+    {
+      "id": "ISO4217",
+      "repo": "ISO (International Organization for Standardization)",
+      "ref": "(to be established at Ship 3)",
+      "commit": null,
+      "path": null,
+      "sha256": null,
+      "status": "pending",
+      "note": "draft-mcguinness-oauth-mission cites ISO4217 (ISO 4217:2015, Codes for the representation of currencies and funds) as a normative reference; not git-hosted, so Ship 3 must also decide how a non-git published standard is pinned and verified here; derived at PR #595 review (P3)"
+    }
+  ]
+}
