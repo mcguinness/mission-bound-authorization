@@ -699,7 +699,11 @@ How quickly a consumer must adopt the narrowed view is bounded by the
 freshness and staleness rules it already operates under
 ({{I-D.draft-mcguinness-oauth-mission-status}},
 {{I-D.draft-mcguinness-mission-runtime}}); this document does not
-restate them.
+restate them. The runtime profile's state-freshness rules separately
+recommend a containment-aware source for the remainder of a Mission
+carrying a nonzero overlay
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Mission State and
+Freshness").
 
 # Restoration Through Expansion {#restoration}
 

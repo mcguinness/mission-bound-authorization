@@ -145,6 +145,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-signals:
+    title: "Mission Lifecycle Signals for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-continuation:
     title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
@@ -582,15 +590,30 @@ path:
 4. origin principal, local subject, and actor consistency under the
    principal profile in effect
    ({{I-D.draft-mcguinness-oauth-mission-cross-domain}});
-5. current local policy, principal entitlement, and any required
-   Mission state, observed through the Mission Status surface, the
-   Status List, or issuer token introspection within their declared
-   freshness bounds ({{I-D.draft-mcguinness-oauth-mission-status}},
+5. current local policy, principal entitlement, and that the
+   challenged operation remains within the Mission's current
+   Effective Authority Set, observed through a full audience-scoped
+   Mission Status Response, containment- and discharge-aware issuer
+   token introspection, or an equivalent authenticated, versioned
+   authority source that reflects every relevant `authority_changed`
+   update, each within its declared freshness bounds; the Status
+   List MAY serve as a lifecycle prefilter only and MUST NOT alone
+   satisfy this step, since its two-bit reliance state does not
+   observe containment or discharge
+   ({{I-D.draft-mcguinness-oauth-mission-status}},
+   {{I-D.draft-mcguinness-oauth-mission-signals}},
    {{I-D.draft-mcguinness-mission-runtime}}); and
 6. atomic first use of the resource-scoped `txn` in the consumption
    domain; a second, distinct token `jti` presented for an
    already-consumed `txn` is the same replay and MUST be refused,
    never executed as a new attempt.
+
+The Effective Authority Set belongs to the Mission and is evaluated
+at the point of use, not carried by the token: an `active` Mission
+observed before containment or discharge narrowed the set does not
+satisfy step 5. The transaction token transports a bounded,
+action-bound approval and never substitutes for the Mission's current
+authority, applicable Resource policy, or consumption state.
 
 Consumption of `txn` MUST be linearizable across every replica capable
 of executing the same operation, meeting the metering companion's
@@ -847,6 +870,13 @@ Status surface for freshness-bounded state observation (both
 {{offline-verification}}), and, conditionally, the cross-domain Origin
 Principal profile for the invariant origin principal
 ({{resource-challenge}}). All three are consumed, none produced.
+
+These consumed capabilities join conjunctively, at the runtime
+decision, with the Mission's current Effective Authority Set and any
+applicable cumulative-consumption or stateful operational gate
+({{I-D.draft-mcguinness-mission-runtime}}, Section "The Runtime
+Decision"): the fresh, action-bound permit this profile mints is one
+more independent gate, never a substitute for the others.
 
 # Conformance {#conformance}
 

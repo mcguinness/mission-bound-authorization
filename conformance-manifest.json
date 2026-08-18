@@ -2197,6 +2197,25 @@
    ]
   },
   {
+   "id": "txn-authorization.verification.current-effective-authority-set",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "offline-verification",
+   "text": "that the challenged operation remains within the Mission's current Effective Authority Set, observed through a full audience-scoped Mission Status Response, containment- and discharge-aware issuer token introspection, or an equivalent authenticated, versioned authority source that reflects every relevant `authority_changed` update, each within its declared freshness bounds; the Status List MAY serve as a lifecycle prefilter only and MUST NOT alone satisfy this step, since its two-bit reliance state does not observe containment or discharge",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "offline verification refuses a challenged operation whose Mission has been narrowed by containment or discharge since the challenge was issued: a fresh Status List VALID bit alone does not satisfy this step, because the list carries only a two-bit lifecycle reliance state blind to containment and discharge; verification instead re-evaluates current Effective Authority Set membership at the point of use via a full audience-scoped Mission Status Response, containment- and discharge-aware issuer token introspection, or an equivalent authenticated, versioned authority source, never a stale active check, a Status List bit alone, or the token's own claims"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "txn-authorization.consumption.linearizable-cross-replica",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "offline-verification",

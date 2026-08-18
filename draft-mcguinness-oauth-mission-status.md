@@ -250,7 +250,10 @@ Effective Authority Set:
   monotonic narrowing mechanism the deployment runs. This profile
   contributes discharged entries ({{discharge}}). Each other narrowing
   profile defines its own subtraction. No narrowing mechanism adds or
-  restores authority.
+  restores authority. Membership in this set is necessary, never
+  sufficient, for an action to proceed: the runtime decision evaluates
+  it alongside every other required decision input
+  ({{I-D.draft-mcguinness-mission-runtime}}).
 
 All JSON shown in this document is non-normative and illustrative; the
 member definitions in the surrounding text are authoritative. HTTP
