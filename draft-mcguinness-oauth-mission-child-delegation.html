@@ -30,14 +30,14 @@ Mission is never created by session ancestry alone.
 <meta content="draft-mcguinness-oauth-mission-child-delegation-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
-    Python 3.14.5
+    Python 3.14.7
     ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
     lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.11.0
+    platformdirs 4.11.3
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
@@ -2770,39 +2770,53 @@ subset of the successor.<a href="#section-10-4" class="pilcrow">¶</a></p>
 Child Mission creation (<a href="#child-creation" class="auto internal xref">Section 6</a>) under a successor grant,
 which re-runs strict-subset validation (<a href="#strict-subset" class="auto internal xref">Section 8.1</a>) against the
 successor's Authority Set.<a href="#section-10-5" class="pilcrow">¶</a></p>
-<p id="section-10-6">Cascade under this profile is issuer-committed. The Mission Issuer
+<p id="section-10-6">There is no subtree-preserving path from fan-out to widening: a
+deployment that creates several Child Missions under a predecessor and
+later expands that predecessor pays for it by tearing down every
+non-terminal descendant and re-creating each one still needed under
+the successor. That cost is deliberate. A Child Mission's authority
+must always trace to a committed approval it was actually checked
+against: <code>parent.authority_hash</code> commits to the exact predecessor
+Authority Set the strict-subset check ran against
+(<a href="#parent-member" class="auto internal xref">Section 7</a>), and a successor's freshly derived Authority Set
+is not that commitment. The expansion profile's child-cascade consent
+notice is where this cost can be surfaced to the Approver, at the same
+consent event that approves the successor
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "The
+deferred window").<a href="#section-10-6" class="pilcrow">¶</a></p>
+<p id="section-10-7">Cascade under this profile is issuer-committed. The Mission Issuer
 <span class="bcp14">MUST</span> implement the <code>immediate</code> cascade mode and record the mode on the
-Child Mission:<a href="#section-10-6" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-10-7">
-        <dt id="section-10-7.1">
+Child Mission:<a href="#section-10-7" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10-8">
+        <dt id="section-10-8.1">
 <code>immediate</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-10-7.2">
-          <p id="section-10-7.2.1">On a terminal trigger the Child Mission transitions to the <code>cascaded</code>
+        <dd style="margin-left: 1.5em" id="section-10-8.2">
+          <p id="section-10-8.2.1">On a terminal trigger the Child Mission transitions to the <code>cascaded</code>
 state when the parent transition commits. On the reversible trigger
 the child is held non-active while the parent is suspended and
-restored to its prior state on parent resume.<a href="#section-10-7.2.1" class="pilcrow">¶</a></p>
+restored to its prior state on parent resume.<a href="#section-10-8.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-10-8">Two consumer-verified cascade modes, <code>bounded_staleness</code> and
+<p id="section-10-9">Two consumer-verified cascade modes, <code>bounded_staleness</code> and
 <code>status_required</code>, which trade issuer-committed transitions for
 consumer-side parent-state checks, are experimental and defined in
 <a href="#experimental-cascade" class="auto internal xref">Appendix A</a>. A cascade mode <span class="bcp14">MUST NOT</span> allow a Child Mission
 to continue deriving
-new credentials after the parent is known to be non-active.<a href="#section-10-8" class="pilcrow">¶</a></p>
-<p id="section-10-9">A consumer that does not recognize a Child Mission's <code>cascade_mode</code>
+new credentials after the parent is known to be non-active.<a href="#section-10-9" class="pilcrow">¶</a></p>
+<p id="section-10-10">A consumer that does not recognize a Child Mission's <code>cascade_mode</code>
 value <span class="bcp14">MUST</span> verify parent state, within the deployment's declared
 freshness window, before each reliance on the child's authority: an
 unrecognized mode may place the interim verification obligation on
-the consumer.<a href="#section-10-9" class="pilcrow">¶</a></p>
-<p id="section-10-10">Cascade modes may differ across one lineage. The Mission Issuer <span class="bcp14">MUST</span>
+the consumer.<a href="#section-10-10" class="pilcrow">¶</a></p>
+<p id="section-10-11">Cascade modes may differ across one lineage. The Mission Issuer <span class="bcp14">MUST</span>
 commit the terminal cascade transition for every dependent Child
 Mission regardless of its cascade mode; the mode governs only what
-consumers must verify in the interim.<a href="#section-10-10" class="pilcrow">¶</a></p>
-<p id="section-10-11">An <code>immediate</code>-mode descendant under a consumer-verified parent is
+consumers must verify in the interim.<a href="#section-10-11" class="pilcrow">¶</a></p>
+<p id="section-10-12">An <code>immediate</code>-mode descendant under a consumer-verified parent is
 therefore never orphaned: its own transition is committed even where
-the parent's is consumer-observed.<a href="#section-10-11" class="pilcrow">¶</a></p>
-<p id="section-10-12">The cascade behavior by trigger:<a href="#section-10-12" class="pilcrow">¶</a></p>
+the parent's is consumer-observed.<a href="#section-10-12" class="pilcrow">¶</a></p>
+<p id="section-10-13">The cascade behavior by trigger:<a href="#section-10-13" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
         <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>

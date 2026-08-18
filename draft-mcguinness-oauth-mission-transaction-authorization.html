@@ -28,14 +28,14 @@ fresh decision, and the transaction-token profile.
 <meta content="draft-mcguinness-oauth-mission-transaction-authorization-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
-    Python 3.14.5
+    Python 3.14.7
     ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
     lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.11.0
+    platformdirs 4.11.3
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
@@ -1765,10 +1765,18 @@ principal profile in effect
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>);<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-8-2.5">
-          <p id="section-8-2.5.1">current local policy, principal entitlement, and any required
-Mission state, observed through the Mission Status surface, the
-Status List, or issuer token introspection within their declared
-freshness bounds (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>,
+          <p id="section-8-2.5.1">current local policy, principal entitlement, and that the
+challenged operation remains within the Mission's current
+Effective Authority Set, observed through a full audience-scoped
+Mission Status Response, containment- and discharge-aware issuer
+token introspection, or an equivalent authenticated, versioned
+authority source that reflects every relevant <code>authority_changed</code>
+update, each within its declared freshness bounds; the Status
+List <span class="bcp14">MAY</span> serve as a lifecycle prefilter only and <span class="bcp14">MUST NOT</span> alone
+satisfy this step, since its two-bit reliance state does not
+observe containment or discharge
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); and<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-8-2.6">
@@ -1778,14 +1786,20 @@ already-consumed <code>txn</code> is the same replay and <span class="bcp14">MUS
 never executed as a new attempt.<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-8-3">Consumption of <code>txn</code> <span class="bcp14">MUST</span> be linearizable across every replica capable
+<p id="section-8-3">The Effective Authority Set belongs to the Mission and is evaluated
+at the point of use, not carried by the token: an <code>active</code> Mission
+observed before containment or discharge narrowed the set does not
+satisfy step 5. The transaction token transports a bounded,
+action-bound approval and never substitutes for the Mission's current
+authority, applicable Resource policy, or consumption state.<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">Consumption of <code>txn</code> <span class="bcp14">MUST</span> be linearizable across every replica capable
 of executing the same operation, meeting the metering companion's
 Exact enforcement profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>): the record commits before
 the irreversible effect, or atomically with it where the operation
 store supports that transaction. If the consumption store is
-unavailable, the resource <span class="bcp14">MUST</span> fail closed for this profile.<a href="#section-8-3" class="pilcrow">¶</a></p>
-<p id="section-8-4"><code>txn</code> identifies the resource transaction and is the atomic
+unavailable, the resource <span class="bcp14">MUST</span> fail closed for this profile.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5"><code>txn</code> identifies the resource transaction and is the atomic
 consumption key; challenge <code>jti</code> identifies one admission into a
 workflow; <code>transaction_authorization_id</code> (or the ARAP task handle
 backing it) identifies one pending workflow; token <code>jti</code> identifies
@@ -1800,7 +1814,7 @@ workflow to the idempotency key, and the resource returns
 <code>duplicate_suppressed</code> as the runtime profile defines it
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) rather than executing
 again. A genuinely new attempt requires a new challenge, a new
-workflow, a new token, and a new idempotency key.<a href="#section-8-4" class="pilcrow">¶</a></p>
+workflow, a new token, and a new idempotency key.<a href="#section-8-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="evidence-audit">
@@ -2178,6 +2192,12 @@ Status surface for freshness-bounded state observation (both
 <a href="#offline-verification" class="auto internal xref">Section 8</a>), and, conditionally, the cross-domain Origin
 Principal profile for the invariant origin principal
 (<a href="#resource-challenge" class="auto internal xref">Section 5</a>). All three are consumed, none produced.<a href="#section-14-5" class="pilcrow">¶</a></p>
+<p id="section-14-6">These consumed capabilities join conjunctively, at the runtime
+decision, with the Mission's current Effective Authority Set and any
+applicable cumulative-consumption or stateful operational gate
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "The Runtime
+Decision"): the fresh, action-bound permit this profile mints is one
+more independent gate, never a substitute for the others.<a href="#section-14-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conformance">
@@ -2388,6 +2408,10 @@ cross-organizational, execution-time approval.<a href="#section-16-1" class="pil
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-org-delegation">[I-D.draft-mcguinness-oauth-mission-cross-org-delegation]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Organizational Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
         <dd>

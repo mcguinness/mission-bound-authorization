@@ -827,9 +827,12 @@ Table of Contents
 
    Four rules govern the approval's enforcement:
 
-   1.  A PEP MUST refuse an action for which deployment policy or
-       Resource policy requires an action-bound approval and a valid
-       fresh approval bound to the action's parameters is not present.
+   1.  A PEP MUST refuse an action for which the applicable entry's
+       constraints.requires_action_approval is true, or deployment
+       policy or Resource policy otherwise requires an action-bound
+       approval, and for which a valid fresh approval bound to the
+       action's parameters is not present.  Absent a usable approval
+       mechanism, the action fails closed.
 
    2.  An action-bound approval MUST carry a maximum age, bounded by a
        value the deployment set publishes, and MAY additionally carry an
@@ -1345,6 +1348,15 @@ Table of Contents
    The requirement is only that a PEP at each consequential boundary can
    reach an applicable PDP.
 
+   In addition to every other required decision input, the runtime
+   decision MUST require the action to remain within the Mission's
+   current Effective Authority Set (Section 7.2.1); MUST enforce every
+   applicable cumulative-consumption or stateful operational gate
+   (Section 9); and MUST require a valid fresh action-bound approval
+   whenever the applicable entry or applicable policy requires one
+   (Section 4.4).  Each gate is independently necessary and none grants,
+   widens, or restores another.
+
 7.1.  Decision Output
 
    Whatever the wire, a runtime decision presents one abstract output,
@@ -1792,6 +1804,47 @@ Table of Contents
 
    A deployment justifies any looser value for a high-consequence class
    in its Enforcement Scope Statement.
+
+   For a Mission carrying a nonzero containment overlay
+   ([I-D.draft-mcguinness-oauth-mission-containment]), the RECOMMENDED
+   posture for a consequential read whose authorizing entry or action
+   class intersects the overlay tightens to a containment-aware state
+   source, for the remainder of that Mission: the overlay never clears
+   on the same Mission, and restoration is a successor Mission's own
+   approval ([I-D.draft-mcguinness-oauth-mission-containment],
+   Section "Restoration Through Expansion").  A deployment adopting this
+   tightening MUST name a containment-aware state source, not merely an
+   active one: a contained Mission stays active, so a Mission Status
+   List bit does not move
+   ([I-D.draft-mcguinness-oauth-mission-containment],
+   Section "Propagation").  A containment-aware source is full Status or
+   introspection carrying containment_version, or Mission Lifecycle
+   Signals carrying the overlay change
+   ([I-D.draft-mcguinness-oauth-mission-containment],
+   Section "Visibility").  A fresh derivation narrows what it mints and
+   can shorten the residual, but it checks nothing at action time, so it
+   carries Baseline, not Runtime-Enforced, and is not a containment-
+   aware source for this tightening
+   ([I-D.draft-mcguinness-oauth-mission-containment],
+   Section "Containment Properties").
+
+   A deployment MAY instead tighten on any nonzero overlay regardless of
+   class.  That is a defensible conservative default; its cost is
+   incident-time availability load on reads the overlay does not touch,
+   since every consequential read then depends on state-source
+   availability during the incident that triggered containment.  The
+   under-containment staleness bound for an affected class is declared
+   in its Enforcement Scope Statement alongside the ordinary bound
+   (Section 4.2); this posture adds no separate value, and the bound
+   carries its latency consequence like any other.
+
+   The tightening narrows the post-taint window for the classes and
+   deployments that adopt a containment-aware source; it does not close
+   the Baseline residual
+   ([I-D.draft-mcguinness-oauth-mission-containment],
+   Section "Containment Properties").  A consumer bounded by token
+   lifetime alone, or a class this tightening does not reach, still runs
+   to its existing bound.
 
 7.5.  Materialized Policy View
 
