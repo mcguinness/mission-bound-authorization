@@ -114,6 +114,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-gnap:
+    title: "Mission-Bound Authorization for GNAP"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-gnap.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-aauth:
     title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
@@ -1742,11 +1750,12 @@ Mission Intent or dependency on the shaping profile.
 
 The question: how does a proposed task become an approved, committed
 Mission? The boundary is the binding's control point; the approval
-event is where trust is created. Owners: the four bindings
+event is where trust is created. Owners: the five bindings
 ({{I-D.draft-mcguinness-oauth-mission}},
 {{I-D.draft-mcguinness-mission-authority-server}},
 {{I-D.draft-mcguinness-mission-aauth}},
-{{I-D.draft-mcguinness-mission-uma}}), Consent Evidence
+{{I-D.draft-mcguinness-mission-uma}},
+{{I-D.draft-mcguinness-mission-gnap}}), Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) committing
 the disclosure shown to the Approver, and Deferred Approval
 ({{I-D.draft-mcguinness-oauth-mission-approval}}), the OAuth
@@ -2788,6 +2797,14 @@ reclassification, not by a stable document absorbing a dependency.
   authorization assessment, the RPT is the Mission-bound credential,
   and the PCT is continuity that is never authority; the first
   binding authored against the substrate contract.
+
+`mission-gnap`:
+: Experimental sketch. The GNAP binding: the Mission Intent rides a
+  registered grant request member, interaction or standing policy is
+  the approval event, grant modification splits into in-Mission
+  drawdown and Approver-routed expansion, and the continuation access
+  token is continuity that is never authority; the second binding
+  authored against the substrate contract.
 
 `mission-substrate`:
 : Normative requirements on any further binding of the model; the
