@@ -591,6 +591,12 @@ Table of Contents
       and, where the agent-isolated evidence-emission condition is
       claimed, its per-emitter declaration (Section 4.7);
 
+   *  where a High-Assurance Agent claim rests on EAT evidence
+      (Section 12.1, Section 12.2), the per-row selections the evidence
+      table requires: the claim or profile identifiers, the expected
+      measurements or reference values, the appraisal policy, the
+      attester identity, and the freshness rule;
+
    *  the reconciliation window for matching execution-outcome evidence
       to decisions, the component responsible for orphaned-evidence and
       sequence-gap detection and for actively reconciling each
@@ -2801,15 +2807,141 @@ Table of Contents
    (Section 12.1) rest on the execution-environment scope statement, a
    self-declared artifact: the wire alone does not let a relying party
    distinguish a deployment that built the declared isolation from one
-   that only published the statement.  A deployment claiming either MUST
-   bind the statement to execution-environment attestation, presenting
-   Entity Attestation Token [RFC9711] evidence under the AI-agent-
-   instance profile ([I-D.draft-mcguinness-oauth-ai-agent-instance])
-   covering the isolation properties the statement declares, and MUST
-   NOT represent the claim as met without it.  The requirement is scoped
-   to these two High-Assurance Agent claims; base runtime conformance
-   does not require attestation, and a deployment claiming only the base
-   profile MAY publish its scope statement unattested.
+   that only published the statement.
+
+   The conditions the two claims name do not share one evidence type.
+   The table below fixes, per condition: a stable identifier, the
+   evidence that authoritatively establishes it, the scope that evidence
+   covers, the verifier and trust anchor a relying party checks it
+   against, the freshness the evidence must carry, and the behavior when
+   the evidence is missing.
+
+   +=======================+==============================================+===========+==============+=============+==============+
+   |Condition              |Evidence producer/type                        |Covered    |Verifier /    |Freshness    |Failure       |
+   |                       |                                              |scope      |trust anchor  |             |behavior      |
+   +=======================+==============================================+===========+==============+=============+==============+
+   |key_custody: the       |EAT ([RFC9711])                               |The        |The relying   |The nonce,   |Absent, stale,|
+   |sender-constraint key  |                                              |mediating  |party, against|timestamp, or|or            |
+   |is held and generated  |                                              |PEP's key- |the attester  |session-     |unverifiable  |
+   |in the mediating PEP,  |                                              |holding    |identity and  |binding rule |evidence, or a|
+   |never transferred to   |                                              |component  |appraisal     |the statement|missing       |
+   |the agent              |                                              |           |policy the    |selects for  |selection this|
+   |(Section 12.1,         |                                              |           |Enforcement   |this row,    |row requires, |
+   |Section 4.6)           |                                              |           |Scope         |current at   |makes the     |
+   |                       |                                              |           |Statement     |the session  |claim         |
+   |                       |                                              |           |selects for   |or credential|unavailable   |
+   |                       |                                              |           |this row      |issuance the |              |
+   |                       |                                              |           |              |claim covers |              |
+   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
+   |isolation_boundary: the|EAT ([RFC9711])                               |The        |The relying   |The freshness|Absent, stale,|
+   |execution environment  |                                              |boundary   |party, against|rule the     |or            |
+   |separates the agent    |                                              |between the|the attester  |statement    |unverifiable  |
+   |component from the     |                                              |agent      |identity and  |selects for  |evidence, or a|
+   |mediating PEP, approval|                                              |component  |appraisal     |this row,    |missing       |
+   |service, and rendering |                                              |and each   |policy the    |current at   |selection this|
+   |component, and         |                                              |isolated   |statement     |the session  |row requires, |
+   |credential material    |                                              |component  |selects for   |the claim    |makes the     |
+   |stays out of the agent |                                              |           |this row      |covers       |claim         |
+   |(Section 12.1,         |                                              |           |              |             |unavailable   |
+   |Section 12.2,          |                                              |           |              |             |              |
+   |Section 4.6)           |                                              |           |              |             |              |
+   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
+   |workload_measurement:  |EAT ([RFC9711])                               |Each       |The relying   |The freshness|Absent, stale,|
+   |the attested component |                                              |component  |party, against|rule the     |or            |
+   |runs the software the  |                                              |the        |the attester  |statement    |unverifiable  |
+   |Enforcement Scope      |                                              |statement  |identity,     |selects for  |evidence, or a|
+   |Statement declares     |                                              |names as   |appraisal     |this row,    |missing       |
+   |(Section 12.1,         |                                              |isolated or|policy, and   |current at   |selection this|
+   |Section 4.2)           |                                              |mediating  |reference     |attestation  |row requires, |
+   |                       |                                              |           |values the    |time         |makes the     |
+   |                       |                                              |           |statement     |             |claim         |
+   |                       |                                              |           |selects for   |             |unavailable   |
+   |                       |                                              |           |this row      |             |              |
+   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
+   |approval_policy: each  |Signed configuration, or independent service  |The        |The auditor   |Current with |Unknown or    |
+   |action in the claimed  |evidence from the approval service            |approval   |reading the   |the approval |unverifiable  |
+   |classes requires       |                                              |service's  |configuration,|service's    |configuration |
+   |action-bound approval  |                                              |enforcement|against the   |active policy|makes the     |
+   |(Section 12.1,         |                                              |over the   |approval      |version      |claim         |
+   |Section 4.4)           |                                              |classes    |service's     |             |unavailable   |
+   |                       |                                              |claimed    |operator key  |             |              |
+   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
+   |rendering_independence:|Independent service evidence, the committed   |The        |The party     |Per approval |An approval   |
+   |the disclosure is      |Consent Evidence where available              |rendering  |evaluating the|event        |event lacking |
+   |derived from the bound |                                              |component's|evidence,     |             |this evidence |
+   |normalized parameters, |                                              |output for |against the   |             |cannot be     |
+   |never composed by the  |                                              |the        |rendering     |             |counted toward|
+   |agent (Section 12.1,   |                                              |approval   |component's or|             |the claim; a  |
+   |Section 4.4)           |                                              |event      |Consent       |             |class with no |
+   |                       |                                              |claimed    |Evidence      |             |such event    |
+   |                       |                                              |           |signer's key  |             |verified does |
+   |                       |                                              |           |              |             |not carry the |
+   |                       |                                              |           |              |             |claim         |
+   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
+   |freshness_sourcing: the|Signed configuration naming the state source  |The state  |The auditor   |The published|A stale or    |
+   |Mission state source is|and its staleness bound                       |source used|reading the   |staleness    |unverifiable  |
+   |an active freshness    |([I-D.draft-mcguinness-mission-architecture]),|for the    |Deployment    |bound        |state source  |
+   |mechanism, not token-  |or independent evidence from the state source |classes    |Profile,      |             |makes the     |
+   |lifetime expiry        |                                              |claimed    |against the   |             |claim         |
+   |(Section 12.1,         |                                              |           |state source's|             |unavailable   |
+   |Section 7.4)           |                                              |           |operator key  |             |              |
+   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
+   |path_completeness: no  |Negative tests (Section 13) and organizational|Every path |The auditor   |Per the      |Untested,     |
+   |unmediated path reaches|topology audit                                |to the     |who ran or    |deployment's |stale, or a   |
+   |the mediated classes or|                                              |classes    |reviewed the  |stated audit |found         |
+   |a fresh usable         |                                              |claimed,   |tests and     |cadence      |unmediated    |
+   |credential for them    |                                              |deployment-|audit, an     |             |path makes the|
+   |(Section 12.1)         |                                              |wide       |organizational|             |claim         |
+   |                       |                                              |           |anchor        |             |unavailable   |
+   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
+   |least_exposure: the    |Signed configuration naming the exposure-     |The        |The auditor   |Current with |Unknown,      |
+   |context surfaced to the|scoping rule for the classes claimed, and     |exposure-  |reading the   |the          |stale, or     |
+   |agent (prompts,        |negative tests demonstrating out-of-Mission   |scoping    |configuration,|deployment's |unverifiable  |
+   |retrieved documents,   |context is withheld                           |rule's     |against the   |active       |configuration,|
+   |memory, tool catalogs, |                                              |coverage   |deployment's  |exposure-    |or a found    |
+   |schemas, and downstream|                                              |over the   |operator key  |scoping      |unscoped      |
+   |responses) is scoped to|                                              |classes    |              |configuration|exposure,     |
+   |the active Mission     |                                              |claimed    |              |version      |makes the     |
+   |(Section 12.2,         |                                              |           |              |             |claim         |
+   |Section 4.8)           |                                              |           |              |             |unavailable   |
+   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
+   |taint_egress_topology: |Topology audit (channel enumeration) and      |Every      |The auditor,  |Per audit    |A stale       |
+   |the taint policy and   |negative tests                                |egress     |an            |cycle or     |enumeration or|
+   |egress rule are        |                                              |channel    |organizational|channel-     |a found       |
+   |enforced, and every    |                                              |available  |anchor        |inventory    |unenumerated  |
+   |egress channel is      |                                              |to the     |              |change       |channel makes |
+   |enumerated             |                                              |agent's    |              |             |the claim     |
+   |(Section 12.2)         |                                              |execution  |              |             |unavailable   |
+   |                       |                                              |environment|              |             |              |
+   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
+
+                                  Table 9
+
+   A deployment claiming either named property MUST bind its statement
+   to the evidence this table names, for each condition its Enforcement
+   Scope Statement claims.  Evidence that is unknown, stale, or
+   unverifiable for a required condition makes the named claim
+   unavailable.
+
+   For each condition this table assigns to EAT evidence, the
+   Enforcement Scope Statement MUST select the claim or profile
+   identifiers the attestation carries, the expected measurements or
+   reference values it is appraised against, the appraisal policy
+   applied, the attester identity, and a checkable nonce, timestamp, or
+   session-binding freshness rule.  Entity Attestation Token ([RFC9711])
+   evidence, carried under the AI-agent-instance profile
+   ([I-D.draft-mcguinness-oauth-ai-agent-instance]), establishes the
+   execution-environment fact a row assigns to it only against those
+   selections; where a selection this paragraph names is absent, the
+   token is a declaration or evidence input, not proof, and the named
+   claim is unavailable on the same terms.  Verified EAT evidence does
+   not by itself establish the exposure, approval, rendering, freshness,
+   path, or topology facts the table assigns elsewhere, and a deployment
+   MUST NOT represent EAT evidence alone as satisfying those.  The
+   requirement is scoped to these two High-Assurance Agent claims; base
+   runtime conformance does not require this evidence map, and a
+   deployment claiming only the base profile MAY publish its scope
+   statement unattested.
 
 13.  Negative Conformance Tests
 
@@ -2820,30 +2952,34 @@ Table of Contents
    contained by a conforming deployment that makes the relevant claim,
    and a deployment SHOULD retain evidence that it ran them.
 
-   +===================================+==============================+
-   | Bypass attempt                    | Required outcome             |
-   +===================================+==============================+
-   | Agent calls a mediated tool       | Blocked (no unmediated path) |
-   | directly, around the PEP          |                              |
-   +-----------------------------------+------------------------------+
-   | Agent presents a cached token     | Blocked within the freshness |
-   | after Mission revocation          | bound                        |
-   +-----------------------------------+------------------------------+
-   | Agent resumes background work     | Paused or refused on resume  |
-   | after Mission state went stale    | re-check                     |
-   +-----------------------------------+------------------------------+
-   | Agent delegates to a sub-agent    | Blocked (no inheritance by   |
-   | with no explicit delegation       | session ancestry)            |
-   +-----------------------------------+------------------------------+
-   | Agent alters action parameters    | Blocked by parameter-digest  |
-   | after the permit is issued        | reverification               |
-   +-----------------------------------+------------------------------+
-   | Agent egresses over a secondary   | Blocked if the channel is in |
-   | channel (DNS, logs, shared store) | the mediated set; otherwise  |
-   |                                   | declared outside the claim   |
-   +-----------------------------------+------------------------------+
+   +====================================+==============================+
+   | Bypass attempt                     | Required outcome             |
+   +====================================+==============================+
+   | Agent calls a mediated tool        | Blocked (no unmediated path) |
+   | directly, around the PEP           |                              |
+   +------------------------------------+------------------------------+
+   | Agent presents a cached token      | Blocked within the freshness |
+   | after Mission revocation           | bound                        |
+   +------------------------------------+------------------------------+
+   | Agent resumes background work      | Paused or refused on resume  |
+   | after Mission state went stale     | re-check                     |
+   +------------------------------------+------------------------------+
+   | Agent delegates to a sub-agent     | Blocked (no inheritance by   |
+   | with no explicit delegation        | session ancestry)            |
+   +------------------------------------+------------------------------+
+   | Agent alters action parameters     | Blocked by parameter-digest  |
+   | after the permit is issued         | reverification               |
+   +------------------------------------+------------------------------+
+   | Agent requests or receives         | Refused or withheld          |
+   | context outside the active         |                              |
+   | Mission's scope                    |                              |
+   +------------------------------------+------------------------------+
+   | Agent egresses over a              | Blocked if the channel is in |
+   | secondary channel (DNS, logs,      | the mediated set; otherwise  |
+   | shared store)                      | declared outside the claim   |
+   +------------------------------------+------------------------------+
 
-                                 Table 9
+                                  Table 10
 
    These are the observable form of the requirements stated normatively
    above; a deployment's Enforcement Scope Statement (Section 4.2) names
@@ -2883,7 +3019,7 @@ Table of Contents
        |                           | an unconstrained signing path |
        +---------------------------+-------------------------------+
 
-                                  Table 10
+                                  Table 11
 
    These tests demonstrate the exposed control surface; they do not
    prove the absence of a hidden bypass, which remains an attestation,

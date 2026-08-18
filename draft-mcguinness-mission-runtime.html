@@ -2003,11 +2003,18 @@ claimed, its per-emitter declaration
 (<a href="#agent-isolated-evidence-emission" class="auto internal xref">Section 4.7</a>);<a href="#section-4.2-3.11.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.2-3.12">
-            <p id="section-4.2-3.12.1">the reconciliation window for matching execution-outcome evidence to
+            <p id="section-4.2-3.12.1">where a High-Assurance Agent claim rests on EAT evidence
+(<a href="#compromise-resistant" class="auto internal xref">Section 12.1</a>, <a href="#trifecta-containment" class="auto internal xref">Section 12.2</a>), the per-row
+selections the evidence table requires: the claim or profile
+identifiers, the expected measurements or reference values, the
+appraisal policy, the attester identity, and the freshness rule;<a href="#section-4.2-3.12.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-3.13">
+            <p id="section-4.2-3.13.1">the reconciliation window for matching execution-outcome evidence to
 decisions, the component responsible for orphaned-evidence and
 sequence-gap detection and for actively reconciling each unresolved
 outcome within the window, and that component's alerting obligation
-(<a href="#evidence" class="auto internal xref">Section 11</a>).<a href="#section-4.2-3.12.1" class="pilcrow">¶</a></p>
+(<a href="#evidence" class="auto internal xref">Section 11</a>).<a href="#section-4.2-3.13.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-4.2-4">A deployment <span class="bcp14">MUST NOT</span> claim runtime enforcement for a resource, action
@@ -4575,16 +4582,133 @@ completeness.<a href="#section-12.2-4" class="pilcrow">¶</a></p>
 (<a href="#compromise-resistant" class="auto internal xref">Section 12.1</a>) rest on the execution-environment scope
 statement, a self-declared artifact: the wire alone does not let a
 relying party distinguish a deployment that built the declared
-isolation from one that only published the statement. A deployment
-claiming either <span class="bcp14">MUST</span> bind the statement to execution-environment
-attestation, presenting Entity Attestation Token <span>[<a href="#RFC9711" class="cite xref">RFC9711</a>]</span> evidence
-under the AI-agent-instance profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>) covering the
-isolation properties the statement declares, and <span class="bcp14">MUST NOT</span> represent
-the claim as met without it. The requirement is scoped to these two
-High-Assurance Agent claims; base runtime conformance does not
-require attestation, and a deployment claiming only the base profile
-<span class="bcp14">MAY</span> publish its scope statement unattested.<a href="#section-12.2-5" class="pilcrow">¶</a></p>
+isolation from one that only published the statement.<a href="#section-12.2-5" class="pilcrow">¶</a></p>
+<p id="section-12.2-6">The conditions the two claims name do not share one evidence type.
+The table below fixes, per condition: a stable identifier, the
+evidence that authoritatively establishes it, the scope that evidence
+covers, the verifier and trust anchor a relying party checks it
+against, the freshness the evidence must carry, and the behavior when
+the evidence is missing.<a href="#section-12.2-6" class="pilcrow">¶</a></p>
+<table class="center" id="table-9">
+          <caption><a href="#table-9" class="selfRef">Table 9</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Condition</th>
+              <th class="text-left" rowspan="1" colspan="1">Evidence producer/type</th>
+              <th class="text-left" rowspan="1" colspan="1">Covered scope</th>
+              <th class="text-left" rowspan="1" colspan="1">Verifier / trust anchor</th>
+              <th class="text-left" rowspan="1" colspan="1">Freshness</th>
+              <th class="text-left" rowspan="1" colspan="1">Failure behavior</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>key_custody</code>: the sender-constraint key is held and generated in the mediating PEP, never transferred to the agent (<a href="#compromise-resistant" class="auto internal xref">Section 12.1</a>, <a href="#custody" class="auto internal xref">Section 4.6</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">EAT (<span>[<a href="#RFC9711" class="cite xref">RFC9711</a>]</span>)</td>
+              <td class="text-left" rowspan="1" colspan="1">The mediating PEP's key-holding component</td>
+              <td class="text-left" rowspan="1" colspan="1">The relying party, against the attester identity and appraisal policy the Enforcement Scope Statement selects for this row</td>
+              <td class="text-left" rowspan="1" colspan="1">The nonce, timestamp, or session-binding rule the statement selects for this row, current at the session or credential issuance the claim covers</td>
+              <td class="text-left" rowspan="1" colspan="1">Absent, stale, or unverifiable evidence, or a missing selection this row requires, makes the claim unavailable</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>isolation_boundary</code>: the execution environment separates the agent component from the mediating PEP, approval service, and rendering component, and credential material stays out of the agent (<a href="#compromise-resistant" class="auto internal xref">Section 12.1</a>, <a href="#trifecta-containment" class="auto internal xref">Section 12.2</a>, <a href="#custody" class="auto internal xref">Section 4.6</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">EAT (<span>[<a href="#RFC9711" class="cite xref">RFC9711</a>]</span>)</td>
+              <td class="text-left" rowspan="1" colspan="1">The boundary between the agent component and each isolated component</td>
+              <td class="text-left" rowspan="1" colspan="1">The relying party, against the attester identity and appraisal policy the statement selects for this row</td>
+              <td class="text-left" rowspan="1" colspan="1">The freshness rule the statement selects for this row, current at the session the claim covers</td>
+              <td class="text-left" rowspan="1" colspan="1">Absent, stale, or unverifiable evidence, or a missing selection this row requires, makes the claim unavailable</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>workload_measurement</code>: the attested component runs the software the Enforcement Scope Statement declares (<a href="#compromise-resistant" class="auto internal xref">Section 12.1</a>, <a href="#runtime-conformance" class="auto internal xref">Section 4.2</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">EAT (<span>[<a href="#RFC9711" class="cite xref">RFC9711</a>]</span>)</td>
+              <td class="text-left" rowspan="1" colspan="1">Each component the statement names as isolated or mediating</td>
+              <td class="text-left" rowspan="1" colspan="1">The relying party, against the attester identity, appraisal policy, and reference values the statement selects for this row</td>
+              <td class="text-left" rowspan="1" colspan="1">The freshness rule the statement selects for this row, current at attestation time</td>
+              <td class="text-left" rowspan="1" colspan="1">Absent, stale, or unverifiable evidence, or a missing selection this row requires, makes the claim unavailable</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>approval_policy</code>: each action in the claimed classes requires action-bound approval (<a href="#compromise-resistant" class="auto internal xref">Section 12.1</a>, <a href="#action-approval" class="auto internal xref">Section 4.4</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">Signed configuration, or independent service evidence from the approval service</td>
+              <td class="text-left" rowspan="1" colspan="1">The approval service's enforcement over the classes claimed</td>
+              <td class="text-left" rowspan="1" colspan="1">The auditor reading the configuration, against the approval service's operator key</td>
+              <td class="text-left" rowspan="1" colspan="1">Current with the approval service's active policy version</td>
+              <td class="text-left" rowspan="1" colspan="1">Unknown or unverifiable configuration makes the claim unavailable</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>rendering_independence</code>: the disclosure is derived from the bound normalized parameters, never composed by the agent (<a href="#compromise-resistant" class="auto internal xref">Section 12.1</a>, <a href="#action-approval" class="auto internal xref">Section 4.4</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">Independent service evidence, the committed Consent Evidence where available</td>
+              <td class="text-left" rowspan="1" colspan="1">The rendering component's output for the approval event claimed</td>
+              <td class="text-left" rowspan="1" colspan="1">The party evaluating the evidence, against the rendering component's or Consent Evidence signer's key</td>
+              <td class="text-left" rowspan="1" colspan="1">Per approval event</td>
+              <td class="text-left" rowspan="1" colspan="1">An approval event lacking this evidence cannot be counted toward the claim; a class with no such event verified does not carry the claim</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>freshness_sourcing</code>: the Mission state source is an active freshness mechanism, not token-lifetime expiry (<a href="#compromise-resistant" class="auto internal xref">Section 12.1</a>, <a href="#state-freshness" class="auto internal xref">Section 7.4</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">Signed configuration naming the state source and its staleness bound (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), or independent evidence from the state source</td>
+              <td class="text-left" rowspan="1" colspan="1">The state source used for the classes claimed</td>
+              <td class="text-left" rowspan="1" colspan="1">The auditor reading the Deployment Profile, against the state source's operator key</td>
+              <td class="text-left" rowspan="1" colspan="1">The published staleness bound</td>
+              <td class="text-left" rowspan="1" colspan="1">A stale or unverifiable state source makes the claim unavailable</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>path_completeness</code>: no unmediated path reaches the mediated classes or a fresh usable credential for them (<a href="#compromise-resistant" class="auto internal xref">Section 12.1</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">Negative tests (<a href="#negative-conformance" class="auto internal xref">Section 13</a>) and organizational topology audit</td>
+              <td class="text-left" rowspan="1" colspan="1">Every path to the classes claimed, deployment-wide</td>
+              <td class="text-left" rowspan="1" colspan="1">The auditor who ran or reviewed the tests and audit, an organizational anchor</td>
+              <td class="text-left" rowspan="1" colspan="1">Per the deployment's stated audit cadence</td>
+              <td class="text-left" rowspan="1" colspan="1">Untested, stale, or a found unmediated path makes the claim unavailable</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>least_exposure</code>: the context surfaced to the agent (prompts, retrieved documents, memory, tool catalogs, schemas, and downstream responses) is scoped to the active Mission (<a href="#trifecta-containment" class="auto internal xref">Section 12.2</a>, <a href="#least-exposure" class="auto internal xref">Section 4.8</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">Signed configuration naming the exposure-scoping rule for the classes claimed, and negative tests demonstrating out-of-Mission context is withheld</td>
+              <td class="text-left" rowspan="1" colspan="1">The exposure-scoping rule's coverage over the classes claimed</td>
+              <td class="text-left" rowspan="1" colspan="1">The auditor reading the configuration, against the deployment's operator key</td>
+              <td class="text-left" rowspan="1" colspan="1">Current with the deployment's active exposure-scoping configuration version</td>
+              <td class="text-left" rowspan="1" colspan="1">Unknown, stale, or unverifiable configuration, or a found unscoped exposure, makes the claim unavailable</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>taint_egress_topology</code>: the taint policy and egress rule are enforced, and every egress channel is enumerated (<a href="#trifecta-containment" class="auto internal xref">Section 12.2</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">Topology audit (channel enumeration) and negative tests</td>
+              <td class="text-left" rowspan="1" colspan="1">Every egress channel available to the agent's execution environment</td>
+              <td class="text-left" rowspan="1" colspan="1">The auditor, an organizational anchor</td>
+              <td class="text-left" rowspan="1" colspan="1">Per audit cycle or channel-inventory change</td>
+              <td class="text-left" rowspan="1" colspan="1">A stale enumeration or a found unenumerated channel makes the claim unavailable</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-12.2-8">A deployment claiming either named property <span class="bcp14">MUST</span> bind its statement
+to the evidence this table names, for each condition its Enforcement
+Scope Statement claims. Evidence that is unknown, stale, or
+unverifiable for a required condition makes the named claim
+unavailable.<a href="#section-12.2-8" class="pilcrow">¶</a></p>
+<p id="section-12.2-9">For each condition this table assigns to EAT evidence, the
+Enforcement Scope Statement <span class="bcp14">MUST</span> select the claim or profile
+identifiers the attestation carries, the expected measurements or
+reference values it is appraised against, the appraisal policy
+applied, the attester identity, and a checkable nonce, timestamp, or
+session-binding freshness rule. Entity Attestation Token
+(<span>[<a href="#RFC9711" class="cite xref">RFC9711</a>]</span>) evidence, carried under the AI-agent-instance profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>), establishes the
+execution-environment fact a row assigns to it only against those
+selections; where a selection this paragraph names is absent, the
+token is a declaration or evidence input, not proof, and the named
+claim is unavailable on the same terms. Verified EAT evidence does
+not by itself establish the exposure, approval, rendering, freshness,
+path, or topology facts the table assigns elsewhere, and a deployment
+<span class="bcp14">MUST NOT</span> represent EAT evidence alone as satisfying those. The
+requirement is scoped to these two High-Assurance Agent claims; base
+runtime conformance does not require this evidence map, and a
+deployment claiming only the base profile <span class="bcp14">MAY</span> publish its scope
+statement unattested.<a href="#section-12.2-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4600,8 +4724,8 @@ protocol element proves. A deployment <span class="bcp14">SHOULD</span> demonstr
 negative tests: each of the following bypass attempts <span class="bcp14">MUST</span> be refused
 or contained by a conforming deployment that makes the relevant
 claim, and a deployment <span class="bcp14">SHOULD</span> retain evidence that it ran them.<a href="#section-13-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-9">
-        <caption><a href="#table-9" class="selfRef">Table 9</a></caption>
+<table class="center" id="table-10">
+        <caption><a href="#table-10" class="selfRef">Table 10</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Bypass attempt</th>
@@ -4630,6 +4754,10 @@ claim, and a deployment <span class="bcp14">SHOULD</span> retain evidence that i
             <td class="text-left" rowspan="1" colspan="1">Blocked by parameter-digest reverification</td>
           </tr>
           <tr>
+            <td class="text-left" rowspan="1" colspan="1">Agent requests or receives context outside the active Mission's scope</td>
+            <td class="text-left" rowspan="1" colspan="1">Refused or withheld</td>
+          </tr>
+          <tr>
             <td class="text-left" rowspan="1" colspan="1">Agent egresses over a secondary channel (DNS, logs, shared store)</td>
             <td class="text-left" rowspan="1" colspan="1">Blocked if the channel is in the mediated set; otherwise declared outside the claim</td>
           </tr>
@@ -4642,8 +4770,8 @@ excludes.<a href="#section-13-3" class="pilcrow">¶</a></p>
 <p id="section-13-4">The agent-isolated evidence-emission condition
 (<a href="#agent-isolated-evidence-emission" class="auto internal xref">Section 4.7</a>) has its own observable form; a
 deployment claiming it <span class="bcp14">SHOULD</span> demonstrate, per covered emitter:<a href="#section-13-4" class="pilcrow">¶</a></p>
-<table class="center" id="table-10">
-        <caption><a href="#table-10" class="selfRef">Table 10</a></caption>
+<table class="center" id="table-11">
+        <caption><a href="#table-11" class="selfRef">Table 11</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Bypass attempt</th>

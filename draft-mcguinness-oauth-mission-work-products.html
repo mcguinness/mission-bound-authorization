@@ -1876,7 +1876,37 @@ referencing, embedding, or communicating an artifact. An agent that
 reads a work product and proposes an action is gated by the Receiving
 Mission's own Authority Set, so a work product cannot be used as a
 capability.<a href="#section-11-1" class="pilcrow">¶</a></p>
-<p id="section-11-2">One residual is not closed by this document. Independent Missions,
+<p id="section-11-2">The trusted mediator that attaches Work Product Provenance is itself
+a residual this document does not close. A Work Product
+Binding's signature proves that the signing mediator's key bound the
+artifact and provenance bytes together (<a href="#binding-verification" class="auto internal xref">Section 9.3</a>); it
+does not prove that the claimed production happened. A compromised
+<code>harness</code>-role mediator (<a href="#binding-object" class="auto internal xref">Section 9.2</a>) can attach and sign a
+Work Product Provenance object attributing a fabricated or malicious
+artifact to a legitimate active Mission, and the binding verifies
+exactly as a faithful one would. Detection is conditional, not
+assured. Where the binding is registered as Mission evidence
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>) and a deployment separately
+retains independently produced Decision and Execution Evidence under
+its own declared correlation rule, that evidence can reveal a
+contradiction, or a missing event the rule expects, against the
+binding's claimed <code>mission_id</code> and <code>created_at</code>. This is not a
+general guarantee: Work Product Binding registration is optional
+(<a href="#binding-verification" class="auto internal xref">Section 9.3</a>), runtime evidence registration is not
+universal, and a work product's creation need not correspond
+one-to-one to a consequential action with evidence of its own.
+Without an independent witness to production, a compromised mediator
+can produce a forgery no correlation rule catches. Transparency
+registration makes a false claim permanent and attributable once
+made; it does not make the claim detectable, and it does not make a
+dishonest mediator honest. Routing the mediator role through the
+Mission Issuer (<a href="#binding-object" class="auto internal xref">Section 9.2</a>) helps only where the issuer
+independently observed the production it signs for, a condition an
+issuer typically lacks for harness-executed work (<a href="#provenance" class="auto internal xref">Section 6</a>).
+The harness profile's own compromise analysis states the same split
+between prevention and after-the-fact detectability for a compromised
+execution environment (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-11-2" class="pilcrow">¶</a></p>
+<p id="section-11-3">One residual is not closed by this document. Independent Missions,
 each acting within its own bounds, can communicate through shared state
 so that discoveries, credentials, techniques, or intermediate results
 persist across runtimes and Missions, and individually acceptable
@@ -1885,15 +1915,15 @@ rule prevents any one artifact from conferring authority; it does not by
 itself bound this aggregate composition through an unmanaged carrier.
 The security model records this as the emergent-authority-through-
 coordination threat
-(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-11-2" class="pilcrow">¶</a></p>
-<p id="section-11-3">Bounding that aggregate is anticipated defense-in-depth, deferred to
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-11-3" class="pilcrow">¶</a></p>
+<p id="section-11-4">Bounding that aggregate is anticipated defense-in-depth, deferred to
 later companions and not specified here: an issuer-assigned or
 deployment-assigned classification of a shared-state effect; a
 communications and audience envelope for what an agent may write and who
 may read it; lineage-keyed aggregate bounds across a provenance chain;
 and quarantine of a work product with blocking of its consumers when the
 Producing Mission is compromised. This document specifies none of them
-now.<a href="#section-11-3" class="pilcrow">¶</a></p>
+now.<a href="#section-11-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="privacy-considerations">
@@ -2083,6 +2113,10 @@ invariants: information may propagate, and authority may not.<a href="#section-1
 <dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Transparency: SCITT Registration of Mission Evidence"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-security-model">[I-D.draft-mcguinness-mission-security-model]</dt>
         <dd>
