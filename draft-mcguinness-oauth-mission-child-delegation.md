@@ -1279,8 +1279,9 @@ must always trace to a committed approval it was actually checked
 against: `parent.authority_hash` commits to the exact predecessor
 Authority Set the strict-subset check ran against
 ({{parent-member}}), and a successor's freshly derived Authority Set
-is not that commitment. The expansion profile renders this cost to the
-Approver at the same consent event that approves the successor
+is not that commitment. The expansion profile's child-cascade consent
+notice is where this cost can be surfaced to the Approver, at the same
+consent event that approves the successor
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The
 deferred window").
 

@@ -751,12 +751,14 @@ check does not carry forward
 "Cascade Revocation"). The re-creation above is paid for per child: a
 fresh assertion conveyed to the child actor that held the terminated
 child, and an interval in which that child actor's outstanding tokens
-under the terminated child run to their own `exp` while the
-replacement is delivered
+under the terminated child run to the earlier of their own `exp` and
+the runtime staleness bound, where the runtime enforcement layer is
+deployed, while the replacement is delivered
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
-"Cascade Failure"). The expansion consent event above is where this
-price becomes visible: it is the only point in this profile at which a
-human sees the cascade before it happens.
+"Cascade Failure"). Where a deployment provides the notice recommended
+above, the expansion consent event is where this price is rendered;
+that consent event is the only point in this profile at which a human
+can witness the cascade before it happens.
 
 ## Successor expiry {#successor-expiry}
 
