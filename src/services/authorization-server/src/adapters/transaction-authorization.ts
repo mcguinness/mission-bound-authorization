@@ -38,7 +38,7 @@ import {
 import { mintTransactionToken } from "../kernel/transaction-token.js";
 import type { AuthorityEntry } from "../kernel/types.js";
 import { TxnWorkflowStore, type TxnWorkflowRecord } from "../kernel/txn-workflow-store.js";
-import type { DpopProofReplay } from "./dpop-replay.js";
+import { DPOP_PROOF_REPLAY_WINDOW_S, type DpopProofReplay } from "./dpop-replay.js";
 
 /**
  * The subset of the Access Request Service this endpoint uses. Structural so
@@ -254,13 +254,20 @@ async function admit(
     return;
   }
 
-  // 1. `subject_token`'s audience against the challenge's `iss`, and its `cnf`
-  //    against the proof presented on THIS request (which is also the key the
-  //    challenge committed to).
+  // 1. `subject_token`'s CLASS, audience against the challenge's `iss`, and its
+  //    `cnf` against the proof presented on THIS request (which is also the key
+  //    the challenge committed to).
+  //
+  //    The class is pinned POSITIVELY to the RFC 9068 access-token type this AS
+  //    mints. Every other credential it signs -- above all a transaction token,
+  //    which carries an audience, the Mission invariants, an authority set and a
+  //    `cnf` of its own -- would otherwise satisfy the checks below and be
+  //    replayable here as the subject's credential.
   let subject: Record<string, unknown>;
   try {
     ({ payload: subject } = (await jwtVerify(subjectToken, createLocalJWKSet(deps.publicJwks as never), {
       issuer: deps.issuer,
+      typ: "at+jwt",
     })) as { payload: Record<string, unknown> });
   } catch {
     fail(ctx, 400, "invalid_grant", "subject_token did not verify");
@@ -687,6 +694,10 @@ async function authenticateClient(
       subject: asserted,
       audience: [deps.issuer, `${deps.issuer}/transaction`],
     });
+    // @spec RFC 7523 §3 — `exp` is REQUIRED on a client assertion. jose only
+    // validates it when present, so an assertion omitting it would otherwise
+    // authenticate forever.
+    if (typeof payload.exp !== "number") return undefined;
     if (typeof payload.jti !== "string" || !deps.dpopProofReplay.check(`ca:${payload.jti}`)) {
       return undefined;
     }
@@ -711,6 +722,14 @@ async function verifyDpop(deps: TxnAuthorizationDeps, ctx: TxnCtx): Promise<stri
     const jkt = await calculateJwkThumbprint(jwk as never);
     const { payload } = await jwtVerify(proofJws, jwk as never, { typ: "dpop+jwt" });
     if (payload.htu !== `${deps.issuer}/transaction` || payload.htm !== "POST") return undefined;
+    // @spec RFC 9449 §4.2/§4.3 — `iat` is REQUIRED and the proof is only
+    // accepted within a short window around it, in BOTH directions: a captured
+    // proof stops being usable, and a future-dated one never starts. The window
+    // is the replay cache's, so a jti is remembered at least as long as a proof
+    // bearing it can be accepted.
+    if (typeof payload.iat !== "number") return undefined;
+    const nowS = Math.floor(deps.now().getTime() / 1000);
+    if (Math.abs(nowS - payload.iat) > DPOP_PROOF_REPLAY_WINDOW_S) return undefined;
     if (typeof payload.jti !== "string" || !deps.dpopProofReplay.check(payload.jti)) return undefined;
     return jkt;
   } catch {

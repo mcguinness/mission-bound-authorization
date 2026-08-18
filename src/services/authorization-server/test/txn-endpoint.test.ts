@@ -1304,3 +1304,132 @@ describe("client identification (@spec txn-authorization#challenge-redemption)",
     expect((await asAgent.json()).error).toBe("invalid_grant");
   });
 });
+
+describe("proof and credential freshness (@spec txn-authorization#challenge-redemption)", () => {
+  it("refuses a transaction token presented as subject_token", async () => {
+    // Obtain a REAL transaction token through the flow first.
+    const mission = await freshMission();
+    const txn = "txn_f4_class";
+    const challenge = await signChallenge(
+      {
+        txn,
+        authorization_details: remittanceEntry(mission.missionId),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: "sha-256:f4-class",
+        mission: mission.mission,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const init = await submit(challenge, { token: mission.token });
+    const initBody = (await init.json()) as { transaction_authorization_id?: string };
+    expect(init.status, JSON.stringify(initBody)).toBe(200);
+    const task = ars.pending().find((t) => t.id.endsWith(txn));
+    expect(task).toBeDefined();
+    await ars.adjudicate(task?.id as string, "approve", "bob");
+    const tokenRes = await postTransaction({
+      transaction_authorization_id: initBody.transaction_authorization_id as string,
+    });
+    const txnToken = ((await tokenRes.json()) as { access_token?: string }).access_token as string;
+    expect(tokenRes.status).toBe(200);
+
+    // Replayed as the subject's credential on a NEW challenge, it is refused on
+    // its CLASS, even though its audience, mission, authority and cnf claims
+    // would all satisfy the checks that follow.
+    const second = await signChallenge(
+      {
+        txn: "txn_f4_class_2",
+        authorization_details: remittanceEntry(mission.missionId),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: "sha-256:f4-class-2",
+        mission: mission.mission,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const replay = await submit(second, { token: txnToken });
+    expect(replay.status).toBe(400);
+    expect((await replay.json()).error).toBe("invalid_grant");
+  });
+
+  it("refuses a client assertion without exp", async () => {
+    // RFC 7523 §3: exp is REQUIRED; jose only validates it when present.
+    const assertion = await new SignJWT({})
+      .setProtectedHeader({ alg: "ES256", kid: "ap-agent-auth" })
+      .setIssuer("ap-agent")
+      .setSubject("ap-agent")
+      .setAudience(ISSUER)
+      .setIssuedAt()
+      .setJti(crypto.randomUUID())
+      .sign(clientKey);
+    const mission = await freshMission();
+    const challenge = await signChallenge(
+      {
+        txn: "txn_f4_exp",
+        authorization_details: remittanceEntry(mission.missionId),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: "sha-256:f4-exp",
+        mission: mission.mission,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const res = await postTransaction(
+      {
+        transaction_challenge: challenge,
+        subject_token: mission.token,
+        subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+      },
+      { assertion },
+    );
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toBe("invalid_client");
+  });
+
+  it("refuses a DPoP proof whose iat is outside the acceptance window, in both directions", async () => {
+    const mission = await freshMission();
+    const challenge = await signChallenge(
+      {
+        txn: "txn_f4_iat",
+        authorization_details: remittanceEntry(mission.missionId),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: "sha-256:f4-iat",
+        mission: mission.mission,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const htu = `${ISSUER}/transaction`;
+    const proofAt = async (iat: number): Promise<string> =>
+      new SignJWT({ htu, htm: "POST", iat })
+        .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(dpopKeys.publicKey) })
+        .setJti(crypto.randomUUID())
+        .sign(dpopKeys.privateKey);
+    const nowS = Math.floor(Date.now() / 1000);
+    // A captured proof stops being usable; a future-dated one never starts.
+    for (const iat of [nowS - 400, nowS + 400]) {
+      const res = await fetch(htu, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proofAt(iat) },
+        body: new URLSearchParams({
+          client_id: "ap-agent",
+          client_assertion: await clientAssertion(),
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+          transaction_challenge: challenge,
+          subject_token: mission.token,
+          subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+        }).toString(),
+      });
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error?: string }).error).toBe("invalid_dpop_proof");
+    }
+  });
+});
