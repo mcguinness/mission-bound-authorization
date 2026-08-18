@@ -1833,6 +1833,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           clients: opts.clients,
           publicJwks: opts.publicJwks as { keys: JWK[] },
           dpopProofReplay: opts.dpopProofReplay as DpopProofReplay,
+          // @spec txn-authorization#challenge-redemption — the SAME liveness
+          // path introspection answers from: the issuance index resolves the
+          // grant/family that actually minted this credential, and that
+          // family's fate is what makes it live or not.
+          subjectTokenLive: async (jti: string) => {
+            const issuance = opts.tokenIssuanceStore?.resolve(opts.issuer, jti);
+            return !!issuance && (await isGrantLive(opts, provider, issuance.grantId));
+          },
           now: () => new Date(),
           ...(opts.txnAuthorization ? { txn: opts.txnAuthorization } : {}),
         },

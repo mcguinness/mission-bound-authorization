@@ -38,7 +38,7 @@ import {
   validateChallenge,
 } from "../kernel/txn-challenge.js";
 import { mintTransactionToken } from "../kernel/transaction-token.js";
-import type { AuthorityEntry } from "../kernel/types.js";
+import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
 import { TxnWorkflowStore, type TxnWorkflowRecord } from "../kernel/txn-workflow-store.js";
 import { DPOP_PROOF_REPLAY_WINDOW_S, type DpopProofReplay } from "./dpop-replay.js";
 
@@ -185,6 +185,16 @@ export interface TxnAuthorizationDeps {
   /** This AS's published keys, for verifying the presented `subject_token`. */
   publicJwks: { keys: JWK[] };
   dpopProofReplay: DpopProofReplay;
+  /**
+   * @spec txn-authorization#challenge-redemption step 1, step 7 — whether the
+   * credential behind `jti` is STILL LIVE according to the issuer's own
+   * records, resolved through the same issuance index introspection answers
+   * from. A `subject_token`'s `exp` is a claim the credential makes about
+   * itself; individual revocation (its delegation family destroyed, its grant
+   * gone) happens at the issuer and is invisible in the JWT. Without this a
+   * revoked credential keeps redeeming until its nominal expiry.
+   */
+  subjectTokenLive: (jti: string) => Promise<boolean>;
   now: () => Date;
   txn?: TxnAuthorizationOptions;
 }
@@ -333,6 +343,19 @@ async function admit(
     fail(ctx, 400, "invalid_grant", "subject_token did not verify");
     return;
   }
+  // @spec txn-authorization#challenge-redemption step 1 — the credential's
+  // IDENTITY, not merely its claims: `jti` is what the issuer's records are
+  // consulted under. A credential this AS cannot name is one it cannot check
+  // the liveness of, so it is refused rather than trusted on its `exp` alone.
+  const subjectJti = subject.jti;
+  if (typeof subjectJti !== "string" || !subjectJti) {
+    fail(ctx, 400, "invalid_grant", "subject_token carries no jti");
+    return;
+  }
+  if (!(await deps.subjectTokenLive(subjectJti))) {
+    fail(ctx, 400, "invalid_grant", "subject_token is no longer live");
+    return;
+  }
   const aud = subject.aud;
   const audiences = Array.isArray(aud) ? aud : typeof aud === "string" ? [aud] : [];
   if (!audiences.includes(challenge.iss)) {
@@ -426,6 +449,7 @@ async function admit(
     // deployment-declared lifetime, NOT the challenge's remaining window.
     expiresAtS: nowS + txn.workflowLifetimeSeconds,
     subjectTokenExpS: typeof subject.exp === "number" ? subject.exp : nowS,
+    subjectTokenJti: subjectJti,
     missionExpS: Math.floor(Date.parse(active.expires_at) / 1000),
     // Actor context from EITHER upstream carrier; its presence is what makes
     // `act` REQUIRED on the issued token.
@@ -511,108 +535,33 @@ async function poll(
     fail(ctx, 400, "access_denied");
     return;
   }
-  const nowS = Math.floor(deps.now().getTime() / 1000);
   if (wf.state === "issued" && wf.issuedToken) {
     // At most one authorization result per workflow: repeated polling after a
     // decision returns the SAME token (same jti), never a second issuance.
-    respondWithToken(ctx, wf.issuedToken, (wf.issuedExpS ?? nowS) - nowS, wf.challenge.authorization_details);
+    const servedAtS = Math.floor(deps.now().getTime() / 1000);
+    respondWithToken(
+      ctx,
+      wf.issuedToken,
+      (wf.issuedExpS ?? servedAtS) - servedAtS,
+      wf.challenge.authorization_details,
+    );
     return;
   }
-  // @spec txn-authorization#two-phase-expiry — the workflow's OWN lifetime is
-  // what expires here. An async approval completing after the challenge's exp
-  // but within this window still issues; the challenge exp is already consumed.
-  if (nowS >= wf.expiresAtS) {
-    fail(ctx, 400, "expired_token");
-    return;
-  }
-  // The workflow reserved admission but has not opened its approval yet (a
-  // crash between the two, or a concurrent submission still in flight). There
-  // is nothing to decide on yet; the workflow's own lifetime bounds the wait.
-  if (!wf.taskId) {
-    fail(ctx, 400, "authorization_pending");
-    return;
-  }
-  const task = txn.ars.getTask(wf.taskId);
-  if (task?.state === "denied") {
-    workflows.setState(wf.id, "denied");
-    fail(ctx, 400, "access_denied");
-    return;
-  }
-  // 6. The approval's status, scope, grant time, maximum age and
-  //    `approved_until`.
-  if (!task || task.state !== "approved" || !task.approval) {
-    fail(ctx, 400, "authorization_pending");
-    return;
-  }
-  // The approval is only ever SATISFIED by approval state. A stronger
-  // authentication context on `subject_token` (RFC 9470 step-up) proves who is
-  // present; it never stands in for this, and nothing below reads it.
-  const approval = task.approval;
-  if (approval.parameter_digest !== wf.challenge.parameter_digest) {
-    fail(ctx, 400, "access_denied", "approval is not bound to the challenged operation");
-    return;
-  }
-  // The approval is bound to the WHOLE transaction, not to its parameters: the
-  // digest above identifies the operation's parameters, and the same parameters
-  // are reachable under another Mission, principal, client or presenter key.
-  // The expected binding is recomputed from THIS workflow's pinned state, so an
-  // approval opened under any other transaction is refused here -- before the
-  // fresh decision ever sees it as context.
-  const expectedBindingDigest = txnApprovalBindingDigest(approvalBindingFor(wf));
-  if (approval.binding_digest !== expectedBindingDigest) {
-    fail(ctx, 400, "access_denied", "approval is not bound to this transaction");
-    return;
-  }
-  const approvedUntilS = Math.floor(Date.parse(approval.approved_until) / 1000);
-  const approvedAtS = Math.floor(Date.parse(approval.approved_at) / 1000);
-  const maxAgeS = txn.maxApprovalAgeSeconds ?? 300;
-  if (!Number.isFinite(approvedUntilS) || approvedUntilS <= nowS) {
-    fail(ctx, 400, "access_denied", "approval is no longer current");
-    return;
-  }
-  if (!Number.isFinite(approvedAtS) || nowS - approvedAtS > maxAgeS) {
-    fail(ctx, 400, "access_denied", "approval is older than the maximum age");
-    return;
-  }
-  // Approval time sanity, bounded by an explicit skew allowance. A grant time
-  // in the FUTURE would otherwise pass the maximum-age check by construction
-  // (its age is negative), and an approval whose validity ends before it began
-  // never described a window at all.
-  if (approvedAtS > nowS + CLOCK_SKEW_S) {
-    fail(ctx, 400, "access_denied", "approval was granted in the future");
-    return;
-  }
-  if (approvedUntilS < approvedAtS) {
-    fail(ctx, 400, "access_denied", "approval validity ends before it was granted");
+  // The completion checks, run as ONE pass. They run TWICE: once before the
+  // fresh decision, and again immediately before the mint. An `await` on a
+  // deployment's decision is a real window -- a revocation, a containment, an
+  // expiry or a lifecycle transition can land inside it -- and a token minted
+  // on inputs read before that window would be authorized by a state that no
+  // longer holds. One helper, so the two passes cannot drift apart.
+  const before = await completionChecks(deps, txn, wf, workflows);
+  if (!before.ok) {
+    fail(ctx, 400, before.error, before.description);
     return;
   }
 
   // 7. The FRESH authorization decision. Completion of step 6 alone MUST NOT
   //    issue and MUST NOT bypass this: every input below is re-read NOW, not
   //    replayed from admission.
-  if (wf.subjectTokenExpS <= nowS) {
-    fail(ctx, 400, "access_denied", "subject_token is no longer valid");
-    return;
-  }
-  let gated;
-  try {
-    // The lineage-grade active gate, not a bare derivation gate: a non-active
-    // ancestor refuses here too.
-    gated = deps.kernel.gateActive(wf.missionId);
-  } catch (e) {
-    if (e instanceof GateError) {
-      fail(ctx, 400, "access_denied", e.message);
-      return;
-    }
-    throw e;
-  }
-  // Containment may have narrowed the Mission since admission, so the subset
-  // rule is recomputed against the CURRENT effective set, never the pinned one.
-  const permitted = wf.challenge.authorization_details as unknown as AuthorityEntry[];
-  if (!isSubsetSet(permitted, deps.kernel.effectiveAuthoritySet(gated))) {
-    fail(ctx, 400, "access_denied", "challenge authority is no longer within the effective Authority Set");
-    return;
-  }
   const fresh = await txn.freshDecision({
     txn: wf.challenge.txn,
     missionId: wf.missionId,
@@ -622,31 +571,25 @@ async function poll(
     clientId: wf.clientId,
     subject: wf.subject,
     parameterDigest: wf.challenge.parameter_digest,
-    authorizationDetails: permitted,
+    authorizationDetails: before.permitted,
     cnfJkt: wf.challenge.cnf.jkt,
-    approval,
+    approval: before.approval,
   });
   if (fresh.decision !== "permit") {
     fail(ctx, 400, "access_denied", fresh.reason ?? "the fresh authorization decision denied the operation");
     return;
   }
 
-  // @spec txn-authorization#transaction-token — the earliest of approval
-  // freshness, subject_token validity, Mission expiry (pinned AND current, so a
-  // Mission extended mid-workflow cannot widen it), the workflow's remaining
-  // lifetime, and the deployment maximum. Never the challenge's exp.
-  const exp = Math.min(
-    approvedUntilS,
-    wf.subjectTokenExpS,
-    wf.missionExpS,
-    Math.floor(Date.parse(gated.expires_at) / 1000),
-    wf.expiresAtS,
-    nowS + txn.maxTokenLifetimeSeconds,
-  );
-  if (exp <= nowS) {
-    fail(ctx, 400, "access_denied", "no lifetime remains for a transaction token");
+  // The fence: the whole pass again, on a RE-READ clock and re-read state, with
+  // nothing between it and the mint. A permit is a statement about the moment
+  // it was computed, not a licence to issue later.
+  const after = await completionChecks(deps, txn, wf, workflows);
+  if (!after.ok) {
+    fail(ctx, 400, after.error, after.description);
     return;
   }
+  const nowS = after.nowS;
+  const exp = after.exp;
 
   // @spec txn-authorization#transaction-token — `parameter_digest` is copied
   // only after it has been verified against the challenge (the approval above
@@ -698,6 +641,147 @@ async function poll(
     return;
   }
   respondWithToken(ctx, token, exp - nowS, wf.challenge.authorization_details);
+}
+
+/** One completion pass that refused, with the wire error it maps to. */
+interface CompletionRefusal {
+  ok: false;
+  error: string;
+  description?: string;
+}
+
+/** One completion pass that held, with everything the mint needs. */
+interface CompletionPass {
+  ok: true;
+  /** The clock THIS pass read. */
+  nowS: number;
+  approval: NonNullable<ReturnType<TxnArs["getTask"]>>["approval"] & object;
+  /** The permitted set, as pinned on the challenge. */
+  permitted: AuthorityEntry[];
+  /** The token's exp, computed from THIS pass's clock and Mission state. */
+  exp: number;
+}
+
+/**
+ * @spec txn-authorization#challenge-redemption steps 6 and 7,
+ * #two-phase-expiry — every condition a transaction token's issuance rests on,
+ * evaluated against the state and the clock AS OF THIS CALL.
+ *
+ * It is one function because it runs twice: before the deployment's fresh
+ * decision, and again immediately before the mint. Nothing here is replayed
+ * from admission except what the profile PINS (the challenge snapshot, the
+ * `subject_token`'s own terms, the Mission's expiry at admission); everything
+ * else -- the clock, the approval, the credential's liveness, Mission state,
+ * the effective Authority Set -- is re-read.
+ */
+async function completionChecks(
+  deps: TxnAuthorizationDeps,
+  txn: TxnAuthorizationOptions,
+  wf: TxnWorkflowRecord,
+  workflows: TxnWorkflowStore,
+): Promise<CompletionPass | CompletionRefusal> {
+  const nowS = Math.floor(deps.now().getTime() / 1000);
+  // @spec txn-authorization#two-phase-expiry — the workflow's OWN lifetime is
+  // what expires here. An async approval completing after the challenge's exp
+  // but within this window still issues; the challenge exp is already consumed.
+  if (nowS >= wf.expiresAtS) return { ok: false, error: "expired_token" };
+  // The workflow reserved admission but has not opened its approval yet (a
+  // crash between the two, or a concurrent submission still in flight). There
+  // is nothing to decide on yet; the workflow's own lifetime bounds the wait.
+  if (!wf.taskId) return { ok: false, error: "authorization_pending" };
+
+  const task = txn.ars.getTask(wf.taskId);
+  if (task?.state === "denied") {
+    workflows.setState(wf.id, "denied");
+    return { ok: false, error: "access_denied" };
+  }
+  // 6. The approval's status, scope, grant time, maximum age and
+  //    `approved_until`.
+  if (!task || task.state !== "approved" || !task.approval) {
+    return { ok: false, error: "authorization_pending" };
+  }
+  // The approval is only ever SATISFIED by approval state. A stronger
+  // authentication context on `subject_token` (RFC 9470 step-up) proves who is
+  // present; it never stands in for this, and nothing below reads it.
+  const approval = task.approval;
+  if (approval.parameter_digest !== wf.challenge.parameter_digest) {
+    return { ok: false, error: "access_denied", description: "approval is not bound to the challenged operation" };
+  }
+  // The approval is bound to the WHOLE transaction, not to its parameters: the
+  // digest above identifies the operation's parameters, and the same parameters
+  // are reachable under another Mission, principal, client or presenter key.
+  // The expected binding is recomputed from THIS workflow's pinned state, so an
+  // approval opened under any other transaction is refused here -- before the
+  // fresh decision ever sees it as context.
+  if (approval.binding_digest !== txnApprovalBindingDigest(approvalBindingFor(wf))) {
+    return { ok: false, error: "access_denied", description: "approval is not bound to this transaction" };
+  }
+  const approvedUntilS = Math.floor(Date.parse(approval.approved_until) / 1000);
+  const approvedAtS = Math.floor(Date.parse(approval.approved_at) / 1000);
+  const maxAgeS = txn.maxApprovalAgeSeconds ?? 300;
+  if (!Number.isFinite(approvedUntilS) || approvedUntilS <= nowS) {
+    return { ok: false, error: "access_denied", description: "approval is no longer current" };
+  }
+  if (!Number.isFinite(approvedAtS) || nowS - approvedAtS > maxAgeS) {
+    return { ok: false, error: "access_denied", description: "approval is older than the maximum age" };
+  }
+  // Approval time sanity, bounded by an explicit skew allowance. A grant time
+  // in the FUTURE would otherwise pass the maximum-age check by construction
+  // (its age is negative), and an approval whose validity ends before it began
+  // never described a window at all.
+  if (approvedAtS > nowS + CLOCK_SKEW_S) {
+    return { ok: false, error: "access_denied", description: "approval was granted in the future" };
+  }
+  if (approvedUntilS < approvedAtS) {
+    return { ok: false, error: "access_denied", description: "approval validity ends before it was granted" };
+  }
+
+  // The subject's credential, on BOTH terms: the expiry it asserts about
+  // itself, and whether the issuer still stands behind it. Individual
+  // revocation is invisible in the JWT, so the second is the authoritative one.
+  if (wf.subjectTokenExpS <= nowS) {
+    return { ok: false, error: "access_denied", description: "subject_token is no longer valid" };
+  }
+  if (!(await deps.subjectTokenLive(wf.subjectTokenJti))) {
+    return { ok: false, error: "access_denied", description: "subject_token is no longer live" };
+  }
+
+  let gated: MissionRecord;
+  try {
+    // The lineage-grade active gate, not a bare derivation gate: a non-active
+    // ancestor refuses here too.
+    gated = deps.kernel.gateActive(wf.missionId);
+  } catch (e) {
+    if (e instanceof GateError) return { ok: false, error: "access_denied", description: e.message };
+    throw e;
+  }
+  // Containment may have narrowed the Mission since admission, so the subset
+  // rule is recomputed against the CURRENT effective set, never the pinned one.
+  const permitted = wf.challenge.authorization_details as unknown as AuthorityEntry[];
+  if (!isSubsetSet(permitted, deps.kernel.effectiveAuthoritySet(gated))) {
+    return {
+      ok: false,
+      error: "access_denied",
+      description: "challenge authority is no longer within the effective Authority Set",
+    };
+  }
+
+  // @spec txn-authorization#transaction-token — the earliest of approval
+  // freshness, subject_token validity, Mission expiry (pinned AND current, so a
+  // Mission extended mid-workflow cannot widen it), the workflow's remaining
+  // lifetime, and the deployment maximum. Never the challenge's exp.
+  const exp = Math.min(
+    approvedUntilS,
+    wf.subjectTokenExpS,
+    wf.missionExpS,
+    Math.floor(Date.parse(gated.expires_at) / 1000),
+    wf.expiresAtS,
+    nowS + txn.maxTokenLifetimeSeconds,
+  );
+  if (exp <= nowS) {
+    return { ok: false, error: "access_denied", description: "no lifetime remains for a transaction token" };
+  }
+  return { ok: true, nowS, approval, permitted, exp };
 }
 
 /**

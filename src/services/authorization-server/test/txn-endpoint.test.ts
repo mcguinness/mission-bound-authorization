@@ -90,6 +90,12 @@ const approvedAtOverrides = new Map<string, string>();
  * refuses it at completion.
  */
 const bindingMutations = new Map<string, (b: TxnApprovalBinding) => TxnApprovalBinding>();
+/**
+ * @spec txn-authorization#challenge-redemption step 7 — a hook that runs INSIDE
+ * the deployment's fresh decision for one `txn`, so a run can land a real state
+ * change in the window between the decision's inputs and the mint.
+ */
+const freshDecisionHooks = new Map<string, () => void | Promise<void>>();
 
 /**
  * Stand in for the Challenge-Issuing Resource: sign a challenge carrying every
@@ -422,6 +428,7 @@ beforeAll(async () => {
           operationType: input.operationType,
           parameterDigest: input.parameterDigest,
         });
+        await freshDecisionHooks.get(input.txn)?.();
         return policyDeniesTxns.has(input.txn)
           ? { decision: "deny", reason: "entitlement_denied" }
           : { decision: "permit" };
@@ -1028,6 +1035,108 @@ describe("approval bound to the whole transaction (@spec txn-authorization#chall
     approvedAtOverrides.delete(taskFor(txn));
     approvalOverrides.delete(taskFor(txn));
   });
+});
+
+/**
+ * @spec txn-authorization#challenge-redemption step 1, step 7 — the subject's
+ * credential is checked against the ISSUER's records, not only against its own
+ * `exp`, and every completion input is re-read on a fresh clock immediately
+ * before the mint.
+ */
+describe("subject credential liveness and the post-decision fence (@spec txn-authorization#challenge-redemption)", () => {
+  /** A dedicated Mission + base token, so revoking it disturbs nothing else. */
+  async function ownMission(): Promise<{ token: string; missionId: string; claim: Record<string, unknown> }> {
+    const jar = new Map<string, string>();
+    const issued = await issueBaseMissionToken(dpopKeys, jar);
+    return {
+      token: issued.token,
+      missionId: issued.missionId,
+      claim: decodeJwt(issued.token).mission as Record<string, unknown>,
+    };
+  }
+
+  async function admitFor(
+    txn: string,
+    mission: { token: string; missionId: string; claim: Record<string, unknown> },
+  ): Promise<string> {
+    const requested = (as.kernel.get(mission.missionId) as { authority_set: AuthorityEntry[] }).authority_set
+      .filter((e) => e.actions.includes("payments:remittance.send"))
+      .map((e) => ({ ...e, actions: ["payments:remittance.send"] }));
+    const challenge = await signChallenge(
+      {
+        txn,
+        authorization_details: requested,
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: `sha-256:${txn}`,
+        mission: mission.claim,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const res = await submit(challenge, { token: mission.token });
+    const body = (await res.json()) as { transaction_authorization_id?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    return body.transaction_authorization_id as string;
+  }
+
+  /** RFC 7009-style grant destruction: the credential is individually revoked
+   *  at the issuer while its own `exp` is still in the future. */
+  async function revoke(missionId: string): Promise<void> {
+    const grantId = (as.kernel.get(missionId) as { grant_id?: string }).grant_id as string;
+    expect(grantId).toBeDefined();
+    await (
+      as.provider.Grant as unknown as { adapter: { destroy(id: string): Promise<void> } }
+    ).adapter.destroy(grantId);
+  }
+
+  it("refuses a subject_token revoked between admission and completion", async () => {
+    const mission = await ownMission();
+    const txn = "txn_subject_revoked";
+    const id = await admitFor(txn, mission);
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+
+    // The credential's own exp is still in the future; only the issuer knows.
+    expect(decodeJwt(mission.token).exp as number).toBeGreaterThan(Math.floor(Date.now() / 1000));
+    await revoke(mission.missionId);
+
+    const res = await postTransaction({ transaction_authorization_id: id });
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("access_denied");
+    expect(body.error_description).toMatch(/no longer live/);
+    expect(body.access_token).toBeUndefined();
+  });
+
+  it("refuses when the credential is revoked DURING the fresh decision, and mints nothing", async () => {
+    const mission = await ownMission();
+    const txn = "txn_subject_revoked_midflight";
+    const id = await admitFor(txn, mission);
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    // The revocation lands inside the decision's own await: every input the
+    // decision saw was true when it ran, and false by the time it returned.
+    freshDecisionHooks.set(txn, async () => {
+      await revoke(mission.missionId);
+    });
+
+    const res = await postTransaction({ transaction_authorization_id: id });
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("access_denied");
+    expect(body.error_description).toMatch(/no longer live/);
+    expect(body.access_token).toBeUndefined();
+    // The decision genuinely ran and permitted; the fence is what refused.
+    expect(freshDecisionCalls).toContain(txn);
+    // Nothing was minted, so the single issuance slot is still free: a later
+    // poll is refused on the same fresh ground, never served a stored token.
+    const again = await postTransaction({ transaction_authorization_id: id });
+    const againBody = (await again.json()) as { error?: string; access_token?: string };
+    expect(againBody.access_token).toBeUndefined();
+    expect(againBody.error).toBe("access_denied");
+    freshDecisionHooks.delete(txn);
+  });
+
 });
 
 describe("fresh decision at completion (@spec txn-authorization#challenge-redemption)", () => {
