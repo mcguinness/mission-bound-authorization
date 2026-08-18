@@ -75,6 +75,9 @@ for (const list of MODEL_LISTS) {
 if (!manifest.source || !nonEmptyString(manifest.source.revision)) {
   fail("schema", "manifest.source.revision (the drafts revision the rows were evaluated against) is required");
 }
+if (!Array.isArray(manifest.profiles) || manifest.profiles.length === 0 || !manifest.profiles.every(nonEmptyString)) {
+  fail("schema", "manifest.profiles (the published-baseline enum) must be a non-empty array of non-empty strings");
+}
 
 // ---- section extraction ----------------------------------------------------
 
@@ -113,12 +116,12 @@ function draftSections(file) {
 
 const ROW_MEMBERS = new Set([
   "id", "spec", "anchor", "text", "facet", "role", "strength", "applicability",
-  "surface", "assertion", "observation", "level", "coverage", "tests",
+  "profiles", "surface", "assertion", "observation", "level", "coverage", "tests",
   "blocked_by", "notes",
 ]);
 const REQUIRED_MEMBERS = [
   "id", "spec", "anchor", "text", "role", "strength", "applicability",
-  "surface", "assertion", "observation", "level", "coverage", "tests",
+  "profiles", "surface", "assertion", "observation", "level", "coverage", "tests",
 ];
 const MAPPING_MEMBERS = new Set(["file", "name", "level", "surface"]);
 const COVERAGES = ["tested", "partial", "todo", "blocked"];
@@ -160,6 +163,18 @@ for (const row of rows) {
   }
   if (!COVERAGES.includes(row.coverage)) {
     fail("schema", `${id}: coverage must be one of ${COVERAGES.join(", ")}`);
+  }
+
+  // profiles: which published baseline(s) this row applies to (empty allowed:
+  // a spec entirely outside both baselines)
+  if (!Array.isArray(row.profiles)) {
+    fail("schema", `${id}: profiles must be an array`);
+  } else {
+    for (const p of row.profiles) {
+      if (!nonEmptyString(p) || (Array.isArray(manifest.profiles) && !manifest.profiles.includes(p))) {
+        fail("schema", `${id}: profiles entry "${p}" not in manifest.profiles`);
+      }
+    }
   }
 
   // applicability: structured, machine-readable

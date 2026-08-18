@@ -1,5 +1,5 @@
 {
- "$comment": "Conformance traceability manifest (#245). Each requirement row maps one normative clause (or one facet of a multi-part clause) to its observable conformance assertion and the tests that drive it. Validated by scripts/check-conformance-manifest.mjs: unknown anchors, quoted clauses missing from their anchored section, duplicate IDs, missing tests, and coverage states inconsistent with their mappings all fail CI; rows not fully tested are the visible outstanding report, never silent. observation.local records this implementation's chosen behavior where the spec permits more than one; a local pin never becomes the protocol requirement. Rows whose applicability names a capability apply only where the deployment claims it: a runner MUST NOT mark an unclaimed capability nonconforming, and a failed SHOULD row is a recorded departure, not a hard fail. source.revision names the drafts revision the rows were evaluated against; the stale-text check catches edits, the revision identifies the edition.",
+ "$comment": "Conformance traceability manifest (#245). Each requirement row maps one normative clause (or one facet of a multi-part clause) to its observable conformance assertion and the tests that drive it. Validated by scripts/check-conformance-manifest.mjs: unknown anchors, quoted clauses missing from their anchored section, duplicate IDs, missing tests, and coverage states inconsistent with their mappings all fail CI; rows not fully tested are the visible outstanding report, never silent. observation.local records this implementation's chosen behavior where the spec permits more than one; a local pin never becomes the protocol requirement. Rows whose applicability names a capability apply only where the deployment claims it: a runner MUST NOT mark an unclaimed capability nonconforming, and a failed SHOULD row is a recorded departure, not a hard fail. source.revision names the drafts revision the rows were evaluated against; the stale-text check catches edits, the revision identifies the edition. Each row's profiles array (enumerated at the top level in profiles) names which published baseline(s) the requirement applies to: a floor document beyond core carries only runtime-enforced, core carries both, and an empty array means the row's document sits outside both baselines entirely; profiles and applicability are orthogonal, since applicability already encodes election of an OPTIONAL capability.",
  "source": {
   "revision": "fdfaa5b"
  },
@@ -56,6 +56,10 @@
    "txn-authz.action"
   ]
  },
+ "profiles": [
+  "issuance",
+  "runtime-enforced"
+ ],
  "requirements": [
   {
    "id": "core.submission.front-channel-refusal",
@@ -67,6 +71,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "authorization-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -86,6 +94,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "par",
    "assertion": "refusal",
    "observation": {
@@ -106,6 +118,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "par",
    "assertion": "refusal",
    "observation": {
@@ -140,6 +156,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "par",
    "assertion": "refusal",
    "observation": {
@@ -159,6 +179,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "authorization-endpoint",
    "assertion": "ignore",
    "observation": {
@@ -178,6 +202,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "par",
    "assertion": "refusal",
    "observation": {
@@ -216,6 +244,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -242,6 +274,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "par",
    "assertion": "refusal",
    "observation": {
@@ -269,6 +305,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -296,6 +336,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "token-endpoint",
    "assertion": "no-side-effect",
    "observation": {
@@ -323,6 +367,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -343,6 +391,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "par",
    "assertion": "refusal",
    "observation": {
@@ -363,6 +415,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -383,6 +439,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -403,6 +463,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -423,6 +487,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -443,6 +511,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "token-endpoint",
    "assertion": "replay",
    "observation": {
@@ -463,6 +535,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
@@ -483,6 +559,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -502,6 +582,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -529,6 +613,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -549,6 +637,10 @@
     "kind": "capability",
     "capability": "core.introspection"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
@@ -582,6 +674,10 @@
     "kind": "capability",
     "capability": "core.introspection"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "introspection",
    "assertion": "privacy",
    "observation": {
@@ -615,6 +711,10 @@
     "kind": "capability",
     "capability": "core.introspection"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "introspection",
    "assertion": "privacy",
    "observation": {
@@ -642,6 +742,10 @@
     "kind": "capability",
     "capability": "core.introspection"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "introspection",
    "assertion": "privacy",
    "observation": {
@@ -675,6 +779,10 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
@@ -707,6 +815,9 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -745,6 +856,9 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -771,6 +885,9 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -803,6 +920,9 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -835,6 +955,9 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
@@ -867,6 +990,9 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
@@ -900,6 +1026,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -921,6 +1050,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -942,6 +1074,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "privacy",
    "observation": {
@@ -963,6 +1098,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -984,6 +1122,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -1005,6 +1146,9 @@
     "kind": "capability",
     "capability": "status.lifecycle"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "replay",
    "observation": {
@@ -1026,6 +1170,9 @@
     "kind": "capability",
     "capability": "status.lifecycle"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -1047,6 +1194,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "replay",
    "observation": {
@@ -1068,6 +1218,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "replay",
    "observation": {
@@ -1089,6 +1242,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -1110,6 +1266,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -1131,6 +1290,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "no-side-effect",
    "observation": {
@@ -1152,6 +1314,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "no-side-effect",
    "observation": {
@@ -1173,6 +1338,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -1194,6 +1362,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -1215,6 +1386,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "concurrency",
    "observation": {
@@ -1236,6 +1410,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -1258,6 +1435,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -1279,6 +1459,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "no-side-effect",
    "observation": {
@@ -1300,6 +1483,9 @@
     "kind": "capability",
     "capability": "status.discharge"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "lifecycle-endpoint",
    "assertion": "privacy",
    "observation": {
@@ -1320,6 +1506,9 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [
+    "runtime-enforced"
+   ],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -1341,6 +1530,7 @@
     "kind": "capability",
     "capability": "signals.events"
    },
+   "profiles": [],
    "surface": "signals",
    "assertion": "output-bound",
    "observation": {
@@ -1394,6 +1584,7 @@
     "kind": "capability",
     "capability": "signals.events"
    },
+   "profiles": [],
    "surface": "signals",
    "assertion": "output-bound",
    "observation": {
@@ -1416,6 +1607,7 @@
     "kind": "capability",
     "capability": "signals.events"
    },
+   "profiles": [],
    "surface": "signals",
    "assertion": "output-bound",
    "observation": {
@@ -1438,6 +1630,7 @@
     "kind": "capability",
     "capability": "cross-org.delegation"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -1465,6 +1658,7 @@
     "kind": "capability",
     "capability": "cross-org.delegation"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
@@ -1492,6 +1686,7 @@
     "kind": "capability",
     "capability": "cross-org.delegation"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -1519,6 +1714,7 @@
     "kind": "capability",
     "capability": "cross-org.delegation"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -1546,6 +1742,7 @@
     "kind": "capability",
     "capability": "cross-org.delegation"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -1573,6 +1770,7 @@
     "kind": "capability",
     "capability": "cross-org.delegation"
    },
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -1600,6 +1798,7 @@
     "kind": "capability",
     "capability": "cross-org.delegation"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -1627,6 +1826,7 @@
     "kind": "capability",
     "capability": "cross-org.delegation"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -1654,6 +1854,7 @@
     "kind": "capability",
     "capability": "cross-org.delegation"
    },
+   "profiles": [],
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -1680,6 +1881,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -1700,6 +1902,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -1720,6 +1923,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -1740,6 +1944,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -1760,6 +1965,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -1780,6 +1986,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -1800,6 +2007,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "privacy",
    "observation": {
@@ -1820,6 +2028,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "challenge-endpoint",
    "assertion": "ignore",
    "observation": {
@@ -1852,6 +2061,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "challenge-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -1902,6 +2112,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "transaction-authorization-endpoint",
    "assertion": "no-side-effect",
    "observation": {
@@ -1928,6 +2139,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "transaction-authorization-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -1960,6 +2172,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "transaction-authorization-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -2016,6 +2229,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "transaction-authorization-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -2060,6 +2274,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "transaction-authorization-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -2104,6 +2319,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "transaction-authorization-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -2130,6 +2346,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "transaction-authorization-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -2168,6 +2385,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -2206,6 +2424,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -2225,6 +2444,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "replay",
    "observation": {
@@ -2263,6 +2483,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "replay",
    "observation": {
@@ -2301,6 +2522,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "transaction-authorization-endpoint",
    "assertion": "replay",
    "observation": {
@@ -2333,6 +2555,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -2359,6 +2582,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "transaction-authorization-endpoint",
    "assertion": "no-side-effect",
    "observation": {
@@ -2385,6 +2609,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "no-side-effect",
    "observation": {
@@ -2417,6 +2642,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "transaction-authorization-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -2443,6 +2669,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "transaction-authorization-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -2481,6 +2708,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "transaction-authorization-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -2513,6 +2741,7 @@
    "applicability": {
     "kind": "unconditional"
    },
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
