@@ -3898,7 +3898,7 @@
     "normative": "an applicable entry constraint the PDP cannot understand, evaluate, or meter refuses the action rather than being ignored or degraded to a disclosure"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate-amount.test.ts",
@@ -3907,7 +3907,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "Tested for the numeric max_amount constraint; the general rule spans every constraint vocabulary the PDP may not understand."
+   "notes": "Tested only for the numeric max_amount constraint (a malformed cap is denied fail-closed, never treated as unbounded); the general rule also covers non-numeric constraint types, a constraint whose declared inputs the PDP was not given, and a constraint the PDP cannot meter, none of which has a test asserting refusal."
   },
   {
    "id": "runtime.decision-inputs.actor-context-required-and-not-shortcut",
@@ -4455,7 +4455,7 @@
     "normative": "a permit binds the Mission reference, issuer, audience, sub, client_id, actor context, confirmation key, action, resource, authorizing entry, policy-view version, and a lifetime control"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
@@ -4464,7 +4464,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "Tested for entry_digest; the full bound-field set (issuer, audience, actor context, confirmation key, policy-view version) is not independently asserted by a test."
+   "notes": "Tested for the authorizing entry (entry_digest) only; the Mission reference, issuer, audience, sub, client_id, actor context, confirmation key, action, resource, policy-view version, and lifetime control bindings are not independently asserted by a test."
   },
   {
    "id": "runtime.permit-binding.high-consequence-single-use-required",
@@ -6781,16 +6781,9 @@
     "normative": "a parameter-bound permit's conditions.parameter_digest equals the request's supplied digest, and the executing PEP enforces exactly that binding"
    },
    "level": "endpoint",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "PDP decisions against OpenFGA (@spec authzen) > a permit's context carries the entry_digest resolved-scope anchor",
-     "level": "endpoint",
-     "surface": "resource-operation"
-    }
-   ],
-   "notes": "Tested for entry_digest binding; parameter_digest condition equality itself is not separately asserted by a unit test in this file."
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No test asserts conditions.parameter_digest equality to the request's supplied parameter_digest, or that the PEP enforces that exact binding; the previously mapped test asserts only the entry_digest resolved-scope anchor and was removed as non-probative for this clause."
   },
   {
    "id": "authzen.response-context.valid-until-required-and-bounded",
