@@ -1080,7 +1080,7 @@ d("M5 transaction-assurance tier", () => {
   });
 });
 
-describe("the crash window between consumption and the effect (@spec txn-authorization#offline-verification)", () => {
+d("the crash window between consumption and the effect (@spec txn-authorization#offline-verification)", () => {
   /** A challenged remittance, its txn-token, and the operation key the commit
    *  point will compute for it. */
   async function challenged(): Promise<{
