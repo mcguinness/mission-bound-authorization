@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
 import { authorityHash, intentHash } from "@mission/core";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { generateKeyPair } from "jose";
@@ -8,8 +10,10 @@ import {
   IntentError,
   isSubsetSet,
   LifecycleConflictError,
+  MISSION_ID_ENTROPY_BYTES,
   MissionKernel,
   type MissionRecord,
+  newMissionId,
   validateAuthorityProposal,
   validateMissionIntent,
 } from "../src/index.js";
@@ -197,6 +201,15 @@ describe("approval event and record (@spec mission#integrity-anchors)", () => {
   });
 });
 
+describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
+  it("commits an effective expires_at never later than the Intent's requested ceiling", () => {
+    const raw = intent({ expires_at: "2026-12-01T00:00:00Z" });
+    const requested = validateMissionIntent(raw);
+    const record = approve(raw, 200);
+    expect(Date.parse(record.expires_at)).toBeLessThanOrEqual(Date.parse(requested.expires_at));
+  });
+});
+
 describe("approval basis (@spec mission#approval-basis)", () => {
   it("records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor", () => {
     const record = approve(intent(), 100);
@@ -221,6 +234,163 @@ describe("approval basis (@spec mission#approval-basis)", () => {
     const record = approve(intent(), 101);
     const claim = kernel.missionClaim(kernel.get(record.id) as MissionRecord);
     expect(claim.approval_basis).toEqual({ type: "direct" });
+  });
+});
+
+describe("approved context commitment (@spec mission-substrate#approved-context)", () => {
+  it("the approved authority_set and its integrity anchor survive a state transition unchanged, while state and version (the mutable fields) advance", () => {
+    const record = approve(intent(), 300);
+    const authoritySetSnapshot = structuredClone(record.authority_set); // content snapshot, not a live reference
+    const fresh = kernel.transition(record.id, "suspend");
+    expect(fresh.authority_set).toEqual(authoritySetSnapshot);
+    expect(fresh.authority_hash).toBe(record.authority_hash);
+    expect(fresh.state).toBe("suspended");
+    expect(fresh.version).toBeGreaterThan(record.version);
+  });
+
+  // The Approved Context is the Mission Intent, the recorded authority
+  // proposal WHERE ONE WAS SUBMITTED, and the derived Authority Set
+  // ({{mission-substrate#oauth-statement}} item 4) -- three components, not
+  // one. This exercises a Mission approved WITH a submitted proposal (so all
+  // three are present) and snapshots all three components and their three
+  // typed anchors (intent_hash, proposal_hash, authority_hash) byte-for-byte
+  // across TWO successive lifecycle transitions.
+  it("all three Approved Context components (intent, proposal, derived authority_set) and their anchors survive successive state transitions unchanged", () => {
+    const proposal = validateAuthorityProposal(
+      JSON.stringify([
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.read"],
+          constraints: { max_amount: { amount: "10.00", currency: "USD" }, vendors: ["acme"] },
+        },
+      ]),
+      [RESOURCE],
+    );
+    const record = kernel.approve({
+      intent: validateMissionIntent(intent()),
+      proposedAuthority: proposal,
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-420",
+    });
+    // A proposal was actually submitted: both the record and proposal_hash
+    // must be present, or this test would silently degrade to template mode.
+    expect(record.proposed_authority).toBeDefined();
+    expect(record.proposal_hash).toBeDefined();
+
+    const intentSnapshot = structuredClone(record.intent);
+    const proposalSnapshot = structuredClone(record.proposed_authority);
+    const authoritySetSnapshot = structuredClone(record.authority_set);
+    const anchors = {
+      intent_hash: record.intent_hash,
+      proposal_hash: record.proposal_hash,
+      authority_hash: record.authority_hash,
+    };
+
+    kernel.transition(record.id, "suspend");
+    // Re-read from the store, not transition()'s return value: setState()
+    // returns a spread of its in-memory input record ({ ...record, state,
+    // version }), so asserting against that return value would prove only
+    // that the spread copied the field, never that the PERSISTED column was
+    // left untouched. kernel.get() round-trips through rowToRecord, the same
+    // path a fresh process restart would take.
+    const afterSuspend = kernel.get(record.id) as MissionRecord;
+    kernel.transition(record.id, "resume");
+    const afterResume = kernel.get(record.id) as MissionRecord;
+
+    for (const fresh of [afterSuspend, afterResume]) {
+      expect(fresh.intent).toEqual(intentSnapshot);
+      expect(fresh.proposed_authority).toEqual(proposalSnapshot);
+      expect(fresh.authority_set).toEqual(authoritySetSnapshot);
+      expect(fresh.intent_hash).toBe(anchors.intent_hash);
+      expect(fresh.proposal_hash).toBe(anchors.proposal_hash);
+      expect(fresh.authority_hash).toBe(anchors.authority_hash);
+    }
+    // Mutable fields DID advance, distinguishing them from the immutable value.
+    expect(afterResume.state).toBe("active");
+    expect(afterResume.version).toBeGreaterThan(afterSuspend.version);
+    expect(afterSuspend.version).toBeGreaterThan(record.version);
+  });
+});
+
+describe("actor binding at approval (@spec mission-substrate#actor-binding)", () => {
+  it("binds the Mission Context to the client_id Actor handle at approval, and the binding round-trips unchanged", () => {
+    const record = approve(intent(), 301);
+    expect(record.client_id).toBe("ap-agent");
+    const stored = kernel.get(record.id);
+    expect(stored?.client_id).toBe("ap-agent");
+  });
+});
+
+describe("mission reference unguessability (@spec mission-substrate#reference)", () => {
+  it("the Mission Reference's random component carries at least 128 bits of entropy", () => {
+    const record = approve(intent(), 302);
+    const suffix = record.id.replace(/^msn_/, "");
+    const decoded = Buffer.from(suffix, "base64url");
+    expect(decoded.length).toBeGreaterThanOrEqual(16); // 128-bit floor; the kernel mints 18 bytes (144 bits)
+  });
+
+  // Length is not entropy: these test the SOURCE the helper draws from, not
+  // merely the length of one identifier from one call site.
+  it("newMissionId draws at least 18 bytes (144 bits) from a caller-injected random source", () => {
+    let requestedSize: number | undefined;
+    const observedSource = (size: number) => {
+      requestedSize = size;
+      return randomBytes(size); // still the real cryptographic source
+    };
+    const id = newMissionId(observedSource);
+    expect(requestedSize).toBe(MISSION_ID_ENTROPY_BYTES);
+    expect(requestedSize).toBeGreaterThanOrEqual(18);
+    expect(id).toMatch(/^msn_/);
+  });
+
+  it("newMissionId's default source is node:crypto's randomBytes and needs no argument", () => {
+    const id = newMissionId(); // no source supplied: exercises the default parameter itself
+    const decoded = Buffer.from(id.replace(/^msn_/, ""), "base64url");
+    expect(decoded.length).toBe(MISSION_ID_ENTROPY_BYTES);
+    // The runtime check above proves the OUTPUT is shaped like the entropy
+    // source's; this grounds the SOURCE identity itself: the default
+    // parameter is bound to node:crypto's randomBytes, imported by name, not
+    // a same-named local or an unrelated random function.
+    const src = readFileSync(new URL("../src/kernel/mission-id.ts", import.meta.url), "utf8");
+    expect(src).toContain('import { randomBytes } from "node:crypto"');
+    expect(src).toMatch(/source:\s*\(size:\s*number\)\s*=>\s*Buffer\s*=\s*randomBytes/);
+  });
+
+  it("successive draws are distinct (sanity check, not a substitute for the entropy proof above)", () => {
+    const ids = new Set(Array.from({ length: 1000 }, () => newMissionId()));
+    expect(ids.size).toBe(1000);
+  });
+
+  it("the four known msn_ minting sites all call the single newMissionId helper", () => {
+    const sites = [
+      "../src/kernel/kernel.ts",
+      "../src/kernel/expansion.ts",
+      "../src/kernel/template.ts",
+      "../src/kernel/child-delegation.ts",
+    ];
+    for (const rel of sites) {
+      const src = readFileSync(new URL(rel, import.meta.url), "utf8");
+      expect(src.includes("newMissionId()"), `${rel} calls newMissionId()`).toBe(true);
+    }
+  });
+
+  // Closes the class, not just the four known instances: a FIFTH minting
+  // site added later, in a file this test does not name, would still be
+  // caught, because every file in kernel/ is scanned, not only the four
+  // above.
+  it("no file in kernel/ other than mission-id.ts itself constructs an msn_ id inline", () => {
+    const dirUrl = new URL("../src/kernel/", import.meta.url);
+    const files = readdirSync(dirUrl).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"));
+    expect(files.length).toBeGreaterThan(10); // sanity: the scan found the real kernel dir
+    expect(files).toContain("mission-id.ts");
+    for (const f of files) {
+      if (f === "mission-id.ts") continue; // the one file allowed to construct it
+      const src = readFileSync(new URL(f, dirUrl), "utf8");
+      expect(src.includes("msn_${"), `${f} has no inline msn_ construction`).toBe(false);
+    }
   });
 });
 
@@ -250,6 +420,49 @@ describe("lifecycle (@spec status#legal-transitions)", () => {
     const r = approve(intent({ expires_at: "2020-01-01T00:00:00Z" }), 5);
     expect(() => kernel.gateDerivation(r.id)).toThrow(GateError);
     expect(kernel.get(r.id)?.state).toBe("expired");
+  });
+});
+
+// The Controller's Basic Governance Gate (@spec mission-substrate#basic-gate)
+// is realized here, not by the resource-side PDP: gateActive and
+// gateDerivation are the AS's state-gated issuance and derivation paths. The
+// active predicate is a whitelist (`state === "active"`), so any persisted
+// value outside the recognized MissionState set fails closed by construction,
+// never by an explicit blocklist entry.
+describe("basic governance gate: state-gated issuance and derivation (@spec mission-substrate#basic-gate)", () => {
+  it("active predicate true -> gateActive and gateDerivation proceed", () => {
+    const r = approve(intent(), 400);
+    expect(kernel.gateActive(r.id).state).toBe("active");
+    expect(kernel.gateDerivation(r.id).state).toBe("active");
+  });
+
+  it("active predicate false -> gateActive and gateDerivation refuse, for every recognized non-active state", () => {
+    const nonActive = ["suspended", "revoked", "expired", "completed", "superseded", "cascaded"] as const;
+    nonActive.forEach((state, i) => {
+      const r = approve(intent(), 401 + i);
+      kernel.db.prepare("UPDATE missions SET state = ? WHERE id = ?").run(state, r.id);
+      expect(() => kernel.gateActive(r.id), state).toThrow(GateError);
+      expect(() => kernel.gateDerivation(r.id), state).toThrow(GateError);
+    });
+  });
+
+  it("a persisted state value outside the recognized lifecycle set fails closed, never treated as active", () => {
+    const r = approve(intent(), 410);
+    kernel.db.prepare("UPDATE missions SET state = ? WHERE id = ?").run("quantum_supervened", r.id);
+    try {
+      kernel.gateActive(r.id);
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(GateError);
+      expect((e as GateError).reason).toBe("mission_not_active");
+    }
+    try {
+      kernel.gateDerivation(r.id);
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(GateError);
+      expect((e as GateError).reason).toBe("mission_not_active");
+    }
   });
 });
 

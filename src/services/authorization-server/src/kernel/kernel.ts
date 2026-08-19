@@ -16,6 +16,7 @@ import {
 } from "./containment.js";
 import type { DerivationPolicy } from "./derive.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
+import { newMissionId } from "./mission-id.js";
 import {
   type IntentSubmissionPresenter,
   provisionalIntentHash,
@@ -249,8 +250,10 @@ export class MissionKernel {
   }
 
   /**
-   * @spec mission#integrity-anchors — the approval event creates the record
-   * with both anchors; approval_event_id is the idempotency key.
+   * @spec mission#integrity-anchors, mission-substrate#approved-context: the
+   * approval event creates the record with both anchors (and, where a
+   * proposal was submitted, the third); approval_event_id is the idempotency
+   * key.
    */
   approve(input: ApproveInput): MissionRecord {
     // @spec mission#authority-proposal — normalize: an empty proposal is no
@@ -259,8 +262,9 @@ export class MissionKernel {
     // carry neither `proposed_authority` nor `proposal_hash`.
     const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
     const authoritySet = this.derive(input.intent, proposal);
-    // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy.
-    const id = `msn_${randomBytes(18).toString("base64url")}`;
+    // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy,
+    // drawn from the single mission-id.ts minting helper.
+    const id = newMissionId();
     // @spec mission#integrity-anchors (TOCTOU) — all three commitments
     // (intent_hash, proposal_hash, authority_hash) are computed TOGETHER here,
     // at the approval decision, over the exact context being recorded: a task,
@@ -295,6 +299,8 @@ export class MissionKernel {
       subject: input.subject,
       approver: input.approver,
       approval_basis: approvalBasis,
+      // @spec mission-substrate#actor-binding: the Actor handle, bound to
+      // the Mission Context at approval.
       client_id: input.clientId,
       policy_version: this.opts.policy.policy_version,
       approval_event_id: input.approvalEventId,
@@ -914,7 +920,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec mission#lifecycle, child-delegation#child-state — the shared active
+   * @spec mission#lifecycle, child-delegation#child-state, mission-substrate#basic-gate: the shared active
    * gate for BOTH {@link gateDerivation} and {@link gateActive}: apply the expiry
    * clock, require the Mission itself `active`, and walk `parent` upward refusing
    * if ANY ancestor is non-active. Returns the expiry-fresh record. It does NOT

@@ -26,6 +26,7 @@ import { authorityHash, computeAnchor, intentHash, type JsonValue, MISSION_TEMPL
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
+import { newMissionId } from "./mission-id.js";
 import {
   type MissionTemplate,
   type TemplateCreate,
@@ -335,7 +336,7 @@ export function dispatchFromTemplate(
     { ms: lifetimeMs, iso: new Date(lifetimeMs).toISOString() },
     { ms: Date.parse(template.expires_at), iso: template.expires_at },
   ]);
-  const id = `msn_${randomBytes(18).toString("base64url")}`;
+  const id = newMissionId();
   const templateRef: TemplateRef = {
     id: template.id,
     issuer: template.issuer,
