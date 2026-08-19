@@ -1,7 +1,48 @@
 {
- "$comment": "Conformance traceability manifest (#245). Each requirement row maps one normative clause (or one facet of a multi-part clause) to its observable conformance assertion and the tests that drive it. Validated by scripts/check-conformance-manifest.mjs: unknown anchors, quoted clauses missing from their anchored section, duplicate IDs, missing tests, and coverage states inconsistent with their mappings all fail CI; rows not fully tested are the visible outstanding report, never silent. observation.local records this implementation's chosen behavior where the spec permits more than one; a local pin never becomes the protocol requirement. Rows whose applicability names a capability apply only where the deployment claims it: a runner MUST NOT mark an unclaimed capability nonconforming, and a failed SHOULD row is a recorded departure, not a hard fail. source.revision names the drafts revision the rows were evaluated against; the stale-text check catches edits, the revision identifies the edition. Each row's profiles array (enumerated at the top level in profiles) names which published baseline(s) the requirement applies to: a floor document beyond core carries only runtime-enforced, core carries both, and an empty array means the row's document sits outside both baselines entirely; profiles and applicability are orthogonal, since applicability already encodes election of an OPTIONAL capability.",
+ "$comment": "Conformance traceability manifest (#245). Each requirement row maps one normative clause (or one facet of a multi-part clause) to its observable conformance assertion and the tests that drive it. Validated by scripts/check-conformance-manifest.mjs: unknown anchors, quoted clauses missing from their anchored section, duplicate IDs, missing tests, and coverage states inconsistent with their mappings all fail CI; rows not fully tested are the visible outstanding report, never silent. observation.local records this implementation's chosen behavior where the spec permits more than one; a local pin never becomes the protocol requirement. Rows whose applicability names a capability apply only where the deployment claims it: a runner MUST NOT mark an unclaimed capability nonconforming, and a failed SHOULD row is a recorded departure, not a hard fail. source.specs names, for every spec file a row references, the revision (the commit whose text that spec's rows were validated against) and content_sha256 (a mechanical gate recomputed from the working-tree file's current bytes, which must match, or the entry needs deliberate re-review and a bump before CI passes again); the stale-text check catches an edited or relocated clause inside an anchored section, source.specs catches any other edit to a spec whose rows were not re-reviewed. Completeness provenance per spec lives in the tracking issues, not in this manifest. Each row's profiles array (enumerated at the top level in profiles) names which published baseline(s) the requirement applies to: a floor document beyond core carries only runtime-enforced, core carries both, and an empty array means the row's document sits outside both baselines entirely; profiles and applicability are orthogonal, since applicability already encodes election of an OPTIONAL capability.",
  "source": {
-  "revision": "fdfaa5b"
+  "specs": {
+   "draft-mcguinness-mission-authority-server.md": {
+    "revision": "20ff893ed5325000aaf6fe2640b2b079219f14f9",
+    "content_sha256": "bf6cb049e918b5eb6f9c52d7c2963f201293dd33a5f4201b9222f5b82003654e"
+   },
+   "draft-mcguinness-mission-authzen.md": {
+    "revision": "f5977e02bfb4bf8af22d2114ed1e16f520672b07",
+    "content_sha256": "be241b74e741f3f580ef5adacef11cf4176b6978b3cb9c98d72ca9e285602698"
+   },
+   "draft-mcguinness-mission-runtime-evidence.md": {
+    "revision": "3694449a787e0be021803eb82c5ee6eaae3f7ddd",
+    "content_sha256": "49e6edceb6e56df6d9330576c5874acc96b6f558c78c2e07e06778b136f306d2"
+   },
+   "draft-mcguinness-mission-runtime.md": {
+    "revision": "b5e35e2cb5bb8d3cb27394764dfe49a312bc75ff",
+    "content_sha256": "052d7775cb35a999992ccf83b849ed56bed92ccedcc37332370e898128786ffd"
+   },
+   "draft-mcguinness-mission-substrate.md": {
+    "revision": "b5e35e2cb5bb8d3cb27394764dfe49a312bc75ff",
+    "content_sha256": "615ce9a99d7ea161b6580768d59173322b42b2f266677fc8c2f4710652e133ce"
+   },
+   "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
+    "revision": "942d2b0f577d71e8d3d0c1043506ebde04639271",
+    "content_sha256": "ea88f3202d425c16753a8119201c146a779313df50c370f3f473153b358c86d9"
+   },
+   "draft-mcguinness-oauth-mission-signals.md": {
+    "revision": "edb5f6bad7cfde90a1958b4faad9c1ca48a9a09c",
+    "content_sha256": "44f4f24890ebdab6d9c423c0f79b9fc48e5c01ad11fe44d32e02a3c3bb2bc193"
+   },
+   "draft-mcguinness-oauth-mission-status.md": {
+    "revision": "2399f170964924d80f8ceaad81d41892411d4465",
+    "content_sha256": "f1ee825d42dc842134d58b5317a6d31f907ff7ebd43453bbd41c1f75d5cf2bd3"
+   },
+   "draft-mcguinness-oauth-mission-transaction-authorization.md": {
+    "revision": "700499b5e01daec50a4ce5c7a2a15fc543d29a99",
+    "content_sha256": "a42687e945a9b9fecd442a9130b81c952f640fea87633d10f5540322dae032db"
+   },
+   "draft-mcguinness-oauth-mission.md": {
+    "revision": "7d97a7b38a844163db1eaa6bf6e01e002554e487",
+    "content_sha256": "1f3fdf0041c19b5fc71e29ac112d700f3d36588c39740f7da362d807f0023c7a"
+   }
+  }
  },
  "model": {
   "roles": [
