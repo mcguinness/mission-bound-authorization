@@ -243,6 +243,64 @@ describe("approved context commitment (@spec mission-substrate#approved-context)
     expect(fresh.state).toBe("suspended");
     expect(fresh.version).toBeGreaterThan(record.version);
   });
+
+  // The Approved Context is the Mission Intent, the recorded authority
+  // proposal WHERE ONE WAS SUBMITTED, and the derived Authority Set
+  // ({{mission-substrate#oauth-statement}} item 4) -- three components, not
+  // one. This exercises a Mission approved WITH a submitted proposal (so all
+  // three are present) and snapshots all three components and their three
+  // typed anchors (intent_hash, proposal_hash, authority_hash) byte-for-byte
+  // across TWO successive lifecycle transitions.
+  it("all three Approved Context components (intent, proposal, derived authority_set) and their anchors survive successive state transitions unchanged", () => {
+    const proposal = validateAuthorityProposal(
+      JSON.stringify([
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.read"],
+          constraints: { max_amount: { amount: "10.00", currency: "USD" }, vendors: ["acme"] },
+        },
+      ]),
+      [RESOURCE],
+    );
+    const record = kernel.approve({
+      intent: validateMissionIntent(intent()),
+      proposedAuthority: proposal,
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-420",
+    });
+    // A proposal was actually submitted: both the record and proposal_hash
+    // must be present, or this test would silently degrade to template mode.
+    expect(record.proposed_authority).toBeDefined();
+    expect(record.proposal_hash).toBeDefined();
+
+    const intentSnapshot = structuredClone(record.intent);
+    const proposalSnapshot = structuredClone(record.proposed_authority);
+    const authoritySetSnapshot = structuredClone(record.authority_set);
+    const anchors = {
+      intent_hash: record.intent_hash,
+      proposal_hash: record.proposal_hash,
+      authority_hash: record.authority_hash,
+    };
+
+    const afterSuspend = kernel.transition(record.id, "suspend");
+    const afterResume = kernel.transition(record.id, "resume");
+
+    for (const fresh of [afterSuspend, afterResume]) {
+      expect(fresh.intent).toEqual(intentSnapshot);
+      expect(fresh.proposed_authority).toEqual(proposalSnapshot);
+      expect(fresh.authority_set).toEqual(authoritySetSnapshot);
+      expect(fresh.intent_hash).toBe(anchors.intent_hash);
+      expect(fresh.proposal_hash).toBe(anchors.proposal_hash);
+      expect(fresh.authority_hash).toBe(anchors.authority_hash);
+    }
+    // Mutable fields DID advance, distinguishing them from the immutable value.
+    expect(afterResume.state).toBe("active");
+    expect(afterResume.version).toBeGreaterThan(afterSuspend.version);
+    expect(afterSuspend.version).toBeGreaterThan(record.version);
+  });
 });
 
 describe("actor binding at approval (@spec mission-substrate#actor-binding)", () => {

@@ -7754,12 +7754,12 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
-     "name": "approved context commitment (@spec mission-substrate#approved-context) > the approved authority_set and its integrity anchor survive a state transition unchanged, while state and version (the mutable fields) advance",
+     "name": "approved context commitment (@spec mission-substrate#approved-context) > all three Approved Context components (intent, proposal, derived authority_set) and their anchors survive successive state transitions unchanged",
      "level": "unit",
      "surface": "commitment"
     }
    ],
-   "notes": "The kernel's missions table (kernel.ts insertRecord) persists authority_set_json (the Approved Context itself) and authority_hash (a verifiable commitment over it) together at creation; both survive every later state transition unmodified (no UPDATE statement in kernel.ts ever touches either column), tested here under this document's own tag."
+   "notes": "The Approved Context is the Mission Intent, the recorded authority proposal where one was submitted, and the derived Authority Set ({{mission-substrate#oauth-statement}} item 4), not the Authority Set alone. The kernel's missions table (kernel.ts insertRecord) persists all three components (intent_json, proposed_authority_json, authority_set_json) and all three typed anchors (intent_hash, proposal_hash, authority_hash) together at creation; no UPDATE statement anywhere in kernel.ts ever touches any of those six columns (grep-verified: the only UPDATEs touch state/version/successor/grant_id/status_list_idx/containment_json/derivation_count/projected_from). The cited test approves a Mission WITH a submitted proposal (so all three components and all three anchors are actually present, not template-mode nulls), snapshots each by content, and re-verifies all six byte-for-byte across two successive transitions (suspend then resume) while state and version visibly advance."
   },
   {
    "id": "substrate.approved-context.immutability",
@@ -7784,12 +7784,12 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
-     "name": "approved context commitment (@spec mission-substrate#approved-context) > the approved authority_set and its integrity anchor survive a state transition unchanged, while state and version (the mutable fields) advance",
+     "name": "approved context commitment (@spec mission-substrate#approved-context) > all three Approved Context components (intent, proposal, derived authority_set) and their anchors survive successive state transitions unchanged",
      "level": "unit",
      "surface": "commitment"
     }
    ],
-   "notes": "Same kernel.ts persistence: authority_set_json/authority_hash are written once at insertRecord and never appear in any subsequent UPDATE statement; setState only ever writes state/version (and, for contain(), a separate containment_json overlay). The cited test transitions a record and asserts the approved authority_set/authority_hash are unchanged by content (a snapshot comparison), not merely by reference."
+   "notes": "Same kernel.ts persistence as maintain-or-commit above, for all three components: intent_json, proposed_authority_json, and authority_set_json (and their three anchors) are written once at insertRecord and never appear in any subsequent UPDATE statement; setState only ever writes state/version (and, for contain(), a separate containment_json overlay). The cited test transitions a Mission approved with a submitted proposal through two successive transitions and asserts all three components and all three anchors are unchanged by content (a snapshot comparison), not merely by reference."
   },
   {
    "id": "substrate.approved-context.mutable-fields-distinguishable",
