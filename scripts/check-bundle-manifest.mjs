@@ -174,6 +174,67 @@ function deepEqual(a, b) {
   return aKeys.every((k) => deepEqual(a[k], b[k]));
 }
 
+// A key matching this pattern is a bare RFC/BCP/STD reference: text no
+// document in this family ever pins independently (the IETF series itself
+// is the immutable source), so it never contributes to the mutable
+// external-reference set a bundle must pin.
+const SERIES_REFERENCE_RE = /^(RFC|BCP|STD)[0-9]+$/;
+
+// True if this key (or any line of its nested reference block) names an
+// in-family draft-mcguinness-* docname: those are covered by this bundle's
+// own documents[] entries, never by external_pins.
+function isInFamilyReference(key, blockLines) {
+  if (key.includes("draft-mcguinness")) return true;
+  return blockLines.some((l) => l.includes("draft-mcguinness"));
+}
+
+// Light, indentation-based extraction of the top-level keys under a
+// kramdown-rfc front matter `normative:` block, given the raw text of a
+// document. Deliberately not a real YAML parser (no new dependency): the
+// front matter here is flat enough that "exactly 2-space indent = a
+// reference key, 4+ = that key's nested title/target/author/date detail"
+// holds throughout this family's drafts. Returns [] for a document with no
+// normative: block at all (e.g. an informative-only preface).
+function extractNormativeKeys(fileText) {
+  const fm = fileText.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!fm) return [];
+  const lines = fm[1].split(/\r?\n/);
+  const startIdx = lines.findIndex((l) => /^normative:\s*$/.test(l));
+  if (startIdx === -1) return [];
+
+  const keys = [];
+  const keepBlock = (block) => block && !SERIES_REFERENCE_RE.test(block.key) && !isInFamilyReference(block.key, block.lines);
+
+  let currentBlock = null; // { key, lines } for the key most recently seen
+  for (let i = startIdx + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*$/.test(line)) continue; // blank line inside the block: keep scanning
+    if (/^\S/.test(line)) break; // back to column 0: normative: block has ended
+
+    const topLevel = line.match(/^ {2}(\S[^:]*):/);
+    if (topLevel) {
+      if (keepBlock(currentBlock)) keys.push(currentBlock.key);
+      currentBlock = { key: topLevel[1].trim(), lines: [] };
+      continue;
+    }
+    // A more-indented continuation line (title/target/author/date/...):
+    // belongs to whatever top-level key we are currently inside.
+    if (currentBlock) currentBlock.lines.push(line);
+  }
+  if (keepBlock(currentBlock)) keys.push(currentBlock.key);
+  return keys;
+}
+
+// Derives the mutable external-reference set a single document requires,
+// at the pinned commit, by reading that document's normative front matter
+// straight from git (never the working tree, so a pinned document that has
+// since drifted on disk is not silently trusted).
+function deriveDocumentExternalKeys(rootDir, commit, file) {
+  const bytes = gitShowBytes(rootDir, commit, file);
+  if (bytes === null) return null;
+  return extractNormativeKeys(bytes.toString("utf8"));
+}
+
 // This deliberately does not re-run validateExternalPins' structural checks:
 // scripts/check-family-manifest.mjs already runs those once as its own (j)
 // check, and re-running them here would report the same finding twice under
@@ -194,6 +255,29 @@ function loadRegistryPinsById(rootDir, errors) {
     if (entry && typeof entry.id === "string") byId.set(entry.id, entry);
   }
   return byId;
+}
+
+// Maps each registry entry's reference_keys back to that entry's id, so a
+// citation key pulled out of a document's front matter (e.g. "AUTHZEN" or
+// "I-D.draft-zehavi-oauth-rar-metadata") can be resolved to the pin id a
+// bundle's external_pins is expected to carry. Flags a registry that lets
+// two entries claim the same reference key, since that would make
+// derivation ambiguous.
+function buildReferenceKeyIndex(registryById, errors, label) {
+  const index = new Map();
+  for (const entry of registryById.values()) {
+    if (!Array.isArray(entry.reference_keys)) continue;
+    for (const key of entry.reference_keys) {
+      if (typeof key !== "string" || key.trim() === "") continue;
+      const existing = index.get(key);
+      if (existing && existing !== entry.id) {
+        errors.push(`${label}: reference key "${key}" is claimed by both "${existing}" and "${entry.id}" in notes/external-pins.json`);
+        continue;
+      }
+      index.set(key, entry.id);
+    }
+  }
+  return index;
 }
 
 function validateOneManifest(rootDir, manifestPath, registryById, errors) {
@@ -358,6 +442,48 @@ function validateOneManifest(rootDir, manifestPath, registryById, errors) {
         errors.push(`${el}: bundle's copy of "${entry.id}" is not identical to the registry entry (must be copied verbatim)`);
       }
     });
+
+    // The required external-pin set is derived, not assumed: parse every
+    // bundle document's normative front matter at the pinned commit, filter
+    // to the mutable external set, and map through reference_keys. A pin
+    // this bundle carries that nothing requires, or a requirement this
+    // bundle's external_pins omits, both fail the build.
+    if (sourceCommitVerified && Array.isArray(doc.documents)) {
+      const referenceKeyIndex = buildReferenceKeyIndex(registryById, errors, label);
+      const requiredIds = new Set();
+      const unmappedKeys = new Set();
+      for (const d of doc.documents) {
+        if (!d || !isNonEmptyString(d.file)) continue;
+        const keys = deriveDocumentExternalKeys(rootDir, doc.source_repository_commit, d.file);
+        if (keys === null) continue; // file unreadable at commit; already reported above
+        for (const key of keys) {
+          const mappedId = referenceKeyIndex.get(key);
+          if (mappedId) {
+            requiredIds.add(mappedId);
+          } else {
+            unmappedKeys.add(key);
+          }
+        }
+      }
+
+      for (const key of unmappedKeys) {
+        errors.push(
+          `${label}: "${key}" is a mutable external normative reference in this bundle's documents with no notes/external-pins.json entry ` +
+            `whose "reference_keys" names it; establish a real pin for it`
+        );
+      }
+
+      const missingIds = [...requiredIds].filter((id) => !seenIds.has(id));
+      const unrelatedIds = [...seenIds].filter((id) => !requiredIds.has(id));
+      for (const id of missingIds) {
+        errors.push(
+          `${label}: "${id}" is required (a bundle document's normative front matter cites a reference key mapped to it) but is missing from "external_pins"`
+        );
+      }
+      for (const id of unrelatedIds) {
+        errors.push(`${label}: "${id}" is in "external_pins" but no bundle document's derived normative references require it`);
+      }
+    }
   }
 
   if (doc.artifact_digests === null || typeof doc.artifact_digests !== "object" || Array.isArray(doc.artifact_digests)) {

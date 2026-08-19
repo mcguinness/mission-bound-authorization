@@ -1,5 +1,5 @@
 {
-  "description": "This is a partial registry of established planning pins, not a complete inventory of every external normative dependency the floor drafts carry. Every entry carries a \"kind\" (git, datatracker, or standard) with kind-appropriate required fields: git needs repo, commit (full 40-hex), path, and sha256; datatracker needs doc, rev, url, and sha256; standard needs publisher and edition, with sha256 optional (paywalled standards carry no fetchable canonical file to hash, disclosed in the entry's note). As of Ship 3, every entry in this registry is established; none is pending. Live-source verification (object type, path at commit or revision, content digest) against each entry's actual repository, datatracker revision, or published standard happens once, by hand, when a pin is established; it is disclosed per entry in that entry's note. A bundle manifest (notes/bundle-manifest.*.json) copies established entries here verbatim into its external_pins, and scripts/check-bundle-manifest.mjs enforces, on every run, that each copy is identical to its registry entry and that the build REJECTS if any registry entry a bundle consumes has status \"pending\". Completeness of this registry against the selected profiles' normative front matter is checked at Ship 3, not here.",
+  "description": "This is a partial registry of established planning pins, not a complete inventory of every external normative dependency the floor drafts carry. Every entry carries a \"kind\" (git, datatracker, or standard) with kind-appropriate required fields: git needs repo, commit (full 40-hex), path, and sha256; datatracker needs doc, rev, url, and sha256; standard needs publisher and edition, with sha256 optional (paywalled standards carry no fetchable canonical file to hash, disclosed in the entry's note). Every entry also carries reference_keys: the exact citation key(s) as they appear in the drafts' kramdown front matter, which is how a bundle checker maps a document's cited references back to this registry. As of Ship 3, every entry in this registry is established; none is pending. Live-source verification (object type, path at commit or revision, content digest) against each entry's actual repository, datatracker revision, or published standard happens once, by hand, when a pin is established; it is disclosed per entry in that entry's note. A bundle manifest (notes/bundle-manifest.*.json) copies established entries here verbatim into its external_pins, and scripts/check-bundle-manifest.mjs enforces, on every run, that each copy is identical to its registry entry and that the build REJECTS if any registry entry a bundle consumes has status \"pending\". The bundle checker also derives the required external-pin set mechanically, on every run, by parsing each bundle document's normative front matter at its pinned commit and mapping the resulting citation keys through reference_keys; it rejects the build on any pin the derived set requires and the bundle omits, and on any pin the bundle carries that the derived set does not require. Completeness of this registry against the selected profiles' normative front matter is therefore enforced mechanically on every run, not checked by hand at Ship 3.",
   "pins": [
     {
       "id": "AAUTH",
@@ -10,7 +10,8 @@
       "path": "draft-hardt-oauth-aauth-protocol.md",
       "sha256": "041f6a1f0ece3ca5b2f9820821e8fb6b1d7a8f2c2e8c58b53b52157684a5c4b6",
       "status": "established",
-      "note": "datatracker -10 is divergent (pre-person-token); disclosed, not the pin"
+      "note": "datatracker -10 is divergent (pre-person-token); disclosed, not the pin",
+      "reference_keys": ["I-D.draft-hardt-oauth-aauth-protocol"]
     },
     {
       "id": "ARAP",
@@ -21,7 +22,8 @@
       "path": "profiles/authzen-access-request-approval/authzen-access-request-approval-profile-1_0.md",
       "sha256": "621cebdba15a99eff00398052b560904793564de28b2062fce161fd73320094d",
       "status": "established",
-      "note": "Corrected at PR #595 review (P1). Pins the later OIDF WG-stream commit (#515, 2026-06-03, 'Mark profile as OIDF stream document'), one day after the PR #508 merge commit (f4003c6b4604f889f2379f8953bc93ae8a8df961, 2026-06-02): the reference implementation was verified against this later content. Git blob hash 670f5831f6e786c70944887dec6ab14de26986f8 is preserved here as supplementary detail; it is confirmed by API to be the blob at this commit's path. The prior entry labeled that same blob 'PR #508 merged', which named the wrong commit for the pinned content: PR #508's own merge commit carries a different file at a different digest (27893ad72a766680c73530cbe911648dc28d921de6a76bf2f38b907aeb3f06cd, confirmed by API), so the old row mixed two WG streams under one label."
+      "note": "Corrected at PR #595 review (P1). Pins the later OIDF WG-stream commit (#515, 2026-06-03, 'Mark profile as OIDF stream document'), one day after the PR #508 merge commit (f4003c6b4604f889f2379f8953bc93ae8a8df961, 2026-06-02): the reference implementation was verified against this later content. Git blob hash 670f5831f6e786c70944887dec6ab14de26986f8 is preserved here as supplementary detail; it is confirmed by API to be the blob at this commit's path. The prior entry labeled that same blob 'PR #508 merged', which named the wrong commit for the pinned content: PR #508's own merge commit carries a different file at a different digest (27893ad72a766680c73530cbe911648dc28d921de6a76bf2f38b907aeb3f06cd, confirmed by API), so the old row mixed two WG streams under one label.",
+      "reference_keys": ["ARAP"]
     },
     {
       "id": "AUTHZEN",
@@ -32,7 +34,8 @@
       "path": "api/authorization-api-1_0.md",
       "sha256": "c8031f32b10c285bb002d429e1d42adeb5d700997429052cc7c269451a18f360",
       "status": "established",
-      "note": "draft-mcguinness-mission-authzen cites AUTHZEN (OpenID AuthZEN Authorization API 1.0) as a normative reference; derived at PR #595 review (P3). Located via the repo tree at api/authorization-api-1_0.md (front matter docname: authorization-api-1_0); the archive/ and certification/ paths in the same repo hold prior and scenario variants and are not the pin. Commit and content fetched and digested directly from the GitHub API and raw content at the pinned commit."
+      "note": "draft-mcguinness-mission-authzen cites AUTHZEN (OpenID AuthZEN Authorization API 1.0) as a normative reference; derived at PR #595 review (P3). Located via the repo tree at api/authorization-api-1_0.md (front matter docname: authorization-api-1_0); the archive/ and certification/ paths in the same repo hold prior and scenario variants and are not the pin. Commit and content fetched and digested directly from the GitHub API and raw content at the pinned commit.",
+      "reference_keys": ["AUTHZEN"]
     },
     {
       "id": "AUTHZEN-OBL",
@@ -43,7 +46,8 @@
       "path": "profiles/authzen-obligations-profile-1_0.md",
       "sha256": "c166295296903934368f645e2dd18b82c1f7b5572aa901df8c7061cf03899025",
       "status": "established",
-      "note": "The AuthZEN Obligations profile the family's ARAP-native lanes cite alongside ARAP itself. Located via the repo tree at profiles/authzen-obligations-profile-1_0.md (front matter docname: authzen-obligations-profile-1_0, title 'AuthZEN Profile for Obligations - Draft 1'); same commit as AUTHZEN since both live in openid/authzen and were pinned in the same lookup. Had no pin anywhere before Ship 3; established from scratch."
+      "note": "The AuthZEN Obligations profile the family's ARAP-native lanes cite alongside ARAP itself. Located via the repo tree at profiles/authzen-obligations-profile-1_0.md (front matter docname: authzen-obligations-profile-1_0, title 'AuthZEN Profile for Obligations - Draft 1'); same commit as AUTHZEN since both live in openid/authzen and were pinned in the same lookup. Had no pin anywhere before Ship 3; established from scratch.",
+      "reference_keys": ["AUTHZEN-OBL"]
     },
     {
       "id": "RAR-METADATA",
@@ -54,7 +58,8 @@
       "path": "draft-zehavi-oauth-rar-metadata.md",
       "sha256": "f95b9441d0159af2e280ad8afc833bb24431229cf58b85a9ec3ef4db9afeb74d",
       "status": "established",
-      "note": "draft-mcguinness-oauth-mission and draft-mcguinness-mission-authzen cite I-D.draft-zehavi-oauth-rar-metadata (RAR-type metadata) as a normative reference; derived at PR #595 review (P3). A GitHub repo exists for this draft (checked at Ship 3 via repository search), so it is pinned as a git source rather than a bare datatracker revision. The file's own front matter docname is draft-zehavi-oauth-rar-metadata-latest (the editor's copy); datatracker's latest submitted revision at Ship 3 is -06 (id 153116, checked via the datatracker document API), disclosed here for cross-reference, not the pin."
+      "note": "draft-mcguinness-oauth-mission and draft-mcguinness-mission-authzen cite I-D.draft-zehavi-oauth-rar-metadata (RAR-type metadata) as a normative reference; derived at PR #595 review (P3). A GitHub repo exists for this draft (checked at Ship 3 via repository search), so it is pinned as a git source rather than a bare datatracker revision. The file's own front matter docname is draft-zehavi-oauth-rar-metadata-latest (the editor's copy); datatracker's latest submitted revision at Ship 3 is -06 (id 153116, checked via the datatracker document API), disclosed here for cross-reference, not the pin.",
+      "reference_keys": ["I-D.draft-zehavi-oauth-rar-metadata"]
     },
     {
       "id": "STATUS-LIST",
@@ -65,7 +70,8 @@
       "sha256": "21e4867a01f73cee2ebc1408d150c87f77898c3d1549ebc25c80fa352221f846",
       "ref": "IETF Internet-Draft, rev 21 (2026-06-21), established at Ship 3 (2026-08-18)",
       "status": "established",
-      "note": "draft-mcguinness-oauth-mission-status cites I-D.draft-ietf-oauth-status-list (OAuth Status List) as a normative reference; derived at PR #595 review (P3). The citing draft's front matter carries no seriesinfo override on this reference (a bare `I-D.draft-ietf-oauth-status-list:` entry), so no revision is pinned in the draft text itself; this registry therefore pins the latest datatracker revision as of establishment (-21, confirmed via the datatracker document API, id 121268), which coincides with the implemented revision src/SPEC_VERSIONS.md already records for shipped code. That SPEC_VERSIONS.md row is a version pin for shipped code, not the commit+digest planning pin this registry tracks; the two are independently sourced and happen to agree on -21."
+      "note": "draft-mcguinness-oauth-mission-status cites I-D.draft-ietf-oauth-status-list (OAuth Status List) as a normative reference; derived at PR #595 review (P3). The citing draft's front matter carries no seriesinfo override on this reference (a bare `I-D.draft-ietf-oauth-status-list:` entry), so no revision is pinned in the draft text itself; this registry therefore pins the latest datatracker revision as of establishment (-21, confirmed via the datatracker document API, id 121268), which coincides with the implemented revision src/SPEC_VERSIONS.md already records for shipped code. That SPEC_VERSIONS.md row is a version pin for shipped code, not the commit+digest planning pin this registry tracks; the two are independently sourced and happen to agree on -21.",
+      "reference_keys": ["I-D.draft-ietf-oauth-status-list"]
     },
     {
       "id": "ISO4217",
@@ -75,7 +81,8 @@
       "sha256": null,
       "ref": "ISO 4217:2015, established at Ship 3 (2026-08-18)",
       "status": "established",
-      "note": "draft-mcguinness-oauth-mission cites ISO4217 as a normative reference with front-matter seriesinfo `ISO: \"4217:2015\"`; this entry pins that same edition. No sha256: ISO 4217:2015 is a paywalled standard with no freely republishable canonical file, so there is no text this registry can legally fetch and hash; the publisher and edition identifier are the pin, and this note is the disclosed reason sha256 is absent. scripts/check-external-pins.mjs accepts a null sha256 only for kind \"standard\"; git and datatracker entries must always carry one."
+      "note": "draft-mcguinness-oauth-mission cites ISO4217 as a normative reference with front-matter seriesinfo `ISO: \"4217:2015\"`; this entry pins that same edition. No sha256: ISO 4217:2015 is a paywalled standard with no freely republishable canonical file, so there is no text this registry can legally fetch and hash; the publisher and edition identifier are the pin, and this note is the disclosed reason sha256 is absent. scripts/check-external-pins.mjs accepts a null sha256 only for kind \"standard\"; git and datatracker entries must always carry one.",
+      "reference_keys": ["ISO4217"]
     }
   ]
 }
