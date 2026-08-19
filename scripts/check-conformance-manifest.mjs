@@ -18,6 +18,25 @@
 //                               test name does not appear in it
 //   (f) coverage inconsistency- the declared coverage state contradicts the
 //                               mappings (see rules below)
+//   (g) spec inventory drift  - source.specs is missing an entry for a spec
+//                               referenced by a row, carries an entry for a
+//                               spec no row references, or a spec's
+//                               content_sha256 no longer matches its
+//                               working-tree bytes: the spec changed since
+//                               its rows were last audited against the
+//                               recorded revision, and the entry needs
+//                               deliberate re-review and a bump before this
+//                               passes again
+//
+// source.specs replaces a single global source.revision with one entry per
+// spec file named by a row's "spec": { revision, content_sha256 }. revision
+// is the commit whose text that spec's rows were validated against;
+// content_sha256 is a mechanical gate, recomputed here from the working-tree
+// file and compared, proving the file is still byte-identical to the
+// audited text. It intentionally does not shell out to git (CI checkouts are
+// shallow): the digest is the whole check, not a lookup of what changed.
+// Completeness provenance (whether the inventory covers every requirement in
+// the spec) lives in the tracking issues, not in this manifest.
 //
 // Coverage states and their enforced consistency rules:
 //   tested  - tests non-empty, and at least one mapping matches the row's
@@ -39,6 +58,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -72,8 +92,57 @@ for (const list of MODEL_LISTS) {
     fail("schema", `model.${list} must be a non-empty array of non-empty strings`);
   }
 }
-if (!manifest.source || !nonEmptyString(manifest.source.revision)) {
-  fail("schema", "manifest.source.revision (the drafts revision the rows were evaluated against) is required");
+const HEX40 = /^[0-9a-f]{40}$/;
+const HEX64 = /^[0-9a-f]{64}$/;
+const SOURCE_SPEC_MEMBERS = new Set(["revision", "content_sha256"]);
+
+if (!manifest.source || typeof manifest.source !== "object" || Array.isArray(manifest.source) ||
+    !manifest.source.specs || typeof manifest.source.specs !== "object" || Array.isArray(manifest.source.specs)) {
+  fail("schema", "manifest.source.specs (a per-spec {revision, content_sha256} map) is required");
+} else {
+  const specEntries = manifest.source.specs;
+  const specsInRows = new Set(rows.map((r) => r.spec).filter(nonEmptyString));
+  const specKeys = new Set(Object.keys(specEntries));
+
+  for (const spec of specsInRows) {
+    if (!specKeys.has(spec)) fail("spec-inventory-drift", `source.specs is missing an entry for ${spec}, which appears in requirements`);
+  }
+  for (const spec of specKeys) {
+    if (!specsInRows.has(spec)) {
+      fail("spec-inventory-drift", `source.specs has an entry for ${spec}, which no requirement row references`);
+      continue;
+    }
+    const entry = specEntries[spec];
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+      fail("schema", `source.specs["${spec}"] must be an object`);
+      continue;
+    }
+    for (const k of Object.keys(entry)) {
+      if (!SOURCE_SPEC_MEMBERS.has(k)) fail("schema", `source.specs["${spec}"] has unknown member "${k}"`);
+    }
+    if (!nonEmptyString(entry.revision) || !HEX40.test(entry.revision)) {
+      fail("schema", `source.specs["${spec}"].revision must be a full 40-hex commit SHA`);
+    }
+    if (!nonEmptyString(entry.content_sha256) || !HEX64.test(entry.content_sha256)) {
+      fail("schema", `source.specs["${spec}"].content_sha256 must be a 64-hex sha256 digest`);
+      continue;
+    }
+    const p = path.join(ROOT, spec);
+    if (!fs.existsSync(p)) {
+      fail("spec-inventory-drift", `source.specs["${spec}"] names a file that does not exist: ${spec}`);
+      continue;
+    }
+    const actual = crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+    if (actual !== entry.content_sha256) {
+      fail(
+        "spec-inventory-drift",
+        `${spec}: working-tree content_sha256 (${actual}) does not match source.specs's recorded digest (${entry.content_sha256}) for revision ${entry.revision}; the spec changed since its rows were last audited: re-review and bump both fields`
+      );
+    }
+  }
+}
+if (!Array.isArray(manifest.profiles) || manifest.profiles.length === 0 || !manifest.profiles.every(nonEmptyString)) {
+  fail("schema", "manifest.profiles (the published-baseline enum) must be a non-empty array of non-empty strings");
 }
 
 // ---- section extraction ----------------------------------------------------
@@ -113,12 +182,12 @@ function draftSections(file) {
 
 const ROW_MEMBERS = new Set([
   "id", "spec", "anchor", "text", "facet", "role", "strength", "applicability",
-  "surface", "assertion", "observation", "level", "coverage", "tests",
+  "profiles", "surface", "assertion", "observation", "level", "coverage", "tests",
   "blocked_by", "notes",
 ]);
 const REQUIRED_MEMBERS = [
   "id", "spec", "anchor", "text", "role", "strength", "applicability",
-  "surface", "assertion", "observation", "level", "coverage", "tests",
+  "profiles", "surface", "assertion", "observation", "level", "coverage", "tests",
 ];
 const MAPPING_MEMBERS = new Set(["file", "name", "level", "surface"]);
 const COVERAGES = ["tested", "partial", "todo", "blocked"];
@@ -160,6 +229,21 @@ for (const row of rows) {
   }
   if (!COVERAGES.includes(row.coverage)) {
     fail("schema", `${id}: coverage must be one of ${COVERAGES.join(", ")}`);
+  }
+
+  // profiles: which published baseline profile(s) this requirement belongs
+  // to (empty allowed: this requirement belongs to no published baseline
+  // profile, whether its document sits outside every baseline or a baseline
+  // document's own row is scoped to an optional capability no published
+  // baseline selects)
+  if (!Array.isArray(row.profiles)) {
+    fail("schema", `${id}: profiles must be an array`);
+  } else {
+    for (const p of row.profiles) {
+      if (!nonEmptyString(p) || (Array.isArray(manifest.profiles) && !manifest.profiles.includes(p))) {
+        fail("schema", `${id}: profiles entry "${p}" not in manifest.profiles`);
+      }
+    }
   }
 
   // applicability: structured, machine-readable

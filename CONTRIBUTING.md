@@ -90,9 +90,13 @@ fail; rows whose coverage is `partial`, `todo`, or `blocked` are the
 visible outstanding report (the reverse mapping is the metric, not
 tag coverage). Each row carries the conforming role, BCP 14 strength
 (`stated` for present-tense normative prose), a machine-readable
-applicability condition, protocol surface, assertion form, a declared
-coverage state, per-test level and surface mappings, and the
-normative observation separated from any locally chosen behavior.
+applicability condition, the published baseline profile(s) it belongs
+to (`profiles`, validated against the manifest's own top-level enum;
+empty when the requirement belongs to no published baseline profile),
+protocol surface,
+assertion form, a declared coverage state, per-test level and surface
+mappings, and the normative observation separated from any locally
+chosen behavior.
 
 Two rules keep the record honest. Only pin an OAuth error code or
 Mission diagnostic where the draft normatively specifies it: a test
