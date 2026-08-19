@@ -127,6 +127,21 @@ d("M4 core enforcement tier", () => {
     );
   });
 
+  // @spec mission-substrate#governance-record (minimum-coverage-and-attribution,
+  // the positive/negative reliance-decision arm): a DENIED decision is
+  // recorded with the same attribution and Mission correlation as a permit,
+  // not only the happy path above.
+  it("a denied decision also produces attributable, mission-correlated Decision Evidence, not only a permit", async () => {
+    build();
+    const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-3" }, TOKEN);
+    expect(res.ok, JSON.stringify(res)).toBe(false);
+    expect(res.denial_reason).toBe("out_of_authority");
+    const dec = evidence.forMission("msn_m4").find((e) => e.kind === "decision" && e.decision === false);
+    expect(dec).toBeDefined();
+    expect(dec?.mission_id).toBe("msn_m4");
+    expect(dec?.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
+  });
+
   it("scenario 2: schedule under the cap permitted and reconciles digest at execute", async () => {
     build();
     const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, TOKEN);

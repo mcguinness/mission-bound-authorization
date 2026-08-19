@@ -233,6 +233,36 @@ describe("approval basis (@spec mission#approval-basis)", () => {
   });
 });
 
+describe("approved context commitment (@spec mission-substrate#approved-context)", () => {
+  it("the approved authority_set and its integrity anchor survive a state transition unchanged, while state and version (the mutable fields) advance", () => {
+    const record = approve(intent(), 300);
+    const authoritySetSnapshot = structuredClone(record.authority_set); // content snapshot, not a live reference
+    const fresh = kernel.transition(record.id, "suspend");
+    expect(fresh.authority_set).toEqual(authoritySetSnapshot);
+    expect(fresh.authority_hash).toBe(record.authority_hash);
+    expect(fresh.state).toBe("suspended");
+    expect(fresh.version).toBeGreaterThan(record.version);
+  });
+});
+
+describe("actor binding at approval (@spec mission-substrate#actor-binding)", () => {
+  it("binds the Mission Context to the client_id Actor handle at approval, and the binding round-trips unchanged", () => {
+    const record = approve(intent(), 301);
+    expect(record.client_id).toBe("ap-agent");
+    const stored = kernel.get(record.id);
+    expect(stored?.client_id).toBe("ap-agent");
+  });
+});
+
+describe("mission reference unguessability (@spec mission-substrate#reference)", () => {
+  it("the Mission Reference's random component carries at least 128 bits of entropy", () => {
+    const record = approve(intent(), 302);
+    const suffix = record.id.replace(/^msn_/, "");
+    const decoded = Buffer.from(suffix, "base64url");
+    expect(decoded.length).toBeGreaterThanOrEqual(16); // 128-bit floor; the kernel mints 18 bytes (144 bits)
+  });
+});
+
 describe("lifecycle (@spec status#legal-transitions)", () => {
   it("enforces the legal-transitions table with idempotent success", () => {
     const r = approve(intent(), 2);

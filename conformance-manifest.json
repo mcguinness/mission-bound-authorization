@@ -7531,8 +7531,16 @@
     "normative": "a disclosed reference resists guessing by unauthorized parties: satisfied by at least 128 bits of reference entropy, a reference derived from undisclosed content, or a namespace whose every keyed surface authenticates the caller and does not disclose existence"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission reference unguessability (@spec mission-substrate#reference) > the Mission Reference's random component carries at least 128 bits of entropy",
+     "level": "unit",
+     "surface": "mission-reference"
+    }
+   ],
+   "notes": "Every msn_ minting site (kernel.ts insertRecord, expansion.ts, child-delegation.ts, template.ts; grep-verified) uses randomBytes(18), 144 bits, above the 128-bit floor this row's normative text names as one of three satisfying conditions. The cited test decodes the base approve() path's id suffix and checks its byte length; the other three sites share the identical construction, cited here rather than each re-tested. No negative-class row exists anywhere in the manifest for the mission-reference surface, so that half of the per-surface minimum is not expressible from this manifest as authored."
   },
   {
    "id": "substrate.reference.controller-identification",
@@ -7619,8 +7627,16 @@
     "normative": "the Controller binds the Mission Context to a defined Actor handle at approval"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "actor binding at approval (@spec mission-substrate#actor-binding) > binds the Mission Context to the client_id Actor handle at approval, and the binding round-trips unchanged",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "kernel.approve()'s clientId input is the substrate's Actor handle per the family crosswalk (PLAN.md D85 BUNDLE 3: client_id maps to Actor); it is persisted on MissionRecord.client_id and round-trips through kernel.get unchanged. This is the client-Actor binding, distinct from the existing approval_basis tests (mission#approval-basis), which cover the consenting human (Approver), a different substrate role."
   },
   {
    "id": "substrate.actor-binding.authenticated-derivation-only",
@@ -7707,8 +7723,16 @@
     "normative": "the binding maintains either the Approved Context or a verifiable commitment to it"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approved context commitment (@spec mission-substrate#approved-context) > the approved authority_set and its integrity anchor survive a state transition unchanged, while state and version (the mutable fields) advance",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "The kernel's missions table (kernel.ts insertRecord) persists authority_set_json (the Approved Context itself) and authority_hash (a verifiable commitment over it) together at creation; both survive every later state transition unmodified (no UPDATE statement in kernel.ts ever touches either column), tested here under this document's own tag."
   },
   {
    "id": "substrate.approved-context.immutability",
@@ -7729,8 +7753,16 @@
     "normative": "the approved value never changes after approval"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approved context commitment (@spec mission-substrate#approved-context) > the approved authority_set and its integrity anchor survive a state transition unchanged, while state and version (the mutable fields) advance",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "Same kernel.ts persistence: authority_set_json/authority_hash are written once at insertRecord and never appear in any subsequent UPDATE statement; setState only ever writes state/version (and, for contain(), a separate containment_json overlay). The cited test transitions a record and asserts the approved authority_set/authority_hash are unchanged by content (a snapshot comparison), not merely by reference."
   },
   {
    "id": "substrate.approved-context.mutable-fields-distinguishable",
@@ -7995,8 +8027,22 @@
     "normative": "the binding defines an active predicate and a non-active outcome over its state vocabulary"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > active predicate true -> the gate proceeds to a decision (never the non-active outcome)",
+     "level": "unit",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > active predicate false -> the non-active outcome (mission_inactive), for every recognized non-active state, never a positive decision",
+     "level": "unit",
+     "surface": "governance-decision"
+    }
+   ],
+   "notes": "src/services/pdp/src/evaluate.ts (tagged @spec runtime abstract decision contract) is the concrete Basic Governance Gate: step 2 defines the active predicate (view.state !== 'active') and its non-active outcome (deny mission_inactive); the permit path proceeds only when the predicate holds. Both cited tests run unconditionally (no live OpenFGA needed; the permit case supplies a stub Fga), so this coverage never sandbox-skips. Cross-mapped from the same code already tested under the runtime#decision-inputs and authzen#pdp-request document tags (runtime.decision-inputs.active-state-required and others)."
   },
   {
    "id": "substrate.basic-gate.decision-only-while-active",
@@ -8017,8 +8063,16 @@
     "normative": "a positive governance decision is made only while the Mission is active"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > active predicate false -> the non-active outcome (mission_inactive), for every recognized non-active state, never a positive decision",
+     "level": "unit",
+     "surface": "governance-decision"
+    }
+   ],
+   "notes": "Same evaluate.ts predicate as active-predicate-and-outcome above; the cited test sweeps every recognized non-active state (revoked, expired, suspended, superseded) and asserts none ever yields decision:true."
   },
   {
    "id": "substrate.basic-gate.unrecognized-fails-closed",
@@ -8039,8 +8093,16 @@
     "normative": "any value or condition not recognized as active fails the decision closed"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > an action absent from the policy's action-to-relation map fails closed (out_of_authority), never reaching the FGA check",
+     "level": "unit",
+     "surface": "governance-decision"
+    }
+   ],
+   "notes": "evaluate.ts's relationForAction lookup returning null for an action the policy does not map denies out_of_authority before the FGA check ever runs; the cited test uses an action name absent from the policy's map entirely, distinct from the existing 'never-granted action' tests (which use a recognized, mapped action that is simply outside the Authority Set)."
   },
   {
    "id": "substrate.basic-gate.non-active-transition-definition",
@@ -8135,8 +8197,22 @@
     "normative": "every governed decision or artifact carries, or is unambiguously joinable to, the Mission Reference and Controller namespace, and the binding defines the join and the party performing it"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "M4 core enforcement tier > scenario 2: happy path -- in-authority read permitted, Decision Evidence recorded",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "M4 core enforcement tier > Decision Evidence carries the PEP emitter and the recomputable entry_digest",
+     "level": "endpoint",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "Partial: the M4 enforcement tests thread the Mission Reference (mission_id) from the PDP request through the PEP decision to the retained Decision Evidence record, attributed to its emitter; a genuine cross-component chain (PDP, PEP, EvidenceStore). The underlying tests are tagged endpoint-level under their existing rows (runtime.evidence.decision-and-refusal-must-produce-record and others), so this row's cross-component level is not matched and it stays partial rather than tested. The Controller-namespace half is implicit (a single-issuer deployment), not a separately carried field, and this mapping does not exercise it."
   },
   {
    "id": "substrate.propagation.no-bare-unverified-acceptance",
@@ -8157,8 +8233,16 @@
     "normative": "an unverified Actor-supplied reference, accepted without more, does not establish Mission governance"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > a supplied mission reference that mismatches the loaded view is refused, never silently accepted",
+     "level": "unit",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "Partial: the cited unit-level test (unconditional, no live OpenFGA) proves a supplied context.mission.authority_hash that mismatches the independently loaded view is refused (view_inconsistent), never silently accepted. It does not prove the complementary half of this row's normative text, that an accepted reference must itself have arrived inside a verified credential rather than as a bare unauthenticated parameter; that is a token-binding/RS concern outside evaluate()'s pure-function boundary and untested here."
   },
   {
    "id": "substrate.propagation.proof-property-distinction",
@@ -8201,8 +8285,16 @@
     "normative": "the Controller maintains an integrity-protected, ordered governance-event record for the Mission"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/refusal-evidence.test.ts",
+     "name": "Refusal Records are per-attempt, immutable, and append-only > a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Partial: EvidenceStore (src/services/mcp-payments/src/evidence.ts) is an append-only, in-memory array that never amends a record in place, in receipt order; the cited test (already covering runtime-evidence#pre-decision-refusal under its own document tag as evidence.refusal.per-attempt-immutable-append-only) proves ordering and immutability. Not tested, and not implemented: 'integrity-protected'. The store retains plain unsigned objects; signing and SCITT registration are explicitly M10 future work per the file's own header comment, so the integrity-protection arm of this MUST has no code to test."
   },
   {
    "id": "substrate.governance-record.minimum-coverage-and-attribution",
@@ -8223,8 +8315,22 @@
     "normative": "the record covers approval, positive and negative reliance decisions, and the non-active transition; events are attributable to their source and correlated with the Mission Reference"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "M4 core enforcement tier > scenario 2: happy path -- in-authority read permitted, Decision Evidence recorded",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "M4 core enforcement tier > a denied decision also produces attributable, mission-correlated Decision Evidence, not only a permit",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Partial: the mcp-payments EvidenceStore records positive and negative reliance decisions (kind: 'decision', decision: true|false), each attributable to its emitter and correlated by mission_id; the happy-path test covers the positive arm and the new denied-decision test covers the negative arm. Not covered: 'approval' and 'transition to a non-active outcome' are Mission Kernel lifecycle events (kernel.ts approve()/setState()) that fan out only through the ephemeral onLifecycleCommit callback (emitCommit), never journaled into EvidenceStore or any other persisted, queryable record; no governance-record-shaped log of approval/transition events exists in src today."
   },
   {
    "id": "substrate.governance-record.ordering-and-retention-statement",

@@ -391,3 +391,57 @@ d("entry-driven action approval (@spec txn-authorization#applicability)", () => 
     expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
   });
 });
+
+// --- substrate Basic Governance Gate (@spec mission-substrate#basic-gate) ---
+//
+// Unconditional (no live OpenFGA needed): every case below returns before
+// evaluateInner ever reaches step 6's fga.checkWithContext, EXCEPT the first
+// permit case, which supplies a stub Fga whose checkWithContext always
+// resolves true. Runs unconditionally so this coverage is never sandbox-skipped.
+describe("basic gate: active predicate, non-active outcome, unrecognized-fails-closed", () => {
+  const stubFga = { checkWithContext: async () => true } as unknown as Fga;
+  const gateOpts = (v: MissionView) => ({
+    view: v,
+    fga: stubFga,
+    modelId: "unit-test-model",
+    now: () => NOW,
+    stalenessBoundSeconds,
+    relationForAction,
+  });
+
+  it("active predicate true -> the gate proceeds to a decision (never the non-active outcome)", async () => {
+    const dec = await evaluate(req(), gateOpts(view()));
+    expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+    expect(dec.context.denial_reason).toBeUndefined();
+  });
+
+  it("active predicate false -> the non-active outcome (mission_inactive), for every recognized non-active state, never a positive decision", async () => {
+    for (const state of ["revoked", "expired", "suspended", "superseded"]) {
+      const dec = await evaluate(req(), gateOpts(view({ state })));
+      expect(dec.decision, state).toBe(false);
+      expect(dec.context.denial_reason, state).toBe("mission_inactive");
+    }
+  });
+
+  it("an action absent from the policy's action-to-relation map fails closed (out_of_authority), never reaching the FGA check", async () => {
+    const dec = await evaluate(req({ action: { name: "payments:totally_unrecognized_action" } }), gateOpts(view()));
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("out_of_authority");
+  });
+
+  // @spec mission-substrate#propagation (no-bare-unverified-acceptance) --
+  // proves the mismatch-refusal arm only: a supplied mission reference that
+  // does not match the independently loaded, server-held view is refused.
+  // It does NOT prove the complementary arm (that an accepted reference must
+  // have arrived inside a verified credential rather than a bare parameter);
+  // that arm is a token-binding/RS concern outside evaluate()'s pure-function
+  // boundary, so this stays a partial mapping for the propagation surface.
+  it("a supplied mission reference that mismatches the loaded view is refused, never silently accepted", async () => {
+    const dec = await evaluate(
+      req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", authority_hash: "sha-256:WRONG" } } }),
+      gateOpts(view()),
+    );
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("view_inconsistent");
+  });
+});
