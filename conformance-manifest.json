@@ -6842,7 +6842,7 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a permit's valid_until never exceeds the minimum of the credential's expiry, any satisfied approval's approved_until, the state valid-through, and any policy-defined maximum lifetime for the class"
+    "normative": "a permit's conditions always carries valid_until (an RFC 3339 timestamp, REQUIRED), and its value never exceeds the minimum of the credential's expiry, any satisfied approval's approved_until, the state valid-through, and any policy-defined maximum lifetime for the class"
    },
    "level": "endpoint",
    "coverage": "todo",
