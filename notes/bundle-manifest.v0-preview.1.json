@@ -3,7 +3,7 @@
   "version": "v0-preview.1",
   "source_repository_commit": "eb3a8f234a6367d388957f1be4ac73b0cc78fb13",
   "source_repository_commit_note": "Full SHA of the branch's base commit at Ship 3 (the commit feat/ship3-preview branched from, 2026-08-18), covering every in-repository document as one coherent snapshot. Known caveat: a pull_request CI build sees the platform's ephemeral merge commit SHA for the head ref, not this base commit; that ephemeral SHA is never the pin recorded here, and re-deriving this field from a merge-commit checkout would silently drift the snapshot.",
-  "external_pins_note": "external_pins copies every established entry in notes/external-pins.json verbatim, for registry fidelity, not only those a bundle document cites. Six entries (ARAP, AUTHZEN, AUTHZEN-OBL, RAR-METADATA, STATUS-LIST, ISO4217) are normative dependencies of this bundle's seven documents. AAUTH is not: it pins the upstream for mission-aauth, a Compose/bindings document (the AAuth Mission Context Bundle) outside this bundle's Start/floor set, and is carried here for registry completeness rather than because any Start/floor document cites it.",
+  "external_pins_note": "external_pins carries exactly the external normative dependencies this bundle's seven documents require: scripts/check-bundle-manifest.mjs derives this set mechanically from each document's pinned front matter and rejects the build on any mismatch, so the six entries here (ARAP, AUTHZEN, AUTHZEN-OBL, RAR-METADATA, STATUS-LIST, ISO4217) are not a hand-curated subset. AAUTH is deliberately absent: it pins the upstream for mission-aauth, a Compose/bindings document (the AAuth Mission Context Bundle) outside this bundle's Start/floor set, and no document here cites it.",
   "documents": [
     {
       "slug": "draft-mcguinness-mission-architecture",
@@ -49,19 +49,6 @@
     }
   ],
   "external_pins": [
-    {
-      "id": "AAUTH",
-      "kind": "git",
-      "repo": "dickhardt/AAuth",
-      "ref": "PR #73 merged",
-      "commit": "f1569261d0b9d179324f1665db1597f81cd0a851",
-      "path": "draft-hardt-oauth-aauth-protocol.md",
-      "sha256": "041f6a1f0ece3ca5b2f9820821e8fb6b1d7a8f2c2e8c58b53b52157684a5c4b6",
-      "status": "established",
-      "note": "datatracker -10 is divergent (pre-person-token); disclosed, not the pin",
-      "reference_keys": ["I-D.draft-hardt-oauth-aauth-protocol"],
-      "pin_id": "AAUTH@041f6a1f0ece"
-    },
     {
       "id": "ARAP",
       "kind": "git",
