@@ -52,16 +52,18 @@ Baseline is never blocked on their conformance inventories.
 ## Pin table
 
 Pinning is one coherent snapshot. The in-repository documents below share a
-single `source_repository_commit`; per-document commits are informational
-traceability only, never assembly inputs. External dependencies are pinned
-by repository (or datatracker document, or published standard), commit or
-revision, path or URL, and a content digest where one can be taken.
+single `source_repository_commit`; per-document commits are traceability,
+not assembly inputs, but they are checked traceability: scripts/check-bundle-manifest.mjs
+re-derives each one from git and rejects the build on a mismatch. External
+dependencies are pinned by repository (or datatracker document, or
+published standard), commit or revision, path or URL, and a content
+digest where one can be taken.
 
 Coherent snapshot commit: `eb3a8f234a6367d388957f1be4ac73b0cc78fb13` (2026-08-18).
 
 ### In-repository documents
 
-| Document | Title | File | Last-touched commit (informational) | Date |
+| Document | Title | File | Last-touched commit (verified) | Date |
 |---|---|---|---|---|
 | mission-architecture | An Architecture for Mission-Bound Authorization | draft-mcguinness-mission-architecture.md | `122586a334069ba4a934a9b988b7bb1b0ed7926a` | 2026-08-17 |
 | mission-substrate | Mission Substrate Requirements | draft-mcguinness-mission-substrate.md | `77eb14b40b6a203bcdc4ea6bab270ebbbc1c767f` | 2026-08-16 |
