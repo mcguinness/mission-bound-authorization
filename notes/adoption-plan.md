@@ -101,9 +101,20 @@ unwind); adjust authority in flight (a named-direction table: widen, meet the un
 narrow, draw down, cap); operate the fleet (push notice and bulk lifecycle); a closing
 shelf holds portable proof, the guide, and the remaining Lab items; the assurance menu closes
 as the enforcement counterpart (the conformance baselines as cumulative levels). Maturity
-on the menu is one vocabulary, taken verbatim from the family manifest's maturity field
-(stable unmarked, informational, experimental, sketch); no menu-local readiness words are
-invented, and Compose bindings therefore read as stable peers of the OAuth extensions. The two-layer principle is unchanged: the menu is presentation, the
+on the menu is one vocabulary, mapped one-to-one from the family manifest's maturity field:
+stable is unmarked, experimental and sketch mark readiness, and informational displays as
+"guide" so document category is never mistaken for a readiness rung; no menu-local
+readiness words are invented, and Compose bindings therefore read as stable peers of the
+OAuth extensions. A fresh-eyes critique round hardened the menu: Level 1 concedes the
+issuance exit up front (pick 2 alone is the floor); Level 2 and pick 3 carry explicit
+OAuth-path scoping with the AAuth reading rule inline (per-document binding-compatibility
+tags remain the Retrofit-wave spike); the approval-provenance option avoids colliding with
+the Governed Agent baseline name; the baseline table is scoped to document-set baselines,
+names its sets by document rather than pick number, and points to High-Assurance Agent as
+condition-based; the shelf dissolved (proof pair to the evidence pick, the guide to pick 1,
+a small evaluations list remains); and the validator gains menu-layer checks (slug
+coverage, maturity-display agreement, pick-reference resolution, floor-referenced pairing)
+so the menu's own claims are machine-checked, not just the matrix. The two-layer principle is unchanged: the menu is presentation, the
 collapsed 41-row matrix remains the machine-validated layer carrying zone, track, group,
 and per-document triggers, and the validator's placement checks bind to the matrix. Zones
 and tracks stay authoritative in the manifest; the menu never regroups the catalog or the
