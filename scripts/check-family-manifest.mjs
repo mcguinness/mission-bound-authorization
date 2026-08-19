@@ -26,11 +26,15 @@
 //                                is not a YYYY-MM-DD date string
 //   (j) external-pins shape   - notes/external-pins.json fails structural validation
 //                                (see scripts/check-external-pins.mjs)
+//   (k) bundle-manifest       - a notes/bundle-manifest.*.json file fails structural or
+//                                registry cross-reference validation, including consuming
+//                                a "pending" external pin (see scripts/check-bundle-manifest.mjs)
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateExternalPins } from "./check-external-pins.mjs";
+import { validateBundleManifests } from "./check-bundle-manifest.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -362,6 +366,11 @@ function main() {
   // PR #595). Content verification against live source repos happens at
   // Ship 3, not here.
   for (const e of validateExternalPins(ROOT)) fail("external-pins", e);
+
+  // (k) Bundle manifest(s): structural validation plus a cross-reference
+  // against the external pin registry, chained the same way as (j). Rejects
+  // the check if a bundle consumes a "pending" registry entry.
+  for (const e of validateBundleManifests(ROOT)) fail("bundle-manifest", e);
 
   if (errors.length > 0) {
     console.error(`family-manifest check FAILED with ${errors.length} finding(s):\n`);

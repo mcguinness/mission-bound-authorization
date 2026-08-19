@@ -1,19 +1,54 @@
 {
-  "description": "This is a partial registry of established planning pins, not a complete inventory of every external normative dependency the floor drafts carry. Every entry carries a \"kind\" (git, datatracker, or standard) with kind-appropriate required fields: git needs repo, commit (full 40-hex), path, and sha256; datatracker needs doc, rev, url, and sha256; standard needs publisher and edition, with sha256 optional (paywalled standards carry no fetchable canonical file to hash, disclosed in the entry's note). Every entry also carries reference_keys: the exact citation key(s) as they appear in the drafts' kramdown front matter, which is how a bundle checker maps a document's cited references back to this registry. As of Ship 3, every entry in this registry is established; none is pending. Live-source verification (object type, path at commit or revision, content digest) against each entry's actual repository, datatracker revision, or published standard happens once, by hand, when a pin is established; it is disclosed per entry in that entry's note. A bundle manifest (notes/bundle-manifest.*.json) copies established entries here verbatim into its external_pins, and scripts/check-bundle-manifest.mjs enforces, on every run, that each copy is identical to its registry entry and that the build REJECTS if any registry entry a bundle consumes has status \"pending\". The bundle checker also derives the required external-pin set mechanically, on every run, by parsing each bundle document's normative front matter at its pinned commit and mapping the resulting citation keys through reference_keys; it rejects the build on any pin the derived set requires and the bundle omits, and on any pin the bundle carries that the derived set does not require. Completeness of this registry against the selected profiles' normative front matter is therefore enforced mechanically on every run, not checked by hand at Ship 3.",
-  "pins": [
+  "bundle_id": "oauth-mission-baseline-bundle",
+  "version": "v0-preview.1",
+  "source_repository_commit": "eb3a8f234a6367d388957f1be4ac73b0cc78fb13",
+  "source_repository_commit_note": "Full SHA of the branch's base commit at Ship 3 (the commit feat/ship3-preview branched from, 2026-08-18), covering every in-repository document as one coherent snapshot. Known caveat: a pull_request CI build sees the platform's ephemeral merge commit SHA for the head ref, not this base commit; that ephemeral SHA is never the pin recorded here, and re-deriving this field from a merge-commit checkout would silently drift the snapshot.",
+  "external_pins_note": "external_pins carries exactly the external normative dependencies this bundle's seven documents require: scripts/check-bundle-manifest.mjs derives this set mechanically from each document's pinned front matter and rejects the build on any mismatch, so the six entries here (ARAP, AUTHZEN, AUTHZEN-OBL, RAR-METADATA, STATUS-LIST, ISO4217) are not a hand-curated subset. AAUTH is deliberately absent: it pins the upstream for mission-aauth, a Compose/bindings document (the AAuth Mission Context Bundle) outside this bundle's Start/floor set, and no document here cites it.",
+  "documents": [
     {
-      "id": "AAUTH",
-      "kind": "git",
-      "repo": "dickhardt/AAuth",
-      "ref": "PR #73 merged",
-      "commit": "f1569261d0b9d179324f1665db1597f81cd0a851",
-      "path": "draft-hardt-oauth-aauth-protocol.md",
-      "sha256": "041f6a1f0ece3ca5b2f9820821e8fb6b1d7a8f2c2e8c58b53b52157684a5c4b6",
-      "status": "established",
-      "note": "datatracker -10 is divergent (pre-person-token); disclosed, not the pin",
-      "reference_keys": ["I-D.draft-hardt-oauth-aauth-protocol"],
-      "pin_id": "AAUTH@041f6a1f0ece"
+      "slug": "draft-mcguinness-mission-architecture",
+      "file": "draft-mcguinness-mission-architecture.md",
+      "last_modified_commit": "122586a334069ba4a934a9b988b7bb1b0ed7926a",
+      "sha256": "451e2e552e284719cf36cbffd16e9980f57ac429fa06ed0019b3fa2148748d10"
     },
+    {
+      "slug": "draft-mcguinness-mission-substrate",
+      "file": "draft-mcguinness-mission-substrate.md",
+      "last_modified_commit": "77eb14b40b6a203bcdc4ea6bab270ebbbc1c767f",
+      "sha256": "ba84fd2a30d4bd9d139d560da4efc0e0c931b9d0ad2878131bbc820e64068e26"
+    },
+    {
+      "slug": "draft-mcguinness-oauth-mission",
+      "file": "draft-mcguinness-oauth-mission.md",
+      "last_modified_commit": "7d97a7b38a844163db1eaa6bf6e01e002554e487",
+      "sha256": "1f3fdf0041c19b5fc71e29ac112d700f3d36588c39740f7da362d807f0023c7a"
+    },
+    {
+      "slug": "draft-mcguinness-oauth-mission-status",
+      "file": "draft-mcguinness-oauth-mission-status.md",
+      "last_modified_commit": "2399f170964924d80f8ceaad81d41892411d4465",
+      "sha256": "f1ee825d42dc842134d58b5317a6d31f907ff7ebd43453bbd41c1f75d5cf2bd3"
+    },
+    {
+      "slug": "draft-mcguinness-mission-runtime",
+      "file": "draft-mcguinness-mission-runtime.md",
+      "last_modified_commit": "122586a334069ba4a934a9b988b7bb1b0ed7926a",
+      "sha256": "f43480282b0df5fc3fdecfde8e0b019df14db9072917ec1b517f986a61a7b4f5"
+    },
+    {
+      "slug": "draft-mcguinness-mission-runtime-evidence",
+      "file": "draft-mcguinness-mission-runtime-evidence.md",
+      "last_modified_commit": "3694449a787e0be021803eb82c5ee6eaae3f7ddd",
+      "sha256": "49e6edceb6e56df6d9330576c5874acc96b6f558c78c2e07e06778b136f306d2"
+    },
+    {
+      "slug": "draft-mcguinness-mission-authzen",
+      "file": "draft-mcguinness-mission-authzen.md",
+      "last_modified_commit": "f5977e02bfb4bf8af22d2114ed1e16f520672b07",
+      "sha256": "be241b74e741f3f580ef5adacef11cf4176b6978b3cb9c98d72ca9e285602698"
+    }
+  ],
+  "external_pins": [
     {
       "id": "ARAP",
       "kind": "git",
@@ -92,5 +127,39 @@
       "pin_id": "ISO4217@4217-2015"
     }
   ],
-  "archive": []
+  "artifact_digests": {
+    "notes/oauth-mission-baseline-bundle-preview.md": "e8737650617fee7267c488cdf0c492c256542c2fbb4b0a219e74baefde2a60fd"
+  },
+  "profiles": {
+    "issuance-baseline": {
+      "label": "OAuth Mission Issuance Baseline",
+      "normative_document_slugs": ["draft-mcguinness-oauth-mission"],
+      "disabled_conditionals": ["cross-domain"]
+    },
+    "runtime-enforced-baseline": {
+      "label": "OAuth Mission Runtime-Enforced Baseline",
+      "normative_document_slugs": [
+        "draft-mcguinness-oauth-mission",
+        "draft-mcguinness-mission-substrate",
+        "draft-mcguinness-oauth-mission-status",
+        "draft-mcguinness-mission-runtime",
+        "draft-mcguinness-mission-runtime-evidence",
+        "draft-mcguinness-mission-authzen"
+      ],
+      "disabled_conditionals": ["cross-domain"],
+      "named_extensions": ["transaction-assurance"]
+    }
+  },
+  "disabled_capabilities": [
+    {
+      "capability": "cross-domain",
+      "reason": "Cross-Domain is a conditional normative dependency the baseline disables, for both the Issuance and Runtime-Enforced levels (profile matrix, notes/adoption-plan.md)."
+    }
+  ],
+  "deferred_capabilities": [
+    {
+      "capability": "rar-free-mode",
+      "note": "Absent by design, not a disabled conditional: RAR-free mode is protocol design work that has not landed normatively (issue #220), so this bundle cannot select a mode that does not yet exist."
+    }
+  ]
 }
