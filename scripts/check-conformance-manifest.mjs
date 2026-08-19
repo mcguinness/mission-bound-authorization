@@ -231,8 +231,11 @@ for (const row of rows) {
     fail("schema", `${id}: coverage must be one of ${COVERAGES.join(", ")}`);
   }
 
-  // profiles: which published baseline(s) this row applies to (empty allowed:
-  // a spec entirely outside both baselines)
+  // profiles: which published baseline profile(s) this requirement belongs
+  // to (empty allowed: this requirement belongs to no published baseline
+  // profile, whether its document sits outside every baseline or a baseline
+  // document's own row is scoped to an optional capability no published
+  // baseline selects)
   if (!Array.isArray(row.profiles)) {
     fail("schema", `${id}: profiles must be an array`);
   } else {
