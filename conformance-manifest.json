@@ -7593,12 +7593,18 @@
     },
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
-     "name": "mission reference unguessability (@spec mission-substrate#reference) > every msn_ minting site draws from the single newMissionId helper, never an inline construction",
+     "name": "mission reference unguessability (@spec mission-substrate#reference) > the four known msn_ minting sites all call the single newMissionId helper",
+     "level": "unit",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission reference unguessability (@spec mission-substrate#reference) > no file in kernel/ other than mission-id.ts itself constructs an msn_ id inline",
      "level": "unit",
      "surface": "mission-reference"
     }
    ],
-   "notes": "Length alone is not entropy, so Mission ID generation is now centralized into one helper (src/services/authorization-server/src/kernel/mission-id.ts's newMissionId), built on node:crypto's randomBytes, and all four msn_ minting sites (kernel.ts insertRecord, expansion.ts, child-delegation.ts, template.ts) were updated to call it instead of constructing the id inline; a grep-encoded test asserts every site calls newMissionId() and none still constructs `msn_${...}` inline. The helper itself is tested directly: one test injects an observing wrapper around the source function and asserts the helper requests exactly MISSION_ID_ENTROPY_BYTES (18, 144 bits, above the 128-bit floor this row's normative text names as one of three satisfying conditions), proving the entropy claim is about the source and byte count, not merely the length of one identifier from one call site; a second test exercises the default parameter (node:crypto's randomBytes with no argument supplied) and decodes the exact byte count; a distinctness sanity check over 1000 draws is additional, not a substitute for the entropy proof. No negative-class row exists anywhere in the manifest for the mission-reference surface, so that half of the per-surface minimum is not expressible from this manifest as authored."
+   "notes": "Length alone is not entropy, so Mission ID generation is now centralized into one helper (src/services/authorization-server/src/kernel/mission-id.ts's newMissionId), built on node:crypto's randomBytes, and all four msn_ minting sites (kernel.ts insertRecord, expansion.ts, child-delegation.ts, template.ts) were updated to call it instead of constructing the id inline. The helper itself is tested directly: one test injects an observing wrapper around the source function and asserts the helper requests exactly MISSION_ID_ENTROPY_BYTES (18, 144 bits, above the 128-bit floor this row's normative text names as one of three satisfying conditions), proving the entropy claim is about the source and byte count, not merely the length of one identifier from one call site; a second test exercises the default parameter (node:crypto's randomBytes with no argument supplied), decodes the exact byte count, AND reads mission-id.ts's own source to confirm the default is bound to the imported node:crypto randomBytes, not a same-named local; a distinctness sanity check over 1000 draws is additional, not a substitute for the entropy proof. The last two tests close the site-coverage class, not just four known instances: one confirms each known site calls newMissionId(), the other scans every file in kernel/ (not a fixed list) and asserts none but mission-id.ts itself still constructs `msn_${...}` inline, so a fifth minting site added later in a new file would still be caught. No negative-class row exists anywhere in the manifest for the mission-reference surface, so that half of the per-surface minimum is not expressible from this manifest as authored."
   },
   {
    "id": "substrate.reference.controller-identification",

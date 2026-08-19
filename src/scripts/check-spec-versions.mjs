@@ -378,18 +378,29 @@ if (outstanding.length && !dump) {
 //
 // Every key any row declares anywhere in its Surfaces column (whether or
 // not that row's own byKey.size check above skipped it, and regardless of
-// strict/non-strict), versus every key actually tagged in implementation
-// files repo-wide. A key tagged in code but declared by NO row at all is a
+// strict/non-strict), PLUS every row's own spec id itself -- a tag can name
+// either the short key ("mission#...") or, as several rows in this table do
+// ("draft-mcguinness-oauth-mission#per-entry-enforcement"), the full spec id
+// -- versus every key actually tagged in implementation files repo-wide. A
+// key tagged in code but declared by NO row at all, under EITHER name, is a
 // whole spec the matrix never tracked, not merely one row's undercount.
 const knownKeys = new Set();
 for (const row of rows) {
+  knownKeys.add(row.spec);
   for (const key of parseSurfaceAnchors(row.surfaces).keys()) knownKeys.add(key);
 }
+
+// A repo spec key (short or full draft id) is lowercase-hyphenated; this
+// excludes an occasional `@spec Identifier#member` code cross-reference
+// (e.g. `@spec MissionKernel#emitCommit`, a {@link}-style pointer to a
+// method, not a spec anchor) from being misread as an untracked spec.
+const SPEC_KEY_SHAPE = /^[a-z][a-z0-9-]*$/;
 
 const globalByKey = new Map(); // key -> Set<anchor>
 const globalFilesByKey = new Map(); // key -> Set<relFile>
 for (const f of listAllSourceFiles(ROOT)) {
   for (const [key, anchors] of allKeyAnchorsInFile(f)) {
+    if (!SPEC_KEY_SHAPE.test(key)) continue;
     if (!globalByKey.has(key)) globalByKey.set(key, new Set());
     for (const a of anchors) globalByKey.get(key).add(a);
     if (!globalFilesByKey.has(key)) globalFilesByKey.set(key, new Set());

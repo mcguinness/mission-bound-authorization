@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { authorityHash, intentHash } from "@mission/core";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { generateKeyPair } from "jose";
@@ -289,8 +289,16 @@ describe("approved context commitment (@spec mission-substrate#approved-context)
       authority_hash: record.authority_hash,
     };
 
-    const afterSuspend = kernel.transition(record.id, "suspend");
-    const afterResume = kernel.transition(record.id, "resume");
+    kernel.transition(record.id, "suspend");
+    // Re-read from the store, not transition()'s return value: setState()
+    // returns a spread of its in-memory input record ({ ...record, state,
+    // version }), so asserting against that return value would prove only
+    // that the spread copied the field, never that the PERSISTED column was
+    // left untouched. kernel.get() round-trips through rowToRecord, the same
+    // path a fresh process restart would take.
+    const afterSuspend = kernel.get(record.id) as MissionRecord;
+    kernel.transition(record.id, "resume");
+    const afterResume = kernel.get(record.id) as MissionRecord;
 
     for (const fresh of [afterSuspend, afterResume]) {
       expect(fresh.intent).toEqual(intentSnapshot);
@@ -342,6 +350,13 @@ describe("mission reference unguessability (@spec mission-substrate#reference)",
     const id = newMissionId(); // no source supplied: exercises the default parameter itself
     const decoded = Buffer.from(id.replace(/^msn_/, ""), "base64url");
     expect(decoded.length).toBe(MISSION_ID_ENTROPY_BYTES);
+    // The runtime check above proves the OUTPUT is shaped like the entropy
+    // source's; this grounds the SOURCE identity itself: the default
+    // parameter is bound to node:crypto's randomBytes, imported by name, not
+    // a same-named local or an unrelated random function.
+    const src = readFileSync(new URL("../src/kernel/mission-id.ts", import.meta.url), "utf8");
+    expect(src).toContain('import { randomBytes } from "node:crypto"');
+    expect(src).toMatch(/source:\s*\(size:\s*number\)\s*=>\s*Buffer\s*=\s*randomBytes/);
   });
 
   it("successive draws are distinct (sanity check, not a substitute for the entropy proof above)", () => {
@@ -349,7 +364,7 @@ describe("mission reference unguessability (@spec mission-substrate#reference)",
     expect(ids.size).toBe(1000);
   });
 
-  it("every msn_ minting site draws from the single newMissionId helper, never an inline construction", () => {
+  it("the four known msn_ minting sites all call the single newMissionId helper", () => {
     const sites = [
       "../src/kernel/kernel.ts",
       "../src/kernel/expansion.ts",
@@ -359,7 +374,22 @@ describe("mission reference unguessability (@spec mission-substrate#reference)",
     for (const rel of sites) {
       const src = readFileSync(new URL(rel, import.meta.url), "utf8");
       expect(src.includes("newMissionId()"), `${rel} calls newMissionId()`).toBe(true);
-      expect(src.includes("msn_${"), `${rel} has no inline msn_ construction`).toBe(false);
+    }
+  });
+
+  // Closes the class, not just the four known instances: a FIFTH minting
+  // site added later, in a file this test does not name, would still be
+  // caught, because every file in kernel/ is scanned, not only the four
+  // above.
+  it("no file in kernel/ other than mission-id.ts itself constructs an msn_ id inline", () => {
+    const dirUrl = new URL("../src/kernel/", import.meta.url);
+    const files = readdirSync(dirUrl).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"));
+    expect(files.length).toBeGreaterThan(10); // sanity: the scan found the real kernel dir
+    expect(files).toContain("mission-id.ts");
+    for (const f of files) {
+      if (f === "mission-id.ts") continue; // the one file allowed to construct it
+      const src = readFileSync(new URL(f, dirUrl), "utf8");
+      expect(src.includes("msn_${"), `${f} has no inline msn_ construction`).toBe(false);
     }
   });
 });
