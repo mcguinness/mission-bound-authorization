@@ -80,7 +80,11 @@ describe("Refusal Records are per-attempt, immutable, and append-only", () => {
     const afterFirst = evidence.forMission(TOKEN.mission.id);
     expect(afterFirst).toHaveLength(1);
     expect(afterFirst[0]?.kind).toBe("refusal");
-    const firstRecord = afterFirst[0];
+    // A content snapshot, not a reference: `toBe` on the same array element
+    // would pass even if record() mutated it in place later, since nothing
+    // ever replaces the element with a different object. Only a snapshot
+    // comparison catches an in-place amendment.
+    const firstSnapshot = structuredClone(afterFirst[0]);
 
     // Attempt 2: a retrying agent hits the identical failure condition again.
     expect(pep.reverify(effective, wrongDigest, TOKEN)).toBe(false);
@@ -89,8 +93,8 @@ describe("Refusal Records are per-attempt, immutable, and append-only", () => {
     // Append-only: a second, distinct record now exists.
     expect(afterSecond).toHaveLength(2);
     expect(afterSecond[1]).not.toBe(afterSecond[0]);
-    // Immutable: the first record is the SAME object, unamended in place,
-    // not a record that got overwritten or replaced.
-    expect(afterSecond[0]).toBe(firstRecord);
+    // Immutable: the first record's own content is byte-for-byte what it was
+    // before the second attempt, never amended or replaced in place.
+    expect(afterSecond[0]).toEqual(firstSnapshot);
   });
 });

@@ -9923,7 +9923,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "Tested: a sustained parameter_mismatch condition, retried twice, yields two distinct append-only records rather than one amended in place (EvidenceStore.record() only ever pushes). Not tested: 'signed' -- EvidenceStore retains plain objects; signing and SCITT registration are M10 future work per its own header comment."
+   "notes": "Tested: a sustained parameter_mismatch condition, retried twice, yields a second distinct record (append-only) whose content leaves the first record's own content unchanged (a snapshot comparison, not reference identity, so an in-place amendment would fail it). Not tested: 'signed' -- EvidenceStore retains plain objects; signing and SCITT registration are M10 future work per its own header comment."
   },
   {
    "id": "evidence.refusal.external-binding-exempts-missing-claim",
