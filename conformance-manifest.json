@@ -5565,6 +5565,50 @@
    "tests": []
   },
   {
+   "id": "runtime.privacy.minimize-and-restrict-recorded-evidence",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "privacy-considerations",
+   "text": "Deployments SHOULD minimize recorded authority entries, store entry and parameter digests where full values are not needed for audit, restrict access to evidence by role, and document the retention window declared under {{evidence}}.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "recorded authority entries are minimized, entry and parameter digests are stored in place of full values where full values are not needed for audit, access to evidence is restricted by role, and the evidence's retention window is documented"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "runtime.privacy.audit-evidence-access",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "privacy-considerations",
+   "text": "Access to Mission evidence is itself a privileged operation a deployment SHOULD audit",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "access to Mission evidence is itself audited as a privileged operation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "authzen.conventions.required-when-known-no-inference",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "conventions-and-definitions",
@@ -9049,6 +9093,94 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the Statement identifies every narrowing point in the covered derivation/delegation/attenuation flow and the component performing each comparison"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.privacy.reference-disclosure-limited-to-correlation-need",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "privacy-considerations",
+   "text": "Bindings SHOULD disclose a reference only to components that require Mission correlation",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-reference",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a Mission Reference is disclosed only to components that require Mission correlation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.privacy.prefer-audience-specific-derived-handles",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "privacy-considerations",
+   "text": "SHOULD prefer audience-specific derived handles where cross-context correlation is unnecessary",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-reference",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an audience-specific derived handle is used in place of the shared Mission Reference where cross-context correlation is unnecessary"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.privacy.minimize-context-in-credentials-state-evidence",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "privacy-considerations",
+   "text": "A binding SHOULD minimize context in credentials, state responses, and evidence",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "Approved Context content carried in credentials, state responses, and evidence is minimized rather than carried in full"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "substrate.privacy.document-disclosure-from-capability-claims",
+   "spec": "draft-mcguinness-mission-substrate.md",
+   "anchor": "privacy-considerations",
+   "text": "MUST document the additional disclosure introduced by Structured Authority, Independently Verifiable, or Portable Evidence claims",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "mission-statement",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the additional disclosure introduced by a Structured Authority, Independently Verifiable, or Portable Evidence claim is documented"
    },
    "level": "unit",
    "coverage": "todo",

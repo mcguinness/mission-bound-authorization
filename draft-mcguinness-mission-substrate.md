@@ -995,7 +995,7 @@ public transparency.  Deployments needing third-party detection of
 equivocation or truncation require Portable Evidence or a separate
 transparency profile.
 
-# Privacy Considerations
+# Privacy Considerations {#privacy-considerations}
 
 Mission References are correlation handles.  Reusing them across
 resources or administrative domains can reveal that otherwise

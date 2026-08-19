@@ -3029,7 +3029,7 @@ and disclosure controls it applies at the Resource Server.
 General OAuth security guidance {{RFC9700}} applies to the underlying
 credentials.
 
-# Privacy Considerations
+# Privacy Considerations {#privacy-considerations}
 
 Runtime enforcement evidence is intentionally durable and therefore
 sensitive. It can reveal a subject's resources, action timing,
