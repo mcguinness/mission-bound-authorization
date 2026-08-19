@@ -12,7 +12,10 @@
    "PEP",
    "verifier",
    "TAS",
-   "Controller"
+   "Controller",
+   "PRODUCER",
+   "RECEIPT-ISSUER",
+   "RECEIPT-VERIFIER"
   ],
   "strengths": [
    "MUST",
@@ -9046,6 +9049,1638 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the Statement identifies every narrowing point in the covered derivation/delegation/attenuation flow and the component performing each comparison"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.evidence-id-entropy-and-format",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "REQUIRED. A string. Unique record identifier for this Decision Evidence Object. ABNF: `1*64( ALPHA / DIGIT / \"-\" / \"_\" )`. At least 128 bits of entropy.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "evidence_id conforms to the ABNF and carries at least 128 bits of entropy"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.mission-reference-sub-members",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "REQUIRED. An object. The decision request's Mission reference object, extended with the facts below, so the evidence chains back to the exact approved Mission. Sub-members:",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the record's mission object always carries the request's id/issuer/authority_hash (REQUIRED) and the PDP's own policy_view_id (REQUIRED, always populated whatever the request carried); intent_hash, policy_version, and a consent-disclosure commitment are OPTIONAL and recorded only when known; these hashes are the issuing AS's own commitments cited as anchors, never recomputed by the PDP"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.action-no-raw-parameters",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "It MUST NOT contain the request's `properties.parameters`, under any name: the parameter binding this record carries is `parameter_digest` alone, an evidence projection of the decision request rather than a pass-through of it.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the action member never carries raw request parameters under any name; only parameter_digest carries the parameter binding"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.action-class-and-source",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "REQUIRED. A string. The runtime action class the PDP applied to the action: one of `consequential_read`, `consequential_write`, `irreversible_action`, `external_commitment`, or `privileged_administration`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "action_class names one of the five runtime classes and is always present since every record here is on a consequential action; class_source (REQUIRED when action_class is present, i.e. always) records how the class was assigned: default, resource_floor, or deployment"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.credential-verified-claims-only",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "This member MUST contain only claims the PEP verified before invoking the PDP.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the credential member never carries a claim the PEP did not itself verify before invoking the PDP"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.parameter-binding-digest-xor",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "REQUIRED when `parameter_digest` is absent for a consequential action, so the closed object still carries the request digest the runtime profile requires of every decision record",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "parameter_digest is REQUIRED for a parameter-bound action; evaluation_request_digest is REQUIRED whenever parameter_digest is absent, so every decision record carries one digest or the other, present whether the decision was a permit or a deny"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.obligations-recorded-as-returned",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "REQUIRED whenever the decision response contained obligations, on either decision. An array of obligation objects, recorded as returned to the PEP",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "obligations is present whenever the decision response carried obligations, on a permit or a deny alike, and records them exactly as returned to the PEP"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.conditions-use-limit-and-digest-consistency",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "the PDP MUST set `use_limit: 1` for a permit in the high-consequence classes",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "conditions is REQUIRED when decision is permit for a consequential action, recording valid_until and use_limit; the PDP sets use_limit to exactly 1 for a high-consequence-class permit, and the producer ensures the record's parameter_digest equals the parameter binding carried by the wire conditions"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.contributing-constraints-completeness",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "For a permit it records every constraint key and entry type the decision relied on; for a deny it MUST list every entry that failed. Omitting an entry the decision turned on is non-conforming.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "contributing_constraints, required when the decision turned on one or more authority or constraint entries, lists every relied-on entry for a permit and every failing entry for a deny; omitting an entry the decision turned on is non-conforming"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.sequence-monotonic-per-emitter",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "The sequence is scoped to the emitter identified by `emitter`: each emitter maintains its own monotonically increasing per-Mission sequence, and a verifier detects gaps and orders records within (Mission, emitter).",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "sequence is zero or greater and monotonically increasing per (Mission, emitter); cross-emitter ordering is best-effort from correlation members and timestamps, never reconstructed from sequence alone"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.denial-reason-unrecognized-and-split",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "a consumer MUST treat an unrecognized value as a deny and MUST NOT attach any other semantics to it",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a consumer treats an unrecognized denial_reason value as a deny and attaches no other semantics to it; a constraint-violation deny records `parameter_violation` in denial_reason with the specific failing keys in contributing_constraints, so the reason enum and the open constraint-key space never mix in one field"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.decision.permit-must-carry-entry-or-digest",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "A record of a permit MUST carry `authorizing_entry` or `entry_digest`, per the runtime record requirements",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every permit record carries authorizing_entry (the full entry) or entry_digest (its integrity-anchor encoded digest), the issuance profile's Authority Set entry commitment"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.refusal.refusal-id-entropy-and-format",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "REQUIRED. A string. Unique refusal identifier. ABNF: `1*64( ALPHA / DIGIT / \"-\" / \"_\" )`. At least 128 bits of entropy.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "refusal_id conforms to the ABNF and carries at least 128 bits of entropy"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.refusal.denial-reason-enum-and-boundary",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "denial_reason names a pre-evaluation condition (PEP-side: token_invalid, mission_claim_missing, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.refusal.parameter-binding-digest-xor",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "REQUIRED when `parameter_digest` is absent, so the record meets the runtime profile's record minimum",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "parameter_digest is REQUIRED for a parameter-bound action class; evaluation_request_digest is REQUIRED whenever parameter_digest is absent, so a Refusal Record always carries one of the two digests"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.refusal.mission-present-only-when-established",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "present only when the refusing component established it before the failure: for a PEP, for example, on `pdp_unreachable`; for a PDP refusing on `mission_context_missing`, the reference is typically absent, since that is exactly what the request lacked.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Refusal Record's mission member is present only when the refusing component itself established the Mission reference before the failure occurred"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.refusal.no-unverified-claims-as-authenticated",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "For a token-validation failure, the record MUST NOT describe unverified token claims as authenticated facts",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "subject/actor/credential on a Refusal Record carry only verified facts; a PEP populates them from its own token validation and a PDP from the request context it received, and neither role attests a fact only the other could verify; on a token-validation failure, unverified claims are never described as authenticated"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.refusal.sequence-continues-when-mission-present",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "REQUIRED when the record carries a verified `mission` reference, continuing that emitter's per-Mission sequence for that Mission",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "sequence is REQUIRED exactly when the record carries a verified mission reference, continuing that emitter's ordinary per-Mission sequence; it is absent when no Mission was established"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.refusal.per-attempt-immutable-append-only",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "Refusal Records are per-attempt, immutable, and append-only: a sustained failure condition with a retrying agent yields one signed record per attempt, never a record amended or replaced in place.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "each refusal attempt yields its own signed, immutable record; a retried failure never amends or replaces a prior record in place, and a derived summary over a series of records is not itself a Refusal Record and adds no evidentiary standing beyond its inputs"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.refusal.external-binding-exempts-missing-claim",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "absence of the `mission` claim is not a pre-decision refusal and `mission_claim_missing` does not apply; the external join's verification governs instead",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the deployment establishes the Mission binding externally under the runtime profile's binding-establishment step, a missing mission claim is not itself a pre-decision refusal condition"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.integrity.ordered-total-verification",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-integrity",
+   "text": "A verifier MUST perform the following steps, in order, and MUST NOT treat a record as verified if any step fails:",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the four-step verification procedure (decode payload; recompute JCS canonical bytes with evidence_envelope removed; require byte equality; verify the JWS signature and header) runs in order, and a record is treated as verified only if every step succeeds"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.integrity.byte-equality-required",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-integrity",
+   "text": "Require byte-for-byte equality between the decoded payload of step 1 and the canonical bytes of step 2, rejecting the record on any difference. The signature authenticates only its own embedded payload; an outer object that differs from that payload is unauthenticated, regardless of whether the signature itself verifies.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "byte-for-byte equality between the decoded JWS payload and the recomputed canonical bytes of the outer record (envelope removed) is required; any difference rejects the record even if the embedded signature itself verifies, since the signature authenticates only its own payload"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.integrity.key-bound-to-scope-and-audience",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-integrity",
+   "text": "A verifier MUST confirm that the signing key selected by the JWS `kid` is the published key of the component named in the record's `emitter` member, and that this key is bound to the enforcement scope and audience the record serves",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the verifier confirms the kid-selected key is the named emitter's published key and is bound to the enforcement scope and audience the record serves; a record whose signing key is not published for that scope is rejected, so one component's key cannot sign evidence for a resource, audience, or scope it does not serve"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Lines 487-489 (Decision Evidence's emitter member), 640-642 (Refusal Record's emitter member), and 1029-1031 (Execution Evidence's emitter member) each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows."
+  },
+  {
+   "id": "evidence.integrity.compromise-boundary-gates-signature-step",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-integrity",
+   "text": "Where the selected signing key is identified as compromised by the deployment-defined key-status mechanism, the verifier MUST apply the compromise-boundary rule of {{evidence-integrity-signing-keys}} before treating the signature as verified",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the selected signing key is identified as compromised, the compromise-boundary rule gates the signature-verification step itself: it applies before the signature can be treated as verified, not as a separate check after the fact"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.integrity.header-kid-and-alg",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-integrity",
+   "text": "an implementation MAY offer other JOSE algorithms but MUST implement `ES256`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the protected header's kid resolves in the emitter's published JWKS, and ES256 is mandatory to implement (other JOSE algorithms may additionally be offered)"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.integrity.typ-rejects-cross-use",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-integrity",
+   "text": "A verifier MUST reject a JWS whose protected `typ` is not the media type of the object it is verifying, so signatures over one record kind cannot be cross-used for another.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a JWS whose typ does not match the media type of the object being verified is rejected; shared member names among Decision Evidence, Execution Evidence, and Refusal Records carry no exemption, and the typ check is the sole authority for which record kind a signature covers"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.integrity.reject-unsupported-format",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-integrity",
+   "text": "This document defines only the `jws-compact` format. Additional formats MAY be defined by future specifications; implementations MUST reject envelopes with unsupported formats.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an evidence_envelope whose format is not jws-compact, or another format a future specification defines and the implementation recognizes, is rejected rather than accepted unverified"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Line 1849 (\"Implementations MUST reject evidence whose format is unsupported rather than accepting it unverified\") restates this rule under evidence-integrity-signing-keys; treated as duplicate-of-another-row."
+  },
+  {
+   "id": "evidence.execution.execution-id-entropy-and-format",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "REQUIRED. A string. Unique execution identifier, stable across delivery retries of this record: exactly one Execution Evidence Object exists per final disposition of a permit, and delivery of that record is at-least-once",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "execution_id conforms to the ABNF, carries at least 128 bits of entropy, and stays stable across at-least-once delivery retries of the one Execution Evidence Object per final disposition"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.execution.dedup-on-execution-id",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "delivery of that record is at-least-once, so a consumer MUST deduplicate on `execution_id` rather than assume single delivery",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a consumer deduplicates Execution Evidence deliveries on execution_id rather than assuming exactly-once delivery"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.execution.parameter-deviation-remains-valid-and-flagged",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "Inequality is a parameter deviation, and the record REMAINS VALID: evidence of an unauthorized execution is still evidence, never grounds to discard the record.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "when authorized_parameter_digest and effective_parameter_digest diverge, the record is a parameter deviation and remains a valid record, never discarded; a deviation recorded against outcome completed or failed is equally representable, and a consumer MUST flag it as an unauthorized execution"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.execution.error-closed-set-and-extension-naming",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "A deployment MAY define additional values, which MUST be collision-resistant names (a short name within a namespace the deployment controls, following the Collision-Resistant Name guidance of {{RFC7519}} Section 4.2) so they cannot collide with this set or another deployment's.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "error is one of the closed set (parameter_mismatch, permit_expired, permit_consumed, obligation_unfulfilled, kill_switch) when outcome is failed or suppressed; a deployment-defined additional value must be a collision-resistant name"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.execution.obligation-outcomes-schema",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "REQUIRED when the linked Decision Evidence carried obligations and a permit disposition exists. One object per attached obligation, with `id` (REQUIRED, a string, the obligation's identifier as returned by the decision), `type` (REQUIRED, a string, the obligation type), `outcome` (REQUIRED, a string, one of `fulfilled`, `failed`, or `unsupported`)",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "obligation_outcomes is REQUIRED whenever the linked Decision Evidence carried obligations and a permit disposition exists, with one object per attached obligation carrying id, type, and a fulfilled/failed/unsupported outcome"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.execution.result-summary-no-user-content",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "MUST NOT carry user-content payloads.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "result_summary carries only minimal action result metadata (for example, affected resource counts), never user-content payloads"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Line 1938 (\"The Execution Evidence result_summary MUST NOT carry user-content payloads\") restates this in Privacy Considerations; treated as duplicate-of-another-row."
+  },
+  {
+   "id": "evidence.execution.detected-deviation-must-refuse-before-acting",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "When the executing PEP detects the deviation before acting, it MUST refuse the action and emit Execution Evidence with `outcome` `suppressed` and `error` `parameter_mismatch`",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an executing PEP that detects a parameter deviation before acting refuses the action and emits Execution Evidence with outcome suppressed and error parameter_mismatch, rather than proceeding; whatever the recorded outcome, an audit consumer MUST classify a detected digest divergence as a parameter deviation and treat it as equivalent to an unauthorized action for compliance purposes"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.retention.audit-window-floor",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "Decision Evidence, Execution Evidence, and Refusal Records MUST be retained for at least the deployment's audit retention window, which the runtime profile requires to be no shorter than the Mission's audit horizon",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "all three record types are retained for at least the deployment's audit retention window, itself no shorter than the Mission's audit horizon; a regulated deployment may require longer retention"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.verify-before-relying-on-copied-fields",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "mission-receipt",
+   "text": "A verifier MUST verify the referenced records and the cross-record joins of {{receipt-verification}} before relying on any copied field",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a verifier verifies the referenced records and cross-record joins before relying on any copied field, and additionally verifies the transparency commitment where transparency is claimed; a deployment may instead accept a copied field on the receipt signer's authority alone, but only under an explicit policy naming the receipt issuer as attesting that fact directly"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.decision-kind-no-execution-claim",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "mission-receipt",
+   "text": "It claims an authorization decision was rendered; it claims nothing about execution, and a verifier MUST NOT treat it as evidence that an action occurred.",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a `decision`-kind receipt is never treated as evidence that an action occurred"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.no-premature-execution-receipt",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "mission-receipt",
+   "text": "an action whose outcome is not yet terminal has no `execution` receipt, and an unresolved action MUST NOT be rewritten as terminal to issue one",
+   "role": "RECEIPT-ISSUER",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an execution-kind receipt is never issued by rewriting an unresolved action as terminal; it exists only once the linked Execution Evidence has a real terminal outcome"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.mission-member-exact-object-no-union",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "mission-receipt",
+   "text": "The member is this exact object, never a union with another projection.",
+   "role": "RECEIPT-ISSUER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the receipt's mission member is exactly {id, issuer, optionally authority_hash}, never unioned with fields from another projection"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.issuer-must-be-scope-named",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "mission-receipt",
+   "text": "the statement declares which of them issue receipts; the verifier resolves the signing key through that statement's published key sets ({{evidence-integrity-signing-keys}}) and rejects an emitter the statement does not name as a receipt issuer. A self-published key presenting `role` `receipt_issuer` establishes nothing",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "receipt issuance is limited to components the deployment's enforcement scope statement names; a verifier rejects an emitter the statement does not name as a receipt issuer, and a self-published key presenting role receipt_issuer establishes nothing on its own"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.outcome-required-for-execution-kind",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "mission-receipt",
+   "text": "REQUIRED when `kind` is `execution`; absent otherwise. A string, copied from the projected Execution Evidence's `outcome`",
+   "role": "RECEIPT-ISSUER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "outcome is REQUIRED exactly when kind is execution and absent otherwise, copied from the projected Execution Evidence's outcome unchanged"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.optional-members-selected-not-defaulted",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "mission-receipt",
+   "text": "Everything beyond the join and integrity core is optional and selected, never defaulted: a projection profile or a recipient agreement names the optional members a receipt carries, and an issuer minimizes to that selection.",
+   "role": "RECEIPT-ISSUER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an issuer carries only the optional members a projection profile or recipient agreement selects, never every available member by default; a Mission Receipt is evidence, never reusable authorization, and confers no authority on its holder"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.profile-required-with-issuer-assertions",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "mission-receipt",
+   "text": "REQUIRED when `issuer_assertions` is present.",
+   "role": "RECEIPT-ISSUER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the profile member (naming the projection profile in force) is REQUIRED whenever issuer_assertions is present"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.issuer-assertions-explicit-policy-path",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "mission-receipt",
+   "text": "every member's name and semantics come from the `profile`, and relying on any of them takes the trust model's explicit-policy path, never the verified-projection path",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "issuer_assertions members are structurally separate from the projected members: their names and semantics come entirely from the named profile, and a relying party takes the explicit-policy trust path for them, never the verified-projection path the other members use"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.evidence-reference-digest-classification",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-evidence",
+   "text": "A `sha-256:` prefixed digest, classified under the core's commitment taxonomy ({{I-D.draft-mcguinness-oauth-mission}}) as a canonical-object digest for a JSON evidence record and a raw-octet digest for a JWS- or JWT-shaped artifact.",
+   "role": "RECEIPT-ISSUER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an evidence reference's digest is a canonical-object digest (complete object, evidence_envelope included, JCS canonicalized) for a JSON evidence record, and a raw-octet digest over the exact serialization octets for a compact-serialized artifact"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.evidence-combination-per-kind",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-evidence",
+   "text": "An `evidence` array carries the combination {{receipt-kinds}} fixes for the receipt's `kind`: one Decision Evidence reference alone for `decision`; a permit Decision Evidence reference and the final Execution Evidence reference of the same action for `execution`; one Refusal Record reference alone for `refusal`. A reference to a record type the verifier does not implement fails verification; it is not skipped.",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the evidence array carries exactly the reference combination fixed for the receipt's kind (decision: one Decision Evidence; execution: a permit Decision Evidence plus the final Execution Evidence of the same action; refusal: one Refusal Record); a reference to an unimplemented record type fails verification rather than being silently skipped"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.chain-schema-and-predecessor-digest",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-chaining",
+   "text": "`previous` (an array of one or more digests of predecessor receipts in the same scope, present on every receipt after the stream's first)",
+   "role": "RECEIPT-ISSUER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "chain carries stream (issuer-chosen identifier), sequence (strictly increasing per stream), and previous (one or more predecessor digests, present on every receipt after the stream's first); a predecessor digest is a canonical-object digest of the complete predecessor Mission Receipt object, evidence_envelope included, so it covers the signature and not only the unsigned payload; concurrent issuance either serializes per stream or records multiple predecessors, and a verifier treats the result as a DAG, checking linkage and sequence monotonicity, never completeness"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.verification-ordered-total",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-verification",
+   "text": "A verifier MUST perform the following steps, in order, and MUST NOT rely on a receipt if any step fails.",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the seven-step receipt verification procedure runs in order, and a receipt is relied on only if every step succeeds; the reject-on list (a missing required record, a record of an unimplemented type, digest mismatch, emitter or key mismatch, join failure, a chain-linkage failure, or a copied field that differs) enumerates what \"any step fails\" means"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.step1-envelope-and-no-binding-by-key-alone",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-verification",
+   "text": "the receipt's Mission binding is established by the verified records and the joins of step 4, never by key publication alone",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "step 1 verifies the receipt's own evidence_envelope (byte equality, typ, and signature against the scope statement's published keys, confirming the statement names the emitter as a receipt issuer) but the receipt's Mission binding itself rests on the verified referenced records and their joins, never on key publication alone"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.step3-resolve-and-recompute-digest",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-verification",
+   "text": "Resolve each evidence reference. Verify each resolved record under its own rules ({{decision-evidence-integrity}}). Recompute each digest over the defined bytes ({{receipt-evidence}}) and require equality. Require the resolved record's own identifier to equal `evidence_id` and its emitter and key to match `emitter`.",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "step 3 resolves and independently verifies each referenced record, recomputes its digest and requires equality with the reference, and requires the resolved record's own identifier and emitter/key to match the reference"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.step4-cross-record-joins",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-verification",
+   "text": "Join the records: the same `mission.id` and `mission.issuer` as the receipt's `mission`; the Execution Evidence joins the Decision Evidence on `evaluation_id`",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "step 4 joins the resolved records: the same mission.id/mission.issuer as the receipt's own mission; the Execution Evidence joins the Decision Evidence on evaluation_id; audience, target, and the authorized/effective parameter digests are consistent across records; for an execution receipt, the receipt's outcome equals the Execution Evidence's terminal outcome"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.step5-copied-members-equal-source",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-verification",
+   "text": "Require every copied optional member to equal the corresponding member of the record it projects.",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "every copied optional member on the receipt equals the corresponding member of the record it projects"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.step6-chain-verification-and-monotonicity",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-verification",
+   "text": "require each predecessor's `chain.sequence` to be strictly less than this receipt's. Monotonicity is relative to the receipt's predecessors, never a claim of a globally serialized stream. A predecessor unresolvable within the retention obligations of {{receipt-retention}} fails chain verification.",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when chain is present, the verifier resolves each previous digest to a predecessor receipt, verifies the predecessor's own envelope, requires the same mission/emitter/chain.stream, recomputes the predecessor digest and requires equality, and requires each predecessor's chain.sequence to be strictly less than this receipt's; monotonicity is relative to this receipt's predecessors only, and a predecessor unresolvable within its retention obligations fails chain verification"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.retention-keys-and-evidence-resolvable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-retention",
+   "text": "the referenced evidence and the historical verification keys MUST remain retained or resolvable for as long as verifiers are expected to validate the receipt",
+   "role": "RECEIPT-ISSUER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Receipt is retained at least as long as the records it projects, and the referenced evidence plus historical verification keys stay retained or resolvable for as long as verifiers are expected to validate the receipt"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.extensions.closed-ignore-unrecognized-no-authority",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-extensions",
+   "text": "a consumer MUST ignore a member it does not understand and MUST NOT derive authority from any member it does not recognize",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "Decision Evidence, Execution Evidence, and Refusal Records are each closed to uncoordinated extension: an added member rides a coordinated or collision-resistant name, a consumer ignores a member it does not understand, and never derives authority from a member it does not recognize"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Line 530 (Decision Evidence's own closing sentence) and line 656-657 (Refusal Record's) and lines 1055-1060 (Execution Evidence's) each point forward to this anchor for the extension rule rather than restating it independently; treated as duplicate-of-another-row."
+  },
+  {
+   "id": "evidence.extensions.taint-required-when-context-present",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-extensions",
+   "text": "REQUIRED when the decision request carried a taint context.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the taint extension member is REQUIRED on Decision Evidence exactly when the decision request carried a taint context; this document records it as presented, and the harness profile owns its semantics"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.extensions.mission-history-required-when-selected",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-extensions",
+   "text": "REQUIRED when policy selected any history predicate for the decision, whether or not the request carried a Mission history member.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission_history extension member is REQUIRED on Decision Evidence whenever policy selected any history predicate for the decision, independent of whether the request itself carried a history member; each predicate outcome is satisfied, not_satisfied, or unavailable"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.extensions.hop-reference-required-submembers",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-extensions",
+   "text": "Sub-members: `jti` (REQUIRED, a string, the authorizing token's identifier) and `mission_id` (REQUIRED, a string, the Mission the continued credential carries); `continuation_handle` (OPTIONAL, a string, the hop's identity-continuation handle, when present).",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the hop_reference extension member's jti and mission_id sub-members are REQUIRED whenever the member is present, recorded on Decision Evidence, Execution Evidence, or a Refusal Record concerning a continuation-profile credential; continuation_handle is OPTIONAL"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.extensions.principal-mapping-required-submembers",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-extensions",
+   "text": "Sub-members: `origin` (REQUIRED, a protected origin-subject reference), `local` (REQUIRED, a protected local-subject reference), `policy` (REQUIRED, an object with `id` and `version` naming the mapping policy applied), `observed_at` (REQUIRED, an RFC 3339 date-time), and `valid_until` (REQUIRED, an RFC 3339 date-time, the observation's validity bound).",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the principal_mapping extension member's origin, local, policy, observed_at, and valid_until sub-members are all REQUIRED whenever the member is present; the origin/local references follow this document's protected-reference privacy rule"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.conformance.producer-bar",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "conformance",
+   "text": "A PRODUCER conforming to this document MUST:",
+   "role": "PRODUCER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a conforming PRODUCER emits a Decision Evidence Object for every PDP decision on a consequential action, a Refusal Record for a pre-decision PEP or PDP refusal, an Execution Evidence Object for the classes the transaction-assurance tier covers, and signs every record with the integrity envelope, a resolvable kid, and a typ matching the record's own media type"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.conformance.consumer-verifier-bar",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "conformance",
+   "text": "A CONSUMER or VERIFIER conforming to this document MUST perform the byte-equality verification procedure and key checks of {{decision-evidence-integrity}} against the emitter's published keys",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a conforming CONSUMER/VERIFIER performs the byte-equality and key-check verification procedure against the emitter's published keys, and classifies orphaned Decision Evidence and cross-record digest divergence per the Security Considerations and Execution Evidence rules, never as proof of action"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.conformance.receipt-issuer-bar",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "conformance",
+   "text": "A RECEIPT ISSUER conforming to this document MUST:",
+   "role": "RECEIPT-ISSUER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a conforming RECEIPT ISSUER verifies every referenced record before assembling a receipt that projects it, minimizes to the projection profile's or recipient agreement's optional-member selection, assembles only the evidence combination the receipt's kind fixes, publishes a signing key resolvable by kid for the named mission, and, when chaining, maintains a strictly increasing sequence per (Mission, issuer, stream) with the required predecessor digests"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.conformance.receipt-verifier-bar",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "conformance",
+   "text": "A RECEIPT VERIFIER conforming to this document MUST perform the algorithm of {{receipt-verification}} and reject a Mission Receipt on any of its failure conditions.",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a conforming RECEIPT VERIFIER performs the full seven-step receipt-verification algorithm and rejects the receipt on any of its failure conditions"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.compromise.at-or-after-boundary-no-rescue",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "compromise-vectors",
+   "text": "a proof whose authenticated time is at or after the boundary does not",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a recovery proof whose authenticated time is at or after the compromise boundary does not permit the ordinary verification algorithm to continue; the boundary is strict, so only a proof strictly before it rescues an artifact under a compromised key"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.security.orphaned-decision-evidence-classification",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "security-considerations",
+   "text": "An audit consumer MUST classify orphaned Decision Evidence (no matching Execution Evidence within the deployment's reconciliation window) as undetermined-outcome or, per deployment policy, as action-attempted; it MUST NOT treat it as proof of action.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "implementations emit Execution Evidence to record outcomes, and auditors never treat Decision Evidence alone as evidence of action; an audit consumer classifies orphaned Decision Evidence (no matching Execution Evidence within the reconciliation window) as undetermined-outcome or, per policy, action-attempted, and never as proof of action"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.security.key-resolvable-in-published-set",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-integrity-signing-keys",
+   "text": "The PEP or executor signing key used for Execution Evidence and Refusal Records MUST be resolvable the same way through a deployment-published key set.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PDP's jws-compact signing key is resolvable by kid in the PDP's published JWKS, and the PEP/executor signing key used for Execution Evidence and Refusal Records is resolvable the same way through a deployment-published key set"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.security.retired-key-resolvable-during-retention",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-integrity-signing-keys",
+   "text": "a retired signing key MUST remain resolvable in the published key set for at least the evidence retention window, so records signed before a rotation stay verifiable after it",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a retired evidence-signing key stays resolvable in the published key set for at least the evidence retention window, so a rotation does not strand previously signed records"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.security.transport-tls-and-encryption-at-rest",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "security-considerations",
+   "text": "Audit channels carrying Decision Evidence and Execution Evidence MUST be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED). Evidence at rest MUST be encrypted per the deployment's data-protection posture.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "audit channels carrying Decision Evidence and Execution Evidence are served over TLS 1.2 or later, with TLS 1.3 the recommended floor, and evidence at rest is encrypted per the deployment's data-protection posture"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.receipt.compromised-issuer-key-governed-by-boundary-rule",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "receipt-security-considerations",
+   "text": "A compromised receipt-issuer signing key is governed by the compromise-boundary rule of {{evidence-integrity-signing-keys}}, applied during Receipt verification ({{receipt-verification}}): timestamps asserted by the receipt itself never establish that its signature predates the boundary.",
+   "role": "RECEIPT-VERIFIER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a compromised receipt-issuer signing key is governed by the same compromise-boundary rule during receipt verification; the receipt's own asserted timestamps never establish that its signature predates the boundary"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.privacy.pii-sink-access-control-should",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-pii",
+   "text": "These records are PII sinks and SHOULD be access-controlled to audit consumers with a legitimate need, encrypted at rest, and retained per the window",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "Decision Evidence, Execution Evidence, and Refusal Records are PII sinks that should be access-controlled to audit consumers with a legitimate need, encrypted at rest, and retained per the Execution Evidence retention window"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.privacy.protected-subject-reference-should-and-disclose-limitation",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-pii",
+   "text": "A deterministic digest of an enumerable identifier is dictionary-attackable: it is correlation infrastructure, not concealment, and a deployment using it MUST disclose that limitation.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "where the cross-domain Origin Principal profile is in use, retained records should carry the principal_mapping extension with a protected subject reference rather than a raw identity, unless the raw identity is necessary for the stated audit purpose; a deployment using the deterministic-digest form of protected reference must disclose that it is dictionary-attackable correlation infrastructure, not concealment"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.privacy.pep-should-supply-digest-only-for-pii-parameters",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "privacy-considerations",
+   "text": "the PEP SHOULD supply only a parameter digest to the PDP, omitting the raw parameters, so the PDP evaluates against parameter-class policy without observing the raw values",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "when the action's parameters are themselves PII, the PEP should supply the PDP only a parameter digest, omitting the raw parameters, so the PDP evaluates against parameter-class policy without observing the raw values"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.execution.authorized-digest-equals-decision-digest",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "REQUIRED when the linked Decision Evidence carries `parameter_digest`; MUST equal it.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "authorized_parameter_digest is REQUIRED whenever the linked Decision Evidence carries parameter_digest, and its value equals that digest exactly, linking the execution record to what the permit actually authorized"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "evidence.execution.effective-digest-required-when-authorized-present",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "CONDITIONAL. A string. REQUIRED whenever `authorized_parameter_digest` is present.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "effective_parameter_digest is REQUIRED whenever authorized_parameter_digest is present, recording the digest over the normalized parameters actually attempted or executed so the two can be compared"
    },
    "level": "unit",
    "coverage": "todo",
