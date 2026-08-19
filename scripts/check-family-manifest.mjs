@@ -29,6 +29,25 @@
 //   (k) bundle-manifest       - a notes/bundle-manifest.*.json file fails structural or
 //                                registry cross-reference validation, including consuming
 //                                a "pending" external pin (see scripts/check-bundle-manifest.mjs)
+//
+// README's "The adoption map" section has two layers: a hand-authored ten-pick
+// menu (from the heading down to the "<details>" line) and the machine-
+// validated matrix (g) already covers. The menu's own prose claims are
+// checked by (l)-(o):
+//   (l) menu-coverage         - a draft not named at least once in the menu region as a
+//                                backtick-quoted short slug
+//   (m) menu-maturity         - the menu's display of a draft's maturity (an inline
+//                                "(word)" suffix right after a slug link, or a table's
+//                                trailing "Maturity" column) disagrees with the manifest,
+//                                or a non-stable draft's maturity is not displayed anywhere
+//                                in the menu region
+//   (n) menu-picks            - a "pick N" / "picks N and M" cross-reference in the menu
+//                                region names a pick number with no matching bolded
+//                                "**N." pick heading in the region
+//   (o) menu-floor-ref        - a "floor-referenced*" marker attached to a slug other than
+//                                oauth-mission-containment/mission-metering, or either of
+//                                those two missing the marker in the menu region or not
+//                                carrying it exactly once in the matrix rows
 
 import fs from "node:fs";
 import path from "node:path";
@@ -164,6 +183,122 @@ function parseAdoptionMapRows(section) {
     });
   }
   return rows;
+}
+
+// Extracts README's hand-authored adoption-map menu: the text between the
+// exact line "## The adoption map" and the first subsequent exact line
+// "<details>" (the machine-validated matrix (g) validates lives past that
+// point). Unlike extractSection, this is anchored on the literal "<details>"
+// line rather than the next heading, since the menu and the matrix share one
+// "## The adoption map" section. Returns null if either anchor is missing.
+function extractMenuRegion(markdown) {
+  const lines = markdown.split("\n");
+  const headingIdx = lines.findIndex((l) => l === "## The adoption map");
+  if (headingIdx === -1) return null;
+  let detailsIdx = -1;
+  for (let i = headingIdx + 1; i < lines.length; i++) {
+    if (lines[i].trim() === "<details>") {
+      detailsIdx = i;
+      break;
+    }
+  }
+  if (detailsIdx === -1) return null;
+  return lines.slice(headingIdx + 1, detailsIdx).join("\n");
+}
+
+// The menu displays a manifest maturity value under one shared vocabulary:
+// stable and experimental and sketch display verbatim; informational
+// displays as "guide" (a document that explains rather than defines).
+// Returns null for a maturity value with no defined display word.
+function maturityDisplay(maturity) {
+  if (maturity === "stable" || maturity === "experimental" || maturity === "sketch") return maturity;
+  if (maturity === "informational") return "guide";
+  return null;
+}
+
+// Collects every backtick-quoted token (`` `token` ``, bare or inside a
+// `[`token`](url)` link) out of a text blob, e.g. the menu region. Backticks
+// are exact delimiters, so this cannot mistake a short slug for a substring
+// of a longer one the way plain containment matching could.
+function extractBacktickedTokens(text) {
+  const set = new Set();
+  const re = /`([a-z0-9-]+)`/g;
+  let m;
+  while ((m = re.exec(text))) set.add(m[1]);
+  return set;
+}
+
+// Parses every pipe-delimited markdown table out of a section, independent
+// of column count (the menu's tables run 3 or 4 columns; the matrix table
+// (g) parses runs 5). A table is a pipe row immediately followed by a
+// separator row (cells of only "-", optionally colon-flanked) of the same
+// width; every following pipe row is a data row until a non-pipe line ends
+// the table.
+function parseMarkdownTables(section) {
+  const lines = section.split("\n");
+  const isPipeRow = (l) => {
+    const t = l.trim();
+    return t.startsWith("|") && t.endsWith("|");
+  };
+  const splitRow = (l) => l.trim().slice(1, -1).split("|").map((c) => c.trim());
+  const tables = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (isPipeRow(lines[i]) && i + 1 < lines.length && isPipeRow(lines[i + 1])) {
+      const headerCells = splitRow(lines[i]);
+      const sepCells = splitRow(lines[i + 1]);
+      const isSeparator = sepCells.length === headerCells.length && sepCells.every((c) => /^:?-+:?$/.test(c));
+      if (isSeparator) {
+        const rows = [];
+        let j = i + 2;
+        while (j < lines.length && isPipeRow(lines[j])) {
+          rows.push({ cells: splitRow(lines[j]), line: lines[j] });
+          j++;
+        }
+        tables.push({ headerCells, rows });
+        i = j;
+        continue;
+      }
+    }
+    i++;
+  }
+  return tables;
+}
+
+// Every backtick-quoted short slug linked anywhere in a table row (any
+// cell), used both to find which manifest drafts a row names and to check
+// (m)'s inline-badge and floor-referenced pairing patterns against a whole
+// row rather than a single cell.
+function slugsLinkedInRow(rowCells) {
+  return extractBacktickedTokens(rowCells.join(" | "));
+}
+
+// Scans pipe-table-row lines only (never free-standing prose) for the
+// literal marker "floor-referenced*", pairing each occurrence with whatever
+// backtick-quoted slug's link immediately precedes it on that line. Prose
+// glossary lines that merely discuss the marker (never inside a table row)
+// are intentionally out of scope: (o) validates a display convention that
+// only exists inside table cells.
+function scanFloorReferencedMarkers(text) {
+  const MARKER = "floor-referenced*";
+  const pairRe = /\[`([a-z0-9-]+)`\]\([^)]*\)\s*floor-referenced\*/g;
+  const paired = []; // { slug, line }
+  const unpaired = []; // { line } - marker present but no slug link precedes it
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) continue;
+    const markerCount = line.split(MARKER).length - 1;
+    if (markerCount === 0) continue;
+    let pairedOnLine = 0;
+    let m;
+    pairRe.lastIndex = 0;
+    while ((m = pairRe.exec(line))) {
+      paired.push({ slug: m[1], line });
+      pairedOnLine++;
+    }
+    for (let k = pairedOnLine; k < markerCount; k++) unpaired.push({ line });
+  }
+  return { paired, unpaired };
 }
 
 function main() {
@@ -333,6 +468,176 @@ function main() {
       }
       if (row.trigger === "") {
         fail("adoption-map", `${d.slug}: adoption map row has an empty "Pull this when..." cell`);
+      }
+    }
+  }
+
+  // (l)-(o): the hand-authored adoption-map menu (the ten-pick prose above
+  // the matrix table (g) validates). See extractMenuRegion for the exact
+  // boundary: the "## The adoption map" heading line through the first
+  // "<details>" line.
+  const menuRegion = extractMenuRegion(readme);
+  if (menuRegion === null) {
+    fail("menu-coverage", `could not find README's adoption-map menu region (exact lines "## The adoption map" and "<details>")`);
+  } else {
+    // (l) Menu slug coverage: every draft must be named at least once in
+    // the menu region as a backtick-quoted short slug.
+    const menuSlugs = extractBacktickedTokens(menuRegion);
+    for (const d of drafts) {
+      const short = shortForm(d.slug);
+      if (!menuSlugs.has(short)) {
+        fail("menu-coverage", `${d.slug} (short form "${short}") does not appear as a backtick-quoted slug anywhere in README's adoption-map menu region`);
+      }
+    }
+
+    // (m) Menu maturity display: the menu shows a manifest maturity as
+    // "stable" (unmarked inline) or the literal word (table cells), and
+    // "experimental"/"sketch" verbatim, or "guide" for informational. Checks,
+    // in order: (m-a) inline "[`slug`](url) (word)" suffix badges;
+    // (m-b) the trailing "Maturity" column of a menu table; (m-c) that
+    // every non-stable draft is shown correctly by one of those two forms,
+    // or, failing that, by the expected word appearing as a parenthetical
+    // elsewhere in a table row that links the slug (how the Baseline
+    // table's "Transaction assurance (experimental)" row marks a document
+    // outside any "Maturity"-headed table).
+    const shortToDraft = new Map(drafts.map((d) => [shortForm(d.slug), d]));
+    const correctlyMarked = new Set();
+
+    const INLINE_BADGE_RE = /\[`([a-z0-9-]+)`\]\([^)]*\)\s\((guide|experimental|sketch|stable)\)/g;
+    let im;
+    while ((im = INLINE_BADGE_RE.exec(menuRegion))) {
+      const [, slug, badge] = im;
+      const d = shortToDraft.get(slug);
+      if (!d) continue;
+      const expected = maturityDisplay(d.maturity);
+      if (badge === expected) {
+        correctlyMarked.add(slug);
+      } else {
+        fail(
+          "menu-maturity",
+          `${d.slug}: menu shows inline maturity badge "${badge}" but manifest maturity "${d.maturity}" displays as "${expected}"`
+        );
+      }
+    }
+
+    const menuTables = parseMarkdownTables(menuRegion);
+    for (const table of menuTables) {
+      if (table.headerCells[table.headerCells.length - 1] !== "Maturity") continue;
+      for (const row of table.rows) {
+        const linked = slugsLinkedInRow(row.cells);
+        if (linked.size === 0) continue;
+        const cellValue = row.cells[row.cells.length - 1];
+        for (const slug of linked) {
+          const d = shortToDraft.get(slug);
+          if (!d) continue;
+          const expected = maturityDisplay(d.maturity);
+          if (cellValue === expected) {
+            correctlyMarked.add(slug);
+          } else {
+            fail(
+              "menu-maturity",
+              `${d.slug}: menu's Maturity column shows "${cellValue}" on the row linking it, but manifest maturity "${d.maturity}" displays as "${expected}"`
+            );
+          }
+        }
+      }
+    }
+
+    for (const d of drafts) {
+      if (d.maturity === "stable") continue;
+      const short = shortForm(d.slug);
+      if (correctlyMarked.has(short)) continue;
+      const expected = maturityDisplay(d.maturity);
+      let markedByRowParenthetical = false;
+      for (const table of menuTables) {
+        for (const row of table.rows) {
+          if (!slugsLinkedInRow(row.cells).has(short)) continue;
+          if (row.cells.some((c) => c.includes(`(${expected})`))) {
+            markedByRowParenthetical = true;
+            break;
+          }
+        }
+        if (markedByRowParenthetical) break;
+      }
+      if (!markedByRowParenthetical) {
+        fail(
+          "menu-maturity",
+          `${d.slug}: manifest maturity "${d.maturity}" (displays as "${expected}") is not shown anywhere in README's adoption-map menu region (no inline badge, Maturity-column cell, or row parenthetical)`
+        );
+      }
+    }
+
+    // (n) Pick-reference resolution: every "pick N" / "picks N and M"
+    // mention in the menu region must resolve to an existing bolded
+    // "**N." pick heading in the region.
+    const pickHeadings = new Set();
+    const HEADING_RE = /\*\*(\d+)\./g;
+    let hm;
+    while ((hm = HEADING_RE.exec(menuRegion))) pickHeadings.add(hm[1]);
+
+    const pickRefs = new Set();
+    const PICK_WORD_RE = /pick[s]?(?=\s+\d)/gi;
+    let pm;
+    while ((pm = PICK_WORD_RE.exec(menuRegion))) {
+      const start = pm.index + pm[0].length;
+      const window = menuRegion.slice(start, start + 20);
+      for (const n of window.match(/\d+/g) || []) pickRefs.add(n);
+    }
+    for (const n of pickRefs) {
+      if (!pickHeadings.has(n)) {
+        fail("menu-picks", `menu region references "pick ${n}" but no bolded "**${n}." pick heading exists in the region`);
+      }
+    }
+
+    // (o) floor-referenced pairing: the literal marker "floor-referenced*"
+    // may only follow the slug link for oauth-mission-containment or
+    // mission-metering (the floor's conditional text names those two by
+    // property). Scans pipe-table rows only in both the menu region and
+    // the matrix rows (g) already isolated; the marker's two prose
+    // glossary explanations sit outside any table row and are descriptive
+    // text, not table-cell display, so they are out of scope by design.
+    const FLOOR_REF_SLUGS = ["oauth-mission-containment", "mission-metering"];
+
+    const menuFloorRef = scanFloorReferencedMarkers(menuRegion);
+    for (const bad of menuFloorRef.unpaired) {
+      fail("menu-floor-ref", `menu region has a "floor-referenced*" marker with no slug link immediately preceding it: ${bad.line.trim()}`);
+    }
+    for (const p of menuFloorRef.paired) {
+      if (!FLOOR_REF_SLUGS.includes(p.slug)) {
+        fail("menu-floor-ref", `menu region attaches "floor-referenced*" to ${p.slug}, but only ${FLOOR_REF_SLUGS.join(" and ")} may carry it`);
+      }
+    }
+    const menuFloorRefCounts = new Map(FLOOR_REF_SLUGS.map((s) => [s, 0]));
+    for (const p of menuFloorRef.paired) {
+      if (menuFloorRefCounts.has(p.slug)) menuFloorRefCounts.set(p.slug, menuFloorRefCounts.get(p.slug) + 1);
+    }
+    for (const slug of FLOOR_REF_SLUGS) {
+      if (menuFloorRefCounts.get(slug) === 0) {
+        fail("menu-floor-ref", `${slug} must carry the "floor-referenced*" marker at least once in the menu region, but it does not`);
+      }
+    }
+
+    if (adoptionMapSection !== null) {
+      const matrixRowsForFloorRef = parseAdoptionMapRows(adoptionMapSection);
+      const matrixText = matrixRowsForFloorRef.map((r) => r.line).join("\n");
+      const matrixFloorRef = scanFloorReferencedMarkers(matrixText);
+      for (const bad of matrixFloorRef.unpaired) {
+        fail("menu-floor-ref", `matrix rows have a "floor-referenced*" marker with no slug link immediately preceding it: ${bad.line.trim()}`);
+      }
+      for (const p of matrixFloorRef.paired) {
+        if (!FLOOR_REF_SLUGS.includes(p.slug)) {
+          fail("menu-floor-ref", `matrix rows attach "floor-referenced*" to ${p.slug}, but only ${FLOOR_REF_SLUGS.join(" and ")} may carry it`);
+        }
+      }
+      const matrixFloorRefCounts = new Map(FLOOR_REF_SLUGS.map((s) => [s, 0]));
+      for (const p of matrixFloorRef.paired) {
+        if (matrixFloorRefCounts.has(p.slug)) matrixFloorRefCounts.set(p.slug, matrixFloorRefCounts.get(p.slug) + 1);
+      }
+      for (const slug of FLOOR_REF_SLUGS) {
+        const count = matrixFloorRefCounts.get(slug);
+        if (count !== 1) {
+          fail("menu-floor-ref", `${slug} must carry the "floor-referenced*" marker exactly once in the matrix rows, but it appears ${count} time(s)`);
+        }
       }
     }
   }
