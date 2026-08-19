@@ -430,6 +430,15 @@ export type Evidence =
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 export type EvidenceInput = DistributiveOmit<Evidence, "trace_id" | "at">;
 
+/**
+ * @spec runtime-evidence#decision-evidence-object, runtime-evidence#pre-decision-refusal:
+ * an append-only, in-memory, per-attempt retained store: `record` only ever
+ * pushes, never amends or replaces an existing entry, so a retried refusal
+ * or decision yields its own distinct record. PEP-side and per-request; the
+ * Controller-owned Mission Record (approval evidence and lifecycle history,
+ * mission-substrate#governance-record) is a separate, not-yet-implemented
+ * surface this store does not provide.
+ */
 export class EvidenceStore {
   private readonly records: Evidence[] = [];
 

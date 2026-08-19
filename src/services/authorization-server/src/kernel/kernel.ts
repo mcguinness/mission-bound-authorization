@@ -250,8 +250,10 @@ export class MissionKernel {
   }
 
   /**
-   * @spec mission#integrity-anchors — the approval event creates the record
-   * with both anchors; approval_event_id is the idempotency key.
+   * @spec mission#integrity-anchors, mission-substrate#approved-context: the
+   * approval event creates the record with both anchors (and, where a
+   * proposal was submitted, the third); approval_event_id is the idempotency
+   * key.
    */
   approve(input: ApproveInput): MissionRecord {
     // @spec mission#authority-proposal — normalize: an empty proposal is no
@@ -297,6 +299,8 @@ export class MissionKernel {
       subject: input.subject,
       approver: input.approver,
       approval_basis: approvalBasis,
+      // @spec mission-substrate#actor-binding: the Actor handle, bound to
+      // the Mission Context at approval.
       client_id: input.clientId,
       policy_version: this.opts.policy.policy_version,
       approval_event_id: input.approvalEventId,
@@ -916,7 +920,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec mission#lifecycle, child-delegation#child-state — the shared active
+   * @spec mission#lifecycle, child-delegation#child-state, mission-substrate#basic-gate — the shared active
    * gate for BOTH {@link gateDerivation} and {@link gateActive}: apply the expiry
    * clock, require the Mission itself `active`, and walk `parent` upward refusing
    * if ANY ancestor is non-active. Returns the expiry-fresh record. It does NOT

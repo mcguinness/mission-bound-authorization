@@ -27,6 +27,16 @@
 // 'tested' are the outstanding reverse-mapping report: printed, never
 // failing. Completeness is judged by that report, not by tag coverage."
 //
+// Also prints a global inverse-OMISSION report (#605 author review, finding
+// 5): every `@spec <key>#<anchor>` tag found anywhere in implementation
+// files repo-wide (excluding test/demo/dist), grouped by key, where that key
+// never appears in ANY row's Surfaces column at all -- not merely an anchor
+// missing from one row's already-matched Component files (the per-row
+// inverse check above), but a whole spec key the matrix has no row for
+// whatsoever. Print-only, never failing, the same outstanding-report
+// pattern as the per-row checks: this closes the blind spot where an entire
+// implemented spec could go untracked with nothing watching it.
+//
 // Usage: node scripts/check-spec-versions.mjs [--dump]
 //   --dump  print every anchor-tagged row's resolved file set and matched
 //           anchors (both directions), including non-strict rows; useful
@@ -187,6 +197,36 @@ function filesForRow({ files, dirs }) {
   return [...all];
 }
 
+// ---- global file listing, for the inverse-omission report -------------
+//
+// Wider than listFiles: walks from repo root rather than a row's own
+// Component dirs, so it additionally excludes "dist" (gitignored build
+// output that copies doc-comments, including @spec tags, into .d.ts files)
+// and any ".d.ts" file, neither of which the per-row scan ever encounters
+// (Component cells name src/ paths, never a package's dist/ sibling).
+const GLOBAL_EXCLUDED = /(^|\/)(test|demo|dist|node_modules)(\/|$)/;
+
+function listAllSourceFiles(rootFull) {
+  const out = [];
+  const stack = [rootFull];
+  while (stack.length) {
+    const d = stack.pop();
+    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+      const p = path.join(d, entry.name);
+      const rel = path.relative(ROOT, p);
+      if (GLOBAL_EXCLUDED.test(rel)) continue;
+      if (entry.isDirectory()) stack.push(p);
+      else if (
+        /\.(ts|tsx)$/.test(entry.name) &&
+        !entry.name.endsWith(".test.ts") &&
+        !entry.name.endsWith(".d.ts")
+      )
+        out.push(p);
+    }
+  }
+  return out;
+}
+
 // A trailing "," at a comment line's end, followed by a new comment line,
 // joins with the next line so a wrapped `@spec key#a, key#b` list (or its
 // prose that continues past the anchors) reads as one logical line.
@@ -215,6 +255,31 @@ function tagsInFile(fullPath, key) {
     }
   }
   return anchors;
+}
+
+// Same parse as tagsInFile, but returns every key found (Map<key,
+// Set<anchor>>) instead of filtering to one -- for the global
+// inverse-omission scan, which does not know its keys in advance.
+function allKeyAnchorsInFile(fullPath) {
+  const text = flatten(readFile(fullPath, fullPath));
+  const byKey = new Map();
+  for (const m of text.matchAll(/@spec\s+([^\n]*)/g)) {
+    const boundary = m[1].search(/—|--|\)|"|\*\/|;/);
+    const content = boundary === -1 ? m[1] : m[1].slice(0, boundary);
+    let lastKey = null;
+    for (const piece of content.split(",").map((s) => s.trim())) {
+      let pm = piece.match(/^([A-Za-z][\w.-]*)#([\w-]+)/);
+      if (pm) {
+        lastKey = pm[1];
+        if (!byKey.has(lastKey)) byKey.set(lastKey, new Set());
+        byKey.get(lastKey).add(pm[2]);
+        continue;
+      }
+      pm = piece.match(/^#([\w-]+)/);
+      if (pm && lastKey) byKey.get(lastKey).add(pm[1]);
+    }
+  }
+  return byKey;
 }
 
 function tagsForFiles(fileList, key) {
@@ -309,11 +374,47 @@ if (outstanding.length && !dump) {
   }
 }
 
+// ---- global inverse-omission report -------------------------------------
+//
+// Every key any row declares anywhere in its Surfaces column (whether or
+// not that row's own byKey.size check above skipped it, and regardless of
+// strict/non-strict), versus every key actually tagged in implementation
+// files repo-wide. A key tagged in code but declared by NO row at all is a
+// whole spec the matrix never tracked, not merely one row's undercount.
+const knownKeys = new Set();
+for (const row of rows) {
+  for (const key of parseSurfaceAnchors(row.surfaces).keys()) knownKeys.add(key);
+}
+
+const globalByKey = new Map(); // key -> Set<anchor>
+const globalFilesByKey = new Map(); // key -> Set<relFile>
+for (const f of listAllSourceFiles(ROOT)) {
+  for (const [key, anchors] of allKeyAnchorsInFile(f)) {
+    if (!globalByKey.has(key)) globalByKey.set(key, new Set());
+    for (const a of anchors) globalByKey.get(key).add(a);
+    if (!globalFilesByKey.has(key)) globalFilesByKey.set(key, new Set());
+    globalFilesByKey.get(key).add(path.relative(ROOT, f));
+  }
+}
+
+const omittedKeys = [...globalByKey.keys()].filter((k) => !knownKeys.has(k)).sort();
+
+if (omittedKeys.length && !dump) {
+  console.log(
+    `Inverse-omission report (${omittedKeys.length} @spec key(s) tagged in implementation with NO matrix row at all, pre-existing, not enforced):`,
+  );
+  for (const k of omittedKeys) {
+    const anchors = [...globalByKey.get(k)].sort();
+    const files = [...globalFilesByKey.get(k)].sort();
+    console.log(`  - ${k}: ${anchors.map((a) => `#${a}`).join(", ")} in ${files.join(", ")}`);
+  }
+}
+
 if (errors.length) {
   for (const e of errors) console.error(e);
   console.error(`SPEC_VERSIONS check FAILED: ${errors.length} finding(s).`);
   process.exit(1);
 }
 console.log(
-  `SPEC_VERSIONS check OK (${rows.length} rows, ${outstanding.length} outstanding gaps printed above, STRICT_SPECS clean).`,
+  `SPEC_VERSIONS check OK (${rows.length} rows, ${outstanding.length} outstanding gaps printed above, ${omittedKeys.length} omitted keys printed above, STRICT_SPECS clean).`,
 );
