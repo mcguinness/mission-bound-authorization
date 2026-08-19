@@ -241,6 +241,12 @@ function deriveDocumentExternalKeys(rootDir, commit, file) {
 // two different check labels. A caller that runs this script standalone,
 // without also running check-external-pins.mjs, gets read/parse errors here
 // but not the finer-grained structural findings; run both for full coverage.
+// Returns { byId, byPinId }. byId is built from "pins" only (the current,
+// non-superseded entries; what a bundle's external_pins[].id is checked
+// against for existence and pending-rejection). byPinId is built from
+// "pins" AND "archive" together, since a bundle resolves its pin_id
+// references against both: an older bundle that references a since
+// superseded pin_id must still resolve, against the archived record.
 function loadRegistryPinsById(rootDir, errors) {
   const pinsPath = path.join(rootDir, "notes", "external-pins.json");
   let doc;
@@ -248,13 +254,17 @@ function loadRegistryPinsById(rootDir, errors) {
     doc = JSON.parse(fs.readFileSync(pinsPath, "utf8"));
   } catch (e) {
     errors.push(`cannot read/parse ${pinsPath}: ${e.message}`);
-    return new Map();
+    return { byId: new Map(), byPinId: new Map() };
   }
   const byId = new Map();
   for (const entry of doc.pins ?? []) {
     if (entry && typeof entry.id === "string") byId.set(entry.id, entry);
   }
-  return byId;
+  const byPinId = new Map();
+  for (const entry of [...(doc.pins ?? []), ...(doc.archive ?? [])]) {
+    if (entry && typeof entry.pin_id === "string") byPinId.set(entry.pin_id, entry);
+  }
+  return { byId, byPinId };
 }
 
 // Maps each registry entry's reference_keys back to that entry's id, so a
@@ -280,7 +290,8 @@ function buildReferenceKeyIndex(registryById, errors, label) {
   return index;
 }
 
-function validateOneManifest(rootDir, manifestPath, registryById, errors) {
+function validateOneManifest(rootDir, manifestPath, registry, errors) {
+  const { byId: registryById, byPinId: registryByPinId } = registry;
   const label = path.relative(rootDir, manifestPath);
   const filename = path.basename(manifestPath);
 
@@ -421,6 +432,11 @@ function validateOneManifest(rootDir, manifestPath, registryById, errors) {
       }
       seenIds.add(entry.id);
 
+      // Look up by "id" FIRST, against the current registry (not the
+      // pin_id map): this is what catches a registry entry that has been
+      // flipped to "pending" (a pending entry never carries a pin_id, so a
+      // pin_id-only lookup would report "unresolvable" instead of the more
+      // specific pending-rejection message below) or dropped outright.
       const registryEntry = registryById.get(entry.id);
       if (!registryEntry) {
         errors.push(`${el}: id "${entry.id}" does not exist in notes/external-pins.json`);
@@ -438,8 +454,22 @@ function validateOneManifest(rootDir, manifestPath, registryById, errors) {
         errors.push(`${el}: bundle copy of "${entry.id}" has status "${entry.status}", expected "established"`);
       }
 
-      if (!deepEqual(entry, registryEntry)) {
-        errors.push(`${el}: bundle's copy of "${entry.id}" is not identical to the registry entry (must be copied verbatim)`);
+      // The bundle references the pin BY pin_id; resolve that against
+      // "pins" plus "archive" together and deep-equal against whichever
+      // record it resolves to. A pin corrected later (a new pin_id) never
+      // invalidates this bundle, because the record this bundle's pin_id
+      // names is never mutated, only ever superseded and archived.
+      if (typeof entry.pin_id !== "string" || entry.pin_id.trim() === "") {
+        errors.push(`${el}: missing a non-empty string "pin_id"`);
+        return;
+      }
+      const resolved = registryByPinId.get(entry.pin_id);
+      if (!resolved) {
+        errors.push(`${el}: "pin_id" "${entry.pin_id}" does not resolve against notes/external-pins.json's "pins" or "archive"`);
+        return;
+      }
+      if (!deepEqual(entry, resolved)) {
+        errors.push(`${el}: bundle's copy of pin_id "${entry.pin_id}" is not identical to the resolved registry record (must be copied verbatim)`);
       }
     });
 
@@ -526,7 +556,7 @@ function validateOneManifest(rootDir, manifestPath, registryById, errors) {
 
 export function validateBundleManifests(rootDir) {
   const errors = [];
-  const registryById = loadRegistryPinsById(rootDir, errors);
+  const registry = loadRegistryPinsById(rootDir, errors);
 
   const notesDir = path.join(rootDir, "notes");
   let files = [];
@@ -546,7 +576,7 @@ export function validateBundleManifests(rootDir) {
   }
 
   for (const f of files) {
-    validateOneManifest(rootDir, path.join(notesDir, f), registryById, errors);
+    validateOneManifest(rootDir, path.join(notesDir, f), registry, errors);
   }
 
   return errors;
