@@ -35,10 +35,10 @@ and the Issuance Baseline is never blocked on their conformance inventories.
 
 1. mission-architecture (preface): the Mission model, invariants, and
    assurance levels the rest cite.
-2. mission-substrate (floor): the commitment construction and kernel
+2. oauth-mission (floor, core): the floor itself, self-contained by
+   design. An Issuance Baseline adopter stops here.
+3. mission-substrate (floor): the commitment construction and kernel
    contract runtime implementers consume and binding authors profile.
-3. oauth-mission (floor, core): the floor itself. An Issuance Baseline
-   adopter can stop here.
 4. oauth-mission-status (floor): observing or changing Mission state beyond
    token expiry (revoke, suspend, complete).
 5. mission-runtime (floor): point-of-use checks, not just issuance-time
