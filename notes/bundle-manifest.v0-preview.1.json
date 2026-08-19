@@ -8,37 +8,44 @@
     {
       "slug": "draft-mcguinness-mission-architecture",
       "file": "draft-mcguinness-mission-architecture.md",
-      "last_modified_commit": "122586a334069ba4a934a9b988b7bb1b0ed7926a"
+      "last_modified_commit": "122586a334069ba4a934a9b988b7bb1b0ed7926a",
+      "sha256": "451e2e552e284719cf36cbffd16e9980f57ac429fa06ed0019b3fa2148748d10"
     },
     {
       "slug": "draft-mcguinness-mission-substrate",
       "file": "draft-mcguinness-mission-substrate.md",
-      "last_modified_commit": "77eb14b40b6a203bcdc4ea6bab270ebbbc1c767f"
+      "last_modified_commit": "77eb14b40b6a203bcdc4ea6bab270ebbbc1c767f",
+      "sha256": "ba84fd2a30d4bd9d139d560da4efc0e0c931b9d0ad2878131bbc820e64068e26"
     },
     {
       "slug": "draft-mcguinness-oauth-mission",
       "file": "draft-mcguinness-oauth-mission.md",
-      "last_modified_commit": "7d97a7b38a844163db1eaa6bf6e01e002554e487"
+      "last_modified_commit": "7d97a7b38a844163db1eaa6bf6e01e002554e487",
+      "sha256": "1f3fdf0041c19b5fc71e29ac112d700f3d36588c39740f7da362d807f0023c7a"
     },
     {
       "slug": "draft-mcguinness-oauth-mission-status",
       "file": "draft-mcguinness-oauth-mission-status.md",
-      "last_modified_commit": "2399f170964924d80f8ceaad81d41892411d4465"
+      "last_modified_commit": "2399f170964924d80f8ceaad81d41892411d4465",
+      "sha256": "f1ee825d42dc842134d58b5317a6d31f907ff7ebd43453bbd41c1f75d5cf2bd3"
     },
     {
       "slug": "draft-mcguinness-mission-runtime",
       "file": "draft-mcguinness-mission-runtime.md",
-      "last_modified_commit": "122586a334069ba4a934a9b988b7bb1b0ed7926a"
+      "last_modified_commit": "122586a334069ba4a934a9b988b7bb1b0ed7926a",
+      "sha256": "f43480282b0df5fc3fdecfde8e0b019df14db9072917ec1b517f986a61a7b4f5"
     },
     {
       "slug": "draft-mcguinness-mission-runtime-evidence",
       "file": "draft-mcguinness-mission-runtime-evidence.md",
-      "last_modified_commit": "3694449a787e0be021803eb82c5ee6eaae3f7ddd"
+      "last_modified_commit": "3694449a787e0be021803eb82c5ee6eaae3f7ddd",
+      "sha256": "49e6edceb6e56df6d9330576c5874acc96b6f558c78c2e07e06778b136f306d2"
     },
     {
       "slug": "draft-mcguinness-mission-authzen",
       "file": "draft-mcguinness-mission-authzen.md",
-      "last_modified_commit": "f5977e02bfb4bf8af22d2114ed1e16f520672b07"
+      "last_modified_commit": "f5977e02bfb4bf8af22d2114ed1e16f520672b07",
+      "sha256": "be241b74e741f3f580ef5adacef11cf4176b6978b3cb9c98d72ca9e285602698"
     }
   ],
   "external_pins": [
