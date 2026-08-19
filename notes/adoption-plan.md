@@ -93,13 +93,14 @@ the shipped compact track table cold) failed it: zone/track rows answer "where d
 document live", not "what do I order". The top layer is therefore an eight-pick menu: read
 the architecture; pick your binding (OAuth, AAuth, standalone authority server, or a
 sketch); pick your runtime; pick your evidence; shape your Mission and pick your approval
-complexity (each a minimum/better/best table, the two lanes every end-to-end deployment
-decides); pick your delegation and your operations (each a complexity progression); a
-closing shelf holds portable proof, the guide, and the remaining Lab items; the assurance
-menu closes as the enforcement counterpart (the conformance baselines as cumulative
-levels). Readiness markers derive from zone alone: (experimental) and (sketch) mark Lab
-items, Compose bindings are peers of the OAuth extensions and are never marked
-experimental. The two-layer principle is unchanged: the menu is presentation, the
+complexity (each a table of named options ordered by growing capability, the two lanes
+every end-to-end deployment decides; rank adjectives are never used as option labels);
+pick your delegation and your operations (each a complexity progression); a closing shelf
+holds portable proof, the guide, and the remaining Lab items; the assurance menu closes
+as the enforcement counterpart (the conformance baselines as cumulative levels). Maturity
+on the menu is one vocabulary, taken verbatim from the family manifest's maturity field
+(stable unmarked, informational, experimental, sketch); no menu-local readiness words are
+invented, and Compose bindings therefore read as stable peers of the OAuth extensions. The two-layer principle is unchanged: the menu is presentation, the
 collapsed 41-row matrix remains the machine-validated layer carrying zone, track, group,
 and per-document triggers, and the validator's placement checks bind to the matrix. Zones
 and tracks stay authoritative in the manifest; the menu never regroups the catalog or the
